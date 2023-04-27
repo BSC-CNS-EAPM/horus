@@ -7,7 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "buildparcel": "parcel build --dist-dir Gui",
     "devparcel": "parcel Views/Main/index.html",
-    "build:macos": "py2app "
+    "build": "npm run buildparcel && pyinstaller main.spec -y"
   },
   "author": "Nostrum Biodiscovery",
   "license": "MIT",

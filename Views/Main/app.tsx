@@ -27,7 +27,7 @@ export function App() {
         <div className="App">
             <FetchButton setShowData={setShowData} />
             <DataDisplay data={showData} />
-            <Molstar />
+            {/* <Molstar /> */}
         </div>
     );
 }
