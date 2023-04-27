@@ -1,18 +1,19 @@
-from flask import Flask, render_template
-import webview
+# Add to the pythonpath the path of the project
+import sys
 
-app = Flask(__name__,
-            template_folder='App/views',
-            static_folder='App/static',
-            static_url_path='')
+sys.path.append("../")
 
+if __name__ == "__main__":
+    # Import the server from Backend/server.py
 
-@app.route('/')
-def index():
-    return render_template('molstar/molstar.html')
+    from Server import server as flask_server
 
+    import webview
 
-if __name__ == '__main__':
+    window = webview.create_window(
+        "Horus",
+        flask_server
+    )
 
-    window = webview.create_window('Horus', app)
     webview.start(debug=True)
+

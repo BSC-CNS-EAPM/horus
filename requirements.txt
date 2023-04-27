@@ -1,0 +1,7 @@
+flask
+pip-chill
+py2app
+pyinstaller
+pyqtwebengine
+pywebview
+qtpy

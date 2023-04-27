@@ -1,0 +1,33 @@
+{
+  "name": "horus",
+  "version": "0.0.1",
+  "description": "Molecular visualizer from nostrum Biodiscovery",
+  "source": "Views/Main/index.html",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "buildparcel": "parcel build --dist-dir Gui",
+    "devparcel": "parcel Views/Main/index.html",
+    "build:macos": "py2app "
+  },
+  "author": "Nostrum Biodiscovery",
+  "license": "MIT",
+  "keywords": [
+    "molecules",
+    "nbdsuite",
+    "visualizer",
+    "drug-discovery"
+  ],
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "molstar": "^3.34.0"
+  },
+  "devDependencies": {
+    "@parcel/transformer-sass": "^2.8.3",
+    "autoprefixer": "^10.4.14",
+    "parcel": "^2.8.3",
+    "postcss": "^8.4.23",
+    "process": "^0.11.10",
+    "tailwindcss": "^3.3.2"
+  }
+}
