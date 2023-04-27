@@ -144,3 +144,6 @@ Gui/
 
 # macOS files
 .DS_Store
+
+# PyInstaller files
+.eggs/
