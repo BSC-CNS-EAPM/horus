@@ -7,7 +7,11 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "buildparcel": "parcel build --dist-dir Gui",
     "devparcel": "parcel Views/Main/index.html",
-    "build": "npm run buildparcel && pyinstaller main.spec -y"
+    "build": "run-script-os",
+    "build:win32": "npm run buildparcel && pyinstaller main.spec -y",
+    "build:linux": "npm run buildparcel && pyinstaller main.spec -y",
+    "build:macos": "npm run buildparcel && python3 py2app_horus.py py2app",
+    "requirements": "npm install && virtualenv .horus && source .horus/bin/activate && pip install -r requirements.txt"
   },
   "author": "Nostrum Biodiscovery",
   "license": "MIT",
@@ -18,9 +22,9 @@
     "drug-discovery"
   ],
   "dependencies": {
+    "molstar": "^3.34.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "molstar": "^3.34.0"
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@parcel/transformer-sass": "^2.8.3",
@@ -28,6 +32,7 @@
     "parcel": "^2.8.3",
     "postcss": "^8.4.23",
     "process": "^0.11.10",
+    "run-script-os": "^1.1.6",
     "tailwindcss": "^3.3.2"
   }
 }
