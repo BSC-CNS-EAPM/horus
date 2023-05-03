@@ -18,7 +18,7 @@ def tree(src):
     ]
 
 
-ENTRY_POINT = ["main.py"]
+ENTRY_POINT = ["Horus.py"]
 
 DATA_FILES = tree("Gui") + tree("Server")
 

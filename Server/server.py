@@ -13,9 +13,14 @@ import webview
 # Check if the GUI is in the development path or in the frozen executable path
 def guiDir():
     gui_dir = os.path.join(os.path.dirname(__file__), "..", "Gui")
-
+    print("Gui dir is: " + gui_dir)
     if not os.path.exists(gui_dir):  # frozen executable path
         gui_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Gui")
+        print("Frozen executable, trying Gui dir: " + gui_dir)
+    
+    if not os.path.exists(gui_dir):
+        gui_dir = os.path.join(os.path.abspath(os.curdir), "Gui")
+        print("Gui dir still not found, trying current dir: " + gui_dir)
 
     return gui_dir
 
@@ -56,4 +61,6 @@ def test_token():
 @server.route("/")
 def index():
     # Init the webview with the token
+    # Log the template folder
+    print("Template folder is: " + server.template_folder)
     return flask.render_template("index.html", shemsu=webview.token)
