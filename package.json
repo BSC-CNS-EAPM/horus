@@ -14,7 +14,7 @@
     "requirements": "npm install run-script-os && run-script-os",
     "requirements:win32": "npm install && virtualenv .horus && .horus/Scripts/activate && pip install -r requirements.txt",
     "requirements:macos": "npm install && virtualenv .horus && source .horus/bin/activate && pip install -r requirements.txt",
-    "requirements:linux": "npm install && virtualenv .horus && source .horus/local/bin/activate && pip install -r requirements.txt"
+    "requirements:linux": "npm install && virtualenv .horus && source .horus/bin/activate && pip install -r requirements.txt"
   },
   "author": "Nostrum Biodiscovery",
   "license": "MIT",

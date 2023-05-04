@@ -22,8 +22,6 @@ ENTRY_POINT = ["Horus.py"]
 
 DATA_FILES = tree("Gui") + tree("Server")
 
-print("Data files: ", DATA_FILES)
-
 OPTIONS = {
     "argv_emulation": False,
     "strip": True,

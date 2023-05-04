@@ -5,7 +5,7 @@ block_cipher = None
 
 
 a = Analysis(
-    ['main.py'],
+    ['Horus.py'],
     pathex=[],
     binaries=[],
     datas=[('Server', 'Server'), ('Gui', 'Gui')],
@@ -28,7 +28,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='main',
+    name='Horus',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
