@@ -86,6 +86,7 @@ class HorusServer:
 
         @self.server.route("/api/data", methods=["GET"])
         def test_token():
+            print("Seding data")
             return flask.jsonify({"data": "Hello from Flask!"})
 
         @self.server.route("/")
@@ -99,12 +100,18 @@ class HorusServer:
 
         @self.server.before_request
         def before_request():
-            # Load the token from the request
-            token = request.args.get("shemsu")
-            if token == webview.token:
-                pass
-            else:
-                return "Access denied"
+            if not self.debug:
+                # Load the token from the request args or headers
+                token = request.args.get("shemsu")
+                if token is None:
+                    token = request.headers.get("shemsu")
+
+                # Check that the token is valid
+                if token == webview.token:
+                    pass
+                else:
+                    return "Access denied"
+            pass
 
         @self.server.after_request
         def add_header(response):
