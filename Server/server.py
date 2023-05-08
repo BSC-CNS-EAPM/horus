@@ -10,17 +10,50 @@ from flask import request
 # PyWebview
 import webview
 
+# Import random to generate a random port number
+import random
+
 
 class HorusServer:
-    host = "localhost"
-    port = 5050
-    url = f"http://{host}:{port}"
-
     def __init__(self, debug=False):
+        self.host = "localhost"
+        self.port = self.__getFreePort()
+        self.baseURL = f"http://{self.host}:{self.port}"
+        self.tokenURL = f"{self.baseURL}/?shemsu={webview.token}"
         self.debug = debug
         self.guiDir = self.__guiDir()
         self.server = self.__setupServer()
         self.__routes()
+
+    def __getFreePort(self):
+        port = random.randint(5001, 9000)
+
+        # Check that the port is not in use
+        import socket
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        while True:
+            try:
+                sock.bind((self.host, port))
+                break
+            except OSError:
+                port = random.randint(5001, 9000)
+
+        return port
+
+    def __checkParcel(self):
+        # If the parcel server is running, load the index file from there:
+        parcelURL = "http://localhost:1234"
+
+        import requests
+
+        try:
+            parcel = requests.get(parcelURL)
+        except requests.exceptions.ConnectionError:
+            return
+        if parcel.status_code == 200:
+            print("<========Using parcel development server...========>")
+            return flask.redirect(parcelURL)
 
     def __guiDir(self):
         """
@@ -46,34 +79,38 @@ class HorusServer:
         )
 
     def __routes(self):
-        def verify_token(function):
-            @wraps(function)
-            def wrapper(*args, **kwargs):
-                # Load the token from the request header
-                token = flask.request.headers.get("shemsu")
-                if token == webview.token:
-                    return function(*args, **kwargs)
-                else:
-                    return "Access denied"
-
-            return wrapper
-
-        @self.server.after_request
-        def add_header(response):
-            response.headers["Cache-Control"] = "no-store"
-            return response
+        # Setup the error page
+        @self.server.errorhandler(404)
+        def page_not_found(e):
+            return "Page not found"
 
         @self.server.route("/api/data", methods=["GET"])
-        @verify_token
         def test_token():
             return flask.jsonify({"data": "Hello from Flask!"})
 
         @self.server.route("/")
-        @verify_token
         def index():
-            # Init the webview with the token
-            # Log the template folder
+            # Check if the parcel server is running:
+            if self.debug:
+                self.__checkParcel()
+
+            # Otherwise, load the index file from the local folder:
             return flask.render_template("index.html")
+
+        @self.server.before_request
+        def before_request():
+            # Load the token from the request
+            token = request.args.get("shemsu")
+            if token == webview.token:
+                pass
+            else:
+                return "Access denied"
+
+        @self.server.after_request
+        def add_header(response):
+            # Disable caching
+            response.headers["Cache-Control"] = "no-store"
+            return response
 
     def run(self):
         self.server.run(

@@ -3,18 +3,59 @@
 
 <head>
     <title>Horus</title>
-    <link href="index.css" rel="stylesheet">
-    <!-- Load the webview token into the window -->
-    <script>
-        window.shemsu = '{{ shemsu }}';
-    </script>
+    <!-- Load the React app (necessary for parcel detecting the files) -->
+    <link href="index.css" rel="stylesheet" id="css-id">
+    <script src="index.js" type="module" id="js-id"></script>
 </head>
 
 <body>
     <!-- Initialize a React app -->
     <div id="horusRoot"></div>
-    <!-- Load the React app -->
-    <script src="index.js" type="module"></script>
+    <!-- Wait for shemsu before loading the App -->
+    <script>
+        const checkShemsu = async () => {
+            while (window.shemsu === undefined) {
+                await new Promise(r => setTimeout(r, 100));
+            }
+            return true;
+        }
+
+        const loadApp = async () => {
+            const isShemsuDefined = await checkShemsu();
+            if (isShemsuDefined) {
+
+                console.log("Loading shemsu app...")
+
+                // Load the old CSS
+                const CSSOldElement = await document.getElementById("css-id");
+                var newCSSUrl = CSSOldElement.href + `?shemsu=${window.shemsu}`;
+
+                // Create a new CSS link
+                const newCSSLink = document.createElement("link");
+                newCSSLink.href = newCSSUrl;
+                newCSSLink.rel = "stylesheet";
+
+                // Add the CSS to the document
+                document.body.appendChild(newCSSLink);
+
+                // Load the old JS
+                const JSOldElement = await document.getElementById("js-id");
+                var newJSUrl = JSOldElement.src + `?shemsu=${window.shemsu}`;
+
+                // Create a new JS script
+                const newJSScript = document.createElement("script");
+                newJSScript.src = newJSUrl;
+                newJSScript.type = "module";
+
+                // Add the JS to the document
+                document.body.appendChild(newJSScript);
+
+
+                console.log("Loaded shemsu app!")
+            }
+        };
+        loadApp();
+    </script>
 </body>
 
 </html>
