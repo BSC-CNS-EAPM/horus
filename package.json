@@ -10,7 +10,7 @@
     "build": "run-script-os",
     "build:win32": "npm run buildparcel && pyinstaller main.spec -y",
     "build:linux": "npm run buildparcel && pyinstaller main.spec -y",
-    "build:macos": "npm run buildparcel && python3 py2app_horus.py py2app",
+    "build:macos": "npm run buildparcel && python3 compile.py build_ext && python3 py2app_horus.py py2app",
     "requirements": "npm install run-script-os && run-script-os",
     "requirements:win32": "npm install && virtualenv .horus && .horus/Scripts/activate && pip install -r requirements.txt",
     "requirements:macos": "npm install && virtualenv .horus && source .horus/bin/activate && pip install -r requirements.txt",
