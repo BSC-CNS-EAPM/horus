@@ -42,9 +42,7 @@ dependencies:
       - proxy-tools==0.1.0
       - pyinstaller==5.10.1
       - pyinstaller-hooks-contrib==2023.2
-      - pyobjc-core==9.1.1
-      - pyobjc-framework-cocoa==9.1.1
-      - pyobjc-framework-webkit==9.1.1
+      - pyobjc==9.1.1
       - pywebview==4.1
       - requests==2.30.0
       - urllib3==2.0.2
