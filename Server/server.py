@@ -18,17 +18,21 @@ import random
 
 class HorusServer:
     def __init__(self, debug=False):
+        self.debug = debug
         self.host = "localhost"
         self.port = self.__getFreePort()
         self.baseURL = f"http://{self.host}:{self.port}"
         self.tokenURL = f"{self.baseURL}/?shemsu={webview.token}"
-        self.debug = debug
         self.guiDir = self.__guiDir()
         self.server = self.__setupServer()
         self.__routes()
 
     def __getFreePort(self):
+        # Generate a random port number
         port = random.randint(5001, 9000)
+
+        if self.debug:
+            port = 5001
 
         # Check that the port is not in use
         import socket
@@ -99,7 +103,11 @@ class HorusServer:
         # Setup the error page
         @self.server.errorhandler(404)
         def page_not_found(e):
-            return "Page not found"
+            return flask.redirect("/error")
+        
+        @self.server.route("/error")
+        def error():
+            return flask.render_template("Error/error.html")
 
         @self.server.route("/api/data", methods=["GET"])
         def test_token():
@@ -115,22 +123,15 @@ class HorusServer:
                     return parcel
 
             # Otherwise, load the index file from the local folder:
-            return flask.render_template("index.html")
-
-        @self.server.before_request
-        def before_request():
-            if not self.debug:
-                # Load the token from the request args or headers
-                token = request.args.get("shemsu")
-                if token is None:
-                    token = request.headers.get("shemsu")
-
-                # Check that the token is valid
-                if token == webview.token:
-                    pass
-                else:
-                    return "Access denied"
-            pass
+            return flask.render_template("Main/index.html")
+        
+        if self.debug:
+            @self.server.before_request
+            def before_request():
+                # Check the token only for the api routes
+                if request.path.startswith("/api") and \
+                    (request.args.get("shemsu") or request.headers.get("shemsu")) != webview.token:
+                    return flask.redirect("/error")
 
         @self.server.after_request
         def add_header(response):

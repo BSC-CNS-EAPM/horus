@@ -25,9 +25,9 @@ export function App() {
     const [showData, setShowData] = useState("No data");
     return (
         <div className="App">
-            {/* <FetchButton setShowData={setShowData} />
-            <DataDisplay data={showData} /> */}
-            <Molstar />
+            <FetchButton setShowData={setShowData} />
+            <DataDisplay data={showData} />
+            {/* <Molstar /> */}
         </div>
     );
 }
