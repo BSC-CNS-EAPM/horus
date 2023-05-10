@@ -6,13 +6,13 @@ block_cipher = None
 import os
 
 datas = [("GUI", "GUI")]
-# for file in os.listdir("build/cython"):
-#     # Linux and macOS
-#     if file.endswith(".so"):
-#         datas.append((os.path.join("build/cython", file), "."))
-#     # Windows
-#     if file.endswith(".dll"):
-#         datas.append((os.path.join("build/cython", file), "."))
+for file in os.listdir("build/cython"):
+    # Linux and macOS
+    if file.endswith(".so"):
+        datas.append((os.path.join("build/cython", file), "."))
+    # Windows
+    if file.endswith(".dll"):
+        datas.append((os.path.join("build/cython", file), "."))
 
 
 a = Analysis(
@@ -21,11 +21,12 @@ a = Analysis(
     binaries=[],
     datas=datas,
     # Include the default libraries
-    hiddenimports=[],
+    hiddenimports=["webview", "flask", "requests"],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
     # Exclude the uncompiled Server and App files
+    excludes=["Server", "App"],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,

@@ -7,14 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "buildparcel": "parcel build --dist-dir GUI",
     "devparcel": "parcel Views/Main/index.html",
-    "build": "run-script-os",
-    "build:win32": "npm run buildparcel && pyinstaller main.spec -y",
-    "build:linux": "npm run buildparcel && pyinstaller main.spec -y",
-    "build:macos": "npm run buildparcel && python compile.py build_ext && pyinstaller build.spec --noconfirm",
-    "requirements": "npm install run-script-os && run-script-os",
-    "requirements:win32": "npm install && virtualenv .horus && .horus/Scripts/activate && pip install -r requirements.txt",
-    "requirements:macos": "npm install && virtualenv .horus && source .horus/bin/activate && pip install -r requirements.txt",
-    "requirements:linux": "npm install && virtualenv .horus && source .horus/bin/activate && pip install -r requirements.txt"
+    "build": "npm run buildparcel && python compile.py build_ext && pyinstaller build.spec --noconfirm",
+    "requirements": "npm install && conda env create -f conda_horus.yaml -n horus"
   },
   "author": "Nostrum Biodiscovery",
   "license": "MIT",

@@ -3,6 +3,7 @@ import json
 import os
 import sys
 from functools import wraps
+import logging
 
 # Flask
 import flask
@@ -80,6 +81,13 @@ class HorusServer:
         return gui_dir
 
     def __setupServer(self):
+        """
+        Creates the Flask server instance. This will serve the GUI files and handle the API requests. Also disabled Flask logging when not in debug mode.
+        """
+        # Disable werkzeug logging when not in debug mode
+        logging.getLogger("werkzeug").disabled = not self.debug
+
+        # Setup the server
         return flask.Flask(
             __name__,
             static_folder=self.guiDir,
