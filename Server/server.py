@@ -1,6 +1,7 @@
 # Tools
 import json
 import os
+import sys
 from functools import wraps
 
 # Flask
@@ -50,9 +51,9 @@ class HorusServer:
         try:
             parcel = requests.get(parcelURL)
         except requests.exceptions.ConnectionError:
-            return
+            return None
         if parcel.status_code == 200:
-            print("<========Using parcel development server...========>")
+            print("\n<========Using parcel development server...========>\n")
             return flask.redirect(parcelURL)
 
     def __guiDir(self):
@@ -62,11 +63,19 @@ class HorusServer:
         2. The parent directory of the current file (frozen executable pyinstaller)
         3. The current directory (frozen executable py2app)
         """
+
+        # Development path
         gui_dir = os.path.join(os.path.dirname(__file__), "..", "GUI")
-        if not os.path.exists(gui_dir):  # frozen executable path
-            gui_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "GUI")
+
+        # Frozen executable path
         if not os.path.exists(gui_dir):
-            gui_dir = os.path.join(os.path.abspath(os.curdir), "GUI")
+            bundle_dir = sys._MEIPASS
+            gui_dir = os.path.abspath(os.path.join(bundle_dir, "GUI"))
+            print(gui_dir)
+
+        # Error if the GUI directory is not found
+        if not os.path.exists(gui_dir):
+            raise Exception("GUI directory not found")
 
         return gui_dir
 
@@ -93,7 +102,9 @@ class HorusServer:
         def index():
             # Check if the parcel server is running:
             if self.debug:
-                self.__checkParcel()
+                parcel = self.__checkParcel()
+                if parcel is not None:
+                    return parcel
 
             # Otherwise, load the index file from the local folder:
             return flask.render_template("index.html")

@@ -4,28 +4,28 @@ channels:
   - nostrumbiodiscovery
   - defaults
 dependencies:
-  - altgraph=0.17.3=pyhd8ed1ab_0
-  - bzip2=1.0.8=h3422bc3_4
-  - ca-certificates=2023.5.7=hf0a4a13_0
-  - cython=0.29.34=py39h23fbdae_0
-  - libcxx=16.0.3=h4653b0c_0
-  - libffi=3.4.2=h3422bc3_5
-  - libsqlite=3.41.2=hb31c410_1
-  - libzlib=1.2.13=h03a7124_4
-  - macholib=1.16.2=pyhd8ed1ab_0
-  - modulegraph=0.19.3=pyhd8ed1ab_0
-  - ncurses=6.3=h07bb92c_1
-  - openssl=3.1.0=h53f4e23_3
-  - pip=23.1.2=pyhd8ed1ab_0
-  - py2app=0.28.5=py39h02fc5c5_0
-  - python=3.9.16=hea58f1e_0_cpython
-  - python_abi=3.9=3_cp39
-  - readline=8.2=h92ec313_1
-  - setuptools=67.7.2=pyhd8ed1ab_0
-  - tk=8.6.12=he1e0b03_0
-  - tzdata=2023c=h71feb2d_0
-  - wheel=0.40.0=pyhd8ed1ab_0
-  - xz=5.2.6=h57fd34a_0
+  - altgraph=0.17.3
+  - bzip2=1.0.8
+  - ca-certificates=2023.5.7
+  - cython=0.29.34
+  - libcxx=16.0.3
+  - libffi=3.4.2
+  - libsqlite=3.41.2
+  - libzlib=1.2.13
+  - macholib=1.16.2
+  - modulegraph=0.19.3
+  - ncurses=6.3
+  - openssl=3.1.0
+  - pip=23.1.2
+  - py2app=0.28.5
+  - python=3.9.16
+  - python_abi=3.9
+  - readline=8.2
+  - setuptools=67.7.2
+  - tk=8.6.12
+  - tzdata=2023c
+  - wheel=0.40.0
+  - xz=5.2.6
   - pip:
       - blinker==1.6.2
       - bottle==0.12.25

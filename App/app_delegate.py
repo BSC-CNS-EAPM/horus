@@ -47,48 +47,79 @@ class SingletonMeta(type):
 
 class AppDelegate(metaclass=SingletonMeta):
     windows = []
+    """
+    All of the windows that are currently open
+    """
 
-    def __init__(self, debug=False):
-        self.server = HorusServer(debug=debug)
-        self.debug = debug
+    def __init__(self):
+        """
+        Initialize the AppDelegate. This will start the backend server and create the first window.
+        """
+        # Set the debug mode based on module compilation
+        self.debug: bool = not cython.compiled
+
+        # Prepare the server
+        self.server: HorusServer = HorusServer(debug=self.debug)
+
+        # Start the server in a new thread
         self.__startServer()
 
     def __startServer(self):
-        # Creates a secondary thread to run the server
+        """
+        Starts the backend Flask server. This server will handle python modules and scripts in our app.
+        """
         import threading
 
         self.server_thread = threading.Thread(target=self.server.run)
-        self.server_thread.setDaemon(True)
+        self.server_thread.daemon = True
         self.server_thread.start()
 
-    def newWindow(self, title, url=None):
+    def newWindow(self, title: str, url: str = None):
+        """
+        Creates a new window with the given title. If no url is given, the index page will be loaded.
+
+        :param title: The title of the window
+        :param url: The url to load
+        """
         if url is None:
             url = self.server.tokenURL
         window = webview.create_window("Horus", url=url)
         return window
 
     def applicationDidFinishLaunching(self):
+        """
+        This will be called when the app is launched. It will create the first window.
+        """
         self.__start(self.newWindow("Horus"))
 
     def applicationWillTerminate(self):
+        """
+        This will be called after the last window is closed.
+        """
         pass
 
     def __setShemsuToken(self, window):
+        """
+        This will be called when the window is ready. It will set the shemsu token to the window.
+        """
         window.evaluate_js(f"window.shemsu = '{webview.token}';")
 
     def __start(self, window):
+        """
+        This will start the window and set the shemsu token to the window object.
+        """
         webview.start(self.__setShemsuToken, window, debug=self.debug)
 
 
 def LaunchApp():
-    # Enable debug mode only when not compiled
-    debug = not cython.compiled
-
     # Prepare the app delegate
-    app = AppDelegate(debug)
+    app: AppDelegate = AppDelegate()
+    """
+    App Delegate is a singleton class that will handle the app
+    """
 
-    # Start the app
+    # Start the app. This is a blocking process.
     app.applicationDidFinishLaunching()
 
-    # Terminate the app
+    # Execute after the app is terminated
     app.applicationWillTerminate()
