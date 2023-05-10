@@ -17,7 +17,6 @@ dependencies:
   - ncurses=6.3
   - openssl=3.1.0
   - pip=23.1.2
-  - py2app=0.28.5
   - python=3.9.16
   - python_abi=3.9
   - readline=8.2
