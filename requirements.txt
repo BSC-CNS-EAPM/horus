@@ -1,5 +1,0 @@
-flask
-pip-chill
-pyinstaller
-pywebview
-requests
