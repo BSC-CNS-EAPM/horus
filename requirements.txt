@@ -1,6 +1,5 @@
 flask
 pip-chill
-py2app
 pyinstaller
 pywebview
-
+requests

@@ -11,10 +11,11 @@ ext_modules = [
 ]
 
 setup(
-    name="cython_example",
+    name="Horus",
     cmdclass={"build_ext": build_ext},
     ext_modules=ext_modules,
-    build_folder="build",
+    # Set the build dir to be build/cython
+    script_args=["build_ext", "-b", "build/cython"],
 )
 
 # Remove the generated C files

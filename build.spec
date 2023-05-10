@@ -1,22 +1,31 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-
 block_cipher = None
 
-files = [
-    ('App', 'App'),
-]
+# Include in the datas the .so files present in the build/cython directory
+import os
+
+datas = [("GUI", "GUI")]
+# for file in os.listdir("build/cython"):
+#     # Linux and macOS
+#     if file.endswith(".so"):
+#         datas.append((os.path.join("build/cython", file), "."))
+#     # Windows
+#     if file.endswith(".dll"):
+#         datas.append((os.path.join("build/cython", file), "."))
+
 
 a = Analysis(
-    ['main.py'],
+    ["Horus.py"],
     pathex=[],
     binaries=[],
-    datas=files,
+    datas=datas,
+    # Include the default libraries
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    # Exclude the uncompiled Server and App files
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
@@ -29,7 +38,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='Horus',
+    name="Horus",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -49,11 +58,11 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='Horus',
+    name="Horus",
 )
 app = BUNDLE(
     coll,
-    name='Horus.app',
-    icon='Resources/horus.icns',
-    bundle_identifier=None,
+    name="Horus.app",
+    icon="Resources/horus.icns",
+    bundle_identifier="com.nostrumbiodiscovery.com",
 )

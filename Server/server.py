@@ -57,16 +57,16 @@ class HorusServer:
 
     def __guiDir(self):
         """
-        Checks for the Gui directory in the following order:
+        Checks for the GUI directory in the following order:
         1. The parent directory of the current file (development)
         2. The parent directory of the current file (frozen executable pyinstaller)
         3. The current directory (frozen executable py2app)
         """
-        gui_dir = os.path.join(os.path.dirname(__file__), "..", "Gui")
+        gui_dir = os.path.join(os.path.dirname(__file__), "..", "GUI")
         if not os.path.exists(gui_dir):  # frozen executable path
-            gui_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Gui")
+            gui_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "GUI")
         if not os.path.exists(gui_dir):
-            gui_dir = os.path.join(os.path.abspath(os.curdir), "Gui")
+            gui_dir = os.path.join(os.path.abspath(os.curdir), "GUI")
 
         return gui_dir
 
