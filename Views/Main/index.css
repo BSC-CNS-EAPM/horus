@@ -1,3 +1,19 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Define color variables */
+@layer base {
+  :root {
+    --tech-blue: #0d47a1;
+    --tech-red: #b71c1c;
+    --tech-green: #1b5e20;
+    --tech-yellow: #f57f17;
+    --tech-orange: #e65100;
+    --tech-purple: #4a148c;
+    --tech-pink: #880e4f;
+    --tech-gray: #616161;
+    --tech-black: #212121;
+    --tech-white: #ffffff;
+  }
+}

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Molstar } from "../Molstar/molstar";
+import NBDButton from "../Components/NBDButton";
 
 // Define the window object
 declare global {
@@ -8,17 +9,28 @@ declare global {
     }
 }
 
-function getData() {
+async function getData() {
     // Fetch the data from /api/data
-    return fetch("/api/data", {
+    const result = await fetch("/api/data", {
         method: "GET",
         headers: {
             "Content-Type": "application/json",
             shemsu: window.shemsu
         }
     })
-        .then((response) => response.json())
-        .then((data) => data.data);
+
+    console.log(result)
+
+    // Parse the result as JSON
+    const data = await result.json();
+
+    if (data.error) {
+        return "Error"
+    }
+
+    // Return the data
+    return data;
+
 }
 
 export function App() {
@@ -51,5 +63,10 @@ function FetchButton({ setShowData }) {
         }
     };
 
-    return <button onClick={handleClick}>Fetch Data</button>;
+    const props = {
+        text: "Fetch data",
+        action: handleClick
+    };
+    // Create a nbd button with the text "Fetch data" and the action handleClick
+    return <NBDButton {...props} />;
 }
