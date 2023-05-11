@@ -2,7 +2,6 @@ name: horus_develop
 channels:
   - conda-forge
   - nostrumbiodiscovery
-  - defaults
 dependencies:
   - pip=23.1.2
   - python=3.9.16
@@ -13,5 +12,6 @@ dependencies:
   - pip:
       - pywebview==4.1
       - pyobjc==9.1.1; sys_platform == 'darwin'
+      - pygobject==3.44.1; sys_platform == 'linux'
 
 

@@ -1,19 +1,8 @@
-# -*- mode: python ; coding: utf-8 -*-
-
-block_cipher = None
-
-# Include in the datas the .so files present in the build/cython directory
 import os
 
-datas = [("GUI", "GUI")]
-for file in os.listdir("build/cython"):
-    # Linux and macOS
-    if file.endswith(".so"):
-        datas.append((os.path.join("build/cython", file), "."))
-    # Windows
-    if file.endswith(".dll"):
-        datas.append((os.path.join("build/cython", file), "."))
+cython_folder = os.path.join("build", "cython")
 
+datas = [("GUI", "GUI"), (cython_folder, ".")]
 
 a = Analysis(
     ["Horus.py"],
@@ -32,7 +21,7 @@ a = Analysis(
     cipher=block_cipher,
     noarchive=False,
 )
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+pyz = PYZ(a.pure, a.zipped_data, cipher=None)
 
 exe = EXE(
     pyz,
