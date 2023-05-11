@@ -7,13 +7,23 @@ Horus is a cross-platform graphical user interface of the NBDSuite, a collection
 
 # Installation
 ## Linux
-1. Download the latest release from the [releases page]()
+1. Download the latest Linux release from the [releases page]()
 2. Unzip the application on your usual applications folder
 3. Run the application by executing the `Horus` file:
 
     ```
     ./Horus
     ```
+
+## macOS
+1. Download the latest macOS release from the [releases page]()
+2. Open the .dmg file and drag the application to your usual applications folder
+3. Run the application by double clicking on the `Horus` icon in your applications folder
+
+## Windows
+1. Download the latest Windows release from the [releases page]()
+2. Run the installer and follow the instructions
+3. Run the application by double clicking on the `Horus` icon on your desktop
         
 
 # Development dependencies
