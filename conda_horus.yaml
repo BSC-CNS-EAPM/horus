@@ -9,6 +9,7 @@ dependencies:
   - cython=0.29.34
   - pyinstaller==5.10.1
   - flask==2.3.2
+  - requests==2.29.0
   - pip:
       - pywebview==4.1
       - pyobjc==9.1.1; sys_platform == 'darwin'
