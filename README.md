@@ -7,35 +7,47 @@ Horus is a cross-platform graphical user interface of the NBDSuite, a collection
 2. Unzip the application on your usual applications folder
 3. Run the application by executing the `Horus` file:
 
-    `./Horus`
+    ```
+    ./Horus
+    ```
         
 
 # Development dependencies
 ## Linux
 1. Install required libraries for GTK:
 
-    `sudo apt install libgirepository1.0-dev gcc libgtk-3-dev`
+    ```
+    sudo apt install libgirepository1.0-dev gcc libgtk-3-dev
+    ```
 
 2. Install Miniconda
 
-    `wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && bash ~/miniconda.sh`
+    ```
+    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && bash ~/miniconda.sh
+    ```
 
 3. Install Nodejs
 
-    `curl -sL https://deb.nodesource.com/setup_18.x -o /tmp/nodesource_setup.sh`
+    ```
+    curl -sL https://deb.nodesource.com/setup_18.x -o /tmp/nodesource_setup.sh
 
-    `sudo bash /tmp/nodesource_setup.sh`
+    sudo bash /tmp/nodesource_setup.sh
 
-    `sudo apt install nodejs@18`
+    sudo apt install nodejs@18
+    ```
 
 ## macOS
 1. Install Miniconda
 
-    `brew install --cask miniconda`
+    ```
+    brew install --cask miniconda
+    ```
 
 2. Install Nodejs
 
-    `brew install nodejs`
+    ```
+    brew install nodejs
+    ```
  
 ## Windows
 1. Install Visual Studio Build Tools (C++ Desktop Development)
@@ -54,14 +66,18 @@ Horus is a cross-platform graphical user interface of the NBDSuite, a collection
 # Development environment
 Once all the dependencies are installed, you can create a virtual environment with the following command:
 
-`npm run requirements`
+```
+npm run requirements
+```
 
 This will install all the required node packages and will create a new codna environment named 'horus' with all the needed python packages.
 
 # Run in development
 To run the application in development mode, make sure you are inside the `horus` environment and run the following command:
 
-`python Horus.py`
+```
+python Horus.py
+```
 
 # Building
 
@@ -71,10 +87,14 @@ To run the application in development mode, make sure you are inside the `horus`
 
 3. Activate the `horus` environment
 
-    `conda activate horus`
+    ```
+    conda activate horus
+    ```
 
 4. Run the build command
 
-    `npm run build`
+    ```
+    npm run build
+    ```
 
 The compiled application will be located in the `dist` folder.
