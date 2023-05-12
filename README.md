@@ -78,6 +78,7 @@ Horus is a cross-platform graphical user interface of the NBDSuite, a collection
     https://nodejs.org/en/download
 
 # Development environment
+## Regular dependencies
 Once all the dependencies are installed, you can create a virtual environment with the following command:
 
 ```
@@ -85,6 +86,13 @@ npm run requirements
 ```
 
 This will install all the required node packages and will create a new codna environment named 'horus' with all the needed python packages.
+
+## NBDSuite
+You will need to install NBDSuite manually. You can download the latest release from the [NBDSuite releases page](https://github.com/NBDsoftware/NBDSuite/releases). Once downloaded, unzip the file and run the following command:
+
+```
+python -m pip install nbdsuite-<version>.tar.gz
+```
 
 # Run in development
 To run the application in development mode, make sure you are inside the `horus` environment and run the following command:
@@ -105,7 +113,7 @@ python Horus.py
     conda activate horus
     ```
 
-4. Run the build command
+4. Make sure you are on the root folder of the project and run the following command:
 
     ```
     npm run build

@@ -7,8 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "buildparcel": "parcel build Views/**/*.html --dist-dir GUI",
     "devparcel": "parcel Views/Main/index.html",
-    "build": "npm run buildparcel && python compile.py build_ext && pyinstaller build.spec --noconfirm",
-    "requirements": "npm install && conda env create -f conda_horus.yaml -n horus",
+    "build": "npm run buildparcel && python Devtools/Build/compile.py build_ext && pyinstaller Devtools/Build/build.spec --noconfirm",
+    "requirements": "npm install && conda env create -f Devtools/Environment/conda_horus.yaml -n horus",
     "clean": "rm -rf dist build GUI"
   },
   "author": "Nostrum Biodiscovery",

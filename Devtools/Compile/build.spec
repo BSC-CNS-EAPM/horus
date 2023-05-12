@@ -1,11 +1,29 @@
 import os
 
-cython_folder = os.path.join("build", "cython")
+currentDir = os.getcwd()
 
-datas = [("GUI", "GUI"), (cython_folder, ".")]
+# Main App script
+entry_point = [os.path.join(currentDir, "Horus.py")]
+
+# Exclude the Server and App folders
+server_folder = os.path.join(currentDir, "Server")
+app_folder = os.path.join(currentDir, "App")
+
+exclude_folders =[
+    server_folder,
+    app_folder,
+]
+
+# Include the Cython folder
+cython_folder = os.path.join(currentDir, "build", "cython")
+
+# Include the GUI folder
+gui_folder = os.path.join(currentDir, "GUI")
+
+datas = [(gui_folder, "GUI"), (cython_folder, ".")]
 
 a = Analysis(
-    ["Horus.py"],
+    entry_point,
     pathex=[],
     binaries=[],
     datas=datas,
@@ -15,10 +33,10 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=[],
     # Exclude the uncompiled Server and App files
-    excludes=["Server", "App"],
+    excludes=exclude_folders,
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
-    cipher=block_cipher,
+    cipher=None,
     noarchive=False,
 )
 pyz = PYZ(a.pure, a.zipped_data, cipher=None)
@@ -50,9 +68,12 @@ coll = COLLECT(
     upx_exclude=[],
     name="Horus",
 )
+
+macos_icon = os.path.join(currentDir, "Resources", "horus.icns")
+
 app = BUNDLE(
     coll,
     name="Horus.app",
-    icon="Resources/horus.icns",
+    icon=macos_icon,
     bundle_identifier="com.nostrumbiodiscovery.com",
 )

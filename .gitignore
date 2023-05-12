@@ -137,9 +137,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Frozen distributions
+# Frozen distribution folders
 dist/
-Build/
+build/
 GUI/
 
 # macOS files
