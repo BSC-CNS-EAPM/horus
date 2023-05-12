@@ -47,7 +47,7 @@ Horus is a cross-platform graphical user interface of the NBDSuite, a collection
 
     sudo bash /tmp/nodesource_setup.sh
 
-    sudo apt install nodejs@18
+    sudo apt install nodejs
     ```
 
 ## macOS

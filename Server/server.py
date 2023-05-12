@@ -1,8 +1,6 @@
 # Tools
-import json
 import os
 import sys
-from functools import wraps
 import logging
 
 # Flask
@@ -15,14 +13,18 @@ import webview
 # Import random to generate a random port number
 import random
 
+# Define version
+__version__ = "0.0.1"
 
 class HorusServer:
+
+    parcelURL = "http://127.0.0.1:1234"
+
     def __init__(self, debug=False):
         self.debug = debug
-        self.host = "localhost"
+        self.host = "127.0.0.1"
         self.port = self.__getFreePort()
         self.baseURL = f"http://{self.host}:{self.port}"
-        self.tokenURL = f"{self.baseURL}/?shemsu={webview.token}"
         self.guiDir = self.__guiDir()
         self.server = self.__setupServer()
         self.__routes()
@@ -49,17 +51,15 @@ class HorusServer:
 
     def __checkParcel(self):
         # If the parcel server is running, load the index file from there:
-        parcelURL = "http://localhost:1234"
-
         import requests
 
         try:
-            parcel = requests.get(parcelURL)
+            parcel = requests.get(self.parcelURL)
         except requests.exceptions.ConnectionError:
-            return None
+            return False
         if parcel.status_code == 200:
             print("\n<========Using parcel development server...========>\n")
-            return flask.redirect(parcelURL)
+            return True
 
     def __guiDir(self):
         """
@@ -69,72 +69,85 @@ class HorusServer:
         3. The current directory (frozen executable py2app)
         """
 
+        # Check the parcel server
+        if self.debug and self.__checkParcel():
+            return self.parcelURL
+
         # Development path
         gui_dir = os.path.join(os.path.dirname(__file__), "..", "GUI")
 
         # Frozen executable path
         if not os.path.exists(gui_dir):
-            bundle_dir = sys._MEIPASS
-            gui_dir = os.path.abspath(os.path.join(bundle_dir, "GUI"))
-            print(gui_dir)
-
-        # Error if the GUI directory is not found
-        if not os.path.exists(gui_dir):
-            raise Exception("GUI directory not found")
+            try: 
+                bundle_dir = sys._MEIPASS
+                gui_dir = os.path.abspath(os.path.join(bundle_dir, "GUI"))
+            except AttributeError: 
+                raise Exception("App not frozen and GUI directory not found. Did you forget to run npm run buildparcel?")
 
         return gui_dir
 
     def __setupServer(self):
         """
-        Creates the Flask server instance. This will serve the GUI files and handle the API requests. Also disabled Flask logging when not in debug mode.
+        Creates the Flask server instance. This will serve the GUI files and handle the 
+        API requests. Also disables Flask logging when not in debug mode.
         """
         # Disable werkzeug logging when not in debug mode
         logging.getLogger("werkzeug").disabled = not self.debug
 
         # Setup the server
-        return flask.Flask(
+        server = flask.Flask(
             __name__,
             static_folder=self.guiDir,
             template_folder=self.guiDir,
             static_url_path="/",
         )
 
+        if self.debug:
+            print("\n<========Enabling CORS...========>\n")
+            from flask_cors import CORS
+            CORS(server)
+
+        return server
+
     def __routes(self):
         # Setup the error page
         @self.server.errorhandler(404)
-        def page_not_found(e):
+        def pageNotFound(e):
             return flask.redirect("/error")
         
         @self.server.route("/error")
         def error():
             return flask.render_template("Error/error.html")
 
-        @self.server.route("/api/data", methods=["GET"])
-        def test_token():
-            print("Seding data")
-            return flask.jsonify({"data": "Hello from Flask!"})
+        @self.server.route("/api/version", methods=["GET"])
+        def sendVersion():
+            import nbdsuite as nbds
+            versionInfo = {
+                "nbdsuite": nbds.__version__,
+                "horus": __version__,
+            }
+            return flask.jsonify(versionInfo)
 
         @self.server.route("/")
         def index():
             # Check if the parcel server is running:
-            if self.debug:
-                parcel = self.__checkParcel()
-                if parcel is not None:
-                    return parcel
-
+            if self.debug and self.__checkParcel():
+                return flask.redirect(self.parcelURL)
+            
             # Otherwise, load the index file from the local folder:
             return flask.render_template("Main/index.html")
         
-        if self.debug:
+        if not self.debug:
             @self.server.before_request
-            def before_request():
+            def beforeRequest():
                 # Check the token only for the api routes
                 if request.path.startswith("/api") and \
-                    (request.args.get("shemsu") or request.headers.get("shemsu")) != webview.token:
+                    (request.args.get("shemsu") or \
+                     request.headers.get("shemsu")) != webview.token:
                     return flask.redirect("/error")
 
         @self.server.after_request
-        def add_header(response):
+        def addHeader(response):
             # Disable caching
             response.headers["Cache-Control"] = "no-store"
             return response

@@ -1,72 +1,42 @@
-import React, { useState } from "react";
+import React, { Children, useState } from "react";
 import { Molstar } from "../Molstar/molstar";
 import NBDButton from "../Components/NBDButton";
-
-// Define the window object
-declare global {
-    interface Window {
-        shemsu: string;
-    }
-}
-
-async function getData() {
-    // Fetch the data from /api/data
-    const result = await fetch("/api/data", {
-        method: "GET",
-        headers: {
-            "Content-Type": "application/json",
-            shemsu: window.shemsu
-        }
-    })
-
-    console.log(result)
-
-    // Parse the result as JSON
-    const data = await result.json();
-
-    if (data.error) {
-        return "Error"
-    }
-
-    // Return the data
-    return data;
-
-}
+import HorusModal from "../Components/Modal";
+import getVersion from "./Utils/utils";
 
 export function App() {
-    const [showData, setShowData] = useState("No data");
+
+    // Modal state
+    const [showModal, setShowModal] = useState(false);
+    const [modalBody, setModalBody] = useState(<div></div>);
+
+
+    const handleOpenModal = () => {
+        getVersion().then((version) => {
+            const versionsChildren = (
+                <div>
+                    <p key="version">NBDSuite: {version.nbdsuite}</p>
+                    <p key="horus">Horus: {version.horus}</p>
+                </div>);
+            setModalBody(versionsChildren);
+        });
+        setShowModal(true);
+    }
+    const handleCloseModal = () => setShowModal(false);
+
     return (
         <div className="App">
-            <FetchButton setShowData={setShowData} />
-            <DataDisplay data={showData} />
-            {/* <Molstar /> */}
+            <NBDButton text="About Horus" action={handleOpenModal} />
+            <HorusModal show={showModal} onHide={handleCloseModal} title="About Horus" body={modalBody} />
         </div>
     );
 }
 
-// Create a text component to display the fetched data
-function DataDisplay({ data }) {
+function About() {
     return (
         <div>
-            <p>Here is the data: {data}</p>
+            <h1>About</h1>
+            <p>This is the about page</p>
         </div>
     );
-}
-
-function FetchButton({ setShowData }) {
-    const handleClick = async () => {
-        try {
-            const data = await getData();
-            setShowData(data);
-        } catch (error) {
-            setShowData(`Error fetching data: ${error}`);
-        }
-    };
-
-    const props = {
-        text: "Fetch data",
-        action: handleClick
-    };
-    // Create a nbd button with the text "Fetch data" and the action handleClick
-    return <NBDButton {...props} />;
 }

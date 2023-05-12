@@ -7,7 +7,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "buildparcel": "parcel build Views/**/*.html --dist-dir GUI",
     "devparcel": "parcel Views/Main/index.html",
-    "build": "npm run buildparcel && python Devtools/Build/compile.py build_ext && pyinstaller Devtools/Build/build.spec --noconfirm",
+    "build": "npm run buildparcel && python Devtools/Compile/compile.py build_ext && pyinstaller Devtools/Compile/build.spec --noconfirm",
     "requirements": "npm install && conda env create -f Devtools/Environment/conda_horus.yaml -n horus",
     "clean": "rm -rf dist build GUI"
   },
@@ -20,8 +20,10 @@
     "drug-discovery"
   ],
   "dependencies": {
+    "bootstrap": "^5.2.3",
     "molstar": "^3.34.0",
     "react": "^18.2.0",
+    "react-bootstrap": "^2.7.4",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {

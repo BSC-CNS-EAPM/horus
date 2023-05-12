@@ -6,12 +6,9 @@ currentDir = os.getcwd()
 entry_point = [os.path.join(currentDir, "Horus.py")]
 
 # Exclude the Server and App folders
-server_folder = os.path.join(currentDir, "Server")
-app_folder = os.path.join(currentDir, "App")
-
 exclude_folders =[
-    server_folder,
-    app_folder,
+    "App",
+    "Server"
 ]
 
 # Include the Cython folder
@@ -22,13 +19,25 @@ gui_folder = os.path.join(currentDir, "GUI")
 
 datas = [(gui_folder, "GUI"), (cython_folder, ".")]
 
+# Required modules
+imports = ["webview", "flask", "requests", "nbdsuite"]
+
+# Check that all the modules are installed in the environment
+try:
+    for module in imports:
+        __import__(module)
+except ImportError as e:
+    print(f"Error importing module {module}: {e}. Cannot compile.")
+    exit(1)
+
+
 a = Analysis(
     entry_point,
     pathex=[],
     binaries=[],
     datas=datas,
     # Include the default libraries
-    hiddenimports=["webview", "flask", "requests"],
+    hiddenimports=imports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

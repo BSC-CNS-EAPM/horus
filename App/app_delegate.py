@@ -53,7 +53,8 @@ class AppDelegate(metaclass=SingletonMeta):
 
     def __init__(self):
         """
-        Initialize the AppDelegate. This will start the backend server and create the first window.
+        Initialize the AppDelegate. 
+        This will start the backend server and create the first window.
         """
         # Set the debug mode based on module compilation
         self.debug: bool = not cython.compiled
@@ -66,7 +67,8 @@ class AppDelegate(metaclass=SingletonMeta):
 
     def __startServer(self):
         """
-        Starts the backend Flask server. This server will handle python modules and scripts in our app.
+        Starts the backend Flask server. 
+        This server will handle python modules and scripts in our app.
         """
         import threading
 
@@ -76,13 +78,14 @@ class AppDelegate(metaclass=SingletonMeta):
 
     def newWindow(self, title: str, url: str = None):
         """
-        Creates a new window with the given title. If no url is given, the index page will be loaded.
+        Creates a new window with the given title. 
+        If no url is given, the index page will be loaded.
 
         :param title: The title of the window
         :param url: The url to load
         """
         if url is None:
-            url = self.server.tokenURL
+            url = self.server.baseURL
         window = webview.create_window("Horus", url=url)
         return window
 
@@ -100,7 +103,8 @@ class AppDelegate(metaclass=SingletonMeta):
 
     def __setShemsuToken(self, window):
         """
-        This will be called when the window is ready. It will set the shemsu token to the window.
+        This will be called when the window is ready.
+        It will set the shemsu token to the window.
         """
         window.evaluate_js(f"window.shemsu = '{webview.token}';")
 
@@ -110,8 +114,21 @@ class AppDelegate(metaclass=SingletonMeta):
         """
         webview.start(self.__setShemsuToken, window, debug=self.debug)
 
+    @staticmethod
+    def tokenize(url: str):
+        """
+        Adds to an url the shemsu as a query parameter.
+        """
+        return f"{url}?shemsu={webview.token}"
+
 
 def LaunchApp():
+
+    # Define a global variable "isDesktop" that will be used to check if the app is 
+    # running on desktop mode
+    global isDesktop
+    isDesktop = True
+
     # Prepare the app delegate
     app: AppDelegate = AppDelegate()
     """
