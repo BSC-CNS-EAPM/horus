@@ -127,6 +127,19 @@ class HorusServer:
                 "horus": __version__,
             }
             return flask.jsonify(versionInfo)
+        
+        @self.server.route("/api/nbdsuite/forcefields", methods=["GET"])
+        def sendForcefields():
+            from nbdsuite.utils.toolkits import PeleffyToolkit
+            peleffy_tk = PeleffyToolkit()
+            ff_list = peleffy_tk.get_available_forcefields()
+            return flask.jsonify(ff_list)
+        
+        @self.server.route("/plugins", methods=["GET"])
+        def sendPlugins():
+            from App import AppDelegate
+            plugins = AppDelegate.getPlugins()
+            return flask.jsonify(plugins)
 
         @self.server.route("/")
         def index():

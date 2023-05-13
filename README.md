@@ -21,9 +21,7 @@ Horus is a cross-platform graphical user interface of the NBDSuite, a collection
 3. Run the application by double clicking on the `Horus` icon in your applications folder
 
 ## Windows
-1. Download the latest Windows release from the [releases page]()
-2. Run the installer and follow the instructions
-3. Run the application by double clicking on the `Horus` icon on your desktop
+Unfortunately, a Windows version cannot be provided at the moment. However, you can run the web version of the application by following the instructions below.
         
 
 # Development dependencies
@@ -62,20 +60,6 @@ Horus is a cross-platform graphical user interface of the NBDSuite, a collection
     ```
     brew install nodejs
     ```
- 
-## Windows
-1. Install Visual Studio Build Tools (C++ Desktop Development)
-
-    https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=BuildTools&rel=16
-
-2. Install Miniconda
-
-    https://docs.conda.io/projects/conda/en/stable/user-guide/install/windows.html
-
-3. Install Nodejs
-
-    Get the 18.x.x LTS version from:
-    https://nodejs.org/en/download
 
 # Development environment
 ## Regular dependencies
@@ -93,6 +77,43 @@ You will need to install NBDSuite manually. You can download the latest release 
 ```
 python -m pip install nbdsuite-<version>.tar.gz
 ```
+
+## Peleffy
+You will need to install Peleffy from source into the environment if you have an Apple Silicon Mac. To do so, follow these steps:
+
+1. Clone the peleffy repository: 
+
+    ```
+    git clone https://github.com/martimunicoy/peleffy/tree/master
+    ```
+2. Checkout the latest tag
+    
+    ```
+    git checkout tags/v1.4.4
+    ```
+
+3. Install peleffy
+    
+    ```
+    python -m pip install .
+    ```
+
+Otherwise you can follow the instructions here:
+
+https://martimunicoy.github.io/peleffy/installation.html
+
+## AmberTools
+If you have an Apple Silicon Mac, you will need to install AmberTools from source into the environment. To do so, follow these steps:
+
+TODO
+
+Otherwise you can install directly from conda:
+    
+```
+conda install -c conda-forge ambertools
+```
+
+
 
 # Run in development
 To run the application in development mode, make sure you are inside the `horus` environment and run the following command:

@@ -2,7 +2,7 @@ import React, { Children, useState } from "react";
 import { Molstar } from "../Molstar/molstar";
 import NBDButton from "../Components/NBDButton";
 import HorusModal from "../Components/Modal";
-import getVersion from "./Utils/utils";
+import { getPlugins, getVersion, getForceFields } from "./Utils/utils";
 
 export function App() {
 
@@ -11,7 +11,7 @@ export function App() {
     const [modalBody, setModalBody] = useState(<div></div>);
 
 
-    const handleOpenModal = () => {
+    const openVersionModal = () => {
         getVersion().then((version) => {
             const versionsChildren = (
                 <div>
@@ -24,9 +24,33 @@ export function App() {
     }
     const handleCloseModal = () => setShowModal(false);
 
+    const openPluginsModal = () => {
+        getPlugins().then((plugins) => {
+            const versionsChildren = (
+                <div>
+                    <p key="version">Installed plugins: {plugins}</p>
+                </div>);
+            setModalBody(versionsChildren);
+        });
+        setShowModal(true);
+    }
+
+    const openForceFieldsModal = () => {
+        getForceFields().then((ff) => {
+            const versionsChildren = (
+                <div>
+                    <p key="version">Installed force fields: {ff}</p>
+                </div>);
+            setModalBody(versionsChildren);
+        });
+        setShowModal(true);
+    }
+
     return (
         <div className="App">
-            <NBDButton text="About Horus" action={handleOpenModal} />
+            <NBDButton text="Force fields" action={openForceFieldsModal} />
+            <NBDButton text="Plugins" action={openPluginsModal} />
+            <NBDButton text="About Horus" action={openVersionModal} />
             <HorusModal show={showModal} onHide={handleCloseModal} title="About Horus" body={modalBody} />
         </div>
     );

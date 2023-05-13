@@ -150,3 +150,6 @@ GUI/
 
 # Package lock
 package-lock.json
+
+# Plugins development folder
+Plugins/

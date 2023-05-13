@@ -1,4 +1,5 @@
 import sys
+import os
 import webview
 from threading import Lock
 
@@ -59,11 +60,44 @@ class AppDelegate(metaclass=SingletonMeta):
         # Set the debug mode based on module compilation
         self.debug: bool = not cython.compiled
 
+        # Check if the app is frozen
+        self.frozen = self.__isFrozen()
+
+        # Create the plugins folder
+        self.__createPluginsFolder()
+
         # Prepare the server
         self.server: HorusServer = HorusServer(debug=self.debug)
 
         # Start the server in a new thread
         self.__startServer()
+
+    def __isFrozen(self):
+        """
+        Returns wheter the app is frozen or not
+        """
+        try: 
+            sys._MEIPASS
+            return True
+        except AttributeError: 
+            return False
+
+    def __createPluginsFolder(self):
+        """
+        Creates the plugins folder
+        """
+        # Get the plugins folder path
+        if self.frozen:
+            pluginsFolder = os.path.join(sys._MEIPASS, "Plugins")
+        else:
+            pluginsFolder = os.path.join("Plugins")
+
+        # Create the plugins folder
+        if not os.path.exists(pluginsFolder):
+            os.mkdir(pluginsFolder)
+
+        # Set the plugins folder
+        self.pluginsFolder = os.path.abspath(pluginsFolder)
 
     def __startServer(self):
         """
@@ -120,6 +154,30 @@ class AppDelegate(metaclass=SingletonMeta):
         Adds to an url the shemsu as a query parameter.
         """
         return f"{url}?shemsu={webview.token}"
+    
+    @staticmethod
+    def installPlugin(pluginPath: str):
+        """
+        Installs a plugin to the plugins dir
+        """
+        import shutil
+        shutil.copy(pluginPath, AppDelegate().pluginsFolder)
+
+    @staticmethod
+    def uninstallPlugin(pluginName: str):
+        """
+        Uninstalls a plugin from the plugins dir
+        """
+        import os
+        os.remove(f"{AppDelegate().pluginsFolder}/{pluginName}")
+
+    @staticmethod
+    def getPlugins():
+        """
+        Returns a list of all the plugins in the plugins dir
+        """
+        import os
+        return os.listdir(AppDelegate().pluginsFolder)
 
 
 def LaunchApp():
@@ -130,7 +188,8 @@ def LaunchApp():
     isDesktop = True
 
     # Prepare the app delegate
-    app: AppDelegate = AppDelegate()
+    global app
+    app = AppDelegate()
     """
     App Delegate is a singleton class that will handle the app
     """

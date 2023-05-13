@@ -30,7 +30,22 @@ async function getVersion() {
         throw new Error(`Error fetching data: ${result.status}`);
     }
 
-    console.log(result)
+    // Parse the result as JSON
+    const data = await result.json();
+
+    // Return the data
+    return data;
+
+}
+
+async function getPlugins() {
+    // Fetch the data from /api/data
+    const result = await horusGet("/plugins", "GET", {});
+
+    // Check any error status code
+    if (!result.ok) {
+        throw new Error(`Error fetching data: ${result.status}`);
+    }
 
     // Parse the result as JSON
     const data = await result.json();
@@ -40,4 +55,21 @@ async function getVersion() {
 
 }
 
-export default getVersion;
+async function getForceFields() {
+    // Fetch the data from /api/data
+    const result = await horusGet("/api/nbdsuite/forcefields", "GET", {});
+
+    // Check any error status code
+    if (!result.ok) {
+        throw new Error(`Error fetching data: ${result.status}`);
+    }
+
+    // Parse the result as JSON
+    const data = await result.json();
+
+    // Return the data
+    return data;
+
+}
+
+export { getVersion, getPlugins, getForceFields };
