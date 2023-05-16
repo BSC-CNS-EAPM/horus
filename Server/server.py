@@ -64,12 +64,11 @@ class HorusServer:
         import requests
 
         try:
-            parcel = requests.get(self.parcelURL)
+            requests.get(self.parcelURL)
+            print("\n<=======Using parcel development server=======>\n")
+            return True
         except requests.exceptions.ConnectionError:
             return False
-        if parcel.status_code == 200:
-            print("\n<========Using parcel development server...========>\n")
-            return True
 
     def __guiDir(self):
         """
@@ -78,6 +77,10 @@ class HorusServer:
         2. The parent directory of the current file (frozen executable pyinstaller)
         3. The current directory (frozen executable py2app)
         """
+
+        # Check if the parcel server is running
+        if self.__checkParcel():
+            return os.path.join(os.path.dirname(__file__), "..", "dist")
 
         # Development path
         gui_dir = os.path.join(os.path.dirname(__file__), "..", "GUI")
@@ -111,7 +114,7 @@ class HorusServer:
         )
 
         if self.debug:
-            print("\n<========Enabling CORS...========>\n")
+            print("\n<========Enabling CORS========>\n")
             from flask_cors import CORS
 
             CORS(server)
@@ -192,11 +195,6 @@ class HorusServer:
 
         @self.server.route("/")
         def index():
-            # Check if the parcel server is running:
-            # if self.debug and self.__checkParcel():
-            #     return flask.redirect(self.parcelURL)
-
-            # Otherwise, load the index file from the local folder:
             return flask.render_template("Main/index.html")
 
         if not self.debug:
