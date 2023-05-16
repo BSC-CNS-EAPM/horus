@@ -147,18 +147,58 @@ class AppDelegate(metaclass=SingletonMeta):
         """
         pass
 
-    def __setShemsuToken(self, window):
-        """
-        This will be called when the window is ready.
-        It will set the shemsu token to the window.
-        """
-        window.evaluate_js(f"window.shemsu = '{webview.token}';")
+    def __menus(self):
+        import webview.menu as wm
+
+        def newHorus():
+            self.openWindow("Horus")
+
+        def openPlugins():
+            self.openWindow("Plugins", url=self.server.baseURL + "/desktop/plugins")
+
+        fileMenu = wm.Menu(
+            "File",
+            [
+                wm.MenuAction("New...", None),
+                wm.MenuAction("Open...", None),
+                wm.MenuAction("Save project...", None),
+                wm.MenuSeparator(),
+                wm.MenuAction(
+                    "New Window",
+                    newHorus,
+                ),
+            ],
+        )
+
+        pluginsMenu = wm.Menu(
+            "Plugins",
+            [
+                wm.MenuAction(
+                    "Manage...",
+                    openPlugins,
+                )
+            ],
+        )
+
+        def openSSHConfig():
+            self.openWindow(
+                "SSH Config", url=self.server.baseURL + "/desktop/configureSSH"
+            )
+
+        settingsMenu = wm.Menu(
+            "Settings",
+            [
+                wm.MenuAction("SSH configuration", openSSHConfig),
+            ],
+        )
+
+        return [fileMenu, pluginsMenu, settingsMenu]
 
     def __start(self, window):
         """
         This will start the window and set the shemsu token to the window object.
         """
-        webview.start(self.__setShemsuToken, window, debug=self.debug)
+        webview.start(debug=self.debug, menu=self.__menus())
 
     @staticmethod
     def tokenize(url: str):

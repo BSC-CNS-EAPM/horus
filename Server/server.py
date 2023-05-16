@@ -162,11 +162,8 @@ class HorusServer:
 
         @self.server.route("/desktop/plugins", methods=["GET"])
         @desktopOnly
-        def sendPlugins():
-            from App import AppDelegate
-
-            plugins = AppDelegate.getPlugins()
-            return flask.jsonify(plugins)
+        def pluginsManager():
+            return flask.render_template("PluginsManager/index.html")
 
         @self.server.route("/desktop/openWindow", methods=["POST"])
         @desktopOnly

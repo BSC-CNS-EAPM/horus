@@ -1,10 +1,29 @@
 
+// Define the shemsu token
+declare global {
+    interface Window {
+        pywebview: {
+            token: string;
+        }
+    }
+}
+
+// Function to get the pywebview token
+function getShemsuToken() {
+    try {
+        return window.pywebview.token;
+    }
+    catch (error) {
+        return "";
+    }
+}
+
 // Tokenize the urls with the shemsu token
 async function horusGet(url, headers) {
     return fetch(url, {
         method: "GET",
         headers: {
-            shemsu: window.shemsu,
+            shemsu: getShemsuToken(),
             ...headers
         }
     })
@@ -20,7 +39,7 @@ async function horusPost(url, headers, body) {
     return await fetch(url, {
         method: "POST",
         headers: {
-            shemsu: window.shemsu,
+            shemsu: getShemsuToken(),
             ...headers
         },
         body: body

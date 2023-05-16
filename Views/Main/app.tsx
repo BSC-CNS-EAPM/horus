@@ -24,17 +24,6 @@ export function App() {
     }
     const handleCloseModal = () => setShowModal(false);
 
-    const openPluginsModal = () => {
-        getPlugins().then((plugins) => {
-            const versionsChildren = (
-                <div>
-                    <p key="version">Installed plugins: {plugins}</p>
-                </div>);
-            setModalBody(versionsChildren);
-        });
-        setShowModal(true);
-    }
-
     const openForceFieldsModal = () => {
         getForceFields().then((ff) => {
             const versionsChildren = (
@@ -46,17 +35,11 @@ export function App() {
         setShowModal(true);
     }
 
-    const openSSHWindow = () => {
-        openWindow("Configure SSH", "/desktop/configureSSH");
-    }
-
 
     return (
         <div className="App">
             <NBDButton text="Force fields" action={openForceFieldsModal} />
-            <NBDButton text="Plugins" action={openPluginsModal} />
             <NBDButton text="About Horus" action={openVersionModal} />
-            <NBDButton text="Configure SSH" action={openSSHWindow} />
             <HorusModal show={showModal} onHide={handleCloseModal} title="About Horus" body={modalBody} />
             <Molstar />
         </div>
