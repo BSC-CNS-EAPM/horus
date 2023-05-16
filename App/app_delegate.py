@@ -60,55 +60,14 @@ class AppDelegate(metaclass=SingletonMeta):
         # Set the debug mode based on module compilation
         self.debug: bool = not cython.compiled
 
-        # Check if the app is frozen
-        self.frozen = self.__isFrozen()
-
-        # Set the AppSupport folder
-        self.appSupportDir = self.__appSupportDir()
-
-        # Create the plugins folder
-        self.__createPluginsFolder()
-
         # Prepare the server
         self.server: HorusServer = HorusServer(debug=self.debug, desktop=True)
 
+        # App frozen
+        self.isFrozen = self.server.isFrozen
+
         # Start the server in a new thread
         self.__startServer()
-
-    def __isFrozen(self):
-        """
-        Returns wheter the app is frozen or not
-        """
-        try:
-            sys._MEIPASS
-            return True
-        except AttributeError:
-            return False
-
-    def __appSupportDir(self):
-        if self.frozen:
-            appSupportDir = os.path.join(sys._MEIPASS, "AppSupport")
-        else:
-            appSupportDir = os.path.join("AppSupport")
-
-        if not os.path.exists(appSupportDir):
-            os.mkdir(appSupportDir)
-
-        return appSupportDir
-
-    def __createPluginsFolder(self):
-        """
-        Creates the plugins folder
-        """
-        # Get the plugins folder path
-        pluginsFolder = os.path.join(self.appSupportDir, "Plugins")
-
-        # Create the plugins folder
-        if not os.path.exists(pluginsFolder):
-            os.mkdir(pluginsFolder)
-
-        # Set the plugins folder
-        self.pluginsFolder = os.path.abspath(pluginsFolder)
 
     def __startServer(self):
         """

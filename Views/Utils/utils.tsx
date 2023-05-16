@@ -20,7 +20,7 @@ function getShemsuToken() {
 
 // Tokenize the urls with the shemsu token
 async function horusGet(url, headers) {
-    return fetch(url, {
+    return await fetch(url, {
         method: "GET",
         headers: {
             shemsu: getShemsuToken(),
@@ -49,23 +49,6 @@ async function horusPost(url, headers, body) {
 async function getVersion() {
     // Fetch the data from /api/data
     const result = await horusGet("/api/version", {});
-
-    // Check any error status code
-    if (!result.ok) {
-        throw new Error(`Error fetching data: ${result.status}`);
-    }
-
-    // Parse the result as JSON
-    const data = await result.json();
-
-    // Return the data
-    return data;
-
-}
-
-async function getPlugins() {
-    // Fetch the data from /api/data
-    const result = await horusGet("/desktop/plugins", {});
 
     // Check any error status code
     if (!result.ok) {
@@ -120,4 +103,4 @@ async function openWindow(name, url) {
     return data;
 }
 
-export { horusGet, horusPost, getVersion, getPlugins, getForceFields, openWindow };
+export { horusGet, horusPost, getVersion, getForceFields, openWindow };

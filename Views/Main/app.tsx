@@ -2,7 +2,7 @@ import React, { Children, useState } from "react";
 import { Molstar } from "../Molstar/molstar";
 import NBDButton from "../Components/NBDButton";
 import HorusModal from "../Components/Modal";
-import { getPlugins, getVersion, getForceFields, openWindow } from "../Utils/utils";
+import { getVersion, getForceFields, openWindow } from "../Utils/utils";
 
 export function App() {
 
