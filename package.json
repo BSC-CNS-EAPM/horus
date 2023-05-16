@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "buildparcel": "parcel build Views/**/*.html --dist-dir GUI",
-    "devparcel": "parcel Views/Main/index.html",
+    "devparcel": "parcel Views/**/*.html",
     "build": "npm run buildparcel && python Devtools/Compile/compile.py build_ext && pyinstaller Devtools/Compile/build.spec --noconfirm",
     "requirements": "npm install && conda env create -f Devtools/Environment/conda_horus.yaml -n horus",
     "clean": "rm -rf dist build GUI"
@@ -21,10 +21,13 @@
   ],
   "dependencies": {
     "bootstrap": "^5.2.3",
+    "i18next": "^22.4.15",
+    "i18next-browser-languagedetector": "^7.0.1",
     "molstar": "^3.34.0",
     "react": "^18.2.0",
     "react-bootstrap": "^2.7.4",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-i18next": "^12.2.2"
   },
   "devDependencies": {
     "@parcel/transformer-sass": "^2.8.3",

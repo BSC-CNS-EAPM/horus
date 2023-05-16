@@ -2,7 +2,7 @@ import React, { Children, useState } from "react";
 import { Molstar } from "../Molstar/molstar";
 import NBDButton from "../Components/NBDButton";
 import HorusModal from "../Components/Modal";
-import { getPlugins, getVersion, getForceFields } from "./Utils/utils";
+import { getPlugins, getVersion, getForceFields, openWindow } from "../Utils/utils";
 
 export function App() {
 
@@ -46,12 +46,19 @@ export function App() {
         setShowModal(true);
     }
 
+    const openSSHWindow = () => {
+        openWindow("Configure SSH", "/desktop/configureSSH");
+    }
+
+
     return (
         <div className="App">
             <NBDButton text="Force fields" action={openForceFieldsModal} />
             <NBDButton text="Plugins" action={openPluginsModal} />
             <NBDButton text="About Horus" action={openVersionModal} />
+            <NBDButton text="Configure SSH" action={openSSHWindow} />
             <HorusModal show={showModal} onHide={handleCloseModal} title="About Horus" body={modalBody} />
+            <Molstar />
         </div>
     );
 }

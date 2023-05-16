@@ -54,7 +54,7 @@ class AppDelegate(metaclass=SingletonMeta):
 
     def __init__(self):
         """
-        Initialize the AppDelegate. 
+        Initialize the AppDelegate.
         This will start the backend server and create the first window.
         """
         # Set the debug mode based on module compilation
@@ -63,11 +63,14 @@ class AppDelegate(metaclass=SingletonMeta):
         # Check if the app is frozen
         self.frozen = self.__isFrozen()
 
+        # Set the AppSupport folder
+        self.appSupportDir = self.__appSupportDir()
+
         # Create the plugins folder
         self.__createPluginsFolder()
 
         # Prepare the server
-        self.server: HorusServer = HorusServer(debug=self.debug)
+        self.server: HorusServer = HorusServer(debug=self.debug, desktop=True)
 
         # Start the server in a new thread
         self.__startServer()
@@ -76,21 +79,29 @@ class AppDelegate(metaclass=SingletonMeta):
         """
         Returns wheter the app is frozen or not
         """
-        try: 
+        try:
             sys._MEIPASS
             return True
-        except AttributeError: 
+        except AttributeError:
             return False
+
+    def __appSupportDir(self):
+        if self.frozen:
+            appSupportDir = os.path.join(sys._MEIPASS, "AppSupport")
+        else:
+            appSupportDir = os.path.join("AppSupport")
+
+        if not os.path.exists(appSupportDir):
+            os.mkdir(appSupportDir)
+
+        return appSupportDir
 
     def __createPluginsFolder(self):
         """
         Creates the plugins folder
         """
         # Get the plugins folder path
-        if self.frozen:
-            pluginsFolder = os.path.join(sys._MEIPASS, "Plugins")
-        else:
-            pluginsFolder = os.path.join("Plugins")
+        pluginsFolder = os.path.join(self.appSupportDir, "Plugins")
 
         # Create the plugins folder
         if not os.path.exists(pluginsFolder):
@@ -101,7 +112,7 @@ class AppDelegate(metaclass=SingletonMeta):
 
     def __startServer(self):
         """
-        Starts the backend Flask server. 
+        Starts the backend Flask server.
         This server will handle python modules and scripts in our app.
         """
         import threading
@@ -110,9 +121,9 @@ class AppDelegate(metaclass=SingletonMeta):
         self.server_thread.daemon = True
         self.server_thread.start()
 
-    def newWindow(self, title: str, url: str = None):
+    def openWindow(self, title: str, url: str = None):
         """
-        Creates a new window with the given title. 
+        Creates a new window with the given title.
         If no url is given, the index page will be loaded.
 
         :param title: The title of the window
@@ -121,13 +132,14 @@ class AppDelegate(metaclass=SingletonMeta):
         if url is None:
             url = self.server.baseURL
         window = webview.create_window("Horus", url=url)
+        self.windows.append(window)
         return window
 
     def applicationDidFinishLaunching(self):
         """
         This will be called when the app is launched. It will create the first window.
         """
-        self.__start(self.newWindow("Horus"))
+        self.__start(self.openWindow("Horus"))
 
     def applicationWillTerminate(self):
         """
@@ -154,13 +166,14 @@ class AppDelegate(metaclass=SingletonMeta):
         Adds to an url the shemsu as a query parameter.
         """
         return f"{url}?shemsu={webview.token}"
-    
+
     @staticmethod
     def installPlugin(pluginPath: str):
         """
         Installs a plugin to the plugins dir
         """
         import shutil
+
         shutil.copy(pluginPath, AppDelegate().pluginsFolder)
 
     @staticmethod
@@ -169,6 +182,7 @@ class AppDelegate(metaclass=SingletonMeta):
         Uninstalls a plugin from the plugins dir
         """
         import os
+
         os.remove(f"{AppDelegate().pluginsFolder}/{pluginName}")
 
     @staticmethod
@@ -177,12 +191,40 @@ class AppDelegate(metaclass=SingletonMeta):
         Returns a list of all the plugins in the plugins dir
         """
         import os
+
         return os.listdir(AppDelegate().pluginsFolder)
+
+    def configureSSH(self, sshConfig: dict):
+        """
+        Configures the SSH connection for HPC clusters
+
+        param sshConfig: A dictionary containing the ssh configuration
+        {
+            user: str,
+            host: str,
+            port: int,
+            keys: str,
+        }
+        """
+
+        import json
+
+        user_data = {
+            "user": sshConfig["user"],
+            "host": sshConfig["host"],
+            "port": sshConfig["port"],
+            "dir": sshConfig["dir"],
+        }
+
+        with open(f"{self.appSupportDir}/ssh.json", "w") as f:
+            json.dump(user_data, f)
+
+        with open(f"{self.appSupportDir}/ssh.key", "w") as f:
+            f.write(sshConfig["keys"])
 
 
 def LaunchApp():
-
-    # Define a global variable "isDesktop" that will be used to check if the app is 
+    # Define a global variable "isDesktop" that will be used to check if the app is
     # running on desktop mode
     global isDesktop
     isDesktop = True

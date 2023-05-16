@@ -1,12 +1,13 @@
 {
     "compilerOptions": {
         "module": "ES6",
-        "jsx": "preserve",
+        "jsx": "react-jsx",
         "checkJs": true,
         "moduleResolution": "node",
+        "allowSyntheticDefaultImports": true,
+        "allowJs": true
     },
-    "exclude": [
-        "node_modules",
-        "**/node_modules/*"
+    "include": [
+        "Views/**/*"
     ]
 }

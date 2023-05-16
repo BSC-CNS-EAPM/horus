@@ -8,7 +8,7 @@ import { PluginCommands } from 'molstar/lib/mol-plugin/commands';
 import { PluginUISpec, DefaultPluginUISpec } from "molstar/lib/mol-plugin-ui/spec";
 import { PluginConfig } from "molstar/lib/mol-plugin/config";
 
-// Load the molsta default style
+// Load the molstar default style
 import "molstar/lib/mol-plugin-ui/skin/light.scss";
 
 
@@ -24,8 +24,15 @@ export function Molstar() {
   const MySpec: PluginUISpec = {
     ...DefaultPluginUISpec(),
     config: [
-      [PluginConfig.Viewport.ShowExpand, false],
-    ]
+      [PluginConfig.Viewport.ShowExpand, true],
+      [PluginConfig.Viewport.ShowControls, false],
+    ],
+    layout: {
+      initial: {
+        isExpanded: false,
+        showControls: false,
+      },
+    }
   }
 
   useEffect(() => {
@@ -55,5 +62,5 @@ export function Molstar() {
     };
   }, []);
 
-  return <div ref={parent} style={{ width: 640, height: 480 }} />;
+  return <div ref={parent} style={{ position: "relative", width: "800px", height: "600px" }} />;
 }
