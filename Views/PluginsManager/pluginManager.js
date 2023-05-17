@@ -41,8 +41,9 @@ function PluginManager() {
             <h1>Plugin Manager</h1>
             {/* Render plugin data */}
             {pluginList.map((plugin) => {
+                console.log(plugin)
                 return (
-                    <div className="card" style={{ width: "30rem", marginLeft: "1rem" }} >
+                    <div className="card mb-2" style={{ width: "30rem", marginLeft: "1rem" }} >
                         <div className="card-body">
                             <h5 className="card-title">{plugin.name} </h5>
                             <h6 className="card-subtitle mb-2 text-muted">{plugin.description}</h6>
@@ -53,7 +54,7 @@ function PluginManager() {
                                 Author: {plugin.author}
                             </div>
                             <div>
-                                Dependencies: {plugin.dependencies.join(", ")}
+                                Dependencies: {plugin.dependencies}
                             </div>
                         </div>
                     </div>

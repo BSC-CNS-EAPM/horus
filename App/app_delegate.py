@@ -63,9 +63,6 @@ class AppDelegate(metaclass=SingletonMeta):
         # Prepare the server
         self.server: HorusServer = HorusServer(debug=self.debug, desktop=True)
 
-        # App frozen
-        self.isFrozen = self.server.isFrozen
-
         # Start the server in a new thread
         self.__startServer()
 
@@ -180,8 +177,6 @@ class AppDelegate(metaclass=SingletonMeta):
         """
         Uninstalls a plugin from the plugins dir
         """
-        import os
-
         os.remove(f"{AppDelegate().pluginsFolder}/{pluginName}")
 
     @staticmethod
@@ -189,8 +184,6 @@ class AppDelegate(metaclass=SingletonMeta):
         """
         Returns a list of all the plugins in the plugins dir
         """
-        import os
-
         return os.listdir(AppDelegate().pluginsFolder)
 
     def configureSSH(self, sshConfig: dict):
