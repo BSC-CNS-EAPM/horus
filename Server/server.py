@@ -31,6 +31,7 @@ class HorusServer:
         self.desktop = desktop
 
         # Initialize the plugin manager
+        from HorusPlugins import PluginManager
         self.pluginManager = PluginManager()
 
         # Security token
@@ -106,7 +107,8 @@ class HorusServer:
                 gui_dir = os.path.abspath(os.path.join(bundle_dir, "GUI"))
             except AttributeError:
                 raise Exception(
-                    "App not frozen and GUI directory not found. Did you forget to run npm run buildparcel?"
+                    "App not frozen and GUI directory not found."
+                     + " Did you forget to run npm run buildparcel?"
                 )
 
         return gui_dir
@@ -177,7 +179,7 @@ class HorusServer:
         def isDesktop():
             return flask.jsonify(self.desktop)
 
-        @self.server.route("/desktop/plugins", methods=["GET"])
+        @self.server.route("/desktop/plugins", methods=["GET", "POST"])
         @desktopOnly
         def pluginsManager():
             return flask.render_template("PluginsManager/index.html")
@@ -185,13 +187,19 @@ class HorusServer:
         @self.server.route("/desktop/plugins/install", methods=["GET"])
         @desktopOnly
         def installPlugin():
-            from App import AppDelegate
-            AppDelegate().installPlugin()
+            self.pluginManager.installPlugin()
+            return "OK"
+        
+        @self.server.route("/desktop/plugins/uninstall", methods=["POST"])
+        @desktopOnly
+        def uninstallPlugin():
+            pluginName = request.get_json()["name"]
+            self.pluginManager.uninstallPlugin(pluginName)
             return "OK"
 
         @self.server.route("/desktop/plugins/list", methods=["GET"])
         def listPlugins():
-            plugins = self.pluginManager.listPlugins()
+            plugins = self.pluginManager.listLoaded()
             return flask.jsonify(plugins)
 
         @self.server.route("/desktop/openWindow", methods=["POST"])
@@ -224,7 +232,6 @@ class HorusServer:
             return flask.render_template("Main/index.html")
 
         if not self.debug:
-
             @self.server.before_request
             def beforeRequest():
                 # Check the token only for the api routes
@@ -247,137 +254,3 @@ class HorusServer:
         )
 
 
-class PluginManager:
-    """
-    This class manages the installation, loading and uninstallation of plugins.
-    It creates the AppSupport/Plugins directory if it doesn't exist.
-    """
-
-    loadedPlugins = []
-
-    def __init__(self) -> None:
-        self.appSupportDir = self.__appSupportDir()
-        self.pluginsDir = self.__pluginsDir()
-
-        # Initialize the plugins
-        self.__initializePlugins()
-
-        print("Loaded plugins:")
-        for p in self.loadedPlugins:
-            print(f" - {p.pluginInfo['name']}")
-
-    def __pluginsDir(self):
-        pluginsDir = os.path.join(self.appSupportDir, "Plugins")
-
-        if not os.path.exists(pluginsDir):
-            os.mkdir(pluginsDir)
-
-        return pluginsDir
-
-    def __appSupportDir(self):
-        try:
-            appSupportDir = os.path.join(sys._MEIPASS, "AppSupport")
-        except AttributeError:
-            appSupportDir = os.path.join("AppSupport")
-
-        appSupportDir = os.path.abspath(appSupportDir)
-
-        if not os.path.exists(appSupportDir):
-            os.mkdir(appSupportDir)
-
-        return appSupportDir
-
-    def installPlugin(self, pluginPath: str):
-        """
-        Installs a plugin from the given path.
-        """
-        import shutil
-
-        shutil.copy(pluginPath, self.pluginsDir)
-
-    def uninstallPlugin(self, pluginName: str):
-        """
-        Uninstalls a plugin with the given name.
-        """
-        import os
-
-        pluginPath = os.path.join(self.pluginsDir, pluginName)
-        os.remove(pluginPath)
-
-    def __listPluginsPaths(self):
-        """
-        Lists the plugins present in the plugins directory.
-        """
-        # List the files present in the plugins directory
-        pluginFiles = os.listdir(self.pluginsDir)
-
-        # Filter the python files
-        plugins = []
-        for pf in pluginFiles:
-            if pf.endswith(".py"):
-                fullPath = os.path.abspath(os.path.join(self.pluginsDir, pf))
-                plugins.append(fullPath)
-
-        return plugins
-
-    def __initializePlugins(self):
-        """
-        Initializes all the plugins present in the plugins directory.
-        """
-        pluginPaths = self.__listPluginsPaths()
-        for pth in pluginPaths:
-            try:
-                self.__loadPlugin(pth)
-            except Exception as e:
-                print(f"Error loading plugin {os.path.basename(pth)}: {e}")
-
-    def __loadPlugin(self, pluginPath: str):
-        """
-        Loads a plugin from the given path.
-        """
-
-        import imp
-        from Server.HorusPlugin import Plugin
-
-        fileName = os.path.basename(pluginPath)
-
-        # Load the plugin file and obtain the plugin variable
-        pluginFile = imp.load_source("pluginFile", pluginPath)
-
-        # Check that the plugin variable exists
-        if not hasattr(pluginFile, "plugin"):
-            raise Exception(
-                f"The plugin {fileName} does not contain a plugin variable."
-            )
-
-        plugin = pluginFile.plugin
-
-        # Check that the plugin variable is a Plugin instance
-        if not isinstance(plugin, Plugin):
-            raise Exception(
-                f"The plugin {fileName} does not contain a valid plugin variable."
-            )
-
-        # Check that the plugin variable has a name
-        if not plugin.pluginInfo["name"]:
-            raise Exception(f"The plugin {fileName} does not have a name.")
-
-        # Add the plugin to the loaded plugins list only if it is not already there
-        if plugin not in self.loadedPlugins:
-            self.loadedPlugins.append(plugin)
-        else:
-            raise Exception(
-                f"Another plugin with the same name as {plugin.pluginInfo['name']}"
-                + "is already loaded."
-            )
-
-    def listPlugins(self):
-        """
-        Returns a list of all the loaded plugins.
-        """
-        listedPlugins = []
-        for p in self.loadedPlugins:
-            info = p.pluginInfo
-            info["actions"] = len(p.pluginActions)
-            listedPlugins.append(info)
-        return listedPlugins

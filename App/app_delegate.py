@@ -156,21 +156,23 @@ class AppDelegate(metaclass=SingletonMeta):
         """
         webview.start(debug=self.debug, menu=self.__menus())
 
-    def openFileDialog(multiple: bool = False, fileTypes=None):
+    def openFileDialog(self, allowMultiple: bool = False, fileTypes: tuple = None):
         """
-        Opens a file dialog and returns the path of the selected file.
+        Opens a file dialog and returns the path of the selected file(s).
+
+        :param allowMultiple: Allow the user to select multiple files
+        :param fileTypes: A tuple of strings of file types to filter the files. 
+        The tuple must be in the format: ("Description (*.ext1;*.ext2...)", "Description 2 (*.ext3;*.ext4...)")
         """
         # Get the active window
         window = webview.windows[0]
 
-        file_types = ("Image Files (*.bmp;*.jpg;*.gif;*.png)", "All files (*.*)")
-
         # Open the file dialog
         result = window.create_file_dialog(
-            webview.OPEN_DIALOG, allow_multiple=multiple, file_types=file_types
+            webview.OPEN_DIALOG, allow_multiple=allowMultiple, file_types=fileTypes
         )
-
-        print(result)
+    
+        return result
 
     @staticmethod
     def tokenize(url: str):
@@ -178,31 +180,6 @@ class AppDelegate(metaclass=SingletonMeta):
         Adds to an url the shemsu as a query parameter.
         """
         return f"{url}?shemsu={webview.token}"
-
-    @staticmethod
-    def installPlugin():
-        """
-        Installs a plugin to the plugins dir
-        """
-        import shutil
-
-        pluginPath = AppDelegate().openFileDialog()
-
-        # shutil.copy(pluginPath, AppDelegate().pluginsFolder)
-
-    @staticmethod
-    def uninstallPlugin(pluginName: str):
-        """
-        Uninstalls a plugin from the plugins dir
-        """
-        os.remove(f"{AppDelegate().pluginsFolder}/{pluginName}")
-
-    @staticmethod
-    def getPlugins():
-        """
-        Returns a list of all the plugins in the plugins dir
-        """
-        return os.listdir(AppDelegate().pluginsFolder)
 
     def configureSSH(self, sshConfig: dict):
         """
@@ -234,13 +211,8 @@ class AppDelegate(metaclass=SingletonMeta):
 
 
 def LaunchApp():
-    # Define a global variable "isDesktop" that will be used to check if the app is
-    # running on desktop mode
-    global isDesktop
-    isDesktop = True
 
     # Prepare the app delegate
-    global app
     app = AppDelegate()
     """
     App Delegate is a singleton class that will handle the app
