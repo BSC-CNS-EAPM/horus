@@ -4,8 +4,9 @@ import { createRoot } from "react-dom/client";
 import 'bootstrap/dist/css/bootstrap.css';
 
 import { horusGet } from "../Utils/utils";
+import NBDButton from "../Components/NBDButton";
 
-function PluginManager() {
+function InstalledPlugins() {
 
     const [loading, setLoading] = useState(true);
     const [pluginList, setPluginList] = useState(null);
@@ -13,9 +14,8 @@ function PluginManager() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const response = await fetch("/desktop/plugins/list");
+                const response = await horusGet("/desktop/plugins/list");
                 const data = await response.json();
-                console.log(data);
                 setPluginList(data);
                 setLoading(false);
             } catch (error) {
@@ -38,7 +38,7 @@ function PluginManager() {
 
     return (
         <div>
-            <h1>Plugin Manager</h1>
+            <h1>Installed plugins</h1>
             {/* Render plugin data */}
             {pluginList.map((plugin) => {
                 console.log(plugin)
@@ -56,6 +56,9 @@ function PluginManager() {
                             <div>
                                 Dependencies: {plugin.dependencies}
                             </div>
+                            <div>
+                                Actions: {plugin.actions}
+                            </div>
                         </div>
                     </div>
                 )
@@ -63,6 +66,22 @@ function PluginManager() {
             }
         </div>
     );
+}
+
+function PluginManager() {
+
+    // Open new window for plugin installation
+    const installPlugin = () => {
+        horusGet("/desktop/plugins/install");
+    }
+
+    return (
+        <div>
+            <h1>Plugin Manager</h1>
+            <NBDButton text="Install plugin" action={installPlugin} />
+            <InstalledPlugins />
+        </div>
+    )
 }
 
 const container = document.getElementById("plugin-manager-root");

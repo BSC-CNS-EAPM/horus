@@ -156,6 +156,22 @@ class AppDelegate(metaclass=SingletonMeta):
         """
         webview.start(debug=self.debug, menu=self.__menus())
 
+    def openFileDialog(multiple: bool = False, fileTypes=None):
+        """
+        Opens a file dialog and returns the path of the selected file.
+        """
+        # Get the active window
+        window = webview.windows[0]
+
+        file_types = ("Image Files (*.bmp;*.jpg;*.gif;*.png)", "All files (*.*)")
+
+        # Open the file dialog
+        result = window.create_file_dialog(
+            webview.OPEN_DIALOG, allow_multiple=multiple, file_types=file_types
+        )
+
+        print(result)
+
     @staticmethod
     def tokenize(url: str):
         """
@@ -164,13 +180,15 @@ class AppDelegate(metaclass=SingletonMeta):
         return f"{url}?shemsu={webview.token}"
 
     @staticmethod
-    def installPlugin(pluginPath: str):
+    def installPlugin():
         """
         Installs a plugin to the plugins dir
         """
         import shutil
 
-        shutil.copy(pluginPath, AppDelegate().pluginsFolder)
+        pluginPath = AppDelegate().openFileDialog()
+
+        # shutil.copy(pluginPath, AppDelegate().pluginsFolder)
 
     @staticmethod
     def uninstallPlugin(pluginName: str):

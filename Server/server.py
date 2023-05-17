@@ -182,6 +182,13 @@ class HorusServer:
         def pluginsManager():
             return flask.render_template("PluginsManager/index.html")
 
+        @self.server.route("/desktop/plugins/install", methods=["GET"])
+        @desktopOnly
+        def installPlugin():
+            from App import AppDelegate
+            AppDelegate().installPlugin()
+            return "OK"
+
         @self.server.route("/desktop/plugins/list", methods=["GET"])
         def listPlugins():
             plugins = self.pluginManager.listPlugins()
@@ -372,6 +379,5 @@ class PluginManager:
         for p in self.loadedPlugins:
             info = p.pluginInfo
             info["actions"] = len(p.pluginActions)
-            print(info)
             listedPlugins.append(info)
         return listedPlugins
