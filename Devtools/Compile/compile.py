@@ -8,6 +8,8 @@ ext_modules = [
     Extension("App", ["App/__init__.py"]),
     Extension("Server", ["Server/server.py"]),
     Extension("Server", ["Server/__init__.py"]),
+    Extension("HorusPlugins", ["HorusPlugins/plugins.py"]),
+    Extension("HorusPlugins", ["HorusPlugins/__init__.py"]),
 ]
 
 setup(
@@ -26,3 +28,7 @@ for file in os.listdir("Server"):
 for file in os.listdir("App"):
     if file.endswith(".c"):
         os.remove(os.path.join("App", file))
+
+for file in os.listdir("HorusPlugins"):
+    if file.endswith(".c"):
+        os.remove(os.path.join("HorusPlugins", file))
