@@ -10,6 +10,10 @@ import cython
 # Add to the pythonpath the path of the project
 sys.path.append("../")
 
+# Create a global dictionary to store information about the app
+# such as the version, the bundle identifier, etc.
+appInfo = {"version": "0.0.1", "bundleIdentifier": "com.nostrumbiodiscovery.horus"}
+
 
 class SingletonMeta(type):
     """
@@ -64,7 +68,9 @@ class AppDelegate(metaclass=SingletonMeta):
         self.__appSupportDir()
 
         # Prepare the server
-        self.server: HorusServer = HorusServer(debug=self.debug, desktop=True, appSupportDir=self.appSupportDir)
+        self.server: HorusServer = HorusServer(
+            debug=self.debug, desktop=True, appSupportDir=self.appSupportDir
+        )
 
         # Start the server in a new thread
         self.__startServer()
@@ -82,14 +88,20 @@ class AppDelegate(metaclass=SingletonMeta):
 
             if platform == "darwin":
                 appSupportDir = os.path.join(
-                    os.path.expanduser("~"), "Library", "Application Support", "Horus"
+                    os.path.expanduser("~"),
+                    "Library",
+                    "Application Support",
+                    appInfo["bundleIdentifier"],
                 )
             elif platform == "win32":
                 appSupportDir = os.getenv("APPDATA")
-                appSupportDir = os.path.join(appSupportDir, "Horus")
+                appSupportDir = os.path.join(appSupportDir, appInfo["bundleIdentifier"])
             elif platform == "linux":
                 appSupportDir = os.path.join(
-                    os.path.expanduser("~"), ".local", "share", "Horus"
+                    os.path.expanduser("~"),
+                    ".local",
+                    "share",
+                    appInfo["bundleIdentifier"],
                 )
             else:
                 raise Exception(f"Unsupported platform {platform}")
