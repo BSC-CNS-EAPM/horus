@@ -38,10 +38,15 @@ export function App() {
 
     return (
         <div className="App">
-            <NBDButton text="Force fields" action={openForceFieldsModal} />
-            <NBDButton text="About Horus" action={openVersionModal} />
             <HorusModal show={showModal} onHide={handleCloseModal} title="About Horus" body={modalBody} />
-            <Molstar />
+            <div className="grid h-screen place-items-center">
+                <div className="grid gap-3">
+                <h1>Horus</h1>
+                <NBDButton text="New job" action={null} />
+                <NBDButton text="Open..." action={null} />
+                <NBDButton text="About Horus" action={openVersionModal} />
+                </div>
+            </div>
         </div>
     );
 }
