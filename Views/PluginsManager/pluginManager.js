@@ -86,6 +86,9 @@ function PluginCard({ plugin }) {
                     <div>
                         Actions: {plugin.actions}
                     </div>
+                    <div>
+                        Views: {plugin.views}
+                    </div>
                 </div>
                 <div>
                     <button className="card-link" onClick={deletePlugin}>

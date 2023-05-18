@@ -1,5 +1,33 @@
 import os
-import sys
+
+
+class PluginVariable:
+    # Children of the Variable (more PluginVariable)
+    children = []
+
+    # The value of the variable
+    value = None
+
+    def __init__(self, name, description, type, defaultValue=None):
+        self.name = name
+        self.description = description
+        self.type = type
+        self.defaultValue = defaultValue
+
+
+class PluginBlock:
+    # Children of the Block (PluginVariable)
+    children = []
+
+    # The output that the block produces
+    output = None
+
+    # The input that the block receives
+    input = None
+
+    def __init__(self, name, description, type, defaultValue=None):
+        self.name = name
+        self.description = description
 
 
 class PluginAction:
@@ -52,6 +80,12 @@ class Plugin:
     Functions that can be called from the GUI.
     """
 
+    pluginViews = []
+    """
+    Views that can be loaded from the GUI.
+    Should be the path to the HTML file.
+    """
+
     # Define comparison operators
     def __eq__(self, other):
         return self.pluginInfo["name"] == other.pluginInfo["name"]
@@ -68,51 +102,36 @@ class PluginManager:
 
     loadedPlugins = []
 
-    def __init__(self) -> None:
-        self.appSupportDir = self.__appSupportDir()
-        self.pluginsDir = self.__pluginsDir()
+    def __init__(self, appSupportDir) -> None:
+        self.pluginsDir = self.__pluginsDir(appSupportDir)
 
         # Initialize the plugins
         self.__initializePlugins()
 
-        print("Loaded plugins:")
-        for p in self.loadedPlugins:
-            print(f" - {p.pluginInfo['name']}")
-
-    def __pluginsDir(self):
-        pluginsDir = os.path.join(self.appSupportDir, "Plugins")
+    def __pluginsDir(self, appSupportDir):
+        pluginsDir = os.path.join(appSupportDir, "Plugins")
 
         if not os.path.exists(pluginsDir):
             os.mkdir(pluginsDir)
 
         return pluginsDir
 
-    def __appSupportDir(self):
-        try:
-            appSupportDir = os.path.join(sys._MEIPASS, "AppSupport")
-        except AttributeError:
-            appSupportDir = os.path.join("AppSupport")
-
-        appSupportDir = os.path.abspath(appSupportDir)
-
-        if not os.path.exists(appSupportDir):
-            os.mkdir(appSupportDir)
-
-        return appSupportDir
-
     def installPlugin(self):
         """
-        Opens the file dialog to select a plugin file 
+        Opens the file dialog to select a plugin file
         and installs it to the plugins folder.
         """
         from App import AppDelegate
 
         try:
             files = AppDelegate().openFileDialog(
-                allowMultiple=True, fileTypes=(("Python files (*.py)"),)
+                allowMultiple=True, fileTypes=("Horus plugins (*.hp)",)
             )
         except Exception as e:
-            raise Exception(f"Failed to get plugins path: {e}")
+            raise Exception(f"Failed to get plugin path: {e}")
+
+        if not files:
+            return
 
         for f in files:
             self.__installPlugin(f)
@@ -120,12 +139,42 @@ class PluginManager:
     def __installPlugin(self, path):
         import shutil
 
-        newPlugin = shutil.copy(path, self.pluginsDir)
+        # Get the name of the plugin
+        pluginName = os.path.basename(path)
+
+        # Remove the extension
+        pluginName = os.path.splitext(pluginName)[0]
+
+        # Create a folder with the same name as the plugin
+        newPluginDir = os.path.join(self.pluginsDir, pluginName)
+
+        if os.path.exists(newPluginDir):
+            raise Exception(f"Plugin {os.path.basename(path)} already installed.")
+
+        os.mkdir(newPluginDir)
+
+        newPlugin = shutil.copy(path, newPluginDir)
+
+        # If the plugin is provided in .hp format, unzip it
+        if newPlugin.endswith(".hp"):
+            # Unzip the plugin
+            import zipfile
+
+            with zipfile.ZipFile(newPlugin, "r") as zip_ref:
+                zip_ref.extractall(newPluginDir)
+
+            # Remove the .hp file
+            os.remove(newPlugin)
+
+        # Get the .py file
+        newPlugin = os.path.join(newPluginDir, pluginName + ".py")
+
         try:
             self.__loadPlugin(newPlugin)
         except Exception as e:
-            os.remove(newPlugin)
-            raise Exception(f"Error installing plugin {os.path.basename(path)}: {e}")
+            shutil.rmtree(newPluginDir)
+            print(e)
+            raise Exception(f"Error installing plugin {os.path.basename(path)}")
 
     def __getPlugin(self, byName: str):
         """
@@ -140,25 +189,25 @@ class PluginManager:
         """
         Uninstalls a plugin with the given name.
         """
-        import os
+        import shutil
 
-        pluginFile = self.__getPlugin(pluginName).pluginInfo["filename"]
-        pluginPath = os.path.join(self.pluginsDir, pluginFile)
-        os.remove(pluginPath)
+        pDir = self.__getPlugin(pluginName).pluginInfo["filename"].replace(".py", "")
+        pluginPath = os.path.join(self.pluginsDir, pDir)
+        shutil.rmtree(pluginPath)
 
     def __listPluginsPaths(self):
         """
         Lists the plugins present in the plugins directory.
         """
-        # List the files present in the plugins directory
-        pluginFiles = os.listdir(self.pluginsDir)
+        # List the directories present in the plugins directory
+        installed = os.listdir(self.pluginsDir)
 
         # Filter the python files
         plugins = []
-        for pf in pluginFiles:
-            if pf.endswith(".py"):
-                fullPath = os.path.abspath(os.path.join(self.pluginsDir, pf))
-                plugins.append(fullPath)
+        for pl in installed:
+            # Get the plugin file based on the folder name + .py
+            pluginFile = os.path.join(self.pluginsDir, pl, pl + ".py")
+            plugins.append(pluginFile)
 
         return plugins
 
@@ -228,5 +277,6 @@ class PluginManager:
         for p in self.loadedPlugins:
             info = p.pluginInfo
             info["actions"] = len(p.pluginActions)
+            info["views"] = len(p.pluginViews)
             listedPlugins.append(info)
         return listedPlugins

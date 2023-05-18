@@ -60,11 +60,52 @@ class AppDelegate(metaclass=SingletonMeta):
         # Set the debug mode based on module compilation
         self.debug: bool = not cython.compiled
 
+        # Set the app support directory
+        self.__appSupportDir()
+
         # Prepare the server
-        self.server: HorusServer = HorusServer(debug=self.debug, desktop=True)
+        self.server: HorusServer = HorusServer(debug=self.debug, desktop=True, appSupportDir=self.appSupportDir)
 
         # Start the server in a new thread
         self.__startServer()
+
+    def __appSupportDir(self):
+        try:
+            # Check if we are in a frozen executable
+            sys._MEIPASS
+
+            # If we are, use the default system Application Support directory
+            # On macOS this is ~/Library/Application Support
+            # On Windows this is %APPDATA%
+            # On Linux this is ~/.local/share
+            platform = sys.platform
+
+            if platform == "darwin":
+                appSupportDir = os.path.join(
+                    os.path.expanduser("~"), "Library", "Application Support", "Horus"
+                )
+            elif platform == "win32":
+                appSupportDir = os.getenv("APPDATA")
+                appSupportDir = os.path.join(appSupportDir, "Horus")
+            elif platform == "linux":
+                appSupportDir = os.path.join(
+                    os.path.expanduser("~"), ".local", "share", "Horus"
+                )
+            else:
+                raise Exception(f"Unsupported platform {platform}")
+
+        except AttributeError:
+            # If we are not in a frozen executable,
+            # place the Application Support directory in the project directory
+            # (Development)
+            appSupportDir = os.path.join("AppSupport")
+
+        appSupportDir = os.path.abspath(appSupportDir)
+
+        if not os.path.exists(appSupportDir):
+            os.mkdir(appSupportDir)
+
+        self.appSupportDir = appSupportDir
 
     def __startServer(self):
         """
@@ -161,7 +202,7 @@ class AppDelegate(metaclass=SingletonMeta):
         Opens a file dialog and returns the path of the selected file(s).
 
         :param allowMultiple: Allow the user to select multiple files
-        :param fileTypes: A tuple of strings of file types to filter the files. 
+        :param fileTypes: A tuple of strings of file types to filter the files.
         The tuple must be in the format: ("Description (*.ext1;*.ext2...)", "Description 2 (*.ext3;*.ext4...)")
         """
         # Get the active window
@@ -171,7 +212,7 @@ class AppDelegate(metaclass=SingletonMeta):
         result = window.create_file_dialog(
             webview.OPEN_DIALOG, allow_multiple=allowMultiple, file_types=fileTypes
         )
-    
+
         return result
 
     @staticmethod
@@ -203,15 +244,14 @@ class AppDelegate(metaclass=SingletonMeta):
             "dir": sshConfig["dir"],
         }
 
-        with open(f"{self.appSupportDir}/ssh.json", "w") as f:
+        with open(f"{self.server.pluginManager.appSupportDir}/ssh.json", "w") as f:
             json.dump(user_data, f)
 
-        with open(f"{self.appSupportDir}/ssh.key", "w") as f:
+        with open(f"{self.server.pluginManager.appSupportDir}/ssh.key", "w") as f:
             f.write(sshConfig["keys"])
 
 
 def LaunchApp():
-
     # Prepare the app delegate
     app = AppDelegate()
     """

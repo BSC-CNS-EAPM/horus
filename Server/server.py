@@ -20,7 +20,11 @@ __version__ = "0.0.1"
 class HorusServer:
     parcelURL = "http://127.0.0.1:1234"
 
-    def __init__(self, debug=False, desktop=False):
+    def __init__(self, debug=False, desktop=False, appSupportDir=None):
+        # App support directory
+        if appSupportDir is None:
+            self.appSupportDir = os.path.abspath(os.path.join("AppSupport"))
+
         # Basic Flask setup
         self.debug = debug
         self.host = "127.0.0.1"
@@ -31,8 +35,9 @@ class HorusServer:
         self.desktop = desktop
 
         # Initialize the plugin manager
-        from HorusPlugins import PluginManager
-        self.pluginManager = PluginManager()
+        from HorusAPI import PluginManager
+
+        self.pluginManager = PluginManager(appSupportDir)
 
         # Security token
         self.token = self.__cors()
@@ -108,7 +113,7 @@ class HorusServer:
             except AttributeError:
                 raise Exception(
                     "App not frozen and GUI directory not found."
-                     + " Did you forget to run npm run buildparcel?"
+                    + " Did you forget to run npm run buildparcel?"
                 )
 
         return gui_dir
@@ -187,9 +192,15 @@ class HorusServer:
         @self.server.route("/desktop/plugins/install", methods=["GET"])
         @desktopOnly
         def installPlugin():
-            self.pluginManager.installPlugin()
+            try:
+                self.pluginManager.installPlugin()
+            except Exception as e:
+                error = {
+                    "error": str(e),
+                }
+                return flask.jsonify(error)
             return "OK"
-        
+
         @self.server.route("/desktop/plugins/uninstall", methods=["POST"])
         @desktopOnly
         def uninstallPlugin():
@@ -232,6 +243,7 @@ class HorusServer:
             return flask.render_template("Main/index.html")
 
         if not self.debug:
+
             @self.server.before_request
             def beforeRequest():
                 # Check the token only for the api routes
@@ -252,5 +264,3 @@ class HorusServer:
         self.server.run(
             host=self.host, port=self.port, debug=self.debug, use_reloader=False
         )
-
-
