@@ -35,7 +35,7 @@ class HorusServer:
         self.desktop = desktop
 
         # Initialize the plugin manager
-        from HorusAPI import PluginManager
+        from Server import PluginManager
 
         self.pluginManager = PluginManager(appSupportDir)
 
@@ -211,6 +211,11 @@ class HorusServer:
         @self.server.route("/desktop/plugins/list", methods=["GET"])
         def listPlugins():
             plugins = self.pluginManager.listLoaded()
+            return flask.jsonify(plugins)
+        
+        @self.server.route("/desktop/plugins/listblocks", methods=["GET"])
+        def listblocks():
+            plugins = self.pluginManager.listAllBlocks()
             return flask.jsonify(plugins)
 
         @self.server.route("/desktop/openWindow", methods=["POST"])

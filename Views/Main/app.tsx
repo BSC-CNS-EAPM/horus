@@ -1,11 +1,14 @@
 import React, { Children, useState } from "react";
-import { Molstar } from "../Molstar/molstar";
+import { Molstar } from "../Components/molstar";
 import NBDButton from "../Components/NBDButton";
 import HorusModal from "../Components/Modal";
 import { getVersion, getForceFields, openWindow } from "../Utils/utils";
+import { FlowBuilder } from "../Components/flow_builder";
 
-export function App() {
+import { Route, Routes, Link } from "react-router-dom"
 
+
+const Main = () => {
     // Modal state
     const [showModal, setShowModal] = useState(false);
     const [modalBody, setModalBody] = useState(<div></div>);
@@ -35,27 +38,34 @@ export function App() {
         setShowModal(true);
     }
 
-
     return (
         <div className="App">
             <HorusModal show={showModal} onHide={handleCloseModal} title="About Horus" body={modalBody} />
             <div className="grid h-screen place-items-center">
-                <div className="grid gap-3">
-                <h1>Horus</h1>
-                <NBDButton text="New job" action={null} />
-                <NBDButton text="Open..." action={null} />
-                <NBDButton text="About Horus" action={openVersionModal} />
-                </div>
+                <nav>
+                    <div className="grid gap-3">
+                        <h1>Horus</h1>
+                        <Link to="/newjob">
+                            <NBDButton text="New job" action={null} />
+                        </Link>
+                        <NBDButton text="Open..." action={null} />
+                        <Link to="/molstar">
+                            <NBDButton text="Molstar" action={null} />
+                        </Link>
+                        <NBDButton text="About Horus" action={openVersionModal} />
+                    </div>
+                </nav>
             </div>
         </div>
     );
 }
 
-function About() {
+export function App() {
     return (
-        <div>
-            <h1>About</h1>
-            <p>This is the about page</p>
-        </div>
-    );
+        <Routes>
+            <Route path="/" element={<Main />} />
+            <Route path="/newjob" element={<FlowBuilder />} />
+            <Route path="/molstar" element={<Molstar />} />
+        </Routes>
+    )
 }

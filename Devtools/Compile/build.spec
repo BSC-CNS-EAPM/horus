@@ -9,7 +9,7 @@ entry_point = [os.path.join(currentDir, "Horus.py")]
 exclude_folders =[
     "App",
     "Server",
-    "HorusPlugins"
+    "HorusAPI"
 ]
 
 # Include the Cython folder

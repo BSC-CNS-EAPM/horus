@@ -6,10 +6,12 @@ import os
 ext_modules = [
     Extension("App", ["App/app_delegate.py"]),
     Extension("App", ["App/__init__.py"]),
-    Extension("Server", ["Server/server.py"]),
-    Extension("Server", ["Server/__init__.py"]),
-    Extension("HorusPlugins", ["HorusPlugins/plugins.py"]),
-    Extension("HorusPlugins", ["HorusPlugins/__init__.py"]),
+    Extension("Server.server", ["Server/server.py"]),
+    Extension("Server.plugin_manager", ["Server/plugin_manager.py"]),
+    Extension("Server.__init__", ["Server/__init__.py"], include_package_data=True),
+    Extension("HorusAPI", ["HorusAPI/plugins.py"]),
+    Extension("HorusAPI", ["HorusAPI/molstar.py"]),
+    Extension("HorusAPI", ["HorusAPI/__init__.py"]),
 ]
 
 setup(
@@ -29,6 +31,6 @@ for file in os.listdir("App"):
     if file.endswith(".c"):
         os.remove(os.path.join("App", file))
 
-for file in os.listdir("HorusPlugins"):
+for file in os.listdir("HorusAPI"):
     if file.endswith(".c"):
-        os.remove(os.path.join("HorusPlugins", file))
+        os.remove(os.path.join("HorusAPI", file))
