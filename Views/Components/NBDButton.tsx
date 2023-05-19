@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 
 // Import the css
-import "./NBDButton.css";
+import "./nbdbutton.css";
 
 // Create a component called NBDButton
 function NBDButton(props) {

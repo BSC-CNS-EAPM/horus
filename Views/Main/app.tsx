@@ -1,11 +1,11 @@
 import React, { Children, useState } from "react";
 import { Molstar } from "../Components/molstar";
+import { getVersion, getForceFields, openWindow } from "../Utils/utils";
+import { Route, Routes, Link } from "react-router-dom"
+
+import FlowBuilder from "../Components/FlowBuilder/flowbuilder";
 import NBDButton from "../Components/NBDButton";
 import HorusModal from "../Components/Modal";
-import { getVersion, getForceFields, openWindow } from "../Utils/utils";
-import { FlowBuilder } from "../Components/flow_builder";
-
-import { Route, Routes, Link } from "react-router-dom"
 
 
 const Main = () => {
