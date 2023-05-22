@@ -4,7 +4,7 @@ import { createRoot } from "react-dom/client";
 import 'bootstrap/dist/css/bootstrap.css';
 
 import { horusGet, horusPost } from "../Utils/utils";
-import NBDButton from "../Components/nbdbutton";
+import NBDButton from "../Components/NBDbutton";
 
 
 function InstalledPlugins() {

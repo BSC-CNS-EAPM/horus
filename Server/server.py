@@ -21,9 +21,12 @@ class HorusServer:
     parcelURL = "http://127.0.0.1:1234"
 
     def __init__(self, debug=False, desktop=False, appSupportDir=None):
+        
         # App support directory
         if appSupportDir is None:
             self.appSupportDir = os.path.abspath(os.path.join("AppSupport"))
+        else:
+            self.appSupportDir = appSupportDir
 
         # Basic Flask setup
         self.debug = debug
@@ -37,7 +40,7 @@ class HorusServer:
         # Initialize the plugin manager
         from Server import PluginManager
 
-        self.pluginManager = PluginManager(appSupportDir)
+        self.pluginManager = PluginManager(self.appSupportDir)
 
         # Security token
         self.token = self.__cors()
@@ -90,10 +93,7 @@ class HorusServer:
 
     def __guiDir(self):
         """
-        Checks for the GUI directory in the following order:
-        1. The parent directory of the current file (development)
-        2. The parent directory of the current file (frozen executable pyinstaller)
-        3. The current directory (frozen executable py2app)
+        Checks for the GUI directory
         """
 
         # Check if the parcel server is running
@@ -156,7 +156,7 @@ class HorusServer:
         # Setup the error page
         @self.server.errorhandler(404)
         def pageNotFound(e):
-            return flask.redirect("/error")
+            return flask.redirect("/")
 
         @self.server.route("/error")
         def error():
@@ -212,7 +212,7 @@ class HorusServer:
         def listPlugins():
             plugins = self.pluginManager.listLoaded()
             return flask.jsonify(plugins)
-        
+
         @self.server.route("/desktop/plugins/listblocks", methods=["GET"])
         def listblocks():
             plugins = self.pluginManager.listAllBlocks()
@@ -265,7 +265,8 @@ class HorusServer:
             response.headers["Cache-Control"] = "no-store"
             return response
 
-    def run(self):
+    def run(self, reloader=False):
+        # use_reloader has to be turned off in order to run in a secondary thread
         self.server.run(
-            host=self.host, port=self.port, debug=self.debug, use_reloader=False
+            host=self.host, port=self.port, debug=self.debug, use_reloader=reloader
         )

@@ -197,11 +197,13 @@ class PluginManager:
         """
         Returns a list of all the blocks of all the plugins.
         """
+        self.__initializePlugins()
         blocks = []
         for p in self.loadedPlugins:
             for b in p.blocks:
                 blocks.append(
                     {
+                        "id": b.id,
                         "plugin": p.info["name"],
                         "name": b.name,
                         "description": b.description,

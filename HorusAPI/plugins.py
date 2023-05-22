@@ -1,6 +1,4 @@
-
-class PluginVariable:    
-
+class PluginVariable:
     # The value of the variable
     value = None
 
@@ -23,7 +21,7 @@ class PluginVariable:
             if child.name == name:
                 return child
         raise Exception(f"Child {name} not found.")
-    
+
     def getChildren(self):
         chilList = []
         for child in self.__children:
@@ -32,14 +30,32 @@ class PluginVariable:
                 "description": child.description,
                 "type": child.type,
                 "defaultValue": child.defaultValue,
-                "children": child.getChildren()
+                "children": child.getChildren(),
             }
             chilList.append(childDict)
-    
-
 
 
 class PluginBlock:
+    id: str = None
+    """
+    The id of the block. It is composed by the author and the name of the block.
+    """
+
+    name: str = None
+    """
+    The name of the block.
+    """
+
+    description: str = None
+    """
+    A description of the block.
+    """
+
+    action: callable = None
+    """
+    The action that the block performs.
+    """
+
     # Children of the Block (PluginVariable)
     variables: list[PluginVariable] = []
 
@@ -49,10 +65,14 @@ class PluginBlock:
     # The input that the block receives
     input = None
 
-    def __init__(self, name, description, action=None):
+    def __init__(
+        self, author: str, name: str, description: str, action: callable = None
+    ):
+        self.id = f"{author}.{name}"
         self.name = name
         self.description = description
         self.action = action
+        self.author = author
 
 
 class PluginAction:

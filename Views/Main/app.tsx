@@ -1,12 +1,13 @@
 import React, { Children, useState } from "react";
-import { Molstar } from "../Components/molstar";
 import { getVersion, getForceFields, openWindow } from "../Utils/utils";
 import { Route, Routes, Link } from "react-router-dom"
 
-import FlowBuilder from "../Components/FlowBuilder/flowbuilder";
-import NBDButton from "../Components/NBDButton";
-import HorusModal from "../Components/Modal";
+import Molstar from "../Components/molstar";
 
+import FlowBuilder from "../Components/FlowBuilder/FlowBuilder";
+import NBDButton from "../Components/nbdbutton";
+import HorusModal from "../Components/modal";
+import HorusToolbar from "../Components/toolbar";
 
 const Main = () => {
     // Modal state
@@ -39,20 +40,14 @@ const Main = () => {
     }
 
     return (
-        <div className="App">
-            <HorusModal show={showModal} onHide={handleCloseModal} title="About Horus" body={modalBody} />
-            <div className="grid h-screen place-items-center">
+        <div className="grid">
+            <HorusToolbar />
+            <div className="absolute z-10">
                 <nav>
-                    <div className="grid gap-3">
-                        <h1>Horus</h1>
+                    <div className="flex flex-row">
                         <Link to="/newjob">
                             <NBDButton text="New job" action={null} />
                         </Link>
-                        <NBDButton text="Open..." action={null} />
-                        <Link to="/molstar">
-                            <NBDButton text="Molstar" action={null} />
-                        </Link>
-                        <NBDButton text="About Horus" action={openVersionModal} />
                     </div>
                 </nav>
             </div>
@@ -62,10 +57,12 @@ const Main = () => {
 
 export function App() {
     return (
-        <Routes>
-            <Route path="/" element={<Main />} />
-            <Route path="/newjob" element={<FlowBuilder />} />
-            <Route path="/molstar" element={<Molstar />} />
-        </Routes>
+        <div className="grid">
+            <HorusToolbar />
+            <Routes>
+                <Route path="/" element={<Molstar />} />
+                <Route path="/newjob" element={<FlowBuilder />} />
+            </Routes>
+        </div>
     )
 }

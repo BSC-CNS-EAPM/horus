@@ -1,4 +1,4 @@
-import { useEffect, createRef } from "react";
+import { useEffect, createRef, useState } from "react";
 import { createPluginUI } from "molstar/lib/mol-plugin-ui";
 import { PluginUIContext } from "molstar/lib/mol-plugin-ui/context";
 
@@ -11,6 +11,9 @@ import { PluginConfig } from "molstar/lib/mol-plugin/config";
 // Load the molstar default style
 import "molstar/lib/mol-plugin-ui/skin/light.scss";
 
+// Import the loading indicator
+import Loading from "./Loading";
+
 
 declare global {
   interface Window {
@@ -18,13 +21,14 @@ declare global {
   }
 }
 
-export function Molstar() {
+export default function Molstar() {
+
   const parent = createRef<HTMLDivElement>();
 
   const MySpec: PluginUISpec = {
     ...DefaultPluginUISpec(),
     config: [
-      [PluginConfig.Viewport.ShowExpand, true],
+      [PluginConfig.Viewport.ShowExpand, false],
       [PluginConfig.Viewport.ShowControls, false],
     ],
     layout: {
@@ -40,20 +44,16 @@ export function Molstar() {
       const plugin = await createPluginUI(parent.current as HTMLDivElement, { ...MySpec });
 
       const renderer = plugin.canvas3d!.props.renderer;
-      PluginCommands.Canvas3D.SetSettings(plugin, { settings: { renderer: { ...renderer, backgroundColor: ColorNames.whitesmoke /* or: 0xff0000 as Color */ } } });
+      PluginCommands.Canvas3D.SetSettings(plugin, {
+        settings: {
+          renderer: {
+            ...renderer,
+            backgroundColor: ColorNames.white,
+          }
+        }
+      });
 
       window.molstar = plugin;
-
-      const data = await window.molstar.builders.data.download(
-        { url: "https://files.rcsb.org/download/3PTB.pdb" }, /* replace with your URL */
-        { state: { isGhost: true } }
-      );
-      const trajectory =
-        await window.molstar.builders.structure.parseTrajectory(data, "pdb");
-      await window.molstar.builders.structure.hierarchy.applyPreset(
-        trajectory,
-        "default"
-      );
     }
     init();
     return () => {
@@ -62,5 +62,15 @@ export function Molstar() {
     };
   }, []);
 
-  return <div ref={parent} style={{ position: "relative", width: "800px", height: "600px" }} />;
+  return (
+    <div ref={parent} style={{
+      // Place a top margin of 2 rem to avoid the toolbar
+      position: "absolute",
+      marginTop: "2rem",
+      width: "100%",
+      // Set the height to the height of the window minus the toolbar
+      height: "calc(100vh - 2rem)",
+      border: "none"
+    }} />
+  );
 }

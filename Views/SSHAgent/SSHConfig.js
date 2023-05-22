@@ -1,7 +1,7 @@
 // Create the error window view
 import { createRoot } from "react-dom/client";
 import React, { useState } from "react";
-import NBDButton from "../Components/nbdbutton";
+import NBDButton from "../Components/NBDbutton";
 import { horusPost } from "../Utils/utils";
 
 // Define the submission function

@@ -19,7 +19,7 @@ function getShemsuToken() {
 }
 
 // Tokenize the urls with the shemsu token
-async function horusGet(url, headers) {
+async function horusGet(url, headers?) {
     return await fetch(url, {
         method: "GET",
         headers: {
