@@ -2,12 +2,12 @@ import React, { Children, useState } from "react";
 import { getVersion, getForceFields, openWindow } from "../Utils/utils";
 import { Route, Routes, Link } from "react-router-dom"
 
-import Molstar from "../Components/molstar";
+import Molstar from "../Components/Molstar";
 
 import FlowBuilder from "../Components/FlowBuilder/FlowBuilder";
-import NBDButton from "../Components/nbdbutton";
+import NBDButton from "../Components/NBDbutton";
 import HorusModal from "../Components/modal";
-import HorusToolbar from "../Components/toolbar";
+import HorusToolbar from "../Components/Toolbar/Toolbar";
 
 const Main = () => {
     // Modal state

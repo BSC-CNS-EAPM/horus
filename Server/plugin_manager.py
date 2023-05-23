@@ -1,5 +1,5 @@
 import os
-from HorusAPI import Plugin, PluginAction, PluginBlock, PluginVariable
+from HorusAPI import Plugin, PluginBlock, PluginVariable
 
 
 class PluginManager:
@@ -113,7 +113,11 @@ class PluginManager:
         for pl in installed:
             # Get the plugin file based on the folder name + .py
             pluginFile = os.path.join(self.pluginsDir, pl, pl + ".py")
-            plugins.append(pluginFile)
+            # Check if the plugin file exists 
+            # (this is needed because in macOS .DS_Store.py files are 
+            # listed but don't exist)
+            if os.path.exists(pluginFile):
+                plugins.append(pluginFile)
 
         return plugins
 
@@ -138,6 +142,12 @@ class PluginManager:
             plugin = self.__checkPlugin(pluginPath)
         except Exception as e:
             raise Exception(f"Error loading plugin {os.path.basename(pluginPath)}: {e}")
+
+
+        # Check that the plugin is not already loaded
+        for p in self.loadedPlugins:
+            if p == plugin:
+                return
 
         self.loadedPlugins.append(plugin)
 
@@ -182,8 +192,8 @@ class PluginManager:
         listedPlugins = []
         for p in self.loadedPlugins:
             info = p.info
-            info["actions"] = len(p.actions)
-            info["views"] = len(p.views)
+            info["actions"] = str(len(p.actions) if p.actions else 0)
+            info["views"] = str(len(p.views))
             listedPlugins.append(info)
         return listedPlugins
 
@@ -227,3 +237,18 @@ class PluginManager:
                 "children": v.getChildren()
             })
         return varList
+    
+    def executeAction(self, actionID, variables):
+        """
+        Executes an action of a plugin.
+        """
+
+        # Split the id
+        pluginName, blockName, actionName = actionID.split(".")
+
+        # Find the plugin
+        plugin = self.__getPlugin(pluginName)
+
+        # Get the block
+
+

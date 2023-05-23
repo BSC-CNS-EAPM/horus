@@ -108,7 +108,7 @@ class HorusServer:
         # Frozen executable path
         if not os.path.exists(gui_dir):
             try:
-                bundle_dir = sys._MEIPASS
+                bundle_dir = sys._MEIPASS # type: ignore
                 gui_dir = os.path.abspath(os.path.join(bundle_dir, "GUI"))
             except AttributeError:
                 raise Exception(
@@ -184,12 +184,12 @@ class HorusServer:
         def isDesktop():
             return flask.jsonify(self.desktop)
 
-        @self.server.route("/desktop/plugins", methods=["GET", "POST"])
+        @self.server.route("/plugins", methods=["GET", "POST"])
         @desktopOnly
         def pluginsManager():
             return flask.render_template("PluginsManager/index.html")
 
-        @self.server.route("/desktop/plugins/install", methods=["GET"])
+        @self.server.route("/plugins/install", methods=["GET"])
         @desktopOnly
         def installPlugin():
             try:
@@ -201,22 +201,31 @@ class HorusServer:
                 return flask.jsonify(error)
             return "OK"
 
-        @self.server.route("/desktop/plugins/uninstall", methods=["POST"])
+        @self.server.route("/plugins/uninstall", methods=["POST"])
         @desktopOnly
         def uninstallPlugin():
             pluginName = request.get_json()["name"]
             self.pluginManager.uninstallPlugin(pluginName)
             return "OK"
 
-        @self.server.route("/desktop/plugins/list", methods=["GET"])
+        @self.server.route("/plugins/list", methods=["GET"])
         def listPlugins():
             plugins = self.pluginManager.listLoaded()
             return flask.jsonify(plugins)
 
-        @self.server.route("/desktop/plugins/listblocks", methods=["GET"])
+        @self.server.route("/plugins/listblocks", methods=["GET"])
         def listblocks():
             plugins = self.pluginManager.listAllBlocks()
+            print("plugins: ", plugins)
             return flask.jsonify(plugins)
+        
+        @self.server.route("/plugins/action", methods=["GET"])
+        def pluginAction():
+            # Execute the action from a given plugin
+            pluginId = request.args.get("pluginId")
+            actionId = request.args.get("actionId")
+            self.pluginManager.executeAction(pluginId, actionId)
+            return "OK"
 
         @self.server.route("/desktop/openWindow", methods=["POST"])
         @desktopOnly
@@ -242,6 +251,8 @@ class HorusServer:
 
                 AppDelegate().configureSSH(request.get_json())
                 return "OK"
+
+            return "OK"
 
         @self.server.route("/")
         def index():

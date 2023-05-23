@@ -54,7 +54,7 @@ export default function FlowBuilder() {
 
     useEffect(() => {
         async function fetchBlocks() {
-            return (await horusGet("/desktop/plugins/listblocks")).json()
+            return (await horusGet("/plugins/listblocks")).json()
         }
 
         fetchBlocks().then(fb => {
@@ -64,7 +64,7 @@ export default function FlowBuilder() {
                 name: b.name,
                 description: b.description,
                 plugin: b.plugin,
-                variables: 0
+                variables: b.variables,
             }))
             setBlocks(fb)
         }

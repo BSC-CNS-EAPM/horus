@@ -5,7 +5,21 @@
     height: 1.75rem;
     margin-top: 0.1rem;
     padding-inline: 0.5rem;
+    width: 100%;
+    align-items: center;
+    justify-content: left;
+    display: flex;
+    flex-direction: row;
+    cursor: pointer;
+    /* Animate the background when hovering */
+    transition: background 0.2s ease-in-out;
+    margin-bottom: 0.3rem;
 }
+
+.toolbar-item:hover {
+    background: #defcff;
+}
+
 
 .toolbar-search {
     border: 1px solid #ccc;

@@ -3,6 +3,9 @@ import os
 import webview
 from threading import Lock
 
+# Import type annotations
+import typing
+
 from Server import HorusServer
 
 import cython
@@ -78,7 +81,7 @@ class AppDelegate(metaclass=SingletonMeta):
     def __appSupportDir(self):
         try:
             # Check if we are in a frozen executable
-            sys._MEIPASS
+            sys._MEIPASS  # type: ignore
 
             # If we are, use the default system Application Support directory
             # On macOS this is ~/Library/Application Support
@@ -95,7 +98,12 @@ class AppDelegate(metaclass=SingletonMeta):
                 )
             elif platform == "win32":
                 appSupportDir = os.getenv("APPDATA")
-                appSupportDir = os.path.join(appSupportDir, appInfo["bundleIdentifier"])
+                if appSupportDir is not None:
+                    appSupportDir = os.path.join(
+                        appSupportDir, appInfo["bundleIdentifier"]
+                    )
+                else:
+                    raise Exception("APPDATA environment variable not set")
             elif platform == "linux":
                 appSupportDir = os.path.join(
                     os.path.expanduser("~"),
@@ -130,7 +138,7 @@ class AppDelegate(metaclass=SingletonMeta):
         self.server_thread.daemon = True
         self.server_thread.start()
 
-    def openWindow(self, title: str, url: str = None):
+    def openWindow(self, title: str, url: typing.Optional[str] = None):
         """
         Creates a new window with the given title.
         If no url is given, the index page will be loaded.
@@ -140,7 +148,7 @@ class AppDelegate(metaclass=SingletonMeta):
         """
         if url is None:
             url = self.server.baseURL
-        window = webview.create_window("Horus", url=url)
+        window = webview.create_window(title.encode(), url=url.encode())
         self.windows.append(window)
         return window
 
@@ -209,7 +217,11 @@ class AppDelegate(metaclass=SingletonMeta):
         """
         webview.start(debug=self.debug, menu=self.__menus())
 
-    def openFileDialog(self, allowMultiple: bool = False, fileTypes: tuple = None):
+    def openFileDialog(
+        self,
+        allowMultiple: bool = False,
+        fileTypes: typing.Optional[typing.Tuple[str, ...]] = None,
+    ):
         """
         Opens a file dialog and returns the path of the selected file(s).
 
@@ -221,7 +233,7 @@ class AppDelegate(metaclass=SingletonMeta):
         window = webview.windows[0]
 
         # Open the file dialog
-        result = window.create_file_dialog(
+        result: typing.Tuple[str, ...] = window.create_file_dialog(
             webview.OPEN_DIALOG, allow_multiple=allowMultiple, file_types=fileTypes
         )
 
@@ -256,14 +268,25 @@ class AppDelegate(metaclass=SingletonMeta):
             "dir": sshConfig["dir"],
         }
 
-        with open(f"{self.server.pluginManager.appSupportDir}/ssh.json", "w") as f:
+        with open(f"{self.appSupportDir}/ssh.json", "w") as f:
             json.dump(user_data, f)
 
-        with open(f"{self.server.pluginManager.appSupportDir}/ssh.key", "w") as f:
+        with open(f"{self.appSupportDir}/ssh.key", "w") as f:
             f.write(sshConfig["keys"])
 
 
 def LaunchApp():
+    # Check for the --no-window flag (Only development)
+    if "--server" in sys.argv:
+        # Start the server
+        from Server.server import HorusServer
+
+        server = HorusServer(debug=True, desktop=False)
+        server.run(reloader=True)
+
+        # Exit the app
+        sys.exit(0)
+
     # Prepare the app delegate
     app = AppDelegate()
     """

@@ -15,7 +15,7 @@ function InstalledPlugins() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const response = await horusGet("/desktop/plugins/list");
+                const response = await horusGet("/plugins/list");
                 const data = await response.json();
                 setPluginList(data);
                 setLoading(false);
@@ -62,7 +62,7 @@ function PluginCard({ plugin }) {
             "Accept": "application/json"
         }
 
-        await horusPost("/desktop/plugins/uninstall", headers, body);
+        await horusPost("/plugins/uninstall", headers, body);
 
         // Refresh page
         window.location.reload();
@@ -107,7 +107,7 @@ function PluginManager() {
 
     // Open new window for plugin installation
     const installPlugin = async () => {
-        await horusGet("/desktop/plugins/install");
+        await horusGet("/plugins/install");
         // Refresh page
         window.location.reload();
     }

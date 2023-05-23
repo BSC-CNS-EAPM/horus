@@ -1,12 +1,22 @@
-class PluginVariable:
-    # The value of the variable
-    value = None
+import typing
 
-    def __init__(self, name, description, type, defaultValue=None):
+
+class PluginVariable:
+    
+    id: str = "baseplugin.variable"
+
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        type: str,
+        defaultValue: typing.Any = None,
+    ):
         self.name = name
         self.description = description
         self.type = type
         self.defaultValue = defaultValue
+        self.value = defaultValue
 
         # Initialize a hidden children list
         self.__children = []
@@ -23,7 +33,7 @@ class PluginVariable:
         raise Exception(f"Child {name} not found.")
 
     def getChildren(self):
-        chilList = []
+        childList = []
         for child in self.__children:
             childDict = {
                 "name": child.name,
@@ -32,26 +42,27 @@ class PluginVariable:
                 "defaultValue": child.defaultValue,
                 "children": child.getChildren(),
             }
-            chilList.append(childDict)
+            childList.append(childDict)
+        return childList
 
 
 class PluginBlock:
-    id: str = None
+    id: str = "baseplugin.block"
     """
     The id of the block. It is composed by the author and the name of the block.
     """
 
-    name: str = None
+    name: str = "Block name"
     """
     The name of the block.
     """
 
-    description: str = None
+    description: str = "Block description"
     """
     A description of the block.
     """
 
-    action: callable = None
+    action: typing.Optional[typing.Callable] = None
     """
     The action that the block performs.
     """
@@ -65,29 +76,44 @@ class PluginBlock:
     # The input that the block receives
     input = None
 
+    id = "baseplugin.block"
+
     def __init__(
-        self, author: str, name: str, description: str, action: callable = None
+        self,
+        author: str,
+        name: str,
+        description: str,
+        action: typing.Optional[typing.Callable] = None,
+        variables: list[PluginVariable] = [],
     ):
-        self.id = f"{author}.{name}"
         self.name = name
         self.description = description
         self.action = action
         self.author = author
+        self.variables = variables
 
-
-class PluginAction:
-    def __init__(self, inputs, outputs, action):
+    def setAction(self, action: typing.Callable):
         self.action = action
-        self.inputs = inputs
-        self.outputs = outputs
 
+    def addVariable(self, variable: PluginVariable):
+        variable.id = f"{self.id}.variable.{self.name}".replace(" ", "_")
+        self.variables.append(variable)
+
+    # Define the call method to run the block
     def __call__(self, *args, **kwargs):
-        try:
-            self.action()
-            return True
-        except Exception as e:
-            print(f"Error running plugin action: {e}")
-            return False
+        if self.action is None:
+            raise Exception("The block has no action defined.")
+        return self.action(*args, **kwargs)
+
+    def updateValues(self, values: dict):
+        """
+        Updates the values of the variables of the block.
+
+        :param values: A dictionary with the values to update (JSON coming from frontend).
+        """
+        for variable in self.variables:
+            if variable.name in values:
+                variable.value = values[variable.name]
 
 
 class Plugin:
@@ -103,7 +129,7 @@ class Plugin:
     please specify the path to the interpreter.
     """
 
-    info = {
+    info: dict[str, str] = {
         "name": "Plugin",
         "version": "0.0.1",
         "author": "None",
@@ -120,9 +146,10 @@ class Plugin:
     :param dependencies: A list of dependencies of the plugin
     """
 
-    actions: list[PluginAction] = []
+    actions: typing.Optional[typing.List[typing.Callable]] = None
     """
     Functions that can be called from the GUI.
+    WIP
     """
 
     views = []
@@ -140,7 +167,20 @@ class Plugin:
 
     # Define comparison operators
     def __eq__(self, other):
-        return self.pluginInfo["name"] == other.pluginInfo["name"]
+        if isinstance(other, Plugin):
+            return self.info["name"] == other.info["name"]
+        return False
 
     def __ne__(self, other):
-        return self.pluginInfo["name"] != other.pluginInfo["name"]
+        return not self.__eq__(other)
+
+    # Define the str function fro print(plugin)
+    def __str__(self):
+        return self.info["name"]
+
+    # Function to get a block by its ID
+    def getBlock(self, id):
+        for block in self.blocks:
+            if block.id == id:
+                return block
+        raise Exception(f"Block {id} not found.")
