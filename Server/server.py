@@ -31,7 +31,7 @@ class HorusServer:
         # Basic Flask setup
         self.debug = debug
         self.host = "127.0.0.1"
-        self.port = self.__getFreePort()
+        self.port = self._getFreePort()
         self.baseURL = f"http://{self.host}:{self.port}"
 
         # Desktop mode
@@ -43,16 +43,16 @@ class HorusServer:
         self.pluginManager = PluginManager(self.appSupportDir)
 
         # Security token
-        self.token = self.__cors()
+        self.token = self._getToken()
 
         # GUI directory
-        self.guiDir = self.__guiDir()
+        self.guiDir = self._guiDir()
 
         # Setup the server
-        self.server = self.__setupServer()
-        self.__routes()
+        self.server = self._setupServer()
+        self._routes()
 
-    def __cors(self):
+    def _getToken(self):
         if self.desktop:
             import webview
 
@@ -60,7 +60,7 @@ class HorusServer:
         else:
             return None
 
-    def __getFreePort(self):
+    def _getFreePort(self):
         # Generate a random port number
         port = random.randint(5001, 9000)
 
@@ -80,7 +80,7 @@ class HorusServer:
 
         return port
 
-    def __checkParcel(self):
+    def _checkParcel(self):
         # If the parcel server is running, load the index file from there:
         import requests
         try:
@@ -90,13 +90,13 @@ class HorusServer:
         except requests.exceptions.ConnectionError:
             return False
 
-    def __guiDir(self):
+    def _guiDir(self):
         """
         Checks for the GUI directory
         """
 
         # Check if the parcel server is running
-        if self.debug and self.__checkParcel():
+        if self.debug and self._checkParcel():
             return os.path.abspath(
                 os.path.join(os.path.dirname(__file__), "..", "dist")
             )
@@ -117,7 +117,7 @@ class HorusServer:
 
         return gui_dir
 
-    def __setupServer(self):
+    def _setupServer(self):
         """
         Creates the Flask server instance. This will serve the GUI files and handle the
         API requests. Also disables Flask logging when not in debug mode.
@@ -141,7 +141,20 @@ class HorusServer:
 
         return server
 
-    def __routes(self):
+    def _routes(self):
+
+        # Create a wrapper for token verification
+        def verifyToken(func):
+            @wraps(func)
+            def wrapper(*args, **kwargs):
+                if self.token is None:
+                    return func(*args, **kwargs)
+                if request.headers.get("shemsu") == self.token:
+                    return func(*args, **kwargs)
+                return flask.redirect("/error")
+
+            return wrapper
+
         # Create a wrapper for checking if the app is on desktop mode or web mode
         def desktopOnly(func):
             @wraps(func)
@@ -162,6 +175,7 @@ class HorusServer:
             return flask.render_template("Error/error.html")
 
         @self.server.route("/api/version", methods=["GET"])
+        @verifyToken
         def sendVersion():
             import nbdsuite as nbds
 
@@ -172,6 +186,7 @@ class HorusServer:
             return flask.jsonify(versionInfo)
 
         @self.server.route("/api/nbdsuite/forcefields", methods=["GET"])
+        @verifyToken
         def sendForcefields():
             from nbdsuite.utils.toolkits import PeleffyToolkit
 
@@ -217,23 +232,39 @@ class HorusServer:
 
 
         @self.server.route("/plugins/list", methods=["GET"])
+        @verifyToken
         def listPlugins():
             plugins = self.pluginManager.listLoaded()
             return flask.jsonify(plugins)
 
         @self.server.route("/plugins/listblocks", methods=["GET"])
+        @verifyToken
         def listblocks():
             plugins = self.pluginManager.listAllBlocks()
-            print("plugins: ", plugins)
             return flask.jsonify(plugins)
         
-        @self.server.route("/plugins/action", methods=["GET"])
+        @self.server.route("/plugins/executeblock", methods=["POST"])
+        @verifyToken
         def pluginAction():
-            # Execute the action from a given plugin
-            pluginId = request.args.get("pluginId")
-            actionId = request.args.get("actionId")
-            self.pluginManager.executeAction(pluginId, actionId)
-            return "OK"
+
+            data = request.get_json()
+
+            variables = data["variables"]
+            blockID = data["blockID"]
+
+            # Execute the action from a given block
+            try:
+                self.pluginManager.executeBlock(blockID, variables)
+                success = {
+                    "ok": True,
+                }
+                return flask.jsonify(success)
+            except Exception as e:
+                error = {
+                    "ok": False,
+                    "error": str(e),
+                }
+                return flask.jsonify(error)
 
         @self.server.route("/desktop/openWindow", methods=["POST"])
         @desktopOnly
@@ -265,18 +296,6 @@ class HorusServer:
         @self.server.route("/")
         def index():
             return flask.render_template("Main/index.html")
-
-        if not self.debug:
-
-            @self.server.before_request
-            def beforeRequest():
-                # Check the token only for the api routes
-                if (
-                    request.path.startswith("/api")
-                    and (request.args.get("shemsu") or request.headers.get("shemsu"))
-                    != self.token
-                ):
-                    return flask.redirect("/error")
 
         @self.server.after_request
         def addHeader(response):

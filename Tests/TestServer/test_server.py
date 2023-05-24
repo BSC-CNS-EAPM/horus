@@ -24,12 +24,13 @@ def test_desktop_server_init(desktopServer):
     assert desktopServer.pluginManager is not None
 
 def test_get_free_port(desktopServer):
-    port = desktopServer._HorusServer__getFreePort()
+    port = desktopServer._getFreePort()
     assert isinstance(port, int)
     assert 5001 <= port <= 9000
 
+
 def test_gui_dir(desktopServer):
-    gui_dir = desktopServer._HorusServer__guiDir()
+    gui_dir = desktopServer._guiDir()
     assert isinstance(gui_dir, str)
 
 def test_checkPlugin(pluginManager):
@@ -38,8 +39,8 @@ def test_checkPlugin(pluginManager):
     with open(pluginPath, "w") as f:
         f.write("from HorusAPI import Plugin\nplugin = Plugin()")
 
-    # Call the __checkPlugin function
-    plugin = pluginManager._PluginManager__checkPlugin(pluginPath)
+    # Call the _checkPlugin function
+    plugin = pluginManager._checkPlugin(pluginPath)
 
     # Clean up the mock plugin file
     os.remove(pluginPath)

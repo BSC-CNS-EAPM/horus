@@ -67,7 +67,7 @@ class AppDelegate(metaclass=SingletonMeta):
         self.debug = debug
 
         # Set the app support directory
-        self.__appSupportDir()
+        self._appSupportDir()
 
         # Prepare the server
         self.server: HorusServer = HorusServer(
@@ -75,9 +75,9 @@ class AppDelegate(metaclass=SingletonMeta):
         )
 
         # Start the server in a new thread
-        self.__startServer()
+        self._startServer()
 
-    def __appSupportDir(self):
+    def _appSupportDir(self):
 
         # If we are, use the default system Application Support directory
         # On macOS this is ~/Library/Application Support
@@ -127,7 +127,7 @@ class AppDelegate(metaclass=SingletonMeta):
 
         self.appSupportDir = appSupportDir
 
-    def __startServer(self):
+    def _startServer(self):
         """
         Starts the backend Flask server.
         This server will handle python modules and scripts in our app.
@@ -158,7 +158,7 @@ class AppDelegate(metaclass=SingletonMeta):
         It will create the first window and launch the app
         """
         self.openWindow("Horus")
-        self.__start()
+        self._start()
 
     def applicationWillTerminate(self):
         """
@@ -166,7 +166,7 @@ class AppDelegate(metaclass=SingletonMeta):
         """
         pass
 
-    def __menus(self):
+    def _menus(self):
         import webview.menu as wm
 
         def newHorus():
@@ -213,11 +213,11 @@ class AppDelegate(metaclass=SingletonMeta):
 
         return [fileMenu, pluginsMenu, settingsMenu]
 
-    def __start(self):
+    def _start(self):
         """
         This will start the window and set the shemsu token to the window object.
         """
-        webview.start(debug=self.debug, menu=self.__menus())
+        webview.start(debug=self.debug, menu=self._menus())
 
     def openFileDialog(
         self,

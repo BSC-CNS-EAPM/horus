@@ -10,12 +10,12 @@ class PluginManager:
     """
 
     def __init__(self, appSupportDir) -> None:
-        self.__pluginsDir(appSupportDir)
+        self._pluginsDir(appSupportDir)
 
         # Initialize the plugins
-        self.__initializePlugins()
+        self._initializePlugins()
 
-    def __pluginsDir(self, appSupportDir):
+    def _pluginsDir(self, appSupportDir):
         """
         Creates the plugins directory if it doesn't exist.
         - appSupportDir: The path to the AppSupport directory
@@ -55,9 +55,9 @@ class PluginManager:
             return
 
         for f in files:
-            self.__installPlugin(f)
+            self._installPlugin(f)
 
-    def __installPlugin(self, path):
+    def _installPlugin(self, path):
         import shutil
 
         # Get the name of the plugin
@@ -91,13 +91,13 @@ class PluginManager:
         newPlugin = os.path.join(newPluginDir, pluginName + ".py")
 
         try:
-            self.__loadPlugin(newPlugin)
+            self._loadPlugin(newPlugin)
         except Exception as e:
             shutil.rmtree(newPluginDir)
             print(e)
             raise Exception(f"Error installing plugin {os.path.basename(path)}")
 
-    def __getPlugin(self, byName: str) -> Plugin:
+    def _getPlugin(self, byName: str) -> Plugin:
         """
         Returns a plugin with the given name.
         """
@@ -105,6 +105,15 @@ class PluginManager:
             if p.info["name"] == byName:
                 return p
         raise Exception(f"Plugin {byName} not found.")
+    
+    def _getPluginByID(self, id: str) -> Plugin:
+        """
+        Returns a plugin with the given name.
+        """
+        for p in self.loadedPlugins:
+            if p.id == id:
+                return p
+        raise Exception(f"PluginID {id} not found.")
 
     def uninstallPlugin(self, pluginName: str):
         """
@@ -112,11 +121,11 @@ class PluginManager:
         """
         import shutil
 
-        pDir = self.__getPlugin(pluginName).info["filename"].replace(".py", "")
+        pDir = self._getPlugin(pluginName).info["filename"].replace(".py", "")
         pluginPath = os.path.join(self.pluginsDir, pDir)
         shutil.rmtree(pluginPath)
 
-    def __listPluginsPaths(self):
+    def _listPluginsPaths(self):
         """
         Lists the plugins present in the plugins directory.
         """
@@ -154,27 +163,27 @@ class PluginManager:
 
         return plugins
 
-    def __initializePlugins(self):
+    def _initializePlugins(self):
         """
         Initializes all the plugins present in the plugins directory.
         """
         self.loadedPlugins: list[Plugin] = []
         self.errorPlugins: list[str] = []
-        pluginPaths = self.__listPluginsPaths()
+        pluginPaths = self._listPluginsPaths()
         for pth in pluginPaths:
             try:
-                self.__loadPlugin(pth)
+                self._loadPlugin(pth)
             except Exception as e:
                 print(f"Error loading plugin {os.path.basename(pth)}: {e}")
                 self.errorPlugins.append(os.path.basename(pth))
 
-    def __loadPlugin(self, pluginPath: str):
+    def _loadPlugin(self, pluginPath: str):
         """
         Loads a plugin from the given path.
         """
 
         try:
-            plugin = self.__checkPlugin(pluginPath)
+            plugin = self._checkPlugin(pluginPath)
         except Exception as e:
             raise Exception(f"Error loading plugin {os.path.basename(pluginPath)}: {e}")
 
@@ -185,7 +194,7 @@ class PluginManager:
 
         self.loadedPlugins.append(plugin)
 
-    def __checkPlugin(self, pluginPath):
+    def _checkPlugin(self, pluginPath):
         """
         Checks if a plugin is valid.
 
@@ -233,7 +242,7 @@ class PluginManager:
         """
         Returns a list of all the loaded plugins.
         """
-        self.__initializePlugins()
+        self._initializePlugins()
         listedPlugins = []
         for p in self.loadedPlugins:
             info = p.info
@@ -252,7 +261,7 @@ class PluginManager:
         """
         Returns a list of all the blocks of all the plugins.
         """
-        self.__initializePlugins()
+        self._initializePlugins()
         blocks = []
         for p in self.loadedPlugins:
             for b in p.blocks:
@@ -272,7 +281,7 @@ class PluginManager:
         Returns a list of all the variables of a block.
         """
         varList = []
-        for v in block.variables:
+        for v in block.listVariables():
             # Get the children of the variable
             varList.append(
                 {
@@ -284,16 +293,40 @@ class PluginManager:
                 }
             )
         return varList
+    
+    def _findBlock(self, fromBlockID: str):
+        """
+        Finds a block from an action id.
+        """
+        # Split the id
+        pluginID = fromBlockID.split(".")[0]
 
-    def executeAction(self, actionID, variables):
+        # Find the plugin
+        try:
+            plugin = self._getPluginByID(pluginID)
+        except Exception:
+            raise Exception(f"PluginID {pluginID} not found")
+
+        # Get the block
+        try:
+            block = plugin.getBlock(fromBlockID)
+        except Exception:
+            raise Exception(f"Block {fromBlockID} not found")
+
+        return block
+
+
+    def executeBlock(self, blockID, variables):
         """
         Executes an action of a plugin.
         """
 
-        # Split the id
-        pluginName, blockName, actionName = actionID.split(".")
+        # Find the block
+        block = self._findBlock(blockID)
 
-        # Find the plugin
-        plugin = self.__getPlugin(pluginName)
+        # Set the variables
+        block.updateValues(variables)
 
-        # Get the block
+        # Execute the block
+        block()
+
