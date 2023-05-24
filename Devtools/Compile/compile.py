@@ -8,7 +8,11 @@ ext_modules = [
     Extension("App", ["App/__init__.py"]),
     Extension("Server.server", ["Server/server.py"]),
     Extension("Server.plugin_manager", ["Server/plugin_manager.py"]),
-    Extension("Server.__init__", ["Server/__init__.py"], include_package_data=True),
+    Extension(
+        "Server.__init__",
+        ["Server/__init__.py"],
+        include_package_data=True,  # type: ignore
+    ),
     Extension("HorusAPI", ["HorusAPI/plugins.py"]),
     Extension("HorusAPI", ["HorusAPI/molstar.py"]),
     Extension("HorusAPI", ["HorusAPI/__init__.py"]),
@@ -16,8 +20,8 @@ ext_modules = [
 
 setup(
     name="Horus",
-    cmdclass={"build_ext": build_ext},
-    ext_modules=ext_modules,
+    cmdclass={"build_ext": build_ext},  # type: ignore
+    ext_modules=ext_modules,  # type: ignore
     # Set the build dir to be build/cython
     script_args=["build_ext", "-b", "build/cython"],
 )

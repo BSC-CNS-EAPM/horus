@@ -59,13 +59,12 @@ class AppDelegate(metaclass=SingletonMeta):
     All of the windows that are currently open
     """
 
-    def __init__(self):
+    def __init__(self, debug=False):
         """
         Initialize the AppDelegate.
         This will start the backend server and create the first window.
         """
-        # Set the debug mode based on module compilation
-        self.debug: bool = not cython.compiled
+        self.debug = debug
 
         # Set the app support directory
         self.__appSupportDir()
@@ -79,24 +78,25 @@ class AppDelegate(metaclass=SingletonMeta):
         self.__startServer()
 
     def __appSupportDir(self):
+
+        # If we are, use the default system Application Support directory
+        # On macOS this is ~/Library/Application Support
+        # On Windows this is %APPDATA%
+        # On Linux this is ~/.local/share
+        self.platform = sys.platform
+
         try:
             # Check if we are in a frozen executable
             sys._MEIPASS  # type: ignore
 
-            # If we are, use the default system Application Support directory
-            # On macOS this is ~/Library/Application Support
-            # On Windows this is %APPDATA%
-            # On Linux this is ~/.local/share
-            platform = sys.platform
-
-            if platform == "darwin":
+            if self.platform == "darwin":
                 appSupportDir = os.path.join(
                     os.path.expanduser("~"),
                     "Library",
                     "Application Support",
                     appInfo["bundleIdentifier"],
                 )
-            elif platform == "win32":
+            elif self.platform == "win32":
                 appSupportDir = os.getenv("APPDATA")
                 if appSupportDir is not None:
                     appSupportDir = os.path.join(
@@ -104,7 +104,7 @@ class AppDelegate(metaclass=SingletonMeta):
                     )
                 else:
                     raise Exception("APPDATA environment variable not set")
-            elif platform == "linux":
+            elif self.platform == "linux":
                 appSupportDir = os.path.join(
                     os.path.expanduser("~"),
                     ".local",
@@ -112,7 +112,7 @@ class AppDelegate(metaclass=SingletonMeta):
                     appInfo["bundleIdentifier"],
                 )
             else:
-                raise Exception(f"Unsupported platform {platform}")
+                raise Exception(f"Unsupported platform {self.platform}")
 
         except AttributeError:
             # If we are not in a frozen executable,
@@ -148,15 +148,17 @@ class AppDelegate(metaclass=SingletonMeta):
         """
         if url is None:
             url = self.server.baseURL
-        window = webview.create_window(title.encode(), url=url.encode())
+        window = webview.create_window(title, url=url)
         self.windows.append(window)
         return window
 
     def applicationDidFinishLaunching(self):
         """
-        This will be called when the app is launched. It will create the first window.
+        This will be called when the app is launched. 
+        It will create the first window and launch the app
         """
-        self.__start(self.openWindow("Horus"))
+        self.openWindow("Horus")
+        self.__start()
 
     def applicationWillTerminate(self):
         """
@@ -171,7 +173,7 @@ class AppDelegate(metaclass=SingletonMeta):
             self.openWindow("Horus")
 
         def openPlugins():
-            self.openWindow("Plugins", url=self.server.baseURL + "/desktop/plugins")
+            self.openWindow("Plugins", url=self.server.baseURL + "/plugins")
 
         fileMenu = wm.Menu(
             "File",
@@ -211,7 +213,7 @@ class AppDelegate(metaclass=SingletonMeta):
 
         return [fileMenu, pluginsMenu, settingsMenu]
 
-    def __start(self, window):
+    def __start(self):
         """
         This will start the window and set the shemsu token to the window object.
         """
@@ -227,7 +229,8 @@ class AppDelegate(metaclass=SingletonMeta):
 
         :param allowMultiple: Allow the user to select multiple files
         :param fileTypes: A tuple of strings of file types to filter the files.
-        The tuple must be in the format: ("Description (*.ext1;*.ext2...)", "Description 2 (*.ext3;*.ext4...)")
+        The tuple must be in the format: 
+        ("Description (*.ext1;*.ext2...)", "Description 2 (*.ext3;*.ext4...)")
         """
         # Get the active window
         window = webview.windows[0]
@@ -274,9 +277,37 @@ class AppDelegate(metaclass=SingletonMeta):
         with open(f"{self.appSupportDir}/ssh.key", "w") as f:
             f.write(sshConfig["keys"])
 
+    def openAppSupportDir(self):
+        """
+        Opens the Application Support directory
+        """
+        self.openFileExplorer(self.appSupportDir)
+
+    def openFileExplorer(self, path: str):
+        """
+        Opens a file explorer window with the given path.
+        On macOS it will open Finder.
+        On Windows it will open Explorer.
+        On Linux it will open the default file explorer.
+
+        :param path: The path to open
+        """
+        import subprocess
+
+        if self.platform == "darwin":
+            subprocess.Popen(["open", path])
+        elif self.platform == "win32":
+            subprocess.Popen(["explorer", path])
+        elif self.platform == "linux":
+            subprocess.Popen(["xdg-open", path])
+
 
 def LaunchApp():
-    # Check for the --no-window flag (Only development)
+
+    # Set the debug mode based on module compilation
+    debug: bool = not cython.compiled
+
+    # Check for the --server flag (Only development)
     if "--server" in sys.argv:
         # Start the server
         from Server.server import HorusServer
@@ -287,8 +318,12 @@ def LaunchApp():
         # Exit the app
         sys.exit(0)
 
+    # Check for the --no-debug flag (Only development)
+    if "--no-debug" in sys.argv:
+        debug = False    
+
     # Prepare the app delegate
-    app = AppDelegate()
+    app = AppDelegate(debug)
     """
     App Delegate is a singleton class that will handle the app
     """

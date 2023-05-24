@@ -4,7 +4,7 @@
   "description": "Molecular visualizer from nostrum Biodiscovery",
   "source": "Views/Main/index.html",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "python -m pytest",
     "buildparcel": "parcel build Views/**/*.html --dist-dir GUI",
     "devparcel": "parcel Views/**/*.html",
     "build": "npm run buildparcel && python Devtools/Compile/compile.py build_ext && pyinstaller Devtools/Compile/build.spec --noconfirm",

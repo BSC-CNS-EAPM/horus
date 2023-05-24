@@ -6,11 +6,7 @@ currentDir = os.getcwd()
 entry_point = [os.path.join(currentDir, "Horus.py")]
 
 # Exclude the Server and App folders
-exclude_folders =[
-    "App",
-    "Server",
-    "HorusAPI"
-]
+exclude_folders = ["App", "Server", "HorusAPI"]
 
 # Include the Cython folder
 cython_folder = os.path.join(currentDir, "build", "cython")
@@ -18,7 +14,14 @@ cython_folder = os.path.join(currentDir, "build", "cython")
 # Include the GUI folder
 gui_folder = os.path.join(currentDir, "GUI")
 
-datas = [(gui_folder, "GUI"), (cython_folder, ".")]
+# Include the default plugins folder
+default_plugins_folder = os.path.join(currentDir, "AppSupport", "Plugins")
+
+datas = [
+    (gui_folder, "GUI"),
+    (cython_folder, "."),
+    (default_plugins_folder, "DefaultPlugins"),
+]
 
 # Required modules
 imports = ["webview", "flask", "requests", "nbdsuite"]
@@ -28,10 +31,10 @@ try:
     for module in imports:
         __import__(module)
 except ImportError as e:
-    print(f"Error importing module {module}: {e}. Cannot compile.")
+    print(f"Error importing module: {e}. Cannot compile.")
     exit(1)
 
-
+# Compile the app
 a = Analysis(
     entry_point,
     pathex=[],
@@ -49,7 +52,7 @@ a = Analysis(
     cipher=None,
     noarchive=False,
 )
-pyz = PYZ(a.pure, a.zipped_data, cipher=None)
+pyz = PYZ(a.pure, a.zipped_data, cipher=None)  # noqa: F821
 
 exe = EXE(
     pyz,

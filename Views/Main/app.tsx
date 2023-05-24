@@ -1,13 +1,12 @@
 import React, { Children, useState } from "react";
-import { getVersion, getForceFields, openWindow } from "../Utils/utils";
+import { getVersion } from "../Utils/utils";
 import { Route, Routes, Link } from "react-router-dom"
 
-import Molstar from "../Components/Molstar";
-
-import FlowBuilder from "../Components/FlowBuilder/FlowBuilder";
-import NBDButton from "../Components/NBDbutton";
+import Molstar from "../Components/molstar";
+import FlowBuilder from "../Components/FlowBuilder/flowbuilder";
+import NBDButton from "../Components/nbdbutton";
 import HorusModal from "../Components/modal";
-import HorusToolbar from "../Components/Toolbar/Toolbar";
+import HorusToolbar from "../Components/Toolbar/toolbar";
 
 const Main = () => {
     // Modal state
@@ -27,17 +26,6 @@ const Main = () => {
         setShowModal(true);
     }
     const handleCloseModal = () => setShowModal(false);
-
-    const openForceFieldsModal = () => {
-        getForceFields().then((ff) => {
-            const versionsChildren = (
-                <div>
-                    <p key="version">Installed force fields: {ff}</p>
-                </div>);
-            setModalBody(versionsChildren);
-        });
-        setShowModal(true);
-    }
 
     return (
         <div className="grid">

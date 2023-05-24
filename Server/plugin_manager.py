@@ -1,5 +1,6 @@
 import os
-from HorusAPI import Plugin, PluginBlock, PluginVariable
+import sys
+from HorusAPI import Plugin, PluginBlock
 
 
 class PluginManager:
@@ -9,18 +10,32 @@ class PluginManager:
     """
 
     def __init__(self, appSupportDir) -> None:
-        self.pluginsDir = self.__pluginsDir(appSupportDir)
+        self.__pluginsDir(appSupportDir)
 
         # Initialize the plugins
         self.__initializePlugins()
 
     def __pluginsDir(self, appSupportDir):
-        pluginsDir = os.path.join(appSupportDir, "Plugins")
+        """
+        Creates the plugins directory if it doesn't exist.
+        - appSupportDir: The path to the AppSupport directory
+        """
 
-        if not os.path.exists(pluginsDir):
-            os.mkdir(pluginsDir)
+        # Defines the default plugins directory, which should be in the same
+        # directory as the executable bundle
+        try:
+            bundle_dir = sys._MEIPASS  # type: ignore
+            self.defaultPluginsDir = os.path.abspath(
+                os.path.join(bundle_dir, "DefaultPlugins")
+            )
+        except AttributeError:
+            # We are not in a bundle
+            pass
 
-        return pluginsDir
+        # Defines the plugins directory, which should be in the AppSupport directory
+        self.pluginsDir = os.path.join(appSupportDir, "Plugins")
+        if not os.path.exists(self.pluginsDir):
+            os.mkdir(self.pluginsDir)
 
     def installPlugin(self):
         """
@@ -105,16 +120,34 @@ class PluginManager:
         """
         Lists the plugins present in the plugins directory.
         """
+
         # List the directories present in the plugins directory
         installed = os.listdir(self.pluginsDir)
+
+        # List the directories present in the default plugins directory
+        try:
+            defaultPlugins = os.listdir(self.defaultPluginsDir)
+            installed += defaultPlugins
+        except AttributeError:
+            # We are not in a bundle
+            defaultPlugins = []
 
         # Filter the python files
         plugins = []
         for pl in installed:
             # Get the plugin file based on the folder name + .py
             pluginFile = os.path.join(self.pluginsDir, pl, pl + ".py")
-            # Check if the plugin file exists 
-            # (this is needed because in macOS .DS_Store.py files are 
+            # Check if the plugin file exists
+            # (this is needed because in macOS .DS_Store.py files are
+            # listed but don't exist)
+            if os.path.exists(pluginFile):
+                plugins.append(pluginFile)
+
+        for pl in defaultPlugins:
+            # Get the plugin file based on the folder name + .py
+            pluginFile = os.path.join(self.defaultPluginsDir, pl, pl + ".py")
+            # Check if the plugin file exists
+            # (this is needed because in macOS .DS_Store.py files are
             # listed but don't exist)
             if os.path.exists(pluginFile):
                 plugins.append(pluginFile)
@@ -126,12 +159,14 @@ class PluginManager:
         Initializes all the plugins present in the plugins directory.
         """
         self.loadedPlugins: list[Plugin] = []
+        self.errorPlugins: list[str] = []
         pluginPaths = self.__listPluginsPaths()
         for pth in pluginPaths:
             try:
                 self.__loadPlugin(pth)
             except Exception as e:
                 print(f"Error loading plugin {os.path.basename(pth)}: {e}")
+                self.errorPlugins.append(os.path.basename(pth))
 
     def __loadPlugin(self, pluginPath: str):
         """
@@ -142,7 +177,6 @@ class PluginManager:
             plugin = self.__checkPlugin(pluginPath)
         except Exception as e:
             raise Exception(f"Error loading plugin {os.path.basename(pluginPath)}: {e}")
-
 
         # Check that the plugin is not already loaded
         for p in self.loadedPlugins:
@@ -158,13 +192,14 @@ class PluginManager:
         :param pluginPath: The path to the plugin file
         """
 
-        import imp
+        import importlib.util
 
         # Load the plugin file and obtain the plugin variable
-        try:
-            pluginModule = imp.load_source("pluginFile", pluginPath)
-        except Exception as e:
-            raise Exception(f"Cannot access plugin file {pluginPath}: {e}")
+        spec = importlib.util.spec_from_file_location("pluginFile", pluginPath)
+        if spec is None:
+            raise Exception(f"Failed to create module spec for {pluginPath}")
+        pluginModule = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(pluginModule)  # type: ignore
 
         # Check that the plugin variable exists
         if not hasattr(pluginModule, "plugin"):
@@ -181,6 +216,16 @@ class PluginManager:
         # Add to the info the filename
         pluginModule.plugin.info["filename"] = os.path.basename(pluginPath)
 
+        # Check if the plugin is a default plugin
+        try:
+            if pluginPath.startswith(self.defaultPluginsDir):
+                pluginModule.plugin.info["default"] = True
+            else:
+                pluginModule.plugin.info["default"] = False
+        except AttributeError:
+            # We are not in a bundle
+            pass
+
         # Return the loaded plugin instace
         return pluginModule.plugin
 
@@ -195,7 +240,7 @@ class PluginManager:
             info["actions"] = str(len(p.actions) if p.actions else 0)
             info["views"] = str(len(p.views))
             listedPlugins.append(info)
-        return listedPlugins
+        return {"plugins": listedPlugins, "errors": self.errorPlugins}
 
     # def listPluginBlocks(self, plugin):
     #     """
@@ -229,15 +274,17 @@ class PluginManager:
         varList = []
         for v in block.variables:
             # Get the children of the variable
-            varList.append({
-                "name": v.name,
-                "description": v.description,
-                "type": v.type,
-                "defaultValue": v.defaultValue,
-                "children": v.getChildren()
-            })
+            varList.append(
+                {
+                    "name": v.name,
+                    "description": v.description,
+                    "type": v.type,
+                    "defaultValue": v.defaultValue,
+                    "children": v.getChildren(),
+                }
+            )
         return varList
-    
+
     def executeAction(self, actionID, variables):
         """
         Executes an action of a plugin.
@@ -250,5 +297,3 @@ class PluginManager:
         plugin = self.__getPlugin(pluginName)
 
         # Get the block
-
-

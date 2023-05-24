@@ -83,7 +83,6 @@ class HorusServer:
     def __checkParcel(self):
         # If the parcel server is running, load the index file from there:
         import requests
-
         try:
             requests.get(self.parcelURL)
             print("\n<=======Using parcel development server=======>\n")
@@ -97,7 +96,7 @@ class HorusServer:
         """
 
         # Check if the parcel server is running
-        if self.__checkParcel():
+        if self.debug and self.__checkParcel():
             return os.path.abspath(
                 os.path.join(os.path.dirname(__file__), "..", "dist")
             )
@@ -113,7 +112,7 @@ class HorusServer:
             except AttributeError:
                 raise Exception(
                     "App not frozen and GUI directory not found."
-                    + " Did you forget to run npm run buildparcel?"
+                    + " Did you forget to build the View?"
                 )
 
         return gui_dir
@@ -207,6 +206,15 @@ class HorusServer:
             pluginName = request.get_json()["name"]
             self.pluginManager.uninstallPlugin(pluginName)
             return "OK"
+        
+        @self.server.route("/desktop/appsupportdir", methods=["GET"])
+        @desktopOnly
+        def openPluginsFolder():
+            print("Opening plugins folder")
+            from App import AppDelegate
+            AppDelegate().openAppSupportDir()
+            return "OK"
+
 
         @self.server.route("/plugins/list", methods=["GET"])
         def listPlugins():

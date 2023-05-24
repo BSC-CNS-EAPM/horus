@@ -1,10 +1,10 @@
-import { ItemTypes, Block, BlockProps } from "./Block";
+import { ItemTypes, Block, BlockProps } from "./block";
 import { DndProvider, useDrop } from "react-dnd";
 import { useEffect, useState } from "react";
 import { DndContext } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { horusGet } from "../../Utils/utils";
-import Loading from "../Loading";
+import Loading from "../loading";
 
 function FlowReciver() {
 

@@ -12,7 +12,7 @@ import { PluginConfig } from "molstar/lib/mol-plugin/config";
 import "molstar/lib/mol-plugin-ui/skin/light.scss";
 
 // Import the loading indicator
-import Loading from "./Loading";
+import Loading from "./loading";
 
 
 declare global {

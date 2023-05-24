@@ -4,7 +4,7 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 import { ChevronDownIcon } from '@heroicons/react/20/solid'
 import { useNavigate } from 'react-router'
 
-import "./Toolbar.css"
+import "./toolbar.css"
 import { none } from 'molstar/lib/mol-model/structure/query/queries/generators'
 
 interface ToolBarItemProps {

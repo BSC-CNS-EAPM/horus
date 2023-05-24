@@ -68,7 +68,7 @@ class PluginBlock:
     """
 
     # Children of the Block (PluginVariable)
-    variables: list[PluginVariable] = []
+    variables: typing.List[PluginVariable] = []
 
     # The output that the block produces
     output = None
@@ -84,7 +84,7 @@ class PluginBlock:
         name: str,
         description: str,
         action: typing.Optional[typing.Callable] = None,
-        variables: list[PluginVariable] = [],
+        variables: typing.List[PluginVariable] = [],
     ):
         self.name = name
         self.description = description
@@ -109,7 +109,8 @@ class PluginBlock:
         """
         Updates the values of the variables of the block.
 
-        :param values: A dictionary with the values to update (JSON coming from frontend).
+        :param values: A dictionary with the values to update 
+        (JSON coming from frontend).
         """
         for variable in self.variables:
             if variable.name in values:
@@ -129,7 +130,7 @@ class Plugin:
     please specify the path to the interpreter.
     """
 
-    info: dict[str, str] = {
+    info: dict[str, typing.Any] = {
         "name": "Plugin",
         "version": "0.0.1",
         "author": "None",
@@ -158,7 +159,7 @@ class Plugin:
     Should be the path to the HTML file.
     """
 
-    blocks: list[PluginBlock] = []
+    blocks: typing.List[PluginBlock] = []
     """
     Blocks that can be used in the GUI flow editor.
 
