@@ -40,7 +40,7 @@ class HorusServer:
         # Initialize the plugin manager
         from Server import PluginManager
 
-        self.pluginManager = PluginManager(self.appSupportDir)
+        self.pluginManager = PluginManager(self.appSupportDir, self.desktop)
 
         # Security token
         self.token = self._getToken()
@@ -173,26 +173,23 @@ class HorusServer:
         @self.server.route("/error")
         def error():
             return flask.render_template("Error/error.html")
-
-        @self.server.route("/api/version", methods=["GET"])
+                
+        @self.server.route("/createflow", methods=["POST"])
         @verifyToken
-        def sendVersion():
-            import nbdsuite as nbds
-
-            versionInfo = {
-                "nbdsuite": nbds.__version__,
-                "horus": __version__,
-            }
-            return flask.jsonify(versionInfo)
-
-        @self.server.route("/api/nbdsuite/forcefields", methods=["GET"])
-        @verifyToken
-        def sendForcefields():
-            from nbdsuite.utils.toolkits import PeleffyToolkit
-
-            peleffy_tk = PeleffyToolkit()
-            ff_list = peleffy_tk.get_available_forcefields()
-            return flask.jsonify(ff_list)
+        def createFlow():
+            flowData = request.get_json()
+            try:
+                self.pluginManager.createFlow(flowData["name"])
+                success = {
+                    "ok": True,
+                }
+                return flask.jsonify(success)
+            except Exception as e:
+                error = {
+                    "ok": False,
+                    "error": str(e),
+                }
+                return flask.jsonify(error)
 
         @self.server.route("/desktop/isDesktop", methods=["GET"])
         def isDesktop():

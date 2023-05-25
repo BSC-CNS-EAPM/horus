@@ -5,7 +5,6 @@ import { Route, Routes, Link } from "react-router-dom"
 import Molstar from "../Components/molstar";
 import FlowBuilder from "../Components/FlowBuilder/flowbuilder";
 import NBDButton from "../Components/nbdbutton";
-import HorusModal from "../Components/modal";
 import HorusToolbar from "../Components/Toolbar/toolbar";
 
 const Main = () => {
@@ -49,7 +48,7 @@ export function App() {
             <HorusToolbar />
             <Routes>
                 <Route path="/" element={<Molstar />} />
-                <Route path="/newjob" element={<FlowBuilder />} />
+                <Route path="/newjob" element={<FlowBuilder openFlow={false}/>} />
             </Routes>
         </div>
     )

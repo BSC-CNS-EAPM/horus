@@ -78,7 +78,6 @@ class AppDelegate(metaclass=SingletonMeta):
         self._startServer()
 
     def _appSupportDir(self):
-
         # If we are, use the default system Application Support directory
         # On macOS this is ~/Library/Application Support
         # On Windows this is %APPDATA%
@@ -154,7 +153,7 @@ class AppDelegate(metaclass=SingletonMeta):
 
     def applicationDidFinishLaunching(self):
         """
-        This will be called when the app is launched. 
+        This will be called when the app is launched.
         It will create the first window and launch the app
         """
         self.openWindow("Horus")
@@ -219,17 +218,17 @@ class AppDelegate(metaclass=SingletonMeta):
         """
         webview.start(debug=self.debug, menu=self._menus())
 
-    def openFileDialog(
+    def openFileSelectDialog(
         self,
         allowMultiple: bool = False,
         fileTypes: typing.Optional[typing.Tuple[str, ...]] = None,
-    ):
+    ) -> typing.Tuple[str, ...]:
         """
         Opens a file dialog and returns the path of the selected file(s).
 
         :param allowMultiple: Allow the user to select multiple files
         :param fileTypes: A tuple of strings of file types to filter the files.
-        The tuple must be in the format: 
+        The tuple must be in the format:
         ("Description (*.ext1;*.ext2...)", "Description 2 (*.ext3;*.ext4...)")
         """
         # Get the active window
@@ -241,6 +240,20 @@ class AppDelegate(metaclass=SingletonMeta):
         )
 
         return result
+
+    def openFolderSelectDialog(self) -> str:
+        """
+        Opens a folder dialog and returns the path of the selected folder.
+        """
+        # Get the active window
+        window = webview.windows[0]
+
+        # Open the folder dialog
+        result: typing.Tuple[str, ...] = window.create_file_dialog(
+            webview.FOLDER_DIALOG, allow_multiple=False
+        )
+
+        return result[0]
 
     @staticmethod
     def tokenize(url: str):
@@ -303,7 +316,6 @@ class AppDelegate(metaclass=SingletonMeta):
 
 
 def LaunchApp():
-
     # Set the debug mode based on module compilation
     debug: bool = not cython.compiled
 
@@ -320,7 +332,7 @@ def LaunchApp():
 
     # Check for the --no-debug flag (Only development)
     if "--no-debug" in sys.argv:
-        debug = False    
+        debug = False
 
     # Prepare the app delegate
     app = AppDelegate(debug)

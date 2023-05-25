@@ -9,8 +9,10 @@ class PluginManager:
     It creates the AppSupport/Plugins directory if it doesn't exist.
     """
 
-    def __init__(self, appSupportDir) -> None:
+    def __init__(self, appSupportDir: str, desktop: bool) -> None:
         self._pluginsDir(appSupportDir)
+
+        self.desktop = desktop
 
         # Initialize the plugins
         self._initializePlugins()
@@ -45,7 +47,7 @@ class PluginManager:
         from App import AppDelegate
 
         try:
-            files = AppDelegate().openFileDialog(
+            files = AppDelegate().openFileSelectDialog(
                 allowMultiple=True, fileTypes=("Horus plugins (*.hp;*.py)",)
             )
         except Exception as e:
@@ -286,10 +288,11 @@ class PluginManager:
             varList.append(
                 {
                     "name": v.name,
+                    "id": v.id,
                     "description": v.description,
                     "type": v.type,
-                    "defaultValue": v.defaultValue,
-                    "children": v.getChildren(),
+                    "value": v.defaultValue if v.defaultValue else "",
+                    # "children": v.getChildren(),
                 }
             )
         return varList
@@ -329,4 +332,32 @@ class PluginManager:
 
         # Execute the block
         block()
+
+    def createFlow(self, name):
+        """
+        Creates a new flow.
+        """
+
+        print("Creating new flow with name", name)
+
+        # If we are in desktop, a window will open to select the flow destination folder
+        if self.desktop:
+            from App import AppDelegate
+            flowPath = AppDelegate().openFolderSelectDialog()
+            flowPath = os.path.join(flowPath, name)
+        else:
+            # If we are in web version instead, 
+            # the flow will be sabed to the user's flows folder
+            # WIP
+            flowPath = "flows"
+
+        # Create the flow folder
+        if not os.path.exists(flowPath):
+            os.mkdir(flowPath)
+
+    def saveFlow(self, flow):
+        """
+        Saves a flow to a file.
+        """
+        pass
 

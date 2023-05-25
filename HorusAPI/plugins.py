@@ -1,8 +1,99 @@
 import typing
 
 
+class VariableTypes:
+    STRING = "string"
+    """
+    A regular string like "Hello world".
+
+    Will render as a text input.
+    """
+
+    INTEGER = "integer"
+    """
+    A regular integer like 1, 2, 3...
+
+    Will render as a text input.
+    """
+
+    FLOAT = "float"
+    """
+    A regular float like 1.0, 2.0, 3.0...
+
+    Will render as a text input.
+    """
+
+    BOOLEAN = "boolean"
+    """
+    A boolean value: True or False.
+
+    Will render as a checkbox.
+    """
+
+    STRING_LIST = "string[]"
+    """
+    A list of strings like ["Hello", "World"].
+
+    Will render as a dropdown.
+    """
+
+    INTEGER_LIST = "integer[]"
+    """
+    A list of integers like [1, 2, 3].
+
+    Will render as a dropdown.
+    """
+
+    FLOAT_LIST = "float[]"
+    """
+    A list of floats like [1.0, 2.0, 3.0].
+
+    Will render as a dropdown.
+    """
+
+    BOOLEAN_LIST = "boolean[]"
+    """
+    A list of booleans like [True, False].
+
+    Will render as a radio items buttons.
+    """
+
+    INT_RANGE = "[integer, integer]"
+    """
+    A range of integers like 1-10.
+
+    Will render as a slider.
+    """
+
+    FLOAT_RANGE = "[float, float]"
+    """
+    A range of floats like 1.0-10.0.
+
+    Will render as a slider.
+    """
+
+    FILE = "file"
+    """
+    A file.
+
+    Will render as a file input.
+    """
+
+    @staticmethod
+    def getTypes():
+        """
+        Returns a list of all the available types.
+        """
+        types = []
+        for attr_name in dir(VariableTypes):
+            attr = getattr(VariableTypes, attr_name)
+            if not callable(attr) and not attr_name.startswith("__"):
+                types.append(attr)
+
+        return types
+
+
 class PluginVariable:
-    
     id: str = "baseplugin.variable"
 
     def __init__(
@@ -11,21 +102,25 @@ class PluginVariable:
         name: str,
         description: str,
         type: str,
-        defaultValue: typing.Any = None,
+        defaultValue: typing.Optional[typing.Any] = None,
     ):
         """
         Create a new PluginVariable.
 
         :param name: The name of the variable.
         :param description: A description of the variable.
-        :param type: The type of the variable.
+        :param type: The type of the variable. Assign it using the VariableTypes class.
         :param defaultValue: The default value of the variable.
-        :param id: The ID of the variable. 
+        :param id: The ID of the variable.
         Important to identify the variable in Block actions
         """
         self.name = name
         self.description = description
         self.type = type
+
+        if type not in VariableTypes.getTypes():
+            raise Exception(f"Invalid type {type}.")
+
         self.defaultValue = defaultValue
         self.value = defaultValue
         self.id = id
@@ -117,11 +212,11 @@ class PluginBlock:
         """
         Updates the values of the variables of the block.
 
-        :param values: A dictionary with the values to update 
+        :param values: A dictionary with the values to update
         (JSON coming from frontend).
         """
         for variable in self._variables:
-            if variable.id in values:
+            if variable.id in values.keys():
                 variable.value = values[variable.id]
 
     def listVariables(self):
@@ -132,7 +227,7 @@ class PluginBlock:
 
     @property
     def variables(self):
-        varsDict = {}
+        varsDict: dict[str, typing.Any] = {}
         for variable in self._variables:
             varsDict[variable.id] = variable.value
         return varsDict
@@ -218,16 +313,16 @@ class Plugin:
         for block in self._blocks:
             if block.id == id:
                 return block
-        raise Exception(f"Block {id} not found.")    
+        raise Exception(f"Block {id} not found.")
 
     def getBlocks(self):
         return self._blocks
-    
+
     # Define the .blocks property to the getBlocks function
     @property
     def blocks(self):
         return self.getBlocks()
-    
+
     def _addBlocks(self):
         # Search for all the properties of the instance
         # Check if the property is a PluginBlock
@@ -242,5 +337,4 @@ class Plugin:
                 try:
                     self.getBlock(attr.id)
                 except Exception:
-                    print("Adding block with id: ", attr.id)
                     self._blocks.append(attr)

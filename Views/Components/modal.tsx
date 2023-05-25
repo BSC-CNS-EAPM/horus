@@ -2,7 +2,15 @@ import React, { useState } from 'react';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
 
-function HorusModal(props) {
+interface HorusModalProps {
+    show: boolean;
+    onHide?: () => void;
+    header: React.ReactNode;
+    body: React.ReactNode;
+    footer: React.ReactNode
+}
+
+function HorusModal(props: HorusModalProps) {
     return (
         <>
             <Modal show={props.show} onHide={props.onHide}>
@@ -11,12 +19,7 @@ function HorusModal(props) {
                 </Modal.Header>
                 <Modal.Body>{props.body}</Modal.Body>
                 <Modal.Footer>
-                    <Button variant="secondary" onClick={props.onHide}>
-                        Close
-                    </Button>
-                    <Button variant="primary" onClick={props.onHide}>
-                        Ok
-                    </Button>
+                    {props.footer}
                 </Modal.Footer>
             </Modal>
         </>

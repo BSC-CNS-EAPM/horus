@@ -1,4 +1,4 @@
-from HorusAPI import Plugin, PluginBlock, PluginVariable
+from HorusAPI import Plugin, PluginBlock, PluginVariable, VariableTypes
 import time
 
 def createYAML(block: PluginBlock):
@@ -6,6 +6,11 @@ def createYAML(block: PluginBlock):
     print("Test varialbe: ", block.variables["test"])
     print("System data: ", block.variables["systemData"])
     print("Ligand data: ", block.variables["ligandData"])
+    print("Test boolean: ", block.variables["testBoolean"])
+
+    print("Types of the variables:")
+    for key in block.variables:
+        print(key, ":", type(block.variables[key]))
 
 def waiterFunction(block: PluginBlock):
     print("Waiting...")
@@ -19,7 +24,7 @@ class NBDSuitePlugin(Plugin):
         id="systemData",
         name="System data",
         description="The protein system data pdb file.",
-        type="string",
+        type=VariableTypes.STRING,
         defaultValue="Default protein"
     )
 
@@ -27,7 +32,7 @@ class NBDSuitePlugin(Plugin):
         id="ligandData",
         name="Ligand data",
         description="The ligand data pdb file.",
-        type="string",
+        type=VariableTypes.STRING,
         defaultValue=None
     )
 
@@ -35,8 +40,16 @@ class NBDSuitePlugin(Plugin):
         id="test",
         name="Test variable",
         description="A test variable.",
-        type="string",
+        type=VariableTypes.STRING,
         defaultValue="Test"
+    )
+
+    testBoolean = PluginVariable(
+        id="testBoolean",
+        name="Test boolean",
+        description="A test boolean.",
+        type=VariableTypes.BOOLEAN,
+        defaultValue=False
     )
 
     createYAMLBlock = PluginBlock(
@@ -47,7 +60,8 @@ class NBDSuitePlugin(Plugin):
         variables=[
             systemData,
             ligandData,
-            testVariable
+            testVariable,
+            testBoolean
             ]
     )
 
