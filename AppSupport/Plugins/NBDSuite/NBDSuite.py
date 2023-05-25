@@ -7,6 +7,7 @@ def createYAML(block: PluginBlock):
     print("System data: ", block.variables["systemData"])
     print("Ligand data: ", block.variables["ligandData"])
     print("Test boolean: ", block.variables["testBoolean"])
+    print("Test string list: ", block.variables["test_stringlist"])
 
     print("Types of the variables:")
     for key in block.variables:
@@ -52,6 +53,24 @@ class NBDSuitePlugin(Plugin):
         defaultValue=False
     )
 
+    test_stringlist = PluginVariable(
+        id="test_stringlist",
+        name="Test string list",
+        description="A test string list.",
+        type=VariableTypes.STRING_LIST,
+        defaultValue="Test3",
+        allowedValues=["Test1", "Test2", "Test3"]
+    )
+
+    test_radio = PluginVariable(
+        id="test_radio",
+        name="Test radio",
+        description="A test radio.",
+        type=VariableTypes.BOOLEAN_LIST,
+        defaultValue=False,
+        allowedValues=[True, False]
+    )
+
     createYAMLBlock = PluginBlock(
         name="Create input YAML",
         description="Creates a NBDSuite input file.",
@@ -61,7 +80,8 @@ class NBDSuitePlugin(Plugin):
             systemData,
             ligandData,
             testVariable,
-            testBoolean
+            testBoolean,
+            test_stringlist
             ]
     )
 

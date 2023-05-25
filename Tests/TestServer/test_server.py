@@ -15,7 +15,7 @@ def server():
 
 @pytest.fixture
 def pluginManager():
-    return PluginManager("AppSupport")
+    return PluginManager("AppSupport", False)
 
 def test_desktop_server_init(desktopServer):
     assert desktopServer.debug is False

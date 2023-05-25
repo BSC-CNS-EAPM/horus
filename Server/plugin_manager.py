@@ -292,7 +292,8 @@ class PluginManager:
                     "description": v.description,
                     "type": v.type,
                     "value": v.defaultValue if v.defaultValue else "",
-                    # "children": v.getChildren(),
+                    "children": v.getChildren(),
+                    "allowedValues": v.allowedValues
                 }
             )
         return varList
@@ -338,8 +339,6 @@ class PluginManager:
         Creates a new flow.
         """
 
-        print("Creating new flow with name", name)
-
         # If we are in desktop, a window will open to select the flow destination folder
         if self.desktop:
             from App import AppDelegate
@@ -352,8 +351,8 @@ class PluginManager:
             flowPath = "flows"
 
         # Create the flow folder
-        if not os.path.exists(flowPath):
-            os.mkdir(flowPath)
+        # if not os.path.exists(flowPath):
+        #     os.mkdir(flowPath)
 
     def saveFlow(self, flow):
         """

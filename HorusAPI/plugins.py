@@ -103,6 +103,7 @@ class PluginVariable:
         description: str,
         type: str,
         defaultValue: typing.Optional[typing.Any] = None,
+        allowedValues: typing.Optional[typing.List[typing.Any]] = None,
     ):
         """
         Create a new PluginVariable.
@@ -112,6 +113,8 @@ class PluginVariable:
         :param type: The type of the variable. Assign it using the VariableTypes class.
         :param defaultValue: The default value of the variable.
         :param id: The ID of the variable.
+        :param allowedValues: A list of allowed values for the variable 
+        if it is a list, range or files.
         Important to identify the variable in Block actions
         """
         self.name = name
@@ -124,9 +127,10 @@ class PluginVariable:
         self.defaultValue = defaultValue
         self.value = defaultValue
         self.id = id
+        self.allowedValues = allowedValues
 
         # Initialize a hidden children list
-        self._children = []
+        self._children: typing.List[PluginVariable] = []
 
     def addChild(self, child):
         if not isinstance(child, PluginVariable):
@@ -147,6 +151,9 @@ class PluginVariable:
                 "description": child.description,
                 "type": child.type,
                 "defaultValue": child.defaultValue,
+                "value": child.value,
+                "id": child.id,
+                "allowedValues": child.allowedValues,
                 "children": child.getChildren(),
             }
             childList.append(childDict)

@@ -1,6 +1,7 @@
 import { useDrag } from "react-dnd";
 import { useEffect, useState } from "react";
 import { horusPost } from "../../Utils/utils";
+import HorusDropdown from "../reusable";
 
 import "./block.css"
 
@@ -34,6 +35,7 @@ interface PluginVariable<T extends PluginVariableType> {
     description: string;
     type: PluginVariableTypes;
     value: T;
+    allowedValues?: T[];
 }
 
 const PluginVariable = <T extends PluginVariableType>(props: { variable: PluginVariable<T>, onChange: (value: T, id: string) => void }) => {
@@ -60,6 +62,8 @@ const PluginVariable = <T extends PluginVariableType>(props: { variable: PluginV
             <div className="plugin-variable-value">
 
                 {/* Define an input based on the type */}
+
+                {/* If its a string, int or float, set a basic input */}
                 {props.variable.type === PluginVariableTypes.STRING && (
                     <input type="text" value={value as string} onChange={e => handleChange(e.target.value as any)} />
                 )}
@@ -72,9 +76,51 @@ const PluginVariable = <T extends PluginVariableType>(props: { variable: PluginV
                     <input type="number" value={value as number} onChange={e => handleChange(e.target.value as any)} />
                 )}
 
+                {/* If its a boolean, set a checkbox */}
                 {props.variable.type === PluginVariableTypes.BOOLEAN && (
                     <input type="checkbox" checked={value as boolean} onChange={e => handleChange(e.target.checked as any)} />
                 )}
+
+                {/* If its a list of strings, set a dropdown */}
+                {props.variable.type === PluginVariableTypes.STRING_LIST && (
+                    <select value={value as string} onChange={e => handleChange(e.target.value as any)}>
+                        {(props.variable.allowedValues as string[])?.map((value, index) => (
+                            <option key={index} value={value}>{value}</option>
+                        ))}
+                    </select>
+                )}
+
+                {/* If its a list of integers, set a dropdown */}
+                {props.variable.type === PluginVariableTypes.INTEGER_LIST && (
+                    <select value={value as number} onChange={e => handleChange(e.target.value as any)}>
+                        {(props.variable.allowedValues as number[])?.map((value, index) => (
+                            <option key={index} value={value}>{value}</option>
+                        ))}
+                    </select>
+                )}
+
+                {/* If its a list of floats, set a dropdown */}
+                {props.variable.type === PluginVariableTypes.FLOAT_LIST && (
+                    <select value={value as number} onChange={e => handleChange(e.target.value as any)}>
+                        {(props.variable.allowedValues as number[])?.map((value, index) => (
+                            <option key={index} value={value}>{value}</option>
+                        ))}
+                    </select>
+                )}
+
+                {/* If its a list of booleans, set radio items*/}
+                {props.variable.type === PluginVariableTypes.BOOLEAN_LIST && (
+                    <div className="flex flex-row">
+                        {(props.variable.allowedValues as boolean[])?.map((value, index) => (
+                            <div key={index} className="flex flex-row items-center">
+                                <input type="radio" checked={value === (value as boolean)} onChange={e => handleChange(value as any)} />
+                                <div className="ml-2">{value}</div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+                                            
+
 
             </div>
         </div>
@@ -88,6 +134,7 @@ export interface BlockProps {
     plugin: string;
     variables: PluginVariable<PluginVariableType>[];
     isPlaced: boolean;
+    onChange?: () => void;
 }
 
 const CustomPopover = ({ trigger, children }) => {
@@ -153,6 +200,9 @@ export function Block(block: BlockProps) {
 
         // Update the block variables
         block.variables = updatedVariables
+
+        // Call the onChange function
+        block.onChange()
     }
 
     const executeBlock = async () => {
