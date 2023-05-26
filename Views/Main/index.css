@@ -17,3 +17,29 @@
     --tech-white: #ffffff;
   }
 }
+
+/* Set the body element to not scroll */
+@layer base {
+  body {
+    overflow: hidden;
+  }
+}
+
+.root-routes {
+  overflow: auto;
+}
+
+/* Content displayed inside the app
+Nnot accounting for the toolbar (top)
+Nor the console (bottom) */
+.root-routes-console-hidden {
+  /* When the console is not visible, 
+  the total height its just all the viewerpot minus the toolbar */
+  height: calc(100vh - 2rem); 
+}
+
+.root-routes-console-visible {
+  /* When the console is visible, 
+  the total height its just all the viewerpot minus the toolbar and the console */
+  height: calc(100vh - 2rem - 150px); 
+}

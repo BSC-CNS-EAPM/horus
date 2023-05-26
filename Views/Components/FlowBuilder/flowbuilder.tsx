@@ -168,9 +168,10 @@ export default function FlowBuilder(props: FlowBuilderProps) {
 
     return (
         <DndProvider backend={HTML5Backend}>
-            <div className="m-auto flex flex-row">
+            <div className="m-auto flex flex-row h-100">
                 <div className="block-sidebar">
                     <h1>Blocks</h1>
+                    <div>
                     {
                         blocks.length === 0 ? <Loading /> : blocks.map((block, index) => (
                             <div style={{
@@ -180,6 +181,7 @@ export default function FlowBuilder(props: FlowBuilderProps) {
                             </div>
                         ))
                     }
+                    </div>
                 </div>
                 <FlowReciver
                     openFlow={props.openFlow}

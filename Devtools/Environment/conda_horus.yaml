@@ -20,6 +20,7 @@ dependencies:
       - pyobjc==9.1.1; sys_platform == 'darwin'
       - pygobject==3.44.1; sys_platform == 'linux'
       - pytest
+      - flask-socketio
 
 # Manual install due to Apple Silicon/ARM not available from repo
 # python -m pip install peleffy

@@ -63,13 +63,12 @@ export default function Molstar() {
   }, []);
 
   return (
-    <div ref={parent} style={{
+    <div id="home-molstar" ref={parent} style={{
       // Place a top margin of 2 rem to avoid the toolbar
-      position: "absolute",
-      marginTop: "2rem",
+      position: "relative",
       width: "100%",
       // Set the height to the height of the window minus the toolbar
-      height: "calc(100vh - 2rem)",
+      height: "100%",
       border: "none"
     }} />
   );

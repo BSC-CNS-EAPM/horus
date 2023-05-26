@@ -7,6 +7,9 @@ import logging
 import flask
 from flask import request
 
+# SocketIO
+from flask_socketio import SocketIO, emit
+
 # Decorators
 from functools import wraps
 
@@ -21,7 +24,6 @@ class HorusServer:
     parcelURL = "http://127.0.0.1:1234"
 
     def __init__(self, debug=False, desktop=False, appSupportDir=None):
-        
         # App support directory
         if appSupportDir is None:
             self.appSupportDir = os.path.abspath(os.path.join("AppSupport"))
@@ -51,6 +53,10 @@ class HorusServer:
         # Setup the server
         self.server = self._setupServer()
         self._routes()
+
+        # Setup SocketIO
+        self.socketio = SocketIO(self.server, cors_allowed_origins="*")
+        self._socketIORoutes()
 
     def _getToken(self):
         if self.desktop:
@@ -83,6 +89,7 @@ class HorusServer:
     def _checkParcel(self):
         # If the parcel server is running, load the index file from there:
         import requests
+
         try:
             requests.get(self.parcelURL)
             print("\n<=======Using parcel development server=======>\n")
@@ -107,7 +114,7 @@ class HorusServer:
         # Frozen executable path
         if not os.path.exists(gui_dir):
             try:
-                bundle_dir = sys._MEIPASS # type: ignore
+                bundle_dir = sys._MEIPASS  # type: ignore
                 gui_dir = os.path.abspath(os.path.join(bundle_dir, "GUI"))
             except AttributeError:
                 raise Exception(
@@ -137,12 +144,11 @@ class HorusServer:
             print("\n<========Enabling CORS========>\n")
             from flask_cors import CORS
 
-            CORS(server)
+            CORS(server, resources={r"/*": {"origins": "*"}})
 
         return server
 
     def _routes(self):
-
         # Create a wrapper for token verification
         def verifyToken(func):
             @wraps(func)
@@ -173,7 +179,7 @@ class HorusServer:
         @self.server.route("/error")
         def error():
             return flask.render_template("Error/error.html")
-                
+
         @self.server.route("/createflow", methods=["POST"])
         @verifyToken
         def createFlow():
@@ -218,15 +224,15 @@ class HorusServer:
             pluginName = request.get_json()["name"]
             self.pluginManager.uninstallPlugin(pluginName)
             return "OK"
-        
+
         @self.server.route("/desktop/appsupportdir", methods=["GET"])
         @desktopOnly
         def openPluginsFolder():
             print("Opening plugins folder")
             from App import AppDelegate
+
             AppDelegate().openAppSupportDir()
             return "OK"
-
 
         @self.server.route("/plugins/list", methods=["GET"])
         @verifyToken
@@ -239,11 +245,10 @@ class HorusServer:
         def listblocks():
             plugins = self.pluginManager.listAllBlocks()
             return flask.jsonify(plugins)
-        
+
         @self.server.route("/plugins/executeblock", methods=["POST"])
         @verifyToken
         def pluginAction():
-
             data = request.get_json()
 
             variables = data["variables"]
@@ -251,12 +256,14 @@ class HorusServer:
 
             # Execute the action from a given block
             try:
-                self.pluginManager.executeBlock(blockID, variables)
+                output = self.pluginManager.executeBlock(blockID, variables)
+                self.socketio.emit("printTerm", output)
                 success = {
                     "ok": True,
                 }
                 return flask.jsonify(success)
             except Exception as e:
+                print(e)
                 error = {
                     "ok": False,
                     "error": str(e),
@@ -299,9 +306,25 @@ class HorusServer:
             # Disable caching
             response.headers["Cache-Control"] = "no-store"
             return response
+    
+    def _socketIORoutes(self):
+        """
+        Setup the socket.io routes endpoints
+        """
+
+        @self.socketio.on('message')
+        def handle_message(data):
+            print('received message: ' + data)
+            emit('printTerm', 'Hello from the server!')
+
+
 
     def run(self, reloader=False):
         # use_reloader has to be turned off in order to run in a secondary thread
-        self.server.run(
-            host=self.host, port=self.port, debug=self.debug, use_reloader=reloader
+        self.socketio.run(
+            self.server,
+            host=self.host,
+            port=self.port,
+            debug=self.debug,
+            use_reloader=reloader,
         )

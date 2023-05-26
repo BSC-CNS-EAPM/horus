@@ -107,7 +107,7 @@ class PluginManager:
             if p.info["name"] == byName:
                 return p
         raise Exception(f"Plugin {byName} not found.")
-    
+
     def _getPluginByID(self, id: str) -> Plugin:
         """
         Returns a plugin with the given name.
@@ -293,11 +293,11 @@ class PluginManager:
                     "type": v.type,
                     "value": v.defaultValue if v.defaultValue else "",
                     "children": v.getChildren(),
-                    "allowedValues": v.allowedValues
+                    "allowedValues": v.allowedValues,
                 }
             )
         return varList
-    
+
     def _findBlock(self, fromBlockID: str):
         """
         Finds a block from an action id.
@@ -319,7 +319,6 @@ class PluginManager:
 
         return block
 
-
     def executeBlock(self, blockID, variables):
         """
         Executes an action of a plugin.
@@ -331,8 +330,18 @@ class PluginManager:
         # Set the variables
         block.updateValues(variables)
 
-        # Execute the block
-        block()
+        # Capture all stdout and stderr output
+        import io
+        from contextlib import redirect_stdout, redirect_stderr
+        with io.StringIO() as buf, redirect_stdout(buf), redirect_stderr(buf):
+            # Execute the block
+            block()
+
+            # Get the output
+            output = buf.getvalue()
+
+        # Return the output
+        return output
 
     def createFlow(self, name):
         """
@@ -342,10 +351,11 @@ class PluginManager:
         # If we are in desktop, a window will open to select the flow destination folder
         if self.desktop:
             from App import AppDelegate
+
             flowPath = AppDelegate().openFolderSelectDialog()
             flowPath = os.path.join(flowPath, name)
         else:
-            # If we are in web version instead, 
+            # If we are in web version instead,
             # the flow will be sabed to the user's flows folder
             # WIP
             flowPath = "flows"
@@ -359,4 +369,3 @@ class PluginManager:
         Saves a flow to a file.
         """
         pass
-

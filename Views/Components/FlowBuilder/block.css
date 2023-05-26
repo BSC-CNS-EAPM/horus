@@ -64,7 +64,6 @@
 .block-sidebar {
     /* Add a right border */
     border-right: 1px solid #e5e5e5;
-    height: calc(100vh - 2rem);
     width: 15vw;
     padding: 1rem;
 }
@@ -74,5 +73,4 @@
     border-radius: 5px;
     padding: 1rem;
     width: 85vw;
-    height: calc(100vh - 2rem);
 }
