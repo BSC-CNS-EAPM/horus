@@ -55,7 +55,9 @@ class HorusServer:
         self._routes()
 
         # Setup SocketIO
-        self.socketio = SocketIO(self.server, cors_allowed_origins="*")
+        self.socketio = SocketIO(
+            self.server, cors_allowed_origins="*", async_mode="eventlet"
+        )
         self._socketIORoutes()
 
     def _getToken(self):
@@ -306,18 +308,16 @@ class HorusServer:
             # Disable caching
             response.headers["Cache-Control"] = "no-store"
             return response
-    
+
     def _socketIORoutes(self):
         """
         Setup the socket.io routes endpoints
         """
 
-        @self.socketio.on('message')
+        @self.socketio.on("message")
         def handle_message(data):
-            print('received message: ' + data)
-            emit('printTerm', 'Hello from the server!')
-
-
+            print("received message: " + data)
+            emit("printTerm", "Hello from the server!")
 
     def run(self, reloader=False):
         # use_reloader has to be turned off in order to run in a secondary thread

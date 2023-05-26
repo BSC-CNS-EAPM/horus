@@ -21,6 +21,8 @@ dependencies:
       - pygobject==3.44.1; sys_platform == 'linux'
       - pytest
       - flask-socketio
+      - eventlet
+      - gevent
 
 # Manual install due to Apple Silicon/ARM not available from repo
 # python -m pip install peleffy

@@ -24,7 +24,34 @@ datas = [
 ]
 
 # Required modules
-imports = ["webview", "flask", "requests", "nbdsuite"]
+imports = [
+    "webview",
+    "flask",
+    "requests",
+    "nbdsuite"
+]
+
+# Add all the submodules required by flask_socketio
+imports += [
+    "flask_socketio",
+    "engineio.async_drivers.eventlet",
+    "eventlet",
+    "eventlet.hubs.epolls",
+    "eventlet.hubs.kqueue",
+    "eventlet.hubs.selects",
+    "dns",
+    "dns.dnssec",
+    "dns.e164",
+    "dns.namedict",
+    "dns.tsigkeyring",
+    "dns.update",
+    "dns.version",
+    "dns.zone",
+    "dns.asyncbackend",
+    "dns.asyncresolver",
+    "dns.asyncquery",
+    "dns.versioned",
+]
 
 # Check that all the modules are installed in the environment
 try:
