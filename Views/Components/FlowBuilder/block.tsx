@@ -180,6 +180,7 @@ export interface BlockProps {
     ) => Promise<void>;
     isRunning?: boolean;
     runError?: boolean;
+    placedID: number
 }
 
 

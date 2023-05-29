@@ -12,6 +12,8 @@ interface FlowReciverProps {
     flowName: string;
 }
 
+var placedID = 0
+
 function FlowReciver(props: FlowReciverProps) {
 
     // Block states
@@ -32,28 +34,32 @@ function FlowReciver(props: FlowReciverProps) {
         () => ({
             accept: ItemTypes.BLOCK,
             drop: (item: BlockProps) => {
-                // Set the block as placed
-                item.isPlaced = true
                 addBlock(item)
-
-                // Set the flow as not saved because it has changed
-                setSaved(false)
             }
         }),
         [blocks],
     )
 
     const addBlock = (block: BlockProps) => {
-        // Add the block only if its not there
-        // if (!blocks.find(b => b.id === block.id)) {
-        //     setBlocks([...blocks, block])
-        // }
-        setBlocks([...blocks, block])
+
+        // Set the block as placed
+        block.isPlaced = true
+        
+        // Set the placedID
+        const newBlock = {...block, placedID: placedID}
+
+        // Increment the placedID
+        placedID++
+        
+        setBlocks([...blocks, newBlock])
+        
+        // Set the flow as not saved because it has changed
+        setSaved(false)
     }
 
     // Remove the block from the list
     const removeBlock = (block: BlockProps) => {
-        setBlocks(blocks.filter(b => b.id !== block.id))
+        setBlocks(blocks.filter(b => b.placedID !== block.placedID))
     }
 
     const handleSave = async () => {
@@ -97,9 +103,10 @@ function FlowReciver(props: FlowReciverProps) {
 
     const executeBlock = async (block) => {
 
-        // Set the running button
+        //Set the running button
         setBlocks(blocks.map(b => {
-            if (b.id === block.id) {
+            if (b.placedID === block.placedID) {
+                console.log(`Setting block ${b.id} with placedID ${b.placedID} to running`)
                 b.isRunning = true
             }
             return b
@@ -130,7 +137,7 @@ function FlowReciver(props: FlowReciverProps) {
         // Check any error status code
         if (!data.ok) {
             setBlocks(blocks.map(b => {
-                if (b.id === block.id) {
+                if (b.placedID === block.placedID) {
                     b.runError = true
                 }
                 return b
@@ -138,7 +145,7 @@ function FlowReciver(props: FlowReciverProps) {
         }
         else {
             setBlocks(blocks.map(b => {
-                if (b.id === block.id) {
+                if (b.placedID === block.placedID) {
                     b.runError = false
                 }
                 return b
@@ -147,14 +154,13 @@ function FlowReciver(props: FlowReciverProps) {
 
         // Set the running button
         setBlocks(blocks.map(b => {
-            if (b.id === block.id) {
+            if (b.placedID === block.placedID) {
                 b.isRunning = false
             }
             return b
         }
         ))
     }
-
 
     const handleExecuteAll = async () => {
         // Set the executing state to true
@@ -163,7 +169,7 @@ function FlowReciver(props: FlowReciverProps) {
         // Loop over the blocks and execute them
         for (let i = 0; i < blocks.length; i++) {
             const b = blocks[i]
-            executeBlock(b)
+            await executeBlock(b)
         }
 
         // Set the executing state to false
@@ -194,12 +200,10 @@ function FlowReciver(props: FlowReciverProps) {
                     }
                 </button>
                 <button onClick={handleExecuteAll}>
-                    {executingAll ? (<><svg xmlns="http://www.w3.org/2000/svg" fill="red" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                    {executingAll ? (<svg xmlns="http://www.w3.org/2000/svg" fill="red" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 9.563C9 9.252 9.252 9 9.563 9h4.874c.311 0 .563.252.563.563v4.874c0 .311-.252.563-.563.563H9.564A.562.562 0 019 14.437V9.564z" />
                     </svg>
-                    </>
-
                     ) : (
                         <svg xmlns="http://www.w3.org/2000/svg" fill="green" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
