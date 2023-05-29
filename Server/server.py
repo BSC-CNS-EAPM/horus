@@ -1,7 +1,6 @@
 # Tools
 import os
 import sys
-import logging
 
 # Flask
 import flask
@@ -61,6 +60,9 @@ class HorusServer:
             async_mode=("threading" if self.debug else "eventlet"),
         )
         self._socketIORoutes()
+
+        # Load the plugins pages
+        self._pluginPages()
 
     def _getToken(self):
         if self.desktop:
@@ -249,6 +251,12 @@ class HorusServer:
         def listblocks():
             plugins = self.pluginManager.listAllBlocks()
             return flask.jsonify(plugins)
+        
+        @self.server.route("/plugins/listpages", methods=["GET"])
+        @verifyToken
+        def listpages():
+            pages = self.pluginManager.getPages()
+            return flask.jsonify(pages)
 
         @self.server.route("/plugins/executeblock", methods=["POST"])
         @verifyToken
@@ -320,6 +328,23 @@ class HorusServer:
         def handle_message(data):
             print("received message: " + data)
             emit("printTerm", "Hello from the server!")
+
+    def _pluginPages(self):
+        """
+        Setup the plugin pages
+        """
+
+        pages = self.pluginManager.getPages()
+
+        for page in pages:
+            htmlFile = page["html"]
+            url = f"/plugins/pages/{page['id']}"
+            self.server.add_url_rule(
+                url,
+                view_func=lambda: flask.send_file(htmlFile),
+            )
+            print(f"Added page {url} with file {htmlFile}")
+        
 
     def run(self, reloader=False):
         # use_reloader has to be turned off in order to run in a secondary thread

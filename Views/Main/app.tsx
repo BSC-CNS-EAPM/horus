@@ -1,10 +1,22 @@
 import { Route, Routes } from "react-router-dom"
 
-import Molstar from "../Components/molstar";
+import Molstar from "../Components/Molstar/molstar";
 import FlowBuilder from "../Components/FlowBuilder/flowbuilder";
 import HorusToolbar from "../Components/Toolbar/toolbar";
 import HorusTerm from "../Components/Console/console";
 
+
+function PluginPage() {
+    return (
+        <iframe id="plugin-page-iframe" src="/plugins/pages" style={
+            {
+                width: "100%",
+                height: "100%",
+                border: "none"
+            }
+        }/>
+    )
+}
 
 export function App() {
 
@@ -14,7 +26,8 @@ export function App() {
             <div id="root-routes" className="root-routes root-routes-console-hidden">
             <Routes>
                 <Route path="/" element={<Molstar />} />
-                <Route path="/newjob" element={<FlowBuilder openFlow={false}/>} />
+                <Route path="/newjob" element={<FlowBuilder />} />
+                <Route path="/plugins/pages" element={<PluginPage />} />
             </Routes>
             </div>
             <HorusTerm />

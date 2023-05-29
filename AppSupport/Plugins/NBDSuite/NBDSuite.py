@@ -1,5 +1,6 @@
-from HorusAPI import Plugin, PluginBlock, PluginVariable, VariableTypes
+from HorusAPI import Plugin, PluginBlock, PluginVariable, VariableTypes, PluginPage
 import time
+
 
 def createYAML(block: PluginBlock):
     print("Creating yaml file...")
@@ -13,6 +14,7 @@ def createYAML(block: PluginBlock):
     for key in block.variables:
         print(key, ":", type(block.variables[key]))
 
+
 def waiterFunction(block: PluginBlock):
     print("Waiting...")
     time.sleep(5)
@@ -20,13 +22,20 @@ def waiterFunction(block: PluginBlock):
 
 
 class NBDSuitePlugin(Plugin):
+    info = {
+        "name": "NBDSuite",
+        "description": "The NBDSuite plugin for Horus",
+        "author": "Nostrum Biodiscovery",
+        "version": "0.0.1",
+        "dependencies": "Peleffy",
+    }
 
     systemData = PluginVariable(
         id="systemData",
         name="System data",
         description="The protein system data pdb file.",
         type=VariableTypes.STRING,
-        defaultValue="Default protein"
+        defaultValue="Default protein",
     )
 
     ligandData = PluginVariable(
@@ -34,7 +43,7 @@ class NBDSuitePlugin(Plugin):
         name="Ligand data",
         description="The ligand data pdb file.",
         type=VariableTypes.STRING,
-        defaultValue=None
+        defaultValue=None,
     )
 
     testVariable = PluginVariable(
@@ -42,7 +51,7 @@ class NBDSuitePlugin(Plugin):
         name="Test variable",
         description="A test variable.",
         type=VariableTypes.STRING,
-        defaultValue="Test"
+        defaultValue="Test",
     )
 
     testBoolean = PluginVariable(
@@ -50,7 +59,7 @@ class NBDSuitePlugin(Plugin):
         name="Test boolean",
         description="A test boolean.",
         type=VariableTypes.BOOLEAN,
-        defaultValue=False
+        defaultValue=False,
     )
 
     test_stringlist = PluginVariable(
@@ -59,7 +68,7 @@ class NBDSuitePlugin(Plugin):
         description="A test string list.",
         type=VariableTypes.STRING_LIST,
         defaultValue="Test3",
-        allowedValues=["Test1", "Test2", "Test3"]
+        allowedValues=["Test1", "Test2", "Test3"],
     )
 
     test_radio = PluginVariable(
@@ -68,7 +77,7 @@ class NBDSuitePlugin(Plugin):
         description="A test radio.",
         type=VariableTypes.BOOLEAN_LIST,
         defaultValue=False,
-        allowedValues=[True, False]
+        allowedValues=[True, False],
     )
 
     createYAMLBlock = PluginBlock(
@@ -76,13 +85,7 @@ class NBDSuitePlugin(Plugin):
         description="Creates a NBDSuite input file.",
         action=createYAML,
         author="Nostrum Biodiscovery",
-        variables=[
-            systemData,
-            ligandData,
-            testVariable,
-            testBoolean,
-            test_stringlist
-            ]
+        variables=[systemData, ligandData, testVariable, testBoolean, test_stringlist],
     )
 
     waiterBlock = PluginBlock(
@@ -93,12 +96,11 @@ class NBDSuitePlugin(Plugin):
         variables=[],
     )
 
-    info = {
-        "name": "NBDSuite",
-        "description": "The NBDSuite plugin for Horus",
-        "author": "Nostrum Biodiscovery",
-        "version": "0.0.1",
-        "dependencies": "Peleffy"
-    }
+    pelePage = PluginPage(
+        name="PELE results",
+        description="Analyse PELE results.",
+        html="pele_results.html",
+    )
+
 
 plugin = NBDSuitePlugin()

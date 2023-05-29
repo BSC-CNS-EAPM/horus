@@ -1,4 +1,22 @@
 import typing
+import os
+
+class PluginPage:
+    id: str = "baseplugin.page"
+
+    def __init__(self, name: str, description: str, html: str):
+        """
+        Create a new PluginPage.
+
+        :param name: The name of the page.
+        :param description: A description of the page.
+        :param html: The name of the HTML file (i.e. "my_page.html").
+        The html file must be located in the "Pages" folder of the plugin.
+        """
+        self.name = name
+        self.description = description
+        self.html = html
+
 
 
 class VariableTypes:
@@ -253,6 +271,9 @@ class Plugin:
         # Add all the blocks to the list of blocks
         self._addBlocks()
 
+        # Add the pages to the list of pages
+        self._addPages()
+
     pythonInterpreter = None
     """
     The python interpreter path used to run the plugin.
@@ -278,6 +299,16 @@ class Plugin:
     :param dependencies: A list of dependencies of the plugin
     """
 
+    _filename: str = ""
+    """
+    The filename of the plugin. Internal use only.
+    """
+
+    _path: str = ""
+    """
+    The path of the plugin folder. Internal use only.
+    """
+
     actions: typing.Optional[typing.List[typing.Callable]] = None
     """
     Functions that can be called from the GUI.
@@ -295,6 +326,13 @@ class Plugin:
     Blocks that can be used in the GUI flow editor.
 
     Allowed type: PluginBlock
+    """
+
+    _pages: typing.List[PluginPage] = []
+    """
+    Pages that can be loaded from the GUI.
+
+    Allowed type: PluginPage
     """
 
     # Define comparison operators
@@ -345,3 +383,37 @@ class Plugin:
                     self.getBlock(attr.id)
                 except Exception:
                     self._blocks.append(attr)
+
+    def getPage(self, id):
+        """
+        Returns a page by its ID.
+
+        :param id: The ID of the page.
+        """
+        for page in self._pages:
+            if page.id == id:
+                return page
+        raise Exception(f"Page {id} not found.")
+    
+    def getPages(self):
+        return self._pages
+    
+    @property
+    def pages(self):
+        return self.getPages()
+
+    def _addPages(self):
+        # Search for all the properties of the instance
+        # Check if the property is a PluginPage
+        # If it is, add it to the list of pages
+        for attr in dir(self):
+            # Get the attribute
+            attr = getattr(self, attr)
+            # If the attribute is a PluginPage, add it to the list
+            # Only add the page if it is not already in the list
+            if isinstance(attr, PluginPage):
+                attr.id = f"{self.id}.{attr.name}".replace(" ", "_").lower()
+                try:
+                    self.getPage(attr.id)
+                except Exception:
+                    self._pages.append(attr)

@@ -254,6 +254,20 @@ class AppDelegate(metaclass=SingletonMeta):
         )
 
         return result[0]
+    
+    def saveFileSelectDialog(self) -> str:
+        """
+        Opens a save file dialog and returns the path of the selected file.
+        """
+        # Get the active window
+        window = webview.windows[0]
+
+        # Open the folder dialog
+        result: typing.Tuple[str, ...] = window.create_file_dialog(
+            webview.SAVE_DIALOG, allow_multiple=False
+        )
+
+        return result[0]
 
     @staticmethod
     def tokenize(url: str):

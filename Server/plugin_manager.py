@@ -9,6 +9,9 @@ class PluginManager:
     It creates the AppSupport/Plugins directory if it doesn't exist.
     """
 
+    # Track if the plugins need to be reloaded
+    pluginChanges = True
+
     def __init__(self, appSupportDir: str, desktop: bool) -> None:
         self._pluginsDir(appSupportDir)
 
@@ -58,6 +61,8 @@ class PluginManager:
 
         for f in files:
             self._installPlugin(f)
+
+        self.pluginChanges = True
 
     def _installPlugin(self, path):
         import shutil
@@ -127,6 +132,8 @@ class PluginManager:
         pluginPath = os.path.join(self.pluginsDir, pDir)
         shutil.rmtree(pluginPath)
 
+        self.pluginChanges = True
+
     def _listPluginsPaths(self):
         """
         Lists the plugins present in the plugins directory.
@@ -169,6 +176,11 @@ class PluginManager:
         """
         Initializes all the plugins present in the plugins directory.
         """
+
+        # Check if its necessary to re-load the plugins
+        if not self.pluginChanges:
+            return
+
         self.loadedPlugins: list[Plugin] = []
         self.errorPlugins: list[str] = []
         pluginPaths = self._listPluginsPaths()
@@ -178,6 +190,8 @@ class PluginManager:
             except Exception as e:
                 print(f"Error loading plugin {os.path.basename(pth)}: {e}")
                 self.errorPlugins.append(os.path.basename(pth))
+        
+        self.pluginChanges = False
 
     def _loadPlugin(self, pluginPath: str):
         """
@@ -196,7 +210,7 @@ class PluginManager:
 
         self.loadedPlugins.append(plugin)
 
-    def _checkPlugin(self, pluginPath):
+    def _checkPlugin(self, pluginPath) -> Plugin:
         """
         Checks if a plugin is valid.
 
@@ -224,8 +238,11 @@ class PluginManager:
         if not pluginModule.plugin.info["name"]:
             raise Exception("The plugin does not have a name.")
 
-        # Add to the info the filename
-        pluginModule.plugin.info["filename"] = os.path.basename(pluginPath)
+        # Add to the plugin the filename
+        pluginModule.plugin._filename = os.path.basename(pluginPath)
+
+        # Add to the plugin the full path of the containing folder
+        pluginModule.plugin._path = os.path.dirname(pluginPath)
 
         # Check if the plugin is a default plugin
         try:
@@ -252,12 +269,6 @@ class PluginManager:
             info["views"] = str(len(p.views))
             listedPlugins.append(info)
         return {"plugins": listedPlugins, "errors": self.errorPlugins}
-
-    # def listPluginBlocks(self, plugin):
-    #     """
-    #     Returns a list of all the blocks of a plugin.
-    #     """
-    #     return plugin.blocks
 
     def listAllBlocks(self):
         """
@@ -352,7 +363,7 @@ class PluginManager:
         if self.desktop:
             from App import AppDelegate
 
-            flowPath = AppDelegate().openFolderSelectDialog()
+            flowPath = AppDelegate().saveFileSelectDialog()
             flowPath = os.path.join(flowPath, name)
         else:
             # If we are in web version instead,
@@ -360,12 +371,39 @@ class PluginManager:
             # WIP
             flowPath = "flows"
 
-        # Create the flow folder
-        # if not os.path.exists(flowPath):
-        #     os.mkdir(flowPath)
+        # Create the flow file
+        if not os.path.exists(flowPath):
+            os.mkdir(flowPath)
+
 
     def saveFlow(self, flow):
         """
         Saves a flow to a file.
         """
         pass
+
+    def loadFlow(self, flowPath):
+        """
+        Loads a flow from a file.
+        """
+        pass
+
+    def getPages(self):
+        """
+        Returns a list of all the pages of all the plugins.
+        """
+        self._initializePlugins()
+        pages: list[dict[str, str]] = []
+        for p in self.loadedPlugins:
+            for pg in p.pages:
+                pages.append(
+                    {
+                        "id": pg.id,
+                        "plugin": p.info["name"],
+                        "name": pg.name,
+                        "description": pg.description,
+                        "html": f"{p._path}/Pages/{pg.html}",
+                        "url": f"/plugins/pages/{pg.id}"
+                    }
+                )
+        return pages

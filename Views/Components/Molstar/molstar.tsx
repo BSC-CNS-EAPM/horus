@@ -11,8 +11,8 @@ import { PluginConfig } from "molstar/lib/mol-plugin/config";
 // Load the molstar default style
 import "molstar/lib/mol-plugin-ui/skin/light.scss";
 
-// Import the loading indicator
-import Loading from "./loading";
+// Import index.css
+import "./molstar.css";
 
 
 declare global {
@@ -67,7 +67,7 @@ export default function Molstar() {
   return (
     <div id="home-molstar" className="home-molstar" ref={parent} style={{
       // Place a top margin of 2 rem to avoid the toolbar
-      position: "relative",
+      position: "absolute",
       width: "100%",
       // Set the height to the height of the window minus the toolbar
       height: "100%",
