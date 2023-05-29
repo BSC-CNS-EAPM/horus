@@ -56,7 +56,9 @@ class HorusServer:
 
         # Setup SocketIO
         self.socketio = SocketIO(
-            self.server, cors_allowed_origins="*", async_mode="eventlet"
+            self.server,
+            cors_allowed_origins="*",
+            async_mode=("threading" if self.debug else "eventlet"),
         )
         self._socketIORoutes()
 
@@ -132,7 +134,7 @@ class HorusServer:
         API requests. Also disables Flask logging when not in debug mode.
         """
         # Disable werkzeug logging when not in debug mode
-        logging.getLogger("werkzeug").disabled = not self.debug
+        # logging.getLogger("werkzeug").disabled = not self.debug
 
         # Setup the server
         server = flask.Flask(
@@ -167,7 +169,7 @@ class HorusServer:
         def desktopOnly(func):
             @wraps(func)
             def wrapper(*args, **kwargs):
-                if not self.desktop:
+                if not self.desktop and not self.debug:
                     return flask.redirect("/error")
                 return func(*args, **kwargs)
 

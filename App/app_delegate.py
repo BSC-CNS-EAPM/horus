@@ -147,7 +147,7 @@ class AppDelegate(metaclass=SingletonMeta):
         """
         if url is None:
             url = self.server.baseURL
-        window = webview.create_window(title, url=url)
+        window = webview.create_window(title, url=url, width=1200, height=800)
         self.windows.append(window)
         return window
 
@@ -320,7 +320,7 @@ def LaunchApp():
     debug: bool = not cython.compiled
 
     # Check for the --server flag (Only development)
-    if "--server" in sys.argv:
+    if "--server-debug" in sys.argv:
         # Start the server
         from Server.server import HorusServer
 

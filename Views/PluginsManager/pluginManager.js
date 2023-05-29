@@ -41,14 +41,14 @@ function InstalledPlugins() {
         <div>
             <h1>Installed plugins</h1>
             {/* Render loaded plugin data */}
-            {pluginList.plugins.map((plugin) => {
+            {pluginList.plugins?.map((plugin) => {
                 return (
                     <PluginCard key={plugin.name} plugin={plugin} />
                 )
             })}
             <h1>Errors</h1>
             {/* Render errors */}
-            {pluginList.errors.map((error) => {
+            {pluginList.errors?.map((error) => {
                 return (
                     <div>{error}</div>
                 )

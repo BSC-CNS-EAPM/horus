@@ -37,7 +37,7 @@ const people = [
   { name: 'Hellen Schmidt' },
 ]
 
-export default function HorusDropdown() {
+function HorusDropdown() {
   const [selected, setSelected] = useState(people[0])
 
   return (

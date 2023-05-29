@@ -2,6 +2,7 @@ import { io } from "socket.io-client";
 import React, { useEffect } from 'react'
 
 import Terminal from 'react-console-emulator'
+import getCommands from "./commands";
 import "./console.css";
 
 
@@ -25,21 +26,6 @@ export default function HorusTerm() {
         term.current?.scrollToBottom();
     });
 
-    const commands = {
-        echo: {
-            description: 'Echo a passed string.',
-            usage: 'echo <string>',
-            fn: (...args) => args.join(' ')
-        },
-        sendSocket: {
-            description: 'Send a message to the server.',
-            usage: 'sendSocket <string>',
-            fn: (...args) => {
-                socket.emit('message', args.join(' '));
-            }
-        },
-    }
-
     return (
         <div id="console-div" className="horus-term" style={
             {
@@ -47,7 +33,7 @@ export default function HorusTerm() {
             }
         }>
             <Terminal
-                commands={commands}
+                commands={getCommands(socket)}
                 promptLabel={'horus:~$'}
                 height={"200px"}
                 ref={term}

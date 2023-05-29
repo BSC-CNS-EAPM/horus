@@ -45,3 +45,8 @@
 /* .toolbar-search:focus, .toolbar-search:active {
     outline: none;
 } */
+
+.toolbar-item-key-shortcut {
+    font-size: 0.8rem;
+    color: #999;
+}

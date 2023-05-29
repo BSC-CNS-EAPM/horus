@@ -1,7 +1,7 @@
 .nbd-btn {
     border: none;
     border: 2px solid var(--tech-blue);
-    background-color: var(--tech-blue);
+    background-color: blue;
     position: relative;
     color: white;
     font-weight: 400;

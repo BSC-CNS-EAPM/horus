@@ -53,6 +53,8 @@ export default function Molstar() {
         }
       });
 
+      // Select the first residue
+      
       window.molstar = plugin;
     }
     init();

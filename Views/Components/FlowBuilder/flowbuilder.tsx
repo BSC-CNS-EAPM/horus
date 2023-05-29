@@ -5,7 +5,7 @@ import { DndContext } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { horusGet, horusPost } from "../../Utils/utils";
 import Loading from "../loading";
-import HorusModal from "../reusable";
+import { HorusModal } from "../reusable";
 
 interface FlowReciverProps {
     openFlow?: string;
@@ -14,12 +14,16 @@ interface FlowReciverProps {
 
 function FlowReciver(props: FlowReciverProps) {
 
+    // Block states
     const [blocks, setBlocks] = useState<BlockProps[]>([])
 
     // Modal state
     const [showModal, setShowModal] = useState(false);
     const [modal, setModal] = useState(<div></div>);
     const [flowName, setFlowName] = useState("New flow")
+
+    // Executing state
+    const [executingAll, setExecutingAll] = useState(false)
 
     // Saved state
     const [saved, setSaved] = useState(false)
@@ -91,6 +95,81 @@ function FlowReciver(props: FlowReciverProps) {
         }
     }
 
+    const executeBlock = async (block) => {
+
+        // Set the running button
+        setBlocks(blocks.map(b => {
+            if (b.id === block.id) {
+                b.isRunning = true
+            }
+            return b
+        }))
+
+        // Get the updated block variables
+        const variables = block.variables.reduce((acc, variable) => {
+            // Return a dictionary with the variable name and value {name: value}
+            acc[variable.id] = variable.value
+            return acc
+        }, {})
+
+
+        const body = JSON.stringify({
+            blockID: block.id,
+            variables: variables
+        })
+
+        const headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
+
+        const response = await horusPost("/plugins/executeblock", headers, body)
+
+        const data = await response.json()
+
+        // Check any error status code
+        if (!data.ok) {
+            setBlocks(blocks.map(b => {
+                if (b.id === block.id) {
+                    b.runError = true
+                }
+                return b
+            }))
+        }
+        else {
+            setBlocks(blocks.map(b => {
+                if (b.id === block.id) {
+                    b.runError = false
+                }
+                return b
+            }))
+        }
+
+        // Set the running button
+        setBlocks(blocks.map(b => {
+            if (b.id === block.id) {
+                b.isRunning = false
+            }
+            return b
+        }
+        ))
+    }
+
+
+    const handleExecuteAll = async () => {
+        // Set the executing state to true
+        setExecutingAll(true)
+
+        // Loop over the blocks and execute them
+        for (let i = 0; i < blocks.length; i++) {
+            const b = blocks[i]
+            executeBlock(b)
+        }
+
+        // Set the executing state to false
+        setExecutingAll(false)
+    }
+
     const onNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFlowName(e.target.value)
         setSaved(false)
@@ -102,18 +181,31 @@ function FlowReciver(props: FlowReciverProps) {
         <div ref={drop} className="current-flow">
             {modal}
             <h1 className="flex flex-row">
-                <input type="text" id="flow-name" placeholder={props.flowName} onChange={onNameChange}/>
+                <input type="text" id="flow-name" placeholder={props.flowName} onChange={onNameChange} />
                 <button onClick={handleSave}>
-                {
-                    saved ? (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="green" className="w-5 h-5">
-                        <path d="M2 3a1 1 0 00-1 1v1a1 1 0 001 1h16a1 1 0 001-1V4a1 1 0 00-1-1H2z" />
-                        <path fillRule="evenodd" d="M2 7.5h16l-.811 7.71a2 2 0 01-1.99 1.79H4.802a2 2 0 01-1.99-1.79L2 7.5zM7 11a1 1 0 011-1h4a1 1 0 110 2H8a1 1 0 01-1-1z" clipRule="evenodd" />
+                    {
+                        saved ? (<svg xmlns="http://www.w3.org/2000/svg" fill="green" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                        </svg>
+                        ) : (<svg xmlns="http://www.w3.org/2000/svg" fill="orange" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3l3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                        </svg>
+                        )
+                    }
+                </button>
+                <button onClick={handleExecuteAll}>
+                    {executingAll ? (<><svg xmlns="http://www.w3.org/2000/svg" fill="red" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 9.563C9 9.252 9.252 9 9.563 9h4.874c.311 0 .563.252.563.563v4.874c0 .311-.252.563-.563.563H9.564A.562.562 0 019 14.437V9.564z" />
                     </svg>
-                    ) : (<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="orange" className="w-5 h-5">
-                        <path fillRule="evenodd" d="M2 3a1 1 0 00-1 1v1a1 1 0 001 1h16a1 1 0 001-1V4a1 1 0 00-1-1H2zm0 4.5h16l-.811 7.71a2 2 0 01-1.99 1.79H4.802a2 2 0 01-1.99-1.79L2 7.5zM10 9a.75.75 0 01.75.75v2.546l.943-1.048a.75.75 0 111.114 1.004l-2.25 2.5a.75.75 0 01-1.114 0l-2.25-2.5a.75.75 0 111.114-1.004l.943 1.048V9.75A.75.75 0 0110 9z" clipRule="evenodd" />
-                    </svg>
-                    )
-                }
+                    </>
+
+                    ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="green" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z" />
+                        </svg>
+                    )}
                 </button>
             </h1>
             <div className="flex flex-col align-items-center">
@@ -121,7 +213,7 @@ function FlowReciver(props: FlowReciverProps) {
                     <div style={{
                         marginBottom: "1rem"
                     }}>
-                        <Block key={index} {...block} onChange={onblockChange}/>
+                        <Block key={index} {...block} onChange={onblockChange} execute={executeBlock} />
                     </div>
                 ))}
             </div>
@@ -172,15 +264,15 @@ export default function FlowBuilder(props: FlowBuilderProps) {
                 <div className="block-sidebar">
                     <h1>Blocks</h1>
                     <div>
-                    {
-                        blocks.length === 0 ? <Loading /> : blocks.map((block, index) => (
-                            <div style={{
-                                marginBottom: "1rem"
-                            }}>
-                                <Block key={index} {...block} />
-                            </div>
-                        ))
-                    }
+                        {
+                            blocks.length === 0 ? <Loading /> : blocks.map((block, index) => (
+                                <div style={{
+                                    marginBottom: "1rem"
+                                }}>
+                                    <Block key={index} {...block} />
+                                </div>
+                            ))
+                        }
                     </div>
                 </div>
                 <FlowReciver

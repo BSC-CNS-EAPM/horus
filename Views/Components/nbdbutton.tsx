@@ -1,6 +1,3 @@
-// Import React library
-import React, { useState, useEffect } from "react";
-
 // Import the css
 import "./nbdbutton.css";
 
