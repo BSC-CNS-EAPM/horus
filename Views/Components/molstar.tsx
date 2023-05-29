@@ -33,8 +33,8 @@ export default function Molstar() {
     ],
     layout: {
       initial: {
-        isExpanded: false,
-        showControls: false,
+        isExpanded: true,
+        showControls: true,
       },
     }
   }
@@ -54,7 +54,7 @@ export default function Molstar() {
       });
 
       // Select the first residue
-      
+      plugin.behaviors.layout.leftPanelTabName.next('data')
       window.molstar = plugin;
     }
     init();
@@ -65,7 +65,7 @@ export default function Molstar() {
   }, []);
 
   return (
-    <div id="home-molstar" ref={parent} style={{
+    <div id="home-molstar" className="home-molstar" ref={parent} style={{
       // Place a top margin of 2 rem to avoid the toolbar
       position: "relative",
       width: "100%",

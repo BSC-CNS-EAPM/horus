@@ -43,3 +43,7 @@ Nor the console (bottom) */
   the total height its just all the viewerpot minus the toolbar and the console */
   height: calc(100vh - 2rem - 150px); 
 }
+
+.msp-plugin .msp-layout-expanded {
+  position: absolute !important;
+}

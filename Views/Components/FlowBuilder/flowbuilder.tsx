@@ -44,15 +44,15 @@ function FlowReciver(props: FlowReciverProps) {
 
         // Set the block as placed
         block.isPlaced = true
-        
+
         // Set the placedID
-        const newBlock = {...block, placedID: placedID}
+        const newBlock = { ...block, placedID: placedID }
 
         // Increment the placedID
         placedID++
-        
+
         setBlocks([...blocks, newBlock])
-        
+
         // Set the flow as not saved because it has changed
         setSaved(false)
     }
@@ -132,21 +132,26 @@ function FlowReciver(props: FlowReciverProps) {
 
         const response = await horusPost("/plugins/executeblock", headers, body)
 
-        const data = await response.json()
-
-        // Check any error status code
-        if (!data.ok) {
+        try {
+            const data = await response.json()
+            // Check any error status code
+            if (!data.ok) {
+                throw new Error(data.message)
+            }
+            else {
+                setBlocks(blocks.map(b => {
+                    if (b.placedID === block.placedID) {
+                        b.runError = false
+                    }
+                    return b
+                }))
+            }
+        }
+        catch (e) {
+            console.log(e)
             setBlocks(blocks.map(b => {
                 if (b.placedID === block.placedID) {
                     b.runError = true
-                }
-                return b
-            }))
-        }
-        else {
-            setBlocks(blocks.map(b => {
-                if (b.placedID === block.placedID) {
-                    b.runError = false
                 }
                 return b
             }))
