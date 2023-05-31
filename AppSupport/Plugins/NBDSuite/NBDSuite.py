@@ -8,18 +8,15 @@ from HorusAPI import (
 )
 import time
 
+plugin = Plugin(id="NBDSuite")
 
-def createYAML(block: PluginBlock):
-    print("Creating yaml file...")
-    print("Test varialbe: ", block.variables["test"])
-    print("System data: ", block.variables["systemData"])
-    print("Ligand data: ", block.variables["ligandData"])
-    print("Test boolean: ", block.variables["testBoolean"])
-    print("Test string list: ", block.variables["test_stringlist"])
-
-    print("Types of the variables:")
-    for key in block.variables:
-        print(key, ":", type(block.variables[key]))
+plugin.info = {
+    "name": "NBDSuite",
+    "description": "The NBDSuite plugin for Horus",
+    "author": "Nostrum Biodiscovery",
+    "version": "0.0.1",
+    "dependencies": "Peleffy",
+}
 
 
 def waiterFunction(block: PluginBlock):
@@ -28,98 +25,150 @@ def waiterFunction(block: PluginBlock):
     print("Done waiting")
 
 
-class NBDSuitePlugin(Plugin):
-    info = {
-        "name": "NBDSuite",
-        "description": "The NBDSuite plugin for Horus",
-        "author": "Nostrum Biodiscovery",
-        "version": "0.0.1",
-        "dependencies": "Peleffy",
-    }
+waiterBlock = PluginBlock(
+    name="Waiter",
+    description="Waits for 5 seconds.",
+    action=waiterFunction,
+    variables=[],
+)
 
-    systemData = PluginVariable(
-        id="systemData",
-        name="System data",
-        description="The protein system data pdb file.",
-        type=VariableTypes.STRING,
-        defaultValue="Default protein",
-    )
+# Add the waiter block to the plugin
+plugin.addBlock(waiterBlock)
 
-    ligandData = PluginVariable(
-        id="ligandData",
-        name="Ligand data",
-        description="The ligand data pdb file.",
-        type=VariableTypes.STRING,
-        defaultValue=None,
-    )
+# Define the variables for the Input Yaml block
+systemData = PluginVariable(
+    id="systemData",
+    name="System data",
+    description="The protein system data pdb file.",
+    type=VariableTypes.STRING,
+    defaultValue="Default protein",
+)
 
-    testVariable = PluginVariable(
-        id="test",
-        name="Test variable",
-        description="A test variable.",
-        type=VariableTypes.STRING,
-        defaultValue="Test",
-    )
+ligandData = PluginVariable(
+    id="ligandData",
+    name="Ligand data",
+    description="The ligand data pdb file.",
+    type=VariableTypes.STRING,
+    defaultValue=None,
+)
 
-    testBoolean = PluginVariable(
-        id="testBoolean",
-        name="Test boolean",
-        description="A test boolean.",
-        type=VariableTypes.BOOLEAN,
-        defaultValue=False,
-    )
+testVariable = PluginVariable(
+    id="test",
+    name="Test variable",
+    description="A test variable.",
+    type=VariableTypes.STRING,
+    defaultValue="Test",
+)
 
-    test_stringlist = PluginVariable(
-        id="test_stringlist",
-        name="Test string list",
-        description="A test string list.",
-        type=VariableTypes.STRING_LIST,
-        defaultValue="Test3",
-        allowedValues=["Test1", "Test2", "Test3"],
-    )
+testBoolean = PluginVariable(
+    id="testBoolean",
+    name="Test boolean",
+    description="A test boolean.",
+    type=VariableTypes.BOOLEAN,
+    defaultValue=False,
+)
 
-    test_radio = PluginVariable(
-        id="test_radio",
-        name="Test radio",
-        description="A test radio.",
-        type=VariableTypes.BOOLEAN_LIST,
-        defaultValue=False,
-        allowedValues=[True, False],
-    )
+test_stringlist = PluginVariable(
+    id="test_stringlist",
+    name="Test string list",
+    description="A test string list.",
+    type=VariableTypes.STRING_LIST,
+    defaultValue="Test3",
+    allowedValues=["Test1", "Test2", "Test3"],
+)
 
-    createYAMLBlock = PluginBlock(
-        name="Create input YAML",
-        description="Creates a NBDSuite input file.",
-        action=createYAML,
-        variables=[systemData, ligandData, testVariable, testBoolean, test_stringlist],
-    )
-
-    waiterBlock = PluginBlock(
-        name="Waiter",
-        description="Waits for 5 seconds.",
-        action=waiterFunction,
-        variables=[],
-    )
-
-    pelePage = PluginPage(
-        name="PELE results",
-        description="Analyse PELE results.",
-        html="pele_results.html",
-    )
-
-    pluginConfig = PluginConfig(
-        name="PELE License",
-        description="PELE license configuration.",
-        variables=[
-            PluginVariable(
-                id="license",
-                name="License",
-                description="PELE license path.",
-                type=VariableTypes.FILE,
-                defaultValue="",
-            )
-        ],
-    )
+test_radio = PluginVariable(
+    id="test_radio",
+    name="Test radio",
+    description="A test radio.",
+    type=VariableTypes.BOOLEAN_LIST,
+    defaultValue=False,
+    allowedValues=[True, False],
+)
 
 
-plugin = NBDSuitePlugin()
+# Define the action for the Input Yaml block
+def createYAML(block: PluginBlock):
+    print("Creating yaml file...")
+    print("Test varialbe: ", block.variables["test"])
+    print("System data: ", block.variables["systemData"])
+    print("Ligand data: ", block.variables["ligandData"])
+    print("Test boolean: ", block.variables["testBoolean"])
+    print("Test string list: ", block.variables["test_stringlist"])
+    print("Config list: ", block.configs)
+    print("License: ", block.configs["license"])
+
+    print("Types of the variables:")
+    for key in block.variables:
+        print(key, ":", type(block.variables[key]))
+
+
+# Define the Input Yaml block
+createYAMLBlock = PluginBlock(
+    name="Create input YAML",
+    description="Creates a NBDSuite input file.",
+    action=createYAML,
+    variables=[systemData, ligandData, testVariable, testBoolean, test_stringlist],
+)
+
+# Create a pele license config
+peleLicense = PluginConfig(
+    name="PELE License",
+    description="PELE license configuration.",
+    action=lambda block: print("License path: ", block.variables["license"]),
+    variables=[
+        PluginVariable(
+            id="license",
+            name="License",
+            description="PELE license path.",
+            type=VariableTypes.FILE,
+            defaultValue="",
+        )
+    ],
+)
+
+# Add a config to the Input Yaml block
+createYAMLBlock.addConfig(peleLicense)
+
+# Add the Input Yaml block to the plugin
+plugin.addBlock(createYAMLBlock)
+
+# Create a PELE block
+peleBlock = PluginBlock(
+    name="PELE",
+    description="Run PELE.",
+    action=lambda block: print("Running PELE..."),
+    variables=[],
+)
+
+# Create a PELE config
+peleConfig = PluginConfig(
+    name="PELE",
+    description="PELE configuration.",
+    action=lambda block: print("PELE config: ", block.variables["peleConfig"]),
+    variables=[
+        PluginVariable(
+            id="peleConfig",
+            name="PELE config",
+            description="PELE config path.",
+            type=VariableTypes.FILE,
+            defaultValue="",
+        )
+    ],
+)
+
+# Add a config to the PELE block
+peleBlock.addConfig(peleConfig)
+
+# Add the PELE block to the plugin
+plugin.addBlock(peleBlock)
+
+# Define the PELE results page
+pelePage = PluginPage(
+    name="PELE results",
+    description="Analyse PELE results.",
+    html="pele_results.html",
+)
+
+# Add the PELE results page to the plugin
+plugin.addPage(pelePage)

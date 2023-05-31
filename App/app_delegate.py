@@ -333,18 +333,26 @@ def LaunchApp():
     # Set the debug mode based on module compilation
     debug: bool = not cython.compiled
 
-    # Check for the --server flag (Only development)
-    if "--server-debug" in sys.argv:
+    # Check for the -debug flag (Only development)
+    if "--server" in sys.argv:
+        # Check for the --debug flag (Only development)
+        # Forces the server to run in debug mode
+        if "--debug" in sys.argv:
+            debug = True
+        else:
+            debug = False
+
         # Start the server
         from Server.server import HorusServer
 
-        server = HorusServer(debug=True, desktop=False)
-        server.run(reloader=True)
+        server = HorusServer(debug=debug, desktop=False)
+        server.run(reloader=debug)
 
         # Exit the app
         sys.exit(0)
 
     # Check for the --no-debug flag (Only development)
+    # Forces the app to run in release mode
     if "--no-debug" in sys.argv:
         debug = False
 

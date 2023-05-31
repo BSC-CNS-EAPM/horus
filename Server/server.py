@@ -15,9 +15,6 @@ from functools import wraps
 # Import random to generate a random port number
 import random
 
-# Import time to wait for the debug port to be free
-import time
-
 # Define version
 __version__ = "0.0.1"
 
@@ -32,14 +29,14 @@ class HorusServer:
         else:
             self.appSupportDir = appSupportDir
 
+        # Desktop mode
+        self.desktop = desktop
+
         # Basic Flask setup
         self.debug = debug
         self.host = "127.0.0.1"
         self.port = self._getFreePort()
         self.baseURL = f"http://{self.host}:{self.port}"
-
-        # Desktop mode
-        self.desktop = desktop
 
         # Initialize the plugin manager
         from Server import PluginManager
@@ -80,7 +77,10 @@ class HorusServer:
         port = random.randint(5001, 9000)
 
         if self.debug:
-            port = 5001
+            return 5001
+
+        if not self.desktop:
+            return 8080
 
         # Check that the port is not in use
         import socket
@@ -246,13 +246,13 @@ class HorusServer:
         @self.server.route("/plugins/list", methods=["GET"])
         @verifyToken
         def listPlugins():
-            plugins = self.pluginManager.listLoaded()
+            plugins = self.pluginManager.getPlugins()
             return flask.jsonify(plugins)
 
         @self.server.route("/plugins/listblocks", methods=["GET"])
         @verifyToken
         def listblocks():
-            plugins = self.pluginManager.listAllBlocks()
+            plugins = self.pluginManager.getBlocks()
             return flask.jsonify(plugins)
 
         @self.server.route("/plugins/listpages", methods=["GET"])
@@ -278,7 +278,7 @@ class HorusServer:
                 }
                 return flask.jsonify(success)
             except Exception as e:
-                print(e)
+                self.socketio.emit("printTerm", "Error: " + str(e))
                 error = {
                     "ok": False,
                     "error": str(e),

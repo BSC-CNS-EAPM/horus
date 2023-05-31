@@ -1,10 +1,9 @@
+from __future__ import annotations
 import typing
-import os
+import json
 
 
 class PluginPage:
-    id: str = "baseplugin.page"
-
     def __init__(self, name: str, description: str, html: str):
         """
         Create a new PluginPage.
@@ -14,6 +13,7 @@ class PluginPage:
         :param html: The name of the HTML file (i.e. "my_page.html").
         The html file must be located in the "Pages" folder of the plugin.
         """
+        self.id: str = "baseplugin.page"
         self.name = name
         self.description = description
         self.html = html
@@ -162,7 +162,7 @@ class PluginVariable:
         raise Exception(f"Child {name} not found.")
 
     def getChildren(self):
-        childList = []
+        childList: list[dict[str, typing.Any]] = []
         for child in self._children:
             childDict = {
                 "name": child.name,
@@ -179,37 +179,6 @@ class PluginVariable:
 
 
 class PluginBlock:
-    id: str = "baseplugin.block"
-    """
-    The id of the block. It is composed by the plugin name and the name of the block.
-    """
-
-    name: str = "Block name"
-    """
-    The name of the block.
-    """
-
-    description: str = "Block description"
-    """
-    A description of the block.
-    """
-
-    action: typing.Optional[typing.Callable] = None
-    """
-    The action that the block performs.
-    """
-
-    # Children of the Block (PluginVariable)
-    _variables: typing.List[PluginVariable] = []
-
-    # The output that the block produces
-    output = None
-
-    # The input that the block receives
-    input = None
-
-    id = "baseplugin.block"
-
     def __init__(
         self,
         name: str,
@@ -217,10 +186,46 @@ class PluginBlock:
         action: typing.Optional[typing.Callable] = None,
         variables: typing.List[PluginVariable] = [],
     ):
+        self.id: str = "baseplugin.block"
+        """
+        The id of the block. 
+        It is composed by the plugin name and the name of the block.
+        The addBlock() method of the Plugin class will automatically
+        assign the id to the block.
+        """
+
         self.name = name
+        """
+        The name of the block.
+        """
+
         self.description = description
+        """
+        A description of the block.
+        """
+
         self.action = action
+        """
+        The action that the block performs.
+        """
+
         self._variables = variables
+        """
+        Variables that can be used in the Block action
+        """
+
+        self._configs: typing.List[PluginConfig] = []
+        """
+        Configs that can be used to configure the block.
+
+        Allowed type: PluginConfig
+        """
+
+        # The output that the block produces WIP / maybe not needed
+        self.output = None
+
+        # The input that the block receives WIP / maybe not needed
+        self.input = None
 
     def setAction(self, action: typing.Callable):
         self.action = action
@@ -242,7 +247,7 @@ class PluginBlock:
             if variable.id in values.keys():
                 variable.value = values[variable.id]
 
-    def listVariables(self):
+    def getVariables(self):
         """
         Returns a list of the variables of the block.
         """
@@ -254,6 +259,72 @@ class PluginBlock:
         for variable in self._variables:
             varsDict[variable.id] = variable.value
         return varsDict
+
+    def getConfig(self, id):
+        """
+        Returns a config by its ID.
+
+        :param id: The ID of the config.
+        """
+        for config in self._configs:
+            if config.id == id:
+                return config
+        raise Exception(f"Config {id} not found.")
+
+    def getConfigs(self):
+        return self._configs
+
+    @property
+    def configs(self):
+        configsDict: dict[str, typing.Any] = {}
+        for config in self._configs:
+            for var in config.getVariables():
+                configsDict[var.id] = var.value
+        return configsDict
+
+    def addConfig(self, config: PluginConfig):
+        """
+        Adds a PluginConfig to the plugin.
+        """
+
+        # If the attribute is a PluginConfig, add it to the list
+        # Only add the config if it is not already in the list
+        if isinstance(config, PluginConfig):
+            config.id = f"{self.id}.{config.name}".replace(" ", "_").lower()
+            try:
+                self.getConfig(config.id)
+            except Exception:
+                self._configs.append(config)
+
+    def updateConfigs(self, configPath: str):
+        """
+        Updates the values of the configs of the block.
+        From the config JSON file.
+        """
+
+        # Read the config file
+        with open(configPath, "r") as configFile:
+            configs = json.load(configFile)
+
+        # Update the values of the configs
+        for config in self._configs:
+            for var in config.getVariables():
+                if var.id in configs.keys():
+                    var.value = configs[var.id]
+
+    def createConfig(self, configPath: str):
+        """
+        Creates the config file for the block.
+        """
+        # Create the config file only if the block has configs
+
+        if len(self._configs) > 0:
+            # Create the config file
+            with open(configPath, "w") as configFile:
+                configs = {}
+                for config in self._configs:
+                    configs[config.id] = config.variables
+                json.dump(self.configs, configFile, indent=4)
 
 
 class PluginConfig(PluginBlock):
@@ -272,6 +343,10 @@ class PluginConfig(PluginBlock):
         action: typing.Optional[typing.Callable] = None,
         variables: typing.List[PluginVariable] = [],
     ):
+        # Raise an error if the variables are empty
+        if len(variables) == 0:
+            raise Exception("A PluginConfig must have at least one variable.")
+
         super().__init__(name, description, action, variables)
 
 
@@ -280,84 +355,84 @@ class Plugin:
     Base class for all plugins.
     """
 
-    # Define a init function
-    def __init__(self):
-        # Set the id of the plugin
-        self.id = self.__class__.__name__.lower()
+    def __init__(self, id: str):
+        """
+        Initializes the plugin.
 
-        # Add all the blocks to the list of blocks
+        :param id: The id of the plugin.
+        """
+
+        self.pythonInterpreter = None
+        """
+        The python interpreter path used to run the plugin.
+        Defaults to the Horus python interpreter.
+        If you need to use a different interpreter, when the plugin is run,
+        please specify the path to the interpreter.
+
+        WIP
+        """
+
+        self.info: dict[str, typing.Any] = {
+            "name": "Plugin",
+            "version": "0.0.1",
+            "author": "None",
+            "description": "None",
+            "dependencies": "None",
+        }
+        """
+        Information about the plugin.
+
+        :param name: The name of the plugin
+        :param version: The version of the plugin
+        :param author: The author of the plugin
+        :param description: A description of the plugin
+        :param dependencies: A list of dependencies of the plugin
+        """
+
+        self._filename: str = ""
+        """
+        The filename of the plugin. Internal use only.
+        """
+
+        self._path: str = ""
+        """
+        The path of the plugin folder. Internal use only.
+        """
+
+        self.actions: typing.Optional[typing.List[typing.Callable]] = None
+        """
+        Functions that can be called from the GUI.
+        WIP
+        """
+
+        self.views = []
+        """
+        Views that can be loaded from the GUI.
+        Should be the path to the HTML file.
+        """
+
+        self._blocks: typing.List[PluginBlock] = []
+        """
+        Blocks that can be used in the GUI flow editor.
+
+        Allowed type: PluginBlock
+        """
+
+        self._pages: typing.List[PluginPage] = []
+        """
+        Pages that can be loaded from the GUI.
+
+        Allowed type: PluginPage
+        """
+
+        # Set the id of the plugin
+        self.id = id.lower().replace(" ", "_")
+
+        # Add all the blocks present in the subclass to the list of blocks
         self._addBlocks()
 
-        # Add the pages to the list of pages
+        # Same for pages
         self._addPages()
-
-    pythonInterpreter = None
-    """
-    The python interpreter path used to run the plugin.
-    Defaults to the Horus python interpreter.
-    If you need to use a different interpreter, when the plugin is run,
-    please specify the path to the interpreter.
-    """
-
-    info: dict[str, typing.Any] = {
-        "name": "Plugin",
-        "version": "0.0.1",
-        "author": "None",
-        "description": "None",
-        "dependencies": "None",
-    }
-    """
-    Information about the plugin.
-
-    :param name: The name of the plugin
-    :param version: The version of the plugin
-    :param author: The author of the plugin
-    :param description: A description of the plugin
-    :param dependencies: A list of dependencies of the plugin
-    """
-
-    _filename: str = ""
-    """
-    The filename of the plugin. Internal use only.
-    """
-
-    _path: str = ""
-    """
-    The path of the plugin folder. Internal use only.
-    """
-
-    actions: typing.Optional[typing.List[typing.Callable]] = None
-    """
-    Functions that can be called from the GUI.
-    WIP
-    """
-
-    views = []
-    """
-    Views that can be loaded from the GUI.
-    Should be the path to the HTML file.
-    """
-
-    _blocks: typing.List[PluginBlock] = []
-    """
-    Blocks that can be used in the GUI flow editor.
-
-    Allowed type: PluginBlock
-    """
-
-    __configs: typing.List[PluginConfig] = []
-    """
-    Configs that can be used in the PluginManager.
-
-    Allowed type: PluginConfig
-    """
-
-    _pages: typing.List[PluginPage] = []
-    """
-    Pages that can be loaded from the GUI.
-
-    Allowed type: PluginPage
-    """
 
     # Define comparison operators
     def __eq__(self, other):
@@ -368,7 +443,7 @@ class Plugin:
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    # Define the str function fro print(plugin)
+    # Define the str function to print(plugin)
     def __str__(self):
         return self.info["name"]
 
@@ -392,6 +467,20 @@ class Plugin:
     def blocks(self):
         return self.getBlocks()
 
+    def addBlock(self, block: PluginBlock):
+        """
+        Adds a PluginBlock to the plugin.
+        """
+
+        # If the attribute is a PluginBlock (not PluginConfig), add it to the list
+        # Only add the block if it is not already in the list
+        if isinstance(block, PluginBlock) and not isinstance(block, PluginConfig):
+            block.id = f"{self.id}.{block.name}".replace(" ", "_").lower()
+            try:
+                self.getBlock(block.id)
+            except Exception:
+                self._blocks.append(block)
+
     def _addBlocks(self):
         # Search for all the properties of the instance
         # Check if the property is a PluginBlock
@@ -399,48 +488,9 @@ class Plugin:
         for attr in dir(self):
             # Get the attribute
             attr = getattr(self, attr)
-            # If the attribute is a PluginBlock (not PluginConfig), add it to the list
-            # Only add the block if it is not already in the list
-            if isinstance(attr, PluginBlock) and not isinstance(attr, PluginConfig):
-                attr.id = f"{self.id}.{attr.name}".replace(" ", "_").lower()
-                try:
-                    self.getBlock(attr.id)
-                except Exception:
-                    self._blocks.append(attr)
 
-    def getConfig(self, id):
-        """
-        Returns a config by its ID.
-
-        :param id: The ID of the config.
-        """
-        for config in self.__configs:
-            if config.id == id:
-                return config
-        raise Exception(f"Config {id} not found.")
-
-    def getConfigs(self):
-        return self.__configs
-
-    @property
-    def configs(self):
-        return self.getConfigs()
-
-    def _addConfigs(self):
-        # Search for all the properties of the instance
-        # Check if the property is a PluginConfig
-        # If it is, add it to the list of configs
-        for attr in dir(self):
-            # Get the attribute
-            attr = getattr(self, attr)
-            # If the attribute is a PluginConfig, add it to the list
-            # Only add the config if it is not already in the list
-            if isinstance(attr, PluginConfig):
-                attr.id = f"{self.id}.{attr.name}".replace(" ", "_").lower()
-                try:
-                    self.getConfig(attr.id)
-                except Exception:
-                    self.__configs.append(attr)
+            # Add the block to the list of blocks
+            self.addBlock(attr)
 
     def getPage(self, id):
         """
@@ -460,6 +510,20 @@ class Plugin:
     def pages(self):
         return self.getPages()
 
+    def addPage(self, page: PluginPage):
+        """
+        Adds a PluginPage to the plugin.
+        """
+
+        # If the attribute is a PluginPage, add it to the list
+        # Only add the page if it is not already in the list
+        if isinstance(page, PluginPage):
+            page.id = f"{self.id}.{page.name}".replace(" ", "_").lower()
+            try:
+                self.getPage(page.id)
+            except Exception:
+                self._pages.append(page)
+
     def _addPages(self):
         # Search for all the properties of the instance
         # Check if the property is a PluginPage
@@ -467,11 +531,6 @@ class Plugin:
         for attr in dir(self):
             # Get the attribute
             attr = getattr(self, attr)
-            # If the attribute is a PluginPage, add it to the list
-            # Only add the page if it is not already in the list
-            if isinstance(attr, PluginPage):
-                attr.id = f"{self.id}.{attr.name}".replace(" ", "_").lower()
-                try:
-                    self.getPage(attr.id)
-                except Exception:
-                    self._pages.append(attr)
+
+            # Add the page to the list of pages
+            self.addPage(attr)

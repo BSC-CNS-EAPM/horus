@@ -1,5 +1,6 @@
 import os
 import sys
+import typing
 from HorusAPI import Plugin, PluginBlock
 
 
@@ -181,8 +182,6 @@ class PluginManager:
         if not self.pluginChanges:
             return
 
-        print("Reloading plugins")
-
         self.loadedPlugins: list[Plugin] = []
         self.errorPlugins: list[Plugin] = []
         pluginPaths = self._listPluginsPaths()
@@ -190,9 +189,10 @@ class PluginManager:
             try:
                 self._loadPlugin(pth)
             except Exception as e:
-                print(f"Error loading plugin {os.path.basename(pth)}: {e}")
+                basename = os.path.basename(pth)
+                print(f"Error loading plugin {basename}: {e}")
                 # Define an error dummy plugin
-                errorPlugin = Plugin()
+                errorPlugin = Plugin(id=f"error.{basename}")
                 errorPlugin.info = {
                     "name": os.path.basename(pth),
                     "description": "Error loading plugin",
@@ -220,7 +220,19 @@ class PluginManager:
             if p == plugin:
                 return
 
+        # Get the folder path
+        pluginDir = os.path.dirname(pluginPath)
+
+        # Create the config folder
+        configDir = os.path.join(pluginDir, "config")
+
+        if not os.path.exists(configDir):
+            os.mkdir(configDir)
+
         self.loadedPlugins.append(plugin)
+
+        # Init the plugin config
+        self._initConfig(plugin)
 
     def _checkPlugin(self, pluginPath) -> Plugin:
         """
@@ -269,7 +281,7 @@ class PluginManager:
         # Return the loaded plugin instace
         return pluginModule.plugin
 
-    def listLoaded(self):
+    def getPlugins(self):
         """
         Returns a list of all the loaded plugins.
         """
@@ -288,12 +300,12 @@ class PluginManager:
             errorPlugins.append(info)
         return {"plugins": listedPlugins, "errors": errorPlugins}
 
-    def listAllBlocks(self):
+    def getBlocks(self):
         """
         Returns a list of all the blocks of all the plugins.
         """
         self._initializePlugins()
-        blocks = []
+        blocks: list[dict[str, typing.Any]] = []
         for p in self.loadedPlugins:
             for b in p.blocks:
                 blocks.append(
@@ -302,17 +314,17 @@ class PluginManager:
                         "plugin": p.info["name"],
                         "name": b.name,
                         "description": b.description,
-                        "variables": self.listVariables(b),
+                        "variables": self.getVariables(b),
                     }
                 )
         return blocks
 
-    def listVariables(self, block: PluginBlock):
+    def getVariables(self, block: PluginBlock):
         """
         Returns a list of all the variables of a block.
         """
-        varList = []
-        for v in block.listVariables():
+        varList: list[dict[str, typing.Any]] = []
+        for v in block.getVariables():
             # Get the children of the variable
             varList.append(
                 {
@@ -358,6 +370,13 @@ class PluginManager:
 
         # Set the variables
         block.updateValues(variables)
+
+        # Read the config file for the block
+        configPath = self._blockConfigPath(block)
+
+        if os.path.exists(configPath):
+            # Set the config to execute the block
+            block.updateConfigs(configPath)
 
         # Capture all stdout and stderr output
         import io
@@ -425,3 +444,33 @@ class PluginManager:
                     }
                 )
         return pages
+
+    def _initConfig(self, plugin: Plugin):
+        """
+        Initializes the config file for the blocks of the plugin.
+        """
+
+        # Loop through all the blocks
+        for block in plugin.blocks:
+            # Get the path of the config file
+            configPath = self._blockConfigPath(block)
+
+            # If the config file does not exist, create it
+            if not os.path.exists(configPath):
+                block.createConfig(configPath)
+
+    def _blockConfigPath(self, block: PluginBlock):
+        """
+        Returns the path of the config file for a block.
+        """
+
+        # Find the plugin folder
+        pluginID = block.id.split(".")[0]
+        plugin = self._getPluginByID(pluginID)
+
+        configDir = os.path.join(plugin._path, "config")
+
+        # Find the block config file
+        blockConfigFile = os.path.join(configDir, f"{block.id}.json")
+
+        return blockConfigFile
