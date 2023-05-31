@@ -181,16 +181,28 @@ class PluginManager:
         if not self.pluginChanges:
             return
 
+        print("Reloading plugins")
+
         self.loadedPlugins: list[Plugin] = []
-        self.errorPlugins: list[str] = []
+        self.errorPlugins: list[Plugin] = []
         pluginPaths = self._listPluginsPaths()
         for pth in pluginPaths:
             try:
                 self._loadPlugin(pth)
             except Exception as e:
                 print(f"Error loading plugin {os.path.basename(pth)}: {e}")
-                self.errorPlugins.append(os.path.basename(pth))
-        
+                # Define an error dummy plugin
+                errorPlugin = Plugin()
+                errorPlugin.info = {
+                    "name": os.path.basename(pth),
+                    "description": "Error loading plugin",
+                    "author": "",
+                    "version": "",
+                    "dependencies": "",
+                    "filename": pth,
+                }
+                self.errorPlugins.append(errorPlugin)
+
         self.pluginChanges = False
 
     def _loadPlugin(self, pluginPath: str):
@@ -263,12 +275,18 @@ class PluginManager:
         """
         self._initializePlugins()
         listedPlugins = []
+        errorPlugins = []
         for p in self.loadedPlugins:
             info = p.info
             info["actions"] = str(len(p.actions) if p.actions else 0)
             info["views"] = str(len(p.views))
             listedPlugins.append(info)
-        return {"plugins": listedPlugins, "errors": self.errorPlugins}
+        for ep in self.errorPlugins:
+            info = ep.info
+            info["actions"] = str(len(ep.actions) if ep.actions else 0)
+            info["views"] = str(len(ep.views))
+            errorPlugins.append(info)
+        return {"plugins": listedPlugins, "errors": errorPlugins}
 
     def listAllBlocks(self):
         """
@@ -344,6 +362,7 @@ class PluginManager:
         # Capture all stdout and stderr output
         import io
         from contextlib import redirect_stdout, redirect_stderr
+
         with io.StringIO() as buf, redirect_stdout(buf), redirect_stderr(buf):
             # Execute the block
             block()
@@ -375,7 +394,6 @@ class PluginManager:
         if not os.path.exists(flowPath):
             os.mkdir(flowPath)
 
-
     def saveFlow(self, flow):
         """
         Saves a flow to a file.
@@ -403,7 +421,7 @@ class PluginManager:
                         "name": pg.name,
                         "description": pg.description,
                         "html": f"{p._path}/Pages/{pg.html}",
-                        "url": f"/plugins/pages/{pg.id}"
+                        "url": f"/plugins/pages/{pg.id}",
                     }
                 )
         return pages

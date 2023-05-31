@@ -20,16 +20,6 @@
     background: #defcff;
 }
 
-
-.toolbar-search {
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    padding: 5px;
-    outline: none;
-    height: 1.75rem;
-    margin-top: 0.1rem;
-}
-
 .toolbar {
     position: relative;
     top: 0;

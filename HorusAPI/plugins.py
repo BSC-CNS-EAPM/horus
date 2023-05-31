@@ -1,6 +1,7 @@
 import typing
 import os
 
+
 class PluginPage:
     id: str = "baseplugin.page"
 
@@ -16,7 +17,6 @@ class PluginPage:
         self.name = name
         self.description = description
         self.html = html
-
 
 
 class VariableTypes:
@@ -131,7 +131,7 @@ class PluginVariable:
         :param type: The type of the variable. Assign it using the VariableTypes class.
         :param defaultValue: The default value of the variable.
         :param id: The ID of the variable.
-        :param allowedValues: A list of allowed values for the variable 
+        :param allowedValues: A list of allowed values for the variable
         if it is a list, range or files.
         Important to identify the variable in Block actions
         """
@@ -181,7 +181,7 @@ class PluginVariable:
 class PluginBlock:
     id: str = "baseplugin.block"
     """
-    The id of the block. It is composed by the author and the name of the block.
+    The id of the block. It is composed by the plugin name and the name of the block.
     """
 
     name: str = "Block name"
@@ -212,7 +212,6 @@ class PluginBlock:
 
     def __init__(
         self,
-        author: str,
         name: str,
         description: str,
         action: typing.Optional[typing.Callable] = None,
@@ -221,7 +220,6 @@ class PluginBlock:
         self.name = name
         self.description = description
         self.action = action
-        self.author = author
         self._variables = variables
 
     def setAction(self, action: typing.Callable):
@@ -256,6 +254,25 @@ class PluginBlock:
         for variable in self._variables:
             varsDict[variable.id] = variable.value
         return varsDict
+
+
+class PluginConfig(PluginBlock):
+    """
+    The PluginConfig class is a special type of block that is used to configure
+    the plugin. It is not meant to be used in the pipeline. It works as a regular
+    PluginBlock but it is shown only in the configuration page of the plugin.
+    Its variables will be stored once set, and can be accessed by the Block actions
+    using the block.config["variable_id"] syntax.
+    """
+
+    def __init__(
+        self,
+        name,
+        description,
+        action: typing.Optional[typing.Callable] = None,
+        variables: typing.List[PluginVariable] = [],
+    ):
+        super().__init__(name, description, action, variables)
 
 
 class Plugin:
@@ -328,6 +345,13 @@ class Plugin:
     Allowed type: PluginBlock
     """
 
+    __configs: typing.List[PluginConfig] = []
+    """
+    Configs that can be used in the PluginManager.
+
+    Allowed type: PluginConfig
+    """
+
     _pages: typing.List[PluginPage] = []
     """
     Pages that can be loaded from the GUI.
@@ -375,14 +399,48 @@ class Plugin:
         for attr in dir(self):
             # Get the attribute
             attr = getattr(self, attr)
-            # If the attribute is a PluginBlock, add it to the list
+            # If the attribute is a PluginBlock (not PluginConfig), add it to the list
             # Only add the block if it is not already in the list
-            if isinstance(attr, PluginBlock):
+            if isinstance(attr, PluginBlock) and not isinstance(attr, PluginConfig):
                 attr.id = f"{self.id}.{attr.name}".replace(" ", "_").lower()
                 try:
                     self.getBlock(attr.id)
                 except Exception:
                     self._blocks.append(attr)
+
+    def getConfig(self, id):
+        """
+        Returns a config by its ID.
+
+        :param id: The ID of the config.
+        """
+        for config in self.__configs:
+            if config.id == id:
+                return config
+        raise Exception(f"Config {id} not found.")
+
+    def getConfigs(self):
+        return self.__configs
+
+    @property
+    def configs(self):
+        return self.getConfigs()
+
+    def _addConfigs(self):
+        # Search for all the properties of the instance
+        # Check if the property is a PluginConfig
+        # If it is, add it to the list of configs
+        for attr in dir(self):
+            # Get the attribute
+            attr = getattr(self, attr)
+            # If the attribute is a PluginConfig, add it to the list
+            # Only add the config if it is not already in the list
+            if isinstance(attr, PluginConfig):
+                attr.id = f"{self.id}.{attr.name}".replace(" ", "_").lower()
+                try:
+                    self.getConfig(attr.id)
+                except Exception:
+                    self.__configs.append(attr)
 
     def getPage(self, id):
         """
@@ -394,10 +452,10 @@ class Plugin:
             if page.id == id:
                 return page
         raise Exception(f"Page {id} not found.")
-    
+
     def getPages(self):
         return self._pages
-    
+
     @property
     def pages(self):
         return self.getPages()

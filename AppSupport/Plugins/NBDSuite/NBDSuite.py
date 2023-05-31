@@ -1,4 +1,11 @@
-from HorusAPI import Plugin, PluginBlock, PluginVariable, VariableTypes, PluginPage
+from HorusAPI import (
+    Plugin,
+    PluginBlock,
+    PluginVariable,
+    VariableTypes,
+    PluginPage,
+    PluginConfig,
+)
 import time
 
 
@@ -84,7 +91,6 @@ class NBDSuitePlugin(Plugin):
         name="Create input YAML",
         description="Creates a NBDSuite input file.",
         action=createYAML,
-        author="Nostrum Biodiscovery",
         variables=[systemData, ligandData, testVariable, testBoolean, test_stringlist],
     )
 
@@ -92,7 +98,6 @@ class NBDSuitePlugin(Plugin):
         name="Waiter",
         description="Waits for 5 seconds.",
         action=waiterFunction,
-        author="Nostrum Biodiscovery",
         variables=[],
     )
 
@@ -100,6 +105,20 @@ class NBDSuitePlugin(Plugin):
         name="PELE results",
         description="Analyse PELE results.",
         html="pele_results.html",
+    )
+
+    pluginConfig = PluginConfig(
+        name="PELE License",
+        description="PELE license configuration.",
+        variables=[
+            PluginVariable(
+                id="license",
+                name="License",
+                description="PELE license path.",
+                type=VariableTypes.FILE,
+                defaultValue="",
+            )
+        ],
     )
 
 

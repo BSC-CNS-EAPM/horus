@@ -3,6 +3,7 @@ import { Menu, Transition } from '@headlessui/react'
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { ChevronDownIcon } from '@heroicons/react/20/solid'
 import { useNavigate } from 'react-router'
+import "../nbdbutton.css"
 
 import "./toolbar.css"
 import { none } from 'molstar/lib/mol-model/structure/query/queries/generators'
@@ -20,7 +21,7 @@ function ToolBarItem(props: ToolBarItemProps) {
     const navigate = useNavigate()
 
     const navigateTo = async () => {
-        await navigate(props.link)
+        await navigate(props?.link)
     }
     const [active, setActive] = useState(false)
 
@@ -47,9 +48,7 @@ function ToolBarItem(props: ToolBarItemProps) {
             onClick={
                 async () => {
                     await navigateTo()
-                    console.log("Navigated")
                     props.onClick?.()
-                    console.log("Clicked")
                 }
             }
         >
@@ -139,23 +138,11 @@ const MenuIcon = ({ active, svgPath }: IconProps) => {
     )
 }
 
-function ToolBarSearch() {
+function SearchComponent() {
     return (
-        <div className="flex flex-row" style={
-            {
-                // Translate the search bar 1.2 rem right to
-                // compensate the icon shift
-                // Therefore it looks like inside the search bar
-                transform: "translateX(1.2rem)"
-            }
-        }>
+        <div className="app-button flex flex-row">
             <input type="text" placeholder="Search..." className="toolbar-search" />
-            <button style={
-                {
-                    // Translate the icon 1 px left
-                    transform: "translateX(-1.6rem)",
-                }
-            }>
+            <button>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 15.75l-2.489-2.489m0 0a3.375 3.375 0 10-4.773-4.773 3.375 3.375 0 004.774 4.774zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -295,7 +282,7 @@ export default function HorusToolbar() {
             items: [
                 {
                     name: 'Toggle console',
-                    onClick: () => { toggleConsole },
+                    onClick: () => { toggleConsole() },
                     svgPath: (
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" className="w-5 h-5">
                             <path fillRule="evenodd" d="M3.25 3A2.25 2.25 0 001 5.25v9.5A2.25 2.25 0 003.25 17h13.5A2.25 2.25 0 0019 14.75v-9.5A2.25 2.25 0 0016.75 3H3.25zm.943 8.752a.75.75 0 01.055-1.06L6.128 9l-1.88-1.693a.75.75 0 111.004-1.114l2.5 2.25a.75.75 0 010 1.114l-2.5 2.25a.75.75 0 01-1.06-.055zM9.75 10.25a.75.75 0 000 1.5h2.5a.75.75 0 000-1.5h-2.5z" clipRule="evenodd" />
@@ -350,13 +337,17 @@ export default function HorusToolbar() {
     ]
 
     return (
-        <div className="z-10 flex flex-row justify-between toolbar" >
+        <div className="z-10 flex flex-row justify-between toolbar mt-1" >
             <div className="flex flex-row gap-1 ml-1 mr-1">
                 {menus.map((menu, index) => (
                     <ToolbarMenu key={index} {...menu} />
                 ))}
             </div>
-            <ToolBarSearch />
+            <div className="mr-1">
+                <SearchComponent />
+            </div>
         </div >
     )
 }
+
+export { SearchComponent }

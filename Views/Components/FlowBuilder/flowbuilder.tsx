@@ -218,11 +218,11 @@ function FlowReciver(props: FlowReciverProps) {
                 </button>
             </h1>
             <div className="flex flex-col align-items-center">
-                {blocks.map((block, index) => (
-                    <div style={{
+                {blocks.map((block) => (
+                    <div key={block.placedID} style={{
                         marginBottom: "1rem"
                     }}>
-                        <Block key={index} {...block} onChange={onblockChange} execute={executeBlock} />
+                        <Block {...block} onChange={onblockChange} execute={executeBlock} />
                     </div>
                 ))}
             </div>
@@ -274,13 +274,15 @@ export default function FlowBuilder(props: FlowBuilderProps) {
                     <h1>Blocks</h1>
                     <div>
                         {
-                            blocks.length === 0 ? <Loading /> : blocks.map((block, index) => (
-                                <div style={{
-                                    marginBottom: "1rem"
-                                }}>
-                                    <Block key={index} {...block} />
-                                </div>
-                            ))
+                            blocks.length === 0 ? <Loading /> : blocks.map((block, index) => {
+                                return (
+                                    <div key={block.id} style={{
+                                        marginBottom: "1rem"
+                                    }}>
+                                        <Block {...block} />
+                                    </div>
+                                )
+                            })
                         }
                     </div>
                 </div>

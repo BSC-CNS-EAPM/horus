@@ -14,7 +14,7 @@ function PluginPage() {
                 height: "100%",
                 border: "none"
             }
-        }/>
+        } />
     )
 }
 
@@ -24,11 +24,11 @@ export function App() {
         <div className="grid">
             <HorusToolbar />
             <div id="root-routes" className="root-routes root-routes-console-hidden">
-            <Routes>
-                <Route path="/" element={<Molstar />} />
-                <Route path="/newjob" element={<FlowBuilder />} />
-                <Route path="/plugins/pages" element={<PluginPage />} />
-            </Routes>
+                <Routes>
+                    <Route path="/" element={<Molstar />} />
+                    <Route path="/newjob" element={<FlowBuilder />} />
+                    <Route path="/plugins/pages" element={<PluginPage />} />
+                </Routes>
             </div>
             <HorusTerm />
         </div>

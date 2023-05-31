@@ -15,6 +15,9 @@ from functools import wraps
 # Import random to generate a random port number
 import random
 
+# Import time to wait for the debug port to be free
+import time
+
 # Define version
 __version__ = "0.0.1"
 
@@ -207,7 +210,7 @@ class HorusServer:
         def isDesktop():
             return flask.jsonify(self.desktop)
 
-        @self.server.route("/plugins", methods=["GET", "POST"])
+        @self.server.route("/plugins/", methods=["GET", "POST"])
         @desktopOnly
         def pluginsManager():
             return flask.render_template("PluginsManager/index.html")
@@ -251,7 +254,7 @@ class HorusServer:
         def listblocks():
             plugins = self.pluginManager.listAllBlocks()
             return flask.jsonify(plugins)
-        
+
         @self.server.route("/plugins/listpages", methods=["GET"])
         @verifyToken
         def listpages():
@@ -337,14 +340,29 @@ class HorusServer:
         pages = self.pluginManager.getPages()
 
         for page in pages:
-            htmlFile = page["html"]
-            url = f"/plugins/pages/{page['id']}"
-            self.server.add_url_rule(
-                url,
-                view_func=lambda: flask.send_file(htmlFile),
+            htmlPath = page["html"]
+            url = f"/plugins/pages/{page['id']}/"
+
+            # Create a blueprint for the page
+            blueprint = flask.Blueprint(
+                page["id"].replace(".", "_"),
+                __name__,
+                template_folder=os.path.dirname(htmlPath),
+                static_folder=os.path.dirname(htmlPath),
+                static_url_path=url,
             )
-            print(f"Added page {url} with file {htmlFile}")
-        
+
+            # Add the route to return the html file
+            @blueprint.route(url)
+            def send_html():
+                return flask.render_template(os.path.basename(htmlPath))
+
+            # Register the blueprint
+            try:
+                self.server.register_blueprint(blueprint)
+            except Exception as e:
+                e = "Error registering page for plugin " + page["id"] + ": " + str(e)
+                self.socketio.emit("printTerm", e)
 
     def run(self, reloader=False):
         # use_reloader has to be turned off in order to run in a secondary thread

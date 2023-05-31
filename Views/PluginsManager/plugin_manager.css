@@ -1,0 +1,56 @@
+html,
+body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: whitesmoke;
+}
+
+.plugin-manager-title {
+    position: sticky;
+    top: 0;
+    background: var(--tech-white);
+    border: 1px solid #ccc;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    width: 100vw;
+    flex-direction: row;
+}
+
+@media (max-width: 900px) {
+    .plugin-manager-title {
+        flex-direction: column;
+    }
+}
+
+.plugin-list {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    overflow-y: scroll;
+    align-items: top;
+    justify-content: center;
+    margin: 2rem;
+}
+
+.root-plugin-container {
+    /* display: block;
+    /* Expand the whole container to the full height of the page */
+    height: 100%;
+    background-color: whitesmoke;
+}
+
+.plugin-error {
+    color: red;
+    margin-top: auto;
+}
+
+.plugin-card {
+    width: 500px;
+}
+
+.plugin-manager-root {
+    background-color: whitesmoke;
+    height: 100%;
+}
