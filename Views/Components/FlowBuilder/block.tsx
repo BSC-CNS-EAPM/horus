@@ -2,6 +2,8 @@ import { useDrag } from "react-dnd";
 import { useEffect, useState } from "react";
 import { horusPost } from "../../Utils/utils";
 
+import { BlockProps, PluginVariable, PluginVariableType, PluginVariableTypes } from "../../Interfaces/plugins";
+
 import "./block.css"
 
 import { Popover } from "@headlessui/react";
@@ -28,35 +30,8 @@ function PlayBlockButton(
     </CustomPopover>)
 }
 
-export const ItemTypes = {
+const ItemTypes = {
     BLOCK: 'block'
-}
-
-enum PluginVariableTypes {
-    STRING = "string",
-    INTEGER = "integer",
-    FLOAT = "float",
-    BOOLEAN = "boolean",
-    STRING_LIST = "string[]",
-    INTEGER_LIST = "integer[]",
-    FLOAT_LIST = "float[]",
-    BOOLEAN_LIST = "boolean[]",
-    INT_RANGE = "[integer, integer]",
-    FLOAT_RANGE = "[float, float]",
-    FILE = "file",
-    // STRING_ARRAY = "string[]",
-    // NUMBER_RANGE = "[number, number]"
-}
-
-type PluginVariableType = string | number | boolean; // | string[] | [number, number]; // Define the allowed types
-
-interface PluginVariable<T extends PluginVariableType> {
-    name: string;
-    id: string;
-    description: string;
-    type: PluginVariableTypes;
-    value: T;
-    allowedValues?: T[];
 }
 
 const PluginVariable = <T extends PluginVariableType>(props: { variable: PluginVariable<T>, onChange: (value: T, id: string) => void }) => {
@@ -141,8 +116,10 @@ const PluginVariable = <T extends PluginVariableType>(props: { variable: PluginV
                     </div>
                 )}
 
-
-
+                {/* If the type is a FILE, set a file upload button */}
+                {props.variable.type === PluginVariableTypes.FILE && (
+                    <input type="file" onChange={e => handleChange(e.target.files[0] as any)} />
+                )}
             </div>
         </div>
     )
@@ -167,24 +144,7 @@ const CustomPopover = ({ trigger, children }) => {
     )
 }
 
-export interface BlockProps {
-    id: string;
-    name: string;
-    description: string;
-    plugin: string;
-    variables: PluginVariable<PluginVariableType>[];
-    isPlaced: boolean;
-    onChange?: () => void;
-    execute?: (
-        block: BlockProps,
-    ) => Promise<void>;
-    isRunning?: boolean;
-    runError?: boolean;
-    placedID: number
-}
-
-
-export function Block(block: BlockProps) {
+function Block(block: BlockProps) {
 
     // Track the mouse position
     const [isHovering, setIsHovering] = useState(false)
@@ -263,3 +223,5 @@ export function Block(block: BlockProps) {
         </div>
     )
 }
+
+export { Block, ItemTypes, PluginVariable }

@@ -121,7 +121,7 @@ peleLicense = PluginConfig(
             id="license",
             name="License",
             description="PELE license path.",
-            type=VariableTypes.FILE,
+            type=VariableTypes.STRING,
             defaultValue="",
         )
     ],

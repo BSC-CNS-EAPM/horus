@@ -260,7 +260,7 @@ class PluginBlock:
             varsDict[variable.id] = variable.value
         return varsDict
 
-    def getConfig(self, id):
+    def getConfig(self, id: str):
         """
         Returns a config by its ID.
 
@@ -479,6 +479,11 @@ class Plugin:
             try:
                 self.getBlock(block.id)
             except Exception:
+                # Assign to the configs in the block the ID
+                for config in block.getConfigs():
+                    config.id = f"{block.id}.config.{config.name}".replace(
+                        " ", "_"
+                    ).lower()
                 self._blocks.append(block)
 
     def _addBlocks(self):

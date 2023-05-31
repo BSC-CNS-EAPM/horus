@@ -188,9 +188,9 @@ class PluginManager:
         for pth in pluginPaths:
             try:
                 self._loadPlugin(pth)
-            except Exception as e:
+            except Exception:
                 basename = os.path.basename(pth)
-                print(f"Error loading plugin {basename}: {e}")
+                # print(f"Error loading plugin {basename}: {e}")
                 # Define an error dummy plugin
                 errorPlugin = Plugin(id=f"error.{basename}")
                 errorPlugin.info = {
@@ -283,7 +283,7 @@ class PluginManager:
 
     def getPlugins(self):
         """
-        Returns a list of all the loaded plugins.
+        Returns a list of all the loaded plugins (blocks + configs).
         """
         self._initializePlugins()
         listedPlugins = []
@@ -292,6 +292,34 @@ class PluginManager:
             info = p.info
             info["actions"] = str(len(p.actions) if p.actions else 0)
             info["views"] = str(len(p.views))
+            info["id"] = p.id
+
+            # List the blocks
+            blocks = []
+            for b in p.blocks:
+                # List configuration blocks
+                configs = []
+                for c in b.getConfigs():
+                    configs.append(
+                        {
+                            "id": c.id,
+                            "name": c.name,
+                            "description": c.description,
+                            "variables": self.getVariables(c),
+                        }
+                    )
+
+                blocks.append(
+                    {
+                        "id": b.id,
+                        "name": b.name,
+                        "description": b.description,
+                        "variables": self.getVariables(b),
+                        "config": configs,
+                    }
+                )
+            info["blocks"] = blocks
+
             listedPlugins.append(info)
         for ep in self.errorPlugins:
             info = ep.info
@@ -302,7 +330,7 @@ class PluginManager:
 
     def getBlocks(self):
         """
-        Returns a list of all the blocks of all the plugins.
+        Returns a list of all the blocks of all the plugins (without the configs).
         """
         self._initializePlugins()
         blocks: list[dict[str, typing.Any]] = []
@@ -332,7 +360,11 @@ class PluginManager:
                     "id": v.id,
                     "description": v.description,
                     "type": v.type,
-                    "value": v.defaultValue if v.defaultValue else "",
+                    "value": ""
+                    if v.defaultValue is None
+                    else v.defaultValue
+                    if not v.value
+                    else v.value,
                     "children": v.getChildren(),
                     "allowedValues": v.allowedValues,
                 }
@@ -458,6 +490,9 @@ class PluginManager:
             # If the config file does not exist, create it
             if not os.path.exists(configPath):
                 block.createConfig(configPath)
+            else:
+                # If the config file exists, read it
+                block.updateConfigs(configPath)
 
     def _blockConfigPath(self, block: PluginBlock):
         """

@@ -1,17 +1,77 @@
 // Create the main window view
-import React, { useState, useEffect } from "react";
-import { createRoot } from "react-dom/client";
-import 'bootstrap/dist/css/bootstrap.css';
-
+import { useState, useEffect } from "react";
 import { horusGet, horusPost } from "../Utils/utils";
 import NBDButton from "../Components/nbdbutton";
 import "./plugin_manager.css"
 import { SearchComponent } from "../Components/Toolbar/toolbar";
+import { HorusModal } from "../Components/reusable";
+
+import { HorusPlugin, BlockProps, PluginVariableType } from "../Interfaces/plugins";
+import { HorusModalProps } from "../Components/reusable";
+import { PluginVariable } from "../Components/FlowBuilder/block";
+
+interface PluginConfigViewProps {
+    plugin: HorusPlugin;
+    handleChange: (value: PluginVariableType, id: string) => void;
+}
+
+function PluginConfigView(props: PluginConfigViewProps) {
+
+    const { plugin, handleChange } = props;
+
+    // Loop through the blocks and store the ones that have config
+    const [configBlocks, setConfigBlocks] = useState<BlockProps[]>([]);
+
+    useEffect(() => {
+        // Create a new array to store the config blocks
+        const newConfigBlocks: BlockProps[] = [];
+
+        // Loop through the blocks and store the ones that have config
+        for (let i = 0; i < plugin.blocks.length; i++) {
+            if (plugin.blocks[i].config) {
+                for (let j = 0; j < plugin.blocks[i].config.length; j++) {
+                    newConfigBlocks.push(plugin.blocks[i].config[j]);
+                }
+            }
+        }
+
+        // Update the state with the new config blocks
+        setConfigBlocks(newConfigBlocks);
+    }, [plugin.blocks]); // Run this effect only when plugin.blocks changes
+
+    return (
+        <div>
+            {/* Map the config blocks and place a <PluginVariable/> component */}
+            {
+                configBlocks.map((block, index) => {
+                    return (
+                        block.variables.map((variable, index) => {
+                            return (
+                                <PluginVariable key={variable.id} variable={variable} onChange={handleChange} />
+                            )
+                        }
+                        )
+                    )
+                })
+            }
+        </div>
+    )
+}
 
 function InstalledPlugins() {
 
     const [loading, setLoading] = useState(true);
     const [pluginList, setPluginList] = useState(null);
+
+    const [modalProps, setModalProps] = useState<HorusModalProps>({
+        header: null,
+        body: null,
+        footer: null,
+        show: false,
+        size: "xl"
+    });
+
+
 
     useEffect(() => {
         const fetchData = async () => {
@@ -29,12 +89,65 @@ function InstalledPlugins() {
         fetchData();
     }, []);
 
+
     if (loading) {
         return (
             <div>
                 <div className="spinner-border" role="status"></div>
             </div>
         )
+    }
+
+    // Create a state to store the modified config
+    const [tempChanges, setTempChanges] = useState<PluginVariableType[]>([]);
+
+    const handleModifyConfig = (
+        value: PluginVariableType,
+        id: string
+    ) => {
+        const updatedChanges = [...tempChanges]; // Create a copy of tempChanges
+        const existingChangeIndex = updatedChanges.findIndex(change => change.id === id); // Check if the change already exists
+
+        if (existingChangeIndex !== -1) {
+            updatedChanges[existingChangeIndex] = { id, value }; // Update the existing change
+        } else {
+            updatedChanges.push({ id, value }); // Add the new change
+        }
+
+        setTempChanges(updatedChanges);
+    }
+
+    const handleSave = () => {
+        // Send tempChanges array to the server
+        console.log("Saving changes:", tempChanges);
+
+        // Reset the temporary changes array
+        setTempChanges([]);
+    };
+
+    const openPluginConfiguration = (plugin: HorusPlugin) => {
+        setModalProps({
+            header: plugin.name,
+            body: <PluginConfigView plugin={plugin} handleChange={handleModifyConfig} />,
+            footer: <div className="d-flex justify-content-between">
+                <NBDButton text="Save" action={
+                    () => {
+                        // Save the changes
+                        handleSave();
+                    }
+                } />
+                <NBDButton text="Close" action={
+                    () => {
+                        setModalProps({
+                            ...modalProps,
+                            show: false
+                        })
+                    }
+                } />
+            </div>,
+            show: true,
+            size: "xl"
+        })
     }
 
     const dummyPlguins = () => {
@@ -49,8 +162,10 @@ function InstalledPlugins() {
         return fakePluginList;
     }
 
+
     return (
         <div>
+            <HorusModal {...modalProps} />
             {/* Render loaded plugin data */}
             <div className="plugin-list gap-2">
                 {
@@ -63,7 +178,11 @@ function InstalledPlugins() {
                 {
                     pluginList.plugins?.map((plugin) => {
                         return (
-                            <PluginCard key={plugin.name} plugin={plugin} error={false} />
+                            <PluginCard key={plugin.name} plugin={plugin} error={false} configPlugin={
+                                () => {
+                                    openPluginConfiguration(plugin);
+                                }
+                            } />
                         )
                     })
 
@@ -79,11 +198,15 @@ function InstalledPlugins() {
     );
 }
 
-function PluginCard({ plugin, error }) {
+interface PluginCardProps {
+    plugin: HorusPlugin,
+    error: boolean,
+    configPlugin?: () => void
+}
 
-    const configPlugin = async () => {
-        console.log("Showing config for plugin " + plugin.name);
-    }
+function PluginCard(props: PluginCardProps) {
+
+    const { plugin, error, configPlugin } = props;
 
     const deletePlugin = async () => {
         const body = JSON.stringify({
@@ -151,7 +274,7 @@ function PluginCard({ plugin, error }) {
 }
 
 
-function PluginManager() {
+export function PluginManager() {
 
     // Open new window for plugin installation
     const installPlugin = async () => {
@@ -182,8 +305,3 @@ function PluginManager() {
         </div>
     )
 }
-
-const container = document.getElementById("plugin-manager-root");
-container.className = "root-plugin-container";
-const root = createRoot(container)
-root.render(<PluginManager />);

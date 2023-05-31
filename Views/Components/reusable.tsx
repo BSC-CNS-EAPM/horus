@@ -5,27 +5,29 @@ import { Listbox, Transition } from '@headlessui/react'
 import { CheckIcon, ChevronUpDownIcon } from '@heroicons/react/20/solid'
 
 interface HorusModalProps {
-    show: boolean;
-    onHide?: () => void;
-    header: React.ReactNode;
-    body: React.ReactNode;
-    footer: React.ReactNode
+  show: boolean;
+  onHide?: () => void;
+  header: React.ReactNode;
+  body: React.ReactNode;
+  footer: React.ReactNode
+  size?: "sm" | "lg" | "xl" | "xxl";
 }
 
 function HorusModal(props: HorusModalProps) {
-    return (
-        <>
-            <Modal show={props.show} onHide={props.onHide}>
-                <Modal.Header closeButton>
-                    <Modal.Title>{props.header}</Modal.Title>
-                </Modal.Header>
-                <Modal.Body>{props.body}</Modal.Body>
-                <Modal.Footer>
-                    {props.footer}
-                </Modal.Footer>
-            </Modal>
-        </>
-    );
+  const sizeClass = props.size ? `modal-${props.size}` : '';
+  return (
+    <>
+      <Modal show={props.show} onHide={props.onHide} dialogClassName={sizeClass}>
+        <Modal.Header>
+          <Modal.Title>{props.header}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>{props.body}</Modal.Body>
+        <Modal.Footer>
+          {props.footer}
+        </Modal.Footer>
+      </Modal>
+    </>
+  );
 }
 
 const people = [
@@ -64,8 +66,7 @@ function HorusDropdown() {
                 <Listbox.Option
                   key={personIdx}
                   className={({ active }) =>
-                    `relative cursor-default select-none py-2 pl-10 pr-4 ${
-                      active ? 'bg-amber-100 text-amber-900' : 'text-gray-900'
+                    `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-amber-100 text-amber-900' : 'text-gray-900'
                     }`
                   }
                   value={person}
@@ -73,9 +74,8 @@ function HorusDropdown() {
                   {({ selected }) => (
                     <>
                       <span
-                        className={`block truncate ${
-                          selected ? 'font-medium' : 'font-normal'
-                        }`}
+                        className={`block truncate ${selected ? 'font-medium' : 'font-normal'
+                          }`}
                       >
                         {person.name}
                       </span>
@@ -96,4 +96,4 @@ function HorusDropdown() {
   )
 }
 
-export { HorusModal, HorusDropdown}
+export { HorusModal, HorusDropdown, HorusModalProps }
