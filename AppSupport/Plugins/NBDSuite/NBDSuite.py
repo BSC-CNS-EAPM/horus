@@ -111,11 +111,16 @@ createYAMLBlock = PluginBlock(
     variables=[systemData, ligandData, testVariable, testBoolean, test_stringlist],
 )
 
+
+def configStores(config: PluginConfig):
+    print("Config stored: ", config.variables)
+
+
 # Create a pele license config
 peleLicense = PluginConfig(
     name="PELE License",
     description="PELE license configuration.",
-    action=lambda block: print("License path: ", block.variables["license"]),
+    action=configStores,
     variables=[
         PluginVariable(
             id="license",
@@ -141,11 +146,12 @@ peleBlock = PluginBlock(
     variables=[],
 )
 
+
 # Create a PELE config
 peleConfig = PluginConfig(
     name="PELE",
     description="PELE configuration.",
-    action=lambda block: print("PELE config: ", block.variables["peleConfig"]),
+    action=configStores,
     variables=[
         PluginVariable(
             id="peleConfig",

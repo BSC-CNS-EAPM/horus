@@ -2,6 +2,8 @@ import os
 import sys
 import typing
 from HorusAPI import Plugin, PluginBlock
+import io
+from contextlib import redirect_stdout, redirect_stderr
 
 
 class PluginManager:
@@ -411,9 +413,6 @@ class PluginManager:
             block.updateConfigs(configPath)
 
         # Capture all stdout and stderr output
-        import io
-        from contextlib import redirect_stdout, redirect_stderr
-
         with io.StringIO() as buf, redirect_stdout(buf), redirect_stderr(buf):
             # Execute the block
             block()
@@ -509,3 +508,52 @@ class PluginManager:
         blockConfigFile = os.path.join(configDir, f"{block.id}.json")
 
         return blockConfigFile
+
+    def saveConfig(self, config: dict[str, typing.Any]):
+        """
+        Saves the config to the config file.
+        """
+
+        # Loop through the newConfig array
+        newConfig = config["newConfig"]
+        output = ""
+        for config in newConfig:
+            # Get the ID of the config block
+            configId = config["id"]
+
+            # Get the plugin and the block
+            pluginID = configId.split(".")[0]
+            plugin = self._getPluginByID(pluginID)
+            blockID = pluginID + "." + configId.split(".")[1]
+            block = plugin.getBlock(blockID)
+
+            # Get the path of the config file
+            configDir = os.path.join(plugin._path, "config")
+
+            # Find the block config file
+            blockConfigFile = os.path.join(configDir, f"{block.id}.json")
+
+            valuesToSave = {}
+            for variable in config["variables"]:
+                valuesToSave[variable["id"]] = variable["value"]
+
+            # Save the config
+            block.saveConfig(blockConfigFile, valuesToSave)
+
+            # Execute the config block
+            pluginConfigID = blockID + ".config." + configId.split(".")[3]
+            configBlock = block.getConfig(pluginConfigID)
+
+            with io.StringIO() as buf, redirect_stdout(buf), redirect_stderr(buf):
+                # Execute the config block
+                configBlock()
+
+                # Get the output
+                output += buf.getvalue()
+
+        # Reload the plugins
+        self.pluginChanges = True
+        self._initializePlugins()
+
+        # Return the output to print in horusterm
+        return output

@@ -11,33 +11,13 @@ import { HorusModalProps } from "../Components/reusable";
 import { PluginVariable } from "../Components/FlowBuilder/block";
 
 interface PluginConfigViewProps {
-    plugin: HorusPlugin;
+    configBlocks: BlockProps[];
     handleChange: (value: PluginVariableType, id: string) => void;
 }
 
 function PluginConfigView(props: PluginConfigViewProps) {
 
-    const { plugin, handleChange } = props;
-
-    // Loop through the blocks and store the ones that have config
-    const [configBlocks, setConfigBlocks] = useState<BlockProps[]>([]);
-
-    useEffect(() => {
-        // Create a new array to store the config blocks
-        const newConfigBlocks: BlockProps[] = [];
-
-        // Loop through the blocks and store the ones that have config
-        for (let i = 0; i < plugin.blocks.length; i++) {
-            if (plugin.blocks[i].config) {
-                for (let j = 0; j < plugin.blocks[i].config.length; j++) {
-                    newConfigBlocks.push(plugin.blocks[i].config[j]);
-                }
-            }
-        }
-
-        // Update the state with the new config blocks
-        setConfigBlocks(newConfigBlocks);
-    }, [plugin.blocks]); // Run this effect only when plugin.blocks changes
+    const { configBlocks, handleChange } = props;
 
     return (
         <div>
@@ -71,7 +51,8 @@ function InstalledPlugins() {
         size: "xl"
     });
 
-
+    // Create a state to store the modified config
+    const [tempChanges, setTempChanges] = useState<BlockProps[]>([]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -92,56 +73,117 @@ function InstalledPlugins() {
 
     if (loading) {
         return (
-            <div>
+            // Center the spinner to the page using TailwindCSS
+            <div className="flex justify-center items-center h-screen overflow-hidden">
                 <div className="spinner-border" role="status"></div>
             </div>
         )
     }
 
-    // Create a state to store the modified config
-    const [tempChanges, setTempChanges] = useState<PluginVariableType[]>([]);
-
-    const handleModifyConfig = (
-        value: PluginVariableType,
-        id: string
-    ) => {
-        const updatedChanges = [...tempChanges]; // Create a copy of tempChanges
-        const existingChangeIndex = updatedChanges.findIndex(change => change.id === id); // Check if the change already exists
-
-        if (existingChangeIndex !== -1) {
-            updatedChanges[existingChangeIndex] = { id, value }; // Update the existing change
-        } else {
-            updatedChanges.push({ id, value }); // Add the new change
-        }
-
-        setTempChanges(updatedChanges);
-    }
-
-    const handleSave = () => {
-        // Send tempChanges array to the server
-        console.log("Saving changes:", tempChanges);
-
-        // Reset the temporary changes array
-        setTempChanges([]);
-    };
 
     const openPluginConfiguration = (plugin: HorusPlugin) => {
+
+        // Get the config blocks from the plugin
+        const newConfigBlocks: BlockProps[] = [];
+
+        // Loop through the blocks and store the ones that have config
+        for (let i = 0; i < plugin.blocks.length; i++) {
+            if (plugin.blocks[i].config) {
+                for (let j = 0; j < plugin.blocks[i].config.length; j++) {
+                    newConfigBlocks.push(plugin.blocks[i].config[j]);
+                }
+            }
+        }
+
+        const handleModifyConfig = (
+            value: PluginVariableType,
+            id: string
+        ) => {
+            const updatedChanges = [...tempChanges]; // Create a copy of tempChanges
+            const existingChangeIndex = updatedChanges.findIndex(change => change.id === id); // Check if the change already exists
+
+            // Update the value of the variable in the tempChanges array (set to the block)
+            if (existingChangeIndex >= 0) {
+                // If the change already exists, update the value
+                updatedChanges[existingChangeIndex].variables.find(variable => variable.id === id).value = value;
+            } else {
+                // If the change doesn't exist, create a new one
+                console.log("New change for variable with id: " + id, "Value: " + value);
+                // Find the block that has the variable
+                for (let i = 0; i < newConfigBlocks.length; i++) {
+                    console.log("Checking variables: " + newConfigBlocks[i].variables);
+                    const variable = newConfigBlocks[i].variables.find(variable => variable.id === id);
+                    if (variable) {
+                        console.log("Found variable");
+
+                        // Update the value of the variable
+                        variable.value = value;
+
+                        // If the variable exists, push the block to the tempChanges array
+                        updatedChanges.push(newConfigBlocks[i]);
+                        break;
+                    }
+                }
+            }
+
+            console.log(updatedChanges);
+
+            setTempChanges(updatedChanges);
+        }
+
+        const handleSave = async () => {
+
+            // Replace the config blocks with the tempChanges
+            const newConfig = [...newConfigBlocks];
+            for (let i = 0; i < tempChanges.length; i++) {
+                console.log(tempChanges[i])
+                const blockIndex = newConfig.findIndex(block => block.id === tempChanges[i].id);
+                newConfig[blockIndex] = tempChanges[i];
+            }
+
+            // Update the state with the new config blocks
+            // setNewConfigBlocks(newConfig);
+
+            // Send the changes to the server
+            const header = {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            };
+
+            const body = JSON.stringify({
+                "newConfig": newConfig
+            });
+
+            await horusPost("/plugins/config", header, body);
+
+        };
+
+        const handleClose = () => {
+            // Reset the temporary changes array
+            setTempChanges([]);
+
+            // Close the modal
+            setModalProps({
+                ...modalProps,
+                show: false
+            })
+        }
+
+        // Pass the selected plugin to the plugin config view
         setModalProps({
             header: plugin.name,
-            body: <PluginConfigView plugin={plugin} handleChange={handleModifyConfig} />,
+            body: <PluginConfigView configBlocks={newConfigBlocks} handleChange={handleModifyConfig} />,
             footer: <div className="d-flex justify-content-between">
                 <NBDButton text="Save" action={
                     () => {
                         // Save the changes
                         handleSave();
+                        handleClose();
                     }
                 } />
                 <NBDButton text="Close" action={
                     () => {
-                        setModalProps({
-                            ...modalProps,
-                            show: false
-                        })
+                        handleClose();
                     }
                 } />
             </div>,
@@ -290,7 +332,7 @@ export function PluginManager() {
 
 
     return (
-        <div className="root-plugin-container">
+        <div className="root-plugin-container overflow-hidden">
             <div className="flex flex-col">
                 <div className="plugin-manager-title flex">
                     <h1>Plugin manager</h1>
@@ -300,7 +342,9 @@ export function PluginManager() {
                         <SearchComponent />
                     </div>
                 </div>
-                <InstalledPlugins />
+                <div>
+                    <InstalledPlugins />
+                </div>
             </div>
         </div>
     )

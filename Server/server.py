@@ -285,6 +285,26 @@ class HorusServer:
                 }
                 return flask.jsonify(error)
 
+        @self.server.route("/plugins/config", methods=["POST"])
+        @verifyToken
+        def pluginConfig():
+            data = request.get_json()
+            # Save the config
+            try:
+                output = self.pluginManager.saveConfig(data)
+                self.socketio.emit("printTerm", output)
+                success = {
+                    "ok": True,
+                }
+                return flask.jsonify(success)
+            except Exception as e:
+                print("Error!!!!!", e)
+                error = {
+                    "ok": False,
+                    "error": str(e),
+                }
+                return flask.jsonify(error)
+
         @self.server.route("/desktop/openWindow", methods=["POST"])
         @desktopOnly
         def openWindow():

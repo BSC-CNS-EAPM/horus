@@ -326,6 +326,19 @@ class PluginBlock:
                     configs[config.id] = config.variables
                 json.dump(self.configs, configFile, indent=4)
 
+    def saveConfig(self, configPath: str, valuesToSave: dict[str, str]):
+        """
+        Saves the config file for the block with new values.
+        """
+        # Save the config file only if the block has configs
+        if len(self._configs) > 0:
+            # Create the config file
+            with open(configPath, "w") as configFile:
+                json.dump(valuesToSave, configFile, indent=4)
+
+        # Update the values of the configs
+        self.updateConfigs(configPath)
+
 
 class PluginConfig(PluginBlock):
     """
