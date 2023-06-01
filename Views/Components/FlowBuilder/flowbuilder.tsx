@@ -1,11 +1,16 @@
-import { ItemTypes, Block, BlockProps } from "./block";
+import { ItemTypes, Block } from "./block";
+import { BlockProps } from "../../Interfaces/plugins";
 import { DndProvider, useDrop } from "react-dnd";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { DndContext } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { horusGet, horusPost } from "../../Utils/utils";
 import Loading from "../loading";
 import { HorusModal } from "../reusable";
+import update from 'immutability-helper'
+
+// Import animejs
+import anime from "animejs";
 
 interface FlowReciverProps {
     openFlow?: string;
@@ -30,6 +35,32 @@ function FlowReciver(props: FlowReciverProps) {
     // Saved state
     const [saved, setSaved] = useState(false)
 
+    // Block animation state (id of the block)
+    const [blockAnimation, setBlockAnimation] = useState("")
+
+    // Use a useEffect to load the animation when the blockAnimation changes
+    useEffect(() => {
+        if (blockAnimation !== "") {
+            // Add rubber bounce effect to the block
+            const blockElement = document.getElementById(blockAnimation)
+
+            anime({
+                targets: blockElement,
+                scaleX: [
+                    { value: 3, easing: 'easeInOutSine', duration: 50 },
+                    { value: 0.9, easing: 'easeInOutSine', duration: 50 },
+                    { value: 1.05, easing: 'easeInOutSine', duration: 50 },
+                    { value: 1, easing: 'easeInOutSine', duration: 50 },
+                ], scaleY: [
+                    { value: 1.1, easing: 'easeInOutSine', duration: 50 },
+                    { value: 0.9, easing: 'easeInOutSine', duration: 50 },
+                    { value: 1.05, easing: 'easeInOutSine', duration: 50 },
+                    { value: 1, easing: 'easeInOutSine', duration: 50 },
+                ],
+            });
+        }
+    }, [blockAnimation])
+
     const [, drop] = useDrop(
         () => ({
             accept: ItemTypes.BLOCK,
@@ -40,26 +71,61 @@ function FlowReciver(props: FlowReciverProps) {
         [blocks],
     )
 
+    const moveBlock = useCallback((dragIndex: number, hoverIndex: number) => {
+        setBlocks((prevBlocks: BlockProps[]) =>
+            update(prevBlocks, {
+                $splice: [
+                    [dragIndex, 1],
+                    [hoverIndex, 0, prevBlocks[dragIndex] as BlockProps],
+                ],
+            }),
+        )
+    }, [])
+
+
+    // Remove the block from the list
+    const removeBlock = (block: BlockProps) => {
+        setBlocks(prevBlocks => {
+            // Filter out the block to be removed
+            const updatedBlocks = prevBlocks.filter(item => item.placedID !== block.placedID);
+
+            // Set the flow as not saved because it has changed
+            setSaved(false);
+
+            return updatedBlocks;
+        });
+    };
+
     const addBlock = (block: BlockProps) => {
 
-        // Set the block as placed
-        block.isPlaced = true
+        // If the block is already placed, return
+        if (block.isPlaced) {
+            return
+        }
 
         // Set the placedID
         const newBlock = { ...block, placedID: placedID }
 
+        // Set the new block as placed
+        newBlock.isPlaced = true
+
         // Increment the placedID
         placedID++
+
+        // Add the moveBlock function to the block
+        newBlock.moveBlock = moveBlock
+
+        // Add the removeBlock function to the block
+        newBlock.deleteBlock = removeBlock
 
         setBlocks([...blocks, newBlock])
 
         // Set the flow as not saved because it has changed
         setSaved(false)
-    }
 
-    // Remove the block from the list
-    const removeBlock = (block: BlockProps) => {
-        setBlocks(blocks.filter(b => b.placedID !== block.placedID))
+        // Set the animation
+        setBlockAnimation(`${newBlock.placedID}-${newBlock.id}`)
+
     }
 
     const handleSave = async () => {
@@ -106,7 +172,6 @@ function FlowReciver(props: FlowReciverProps) {
         //Set the running button
         setBlocks(blocks.map(b => {
             if (b.placedID === block.placedID) {
-                console.log(`Setting block ${b.id} with placedID ${b.placedID} to running`)
                 b.isRunning = true
             }
             return b
@@ -222,7 +287,9 @@ function FlowReciver(props: FlowReciverProps) {
                     <div key={block.placedID} style={{
                         marginBottom: "1rem"
                     }}>
-                        <Block {...block} onChange={onblockChange} execute={executeBlock} />
+                        <Block key={
+                            `${block.placedID}-${block.id}`
+                        } {...block} onChange={onblockChange} execute={executeBlock} />
                     </div>
                 ))}
             </div>

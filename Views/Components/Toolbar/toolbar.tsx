@@ -4,6 +4,7 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 import { ChevronDownIcon } from '@heroicons/react/20/solid'
 import { useNavigate } from 'react-router'
 import "../nbdbutton.css"
+import { horusGet } from '../../Utils/utils'
 
 import "./toolbar.css"
 import { none } from 'molstar/lib/mol-model/structure/query/queries/generators'
@@ -141,7 +142,7 @@ const MenuIcon = ({ active, svgPath }: IconProps) => {
 function SearchComponent() {
     return (
         <div className="app-button flex flex-row">
-            <input type="text" placeholder="Search..." className="toolbar-search" />
+            <input type="text" placeholder="Search..." className="" />
             <button>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 15.75l-2.489-2.489m0 0a3.375 3.375 0 10-4.773-4.773 3.375 3.375 0 004.774 4.774zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -151,29 +152,69 @@ function SearchComponent() {
     )
 }
 
+const handleKeyDown = (event: KeyboardEvent) => {
+    if (event.key === 't' && event.ctrlKey) {
+        toggleConsole();
+    }
+}
+
+const toggleConsole = () => {
+
+    const consoleElement = document.getElementById('console-div');
+    const rootRoutes = document.getElementById('root-routes');
+
+    if (consoleElement && rootRoutes) {
+        setTimeout(() => {
+            consoleElement.style.display = consoleElement.style.display === 'none' ? 'block' : 'none';
+            rootRoutes.classList.toggle('root-routes-console-visible');
+            rootRoutes.classList.toggle('root-routes-console-hidden');
+        }, 0);
+    }
+}
+
+document.addEventListener('keydown', handleKeyDown);
+
 export default function HorusToolbar() {
     // This is the toolbar component
     // Will lie on top of the page and will contain the
     // user menu, search bar, etc.
 
-    const handleKeyDown = (event: KeyboardEvent) => {
-        if (event.key === 't' && event.ctrlKey) {
-            toggleConsole();
+    const [pluginPages, setPluginPages] = useState([])
+
+    const getPluginPages = async () => {
+
+        const response = await horusGet("/plugins/listpages")
+
+        if (!response) {
+            return
         }
+
+        if (!response.ok) {
+            return
+        }
+
+        const data = await response.json()
+
+        return data
+
     }
 
-    const toggleConsole = () => {
-        const consoleElement = document.getElementById('console-div');
-        const rootRoutes = document.getElementById('root-routes');
+    useEffect(() => {
+        getPluginPages().then((data) => {
+            setPluginPages(data)
+        })
+    }, [])
 
-        if (consoleElement && rootRoutes) {
-            consoleElement.style.display = consoleElement.style.display === 'none' ? 'block' : 'none';
-            rootRoutes.classList.toggle('root-routes-console-visible');
-            rootRoutes.classList.toggle('root-routes-console-hidden');
+    const loadPage = async (url: string) => {
+        try {
+            const iframe = document.getElementById("plugin-page-iframe") as HTMLIFrameElement;
+            iframe.src = url;
+            console.log("loading iframe with url: " + url)
+        }
+        catch {
+            console.log("Error loading iframe")
         }
     }
-
-    document.addEventListener('keydown', handleKeyDown);
 
     const menus: ToolBarMenuProps[] = [
         {
@@ -289,7 +330,7 @@ export default function HorusToolbar() {
                         </svg>
                     ),
                     // Set a keyShortcut to enable keyboard navigation.
-                    keyShortcut: "ctrl+T"
+                    keyShortcut: "ctrl T"
                 },
                 {
                     name: 'Zoom In',
@@ -315,23 +356,14 @@ export default function HorusToolbar() {
             svgPath: (
                 <path d="M12 4.467c0-.405.262-.75.559-1.027.276-.257.441-.584.441-.94 0-.828-.895-1.5-2-1.5s-2 .672-2 1.5c0 .362.171.694.456.953.29.265.544.6.544.994a.968.968 0 01-1.024.974 39.655 39.655 0 01-3.014-.306.75.75 0 00-.847.847c.14.993.242 1.999.306 3.014A.968.968 0 014.447 10c-.393 0-.729-.253-.994-.544C3.194 9.17 2.862 9 2.5 9 1.672 9 1 9.895 1 11s.672 2 1.5 2c.356 0 .683-.165.94-.441.276-.297.622-.559 1.027-.559a.997.997 0 011.004 1.03 39.747 39.747 0 01-.319 3.734.75.75 0 00.64.842c1.05.146 2.111.252 3.184.318A.97.97 0 0010 16.948c0-.394-.254-.73-.545-.995C9.171 15.693 9 15.362 9 15c0-.828.895-1.5 2-1.5s2 .672 2 1.5c0 .356-.165.683-.441.94-.297.276-.559.622-.559 1.027a.998.998 0 001.03 1.005c1.337-.05 2.659-.162 3.961-.337a.75.75 0 00.644-.644c.175-1.302.288-2.624.337-3.961A.998.998 0 0016.967 12c-.405 0-.75.262-1.027.559-.257.276-.584.441-.94.441-.828 0-1.5-.895-1.5-2s.672-2 1.5-2c.362 0 .694.17.953.455.265.291.601.545.995.545a.97.97 0 00.976-1.024 41.159 41.159 0 00-.318-3.184.75.75 0 00-.842-.64c-1.228.164-2.473.271-3.734.319A.997.997 0 0112 4.467z" />
             ),
-            items: [
-                {
-                    name: 'NBDSuite Results',
-                    link: '/plugins/pages',
-                    svgPath: (<path d="M12 4.467c0-.405.262-.75.559-1.027.276-.257.441-.584.441-.94 0-.828-.895-1.5-2-1.5s-2 .672-2 1.5c0 .362.171.694.456.953.29.265.544.6.544.994a.968.968 0 01-1.024.974 39.655 39.655 0 01-3.014-.306.75.75 0 00-.847.847c.14.993.242 1.999.306 3.014A.968.968 0 014.447 10c-.393 0-.729-.253-.994-.544C3.194 9.17 2.862 9 2.5 9 1.672 9 1 9.895 1 11s.672 2 1.5 2c.356 0 .683-.165.94-.441.276-.297.622-.559 1.027-.559a.997.997 0 011.004 1.03 39.747 39.747 0 01-.319 3.734.75.75 0 00.64.842c1.05.146 2.111.252 3.184.318A.97.97 0 0010 16.948c0-.394-.254-.73-.545-.995C9.171 15.693 9 15.362 9 15c0-.828.895-1.5 2-1.5s2 .672 2 1.5c0 .356-.165.683-.441.94-.297.276-.559.622-.559 1.027a.998.998 0 001.03 1.005c1.337-.05 2.659-.162 3.961-.337a.75.75 0 00.644-.644c.175-1.302.288-2.624.337-3.961A.998.998 0 0016.967 12c-.405 0-.75.262-1.027.559-.257.276-.584.441-.94.441-.828 0-1.5-.895-1.5-2s.672-2 1.5-2c.362 0 .694.17.953.455.265.291.601.545.995.545a.97.97 0 00.976-1.024 41.159 41.159 0 00-.318-3.184.75.75 0 00-.842-.64c-1.228.164-2.473.271-3.734.319A.997.997 0 0112 4.467z" />
-                    ),
-                    onClick: () => {
-                        try {
-                            const iframe = document.getElementById("plugin-page-iframe") as HTMLIFrameElement;
-                            iframe.src = "/plugins/pages/nbdsuiteplugin.pele_results"
-                        }
-                        catch {
-                            console.log("Error loading iframe")
-                        }
-                    }
+            items: pluginPages.map((page) => ({
+                name: page.name,
+                link: "plugins/pages",
+                svgPath: <path d="M12 4.467c0-.405.262-.75.559-1.027.276-.257.441-.584.441-.94 0-.828-.895-1.5-2-1.5s-2 .672-2 1.5c0 .362.171.694.456.953.29.265.544.6.544.994a.968.968 0 01-1.024.974 39.655 39.655 0 01-3.014-.306.75.75 0 00-.847.847c.14.993.242 1.999.306 3.014A.968.968 0 014.447 10c-.393 0-.729-.253-.994-.544C3.194 9.17 2.862 9 2.5 9 1.672 9 1 9.895 1 11s.672 2 1.5 2c.356 0 .683-.165.94-.441.276-.297.622-.559 1.027-.559a.997.997 0 011.004 1.03 39.747 39.747 0 01-.319 3.734.75.75 0 00.64.842c1.05.146 2.111.252 3.184.318A.97.97 0 0010 16.948c0-.394-.254-.73-.545-.995C9.171 15.693 9 15.362 9 15c0-.828.895-1.5 2-1.5s2 .672 2 1.5c0 .356-.165.683-.441.94-.297.276-.559.622-.559 1.027a.998.998 0 001.03 1.005c1.337-.05 2.659-.162 3.961-.337a.75.75 0 00.644-.644c.175-1.302.288-2.624.337-3.961A.998.998 0 0016.967 12c-.405 0-.75.262-1.027.559-.257.276-.584.441-.94.441-.828 0-1.5-.895-1.5-2s.672-2 1.5-2c.362 0 .694.17.953.455.265.291.601.545.995.545a.97.97 0 00.976-1.024 41.159 41.159 0 00-.318-3.184.75.75 0 00-.842-.64c-1.228.164-2.473.271-3.734.319A.997.997 0 0112 4.467z" />,
+                onClick: () => {
+                    loadPage(page.url);
                 },
-            ],
+            }))
         },
 
     ]

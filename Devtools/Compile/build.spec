@@ -1,4 +1,5 @@
 import os
+import shutil
 
 currentDir = os.getcwd()
 
@@ -17,6 +18,16 @@ gui_folder = os.path.join(currentDir, "GUI")
 # Include the default plugins folder
 default_plugins_folder = os.path.join(currentDir, "AppSupport", "Plugins")
 
+# Delete any config folder in the AppSupport/Plugins/<pluginname>/ folder
+# Iterate over all the folders in AppSupport/Plugins
+for plugin in os.listdir(default_plugins_folder):
+    # List all the files in the plugin folder
+    plugin_folder = os.path.join(default_plugins_folder, plugin)
+    for file in os.listdir(plugin_folder):
+        # If the file is a folder and is called config, delete it
+        if os.path.isdir(os.path.join(plugin_folder, file)) and file == "config":
+            shutil.rmtree(os.path.join(plugin_folder, file))
+
 datas = [
     (gui_folder, "GUI"),
     (cython_folder, "."),
@@ -24,12 +35,7 @@ datas = [
 ]
 
 # Required modules
-imports = [
-    "webview",
-    "flask",
-    "requests",
-    "nbdsuite"
-]
+imports = ["webview", "flask", "requests", "nbdsuite"]
 
 # Add all the submodules required by flask_socketio
 imports += [

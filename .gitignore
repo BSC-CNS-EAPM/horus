@@ -151,3 +151,5 @@ GUI/
 # Package lock
 package-lock.json
 
+# Default plugins config
+AppSupport/Plugins/*/config/

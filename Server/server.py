@@ -162,7 +162,7 @@ class HorusServer:
         def verifyToken(func):
             @wraps(func)
             def wrapper(*args, **kwargs):
-                if self.token is None:
+                if self.token is None or self.debug:
                     return func(*args, **kwargs)
                 if request.headers.get("shemsu") == self.token:
                     return func(*args, **kwargs)
@@ -372,10 +372,14 @@ class HorusServer:
                 static_url_path=url,
             )
 
-            # Add the route to return the html file
-            @blueprint.route(url)
-            def send_html():
-                return flask.render_template(os.path.basename(htmlPath))
+            # Define a function that captures the current htmlPath
+            def create_send_html(path):
+                @blueprint.route(url)
+                def send_html():
+                    return flask.render_template(os.path.basename(path))
+
+            # Call the function with the current htmlPath
+            create_send_html(htmlPath)
 
             # Register the blueprint
             try:

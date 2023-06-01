@@ -36,6 +36,23 @@
     outline: none;
 } */
 
+.app-button {
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    outline: none;
+    height: 1.75rem;
+    margin-top: 0.1rem;
+    padding-inline: 0.5rem;
+    align-items: center;
+    justify-content: left;
+    display: flex;
+    flex-direction: row;
+    cursor: pointer;
+    /* Animate the background when hovering */
+    transition: background 0.2s ease-in-out;
+    margin-bottom: 0.3rem;
+}
+
 .toolbar-item-key-shortcut {
     font-size: 0.8rem;
     color: #999;

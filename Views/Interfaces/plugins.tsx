@@ -54,6 +54,9 @@ interface BlockProps {
     runError?: boolean;
     placedID: number
     config: BlockProps[];
+    index?: number;
+    moveBlock?: (dragIndex: number, hoverIndex: number) => void;
+    deleteBlock?: (block: BlockProps) => void;
 }
 
 // Export the interfaces

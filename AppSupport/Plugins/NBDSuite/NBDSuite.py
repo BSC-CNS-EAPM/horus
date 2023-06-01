@@ -18,29 +18,12 @@ plugin.info = {
     "dependencies": "Peleffy",
 }
 
-
-def waiterFunction(block: PluginBlock):
-    print("Waiting...")
-    time.sleep(5)
-    print("Done waiting")
-
-
-waiterBlock = PluginBlock(
-    name="Waiter",
-    description="Waits for 5 seconds.",
-    action=waiterFunction,
-    variables=[],
-)
-
-# Add the waiter block to the plugin
-plugin.addBlock(waiterBlock)
-
 # Define the variables for the Input Yaml block
 systemData = PluginVariable(
     id="systemData",
     name="System data",
     description="The protein system data pdb file.",
-    type=VariableTypes.STRING,
+    type=VariableTypes.FILE,
     defaultValue="Default protein",
 )
 
@@ -96,7 +79,6 @@ def createYAML(block: PluginBlock):
     print("Test boolean: ", block.variables["testBoolean"])
     print("Test string list: ", block.variables["test_stringlist"])
     print("Config list: ", block.configs)
-    print("License: ", block.configs["license"])
 
     print("Types of the variables:")
     for key in block.variables:
@@ -111,63 +93,122 @@ createYAMLBlock = PluginBlock(
     variables=[systemData, ligandData, testVariable, testBoolean, test_stringlist],
 )
 
+# Add the Input Yaml block to the plugin
+plugin.addBlock(createYAMLBlock)
 
-def configStores(config: PluginConfig):
-    print("Config stored: ", config.variables)
+# Create a Topology Fixer block
+topologyFixerBlock = PluginBlock(
+    name="Topology Fixer",
+    description="Fixes the topology of a protein-ligand complex.",
+    action=lambda block: print("Adding topology fixer block..."),
+    variables=[
+        PluginVariable(
+            id="enable-topology-fixer",
+            name="Enable topology fixer",
+            description="Enable topology fixer.",
+            type=VariableTypes.BOOLEAN,
+            defaultValue=True,
+        )
+    ],
+)
+
+# Add the Topology Fixer block to the plugin
+plugin.addBlock(topologyFixerBlock)
+
+# Create an Adaptive PELE block
+peleBlock = PluginBlock(
+    name="Adaptive PELE",
+    description="Add PELE simulation to your NBDSuite simulation.",
+    action=lambda block: print("Saving pele block into yaml..."),
+    variables=[
+        PluginVariable(
+            id="pele-epochs",
+            name="Epochs",
+            description="PELE simulation epochs.",
+            type=VariableTypes.INTEGER,
+            defaultValue=1,
+        ),
+    ],
+)
+
+# Add the Topology Fixer block to the PELE block
+plugin.addBlock(peleBlock)
+
+# Add the PELE block to the plugin
+plugin.addBlock(peleBlock)
+
+
+def runSimulation(block: PluginBlock):
+    print("Running simulation?...")
+    try:
+        license = block.configs["license"]
+        print("License: ", license)
+        if license is None or license == "":
+            raise Exception
+    except Exception:
+        print("No license found.")
+
+
+runSimulationBlock = PluginBlock(
+    name="Run simulation",
+    description="Runs the simulation.",
+    action=runSimulation,
+    variables=[],
+)
+
+
+def validateLicense(config: PluginConfig):
+    print("Validating pele license...", config.variables)
 
 
 # Create a pele license config
 peleLicense = PluginConfig(
     name="PELE License",
     description="PELE license configuration.",
-    action=configStores,
+    action=validateLicense,
     variables=[
         PluginVariable(
             id="license",
             name="License",
             description="PELE license path.",
             type=VariableTypes.STRING,
-            defaultValue="",
+            defaultValue=None,
         )
     ],
 )
 
-# Add a config to the Input Yaml block
-createYAMLBlock.addConfig(peleLicense)
+# Add tje peleLicense to the runSimulationBlock
+runSimulationBlock.addConfig(peleLicense)
 
-# Add the Input Yaml block to the plugin
-plugin.addBlock(createYAMLBlock)
+# Add the runSimulationBlock to the plugin
+plugin.addBlock(runSimulationBlock)
 
-# Create a PELE block
-peleBlock = PluginBlock(
-    name="PELE",
-    description="Run PELE.",
-    action=lambda block: print("Running PELE..."),
+sendSimulation = PluginBlock(
+    name="Send simulation",
+    description="Sends the simulation to the server.",
+    action=lambda block: print("Sending simulation..."),
     variables=[],
 )
 
+# Add the Send simulation block to the plugin
+plugin.addBlock(sendSimulation)
 
-# Create a PELE config
-peleConfig = PluginConfig(
-    name="PELE",
-    description="PELE configuration.",
-    action=configStores,
-    variables=[
-        PluginVariable(
-            id="peleConfig",
-            name="PELE config",
-            description="PELE config path.",
-            type=VariableTypes.FILE,
-            defaultValue="",
-        )
-    ],
+
+def waiterFunction(block: PluginBlock):
+    print("Waiting...")
+    time.sleep(5)
+    print("Done waiting")
+
+
+waiterBlock = PluginBlock(
+    name="Waiter",
+    description="Waits for 5 seconds.",
+    action=waiterFunction,
+    variables=[],
 )
 
-# Add a config to the PELE block
-peleBlock.addConfig(peleConfig)
-
-# Add the PELE block to the plugin
-plugin.addBlock(peleBlock)
+# Add the waiter block to the plugin
+plugin.addBlock(waiterBlock)
 
 # Define the PELE results page
 pelePage = PluginPage(

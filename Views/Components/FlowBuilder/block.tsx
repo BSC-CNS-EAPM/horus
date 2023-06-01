@@ -1,5 +1,6 @@
-import { useDrag } from "react-dnd";
-import { useEffect, useState } from "react";
+import { Identifier, XYCoord } from "dnd-core";
+import { useDrag, useDrop } from "react-dnd";
+import { useEffect, useState, useRef } from "react";
 import { horusPost } from "../../Utils/utils";
 
 import { BlockProps, PluginVariable, PluginVariableType, PluginVariableTypes } from "../../Interfaces/plugins";
@@ -8,10 +9,34 @@ import "./block.css"
 
 import { Popover } from "@headlessui/react";
 
+interface DeleteBlockButtonProps {
+    block: BlockProps;
+    onClick: (block: BlockProps) => void;
+}
+
 interface PlayBlockButtonProps {
     isRunning: boolean;
     runError: boolean;
     onClick: () => Promise<void>;
+}
+
+function DeleteBlockButton(
+    { block, onClick }: DeleteBlockButtonProps
+) {
+
+    const deleteBlock = () => {
+        onClick(block);
+    }
+
+    return (<CustomPopover trigger={
+        <button onClick={deleteBlock}>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="red" className="w-5 h-5">
+                <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.52.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z" clipRule="evenodd" />
+            </svg>
+        </button>
+    }>
+        <div className="plugin-description">Delete block</div>
+    </CustomPopover>)
 }
 
 function PlayBlockButton(
@@ -146,6 +171,8 @@ const CustomPopover = ({ trigger, children }) => {
 
 function Block(block: BlockProps) {
 
+    const ref = useRef<HTMLDivElement>(null)
+
     // Track the mouse position
     const [isHovering, setIsHovering] = useState(false)
 
@@ -157,20 +184,89 @@ function Block(block: BlockProps) {
         setIsHovering(false)
     }
 
+    const [{ handlerId }, drop] = useDrop<
+        BlockProps,
+        void,
+        { handlerId: Identifier | null }
+    >({
+        accept: ItemTypes.BLOCK,
+        drop: (item: BlockProps) => {
+            console.log("Drop called")
+        },
+        collect(monitor) {
+            return {
+                handlerId: monitor.getHandlerId(),
+            }
+        },
+        hover(hoverBlock: BlockProps, monitor) {
+            console.log("Hover function called")
+            if (!ref.current) {
+                return
+            }
+            const dragIndex = hoverBlock.index
+            const hoverIndex = block.index
+
+            // Don't replace items with themselves
+            if (dragIndex === hoverIndex) {
+                return
+            }
+
+            // Determine rectangle on screen
+            const hoverBoundingRect = ref.current?.getBoundingClientRect()
+
+            // Get vertical middle
+            const hoverMiddleY =
+                (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2
+
+            // Determine mouse position
+            const clientOffset = monitor.getClientOffset()
+
+            // Get pixels to the top
+            const hoverClientY = (clientOffset as XYCoord).y - hoverBoundingRect.top
+
+            // Only perform the move when the mouse has crossed half of the items height
+            // When dragging downwards, only move when the cursor is below 50%
+            // When dragging upwards, only move when the cursor is above 50%
+
+            // Dragging downwards
+            if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) {
+                return
+            }
+
+            // Dragging upwards
+            if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) {
+                return
+            }
+
+            // Time to actually perform the action
+            block.moveBlock(dragIndex, hoverIndex)
+
+            // Note: we're mutating the monitor item here!
+            // Generally it's better to avoid mutations,
+            // but it's good here for the sake of performance
+            // to avoid expensive index searches.
+            hoverBlock.index = hoverIndex
+        },
+    })
+
     const [{ isDragging }, drag] = useDrag(() => ({
         type: ItemTypes.BLOCK,
-        collect: monitor => ({
-            isDragging: !!monitor.isDragging(),
+        collect: (monitor: any) => ({
+            isDragging: monitor.isDragging(),
         }),
         // Assing the item to the drag (BlockProps)
-        item: {
-            id: block.id,
-            name: block.name,
-            description: block.description,
-            plugin: block.plugin,
-            variables: block.variables,
-            isPlaced: block.isPlaced
-        }
+        item: () => {
+            return {
+                id: block.id,
+                name: block.name,
+                description: block.description,
+                plugin: block.plugin,
+                variables: block.variables,
+                isPlaced: block.isPlaced,
+                index: block.index,
+                moveBlock: block.moveBlock
+            }
+        },
     }))
 
     const handleChange = (value: PluginVariableType, id: string) => {
@@ -194,14 +290,21 @@ function Block(block: BlockProps) {
         await block.execute(block)
     }
 
+    if (block.isPlaced) {
+        drag(drop(ref))
+    }
 
     return (
-        <div ref={drag} className={`plugin-block ${block.isPlaced ? 'plugin-block-placed' : ''}`} style={{ opacity: isDragging ? 0.5 : 1, cursor: 'move' }}>
+        <div data-handler-id={handlerId}
+            id={`${block?.placedID}-${block.id}`} ref={drag} className={`plugin-block ${block.isPlaced ? 'plugin-block-placed' : ''}`} style={{ opacity: isDragging ? 0.5 : 1, cursor: 'move' }}>
             <div className="flex flew-row justify-between">
                 <div style={{ fontWeight: "bold" }}>
                     {block.name}
                 </div>
+                {/* Play button to execute the block */}
                 {block.isPlaced && <PlayBlockButton isRunning={block.isRunning} runError={block.runError} onClick={handleExecute} />}
+                {/* Delete button to remove the block from the canvas */}
+                {block.isPlaced && <DeleteBlockButton block={block} onClick={() => block.deleteBlock(block)} />}
 
                 <CustomPopover trigger={
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">

@@ -114,6 +114,11 @@ class PluginManager:
         for p in self.loadedPlugins:
             if p.info["name"] == byName:
                 return p
+
+        # Search in the error plugins
+        for p in self.errorPlugins:
+            if p.info["name"] == byName:
+                return p
         raise Exception(f"Plugin {byName} not found.")
 
     def _getPluginByID(self, id: str) -> Plugin:
@@ -136,6 +141,7 @@ class PluginManager:
         shutil.rmtree(pluginPath)
 
         self.pluginChanges = True
+        self._initializePlugins()
 
     def _listPluginsPaths(self):
         """
@@ -190,9 +196,9 @@ class PluginManager:
         for pth in pluginPaths:
             try:
                 self._loadPlugin(pth)
-            except Exception:
+            except Exception as e:
                 basename = os.path.basename(pth)
-                # print(f"Error loading plugin {basename}: {e}")
+                print(f"Error loading plugin {basename}: {e}")
                 # Define an error dummy plugin
                 errorPlugin = Plugin(id=f"error.{basename}")
                 errorPlugin.info = {
@@ -201,7 +207,7 @@ class PluginManager:
                     "author": "",
                     "version": "",
                     "dependencies": "",
-                    "filename": pth,
+                    "filename": os.path.basename(pth),
                 }
                 self.errorPlugins.append(errorPlugin)
 
