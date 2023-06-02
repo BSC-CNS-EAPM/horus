@@ -68,7 +68,7 @@
 .block-sidebar {
     /* Add a right border */
     border-right: 1px solid #e5e5e5;
-    width: 15vw;
+    width: 15rem;
     padding: 1rem;
     overflow: auto;
 }
@@ -77,7 +77,7 @@
     background-color: #f5f5f5;
     border-radius: 5px;
     padding: 1rem;
-    width: 85vw;
+    width: calc(100% - 15rem);
     overflow: auto;
 }
 

@@ -166,7 +166,7 @@ peleLicense = PluginConfig(
     ],
 )
 
-# Add tje peleLicense to the runSimulationBlock
+# Add the peleLicense to the runSimulationBlock
 runSimulationBlock.addConfig(peleLicense)
 
 
