@@ -87,8 +87,6 @@ function FlowReciver(props: FlowReciverProps) {
             return prevState;
         });
     };
-    const moveBlockHandlerRefactored = useCallback(moveBlockHandler, [blocks]);
-
 
 
     // Remove the block from the list
@@ -121,7 +119,7 @@ function FlowReciver(props: FlowReciverProps) {
         placedID++
 
         // Add the moveBlock function to the block
-        newBlock.moveBlock = moveBlockHandlerRefactored
+        newBlock.moveBlock = moveBlockHandler
 
         // Add the removeBlock function to the block
         newBlock.deleteBlock = removeBlock
