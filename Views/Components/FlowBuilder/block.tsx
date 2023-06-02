@@ -1,5 +1,5 @@
 import { Identifier, XYCoord } from "dnd-core";
-import { useDrag, useDrop } from "react-dnd";
+import { DropTargetMonitor, useDrag, useDrop } from "react-dnd";
 import { useEffect, useState, useRef } from "react";
 import { horusPost } from "../../Utils/utils";
 
@@ -184,69 +184,64 @@ function Block(block: BlockProps) {
         setIsHovering(false)
     }
 
-    const [{ handlerId }, drop] = useDrop<
-        BlockProps,
-        void,
-        { handlerId: Identifier | null }
-    >({
+
+    function handleHover(hoverBlock: BlockProps, monitor: DropTargetMonitor) {
+        if (!ref.current) {
+            return
+        }
+        const dragIndex = hoverBlock.index
+        const hoverIndex = block.index
+
+        // Don't replace items with themselves
+        if (dragIndex === hoverIndex) {
+            return
+        }
+
+        // Determine rectangle on screen
+        const hoverBoundingRect = ref.current?.getBoundingClientRect()
+
+        // Get vertical middle
+        const hoverMiddleY =
+            (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2
+
+        // Determine mouse position
+        const clientOffset = monitor.getClientOffset()
+
+        // Get pixels to the top
+        const hoverClientY = (clientOffset as XYCoord).y - hoverBoundingRect.top
+
+        // Only perform the move when the mouse has crossed half of the items height
+        // When dragging downwards, only move when the cursor is below 50%
+        // When dragging upwards, only move when the cursor is above 50%
+
+        // Dragging downwards
+        if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) {
+            return
+        }
+
+        // Dragging upwards
+        if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) {
+            return
+        }
+
+        // Time to actually perform the action
+        block.moveBlock(dragIndex, hoverIndex)
+
+        // Note: we're mutating the monitor item here!
+        // Generally it's better to avoid mutations,
+        // but it's good here for the sake of performance
+        // to avoid expensive index searches.
+        hoverBlock.index = hoverIndex
+    }
+
+    const [, drop] = useDrop({
         accept: ItemTypes.BLOCK,
-        drop: (item: BlockProps) => {
-            console.log("Drop called")
-        },
-        collect(monitor) {
-            return {
-                handlerId: monitor.getHandlerId(),
-            }
-        },
-        hover(hoverBlock: BlockProps, monitor) {
-            console.log("Hover function called")
-            if (!ref.current) {
-                return
-            }
-            const dragIndex = hoverBlock.index
-            const hoverIndex = block.index
-
-            // Don't replace items with themselves
-            if (dragIndex === hoverIndex) {
-                return
-            }
-
-            // Determine rectangle on screen
-            const hoverBoundingRect = ref.current?.getBoundingClientRect()
-
-            // Get vertical middle
-            const hoverMiddleY =
-                (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2
-
-            // Determine mouse position
-            const clientOffset = monitor.getClientOffset()
-
-            // Get pixels to the top
-            const hoverClientY = (clientOffset as XYCoord).y - hoverBoundingRect.top
-
-            // Only perform the move when the mouse has crossed half of the items height
-            // When dragging downwards, only move when the cursor is below 50%
-            // When dragging upwards, only move when the cursor is above 50%
-
-            // Dragging downwards
-            if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) {
-                return
-            }
-
-            // Dragging upwards
-            if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) {
-                return
-            }
-
-            // Time to actually perform the action
-            block.moveBlock(dragIndex, hoverIndex)
-
-            // Note: we're mutating the monitor item here!
-            // Generally it's better to avoid mutations,
-            // but it's good here for the sake of performance
-            // to avoid expensive index searches.
-            hoverBlock.index = hoverIndex
-        },
+        hover(
+            item: BlockProps,
+            monitor: DropTargetMonitor
+        ) {
+            handleHover(item, monitor)
+        }
     })
 
     const [{ isDragging }, drag] = useDrag(() => ({
@@ -292,11 +287,13 @@ function Block(block: BlockProps) {
 
     if (block.isPlaced) {
         drag(drop(ref))
+    } else {
+        drag(ref)
     }
 
     return (
-        <div data-handler-id={handlerId}
-            id={`${block?.placedID}-${block.id}`} ref={drag} className={`plugin-block ${block.isPlaced ? 'plugin-block-placed' : ''}`} style={{ opacity: isDragging ? 0.5 : 1, cursor: 'move' }}>
+        <div
+            id={`${block?.placedID}-${block.id}`} ref={ref} className={`plugin-block ${block.isPlaced ? 'plugin-block-placed' : ''}`} style={{ opacity: isDragging ? 0.5 : 1, cursor: 'move' }}>
             <div className="flex flew-row justify-between">
                 <div style={{ fontWeight: "bold" }}>
                     {block.name}

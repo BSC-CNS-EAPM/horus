@@ -23,6 +23,9 @@ default_plugins_folder = os.path.join(currentDir, "AppSupport", "Plugins")
 for plugin in os.listdir(default_plugins_folder):
     # List all the files in the plugin folder
     plugin_folder = os.path.join(default_plugins_folder, plugin)
+    # Check that the folder exists and its a dir
+    if not os.path.exists(plugin_folder) or not os.path.isdir(plugin_folder):
+        continue
     for file in os.listdir(plugin_folder):
         # If the file is a folder and is called config, delete it
         if os.path.isdir(os.path.join(plugin_folder, file)) and file == "config":
