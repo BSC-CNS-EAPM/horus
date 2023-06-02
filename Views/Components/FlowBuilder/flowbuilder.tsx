@@ -34,7 +34,8 @@ export default function FlowBuilder(props: FlowBuilderProps) {
                 description: b.description,
                 plugin: b.plugin,
                 variables: b.variables,
-                isPlaced: false
+                isPlaced: false,
+                subBlocks: b.subBlocks,
             }))
             setBlocks(fb)
         }
@@ -57,12 +58,27 @@ export default function FlowBuilder(props: FlowBuilderProps) {
                     <div>
                         {
                             blocks.length === 0 ? <Loading /> : blocks.map((block, index) => {
+                                const prevBlock = index > 0 ? blocks[index - 1] : null
+                                const isDifferentPlugin = prevBlock && prevBlock.plugin !== block.plugin
                                 return (
-                                    <div key={block.id} style={{
-                                        marginBottom: "1rem"
-                                    }}>
+                                    <>
+                                        {(isDifferentPlugin || index == 0) &&
+                                            <div>
+                                                <div className="block-separator"></div>
+                                                <div className="plugin-name-block">
+                                                    {block.plugin}
+                                                </div>
+                                            </div>
+                                        }
                                         <Block {...block} />
-                                    </div>
+                                        {/* Now place the sub-blocks */}
+                                        {block.subBlocks && block.subBlocks.map((subBlock) => {
+                                            return (
+                                                <Block {...subBlock} isSubBlock={true} parent={block} />
+                                            )
+                                        })}
+
+                                    </>
                                 )
                             })
                         }

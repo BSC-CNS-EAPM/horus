@@ -15,6 +15,10 @@
     --tech-gray: #616161;
     --tech-black: #212121;
     --tech-white: #ffffff;
+
+    /* Custom colors */
+    --light-orange: #ffcc80;
+    --light-red: #ef9a9a;
   }
 }
 

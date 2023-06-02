@@ -227,6 +227,9 @@ class PluginBlock:
         # The input that the block receives WIP / maybe not needed
         self.input = None
 
+        # Sublocks are blocks that can only be placed after this block
+        self._subBlocks: typing.List[PluginBlock] = []
+
     def setAction(self, action: typing.Callable):
         self.action = action
 
@@ -338,6 +341,15 @@ class PluginBlock:
 
         # Update the values of the configs
         self.updateConfigs(configPath)
+
+    def addSubBlock(self, block: PluginBlock):
+        """
+        Adds a subblock to the block.
+        """
+        self._subBlocks.append(block)
+
+    def getSubBlocks(self):
+        return self._subBlocks
 
 
 class PluginConfig(PluginBlock):
@@ -470,6 +482,10 @@ class Plugin:
         for block in self._blocks:
             if block.id == id:
                 return block
+            # Search in the subblocks
+            for subBlock in block.getSubBlocks():
+                if subBlock.id == id:
+                    return subBlock
         raise Exception(f"Block {id} not found.")
 
     def getBlocks(self):
@@ -497,6 +513,13 @@ class Plugin:
                     config.id = f"{block.id}.config.{config.name}".replace(
                         " ", "_"
                     ).lower()
+
+                # Assign the ID to its subblocks
+                for subBlock in block.getSubBlocks():
+                    subBlock.id = f"{block.id}.{subBlock.name}".replace(
+                        " ", "_"
+                    ).lower()
+
                 self._blocks.append(block)
 
     def _addBlocks(self):

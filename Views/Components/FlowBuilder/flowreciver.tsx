@@ -5,10 +5,9 @@ import { useEffect, useState, useCallback } from "react";
 import { horusPost } from "../../Utils/utils";
 import { HorusModal } from "../reusable";
 import update from 'immutability-helper'
-
+import { RotatingLines } from "react-loader-spinner";
 // Import animejs
 import anime from "animejs";
-
 
 interface FlowReciverProps {
     openFlow?: string;
@@ -71,29 +70,65 @@ function FlowReciver(props: FlowReciverProps) {
     )
 
     const moveBlockHandler = (dragIndex: number, hoverIndex: number) => {
+        var newIndex = dragIndex;
         setBlocks(prevState => {
             const dragBlock = prevState[dragIndex];
             if (dragBlock) {
+
+                // If the dragblock has a parent, check if the parent is the same as the hover block
+                if (dragBlock.parent) {
+                    if (dragBlock.parent.id === prevState[hoverIndex].id) {
+                        return prevState;
+                    }
+                    // Check that if the block was placed, the parent matches
+                    if (dragBlock.parent.id !== prevState[hoverIndex - 1].id && dragBlock.parent.id !== prevState[hoverIndex].parent.id) {
+                        return prevState;
+                    }
+                }
+
                 const copiedState = [...prevState];
+                // // Remove the block from the old position
+                // const prevItem = copiedState.splice(hoverIndex, 1, dragBlock);
 
-                // Remove the block from the old position
-                const prevItem = copiedState.splice(hoverIndex, 1, dragBlock);
+                // // Remove block on dragIndex and put it on hoverIndex
+                // copiedState.splice(dragIndex, 1, prevItem[0]);
 
-                // Remove block on dragIndex and put it on hoverIndex
-                copiedState.splice(dragIndex, 1, prevItem[0]);
+                update(copiedState, {
+                    $splice: [
+                        [dragIndex, 1],
+                        [hoverIndex, 0, dragBlock],
+                    ],
+                });
+
+                // Set the flow as not saved because it has changed
+                setSaved(false);
+
+                // Set the new index of the block
+                newIndex = hoverIndex;
 
                 return copiedState;
             }
             return prevState;
         });
+
+        // Return the new index of the block
+        return newIndex;
     };
 
 
     // Remove the block from the list
     const removeBlock = (block: BlockProps) => {
         setBlocks(prevBlocks => {
-            // Filter out the block to be removed
-            const updatedBlocks = prevBlocks.filter(item => item.placedID !== block.placedID);
+            // Filter out the block to be removed and its children
+            const updatedBlocks = prevBlocks.filter(item => {
+                if (item.placedID === block.placedID) {
+                    return false;
+                }
+                if (item.parent && item.parent.placedID === block.placedID) {
+                    return false;
+                }
+                return true;
+            });
 
             // Set the flow as not saved because it has changed
             setSaved(false);
@@ -108,6 +143,25 @@ function FlowReciver(props: FlowReciverProps) {
         if (block.isPlaced) {
             return
         }
+
+        // Allow to place only if the block before is its parent or if the block has te same parent
+        if (block.parent !== undefined) {
+            if (blocks.length === 0) {
+                return
+            }
+            const lastBlock = blocks[blocks.length - 1]
+            if (lastBlock.id !== block.parent.id && lastBlock.parent.id !== block.parent.id) {
+                return
+            }
+            // If we can place it, update its parent.placedID
+            if (lastBlock.parent !== undefined) {
+                block.parent.placedID = lastBlock.parent.placedID
+            } else {
+                block.parent.placedID = lastBlock.placedID
+            }
+        }
+
+
 
         // Set the placedID
         const newBlock = { ...block, placedID: placedID }
@@ -263,25 +317,28 @@ function FlowReciver(props: FlowReciverProps) {
         <div ref={drop} className="current-flow">
             {modal}
             <h1 className="flex flex-row">
-                <input type="text" id="flow-name" placeholder={props.flowName} onChange={onNameChange} />
-                <button onClick={handleSave}>
+                <input className="flow-name" type="text" id="flow-name" placeholder={props.flowName} onChange={onNameChange} />
+                <button onClick={handleSave} className="flow-button">
                     {
-                        saved ? (<svg xmlns="http://www.w3.org/2000/svg" fill="green" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                        saved ? (<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
                         </svg>
-                        ) : (<svg xmlns="http://www.w3.org/2000/svg" fill="orange" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                        ) : (<svg xmlns="http://www.w3.org/2000/svg" fill="var(--light-orange)" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3l3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
                         </svg>
                         )
                     }
                 </button>
-                <button onClick={handleExecuteAll}>
-                    {executingAll ? (<svg xmlns="http://www.w3.org/2000/svg" fill="red" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 9.563C9 9.252 9.252 9 9.563 9h4.874c.311 0 .563.252.563.563v4.874c0 .311-.252.563-.563.563H9.564A.562.562 0 019 14.437V9.564z" />
-                    </svg>
+                <button onClick={handleExecuteAll} className="flow-button">
+                    {executingAll ? (
+                        <RotatingLines
+                            strokeColor="grey"
+                            strokeWidth="5"
+                            animationDuration="0.75"
+                            width="40"
+                        />
                     ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="green" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z" />
                         </svg>
@@ -290,13 +347,9 @@ function FlowReciver(props: FlowReciverProps) {
             </h1>
             <div className="flex flex-col align-items-center">
                 {blocks.map((block, index) => (
-                    <div key={block.placedID} style={{
-                        marginBottom: "1rem"
-                    }}>
-                        <Block key={
-                            `${block.placedID}-${block.id}`
-                        } {...block} onChange={onblockChange} execute={executeBlock} index={index} />
-                    </div>
+                    <Block key={
+                        `${block.placedID}-${block.id}`
+                    } {...block} onChange={onblockChange} execute={executeBlock} index={index} />
                 ))}
             </div>
         </div>

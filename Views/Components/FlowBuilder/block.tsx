@@ -2,6 +2,7 @@ import { Identifier, XYCoord } from "dnd-core";
 import { DropTargetMonitor, useDrag, useDrop } from "react-dnd";
 import { useEffect, useState, useRef } from "react";
 import { horusPost } from "../../Utils/utils";
+import { RotatingLines } from "react-loader-spinner";
 
 import { BlockProps, PluginVariable, PluginVariableType, PluginVariableTypes } from "../../Interfaces/plugins";
 
@@ -43,13 +44,19 @@ function PlayBlockButton(
     { isRunning, runError, onClick }: PlayBlockButtonProps
 ) {
     return (<CustomPopover trigger={
-        <button onClick={onClick}>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
-                fill={isRunning ? "green" : (runError ? "red" : "currentColor")}
-                className="w-5 h-5">
-                <path fillRule="evenodd" d="M2 10a8 8 0 1116 0 8 8 0 01-16 0zm6.39-2.908a.75.75 0 01.766.027l3.5 2.25a.75.75 0 010 1.262l-3.5 2.25A.75.75 0 018 12.25v-4.5a.75.75 0 01.39-.658z" clipRule="evenodd" />
-            </svg>
-        </button>
+        isRunning ?
+            (<RotatingLines
+                strokeColor="grey"
+                strokeWidth="5"
+                animationDuration="0.75"
+                width="20"
+            />) : (<button onClick={onClick}>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+                    fill={runError ? "red" : "current"}
+                    className="w-5 h-5">
+                    <path fillRule="evenodd" d="M2 10a8 8 0 1116 0 8 8 0 01-16 0zm6.39-2.908a.75.75 0 01.766.027l3.5 2.25a.75.75 0 010 1.262l-3.5 2.25A.75.75 0 018 12.25v-4.5a.75.75 0 01.39-.658z" clipRule="evenodd" />
+                </svg>
+            </button>)
     }>
         <div className="plugin-description">Execute block</div>
     </CustomPopover>)
@@ -162,7 +169,7 @@ const CustomPopover = ({ trigger, children }) => {
     return (
         <Popover className="relative">
             <Popover.Button onMouseOver={handleOpen} onMouseLeave={handleClose}>{trigger}</Popover.Button>
-            {isOpen && (<Popover.Panel className="absolute z-30" static>
+            {isOpen && (<Popover.Panel className="absolute" static>
                 {children}
             </Popover.Panel>)}
         </Popover>
@@ -176,6 +183,9 @@ function Block(block: BlockProps) {
     // Track the mouse position
     const [isHovering, setIsHovering] = useState(false)
 
+    // Track hovering on info button to display the description instead of the plugin
+    const [isInfoHovering, setIsInfoHovering] = useState(false)
+
     const handleMouseOver = () => {
         setIsHovering(true)
     }
@@ -185,7 +195,7 @@ function Block(block: BlockProps) {
     }
 
 
-    function handleHover(hoverBlock: BlockProps, monitor: DropTargetMonitor) {
+    function handleDrop(hoverBlock: BlockProps, monitor: DropTargetMonitor) {
         if (!ref.current) {
             return
         }
@@ -232,6 +242,7 @@ function Block(block: BlockProps) {
         // but it's good here for the sake of performance
         // to avoid expensive index searches.
         hoverBlock.index = hoverIndex
+
     }
 
     const [, drop] = useDrop({
@@ -240,7 +251,7 @@ function Block(block: BlockProps) {
             item: BlockProps,
             monitor: DropTargetMonitor
         ) {
-            handleHover(item, monitor)
+            handleDrop(item, monitor)
         }
     })
 
@@ -259,7 +270,9 @@ function Block(block: BlockProps) {
                 variables: block.variables,
                 isPlaced: block.isPlaced,
                 index: block.index,
-                moveBlock: block.moveBlock
+                moveBlock: block.moveBlock,
+                isSubBlock: block.isSubBlock,
+                parent: block.parent,
             }
         },
     }))
@@ -293,23 +306,29 @@ function Block(block: BlockProps) {
 
     return (
         <div
-            id={`${block?.placedID}-${block.id}`} ref={ref} className={`plugin-block ${block.isPlaced ? 'plugin-block-placed' : ''}`} style={{ opacity: isDragging ? 0.5 : 1, cursor: 'move' }}>
+            id={`${block?.placedID}-${block.id}`} ref={ref} className={
+                `${block.isSubBlock ? 'subblock' : ''} plugin-block ${block.isPlaced ? 'plugin-block-placed' : ''}`
+            } style={{ opacity: isDragging ? 0.5 : 1, cursor: isDragging ? "grabbing" : "grab" }}>
             <div className="flex flew-row justify-between">
                 <div style={{ fontWeight: "bold" }}>
                     {block.name}
                 </div>
-                {/* Play button to execute the block */}
-                {block.isPlaced && <PlayBlockButton isRunning={block.isRunning} runError={block.runError} onClick={handleExecute} />}
-                {/* Delete button to remove the block from the canvas */}
-                {block.isPlaced && <DeleteBlockButton block={block} onClick={() => block.deleteBlock(block)} />}
+                <div className="flex flex-row gap-1">
+                    {/* Play button to execute the block */}
+                    {block.isPlaced && <PlayBlockButton isRunning={block.isRunning} runError={block.runError} onClick={handleExecute} />}
+                    {/* Delete button to remove the block from the canvas */}
+                    {block.isPlaced && <DeleteBlockButton block={block} onClick={() => block.deleteBlock(block)} />}
 
-                <CustomPopover trigger={
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clipRule="evenodd" />
-                    </svg>
-                }>
-                    <div className="plugin-description">{block.description}</div>
-                </CustomPopover>
+                    {!block.isPlaced && <div onMouseOver={
+                        () => setIsInfoHovering(true)
+                    } onMouseLeave={
+                        () => setIsInfoHovering(false)
+                    } className="cursor-help">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clipRule="evenodd" />
+                        </svg>
+                    </div>}
+                </div>
             </div>
             {
                 block.isPlaced && (
@@ -319,7 +338,10 @@ function Block(block: BlockProps) {
                         ))}
                     </div>)
             }
-            <p>{block.plugin}</p>
+            <div className={'text-gray-500 transition-opacity duration-300 ' + (isInfoHovering || block.isPlaced ? 'opacity-100' : 'opacity-0')}
+            >
+                {isInfoHovering || block.isPlaced ? block.description : null}
+            </div>
         </div>
     )
 }

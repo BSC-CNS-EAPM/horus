@@ -57,6 +57,9 @@ interface BlockProps {
     index?: number;
     moveBlock?: (dragIndex: number, hoverIndex: number) => void;
     deleteBlock?: (block: BlockProps) => void;
+    subBlocks?: BlockProps[];
+    isSubBlock?: boolean;
+    parent?: BlockProps;
 }
 
 // Export the interfaces

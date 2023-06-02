@@ -87,14 +87,12 @@ def createYAML(block: PluginBlock):
 
 # Define the Input Yaml block
 createYAMLBlock = PluginBlock(
-    name="Create input YAML",
+    name="NBDSuite input",
     description="Creates a NBDSuite input file.",
     action=createYAML,
     variables=[systemData, ligandData, testVariable, testBoolean, test_stringlist],
 )
 
-# Add the Input Yaml block to the plugin
-plugin.addBlock(createYAMLBlock)
 
 # Create a Topology Fixer block
 topologyFixerBlock = PluginBlock(
@@ -112,9 +110,6 @@ topologyFixerBlock = PluginBlock(
     ],
 )
 
-# Add the Topology Fixer block to the plugin
-plugin.addBlock(topologyFixerBlock)
-
 # Create an Adaptive PELE block
 peleBlock = PluginBlock(
     name="Adaptive PELE",
@@ -130,12 +125,6 @@ peleBlock = PluginBlock(
         ),
     ],
 )
-
-# Add the Topology Fixer block to the PELE block
-plugin.addBlock(peleBlock)
-
-# Add the PELE block to the plugin
-plugin.addBlock(peleBlock)
 
 
 def runSimulation(block: PluginBlock):
@@ -180,18 +169,28 @@ peleLicense = PluginConfig(
 # Add tje peleLicense to the runSimulationBlock
 runSimulationBlock.addConfig(peleLicense)
 
-# Add the runSimulationBlock to the plugin
-plugin.addBlock(runSimulationBlock)
+
+def sendingSimulation(block: PluginBlock):
+    print("Sending simulation...")
+    time.sleep(5)
+    print("Done sending simulation")
+
 
 sendSimulation = PluginBlock(
     name="Send simulation",
     description="Sends the simulation to the server.",
-    action=lambda block: print("Sending simulation..."),
+    action=sendingSimulation,
     variables=[],
 )
 
-# Add the Send simulation block to the plugin
-plugin.addBlock(sendSimulation)
+# Add the blocks as a sublock of the createYAMLBlock
+createYAMLBlock.addSubBlock(sendSimulation)
+createYAMLBlock.addSubBlock(peleBlock)
+createYAMLBlock.addSubBlock(runSimulationBlock)
+createYAMLBlock.addSubBlock(topologyFixerBlock)
+
+# Add the Input Yaml block to the plugin
+plugin.addBlock(createYAMLBlock)
 
 
 def waiterFunction(block: PluginBlock):

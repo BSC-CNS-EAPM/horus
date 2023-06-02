@@ -336,6 +336,21 @@ class PluginManager:
             errorPlugins.append(info)
         return {"plugins": listedPlugins, "errors": errorPlugins}
 
+    def __getBlocksFromList(self, plugin: Plugin, blockList: list[PluginBlock]):
+        newBlocks: list[dict[str, typing.Any]] = []
+        for b in blockList:
+            newBlock = {
+                "id": b.id,
+                "plugin": plugin.info["name"],
+                "name": b.name,
+                "description": b.description,
+                "variables": self.getVariables(b),
+                "subBlocks": self.__getBlocksFromList(plugin, b.getSubBlocks()),
+            }
+            newBlocks.append(newBlock)
+
+        return newBlocks
+
     def getBlocks(self):
         """
         Returns a list of all the blocks of all the plugins (without the configs).
@@ -343,16 +358,7 @@ class PluginManager:
         self._initializePlugins()
         blocks: list[dict[str, typing.Any]] = []
         for p in self.loadedPlugins:
-            for b in p.blocks:
-                blocks.append(
-                    {
-                        "id": b.id,
-                        "plugin": p.info["name"],
-                        "name": b.name,
-                        "description": b.description,
-                        "variables": self.getVariables(b),
-                    }
-                )
+            blocks += self.__getBlocksFromList(p, p.blocks)
         return blocks
 
     def getVariables(self, block: PluginBlock):
