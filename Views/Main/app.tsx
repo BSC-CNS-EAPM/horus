@@ -1,7 +1,7 @@
 import { Route, Routes } from "react-router-dom"
 
 import Molstar from "../Components/Molstar/molstar";
-import FlowBuilder from "../Components/FlowBuilder/flowbuilder";
+import FlowBuilder from "../Components/FlowBuilder/flow_builder";
 import HorusToolbar from "../Components/Toolbar/toolbar";
 import HorusTerm from "../Components/Console/console";
 

@@ -6,7 +6,7 @@ import "./plugin_manager.css"
 import { SearchComponent } from "../Components/Toolbar/toolbar";
 import { HorusModal } from "../Components/reusable";
 
-import { HorusPlugin, BlockProps, PluginVariableType } from "../Interfaces/plugins";
+import { HorusPlugin, BlockProps, PluginVariableType } from "../Interfaces/plugin_interface";
 import { HorusModalProps } from "../Components/reusable";
 import { PluginVariable } from "../Components/FlowBuilder/block";
 

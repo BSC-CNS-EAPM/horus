@@ -1,14 +1,13 @@
-import { Identifier, XYCoord } from "dnd-core";
-import { DropTargetMonitor, useDrag, useDrop } from "react-dnd";
 import { useEffect, useState, useRef } from "react";
-import { horusPost } from "../../Utils/utils";
 import { RotatingLines } from "react-loader-spinner";
+import { CSS } from '@dnd-kit/utilities';
 
-import { BlockProps, PluginVariable, PluginVariableType, PluginVariableTypes } from "../../Interfaces/plugins";
+import { BlockProps, PluginVariable, PluginVariableType, PluginVariableTypes } from "./flow_builder_interfaces";
 
 import "./block.css"
 
 import { Popover } from "@headlessui/react";
+import { useSortable } from "@dnd-kit/sortable";
 
 interface DeleteBlockButtonProps {
     block: BlockProps;
@@ -194,88 +193,35 @@ function Block(block: BlockProps) {
         setIsHovering(false)
     }
 
-
-    function handleDrop(hoverBlock: BlockProps, monitor: DropTargetMonitor) {
-        if (!ref.current) {
-            return
-        }
-        const dragIndex = hoverBlock.index
-        const hoverIndex = block.index
-
-        // Don't replace items with themselves
-        if (dragIndex === hoverIndex) {
-            return
-        }
-
-        // Determine rectangle on screen
-        const hoverBoundingRect = ref.current?.getBoundingClientRect()
-
-        // Get vertical middle
-        const hoverMiddleY =
-            (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2
-
-        // Determine mouse position
-        const clientOffset = monitor.getClientOffset()
-
-        // Get pixels to the top
-        const hoverClientY = (clientOffset as XYCoord).y - hoverBoundingRect.top
-
-        // Only perform the move when the mouse has crossed half of the items height
-        // When dragging downwards, only move when the cursor is below 50%
-        // When dragging upwards, only move when the cursor is above 50%
-
-        // Dragging downwards
-        if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) {
-            return
-        }
-
-        // Dragging upwards
-        if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) {
-            return
-        }
-
-        // Time to actually perform the action
-        block.moveBlock(dragIndex, hoverIndex)
-
-        // Note: we're mutating the monitor item here!
-        // Generally it's better to avoid mutations,
-        // but it's good here for the sake of performance
-        // to avoid expensive index searches.
-        hoverBlock.index = hoverIndex
-
+    const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({
+        id: block.id,
+        data: { block: block },
+    })
+    const style = {
+        cursor: isDragging ? "grabbing" : "grab"
     }
 
-    const [, drop] = useDrop({
-        accept: ItemTypes.BLOCK,
-        hover(
-            item: BlockProps,
-            monitor: DropTargetMonitor
-        ) {
-            handleDrop(item, monitor)
-        }
-    })
-
-    const [{ isDragging }, drag] = useDrag(() => ({
-        type: ItemTypes.BLOCK,
-        collect: (monitor: any) => ({
-            isDragging: monitor.isDragging(),
-        }),
-        // Assing the item to the drag (BlockProps)
-        item: () => {
-            return {
-                id: block.id,
-                name: block.name,
-                description: block.description,
-                plugin: block.plugin,
-                variables: block.variables,
-                isPlaced: block.isPlaced,
-                index: block.index,
-                moveBlock: block.moveBlock,
-                isSubBlock: block.isSubBlock,
-                parent: block.parent,
-            }
-        },
-    }))
+    // const [{ isDragging }, drag] = useDrag(() => ({
+    //     type: ItemTypes.BLOCK,
+    //     collect: (monitor: any) => ({
+    //         isDragging: monitor.isDragging(),
+    //     }),
+    //     // Assing the item to the drag (BlockProps)
+    //     item: () => {
+    //         return {
+    //             id: block.id,
+    //             name: block.name,
+    //             description: block.description,
+    //             plugin: block.plugin,
+    //             variables: block.variables,
+    //             isPlaced: block.isPlaced,
+    //             index: block.index,
+    //             moveBlock: block.moveBlock,
+    //             isSubBlock: block.isSubBlock,
+    //             parent: block.parent,
+    //         }
+    //     },
+    // }))
 
     const handleChange = (value: PluginVariableType, id: string) => {
         // Update the variable value by searching the PluginVariable by id
@@ -298,17 +244,11 @@ function Block(block: BlockProps) {
         await block.execute(block)
     }
 
-    if (block.isPlaced) {
-        drag(drop(ref))
-    } else {
-        drag(ref)
-    }
-
     return (
         <div
-            id={`${block?.placedID}-${block.id}`} ref={ref} className={
+            id={`${block?.placedID}-${block.id}`} ref={setNodeRef} style={style} {...listeners} {...attributes} className={
                 `${block.isSubBlock ? 'subblock' : ''} plugin-block ${block.isPlaced ? 'plugin-block-placed' : ''}`
-            } style={{ opacity: isDragging ? 0.5 : 1, cursor: isDragging ? "grabbing" : "grab" }}>
+            }>
             <div className="flex flew-row justify-between">
                 <div style={{ fontWeight: "bold" }}>
                     {block.name}
@@ -342,6 +282,20 @@ function Block(block: BlockProps) {
             >
                 {isInfoHovering || block.isPlaced ? block.description : null}
             </div>
+            {
+                !block.isSubBlock && block.isPlaced && (
+                    <div className="mt-2">
+                        <div>
+                            {block.placedSubBlocks?.map((subBlock, index) => (
+                                <Block key={subBlock.id} {...subBlock} />
+                            ))}
+                        </div>
+                        <div className="plugin-block subblock subblock-placeholder">
+                            Place subblocks here...
+                        </div>
+                    </div>
+                )
+            }
         </div>
     )
 }

@@ -9,5 +9,5 @@ from HorusAPI import Plugin, PluginBlock, PluginVariable, VariableTypes, PluginP
 #         "version": "0.0.1",
 #     }
 
-
+x2
 plugin = Paloide()

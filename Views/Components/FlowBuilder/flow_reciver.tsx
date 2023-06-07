@@ -1,26 +1,21 @@
-import { ItemTypes, Block } from "./block";
-import { BlockProps } from "../../Interfaces/plugins";
-import { useDrop } from "react-dnd";
-import { useEffect, useState, useCallback } from "react";
+import { Block } from "./block";
+import { BlockProps, FlowReciverProps } from "./flow_builder_interfaces";
+import { useEffect, useState } from "react";
 import { horusPost } from "../../Utils/utils";
 import { HorusModal } from "../reusable";
 import update from 'immutability-helper'
 import { RotatingLines } from "react-loader-spinner";
+
 // Import animejs
 import anime from "animejs";
 
-interface FlowReciverProps {
-    openFlow?: string;
-    flowName: string;
-}
-
+// Import the dndkit
+import { DndContext, useDroppable } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 
 var placedID = 0
 
 function FlowReciver(props: FlowReciverProps) {
-
-    // Block states
-    const [blocks, setBlocks] = useState<BlockProps[]>([])
 
     // Modal state
     const [showModal, setShowModal] = useState(false);
@@ -59,134 +54,142 @@ function FlowReciver(props: FlowReciverProps) {
         }
     }, [blockAnimation])
 
-    const [, drop] = useDrop(
-        () => ({
-            accept: ItemTypes.BLOCK,
-            drop: (item: BlockProps) => {
-                addBlock(item)
-            }
-        }),
-        [blocks],
-    )
-
-    const moveBlockHandler = (dragIndex: number, hoverIndex: number) => {
-        var newIndex = dragIndex;
-        setBlocks(prevState => {
-            const dragBlock = prevState[dragIndex];
-            if (dragBlock) {
-
-                // If the dragblock has a parent, check if the parent is the same as the hover block
-                if (dragBlock.parent) {
-                    if (dragBlock.parent.id === prevState[hoverIndex].id) {
-                        return prevState;
-                    }
-                    // Check that if the block was placed, the parent matches
-                    if (dragBlock.parent.id !== prevState[hoverIndex - 1].id && dragBlock.parent.id !== prevState[hoverIndex].parent.id) {
-                        return prevState;
-                    }
-                }
-
-                const copiedState = [...prevState];
-                // // Remove the block from the old position
-                // const prevItem = copiedState.splice(hoverIndex, 1, dragBlock);
-
-                // // Remove block on dragIndex and put it on hoverIndex
-                // copiedState.splice(dragIndex, 1, prevItem[0]);
-
-                update(copiedState, {
-                    $splice: [
-                        [dragIndex, 1],
-                        [hoverIndex, 0, dragBlock],
-                    ],
-                });
-
-                // Set the flow as not saved because it has changed
-                setSaved(false);
-
-                // Set the new index of the block
-                newIndex = hoverIndex;
-
-                return copiedState;
-            }
-            return prevState;
-        });
-
-        // Return the new index of the block
-        return newIndex;
+    const { isOver, setNodeRef } = useDroppable({
+        id: 'droppable',
+    });
+    const style = {
+        color: isOver ? 'green' : undefined,
     };
 
+    // Set the new index of the block   
+    const [activeId, setActiveId] = useState(null);
 
-    // Remove the block from the list
-    const removeBlock = (block: BlockProps) => {
-        setBlocks(prevBlocks => {
-            // Filter out the block to be removed and its children
-            const updatedBlocks = prevBlocks.filter(item => {
-                if (item.placedID === block.placedID) {
-                    return false;
-                }
-                if (item.parent && item.parent.placedID === block.placedID) {
-                    return false;
-                }
-                return true;
-            });
+    // const moveBlockHandler = (dragIndex: number, hoverIndex: number) => {
 
-            // Set the flow as not saved because it has changed
-            setSaved(false);
+    //     var newIndex = dragIndex;
+    //     setBlocks(prevState => {
+    //         const dragBlock = prevState[dragIndex];
+    //         if (dragBlock) {
 
-            return updatedBlocks;
-        });
-    };
+    //             // If the dragblock has a parent, check if the parent is the same as the hover block
+    //             if (dragBlock.parent) {
+    //                 if (dragBlock.parent.id === prevState[hoverIndex].id) {
+    //                     return prevState;
+    //                 }
+    //                 // Check that if the block was placed, the parent matches
+    //                 if (dragBlock.parent.id !== prevState[hoverIndex - 1].id && dragBlock.parent.id !== prevState[hoverIndex].parent.id) {
+    //                     return prevState;
+    //                 }
+    //             }
 
-    const addBlock = (block: BlockProps) => {
+    //             const copiedState = [...prevState];
+    //             // // Remove the block from the old position
+    //             // const prevItem = copiedState.splice(hoverIndex, 1, dragBlock);
 
-        // If the block is already placed, move it to the new position
-        if (block.isPlaced) {
-            return
-        }
+    //             // // Remove block on dragIndex and put it on hoverIndex
+    //             // copiedState.splice(dragIndex, 1, prevItem[0]);
 
-        // Allow to place only if the block before is its parent or if the block has te same parent
-        if (block.parent !== undefined) {
-            if (blocks.length === 0) {
-                return
-            }
-            const lastBlock = blocks[blocks.length - 1]
-            if (lastBlock.id !== block.parent.id && lastBlock.parent.id !== block.parent.id) {
-                return
-            }
-            // If we can place it, update its parent.placedID
-            if (lastBlock.parent !== undefined) {
-                block.parent.placedID = lastBlock.parent.placedID
-            } else {
-                block.parent.placedID = lastBlock.placedID
-            }
-        }
+    //             update(copiedState, {
+    //                 $splice: [
+    //                     [dragIndex, 1],
+    //                     [hoverIndex, 0, dragBlock],
+    //                 ],
+    //             });
+
+    //             // Set the flow as not saved because it has changed
+    //             setSaved(false);
+
+    //             // Set the new index of the block
+    //             newIndex = hoverIndex;
+
+    //             return copiedState;
+    //         }
+    //         return prevState;
+    //     });
+
+    //     // Return the new index of the block
+    //     return newIndex;
+    // };
+
+
+    // // Remove the block from the list
+    // const removeBlock = (block: BlockProps) => {
+    //     setBlocks(prevBlocks => {
+    //         // Filter out the block to be removed and its children
+    //         const updatedBlocks = prevBlocks.filter(item => {
+    //             if (item.placedID === block.placedID) {
+    //                 return false;
+    //             }
+    //             if (item.parent && item.parent.placedID === block.placedID) {
+    //                 return false;
+    //             }
+    //             return true;
+    //         });
+
+    //         // Set the flow as not saved because it has changed
+    //         setSaved(false);
+
+    //         return updatedBlocks;
+    //     });
+    // };
+
+    // const addBlock = (event) => {
+
+    //     console.log("Adding block")
+    //     console.log(event)
+
+    //     const block: BlockProps = {
+    //         ...event.data.block
+    //     }
+
+    //     // If the block is already placed, move it to the new position
+    //     if (block.isPlaced) {
+    //         return
+    //     }
+
+    //     // Allow to place only if the block before is its parent or if the block has te same parent
+    //     if (block.parent !== undefined) {
+    //         if (blocks.length === 0) {
+    //             return
+    //         }
+    //         const lastBlock = blocks[blocks.length - 1]
+    //         if (lastBlock.id !== block.parent.id && lastBlock.parent.id !== block.parent.id) {
+    //             return
+    //         }
+    //         // If we can place it, update its parent.placedID
+    //         if (lastBlock.parent !== undefined) {
+    //             block.parent.placedID = lastBlock.parent.placedID
+    //         } else {
+    //             block.parent.placedID = lastBlock.placedID
+    //         }
+    //     }
 
 
 
-        // Set the placedID
-        const newBlock = { ...block, placedID: placedID }
+    //     // Set the placedID
+    //     const newBlock = { ...block, placedID: placedID }
 
-        // Set the new block as placed
-        newBlock.isPlaced = true
+    //     // Set the new block as placed
+    //     newBlock.isPlaced = true
 
-        // Increment the placedID
-        placedID++
+    //     // Increment the placedID
+    //     placedID++
 
-        // Add the moveBlock function to the block
-        newBlock.moveBlock = moveBlockHandler
+    //     // Add the moveBlock function to the block
+    //     newBlock.moveBlock = moveBlockHandler
 
-        // Add the removeBlock function to the block
-        newBlock.deleteBlock = removeBlock
+    //     // Add the removeBlock function to the block
+    //     newBlock.deleteBlock = removeBlock
 
-        setBlocks([...blocks, newBlock])
+    //     setBlocks([...blocks, newBlock])
 
-        // Set the flow as not saved because it has changed
-        setSaved(false)
+    //     // Set the flow as not saved because it has changed
+    //     setSaved(false)
 
-        // Set the animation
-        setBlockAnimation(`${newBlock.placedID}-${newBlock.id}`)
+    //     // Set the animation
+    //     setBlockAnimation(`${newBlock.placedID}-${newBlock.id}`)
 
-    }
+    // }
 
     const handleSave = async () => {
         // Tell the server to save the flow
@@ -229,13 +232,13 @@ function FlowReciver(props: FlowReciverProps) {
 
     const executeBlock = async (block) => {
 
-        //Set the running button
-        setBlocks(blocks.map(b => {
-            if (b.placedID === block.placedID) {
-                b.isRunning = true
-            }
-            return b
-        }))
+        // //Set the running button
+        // setBlocks(blocks.map(b => {
+        //     if (b.placedID === block.placedID) {
+        //         b.isRunning = true
+        //     }
+        //     return b
+        // }))
 
         // Get the updated block variables
         const variables = block.variables.reduce((acc, variable) => {
@@ -264,32 +267,32 @@ function FlowReciver(props: FlowReciverProps) {
                 throw new Error(data.message)
             }
             else {
-                setBlocks(blocks.map(b => {
-                    if (b.placedID === block.placedID) {
-                        b.runError = false
-                    }
-                    return b
-                }))
+                // setBlocks(blocks.map(b => {
+                //     if (b.placedID === block.placedID) {
+                //         b.runError = false
+                //     }
+                //     return b
+                // }))
             }
         }
         catch (e) {
             console.log(e)
-            setBlocks(blocks.map(b => {
-                if (b.placedID === block.placedID) {
-                    b.runError = true
-                }
-                return b
-            }))
+            // setBlocks(blocks.map(b => {
+            //     if (b.placedID === block.placedID) {
+            //         b.runError = true
+            //     }
+            //     return b
+            // }))
         }
 
         // Set the running button
-        setBlocks(blocks.map(b => {
-            if (b.placedID === block.placedID) {
-                b.isRunning = false
-            }
-            return b
-        }
-        ))
+        // setBlocks(blocks.map(b => {
+        //     if (b.placedID === block.placedID) {
+        //         b.isRunning = false
+        //     }
+        //     return b
+        // }
+        // ))
     }
 
     const handleExecuteAll = async () => {
@@ -297,10 +300,10 @@ function FlowReciver(props: FlowReciverProps) {
         setExecutingAll(true)
 
         // Loop over the blocks and execute them
-        for (let i = 0; i < blocks.length; i++) {
-            const b = blocks[i]
-            await executeBlock(b)
-        }
+        // for (let i = 0; i < blocks.length; i++) {
+        //     const b = blocks[i]
+        //     await executeBlock(b)
+        // }
 
         // Set the executing state to false
         setExecutingAll(false)
@@ -313,8 +316,16 @@ function FlowReciver(props: FlowReciverProps) {
 
     const onblockChange = () => (setSaved(false))
 
+    function handleDragStart(event) {
+        setActiveId(event.active.id);
+    }
+
+    function handleDragEnd() {
+        setActiveId(null);
+    }
+
     return (
-        <div ref={drop} className="current-flow">
+        <div ref={setNodeRef} className="current-flow">
             {modal}
             <h1 className="flex flex-row">
                 <input className="flow-name" type="text" id="flow-name" placeholder={props.flowName} onChange={onNameChange} />
@@ -346,11 +357,16 @@ function FlowReciver(props: FlowReciverProps) {
                 </button>
             </h1>
             <div className="flex flex-col align-items-center">
-                {blocks.map((block, index) => (
-                    <Block key={
-                        `${block.placedID}-${block.id}`
-                    } {...block} onChange={onblockChange} execute={executeBlock} index={index} />
-                ))}
+                <SortableContext
+                    items={props.placedBlocks}
+                    strategy={verticalListSortingStrategy}
+                >
+                    {props.placedBlocks.map((block, index) => (
+                        <Block key={
+                            `${block.placedID}-${block.id}`
+                        } {...block} onChange={onblockChange} execute={executeBlock} index={index} />
+                    ))}
+                </SortableContext>
             </div>
         </div>
     )

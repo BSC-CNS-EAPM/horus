@@ -17,7 +17,15 @@
     margin-left: auto
 }
 
-.plugin-block:hover:not(.plugin-block-placed) {
+.subblock-placeholder {
+    width: calc(100% - 2rem) !important;
+    height: 100%;
+    margin-left: auto;
+    background-color: #f5f5f5;
+    color: gainsboro
+}
+
+.plugin-block:hover:not(.plugin-block-placed, .subblock-placeholder) {
     transform: scale(1.05) rotate(1deg);
 }
 
