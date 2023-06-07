@@ -301,33 +301,7 @@ class PluginManager:
             info["actions"] = str(len(p.actions) if p.actions else 0)
             info["views"] = str(len(p.views))
             info["id"] = p.id
-
-            # List the blocks
-            blocks = []
-            for b in p.blocks:
-                # List configuration blocks
-                configs = []
-                for c in b.getConfigs():
-                    configs.append(
-                        {
-                            "id": c.id,
-                            "name": c.name,
-                            "description": c.description,
-                            "variables": self.getVariables(c),
-                        }
-                    )
-
-                blocks.append(
-                    {
-                        "id": b.id,
-                        "name": b.name,
-                        "description": b.description,
-                        "variables": self.getVariables(b),
-                        "config": configs,
-                    }
-                )
-            info["blocks"] = blocks
-
+            info["blocks"] = self._getBlocksFromList(p, p.blocks)
             listedPlugins.append(info)
         for ep in self.errorPlugins:
             info = ep.info
@@ -336,7 +310,7 @@ class PluginManager:
             errorPlugins.append(info)
         return {"plugins": listedPlugins, "errors": errorPlugins}
 
-    def __getBlocksFromList(self, plugin: Plugin, blockList: list[PluginBlock]):
+    def _getBlocksFromList(self, plugin: Plugin, blockList: list[PluginBlock]):
         newBlocks: list[dict[str, typing.Any]] = []
         for b in blockList:
             newBlock = {
@@ -345,11 +319,25 @@ class PluginManager:
                 "name": b.name,
                 "description": b.description,
                 "variables": self.getVariables(b),
-                "subBlocks": self.__getBlocksFromList(plugin, b.getSubBlocks()),
+                "subBlocks": self._getBlocksFromList(plugin, b.getSubBlocks()),
+                "config": self._getConfigFromBlock(b),
             }
             newBlocks.append(newBlock)
 
         return newBlocks
+
+    def _getConfigFromBlock(self, block: PluginBlock):
+        configs = []
+        for c in block.getConfigs():
+            configs.append(
+                {
+                    "id": c.id,
+                    "name": c.name,
+                    "description": c.description,
+                    "variables": self.getVariables(c),
+                }
+            )
+        return configs
 
     def getBlocks(self):
         """
@@ -358,7 +346,7 @@ class PluginManager:
         self._initializePlugins()
         blocks: list[dict[str, typing.Any]] = []
         for p in self.loadedPlugins:
-            blocks += self.__getBlocksFromList(p, p.blocks)
+            blocks += self._getBlocksFromList(p, p.blocks)
         return blocks
 
     def getVariables(self, block: PluginBlock):
@@ -488,13 +476,25 @@ class PluginManager:
                 )
         return pages
 
+    def _blocksPlusSubBlocks(self, plugin: Plugin):
+        """
+        Returns a list of all the blocks of a plugin, including the subblocks.
+        """
+        blocks = plugin.blocks
+        for block in plugin.blocks:
+            blocks += block.getSubBlocks()
+        return blocks
+
     def _initConfig(self, plugin: Plugin):
         """
         Initializes the config file for the blocks of the plugin.
         """
 
-        # Loop through all the blocks
-        for block in plugin.blocks:
+        # allBlocks = self._blocksPlusSubBlocks(plugin)
+        def initBlockConfig(block: PluginBlock):
+            """
+            Initializes the config file for a block.
+            """
             # Get the path of the config file
             configPath = self._blockConfigPath(block)
 
@@ -504,6 +504,14 @@ class PluginManager:
             else:
                 # If the config file exists, read it
                 block.updateConfigs(configPath)
+
+        # Loop through all the blocks
+        for block in plugin.blocks:
+            initBlockConfig(block)
+
+            # Loop through the subblocks
+            for subBlock in block.getSubBlocks():
+                initBlockConfig(subBlock)
 
     def _blockConfigPath(self, block: PluginBlock):
         """
@@ -536,7 +544,9 @@ class PluginManager:
             # Get the plugin and the block
             pluginID = configId.split(".")[0]
             plugin = self._getPluginByID(pluginID)
-            blockID = pluginID + "." + configId.split(".")[1]
+            blockID = ".".join(configId.split(".")[:-2])
+            if "config" in blockID.split("."):
+                blockID = ".".join(blockID.split(".")[:-1])
             block = plugin.getBlock(blockID)
 
             # Get the path of the config file
@@ -553,7 +563,7 @@ class PluginManager:
             block.saveConfig(blockConfigFile, valuesToSave)
 
             # Execute the config block
-            pluginConfigID = blockID + ".config." + configId.split(".")[3]
+            pluginConfigID = blockID + ".config." + configId.split(".")[-1]
             configBlock = block.getConfig(pluginConfigID)
 
             with io.StringIO() as buf, redirect_stdout(buf), redirect_stderr(buf):

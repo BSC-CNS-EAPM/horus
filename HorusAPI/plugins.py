@@ -323,6 +323,7 @@ class PluginBlock:
 
         if len(self._configs) > 0:
             # Create the config file
+            print("Creating config file for block", self.name, "at", configPath)
             with open(configPath, "w") as configFile:
                 configs = {}
                 for config in self._configs:
@@ -335,9 +336,17 @@ class PluginBlock:
         """
         # Save the config file only if the block has configs
         if len(self._configs) > 0:
-            # Create the config file
+            # Read the existing config file
+            with open(configPath, "r") as configFile:
+                configs = json.load(configFile)
+
+            # Update the values to save
+            for key, value in valuesToSave.items():
+                configs[key] = value
+
+            # Write the updated config file
             with open(configPath, "w") as configFile:
-                json.dump(valuesToSave, configFile, indent=4)
+                json.dump(configs, configFile, indent=4)
 
         # Update the values of the configs
         self.updateConfigs(configPath)
@@ -519,7 +528,10 @@ class Plugin:
                     subBlock.id = f"{block.id}.{subBlock.name}".replace(
                         " ", "_"
                     ).lower()
-
+                    for config in subBlock.getConfigs():
+                        config.id = f"{subBlock.id}.config.{config.name}".replace(
+                            " ", "_"
+                        ).lower()
                 self._blocks.append(block)
 
     def _addBlocks(self):

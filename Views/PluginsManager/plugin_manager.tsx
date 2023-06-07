@@ -86,11 +86,21 @@ function InstalledPlugins() {
         // Get the config blocks from the plugin
         const newConfigBlocks: BlockProps[] = [];
 
-        // Loop through the blocks and store the ones that have config
+        // Loop through the blocks and subBlocks and store the ones that have config
         for (let i = 0; i < plugin.blocks.length; i++) {
             if (plugin.blocks[i].config) {
                 for (let j = 0; j < plugin.blocks[i].config.length; j++) {
                     newConfigBlocks.push(plugin.blocks[i].config[j]);
+                }
+            }
+            if (plugin.blocks[i].subBlocks) {
+                for (let k = 0; k < plugin.blocks[i].subBlocks.length; k++) {
+                    if (plugin.blocks[i].subBlocks[k].config) {
+                        for (let l = 0; l < plugin.blocks[i].subBlocks[k].config.length; l++) {
+                            console.log("Config found!")
+                            newConfigBlocks.push(plugin.blocks[i].subBlocks[k].config[l]);
+                        }
+                    }
                 }
             }
         }

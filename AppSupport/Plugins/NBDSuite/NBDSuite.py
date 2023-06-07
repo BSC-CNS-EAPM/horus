@@ -166,8 +166,26 @@ peleLicense = PluginConfig(
     ],
 )
 
+# Favourite path
+favouritePath = PluginConfig(
+    name="Favourite path",
+    description="Favourite path configuration.",
+    action=validateLicense,
+    variables=[
+        PluginVariable(
+            id="path",
+            name="Path",
+            description="Favourite path.",
+            type=VariableTypes.STRING,
+            defaultValue="Very favorite!",
+        )
+    ],
+)
+
+
 # Add the peleLicense to the runSimulationBlock
 runSimulationBlock.addConfig(peleLicense)
+runSimulationBlock.addConfig(favouritePath)
 
 
 def sendingSimulation(block: PluginBlock):
