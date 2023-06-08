@@ -55,7 +55,7 @@ function FlowReciver(props: FlowReciverProps) {
     }, [blockAnimation])
 
     const { isOver, setNodeRef } = useDroppable({
-        id: 'droppable',
+        id: 'flow-reciver',
     });
     const style = {
         color: isOver ? 'green' : undefined,
@@ -63,133 +63,6 @@ function FlowReciver(props: FlowReciverProps) {
 
     // Set the new index of the block   
     const [activeId, setActiveId] = useState(null);
-
-    // const moveBlockHandler = (dragIndex: number, hoverIndex: number) => {
-
-    //     var newIndex = dragIndex;
-    //     setBlocks(prevState => {
-    //         const dragBlock = prevState[dragIndex];
-    //         if (dragBlock) {
-
-    //             // If the dragblock has a parent, check if the parent is the same as the hover block
-    //             if (dragBlock.parent) {
-    //                 if (dragBlock.parent.id === prevState[hoverIndex].id) {
-    //                     return prevState;
-    //                 }
-    //                 // Check that if the block was placed, the parent matches
-    //                 if (dragBlock.parent.id !== prevState[hoverIndex - 1].id && dragBlock.parent.id !== prevState[hoverIndex].parent.id) {
-    //                     return prevState;
-    //                 }
-    //             }
-
-    //             const copiedState = [...prevState];
-    //             // // Remove the block from the old position
-    //             // const prevItem = copiedState.splice(hoverIndex, 1, dragBlock);
-
-    //             // // Remove block on dragIndex and put it on hoverIndex
-    //             // copiedState.splice(dragIndex, 1, prevItem[0]);
-
-    //             update(copiedState, {
-    //                 $splice: [
-    //                     [dragIndex, 1],
-    //                     [hoverIndex, 0, dragBlock],
-    //                 ],
-    //             });
-
-    //             // Set the flow as not saved because it has changed
-    //             setSaved(false);
-
-    //             // Set the new index of the block
-    //             newIndex = hoverIndex;
-
-    //             return copiedState;
-    //         }
-    //         return prevState;
-    //     });
-
-    //     // Return the new index of the block
-    //     return newIndex;
-    // };
-
-
-    // // Remove the block from the list
-    // const removeBlock = (block: BlockProps) => {
-    //     setBlocks(prevBlocks => {
-    //         // Filter out the block to be removed and its children
-    //         const updatedBlocks = prevBlocks.filter(item => {
-    //             if (item.placedID === block.placedID) {
-    //                 return false;
-    //             }
-    //             if (item.parent && item.parent.placedID === block.placedID) {
-    //                 return false;
-    //             }
-    //             return true;
-    //         });
-
-    //         // Set the flow as not saved because it has changed
-    //         setSaved(false);
-
-    //         return updatedBlocks;
-    //     });
-    // };
-
-    // const addBlock = (event) => {
-
-    //     console.log("Adding block")
-    //     console.log(event)
-
-    //     const block: BlockProps = {
-    //         ...event.data.block
-    //     }
-
-    //     // If the block is already placed, move it to the new position
-    //     if (block.isPlaced) {
-    //         return
-    //     }
-
-    //     // Allow to place only if the block before is its parent or if the block has te same parent
-    //     if (block.parent !== undefined) {
-    //         if (blocks.length === 0) {
-    //             return
-    //         }
-    //         const lastBlock = blocks[blocks.length - 1]
-    //         if (lastBlock.id !== block.parent.id && lastBlock.parent.id !== block.parent.id) {
-    //             return
-    //         }
-    //         // If we can place it, update its parent.placedID
-    //         if (lastBlock.parent !== undefined) {
-    //             block.parent.placedID = lastBlock.parent.placedID
-    //         } else {
-    //             block.parent.placedID = lastBlock.placedID
-    //         }
-    //     }
-
-
-
-    //     // Set the placedID
-    //     const newBlock = { ...block, placedID: placedID }
-
-    //     // Set the new block as placed
-    //     newBlock.isPlaced = true
-
-    //     // Increment the placedID
-    //     placedID++
-
-    //     // Add the moveBlock function to the block
-    //     newBlock.moveBlock = moveBlockHandler
-
-    //     // Add the removeBlock function to the block
-    //     newBlock.deleteBlock = removeBlock
-
-    //     setBlocks([...blocks, newBlock])
-
-    //     // Set the flow as not saved because it has changed
-    //     setSaved(false)
-
-    //     // Set the animation
-    //     setBlockAnimation(`${newBlock.placedID}-${newBlock.id}`)
-
-    // }
 
     const handleSave = async () => {
         // Tell the server to save the flow
@@ -230,16 +103,7 @@ function FlowReciver(props: FlowReciverProps) {
         }
     }
 
-    const executeBlock = async (block) => {
-
-        // //Set the running button
-        // setBlocks(blocks.map(b => {
-        //     if (b.placedID === block.placedID) {
-        //         b.isRunning = true
-        //     }
-        //     return b
-        // }))
-
+    const executeInternal = async (block) => {
         // Get the updated block variables
         const variables = block.variables.reduce((acc, variable) => {
             // Return a dictionary with the variable name and value {name: value}
@@ -260,50 +124,61 @@ function FlowReciver(props: FlowReciverProps) {
 
         const response = await horusPost("/plugins/executeblock", headers, body)
 
-        try {
-            const data = await response.json()
-            // Check any error status code
-            if (!data.ok) {
-                throw new Error(data.message)
+        const data = await response.json()
+
+        return data
+    }
+
+    const executeBlock = async (block) => {
+
+        // Set the running spinner for the current block
+        toggleSpinner();
+
+        const result = await executeInternal(block)
+
+        // Check any error status code
+        !result.ok ? toggleError() : toggleError(false)
+
+        // Execute the subblocks
+        if (block.placedSubBlocks?.length > 0) {
+            for (const subBlock of block.placedSubBlocks) {
+                const subresult = await executeInternal(subBlock)
+                // Check any error status code
+                !subresult.ok ? toggleError() : toggleError(false)
+                break
             }
-            else {
-                // setBlocks(blocks.map(b => {
-                //     if (b.placedID === block.placedID) {
-                //         b.runError = false
-                //     }
-                //     return b
-                // }))
-            }
-        }
-        catch (e) {
-            console.log(e)
-            // setBlocks(blocks.map(b => {
-            //     if (b.placedID === block.placedID) {
-            //         b.runError = true
-            //     }
-            //     return b
-            // }))
         }
 
-        // Set the running button
-        // setBlocks(blocks.map(b => {
-        //     if (b.placedID === block.placedID) {
-        //         b.isRunning = false
-        //     }
-        //     return b
-        // }
-        // ))
+        // Set the running button to false
+        toggleSpinner(false)
+
+        function toggleSpinner(status = true) {
+            props.setPlacedBlocks(props.placedBlocks.map(b => {
+                if (b.placedID === block.placedID) {
+                    b.isRunning = status
+                }
+                return b;
+            }));
+        }
+
+        function toggleError(status = true) {
+            props.setPlacedBlocks(props.placedBlocks.map(b => {
+                if (b.placedID === block.placedID) {
+                    b.runError = status
+                }
+                return b;
+            }));
+        }
     }
 
     const handleExecuteAll = async () => {
         // Set the executing state to true
         setExecutingAll(true)
 
-        // Loop over the blocks and execute them
-        // for (let i = 0; i < blocks.length; i++) {
-        //     const b = blocks[i]
-        //     await executeBlock(b)
-        // }
+        //Loop over the blocks and execute them
+        for (const block of props.placedBlocks) {
+            await executeBlock(block)
+        }
 
         // Set the executing state to false
         setExecutingAll(false)
@@ -324,50 +199,61 @@ function FlowReciver(props: FlowReciverProps) {
         setActiveId(null);
     }
 
-    return (
-        <div ref={setNodeRef} className="current-flow">
-            {modal}
-            <h1 className="flex flex-row">
-                <input className="flow-name" type="text" id="flow-name" placeholder={props.flowName} onChange={onNameChange} />
-                <button onClick={handleSave} className="flow-button">
-                    {
-                        saved ? (<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
-                        </svg>
-                        ) : (<svg xmlns="http://www.w3.org/2000/svg" fill="var(--light-orange)" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3l3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
-                        </svg>
-                        )
-                    }
-                </button>
-                <button onClick={handleExecuteAll} className="flow-button">
-                    {executingAll ? (
-                        <RotatingLines
-                            strokeColor="grey"
-                            strokeWidth="5"
-                            animationDuration="0.75"
-                            width="40"
-                        />
-                    ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z" />
-                        </svg>
-                    )}
-                </button>
-            </h1>
+    const topBarTitle = <h1 className="flex flex-row">
+        <input className="flow-name" type="text" id="flow-name" placeholder={props.flowName} onChange={onNameChange} />
+        <button onClick={handleSave} className="flow-button">
+            {saved ? (<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+            </svg>
+            ) : (<svg xmlns="http://www.w3.org/2000/svg" fill="var(--light-orange)" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3l3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+            </svg>
+            )}
+        </button>
+        <button onClick={handleExecuteAll} className="flow-button">
+            {executingAll ? (
+                <RotatingLines
+                    strokeColor="grey"
+                    strokeWidth="5"
+                    animationDuration="0.75"
+                    width="40" />
+            ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z" />
+                </svg>
+            )}
+        </button>
+    </h1>;
+
+    const sortableFlow = () => {
+        if (props.placedBlocks.length === 0) {
+            return (
+                <div className="flex align-items-center justify-center h-full">
+                    Drag and drop a block to start
+                </div>
+            )
+        }
+        return (
             <div className="flex flex-col align-items-center">
                 <SortableContext
                     items={props.placedBlocks}
                     strategy={verticalListSortingStrategy}
                 >
                     {props.placedBlocks.map((block, index) => (
-                        <Block key={
-                            `${block.placedID}-${block.id}`
-                        } {...block} onChange={onblockChange} execute={executeBlock} index={index} />
+                        <Block key={`${block.placedID}-${block.id}`} {...block} onChange={onblockChange} execute={executeBlock} index={index} />
                     ))}
                 </SortableContext>
             </div>
+        )
+    }
+
+
+    return (
+        <div ref={setNodeRef} className="current-flow">
+            {modal}
+            {topBarTitle}
+            {sortableFlow()}
         </div>
     )
 }

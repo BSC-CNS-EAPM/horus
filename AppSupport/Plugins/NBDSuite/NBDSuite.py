@@ -201,20 +201,29 @@ sendSimulation = PluginBlock(
     variables=[],
 )
 
-# Add the blocks as a sublock of the createYAMLBlock
-createYAMLBlock.addSubBlock(sendSimulation)
-createYAMLBlock.addSubBlock(peleBlock)
-createYAMLBlock.addSubBlock(runSimulationBlock)
-createYAMLBlock.addSubBlock(topologyFixerBlock)
-
-# Add the Input Yaml block to the plugin
-plugin.addBlock(createYAMLBlock)
-
 
 def waiterFunction(block: PluginBlock):
     print("Waiting...")
     time.sleep(5)
     print("Done waiting")
+
+
+subWaiterBlock = PluginBlock(
+    name="Sub waiter",
+    description="Waits for 5 seconds.",
+    action=waiterFunction,
+    variables=[],
+)
+
+# Add the blocks as a sublock of the createYAMLBlock
+createYAMLBlock.addSubBlock(sendSimulation)
+createYAMLBlock.addSubBlock(peleBlock)
+createYAMLBlock.addSubBlock(runSimulationBlock)
+createYAMLBlock.addSubBlock(topologyFixerBlock)
+createYAMLBlock.addSubBlock(subWaiterBlock)
+
+# Add the Input Yaml block to the plugin
+plugin.addBlock(createYAMLBlock)
 
 
 waiterBlock = PluginBlock(

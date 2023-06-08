@@ -7,7 +7,8 @@ import { BlockProps, PluginVariable, PluginVariableType, PluginVariableTypes } f
 import "./block.css"
 
 import { Popover } from "@headlessui/react";
-import { useSortable } from "@dnd-kit/sortable";
+import { useSortable, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { useDroppable } from "@dnd-kit/core";
 
 interface DeleteBlockButtonProps {
     block: BlockProps;
@@ -193,13 +194,16 @@ function Block(block: BlockProps) {
         setIsHovering(false)
     }
 
-    const { attributes, listeners, setNodeRef, transform, isDragging } = useSortable({
+    const { attributes, listeners, setNodeRef, transform, isDragging, transition } = useSortable({
         id: block.id,
         data: { block: block },
     })
+
     const style = {
-        cursor: isDragging ? "grabbing" : "grab"
-    }
+        transform: CSS.Transform.toString(transform),
+        transition,
+        cursor: isDragging ? "grabbing" : "grab",
+    };
 
     // const [{ isDragging }, drag] = useDrag(() => ({
     //     type: ItemTypes.BLOCK,
@@ -236,18 +240,44 @@ function Block(block: BlockProps) {
         block.variables = updatedVariables
 
         // Call the onChange function
-        block.onChange()
+        if (block.onChange) {
+            block.onChange()
+        }
     }
 
     const handleExecute = async () => {
         // Call the execute function
-        await block.execute(block)
+        await block?.execute(block)
+    }
+
+    const { isOver, setNodeRef: setNodeRefSubBlock } = useDroppable({
+        id: `sub-block-${block.id}`,
+    });
+
+    const subBlocksView = () => {
+        if (!block.isSubBlock && block.isPlaced && block.subBlocks?.length > 0) {
+            return (
+                <div className="mt-2">
+                    <SortableContext
+                        items={block.placedSubBlocks || []}
+                        strategy={verticalListSortingStrategy}
+                    >
+                        {block.placedSubBlocks?.map((subBlock, index) => (
+                            <Block key={`${subBlock.placedID}-${subBlock.id}`} {...subBlock} onChange={block.onChange} execute={block.execute} index={index} />
+                        ))}
+                    </SortableContext>
+                    <div ref={setNodeRefSubBlock} className="plugin-block subblock subblock-placeholder">
+                        Place subblocks here...
+                    </div>
+                </div>
+            );
+        }
     }
 
     return (
         <div
             id={`${block?.placedID}-${block.id}`} ref={setNodeRef} style={style} {...listeners} {...attributes} className={
-                `${block.isSubBlock ? 'subblock' : ''} plugin-block ${block.isPlaced ? 'plugin-block-placed' : ''}`
+                `${block.isSubBlock ? 'subblock' : ''} plugin-block ${(block.isPlaced && !isDragging) ? 'plugin-block-placed' : ''}`
             }>
             <div className="flex flew-row justify-between">
                 <div style={{ fontWeight: "bold" }}>
@@ -255,7 +285,7 @@ function Block(block: BlockProps) {
                 </div>
                 <div className="flex flex-row gap-1">
                     {/* Play button to execute the block */}
-                    {block.isPlaced && <PlayBlockButton isRunning={block.isRunning} runError={block.runError} onClick={handleExecute} />}
+                    {block.isPlaced && !block?.isSubBlock && <PlayBlockButton isRunning={block.isRunning} runError={block.runError} onClick={handleExecute} />}
                     {/* Delete button to remove the block from the canvas */}
                     {block.isPlaced && <DeleteBlockButton block={block} onClick={() => block.deleteBlock(block)} />}
 
@@ -283,18 +313,7 @@ function Block(block: BlockProps) {
                 {isInfoHovering || block.isPlaced ? block.description : null}
             </div>
             {
-                !block.isSubBlock && block.isPlaced && (
-                    <div className="mt-2">
-                        <div>
-                            {block.placedSubBlocks?.map((subBlock, index) => (
-                                <Block key={subBlock.id} {...subBlock} />
-                            ))}
-                        </div>
-                        <div className="plugin-block subblock subblock-placeholder">
-                            Place subblocks here...
-                        </div>
-                    </div>
-                )
+                subBlocksView()
             }
         </div>
     )
