@@ -1,11 +1,20 @@
-
 // =============================LIBRARIES==============================
 // React basic library
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 // Import drag and drop kit
-import { DndContext, DragEndEvent, DragStartEvent, DragOverlay, useSensor, MouseSensor, useSensors } from '@dnd-kit/core';
+import {
+  DndContext,
+  DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
+  useSensor,
+  MouseSensor,
+  useSensors,
+  pointerWithin,
+} from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
+import { snapCenterToCursor } from "@dnd-kit/modifiers";
 // ====================================================================
 
 // =============================COMPONENTS=============================
@@ -24,134 +33,195 @@ import { Block } from "./block";
 import { BlockProps, FlowBuilderProps } from "./flow_builder_interfaces";
 // ====================================================================
 
-
 export default function FlowBuilder(props: FlowBuilderProps) {
+  const [placedBlocks, setPlacedBlocks] = useState<BlockProps[]>([]);
+  const [draggingBlock, setDraggingBlock] = useState<BlockProps>();
 
-    const [placedBlocks, setPlacedBlocks] = useState<BlockProps[]>([])
-    const [draggingBlock, setDraggingBlock] = useState<BlockProps>()
+  const placedIDCounter = useRef(1);
 
-    const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
 
-        // Get the current dragged block
-        const currentBlock = event.active.data.current.block
+    // Get the current dragged block
+    const currentBlock = active.data.current?.block;
 
-        // Get where it is dropped
-        const { over } = event;
-
-        // If its a sorting operation
-        if (currentBlock.isPlaced && currentBlock.parent === undefined) {
-            handleBlockSort(event)
-            return
-        }
-
-        // If it is dropped inside the flow reciver
-        // we add it to the current flow
-        if (over && over.id === "flow-reciver" && currentBlock.parent === undefined) {
-            addBlockToFlow(currentBlock)
-            return
-        }
-
-        // If it is dropped inside a sub block container
-        if (over && over.id === `sub-block-${currentBlock.parent?.id}`) {
-            addSubBlock(currentBlock)
-            return
-        }
-
-        // If its a sorting operation inside a sub block container
-        if (over && over.data.current?.block.parent?.id === currentBlock.parent?.id) {
-            handleSubBlockSort(event)
-            return
-        }
+    if (!currentBlock) {
+      return;
     }
 
-    const addBlockToFlow = (block: BlockProps) => {
-        setPlacedBlocks([...placedBlocks, { ...block, isPlaced: true, placedID: placedBlocks.length }])
+    // If its a sorting operation
+    if (currentBlock?.isPlaced && currentBlock.parent === undefined) {
+      handleBlockSort(event);
+      return;
     }
 
-    const addSubBlock = (block: BlockProps) => {
-        // Get the parent block
-        const parent = placedBlocks.find((b) => b.id === block.parent?.id)
-
-        // Define the placedSubBlocks array if it's not defined
-        if (!parent?.placedSubBlocks) {
-            parent.placedSubBlocks = []
-        }
-
-        // Add to the parent .placedSubBlocks the current block
-        parent?.placedSubBlocks?.push({ ...block, isPlaced: true, placedID: parent.placedSubBlocks.length })
-
-        // Update the parent block
-        setPlacedBlocks((blocks) => {
-            const index = blocks.findIndex((b) => b.id === parent?.id)
-            blocks[index] = parent
-            return blocks
-        }
-        )
-
+    // If it is dropped inside the flow reciver
+    // we add it to the current flow
+    if (
+      over &&
+      over.id === "flow-reciver" &&
+      currentBlock.parent === undefined
+    ) {
+      addBlockToFlow(currentBlock);
+      return;
     }
 
-    const handleBlockDrag = (event: DragStartEvent) => {
-        const currentBlock = event.active.data.current.block
-        setDraggingBlock(currentBlock)
+    // Get the over block
+    const overBlock = over?.data?.current?.block;
+
+    if (!overBlock) {
+      return;
     }
 
-    const handleBlockSort = (event: DragEndEvent) => {
-        const { active, over } = event;
-
-        if (active.id !== over.id) {
-            setPlacedBlocks((blocks) => {
-                const oldIndex = blocks.findIndex((b) => b.id === active.id);
-                const newIndex = blocks.findIndex((b) => b.id === over.id);
-
-                return arrayMove(blocks, oldIndex, newIndex);
-            });
-        }
-    };
-
-    const handleSubBlockSort = (event: DragEndEvent) => {
-        const { active, over } = event;
-
-        if (active.id !== over.id) {
-            const parent = placedBlocks.find((b) => b.id === active.data.current.block.parent?.id)
-
-            if (parent?.placedSubBlocks) {
-                parent.placedSubBlocks = arrayMove(parent.placedSubBlocks, parent.placedSubBlocks.findIndex((b) => b.id === active.id), parent.placedSubBlocks.findIndex((b) => b.id === over.id))
-            }
-
-            setPlacedBlocks((blocks) => {
-                const index = blocks.findIndex((b) => b.id === parent?.id)
-                blocks[index] = parent
-                return blocks
-            })
-        }
+    // If it is dropped inside a sub block container
+    if (
+      over &&
+      over.id === `${overBlock.placedID}-sub-block-${currentBlock.parent?.id}`
+    ) {
+      addSubBlock(event);
+      return;
     }
 
-    const mouseSensor = useSensor(MouseSensor, {
-        activationConstraint: {
-            distance: 5,
-        },
+    // If its a sorting operation inside a sub block container
+    if (over && overBlock.parent?.id === currentBlock?.parent?.id) {
+      handleSubBlockSort(event);
+      return;
+    }
+  };
+
+  const addBlockToFlow = (block: BlockProps) => {
+    setPlacedBlocks([
+      ...placedBlocks,
+      { ...block, isPlaced: true, placedID: placedIDCounter.current++ },
+    ]);
+    // Log the new placed block
+    console.log(placedBlocks);
+  };
+
+  const addSubBlock = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    // Get the current dragged block
+    const block = active.data.current.block;
+
+    if (!block || block.isPlaced) {
+      return;
+    }
+
+    // Get the parent block
+    const parent = placedBlocks.find(
+      (b) => b.placedID === over.data.current?.block.placedID
+    );
+
+    // Define the placedSubBlocks array if it's not defined
+    if (!parent?.placedSubBlocks) {
+      parent.placedSubBlocks = [];
+    }
+
+    // Add to the parent .placedSubBlocks the current block
+    parent?.placedSubBlocks?.push({
+      ...block,
+      isPlaced: true,
+      placedID: placedIDCounter.current++,
+      parent: parent,
     });
 
-    const sensors = useSensors(mouseSensor);
+    // Update the parent block
+    setPlacedBlocks((blocks) => {
+      const index = blocks.findIndex((b) => b.placedID === parent?.placedID);
+      blocks[index] = parent;
+      return blocks;
+    });
+  };
 
-    return (
-        // Setup the drag and drop context
-        // Added the onDragEnd event handler, so when blocks dropped
-        // inside the flow reciver, we add it to the current flow
-        <DndContext onDragEnd={handleDragEnd} onDragStart={handleBlockDrag} sensors={sensors}>
-            <div className="m-auto flex flex-row h-100">
-                {/* The block list coming from the server */}
-                <BlockList />
-                {/* The flow reciever, where blocks are already placed */}
-                <FlowReciver
-                    flowName="New Flow"
-                    placedBlocks={placedBlocks}
-                    setPlacedBlocks={setPlacedBlocks}
-                />
-            </div>
-            <DragOverlay>
-                <Block {...draggingBlock} />
-            </DragOverlay>
-        </DndContext>
-    )
+  const handleBlockDrag = (event: DragStartEvent) => {
+    const currentBlock = event.active.data.current.block;
+    setDraggingBlock(currentBlock);
+  };
+
+  const handleBlockSort = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    const currentBlock = active?.data?.current?.block;
+    const overBlock = over?.data?.current?.block;
+
+    if (!currentBlock || !overBlock) {
+      return;
+    }
+
+    if (active.id !== over.id) {
+      setPlacedBlocks((blocks) => {
+        const oldIndex = blocks.findIndex(
+          (b) => b.placedID === currentBlock.placedID
+        );
+        const newIndex = blocks.findIndex(
+          (b) => b.placedID === overBlock.placedID
+        );
+
+        return arrayMove(blocks, oldIndex, newIndex);
+      });
+    }
+  };
+
+  const handleSubBlockSort = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (active.id !== over.id) {
+      const parent = placedBlocks.find(
+        (b) => b.placedID === over.data.current.block.parent?.placedID
+      );
+
+      if (parent?.placedSubBlocks) {
+        parent.placedSubBlocks = arrayMove(
+          parent.placedSubBlocks,
+          parent.placedSubBlocks.findIndex(
+            (b) => b.placedID === active.data.current.block.placedID
+          ),
+          parent.placedSubBlocks.findIndex(
+            (b) => b.placedID === over.data.current.block.placedID
+          )
+        );
+      }
+
+      setPlacedBlocks((blocks) => {
+        const index = blocks.findIndex((b) => b.placedID === parent?.placedID);
+        blocks[index] = parent;
+        return blocks;
+      });
+    }
+  };
+
+  const mouseSensor = useSensor(MouseSensor, {
+    activationConstraint: {
+      distance: 5,
+    },
+  });
+
+  const sensors = useSensors(mouseSensor);
+
+  return (
+    // Setup the drag and drop context
+    // Added the onDragEnd event handler, so when blocks dropped
+    // inside the flow reciver, we add it to the current flow
+    <DndContext
+      onDragEnd={handleDragEnd}
+      onDragStart={handleBlockDrag}
+      sensors={sensors}
+      collisionDetection={pointerWithin}
+    >
+      <div className="m-auto flex flex-row h-100">
+        {/* The block list coming from the server */}
+        <BlockList />
+        {/* The flow reciever, where blocks are already placed */}
+        <FlowReciver
+          flowName="New Flow"
+          placedBlocks={placedBlocks}
+          setPlacedBlocks={setPlacedBlocks}
+        />
+      </div>
+      <DragOverlay dropAnimation={null}>
+        <Block {...draggingBlock} isOnAir={true} />
+      </DragOverlay>
+    </DndContext>
+  );
 }

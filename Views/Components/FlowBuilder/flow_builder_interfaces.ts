@@ -25,12 +25,12 @@ interface BlockProps {
     placedID: number
     config: BlockProps[];
     index?: number;
-    moveBlock?: (dragIndex: number, hoverIndex: number) => void;
     deleteBlock?: (block: BlockProps) => void;
     subBlocks?: BlockProps[];
     isSubBlock?: boolean;
     placedSubBlocks?: BlockProps[];
     parent?: BlockProps;
+    isOnAir?: boolean;
 }
 
 

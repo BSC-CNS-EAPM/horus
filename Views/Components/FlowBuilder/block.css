@@ -1,121 +1,132 @@
 .plugin-block {
-    background-color: #fff;
-    border: 1px solid #e5e5e5;
-    border-radius: 15px;
-    box-shadow: black 2px 2px 10px -7px;
-    position: relative;
-    transition: transform .2s ease-in-out;
-    height: 100%;
-    width: 100%;
-    min-width: 10rem;
-    padding: 10px;
-    margin-bottom: 1rem;
+  background-color: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 15px;
+  box-shadow: black 2px 2px 10px -7px;
+  position: relative;
+  transition: transform 0.2s ease-in-out;
+  height: 100%;
+  width: 100%;
+  min-width: 10rem;
+  padding: 10px;
+  margin-bottom: 1rem;
 }
 
 .subblock {
-    width: calc(100% - 2rem) !important;
-    margin-left: auto
+  width: calc(100% - 2rem) !important;
+  margin-left: auto;
 }
 
 .subblock-placeholder {
-    width: calc(100% - 2rem) !important;
-    height: 100%;
-    margin-left: auto;
-    background-color: #f5f5f5;
-    color: gainsboro
+  height: 100%;
+  margin-left: auto;
+  background-color: #f5f5f5;
+  color: rgb(93, 93, 93);
 }
 
-.plugin-block:hover:not(.plugin-block-placed, .subblock-placeholder) {
-    transform: scale(1.05) rotate(1deg);
+.block-placeholder {
+  margin-bottom: 1rem;
+  background-color: #ffffff;
+  color: gainsboro;
+}
+
+.plugin-block:hover:not(
+    .plugin-block-placed,
+    .subblock-placeholder,
+    .block-placeholder
+  ) {
+  transform: scale(1.05) rotate(1deg);
 }
 
 .plugin-block-placed {
-    height: 100%;
-    width: 100%;
-    margin-bottom: 1rem;
+  height: 100%;
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+.plugin-block-onair {
+  width: 10rem;
 }
 
 .plugin-name-block {
-    font-size: 0.8rem;
-    color: #999;
-    background-color: #f5f5f5;
-    border: 1px solid #e5e5e5;
-    border-radius: 5px;
-    padding: 5px;
-    width: 100%;
-    position: relative;
-    margin-bottom: 1rem;
+  font-size: 0.8rem;
+  color: #999;
+  background-color: #f5f5f5;
+  border: 1px solid #e5e5e5;
+  border-radius: 5px;
+  padding: 5px;
+  width: 100%;
+  position: relative;
+  margin-bottom: 1rem;
 }
 
 .plugin-variable {
-    font-size: 0.8rem;
-    color: #999;
-    background-color: #f5f5f5;
-    border: 1px solid #e5e5e5;
-    border-radius: 5px;
-    padding: 5px;
-    position: relative;
-    margin-bottom: 1rem;
+  font-size: 0.8rem;
+  color: #999;
+  background-color: #f5f5f5;
+  border: 1px solid #e5e5e5;
+  border-radius: 5px;
+  padding: 5px;
+  position: relative;
+  margin-bottom: 1rem;
 }
 
 .plugin-variable-name {
-    text-decoration: underline;
+  text-decoration: underline;
 }
 
 .plugin-variable-value {
-    border: none
+  border: none;
 }
 
 .plugin-variable-description {
-    font-size: 0.5rem;
-    color: gray
+  font-size: 0.5rem;
+  color: gray;
 }
 
-
-
 .block-sidebar {
-    /* Add a right border */
-    border-right: 1px solid #e5e5e5;
-    width: 15rem;
-    padding: 1rem;
-    overflow: auto;
+  /* Add a right border */
+  border-right: 1px solid #e5e5e5;
+  width: 15rem;
+  padding: 1rem;
+  overflow: auto;
 }
 
 .current-flow {
-    background-color: #f5f5f5;
-    border-radius: 5px;
-    padding: 1rem;
-    width: calc(100% - 15rem);
-    overflow: auto;
+  background-color: #f5f5f5;
+  border-radius: 5px;
+  padding: 1rem;
+  width: calc(100% - 15rem);
+  overflow: auto;
 }
 
 /* Set all the inputs to 100% width */
 .current-flow input {
-    width: 100%;
+  width: 100%;
 }
 
 /* Set the dropdowns to 100% width */
 .current-flow select {
-    width: 100%;
+  width: 100%;
 }
 
 .block-separator {
-    border-bottom: 1px solid #e5e5e5;
-    margin-bottom: 1rem;
+  border-bottom: 1px solid #e5e5e5;
+  margin-bottom: 1rem;
 }
 
 .flow-name {
-    border: 1px solid black;
-    border-radius: 20px;
-    padding: 15px;
-    /* Shadow */
-    box-shadow: black 2px 2px 10px -7px;
-    margin-right: 1rem;
-    height: 3rem;
+  border: 1px solid black;
+  border-radius: 20px;
+  padding: 15px;
+  /* Shadow */
+  box-shadow: black 2px 2px 10px -7px;
+  margin-right: 1rem;
+  height: 3rem;
 }
 
 .flow-button {
-    margin-right: 1rem;
-    height: 3rem;
-    width: 3rem;
+  margin-right: 1rem;
+  height: 3rem;
+  width: 3rem;
 }
