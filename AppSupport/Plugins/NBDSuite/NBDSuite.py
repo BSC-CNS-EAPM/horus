@@ -166,75 +166,66 @@ peleLicense = PluginConfig(
     ],
 )
 
-# Favourite path
-favouritePath = PluginConfig(
-    name="Favourite path",
-    description="Favourite path configuration.",
-    action=validateLicense,
-    variables=[
-        PluginVariable(
-            id="path",
-            name="Path",
-            description="Favourite path.",
-            type=VariableTypes.STRING,
-            defaultValue="Very favorite!",
-        )
-    ],
-)
-
 
 # Add the peleLicense to the runSimulationBlock
 runSimulationBlock.addConfig(peleLicense)
-runSimulationBlock.addConfig(favouritePath)
 
-
-def sendingSimulation(block: PluginBlock):
-    print("Sending simulation...")
-    time.sleep(5)
-    print("Done sending simulation")
-
-
-sendSimulation = PluginBlock(
-    name="Send simulation",
-    description="Sends the simulation to the server.",
-    action=sendingSimulation,
-    variables=[],
-)
-
-
-def waiterFunction(block: PluginBlock):
-    print("Waiting...")
-    time.sleep(5)
-    print("Done waiting")
-
-
-subWaiterBlock = PluginBlock(
-    name="Sub waiter",
-    description="Waits for 5 seconds.",
-    action=waiterFunction,
-    variables=[],
-)
 
 # Add the blocks as a sublock of the createYAMLBlock
-createYAMLBlock.addSubBlock(sendSimulation)
 createYAMLBlock.addSubBlock(peleBlock)
 createYAMLBlock.addSubBlock(runSimulationBlock)
 createYAMLBlock.addSubBlock(topologyFixerBlock)
-createYAMLBlock.addSubBlock(subWaiterBlock)
 
 # Add the Input Yaml block to the plugin
 plugin.addBlock(createYAMLBlock)
 
 
-waiterBlock = PluginBlock(
-    name="Waiter",
-    description="Waits for 5 seconds.",
-    action=waiterFunction,
+def sendNBDCalc(block: PluginBlock):
+    print("Sending to NBDCalc cluster...")
+    print("Host: ", block.configs["host"])
+    print("User: ", block.configs["user"])
+
+
+sendToCluster = PluginBlock(
+    name="Send to NBDCalc",
+    description="Submits the calculation to the NBDCalc cluster.",
+    action=sendNBDCalc,
     variables=[],
 )
 
+sendToClusterConfig = PluginConfig(
+    name="NBDCalc cluster",
+    description="NBDCalc cluster configuration.",
+    action=None,
+    variables=[
+        PluginVariable(
+            id="host",
+            name="Host",
+            description="NBDCalc cluster host.",
+            type=VariableTypes.STRING,
+            defaultValue=None,
+        ),
+        PluginVariable(
+            id="user",
+            name="User",
+            description="NBDCalc cluster user.",
+            type=VariableTypes.STRING,
+            defaultValue=None,
+        ),
+        PluginVariable(
+            id="password",
+            name="Password",
+            description="NBDCalc cluster password.",
+            type=VariableTypes.STRING,
+            defaultValue=None,
+        ),
+    ],
+)
+
+sendToCluster.addConfig(sendToClusterConfig)
+
 # Add the waiter block to the plugin
-plugin.addBlock(waiterBlock)
+plugin.addBlock(sendToCluster)
 
 # Define the PELE results page
 pelePage = PluginPage(
