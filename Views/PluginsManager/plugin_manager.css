@@ -66,7 +66,6 @@ body {
     justify-content: left;
     display: flex;
     flex-direction: row;
-    cursor: pointer;
     /* Animate the background when hovering */
     transition: background 0.2s ease-in-out;
     margin-bottom: 0.3rem;

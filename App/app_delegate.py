@@ -231,6 +231,7 @@ class AppDelegate(metaclass=SingletonMeta):
         The tuple must be in the format:
         ("Description (*.ext1;*.ext2...)", "Description 2 (*.ext3;*.ext4...)")
         """
+
         # Get the active window
         window = webview.windows[0]
 
@@ -253,21 +254,46 @@ class AppDelegate(metaclass=SingletonMeta):
             webview.FOLDER_DIALOG, allow_multiple=False
         )
 
-        return result[0]
+        if isinstance(result, tuple):
+            try:
+                return result[0]
+            except IndexError:
+                return None
+        else:
+            return result
 
-    def saveFileSelectDialog(self) -> str:
+    def saveFileSelectDialog(
+        self,
+        fileName: typing.Optional[str] = None,
+        fileTypes: typing.Optional[typing.Tuple[str, ...]] = None,
+    ) -> str:
         """
         Opens a save file dialog and returns the path of the selected file.
+
+        :param fileName: The default file name
+        :param fileTypes: A tuple of strings of file types to filter the files.
+        The tuple must be in the format:
+        ("Description (*.ext1;*.ext2...)", "Description 2 (*.ext3;*.ext4...)")
         """
+
         # Get the active window
         window = webview.windows[0]
 
         # Open the folder dialog
-        result: typing.Tuple[str, ...] = window.create_file_dialog(
-            webview.SAVE_DIALOG, allow_multiple=False
+        result = window.create_file_dialog(
+            webview.SAVE_DIALOG,
+            allow_multiple=False,
+            save_filename=fileName,
+            file_types=fileTypes,
         )
 
-        return result[0]
+        if isinstance(result, tuple):
+            try:
+                return result[0]
+            except IndexError:
+                return None
+        else:
+            return str(result)
 
     @staticmethod
     def tokenize(url: str):

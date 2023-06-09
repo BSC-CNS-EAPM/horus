@@ -1,9 +1,26 @@
 import os
 import sys
 import typing
+import json
+import uuid
 from HorusAPI import Plugin, PluginBlock
 import io
 from contextlib import redirect_stdout, redirect_stderr
+
+
+# Define a overwrite exception
+class OverwriteException(Exception):
+    def __init__(self, name: str, path: str, message: str):
+        """
+        An exception that is raised when trying to overwrite a file.
+
+        - name: The name of the file (without extension)
+        - path: The path to the file (with extension)
+        - message: The error message
+        """
+        super().__init__(message)
+        self.name = name
+        self.path = path
 
 
 class PluginManager:
@@ -22,6 +39,9 @@ class PluginManager:
 
         # Initialize the plugins
         self._initializePlugins()
+
+        # Save the current working dir
+        self.workingDir = os.getcwd()
 
     def _pluginsDir(self, appSupportDir):
         """
@@ -104,8 +124,7 @@ class PluginManager:
             self._loadPlugin(newPlugin)
         except Exception as e:
             shutil.rmtree(newPluginDir)
-            print(e)
-            raise Exception(f"Error installing plugin {os.path.basename(path)}")
+            raise Exception(f"Error installing plugin {os.path.basename(path)}: {e}")
 
     def _getPlugin(self, byName: str) -> Plugin:
         """
@@ -198,12 +217,11 @@ class PluginManager:
                 self._loadPlugin(pth)
             except Exception as e:
                 basename = os.path.basename(pth)
-                print(f"Error loading plugin {basename}: {e}")
                 # Define an error dummy plugin
                 errorPlugin = Plugin(id=f"error.{basename}")
                 errorPlugin.info = {
                     "name": os.path.basename(pth),
-                    "description": "Error loading plugin",
+                    "description": f"Error loading plugin: {e}",
                     "author": "",
                     "version": "",
                     "dependencies": "",
@@ -394,7 +412,7 @@ class PluginManager:
 
         return block
 
-    def executeBlock(self, blockID, variables):
+    def executeBlock(self, blockID, variables, workingDir):
         """
         Executes an action of a plugin.
         """
@@ -414,47 +432,116 @@ class PluginManager:
 
         # Capture all stdout and stderr output
         with io.StringIO() as buf, redirect_stdout(buf), redirect_stderr(buf):
+            # Set the working dir to run python from
+            os.chdir(os.path.dirname(workingDir))
+
             # Execute the block
             block()
 
             # Get the output
             output = buf.getvalue()
 
+        # Restore the working dir
+        os.chdir(self.workingDir)
+
         # Return the output
         return output
 
-    def createFlow(self, name):
+    def _saveFlowInternal(self, flow, overwrite=False):
         """
-        Creates a new flow.
+        Saves a flow to a file. (overwrites if already exists)
         """
 
-        # If we are in desktop, a window will open to select the flow destination folder
+        flowPath = flow["path"]
+
+        # Read the savedID from the file if it exists
+        overwriteCaution = False
+        if os.path.exists(flowPath) and not overwrite:
+            with open(flowPath, "r") as f:
+                saved_flow = json.load(f)
+                savedID = saved_flow.get("savedID")
+                if savedID != flow.get("savedID"):
+                    overwriteCaution = True
+
+        # Create a new savedID if it doesn't exist or is "new_flow"
+        if not flow.get("savedID") or flow["savedID"] == "new_flow":
+            flow["savedID"] = str(uuid.uuid4())
+
+        # Check if the savedID is the same as the current flow
+        if overwriteCaution and not overwrite:
+            raise OverwriteException(
+                name=flow["name"], path=flowPath, message="Trying to overwrite a flow."
+            )
+
+        # Set the current folder as the flow folder
+        flow["path"] = flowPath
+
+        # Save the flow (overwrite if already exists)
+        with open(flowPath, "w") as f:
+            json.dump(flow, f)
+
+        # Return the saved flow
+        return flow
+
+    def saveFlow(self, flow):
+        overwrite = flow.get("overwrite")
+        flowPath = flow.get("path")
+        if not flowPath and flow.get("savedID") == "new_flow" and not overwrite:
+            if self.desktop:
+                from App import AppDelegate
+
+                filename = flow.get("name", "New flow") + ".flow"
+                fileTypes = ("Flow (*.flow)",)
+                flowPath = AppDelegate().saveFileSelectDialog(
+                    filename, fileTypes=fileTypes
+                )
+                if not flowPath:
+                    raise Exception("No path selected.")
+                if not flowPath.endswith(".flow"):
+                    flowPath += ".flow"
+                flow["path"] = flowPath
+                flow["name"] = os.path.basename(flowPath).replace(".flow", "")
+            else:
+                flowPath = os.path.join("flows", flow.get("name") + ".flow")
+                overwrite = True
+                flow["path"] = flowPath
+        return self._saveFlowInternal(flow, overwrite)
+
+    def _openFlowInternal(self, flowPath):
+        """
+        Opens a flow from a file.
+        """
+
+        # Read the flow file
+        with open(flowPath, "r") as f:
+            flow = json.load(f)
+
+        # Set the flow path
+        flow["path"] = flowPath
+
+        # Return the flow
+        return flow
+
+    def openFlow(self):
+        """
+        Opens the file select dialog to open a flow.
+        """
         if self.desktop:
             from App import AppDelegate
 
-            flowPath = AppDelegate().saveFileSelectDialog()
-            flowPath = os.path.join(flowPath, name)
+            flowPath = AppDelegate().openFileSelectDialog(
+                allowMultiple=False, fileTypes=("Flow (*.flow)",)
+            )
+
+            if flowPath:
+                if isinstance(flowPath, tuple):
+                    flowPath = flowPath[0]
+                return self._openFlowInternal(str(flowPath))
+            else:
+                return None
         else:
-            # If we are in web version instead,
-            # the flow will be sabed to the user's flows folder
-            # WIP
-            flowPath = "flows"
-
-        # Create the flow file
-        if not os.path.exists(flowPath):
-            os.mkdir(flowPath)
-
-    def saveFlow(self, flow):
-        """
-        Saves a flow to a file.
-        """
-        pass
-
-    def loadFlow(self, flowPath):
-        """
-        Loads a flow from a file.
-        """
-        pass
+            # WIP implement server user folders
+            return None
 
     def getPages(self):
         """

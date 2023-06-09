@@ -6,7 +6,6 @@ from HorusAPI import (
     PluginPage,
     PluginConfig,
 )
-import time
 
 plugin = Plugin(id="NBDSuite")
 
@@ -236,3 +235,32 @@ pelePage = PluginPage(
 
 # Add the PELE results page to the plugin
 plugin.addPage(pelePage)
+
+
+# Create a new block to write a sample file
+def writeFile(block: PluginBlock):
+    import os
+
+    print(f"Writing file {block.variables['file']}...")
+    print("into folder: ", os.getcwd())
+    with open(block.variables["file"], "w") as f:
+        f.write("Hello world!")
+
+
+writeFileBlock = PluginBlock(
+    name="Write file",
+    description="Writes a sample file.",
+    action=writeFile,
+    variables=[
+        PluginVariable(
+            id="file",
+            name="File name",
+            description="File name to write.",
+            type=VariableTypes.STRING,
+            defaultValue=None,
+        )
+    ],
+)
+
+# Add the block to the plugin
+plugin.addBlock(writeFileBlock)

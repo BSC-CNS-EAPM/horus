@@ -1,13 +1,8 @@
 import { Block } from "./block";
 import { BlockProps, FlowReciverProps } from "./flow_builder_interfaces";
-import { useEffect, useState } from "react";
-import { horusPost } from "../../Utils/utils";
-import { HorusModal } from "../reusable";
-import update from "immutability-helper";
+import { useEffect, useRef, useState } from "react";
+import { horusGet, horusPost } from "../../Utils/utils";
 import { RotatingLines } from "react-loader-spinner";
-
-// Import animejs
-import anime from "animejs";
 
 // Import the dndkit
 import { DndContext, useDroppable } from "@dnd-kit/core";
@@ -18,9 +13,11 @@ import {
 
 function FlowReciver(props: FlowReciverProps) {
   // Modal state
-  const [showModal, setShowModal] = useState(false);
-  const [modal, setModal] = useState(<div></div>);
   const [flowName, setFlowName] = useState("New flow");
+
+  // Saved flow vars
+  const savedID = useRef(props.savedID ? props.savedID : "new_flow");
+  const flowPath = useRef(props.flowPath);
 
   // Executing state
   const [executingAll, setExecutingAll] = useState(false);
@@ -28,55 +25,70 @@ function FlowReciver(props: FlowReciverProps) {
   // Saved state
   const [saved, setSaved] = useState(false);
 
-  const { isOver, setNodeRef } = useDroppable({
+  const { setNodeRef } = useDroppable({
     id: "flow-reciver",
   });
-  const style = {
-    color: isOver ? "green" : undefined,
-  };
 
   const handleSave = async () => {
-    // Tell the server to save the flow
-    // If the flow is saved, close the modal
+    const body = JSON.stringify({
+      name: flowName,
+      blocks: props.placedBlocks,
+      savedID: savedID.current,
+      path: flowPath.current,
+    });
 
-    try {
-      const currentFlowName = flowName;
-      const body = JSON.stringify({
-        name: currentFlowName,
-      });
-      const headers = {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      };
+    const headers = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    };
 
-      const response = await horusPost("/createflow", headers, body);
+    const response = await horusPost("/saveflow", headers, body);
+    var savedFlow = await response.json();
 
-      const data = await response.json();
-
-      // Check any error status code
-      if (!data.ok) {
-        // Throw an error
-        throw new Error(data.message);
-      } else {
-        setSaved(true);
-        setFlowName(currentFlowName);
-      }
-    } catch (e) {
-      const header = <div>Error!</div>;
-      const body = <div>{e}</div>;
-      const footer = <div>There was an error saving the flow</div>;
-      const modal = (
-        <HorusModal
-          show={showModal}
-          header={header}
-          body={body}
-          footer={footer}
-        />
-      );
-      setModal(modal);
-      setShowModal(true);
+    if (!savedFlow.ok) {
+      alert(savedFlow.error);
       return;
     }
+
+    const overwrite = savedFlow.overwrite;
+    const existingName = savedFlow.existingName;
+    const path = overwrite ? savedFlow.path : flowPath.current;
+
+    if (
+      overwrite &&
+      !confirm(
+        "Flow with the same name already exists. Are you sure you want to overwrite the flow?"
+      )
+    ) {
+      return;
+    }
+
+    if (overwrite) {
+      const overwriteBody = JSON.stringify({
+        name: overwrite ? existingName : savedFlow.name,
+        blocks: props.placedBlocks,
+        savedID: savedID.current,
+        path: path,
+        overwrite: true,
+      });
+
+      const overwriteResponse = await horusPost(
+        "/saveflow",
+        headers,
+        overwriteBody
+      );
+      savedFlow = await overwriteResponse.json();
+
+      if (!savedFlow.ok) {
+        alert(savedFlow.error);
+        return;
+      }
+    }
+
+    setSaved(true);
+    setFlowName(savedFlow.name);
+    savedID.current = savedFlow.savedID;
+    flowPath.current = savedFlow.path;
   };
 
   const executeInternal = async (block) => {
@@ -90,6 +102,7 @@ function FlowReciver(props: FlowReciverProps) {
     const body = JSON.stringify({
       blockID: block.id,
       variables: variables,
+      path: flowPath.current,
     });
 
     const headers = {
@@ -105,6 +118,12 @@ function FlowReciver(props: FlowReciverProps) {
   };
 
   const executeBlock = async (block) => {
+    // Check that the flow is saved
+    if (!saved) {
+      // Save the flow
+      await handleSave();
+    }
+
     // Set the running spinner for the current block
     toggleSpinner();
 
@@ -190,9 +209,45 @@ function FlowReciver(props: FlowReciverProps) {
         })
       );
     }
+
+    setSaved(false);
   };
 
   const onblockChange = () => setSaved(false);
+
+  const loadFlow = async () => {
+    const response = await horusGet("/openflow");
+    const data = await response.json();
+
+    if (!data.ok) {
+      alert(data.error);
+      return;
+    }
+
+    const openedFlow = data.flow;
+
+    if (!openedFlow) {
+      return;
+    }
+
+    // Set the flow name
+    setFlowName(openedFlow.name);
+    savedID.current = openedFlow.savedID;
+    flowPath.current = openedFlow.path;
+
+    // Set the placed blocks
+    props.setPlacedBlocks(openedFlow.blocks);
+
+    // Set the saved state
+    setSaved(true);
+  };
+
+  useEffect(() => {
+    // Load a flow if the openFlow prop is set
+    if (props.openFlow === true) {
+      loadFlow();
+    }
+  }, [props.openFlow]);
 
   const topBarTitle = (
     <h1 className="flex flex-row">
@@ -202,6 +257,7 @@ function FlowReciver(props: FlowReciverProps) {
         id="flow-name"
         placeholder={props.flowName}
         onChange={onNameChange}
+        value={flowName}
       />
       <button onClick={handleSave} className="flow-button">
         {saved ? (
@@ -293,7 +349,6 @@ function FlowReciver(props: FlowReciverProps) {
 
   return (
     <div ref={setNodeRef} className="current-flow">
-      {modal}
       {topBarTitle}
       {sortableFlow()}
     </div>

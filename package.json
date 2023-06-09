@@ -9,7 +9,7 @@
     "devparcel": "parcel Views/**/*.html",
     "build": "npm run buildparcel && python Devtools/Compile/compile.py build_ext && pyinstaller Devtools/Compile/build.spec --noconfirm",
     "requirements": "npm install && conda env create -f Devtools/Environment/conda_horus.yaml -n horus",
-    "clean": "rm -rf dist build GUI"
+    "clean": "rm -rf dist build GUI .parcel-cache .pytest_cache"
   },
   "author": "Nostrum Biodiscovery",
   "license": "MIT",

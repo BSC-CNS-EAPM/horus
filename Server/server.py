@@ -189,22 +189,47 @@ class HorusServer:
         def error():
             return flask.render_template("Error/error.html")
 
-        @self.server.route("/createflow", methods=["POST"])
+        @self.server.route("/saveflow", methods=["POST"])
         @verifyToken
         def createFlow():
+            from .plugin_manager import OverwriteException
+
             flowData = request.get_json()
             try:
-                self.pluginManager.createFlow(flowData["name"])
+                flow = self.pluginManager.saveFlow(flowData)
                 success = {
                     "ok": True,
+                    "name": flow["name"],
+                    "savedID": flow["savedID"],
+                    "path": flow["path"],
+                    "overwrite": False,
                 }
-                return flask.jsonify(success)
+            except OverwriteException as oe:
+                success = {
+                    "ok": True,
+                    "existingName": oe.name,
+                    "path": oe.path,
+                    "overwrite": True,
+                }
             except Exception as e:
-                error = {
+                success = {
                     "ok": False,
                     "error": str(e),
                 }
-                return flask.jsonify(error)
+            return flask.jsonify(success)
+
+        @self.server.route("/openflow", methods=["GET"])
+        @verifyToken
+        def openFlow():
+            try:
+                flow = self.pluginManager.openFlow()
+                success = {"ok": True, "flow": flow}
+            except Exception as e:
+                success = {
+                    "ok": False,
+                    "error": str(e),
+                }
+            return flask.jsonify(success)
 
         @self.server.route("/desktop/isDesktop", methods=["GET"])
         def isDesktop():
@@ -237,7 +262,6 @@ class HorusServer:
         @self.server.route("/desktop/appsupportdir", methods=["GET"])
         @desktopOnly
         def openPluginsFolder():
-            print("Opening plugins folder")
             from App import AppDelegate
 
             AppDelegate().openAppSupportDir()
@@ -265,13 +289,12 @@ class HorusServer:
         @verifyToken
         def pluginAction():
             data = request.get_json()
-
-            variables = data["variables"]
-            blockID = data["blockID"]
-
             # Execute the action from a given block
             try:
-                output = self.pluginManager.executeBlock(blockID, variables)
+                variables = data["variables"]
+                blockID = data["blockID"]
+                workingDir = data["path"]
+                output = self.pluginManager.executeBlock(blockID, variables, workingDir)
                 self.socketio.emit("printTerm", output)
                 success = {
                     "ok": True,
@@ -298,7 +321,6 @@ class HorusServer:
                 }
                 return flask.jsonify(success)
             except Exception as e:
-                print("Error!!!!!", e)
                 error = {
                     "ok": False,
                     "error": str(e),

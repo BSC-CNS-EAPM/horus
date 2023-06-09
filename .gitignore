@@ -153,3 +153,6 @@ package-lock.json
 
 # Default plugins config
 AppSupport/Plugins/*/config/
+
+# Server flows folder
+flows/

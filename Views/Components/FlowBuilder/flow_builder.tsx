@@ -1,6 +1,6 @@
 // =============================LIBRARIES==============================
 // React basic library
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // Import drag and drop kit
 import {
@@ -217,6 +217,7 @@ export default function FlowBuilder(props: FlowBuilderProps) {
           flowName="New Flow"
           placedBlocks={placedBlocks}
           setPlacedBlocks={setPlacedBlocks}
+          openFlow={props.openFlow}
         />
       </div>
       <DragOverlay dropAnimation={null}>
