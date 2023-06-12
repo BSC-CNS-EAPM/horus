@@ -5,7 +5,6 @@ channels:
 dependencies:
   - pip=23.1.2
   - python=3.9.16
-  - paramiko
   - pyinstaller==5.10.1
   - flask==2.3.2
   - requests==2.29.0
@@ -23,10 +22,8 @@ dependencies:
       - eventlet
       - gevent
       - Cython==3.0.0b3
-
+      - paramiko
 # Manual install due to Apple Silicon/ARM not available from repo
 # python -m pip install peleffy
 # python -m pip install nbdsuite<version>.tar.gz
-
-
 

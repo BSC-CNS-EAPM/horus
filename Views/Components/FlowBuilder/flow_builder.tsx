@@ -118,12 +118,16 @@ export default function FlowBuilder(props: FlowBuilderProps) {
       parent.placedSubBlocks = [];
     }
 
+    // Remove from the parent the placedSubBlocks so no circular structure is created
+    const newParent = { ...parent };
+    delete newParent.placedSubBlocks;
+
     // Add to the parent .placedSubBlocks the current block
     parent?.placedSubBlocks?.push({
       ...block,
       isPlaced: true,
       placedID: placedIDCounter.current++,
-      parent: parent,
+      parent: newParent,
     });
 
     // Update the parent block

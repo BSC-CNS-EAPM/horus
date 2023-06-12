@@ -14,74 +14,63 @@ plugin.info = {
     "description": "The NBDSuite plugin for Horus",
     "author": "Nostrum Biodiscovery",
     "version": "0.0.1",
-    "dependencies": "Peleffy",
 }
 
 # Define the variables for the Input Yaml block
+
+cpus = PluginVariable(
+    id="cpus",
+    name="CPUs",
+    description="The number of computation cores that NBDSuite will use in the run.",
+    type=VariableTypes.INTEGER,
+    defaultValue=1,
+)
+
+verbosity = PluginVariable(
+    id="verbosity",
+    name="Verbosity",
+    description=" Defines the general verbosity level for the NBD Suite run.",
+    type=VariableTypes.STRING_LIST,
+    defaultValue="info",
+    allowedValues=["info", "debug", "warning", "error", "critical"],
+)
+
+
 systemData = PluginVariable(
     id="systemData",
     name="System data",
-    description="The protein system data pdb file.",
-    type=VariableTypes.FILE,
-    defaultValue="Default protein",
+    description="Path to a System PDB file. This should only contain the protein or biological system. Can also be a list of PDB files or a string with an asterisk wildcard representing a file pattern.",
+    type=VariableTypes.STRING,
+    defaultValue="",
 )
 
 ligandData = PluginVariable(
     id="ligandData",
     name="Ligand data",
-    description="The ligand data pdb file.",
+    description="Path to a Ligand PDB file. This should only contain the ligand. Can also be a list of PDB or DF files, a string with an asterisk wildcard representing a file pattern, or a list of SMILES tags.",
     type=VariableTypes.STRING,
-    defaultValue=None,
+    defaultValue="",
 )
 
-testVariable = PluginVariable(
-    id="test",
-    name="Test variable",
-    description="A test variable.",
+name = PluginVariable(
+    id="name",
+    name="Name",
+    description="Pipeline name. It will determine the name of the folder where the output of the NBD Suite simulation will be saved.",
     type=VariableTypes.STRING,
-    defaultValue="Test",
+    defaultValue="NBDSuite",
 )
 
-testBoolean = PluginVariable(
-    id="testBoolean",
-    name="Test boolean",
-    description="A test boolean.",
+static_name = PluginVariable(
+    id="static_name",
+    name="Static name",
+    description="Private attribute of the model to define whether the output folder of the NBD Suite must be static or can be indexed to avoid overwriting an existing folder. Its default value is set to False if a the default name is used for Pipeline. If it has a custom value, static_name is set to True.",
     type=VariableTypes.BOOLEAN,
     defaultValue=False,
 )
 
-test_stringlist = PluginVariable(
-    id="test_stringlist",
-    name="Test string list",
-    description="A test string list.",
-    type=VariableTypes.STRING_LIST,
-    defaultValue="Test3",
-    allowedValues=["Test1", "Test2", "Test3"],
-)
-
-test_radio = PluginVariable(
-    id="test_radio",
-    name="Test radio",
-    description="A test radio.",
-    type=VariableTypes.BOOLEAN_LIST,
-    defaultValue=False,
-    allowedValues=[True, False],
-)
-
-
 # Define the action for the Input Yaml block
 def createYAML(block: PluginBlock):
     print("Creating yaml file...")
-    print("Test varialbe: ", block.variables["test"])
-    print("System data: ", block.variables["systemData"])
-    print("Ligand data: ", block.variables["ligandData"])
-    print("Test boolean: ", block.variables["testBoolean"])
-    print("Test string list: ", block.variables["test_stringlist"])
-    print("Config list: ", block.configs)
-
-    print("Types of the variables:")
-    for key in block.variables:
-        print(key, ":", type(block.variables[key]))
 
 
 # Define the Input Yaml block
@@ -89,142 +78,95 @@ createYAMLBlock = PluginBlock(
     name="NBDSuite input",
     description="Creates a NBDSuite input file.",
     action=createYAML,
-    variables=[systemData, ligandData, testVariable, testBoolean, test_stringlist],
+    variables=[cpus, verbosity, systemData, ligandData, name, static_name],
 )
 
 
-# Create a Topology Fixer block
-topologyFixerBlock = PluginBlock(
-    name="Topology Fixer",
-    description="Fixes the topology of a protein-ligand complex.",
-    action=lambda block: print("Adding topology fixer block..."),
+topology_extractor = PluginBlock(
+    name="Topology extractor",
+    description="Adds a topology extractor to the pipeline.",
+    action=lambda block: print("Adding topology extractor..."),
     variables=[
         PluginVariable(
-            id="enable-topology-fixer",
-            name="Enable topology fixer",
-            description="Enable topology fixer.",
+            id="check_topology",
+            name="Check topology",
+            description="Checks that residues with same name are consistent among all input structures.",
             type=VariableTypes.BOOLEAN,
             defaultValue=True,
-        )
-    ],
-)
-
-# Create an Adaptive PELE block
-peleBlock = PluginBlock(
-    name="Adaptive PELE",
-    description="Add PELE simulation to your NBDSuite simulation.",
-    action=lambda block: print("Saving pele block into yaml..."),
-    variables=[
+        ),
         PluginVariable(
-            id="pele-epochs",
-            name="Epochs",
-            description="PELE simulation epochs.",
-            type=VariableTypes.INTEGER,
-            defaultValue=1,
+            id="explicit_h_in_smiles",
+            name="Explicit H in SMILES",
+            description="Whether the input molecule has explicit information about hydrogen atoms to be considered when the molecule is built.",
+            type=VariableTypes.BOOLEAN,
+            defaultValue=False,
+        ),
+        PluginVariable(
+            id="remove_implicit_hydrogens",
+            name="Remove implicit hydrogens",
+            description="It removes implicit hydrogen atoms from input structures. This strategy might solve some problems with wrong geometries in input structures. Implicit hydrogen atoms are selected by PDB atom name and are those that are not defining any variable protonation state.",
+            type=VariableTypes.BOOLEAN,
+            defaultValue=False,
+        ),
+        PluginVariable(
+            id="fix_structures",
+            name="Fix structures",
+            description="Tries to fix any problem with input structures. If they have already been prepared carefully, this step can be skipped.",
+            type=VariableTypes.BOOLEAN,
+            defaultValue=True,
         ),
     ],
 )
 
+createYAMLBlock.addSubBlock(topology_extractor)
 
-def runSimulation(block: PluginBlock):
-    print("Running simulation?...")
-    try:
-        license = block.configs["license"]
-        print("License: ", license)
-        if license is None or license == "":
-            raise Exception
-    except Exception:
-        print("No license found.")
-
-
-runSimulationBlock = PluginBlock(
-    name="Run simulation",
-    description="Runs the simulation.",
-    action=runSimulation,
-    variables=[],
-)
-
-
-def validateLicense(config: PluginConfig):
-    print("Validating pele license...", config.variables)
-
-
-# Create a pele license config
-peleLicense = PluginConfig(
-    name="PELE License",
-    description="PELE license configuration.",
-    action=validateLicense,
+topology_fixer = PluginBlock(
+    name="Topology fixer",
+    description="Adds a topology fixer to the pipeline.",
+    action=lambda block: print("Adding topology fixer..."),
     variables=[
         PluginVariable(
-            id="license",
-            name="License",
-            description="PELE license path.",
-            type=VariableTypes.FILE,
-            defaultValue=None,
-        )
-    ],
+            id="drop_water",
+            name="Drop water",
+            description="When set to True, water molecules will be removed from topologies.",
+            type=VariableTypes.BOOLEAN,
+            defaultValue=True,
+        ),
+        PluginVariable(
+            id="repair_heavy_atoms",
+            name="Repair heavy atoms",
+            description="When set to True, an attempt to solve problems on heavy atoms will be performed.",
+            type=VariableTypes.BOOLEAN,
+            defaultValue=True,
+        ),
+        PluginVariable(
+            id="protonation_ph",
+            name="Protonation pH",
+            description="pH to consider when protonating topologies.",
+            type=VariableTypes.INTEGER,
+            defaultValue=7,
+        ),
+        PluginVariable(
+            id="std_residues_to_drop",
+            name="Standard residues to drop",
+            description="List of standard residue names to remove from topology models.",
+            type=VariableTypes.STRING,
+            defaultValue=[],
+        ),
+        PluginVariable(
+            id="het_residues_to_drop",
+            name="Hetero residues to drop",
+            description="List of non standard residue names to remove from topology model.",
+            type=VariableTypes.STRING,
+            defaultValue=[],
+        ),
+    ]
 )
 
-
-# Add the peleLicense to the runSimulationBlock
-runSimulationBlock.addConfig(peleLicense)
-
-
-# Add the blocks as a sublock of the createYAMLBlock
-createYAMLBlock.addSubBlock(peleBlock)
-createYAMLBlock.addSubBlock(runSimulationBlock)
-createYAMLBlock.addSubBlock(topologyFixerBlock)
+createYAMLBlock.addSubBlock(topology_fixer)
 
 # Add the Input Yaml block to the plugin
 plugin.addBlock(createYAMLBlock)
-
-
-def sendNBDCalc(block: PluginBlock):
-    print("Sending to NBDCalc cluster...")
-    print("Host: ", block.configs["host"])
-    print("User: ", block.configs["user"])
-
-
-sendToCluster = PluginBlock(
-    name="Send to NBDCalc",
-    description="Submits the calculation to the NBDCalc cluster.",
-    action=sendNBDCalc,
-    variables=[],
-)
-
-sendToClusterConfig = PluginConfig(
-    name="NBDCalc cluster",
-    description="NBDCalc cluster configuration.",
-    action=None,
-    variables=[
-        PluginVariable(
-            id="host",
-            name="Host",
-            description="NBDCalc cluster host.",
-            type=VariableTypes.STRING,
-            defaultValue=None,
-        ),
-        PluginVariable(
-            id="user",
-            name="User",
-            description="NBDCalc cluster user.",
-            type=VariableTypes.STRING,
-            defaultValue=None,
-        ),
-        PluginVariable(
-            id="password",
-            name="Password",
-            description="NBDCalc cluster password.",
-            type=VariableTypes.STRING,
-            defaultValue=None,
-        ),
-    ],
-)
-
-sendToCluster.addConfig(sendToClusterConfig)
-
-# Add the waiter block to the plugin
-plugin.addBlock(sendToCluster)
 
 # Define the PELE results page
 pelePage = PluginPage(
@@ -235,32 +177,3 @@ pelePage = PluginPage(
 
 # Add the PELE results page to the plugin
 plugin.addPage(pelePage)
-
-
-# Create a new block to write a sample file
-def writeFile(block: PluginBlock):
-    import os
-
-    print(f"Writing file {block.variables['file']}...")
-    print("into folder: ", os.getcwd())
-    with open(block.variables["file"], "w") as f:
-        f.write("Hello world!")
-
-
-writeFileBlock = PluginBlock(
-    name="Write file",
-    description="Writes a sample file.",
-    action=writeFile,
-    variables=[
-        PluginVariable(
-            id="file",
-            name="File name",
-            description="File name to write.",
-            type=VariableTypes.STRING,
-            defaultValue=None,
-        )
-    ],
-)
-
-# Add the block to the plugin
-plugin.addBlock(writeFileBlock)
