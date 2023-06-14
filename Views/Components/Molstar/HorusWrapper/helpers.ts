@@ -136,4 +136,7 @@ export enum StateElements {
 
   HetGroupFocus = "het-group-focus",
   HetGroupFocusGroup = "het-group-focus-group",
+
+  Selection = "selection",
+  SelectionGroup = "selection-group",
 }

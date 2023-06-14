@@ -580,10 +580,7 @@ class HorusMolstar {
     },
   };
 
-  async focusFirst(
-    compId: number,
-    options?: { hideLabels: boolean; doNotLabelWaters: boolean }
-  ) {
+  async focusFirst(compId: number, options?: { surroundRadius?: number }) {
     if (!this.state.transforms.has(StateElements.Assembly)) {
       console.warn("No assembly");
       return;
@@ -592,14 +589,14 @@ class HorusMolstar {
 
     const update = this.state.build();
 
-    update.delete(StateElements.HetGroupFocusGroup);
+    update.delete(StateElements.SelectionGroup);
 
     const labelID = String(compId);
 
     const core = MS.struct.filter.first([
       MS.struct.generator.atomGroups({
         "residue-test": MS.core.rel.eq([
-          MS.struct.atomProperty.macromolecular.label_seq_id(),
+          MS.struct.atomProperty.macromolecular.auth_seq_id(),
           compId,
         ]),
         "group-by": MS.core.str.concat([
@@ -608,24 +605,19 @@ class HorusMolstar {
         ]),
       }),
     ]);
-    const surroundings = MS.struct.modifier.includeSurroundings({
-      0: core,
-      radius: 5,
-      "as-whole-residues": true,
-    });
 
     const group = update
       .to(StateElements.Assembly)
       .group(
         StateTransforms.Misc.CreateGroup,
-        { label: labelID },
-        { ref: StateElements.HetGroupFocusGroup }
+        { label: "Focus" },
+        { ref: StateElements.SelectionGroup }
       );
     const asm = this.state.select(StateElements.Assembly)[0]
       .obj as PluginStateObject.Molecule.Structure;
     const coreSel = group.apply(
       StateTransforms.Model.StructureSelectionFromExpression,
-      { label: "Core", expression: core },
+      { label: "Residue " + labelID, expression: core },
       { ref: StateElements.HetGroupFocus }
     );
 
@@ -635,60 +627,24 @@ class HorusMolstar {
         type: "ball-and-stick",
       })
     );
-    coreSel.apply(
-      StateTransforms.Representation.StructureRepresentation3D,
-      createStructureRepresentationParams(this.plugin, asm.data, {
-        type: "label",
-        typeParams: { level: "element" },
-      }),
-      { tags: ["proteopedia-labels"] }
-    );
 
-    group
-      .apply(StateTransforms.Model.StructureSelectionFromExpression, {
-        label: "Surroundings",
-        expression: surroundings,
-      })
-      .apply(
-        StateTransforms.Representation.StructureRepresentation3D,
-        createStructureRepresentationParams(this.plugin, asm.data, {
-          type: "ball-and-stick",
-          color: "uniform",
-          colorParams: { value: ColorNames.gray },
-          size: "uniform",
-          sizeParams: { value: 0.33 },
-        })
-      );
-
-    if (!options?.hideLabels) {
-      // Labels
-      const waters = MS.struct.generator.atomGroups({
-        "entity-test": MS.core.rel.eq([
-          MS.struct.atomProperty.macromolecular.entityType(),
-          "water",
-        ]),
+    if (options?.surroundRadius) {
+      const surroundings = MS.struct.modifier.includeSurroundings({
+        0: core,
+        radius: options.surroundRadius,
+        "as-whole-residues": true,
       });
-      const exclude = options?.doNotLabelWaters
-        ? MS.struct.combinator.merge([core, waters])
-        : core;
-      const onlySurroundings = MS.struct.modifier.exceptBy({
-        0: surroundings,
-        by: exclude,
-      });
-
       group
         .apply(StateTransforms.Model.StructureSelectionFromExpression, {
-          label: "Surroundings (only)",
-          expression: onlySurroundings,
+          label: "Surroundings",
+          expression: surroundings,
         })
         .apply(
           StateTransforms.Representation.StructureRepresentation3D,
           createStructureRepresentationParams(this.plugin, asm.data, {
-            type: "label",
-            typeParams: { level: "residue" },
-          }),
-          { tags: ["proteopedia-labels"] }
-        ); // the tag can later be used to toggle the labels
+            type: "ball-and-stick",
+          })
+        );
     }
 
     await PluginCommands.State.Update(this.plugin, {
@@ -700,6 +656,11 @@ class HorusMolstar {
       this.state.select(StateElements.HetGroupFocus)[0]
         .obj as PluginStateObject.Molecule.Structure
     ).data;
+
+    if (focus === undefined) {
+      return "No residue with id " + labelID + " found";
+    }
+
     const sphere = focus.boundary.sphere;
     const radius = Math.max(sphere.radius, 5);
     const snapshot = this.plugin.canvas3d!.camera.getFocus(
