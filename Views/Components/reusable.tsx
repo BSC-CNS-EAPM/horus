@@ -4,6 +4,14 @@ import Modal from 'react-bootstrap/Modal';
 import { Listbox, Transition } from '@headlessui/react'
 import { CheckIcon, ChevronUpDownIcon } from '@heroicons/react/20/solid'
 
+function debounce(func, timeout = 300){
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => { func.apply(this, args); }, timeout);
+  };
+}
+
 interface HorusModalProps {
   show: boolean;
   onHide?: () => void;
@@ -96,4 +104,4 @@ function HorusDropdown() {
   )
 }
 
-export { HorusModal, HorusDropdown, HorusModalProps }
+export { HorusModal, HorusDropdown, HorusModalProps, debounce }

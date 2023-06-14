@@ -280,10 +280,14 @@ function Block(block: BlockProps) {
   };
 
   const handleChange = (value: PluginVariableType, id: string) => {
+    var hasChanged = false;
     // Update the variable value by searching the PluginVariable by id
     const updatedVariables = block.variables.map((variable) => {
       if (variable.id === id) {
-        variable.value = value;
+        if (variable.value !== value) {
+          hasChanged = true;
+          variable.value = value;
+        }
       }
       return variable;
     });
@@ -292,8 +296,8 @@ function Block(block: BlockProps) {
     block.variables = updatedVariables;
 
     // Call the onChange function
-    if (block.onChange) {
-      block.onChange();
+    if (hasChanged) {
+      block?.onChange();
     }
   };
 

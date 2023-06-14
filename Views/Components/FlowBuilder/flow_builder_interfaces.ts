@@ -9,6 +9,9 @@ interface FlowReciverProps {
   setPlacedBlocks: (blocks: BlockProps[]) => void;
   savedID?: string;
   flowPath?: string;
+  currentSaved: React.MutableRefObject<boolean>;
+  setSaved: (saved: boolean) => void;
+  placedIDCounter: React.MutableRefObject<number>;
 }
 
 interface BlockProps {

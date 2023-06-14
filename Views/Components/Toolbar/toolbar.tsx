@@ -247,14 +247,23 @@ export default function HorusToolbar() {
       items: [
         {
           name: "New",
-          link: "/newjob",
+          link: "/newflow",
           svgPath: (
             <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
           ),
+          onClick: () => {
+            // Emit an event "newFlow"
+            // This event will be captured by the flowReciever component
+            // and will clear the flow
+            const event = new CustomEvent("newFlow", {
+              detail: {},
+            });
+            window.dispatchEvent(event);
+          },
         },
         {
           name: "Open flow",
-          link: "/openflow",
+          link: "/newflow",
           svgPath: (
             <path
               fillRule="evenodd"
@@ -262,6 +271,15 @@ export default function HorusToolbar() {
               clipRule="evenodd"
             />
           ),
+          onClick: () => {
+            // Emit an event "openFlow"
+            // This event will be captured by the flowReciever component
+            // and will open the flow
+            const event = new CustomEvent("openFlow", {
+              detail: {},
+            });
+            window.dispatchEvent(event);
+          },
         },
       ],
     },

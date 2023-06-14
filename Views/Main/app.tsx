@@ -1,5 +1,4 @@
-import { Route, Routes, useNavigate } from "react-router-dom";
-
+import { Route, Routes } from "react-router-dom";
 import Molstar from "../Components/Molstar/molstar";
 import FlowBuilder from "../Components/FlowBuilder/flow_builder";
 import HorusToolbar from "../Components/Toolbar/toolbar";
@@ -20,15 +19,13 @@ function PluginPage() {
 }
 
 export function App() {
-
   return (
     <div className="grid">
       <HorusToolbar />
       <div id="root-routes" className="root-routes root-routes-console-hidden">
         <Routes>
           <Route path="/" element={<Molstar />} />
-          <Route path="/newjob" element={<FlowBuilder />} />
-          <Route path="/openflow" element={<FlowBuilder openFlow={true} />} />
+          <Route path="/newflow" element={<FlowBuilder />} />
           <Route path="/plugins/pages" element={<PluginPage />} />
         </Routes>
       </div>

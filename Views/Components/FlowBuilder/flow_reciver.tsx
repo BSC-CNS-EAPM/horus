@@ -3,9 +3,9 @@ import { BlockProps, FlowReciverProps } from "./flow_builder_interfaces";
 import { useEffect, useRef, useState } from "react";
 import { horusGet, horusPost } from "../../Utils/utils";
 import { RotatingLines } from "react-loader-spinner";
-
+import { debounce } from "../reusable";
 // Import the dndkit
-import { DndContext, useDroppable } from "@dnd-kit/core";
+import { useDroppable } from "@dnd-kit/core";
 import {
   SortableContext,
   verticalListSortingStrategy,
@@ -18,12 +18,10 @@ function FlowReciver(props: FlowReciverProps) {
   // Saved flow vars
   const savedID = useRef(props.savedID ? props.savedID : "new_flow");
   const flowPath = useRef(props.flowPath);
+  const { currentSaved, setSaved } = props;
 
   // Executing state
   const [executingAll, setExecutingAll] = useState(false);
-
-  // Saved state
-  const [saved, setSaved] = useState(false);
 
   const { setNodeRef } = useDroppable({
     id: "flow-reciver",
@@ -119,7 +117,7 @@ function FlowReciver(props: FlowReciverProps) {
 
   const executeBlock = async (block) => {
     // Check that the flow is saved
-    if (!saved) {
+    if (!currentSaved.current) {
       // Save the flow
       await handleSave();
     }
@@ -209,13 +207,33 @@ function FlowReciver(props: FlowReciverProps) {
         })
       );
     }
-
     setSaved(false);
   };
 
-  const onblockChange = () => setSaved(false);
+  const onblockChange = () => {
+    setSaved(false);
+  };
+
+  const openingFlow = useRef(false);
 
   const loadFlow = async () => {
+    if (openingFlow.current) {
+      return;
+    }
+
+    openingFlow.current = true;
+
+    if (!currentSaved.current) {
+      if (
+        !confirm(
+          "Current flow is not saved. Are you sure you want to open a new one?"
+        )
+      ) {
+        openingFlow.current = false;
+        return;
+      }
+    }
+
     const response = await horusGet("/openflow");
     const data = await response.json();
 
@@ -238,16 +256,65 @@ function FlowReciver(props: FlowReciverProps) {
     // Set the placed blocks
     props.setPlacedBlocks(openedFlow.blocks);
 
+    // Set the placedIDCounter
+    // Search for the highest placedID in the blocks and subblocks
+    const placedIDs = openedFlow.blocks.map((b) => b.placedID);
+    for (const block of openedFlow.blocks) {
+      if (block.placedSubBlocks?.length > 0) {
+        for (const subBlock of block.placedSubBlocks) {
+          placedIDs.push(subBlock.placedID);
+        }
+      }
+    }
+    props.placedIDCounter.current = Math.max(...placedIDs) + 1;
+
     // Set the saved state
     setSaved(true);
+
+    openingFlow.current = false;
+  };
+
+  const handlingNew = useRef(false);
+
+  const handleNew = () => {
+    if (handlingNew.current) {
+      return;
+    }
+
+    handlingNew.current = true;
+
+    if (!currentSaved.current) {
+      if (
+        !confirm(
+          "Current flow is not saved. Are you sure you want to create a new flow?"
+        )
+      ) {
+        handlingNew.current = false;
+        return;
+      }
+    }
+    setFlowName("New Flow");
+    savedID.current = "new_flow";
+    flowPath.current = "";
+    props.setPlacedBlocks([]);
+    props.placedIDCounter.current = 0;
+    setSaved(true);
+    handlingNew.current = false;
   };
 
   useEffect(() => {
-    // Load a flow if the openFlow prop is set
-    if (props.openFlow === true) {
-      loadFlow();
-    }
-  }, [props.openFlow]);
+    // Add an event listener to clear all the state when the "New" button is clicked in the toolbar
+    window.addEventListener("newFlow", handleNew);
+
+    // Add an event listener to load a flow when the "Open" button is clicked in the toolbar
+    window.addEventListener("openFlow", loadFlow);
+
+    // Clean the event listener when the component is unmounted
+    return () => {
+      window.removeEventListener("newFlow", handleNew);
+      window.removeEventListener("openFlow", loadFlow);
+    };
+  }, []);
 
   const topBarTitle = (
     <h1 className="flex flex-row">
@@ -260,7 +327,7 @@ function FlowReciver(props: FlowReciverProps) {
         value={flowName}
       />
       <button onClick={handleSave} className="flow-button">
-        {saved ? (
+        {currentSaved.current ? (
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -323,6 +390,10 @@ function FlowReciver(props: FlowReciverProps) {
   );
 
   const sortableFlow = () => {
+    // Log all the placedID:
+    for (const block of props.placedBlocks) {
+      console.log(block.placedID);
+    }
     return (
       <div className="flex flex-col align-items-center mt-4">
         <SortableContext

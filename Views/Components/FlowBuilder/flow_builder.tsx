@@ -1,6 +1,6 @@
 // =============================LIBRARIES==============================
 // React basic library
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 // Import drag and drop kit
 import {
@@ -14,7 +14,6 @@ import {
   pointerWithin,
 } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
-import { snapCenterToCursor } from "@dnd-kit/modifiers";
 // ====================================================================
 
 // =============================COMPONENTS=============================
@@ -35,7 +34,17 @@ import { BlockProps, FlowBuilderProps } from "./flow_builder_interfaces";
 
 export default function FlowBuilder(props: FlowBuilderProps) {
   const [placedBlocks, setPlacedBlocks] = useState<BlockProps[]>([]);
+
   const [draggingBlock, setDraggingBlock] = useState<BlockProps>();
+
+  // Saved state
+  const [saved, _setSaved] = useState(true);
+  const currentSaved = useRef(saved);
+
+  const setSaved = (value: boolean) => {
+    currentSaved.current = value;
+    _setSaved(value);
+  };
 
   const placedIDCounter = useRef(1);
 
@@ -48,6 +57,8 @@ export default function FlowBuilder(props: FlowBuilderProps) {
     if (!currentBlock) {
       return;
     }
+
+    setSaved(false);
 
     // If its a sorting operation
     if (currentBlock?.isPlaced && currentBlock.parent === undefined) {
@@ -94,8 +105,6 @@ export default function FlowBuilder(props: FlowBuilderProps) {
       ...placedBlocks,
       { ...block, isPlaced: true, placedID: placedIDCounter.current++ },
     ]);
-    // Log the new placed block
-    console.log(placedBlocks);
   };
 
   const addSubBlock = (event: DragEndEvent) => {
@@ -222,6 +231,9 @@ export default function FlowBuilder(props: FlowBuilderProps) {
           placedBlocks={placedBlocks}
           setPlacedBlocks={setPlacedBlocks}
           openFlow={props.openFlow}
+          currentSaved={currentSaved}
+          setSaved={setSaved}
+          placedIDCounter={placedIDCounter}
         />
       </div>
       <DragOverlay dropAnimation={null}>
