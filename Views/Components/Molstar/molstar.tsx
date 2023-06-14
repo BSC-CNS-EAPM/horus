@@ -34,27 +34,8 @@ export default function Molstar() {
       });
     }
 
-    var pdbId = "4ldj",
-      assemblyId = "preferred",
-      isBinary = true;
-    var url =
-      "https://www.ebi.ac.uk/pdbe/entry-files/download/" + pdbId + ".bcif";
-    var format = "cif";
-    var representationStyle = {
-      hetGroups: { kind: "ball-and-stick" }, // or 'spacefill
-      water: { hide: true },
-      snfg3d: { hide: false },
-    };
-
     molstar.init(parent.current, {}).then(() => {
       molstar.setBackground(0xffffff);
-      loadAndSnapshot({
-        url: url,
-        format: format,
-        isBinary: isBinary,
-        assemblyId: assemblyId,
-        representationStyle: representationStyle,
-      });
     });
 
     window.molstar = molstar;

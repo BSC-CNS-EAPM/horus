@@ -120,6 +120,8 @@ export namespace RepresentationStyle {
 }
 
 export enum StateElements {
+  root = "-=root=-",
+
   Model = "model",
   ModelProps = "model-props",
   Assembly = "assembly",

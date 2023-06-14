@@ -581,15 +581,26 @@ class HorusMolstar {
   };
 
   async focusFirst(compId: number, options?: { surroundRadius?: number }) {
-    if (!this.state.transforms.has(StateElements.Assembly)) {
-      console.warn("No assembly");
-      return;
+    // Find the first cell to have a "Structure" property cell.obj.type.name
+    const cellsArray = Array.from(this.state.cells.entries());
+    let structureKey = null;
+    cellsArray.some((cell) => {
+      const [key, value] = cell;
+      if (value.obj.type.name === "Structure") {
+        structureKey = key;
+        return true;
+      }
+    });
+
+    if (structureKey === null) {
+      return "No valid structure found.";
     }
+
     await PluginCommands.Camera.Reset(this.plugin, {});
 
     const update = this.state.build();
 
-    update.delete(StateElements.SelectionGroup);
+    update.delete(StateElements.Selection);
 
     const labelID = String(compId);
 
@@ -607,18 +618,18 @@ class HorusMolstar {
     ]);
 
     const group = update
-      .to(StateElements.Assembly)
+      .to(structureKey)
       .group(
         StateTransforms.Misc.CreateGroup,
         { label: "Focus" },
-        { ref: StateElements.SelectionGroup }
+        { ref: StateElements.Selection }
       );
-    const asm = this.state.select(StateElements.Assembly)[0]
+    const asm = this.state.select(structureKey)[0]
       .obj as PluginStateObject.Molecule.Structure;
     const coreSel = group.apply(
       StateTransforms.Model.StructureSelectionFromExpression,
       { label: "Residue " + labelID, expression: core },
-      { ref: StateElements.HetGroupFocus }
+      { ref: StateElements.SelectionGroup }
     );
 
     coreSel.apply(
@@ -653,7 +664,7 @@ class HorusMolstar {
     });
 
     const focus = (
-      this.state.select(StateElements.HetGroupFocus)[0]
+      this.state.select(StateElements.SelectionGroup)[0]
         .obj as PluginStateObject.Molecule.Structure
     ).data;
 
