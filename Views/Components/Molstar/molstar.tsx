@@ -1,12 +1,4 @@
-import { useEffect, createRef, useState } from "react";
-import { createPluginUI } from "molstar/lib/mol-plugin-ui";
-import { PluginUIContext } from "molstar/lib/mol-plugin-ui/context";
-
-import { ColorNames } from 'molstar/lib/mol-util/color/names';
-import { PluginCommands } from 'molstar/lib/mol-plugin/commands';
-
-import { PluginUISpec, DefaultPluginUISpec } from "molstar/lib/mol-plugin-ui/spec";
-import { PluginConfig } from "molstar/lib/mol-plugin/config";
+import { useEffect, createRef } from "react";
 
 // Load the molstar default style
 import "molstar/lib/mol-plugin-ui/skin/light.scss";
@@ -14,62 +6,71 @@ import "molstar/lib/mol-plugin-ui/skin/light.scss";
 // Import index.css
 import "./molstar.css";
 
+import HorusMolstar from "./HorusWrapper/horusmolstar";
 
 declare global {
   interface Window {
-    molstar?: PluginUIContext;
+    molstar?: HorusMolstar;
   }
 }
 
 export default function Molstar() {
-
   const parent = createRef<HTMLDivElement>();
 
-  const MySpec: PluginUISpec = {
-    ...DefaultPluginUISpec(),
-    config: [
-      [PluginConfig.Viewport.ShowExpand, false],
-      [PluginConfig.Viewport.ShowControls, false],
-    ],
-    layout: {
-      initial: {
-        isExpanded: true,
-        showControls: true,
-      },
-    }
-  }
-
   useEffect(() => {
-    async function init() {
-      const plugin = await createPluginUI(parent.current as HTMLDivElement, { ...MySpec });
+    const molstar = new HorusMolstar();
 
-      const renderer = plugin.canvas3d!.props.renderer;
-      PluginCommands.Canvas3D.SetSettings(plugin, {
-        settings: {
-          renderer: {
-            ...renderer,
-            backgroundColor: ColorNames.white,
-          }
-        }
+    var snapshot: any = null;
+
+    function loadAndSnapshot(params) {
+      molstar.load(params).then(() => {
+        setTimeout(
+          () =>
+            (snapshot = molstar.plugin.state.getSnapshot({
+              canvas3d: false,
+            })),
+          500
+        );
       });
-
-      // Select the first residue
-      plugin.behaviors.layout.leftPanelTabName.next('data')
-      window.molstar = plugin;
     }
-    init();
-    return () => {
-      window.molstar?.dispose();
-      window.molstar = undefined;
+
+    var pdbId = "4ldj",
+      assemblyId = "preferred",
+      isBinary = true;
+    var url =
+      "https://www.ebi.ac.uk/pdbe/entry-files/download/" + pdbId + ".bcif";
+    var format = "cif";
+    var representationStyle = {
+      hetGroups: { kind: "ball-and-stick" }, // or 'spacefill
+      water: { hide: true },
+      snfg3d: { hide: false },
     };
+
+    molstar.init(parent.current, {}).then(() => {
+      molstar.setBackground(0xffffff);
+      loadAndSnapshot({
+        url: url,
+        format: format,
+        isBinary: isBinary,
+        assemblyId: assemblyId,
+        representationStyle: representationStyle,
+      });
+    });
+
+    window.molstar = molstar;
   }, []);
 
   return (
-    <div id="home-molstar" className="home-molstar" ref={parent} style={{
-      // Place a top margin of 2 rem to avoid the toolbar
-      position: "relative",
-      width: "100%",
-      border: "none"
-    }} />
+    <div
+      id="home-molstar"
+      className="home-molstar"
+      ref={parent}
+      style={{
+        // Place a top margin of 2 rem to avoid the toolbar
+        position: "relative",
+        width: "100%",
+        border: "none",
+      }}
+    />
   );
 }

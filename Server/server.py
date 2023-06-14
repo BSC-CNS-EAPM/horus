@@ -184,6 +184,10 @@ class HorusServer:
         @self.server.errorhandler(404)
         def pageNotFound(e):
             return flask.redirect("/")
+        
+        @self.server.route("/proteo")
+        def proteo():
+            return flask.render_template("proteopedia-wrapper/index.html")
 
         @self.server.route("/error")
         def error():

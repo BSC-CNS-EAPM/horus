@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"
+    />
+    <title>Mol* Proteopedia Wrapper</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      #app {
+        position: absolute;
+        left: 160px;
+        top: 100px;
+        width: 600px;
+        height: 600px;
+        border: 1px solid #ccc;
+      }
+
+      #controls {
+        position: absolute;
+        width: 130px;
+        top: 10px;
+        left: 10px;
+      }
+
+      #controls > button {
+        display: block;
+        width: 100%;
+        text-align: left;
+      }
+
+      #controls > hr {
+        margin: 5px 0;
+      }
+
+      #controls > input,
+      #controls > select {
+        width: 100%;
+        display: block;
+      }
+
+      #volume-streaming-wrapper {
+        position: absolute;
+        top: 100px;
+        left: 780px;
+        width: 300px;
+      }
+    </style>
+    <script type="module" src="index.ts"></script>
+  </head>
+  <body>
+    <div id="controls">
+      <h3>Source</h3>
+      <input type="text" id="url" placeholder="url" style="width: 400px" />
+      <input type="text" id="assemblyId" placeholder="assembly id" />
+      <select id="format">
+        <option value="cif" selected>CIF</option>
+        <option value="pdb">PDB</option>
+      </select>
+      <input
+        type="checkbox"
+        id="isBinary"
+        style="display: inline-block; width: auto"
+      />
+      <label for="isBinary"> Binary</label><br />
+    </div>
+    <div id="app"></div>
+    <div id="volume-streaming-wrapper"></div>
+  </body>
+</html>
