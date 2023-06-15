@@ -94,7 +94,18 @@ class VariableTypes:
     """
     A file.
 
-    Will render as a file input.
+    - On the server: Will render as a regular browser file upload.
+    The file will be uploaded to the server.
+    - On the desktop: Will render as a file picker.
+    The file will be copied to the current flow folder.
+    """
+
+    LOCAL_FILE = "local_file"
+    """
+    A file present on your local machine.
+
+    Will render as a file picker and the absolute path of the file will be used.
+    Only available on the desktop app.
     """
 
     @staticmethod
@@ -411,7 +422,7 @@ class Plugin:
             "version": "0.0.1",
             "author": "None",
             "description": "None",
-            "dependencies": "None",
+            "dependencies": ["None"],
         }
         """
         Information about the plugin.

@@ -20,23 +20,7 @@ export default function Molstar() {
   useEffect(() => {
     const molstar = new HorusMolstar();
 
-    var snapshot: any = null;
-
-    function loadAndSnapshot(params) {
-      molstar.load(params).then(() => {
-        setTimeout(
-          () =>
-            (snapshot = molstar.plugin.state.getSnapshot({
-              canvas3d: false,
-            })),
-          500
-        );
-      });
-    }
-
-    molstar.init(parent.current, {}).then(() => {
-      molstar.setBackground(0xffffff);
-    });
+    molstar.init(parent.current);
 
     window.molstar = molstar;
   }, []);

@@ -1,7 +1,10 @@
 import sys
 import os
 import webview
+import threading
 from threading import Lock
+import subprocess
+from flask_socketio import SocketIO
 
 # Import type annotations
 import typing
@@ -131,7 +134,6 @@ class AppDelegate(metaclass=SingletonMeta):
         Starts the backend Flask server.
         This server will handle python modules and scripts in our app.
         """
-        import threading
 
         self.server_thread = threading.Thread(target=self.server.run)
         self.server_thread.daemon = True
@@ -354,6 +356,35 @@ class AppDelegate(metaclass=SingletonMeta):
         elif self.platform == "linux":
             subprocess.Popen(["xdg-open", path])
 
+    def executeCommand(self, command: str, socketio: SocketIO):
+        """
+        Executes a command in the OS terminal
+
+        :param command: The command to execute
+        """
+
+        def runCommand(
+            command: str, socketio: SocketIO
+        ) -> typing.Optional[subprocess.Popen]:
+            # Run a command in the os terminal and
+            # capture the output and error in the same variable
+
+            with subprocess.Popen(
+                command,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                universal_newlines=True,
+            ) as p:
+                for line in p.stdout:
+                    socketio.emit("printTerm", line)
+                return p
+
+        process = runCommand(command, socketio)
+        if process:
+            thread = threading.Thread(target=process.wait)
+            thread.start()
+
 
 def LaunchApp():
     # Set the debug mode based on module compilation
@@ -372,6 +403,7 @@ def LaunchApp():
         from Server.server import HorusServer
 
         server = HorusServer(debug=debug, desktop=False)
+
         server.run(reloader=debug)
 
         # Exit the app

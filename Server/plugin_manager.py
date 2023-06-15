@@ -6,6 +6,8 @@ import uuid
 from HorusAPI import Plugin, PluginBlock
 import io
 from contextlib import redirect_stdout, redirect_stderr
+import subprocess
+import imp
 
 
 # Define a overwrite exception
@@ -124,7 +126,7 @@ class PluginManager:
             self._loadPlugin(newPlugin)
         except Exception as e:
             shutil.rmtree(newPluginDir)
-            raise Exception(f"Error installing plugin {os.path.basename(path)}: {e}")
+            raise Exception(e)
 
     def _getPlugin(self, byName: str) -> Plugin:
         """
@@ -155,7 +157,7 @@ class PluginManager:
         """
         import shutil
 
-        pDir = self._getPlugin(pluginName).info["filename"].replace(".py", "")
+        pDir = self._getPlugin(pluginName)._path
         pluginPath = os.path.join(self.pluginsDir, pDir)
         shutil.rmtree(pluginPath)
 
@@ -221,12 +223,13 @@ class PluginManager:
                 errorPlugin = Plugin(id=f"error.{basename}")
                 errorPlugin.info = {
                     "name": os.path.basename(pth),
-                    "description": f"Error loading plugin: {e}",
+                    "description": str(e),
                     "author": "",
                     "version": "",
                     "dependencies": "",
                     "filename": os.path.basename(pth),
                 }
+                errorPlugin._path = pth
                 self.errorPlugins.append(errorPlugin)
 
         self.pluginChanges = False
@@ -304,8 +307,26 @@ class PluginManager:
             # We are not in a bundle
             pass
 
+        # Install the plugin dependencies
+        # self._installDependencies(pluginModule.plugin)
+
         # Return the loaded plugin instace
         return pluginModule.plugin
+
+    def _installDependencies(self, plugin: Plugin):
+        dependencies = plugin.info.get("dependencies", [])
+        for dep in dependencies:
+            try:
+                imp.find_module(dep)
+            except ImportError:
+                result = subprocess.run(
+                    [sys.executable, "-m", "pip", "install", dep, "--upgrade"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                )
+                if result.returncode != 0:
+                    print(f"Dependency {dep} could not be installed.")
+                    raise Exception(f"Dependency {dep} could not be installed.")
 
     def getPlugins(self):
         """

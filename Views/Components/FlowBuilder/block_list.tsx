@@ -2,7 +2,7 @@ import { horusGet } from "../../Utils/utils";
 import { useEffect, useState } from "react";
 import { BlockProps } from "./flow_builder_interfaces";
 import { Block } from "./block";
-
+import { RotatingLines } from "react-loader-spinner";
 function BlockList() {
   // Fetch the blocks from the server api
   const [blocks, setBlocks] = useState<BlockProps[]>([]);
@@ -31,36 +31,51 @@ function BlockList() {
     <div className="block-sidebar">
       <h1>Blocks</h1>
       <div>
-        {blocks.length === 0
-          ? "No blocks"
-          : blocks.map((block, index) => {
-              const prevBlock = index > 0 ? blocks[index - 1] : null;
-              const isDifferentPlugin =
-                prevBlock && prevBlock.plugin !== block.plugin;
-              return (
-                <div key={block.id}>
-                  {(isDifferentPlugin || index == 0) && (
-                    <div>
-                      <div className="block-separator"></div>
-                      <div className="plugin-name-block">{block.plugin}</div>
-                    </div>
-                  )}
-                  <Block {...block} />
-                  {/* Now place the sub-blocks */}
-                  {block.subBlocks &&
-                    block.subBlocks.map((subBlock) => {
-                      return (
-                        <Block
-                          key={subBlock.id}
-                          {...subBlock}
-                          isSubBlock={true}
-                          parent={block}
-                        />
-                      );
-                    })}
-                </div>
-              );
-            })}
+        {blocks.length === 0 ? (
+          <div
+            className="flex flew-column gap-1 justify-center align-items-center"
+            style={{
+              marginTop: "calc(50vh - 6rem)",
+            }}
+          >
+            <RotatingLines
+              strokeColor="grey"
+              strokeWidth="5"
+              animationDuration="0.75"
+              width="40"
+            />
+            Loading blocks...
+          </div>
+        ) : (
+          blocks.map((block, index) => {
+            const prevBlock = index > 0 ? blocks[index - 1] : null;
+            const isDifferentPlugin =
+              prevBlock && prevBlock.plugin !== block.plugin;
+            return (
+              <div key={block.id}>
+                {(isDifferentPlugin || index == 0) && (
+                  <div>
+                    <div className="block-separator"></div>
+                    <div className="plugin-name-block">{block.plugin}</div>
+                  </div>
+                )}
+                <Block {...block} />
+                {/* Now place the sub-blocks */}
+                {block.subBlocks &&
+                  block.subBlocks.map((subBlock) => {
+                    return (
+                      <Block
+                        key={subBlock.id}
+                        {...subBlock}
+                        isSubBlock={true}
+                        parent={block}
+                      />
+                    );
+                  })}
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );

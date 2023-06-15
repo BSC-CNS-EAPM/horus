@@ -57,7 +57,7 @@ def test_checkPlugin(pluginManager):
     assert plugin.info["version"] == "0.0.1"
     assert plugin.info["author"] == "None"
     assert plugin.info["description"] == "None"
-    assert plugin.info["dependencies"] == "None"
+    assert plugin.info["dependencies"] == ["None"]
 
     # Check that the comparison operators work
     assert plugin == plugin

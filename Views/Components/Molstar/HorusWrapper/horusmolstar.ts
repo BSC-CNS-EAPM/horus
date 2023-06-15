@@ -62,12 +62,7 @@ class HorusMolstar {
 
   plugin: PluginUIContext;
 
-  async init(
-    target: string | HTMLElement,
-    options?: {
-      customColorList?: number[];
-    }
-  ) {
+  async init(target: string | HTMLElement) {
     this.plugin = await createPluginUI(
       typeof target === "string" ? document.getElementById(target)! : target,
       {
@@ -75,7 +70,7 @@ class HorusMolstar {
         animations: [AnimateModelIndex],
         config: [
           [PluginConfig.Viewport.ShowExpand, false],
-          [PluginConfig.Viewport.ShowControls, false],
+          [PluginConfig.Viewport.ShowControls, true],
         ],
         layout: {
           initial: {
@@ -100,24 +95,6 @@ class HorusMolstar {
     });
 
     this.plugin.behaviors.layout.leftPanelTabName.next("data");
-
-    const customColoring = createProteopediaCustomTheme(
-      (options && options.customColorList) || []
-    );
-
-    this.plugin.representation.structure.themes.colorThemeRegistry.add(
-      customColoring
-    );
-    this.plugin.representation.structure.themes.colorThemeRegistry.add(
-      EvolutionaryConservation.colorThemeProvider!
-    );
-    this.plugin.managers.lociLabels.addProvider(
-      EvolutionaryConservation.labelProvider!
-    );
-    this.plugin.customModelProperties.register(
-      EvolutionaryConservation.propertyProvider,
-      true
-    );
   }
 
   get state() {
@@ -230,7 +207,7 @@ class HorusMolstar {
             createStructureRepresentationParams(this.plugin, structure, {
               type:
                 (style.hetGroups && style.hetGroups.kind) || "ball-and-stick",
-              color: style.hetGroups && style.hetGroups.coloring,
+              // color: style.hetGroups && style.hetGroups.coloring,
             })
           );
         }
@@ -267,7 +244,7 @@ class HorusMolstar {
           createStructureRepresentationParams(this.plugin, structure, {
             type: (style.water && style.water.kind) || "ball-and-stick",
             typeParams: { alpha: 0.51 },
-            color: style.water && style.water.coloring,
+            // color: style.water && style.water.coloring
           })
         );
       }

@@ -5,7 +5,7 @@ import { ChevronDownIcon } from "@heroicons/react/20/solid";
 import { useNavigate } from "react-router";
 import "../nbdbutton.css";
 import { horusGet } from "../../Utils/utils";
-
+import FlowBuilder from "../FlowBuilder/flow_builder";
 import "./toolbar.css";
 
 interface ToolBarItemProps {
@@ -69,12 +69,13 @@ interface ToolBarMenuProps {
   svgPath: React.ReactNode;
   items?: ToolBarItemProps[];
   link?: string;
+  onClick?: () => void;
 }
 
 function ToolbarMenu(props: ToolBarMenuProps) {
   return (
     <div>
-      {props.link ? (
+      {props.link || props.onClick ? (
         <ToolBarItem {...props} />
       ) : (
         <Menu>
@@ -216,12 +217,28 @@ export default function HorusToolbar() {
   }, []);
 
   const loadPage = async (url: string) => {
+    const iFrameView = (
+      <iframe
+        id="plugin-page-iframe"
+        src="/plugins/pages"
+        style={{
+          width: "100%",
+          height: "100%",
+          border: "none",
+        }}
+      />
+    );
+
+    // Emit an event to the iframe
+    const event = new CustomEvent("secondView", { detail: iFrameView });
+
+    window.dispatchEvent(event);
+
     try {
       const iframe = document.getElementById(
         "plugin-page-iframe"
       ) as HTMLIFrameElement;
       iframe.src = url;
-      console.log("loading iframe with url: " + url);
     } catch {
       console.log("Error loading iframe");
     }
@@ -238,6 +255,11 @@ export default function HorusToolbar() {
           clipRule="evenodd"
         />
       ),
+      onClick: () => {
+        // Set the secondary view to null
+        const event = new CustomEvent("secondView", { detail: null });
+        window.dispatchEvent(event);
+      },
     },
     {
       name: "File",
@@ -247,7 +269,6 @@ export default function HorusToolbar() {
       items: [
         {
           name: "New",
-          link: "/newflow",
           svgPath: (
             <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
           ),
@@ -255,15 +276,23 @@ export default function HorusToolbar() {
             // Emit an event "newFlow"
             // This event will be captured by the flowReciever component
             // and will clear the flow
-            const event = new CustomEvent("newFlow", {
+
+            // Set the secondary view to the flow builder
+            const secondView = <FlowBuilder />;
+
+            const secondViewEvent = new CustomEvent("secondView", {
+              detail: secondView,
+            });
+            window.dispatchEvent(secondViewEvent);
+
+            const newFlowEvent = new CustomEvent("newFlow", {
               detail: {},
             });
-            window.dispatchEvent(event);
+            window.dispatchEvent(newFlowEvent);
           },
         },
         {
           name: "Open flow",
-          link: "/newflow",
           svgPath: (
             <path
               fillRule="evenodd"

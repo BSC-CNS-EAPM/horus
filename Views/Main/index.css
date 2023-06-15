@@ -47,3 +47,35 @@ Nor the console (bottom) */
   the total height its just all the viewerpot minus the toolbar and the console */
   height: calc(100vh - 2rem - 150px);
 }
+
+.ResizeHandleOuter {
+  flex: 0 0 1.5em;
+  position: relative;
+  outline: none;
+
+  --background-color: var(--tech-white);
+}
+.ResizeHandleOuter[data-resize-handle-active] {
+  --background-color: var(--color-solid-resize-bar-handle);
+}
+
+.ResizeHandleInner {
+  position: absolute;
+  top: 0.25em;
+  bottom: 0.25em;
+  left: 0.25em;
+  right: 0.25em;
+  border-radius: 0.25em;
+  background-color: var(--background-color);
+  transition: background-color 0.2s linear;
+}
+
+.Icon {
+  width: 1em;
+  height: 1em;
+  position: absolute;
+  left: calc(50% - 0.5rem);
+  top: calc(50% - 0.5rem);
+  /* Rotate 90 degrees */
+  transform: rotate(90deg);
+}

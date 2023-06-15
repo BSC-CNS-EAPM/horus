@@ -175,7 +175,11 @@ class HorusServer:
             @wraps(func)
             def wrapper(*args, **kwargs):
                 if not self.desktop and not self.debug:
-                    return flask.redirect("/error")
+                    error = {
+                        "ok": False,
+                        "message": "This function is only available on desktop mode.",
+                    }
+                    return flask.jsonify(error)
                 return func(*args, **kwargs)
 
             return wrapper
@@ -184,7 +188,7 @@ class HorusServer:
         @self.server.errorhandler(404)
         def pageNotFound(e):
             return flask.redirect("/")
-        
+
         @self.server.route("/proteo")
         def proteo():
             return flask.render_template("proteopedia-wrapper/index.html")
@@ -249,12 +253,15 @@ class HorusServer:
         def installPlugin():
             try:
                 self.pluginManager.installPlugin()
-            except Exception as e:
-                error = {
-                    "error": str(e),
+                success = {
+                    "ok": True,
                 }
-                return flask.jsonify(error)
-            return "OK"
+            except Exception as e:
+                success = {
+                    "ok": False,
+                    "message": str(e),
+                }
+            return flask.jsonify(success)
 
         @self.server.route("/plugins/uninstall", methods=["POST"])
         @desktopOnly
@@ -330,6 +337,20 @@ class HorusServer:
                     "error": str(e),
                 }
                 return flask.jsonify(error)
+
+        @self.server.route("/desktop/command", methods=["POST", "GET"])
+        @desktopOnly
+        def executeCommand():
+            data = request.get_json()
+            from App import AppDelegate
+            try:
+                AppDelegate().executeCommand(data["command"], self.socketio)
+                return {"ok": True}
+            except Exception as e:
+                return {
+                    "ok": False,
+                    "error": str(e),
+                }
 
         @self.server.route("/desktop/openWindow", methods=["POST"])
         @desktopOnly
@@ -416,6 +437,10 @@ class HorusServer:
 
     def run(self, reloader=False):
         # use_reloader has to be turned off in order to run in a secondary thread
+
+        if not self.desktop:
+            print("Running server mode at: http://" + self.host + ":" + str(self.port))
+
         self.socketio.run(
             self.server,
             host=self.host,

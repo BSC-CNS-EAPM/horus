@@ -13,6 +13,14 @@ plugin.info = {
     "description": "The NBDSuite plugin for Horus",
     "author": "Nostrum Biodiscovery",
     "version": "0.0.1",
+    "dependencies": [
+        "matplotlib",
+        "nbdsuite",
+        "pandas",
+        "numpy",
+        "scipy",
+        "peleffy" 
+    ]
 }
 
 # Define the variables for the Input Yaml block
@@ -78,7 +86,7 @@ static_name = PluginVariable(
 
 # Define the action for the Input Yaml block
 def createYAML(block: PluginBlock):
-    print("Creating yaml file...")
+    print("Creating YAML file...")
 
 
 # Define the Input Yaml block

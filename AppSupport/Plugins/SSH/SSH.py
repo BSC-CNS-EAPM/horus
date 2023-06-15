@@ -13,6 +13,7 @@ plugin.info = {
     "description": "The SSH plugin for Horus",
     "author": "Nostrum Biodiscovery",
     "version": "0.0.1",
+    "dependencies": ["paramiko"],
 }
 
 command = PluginVariable(
