@@ -172,17 +172,9 @@ const handleKeyDown = (event: KeyboardEvent) => {
 };
 
 const toggleConsole = () => {
-  const consoleElement = document.getElementById("console-div");
-  const rootRoutes = document.getElementById("root-routes");
-
-  if (consoleElement && rootRoutes) {
-    setTimeout(() => {
-      consoleElement.style.display =
-        consoleElement.style.display === "none" ? "block" : "none";
-      rootRoutes.classList.toggle("root-routes-console-visible");
-      rootRoutes.classList.toggle("root-routes-console-hidden");
-    }, 0);
-  }
+  // Emit a toggleConsole event
+  const event = new CustomEvent("toggleConsole");
+  window.dispatchEvent(event);
 };
 
 document.addEventListener("keydown", handleKeyDown);

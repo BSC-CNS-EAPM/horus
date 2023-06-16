@@ -1,9 +1,9 @@
 .horus-term {
-    /* Place at the bottom of the page */
-    position: relative;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 5;
-    height: 8rem;
+  /* Place at the bottom of the page */
+  position: relative;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  height: 100%;
 }

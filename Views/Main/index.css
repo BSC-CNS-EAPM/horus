@@ -76,6 +76,8 @@ Nor the console (bottom) */
   position: absolute;
   left: calc(50% - 0.5rem);
   top: calc(50% - 0.5rem);
-  /* Rotate 90 degrees */
+}
+
+.Icon-horizontal {
   transform: rotate(90deg);
 }
