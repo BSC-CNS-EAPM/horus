@@ -1,0 +1,32 @@
+name: Test and build Horus
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v2.2.0
+        with:
+          environment-file: Devtools/Environment/conda_horus.yaml
+          activate-environment: horus
+          python-version: 3.9.16
+          add-pip-as-python-dependency: true
+          auto-activate-base: true
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18.x"
+      - name: Install dependencies
+        run: npm install
+      - name: Test
+        run: npm run test
+      - name: Build
+        run: npm run build
