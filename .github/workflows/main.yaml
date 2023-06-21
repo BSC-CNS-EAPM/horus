@@ -9,6 +9,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-20.04
+    defaults:
+      run:
+        shell: bash -l {0}
 
     steps:
       - uses: actions/checkout@v3
@@ -21,13 +24,17 @@ jobs:
           activate-environment: horus
           python-version: 3.9.16
           add-pip-as-python-dependency: true
-          auto-activate-base: true
+          auto-activate-base: false
       - name: Use Node.js
         uses: actions/setup-node@v3
         with:
           node-version: "18.x"
       - name: Install dependencies
         run: npm install
+      - name: Activate environment
+        run: conda activate horus
+      - name: List installed deps
+        run: conda list
       - name: Test
         run: npm run test
       - name: Build
