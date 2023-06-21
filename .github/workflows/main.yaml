@@ -35,6 +35,8 @@ jobs:
         run: conda activate horus
       - name: List installed deps
         run: conda list
+      - name: Build GUI
+        run: npm run buildparcel
       - name: Test
         run: npm run test
       - name: Build
