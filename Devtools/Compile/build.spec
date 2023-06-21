@@ -38,7 +38,7 @@ datas = [
 ]
 
 # Required modules
-imports = ["webview", "flask", "requests", "nbdsuite"]
+imports = ["webview", "flask", "requests"]
 
 # Add all the submodules required by flask_socketio
 imports += [
