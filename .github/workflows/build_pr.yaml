@@ -32,6 +32,7 @@ jobs:
         run: |
           npm run requirements
           conda activate horus
+          python -m pip install pytest
       - name: Build GUI
         run: npm run buildparcel
       - name: Test
@@ -78,6 +79,7 @@ jobs:
         run: |
           npm run requirements
           conda activate horus
+          python -m pip install pytest
       - name: Build GUI
         run: npm run buildparcel
       - name: Test
