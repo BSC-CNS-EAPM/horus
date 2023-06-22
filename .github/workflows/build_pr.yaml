@@ -3,13 +3,61 @@ name: Test and build Horus
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
 
 jobs:
-  build:
+  build-ubuntu:
     permissions:
       contents: write
       pull-requests: write
-    runs-on: [ubuntu-20.04, macos-11]
+    runs-on: ubuntu-20.04
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup conda
+        uses: conda-incubator/setup-miniconda@v2.2.0
+        with:
+          python-version: 3.9.16
+          add-pip-as-python-dependency: true
+          auto-activate-base: false
+      - name: Install nodejs
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18.x"
+      - name: Install dependencies
+        run: |
+          npm run requirements
+          conda activate horus
+      - name: Build GUI
+        run: npm run buildparcel
+      - name: Test
+        run: npm run test
+      - name: Build
+        run: npm run build
+      - name: Package
+        run: npm run distribute
+      - name: Pull request artifacts
+        uses: gavv/pull-request-artifacts@v1.0.0
+        with:
+          # Commit hash that triggered PR
+          commit: ${{ github.event.pull_request.head.sha }}
+
+          # Token for current repo (used to post PR comment)
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+          # Whitespace-separated list of files to upload
+          artifacts: |
+            dist/Package
+
+  build-macos:
+    permissions:
+      contents: write
+      pull-requests: write
+    runs-on: macos-latest
     defaults:
       run:
         shell: bash -l {0}
