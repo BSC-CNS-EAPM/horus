@@ -12,7 +12,6 @@ dependencies:
   - openmm
   - scipy
   - tk
-  - pytest
   - pip:
       - pywebview==4.1
       - flask-cors==3.0.10
@@ -23,6 +22,7 @@ dependencies:
       - gevent
       - Cython==3.0.0b3
       - paramiko
+      - pytest
 # Manual install due to Apple Silicon/ARM not available from repo
 # python -m pip install peleffy
 # python -m pip install nbdsuite<version>.tar.gz
