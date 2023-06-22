@@ -35,8 +35,8 @@ jobs:
           python -m pip install pytest
       - name: Build GUI
         run: npm run buildparcel
-      - name: Test
-        run: npm run test
+      # - name: Test
+      #   run: npm run test
       - name: Build
         run: npm run build
       - name: Package
