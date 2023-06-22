@@ -13,7 +13,7 @@
     "distribute:darwin": "./Devtools/Package/macos.sh",
     "requirements": "npm i run-script-os && run-script-os",
     "requirements:linux": "sudo apt-get update && sudo apt-get install -y libgirepository1.0-dev gcc libgtk-3-dev && npm install && conda env create -f Devtools/Environment/conda_horus.yaml -n horus",
-    "requirements:mac": "npm install && conda env create -f Devtools/Environment/conda_horus.yaml -n horus && npm install --global create-dmg",
+    "requirements:darwin": "npm install && conda env create -f Devtools/Environment/conda_horus.yaml -n horus && npm install --global create-dmg",
     "clean": "rm -rf dist build GUI .parcel-cache .pytest_cache"
   },
   "author": "Nostrum Biodiscovery",
