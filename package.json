@@ -8,7 +8,12 @@
     "buildparcel": "parcel build Views/**/*.html --dist-dir GUI",
     "devparcel": "parcel Views/**/*.html",
     "build": "npm run buildparcel && python Devtools/Compile/compile.py build_ext && pyinstaller Devtools/Compile/build.spec --noconfirm",
-    "requirements": "npm install && conda env create -f Devtools/Environment/conda_horus.yaml -n horus",
+    "distribute": "run-script-os",
+    "distribute:linux": "./Devtools/Package/linux.sh",
+    "distribute:darwin": "./Devtools/Package/macos.sh",
+    "requirements": "npm i run-script-os && run-script-os",
+    "requirements:linux": "sudo apt-get update && sudo apt-get install -y libgirepository1.0-dev gcc libgtk-3-dev && npm install && conda env create -f Devtools/Environment/conda_horus.yaml -n horus",
+    "requirements:mac": "npm install && conda env create -f Devtools/Environment/conda_horus.yaml -n horus && npm install --global create-dmg",
     "clean": "rm -rf dist build GUI .parcel-cache .pytest_cache"
   },
   "author": "Nostrum Biodiscovery",
