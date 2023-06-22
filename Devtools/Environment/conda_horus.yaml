@@ -12,18 +12,17 @@ dependencies:
   - openmm
   - scipy
   - tk
+  - pytest
   - pip:
       - pywebview==4.1
       - flask-cors==3.0.10
       - pyobjc==9.1.1; sys_platform == 'darwin'
       - pygobject==3.44.1; sys_platform == 'linux'
-      - pytest
       - flask-socketio
       - eventlet
       - gevent
       - Cython==3.0.0b3
       - paramiko
-      
 # Manual install due to Apple Silicon/ARM not available from repo
 # python -m pip install peleffy
 # python -m pip install nbdsuite<version>.tar.gz
