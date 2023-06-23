@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  CACHE_NUMBER: 0 # increase to reset cache manually
+
 jobs:
   build-ubuntu:
     permissions:
@@ -20,17 +23,33 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: "18.x"
+      - uses: actions/cache@v3.3.1
+        with:
+          path: node_modules
+          key: linux-64-node-${{ hashFiles('package.json') }}-${{ env.CACHE_NUMBER }}
+        id: cache-node-linux
       - name: Install dependencies
         run: |
           npm run requirements-action
-      - name: Setup conda
+        if: steps.cache-node-linux.outputs.cache-hit != 'true'
+      - name: Setup Mambaforge
         uses: conda-incubator/setup-miniconda@v2.2.0
         with:
+          miniforge-version: latest
+          miniforge-variant: mambaforge
+          use-mamba: true
           python-version: 3.9.16
           add-pip-as-python-dependency: true
           auto-activate-base: false
-          environment-file: Devtools/Environment/conda_horus.yaml
           activate-environment: horus
+      - uses: actions/cache@v3.3.1
+        with:
+          path: /usr/share/miniconda3/envs/horus
+          key: /usr/share/miniconda3/envs/horus-conda-${{ hashFiles('Devtools/Environment/conda_horus.yaml') }}-${{ env.CACHE_NUMBER }}
+        id: cache-conda-linux
+      - name: Update environment
+        run: mamba env update -n horus -f Devtools/Environment/conda_horus.yaml
+        if: steps.cache-conda-linux.outputs.cache-hit != 'true'
       - name: Build GUI
         run: npm run buildparcel
       - name: Test
@@ -69,17 +88,33 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: "18.x"
+      - uses: actions/cache@v3.3.1
+        with:
+          path: node_modules
+          key: osx-64-node-${{ hashFiles('package.json') }}-${{ env.CACHE_NUMBER }}
+        id: cache-node-macos
       - name: Install dependencies
         run: |
           npm run requirements-action
-      - name: Setup conda
+        if: steps.cache-node-macos.outputs.cache-hit != 'true'
+      - name: Setup Mambaforge
         uses: conda-incubator/setup-miniconda@v2.2.0
         with:
+          miniforge-version: latest
+          miniforge-variant: mambaforge
+          use-mamba: true
           python-version: 3.9.16
           add-pip-as-python-dependency: true
           auto-activate-base: false
-          environment-file: Devtools/Environment/conda_horus.yaml
           activate-environment: horus
+      - uses: actions/cache@v3.3.1
+        with:
+          path: /Users/runner/miniconda3/envs/horus
+          key: osx-64-conda-${{ hashFiles('Devtools/Environment/conda_horus.yaml') }}-${{ env.CACHE_NUMBER }}
+        id: cache-conda-macos
+      - name: Update environment
+        run: mamba env update -n horus -f Devtools/Environment/conda_horus.yaml
+        if: steps.cache-conda-macos.outputs.cache-hit != 'true'
       - name: Build GUI
         run: npm run buildparcel
       - name: Test
