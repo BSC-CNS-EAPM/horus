@@ -1,6 +1,6 @@
 // =============================LIBRARIES==============================
 // React basic library
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // Import drag and drop kit
 import {
@@ -8,12 +8,14 @@ import {
   DragEndEvent,
   DragStartEvent,
   DragOverlay,
-  useSensor,
-  MouseSensor,
-  useSensors,
   pointerWithin,
+  useSensor,
+  useSensors,
+  MouseSensor,
+  getClientRect,
+  MeasuringConfiguration,
 } from "@dnd-kit/core";
-import { arrayMove } from "@dnd-kit/sortable";
+
 // ====================================================================
 
 // =============================COMPONENTS=============================
@@ -29,13 +31,18 @@ import { Block } from "./block";
 
 // =============================INTERFACES=============================
 // Import the block interface
-import { BlockProps, FlowBuilderProps } from "./flow_builder_interfaces";
+import {
+  BlockProps,
+  FlowBuilderProps,
+  PluginVariable,
+} from "./flow_builder_interfaces";
 // ====================================================================
 
 export default function FlowBuilder(props: FlowBuilderProps) {
   const [placedBlocks, setPlacedBlocks] = useState<BlockProps[]>([]);
-
   const [draggingBlock, setDraggingBlock] = useState<BlockProps>();
+
+  const mousePos = useRef({ x: 0, y: 0 });
 
   // Saved state
   const [saved, _setSaved] = useState(true);
@@ -49,7 +56,15 @@ export default function FlowBuilder(props: FlowBuilderProps) {
   const placedIDCounter = useRef(1);
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
+    setDraggingBlock(undefined);
+
+    const { active, over, delta } = event;
+
+    // Check for an arrow-block connection
+    if (active.data.current.type === "connector") {
+      handleArrowBlockConnection(event);
+      return;
+    }
 
     // Get the current dragged block
     const currentBlock = active.data.current?.block;
@@ -60,9 +75,9 @@ export default function FlowBuilder(props: FlowBuilderProps) {
 
     setSaved(false);
 
-    // If its a sorting operation
-    if (currentBlock?.isPlaced && currentBlock.parent === undefined) {
-      handleBlockSort(event);
+    // If its already placed, its a moving operations
+    if (currentBlock.isPlaced) {
+      handleBlockMove(event);
       return;
     }
 
@@ -73,7 +88,7 @@ export default function FlowBuilder(props: FlowBuilderProps) {
       over.id === "flow-reciver" &&
       currentBlock.parent === undefined
     ) {
-      addBlockToFlow(currentBlock);
+      addBlockToFlow(currentBlock, event);
       return;
     }
 
@@ -83,125 +98,144 @@ export default function FlowBuilder(props: FlowBuilderProps) {
     if (!overBlock) {
       return;
     }
-
-    // If it is dropped inside a sub block container
-    if (
-      over &&
-      over.id === `${overBlock.placedID}-sub-block-${currentBlock.parent?.id}`
-    ) {
-      addSubBlock(event);
-      return;
-    }
-
-    // If its a sorting operation inside a sub block container
-    if (over && overBlock.parent?.id === currentBlock?.parent?.id) {
-      handleSubBlockSort(event);
-      return;
-    }
   };
 
-  const addBlockToFlow = (block: BlockProps) => {
-    setPlacedBlocks([
-      ...placedBlocks,
-      { ...block, isPlaced: true, placedID: placedIDCounter.current++ },
-    ]);
-  };
-
-  const addSubBlock = (event: DragEndEvent) => {
+  const handleArrowBlockConnection = (event: DragEndEvent) => {
     const { active, over } = event;
 
-    // Get the current dragged block
-    const block = active.data.current.block;
+    // Get the current dragged arrow block
+    const currentBlock = active.data.current?.block as BlockProps;
 
-    if (!block || block.isPlaced) {
-      return;
-    }
-
-    // Get the parent block
-    const parent = placedBlocks.find(
-      (b) => b.placedID === over.data.current?.block.placedID
-    );
-
-    // Define the placedSubBlocks array if it's not defined
-    if (!parent?.placedSubBlocks) {
-      parent.placedSubBlocks = [];
-    }
-
-    // Remove from the parent the placedSubBlocks so no circular structure is created
-    const newParent = { ...parent };
-    delete newParent.placedSubBlocks;
-
-    // Add to the parent .placedSubBlocks the current block
-    parent?.placedSubBlocks?.push({
-      ...block,
-      isPlaced: true,
-      placedID: placedIDCounter.current++,
-      parent: newParent,
-    });
-
-    // Update the parent block
-    setPlacedBlocks((blocks) => {
-      const index = blocks.findIndex((b) => b.placedID === parent?.placedID);
-      blocks[index] = parent;
-      return blocks;
-    });
-  };
-
-  const handleBlockDrag = (event: DragStartEvent) => {
-    const currentBlock = event.active.data.current.block;
-    setDraggingBlock(currentBlock);
-  };
-
-  const handleBlockSort = (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    const currentBlock = active?.data?.current?.block;
-    const overBlock = over?.data?.current?.block;
+    // Get the over block
+    const overBlock = over?.data?.current?.block as BlockProps;
 
     if (!currentBlock || !overBlock) {
       return;
     }
 
-    if (active.id !== over.id) {
-      setPlacedBlocks((blocks) => {
-        const oldIndex = blocks.findIndex(
-          (b) => b.placedID === currentBlock.placedID
-        );
-        const newIndex = blocks.findIndex(
-          (b) => b.placedID === overBlock.placedID
-        );
+    // Create a new block with the new connection
+    // Adding to the connectedTo array the over block
+    const newBlock = {
+      ...currentBlock,
+      connectedTo: currentBlock.connectedTo
+        ? [...currentBlock.connectedTo, overBlock]
+        : [overBlock],
+    };
 
-        return arrayMove(blocks, oldIndex, newIndex);
-      });
-    }
+    // Update the over block with the new connection
+    const newOverBlock = {
+      ...overBlock,
+      appearsOn: overBlock.appearsOn
+        ? [...overBlock.appearsOn, newBlock]
+        : [newBlock],
+    };
+
+    // Update the state
+    setPlacedBlocks((blocks) => {
+      const index = blocks.findIndex(
+        (b) => b.placedID === currentBlock?.placedID
+      );
+      const newBlocks = [...blocks];
+      newBlocks[index] = newBlock;
+
+      const overIndex = newBlocks.findIndex(
+        (b) => b.placedID === overBlock?.placedID
+      );
+      newBlocks[overIndex] = newOverBlock;
+
+      return newBlocks;
+    });
   };
 
-  const handleSubBlockSort = (event: DragEndEvent) => {
-    const { active, over } = event;
+  const handleBlockMove = (event: DragEndEvent) => {
+    const { active, delta } = event;
 
-    if (active.id !== over.id) {
-      const parent = placedBlocks.find(
-        (b) => b.placedID === over.data.current.block.parent?.placedID
-      );
+    // Get the current dragged block
+    const currentBlock = active.data.current?.block;
 
-      if (parent?.placedSubBlocks) {
-        parent.placedSubBlocks = arrayMove(
-          parent.placedSubBlocks,
-          parent.placedSubBlocks.findIndex(
-            (b) => b.placedID === active.data.current.block.placedID
-          ),
-          parent.placedSubBlocks.findIndex(
-            (b) => b.placedID === over.data.current.block.placedID
-          )
-        );
-      }
-
-      setPlacedBlocks((blocks) => {
-        const index = blocks.findIndex((b) => b.placedID === parent?.placedID);
-        blocks[index] = parent;
-        return blocks;
-      });
+    if (!currentBlock) {
+      return;
     }
+
+    // Get the current position
+    const currentPosition = currentBlock.coords;
+
+    if (!currentPosition) {
+      return;
+    }
+
+    const { over } = event;
+
+    // If the over block is not the flow reciver, we don't move the block
+    if (over?.id !== "flow-reciver") {
+      return;
+    }
+
+    // Set the new position
+    const newBlock = {
+      ...currentBlock,
+      coords: {
+        x: currentPosition.x + delta.x,
+        y: currentPosition.y + delta.y,
+      },
+    };
+
+    // Update the state
+    setPlacedBlocks((blocks) => {
+      const index = blocks.findIndex(
+        (b) => b.placedID === currentBlock?.placedID
+      );
+      blocks[index] = newBlock;
+      return blocks;
+    });
+  };
+
+  function convertRemToPixels(rem) {
+    return (
+      rem * parseFloat(getComputedStyle(document.documentElement).fontSize)
+    );
+  }
+
+  const addBlockToFlow = (block: BlockProps, event: DragEndEvent) => {
+    const newBlock: BlockProps = {
+      ...block,
+      isPlaced: true,
+      placedID: placedIDCounter.current,
+      coords: {
+        x: mousePos.current.x - convertRemToPixels(20),
+        y: mousePos.current.y - convertRemToPixels(8.2),
+      },
+      variables: block.variables.map((variable) => {
+        return {
+          ...variable,
+          placedID: placedIDCounter.current,
+        };
+      }),
+    };
+
+    // Update the state
+    setPlacedBlocks([...placedBlocks, newBlock]);
+
+    // Update the placedIDCounter
+    placedIDCounter.current += 1;
+
+  };
+
+  const handleBlockDrag = (event: DragStartEvent) => {
+    // Get the current dragged block
+    const { active } = event;
+
+    if (active.data.current.type === "connector") {
+      return;
+    }
+
+    const currentBlock = event.active.data.current.block;
+
+    if (currentBlock.isPlaced) {
+      return;
+    }
+
+    setDraggingBlock(currentBlock);
   };
 
   const mouseSensor = useSensor(MouseSensor, {
@@ -210,7 +244,37 @@ export default function FlowBuilder(props: FlowBuilderProps) {
     },
   });
 
+  const handleMouseMove = (event) => {
+    mousePos.current = {
+      x: event.clientX - event.target.offsetLeft,
+      y: event.clientY - event.target.offsetTop,
+    };
+  };
+
+  useEffect(() => {
+    // Set a window event listener for the mousemove event
+    window.addEventListener("mousemove", handleMouseMove);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+    };
+  }, []);
+
   const sensors = useSensors(mouseSensor);
+
+  const measuring: MeasuringConfiguration = {
+    droppable: {
+      measure: getClientRect,
+    },
+  };
+
+  const handleArrows = (event) => {
+    const { active } = event;
+    const updateXarrow = active.data?.current?.updateXarrow;
+    if (updateXarrow) {
+      updateXarrow();
+    }
+  };
 
   return (
     // Setup the drag and drop context
@@ -219,8 +283,10 @@ export default function FlowBuilder(props: FlowBuilderProps) {
     <DndContext
       onDragEnd={handleDragEnd}
       onDragStart={handleBlockDrag}
-      sensors={sensors}
+      onDragMove={handleArrows}
       collisionDetection={pointerWithin}
+      sensors={sensors}
+      measuring={measuring}
     >
       <div className="m-auto flex flex-row h-100">
         {/* The block list coming from the server */}
@@ -237,7 +303,18 @@ export default function FlowBuilder(props: FlowBuilderProps) {
         />
       </div>
       <DragOverlay dropAnimation={null}>
-        <Block {...draggingBlock} isOnAir={true} />
+        {
+          // If there is a block being dragged, show it
+          draggingBlock && (
+            <div
+              style={{
+                cursor: "grabbing",
+              }}
+            >
+              <Block {...draggingBlock} isOnAir={true} />
+            </div>
+          )
+        }
       </DragOverlay>
     </DndContext>
   );

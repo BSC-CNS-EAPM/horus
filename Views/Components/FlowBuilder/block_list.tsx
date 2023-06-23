@@ -1,11 +1,32 @@
 import { horusGet } from "../../Utils/utils";
 import { useEffect, useState } from "react";
 import { BlockProps } from "./flow_builder_interfaces";
-import { Block } from "./block";
+import { Block, DraggableBlock } from "./block";
 import { RotatingLines } from "react-loader-spinner";
+import { SearchComponent } from "../Toolbar/toolbar";
+
+function getFilteredItems(query, blocks: BlockProps[]) {
+  if (!query) {
+    return blocks;
+  }
+
+  return blocks.filter((block) => {
+    const blockName = block.name.toLowerCase();
+    const blockPlugin = block.plugin.toLowerCase();
+    return (
+      blockName.includes(query.toLowerCase()) ||
+      blockPlugin.includes(query.toLowerCase())
+    );
+  });
+}
+
 function BlockList() {
   // Fetch the blocks from the server api
   const [blocks, setBlocks] = useState<BlockProps[]>([]);
+
+  const [query, setQuery] = useState<string>("");
+
+  const filteredBlocks = getFilteredItems(query, blocks);
 
   useEffect(() => {
     async function fetchBlocks() {
@@ -22,6 +43,10 @@ function BlockList() {
         variables: b.variables,
         isPlaced: false,
         subBlocks: b.subBlocks,
+        coords: {
+          x: 0,
+          y: 0,
+        },
       }));
       setBlocks(fb);
     });
@@ -30,6 +55,11 @@ function BlockList() {
   return (
     <div className="block-sidebar">
       <h1>Blocks</h1>
+      <SearchComponent
+        placeholder="Search blocks..."
+        onChange={(e) => setQuery(e.target.value)}
+        showIcon={false}
+      />
       <div>
         {blocks.length === 0 ? (
           <div
@@ -47,8 +77,8 @@ function BlockList() {
             Loading blocks...
           </div>
         ) : (
-          blocks.map((block, index) => {
-            const prevBlock = index > 0 ? blocks[index - 1] : null;
+          filteredBlocks.map((block, index) => {
+            const prevBlock = index > 0 ? filteredBlocks[index - 1] : null;
             const isDifferentPlugin =
               prevBlock && prevBlock.plugin !== block.plugin;
             return (
@@ -59,19 +89,7 @@ function BlockList() {
                     <div className="plugin-name-block">{block.plugin}</div>
                   </div>
                 )}
-                <Block {...block} />
-                {/* Now place the sub-blocks */}
-                {block.subBlocks &&
-                  block.subBlocks.map((subBlock) => {
-                    return (
-                      <Block
-                        key={subBlock.id}
-                        {...subBlock}
-                        isSubBlock={true}
-                        parent={block}
-                      />
-                    );
-                  })}
+                <DraggableBlock {...block} />
               </div>
             );
           })

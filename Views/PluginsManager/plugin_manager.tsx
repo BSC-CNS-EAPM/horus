@@ -11,9 +11,10 @@ import {
   BlockProps,
   PluginVariableType,
 } from "../Components/FlowBuilder/flow_builder_interfaces";
-import { PluginVariable } from "../Components/FlowBuilder/block";
 
 import { RotatingLines } from "react-loader-spinner";
+
+import { PluginVariableView } from "../Components/FlowBuilder/block_variables";
 
 interface PluginConfigViewProps {
   configBlocks: BlockProps[];
@@ -29,7 +30,7 @@ function PluginConfigView(props: PluginConfigViewProps) {
       {configBlocks.map((block, index) => {
         return block.variables.map((variable, index) => {
           return (
-            <PluginVariable
+            <PluginVariableView
               key={variable.id}
               variable={variable}
               onChange={handleChange}

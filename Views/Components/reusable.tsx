@@ -3,6 +3,30 @@ import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
 import { Listbox, Transition } from '@headlessui/react'
 import { CheckIcon, ChevronUpDownIcon } from '@heroicons/react/20/solid'
+import { Popover } from "@headlessui/react";
+
+const HorusPopover = ({ trigger, children }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const handleOpen = () => {
+    setIsOpen(true);
+  };
+  const handleClose = () => {
+    setIsOpen(false);
+  };
+
+  return (
+    <Popover className="relative">
+      <Popover.Button onMouseOver={handleOpen} onMouseLeave={handleClose}>
+        {trigger}
+      </Popover.Button>
+      {isOpen && (
+        <Popover.Panel className="absolute" static>
+          {children}
+        </Popover.Panel>
+      )}
+    </Popover>
+  );
+};
 
 function debounce(func, timeout = 300){
   let timer;
@@ -104,4 +128,4 @@ function HorusDropdown() {
   )
 }
 
-export { HorusModal, HorusDropdown, HorusModalProps, debounce }
+export { HorusModal, HorusDropdown, HorusModalProps, debounce, HorusPopover }

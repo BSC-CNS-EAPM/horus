@@ -1,15 +1,11 @@
-import { Block } from "./block";
+import { Block, DraggableBlock } from "./block";
 import { BlockProps, FlowReciverProps } from "./flow_builder_interfaces";
 import { useEffect, useRef, useState } from "react";
 import { horusGet, horusPost } from "../../Utils/utils";
 import { RotatingLines } from "react-loader-spinner";
-import { debounce } from "../reusable";
-// Import the dndkit
-import { useDroppable } from "@dnd-kit/core";
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
+import { useDroppable, DndContext } from "@dnd-kit/core";
+import Xarrow, { Xwrapper } from "react-xarrows";
+import { HorusModal } from "../reusable";
 
 function FlowReciver(props: FlowReciverProps) {
   // Modal state
@@ -115,7 +111,15 @@ function FlowReciver(props: FlowReciverProps) {
     return data;
   };
 
-  const executeBlock = async (block) => {
+  const stopExecute = useRef(false);
+
+  const executeBlock = async (block: BlockProps) => {
+    if (stopExecute.current) {
+      return;
+    }
+
+    setExecutingAll(true);
+
     // Check that the flow is saved
     if (!currentSaved.current) {
       // Save the flow
@@ -125,27 +129,29 @@ function FlowReciver(props: FlowReciverProps) {
     // Set the running spinner for the current block
     toggleSpinner();
 
-    const result = await executeInternal(block);
+    // Find the actual block in the placedBlocks array
+    const realBlock = props.placedBlocks.find(
+      (b) => b.placedID === block.placedID
+    );
+
+    const result = await executeInternal(realBlock);
+
+    // Set the running button to false
+    toggleSpinner(false);
 
     // Check any error status code
     !result.ok ? toggleError() : toggleError(false);
 
-    // Execute the subblocks
-    if (block.placedSubBlocks?.length > 0) {
-      for (const subBlock of block.placedSubBlocks) {
-        const subresult = await executeInternal(subBlock);
-        // Check any error status code
-        if (!subresult.ok) {
-          toggleError();
-          break;
-        } else {
-          toggleError(false);
-        }
+    // Execute the connected blocks
+    if (realBlock.connectedTo && realBlock.connectedTo.length > 0) {
+      for (const connected of realBlock.connectedTo) {
+        await executeBlock(connected);
       }
     }
 
-    // Set the running button to false
-    toggleSpinner(false);
+    setExecutingAll(false);
+
+    stopExecute.current = false;
 
     function toggleSpinner(status = true) {
       props.setPlacedBlocks(
@@ -170,17 +176,16 @@ function FlowReciver(props: FlowReciverProps) {
     }
   };
 
-  const handleExecuteAll = async () => {
-    // Set the executing state to true
-    setExecutingAll(true);
-
-    //Loop over the blocks and execute them
-    for (const block of props.placedBlocks) {
-      await executeBlock(block);
+  const stopExecutingAll = async () => {
+    if (!executingAll) {
+      return;
     }
 
-    // Set the executing state to false
-    setExecutingAll(false);
+    if (!confirm("Are you sure you want to stop executing the flow?")) {
+      return;
+    }
+
+    stopExecute.current = true;
   };
 
   const onNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -189,24 +194,27 @@ function FlowReciver(props: FlowReciverProps) {
   };
 
   const handleDelete = (block: BlockProps) => {
+    // Loop over the block "appearsOn" and delete the block from the connectedTo list
+    if (block.appearsOn) {
+      for (const aB of block.appearsOn) {
+        props.setPlacedBlocks(
+          props.placedBlocks.map((b) => {
+            if (b.placedID === aB.placedID) {
+              b.connectedTo = b.connectedTo.filter(
+                (c) => c.placedID !== block.placedID
+              );
+            }
+            return b;
+          })
+        );
+      }
+    }
+
     // Delete a block from the current flow
     props.setPlacedBlocks(
       props.placedBlocks.filter((b) => b.placedID !== block.placedID)
     );
 
-    // If the block has a parent, delete the block from the parent
-    if (block.parent !== undefined) {
-      props.setPlacedBlocks(
-        props.placedBlocks.map((b) => {
-          if (b.placedID === block.parent.placedID) {
-            b.placedSubBlocks = b.placedSubBlocks.filter(
-              (s) => s.placedID !== block.placedID
-            );
-          }
-          return b;
-        })
-      );
-    }
     setSaved(false);
   };
 
@@ -357,7 +365,13 @@ function FlowReciver(props: FlowReciverProps) {
           </svg>
         )}
       </button>
-      <button onClick={handleExecuteAll} className="flow-button">
+      <button
+        onClick={stopExecutingAll}
+        className="flow-button"
+        style={{
+          cursor: executingAll ? "pointer" : "default",
+        }}
+      >
         {executingAll ? (
           <RotatingLines
             strokeColor="grey"
@@ -389,41 +403,52 @@ function FlowReciver(props: FlowReciverProps) {
     </h1>
   );
 
-  const sortableFlow = () => {
-    // Log all the placedID:
-    for (const block of props.placedBlocks) {
-      console.log(block.placedID);
-    }
+  const renderBlock = (block: BlockProps, index: number) => {
+    const connectedToBlocks = block.connectedTo?.map((connectedBlock) => (
+      <Xarrow
+        start={`${block?.placedID}-${block.id}`}
+        end={`${connectedBlock?.placedID}-${connectedBlock.id}`}
+        key={`${block?.placedID}-${block.id}-${connectedBlock?.placedID}-${connectedBlock.id}`}
+        startAnchor={["right"]}
+        endAnchor={["left", "top", "bottom"]}
+      />
+    ));
+
     return (
-      <div className="flex flex-col align-items-center mt-4">
-        <SortableContext
-          items={props.placedBlocks || []}
-          strategy={verticalListSortingStrategy}
-        >
-          {props.placedBlocks.map((block, index) => (
-            <Block
-              key={`${block.placedID}-${block.id}`}
-              {...block}
-              onChange={onblockChange}
-              execute={executeBlock}
-              index={index}
-              deleteBlock={handleDelete}
-            />
-          ))}
-        </SortableContext>
-        <div className="plugin-block block-placeholder">
-          Drag and drop a blocks here
-        </div>
-      </div>
+      <>
+        <DraggableBlock
+          key={`${block.placedID}-${block.id}`}
+          {...block}
+          onChange={onblockChange}
+          execute={executeBlock}
+          index={index}
+          deleteBlock={handleDelete}
+        />
+        {connectedToBlocks}
+      </>
     );
   };
 
+  const placedBlocksView = props.placedBlocks.map(renderBlock);
+
   return (
-    <div ref={setNodeRef} className="current-flow">
+    <div className="current-flow">
       {topBarTitle}
-      {sortableFlow()}
+      <div className="current-flow-canvas" ref={setNodeRef}>
+        <Xwrapper>{placedBlocksView}</Xwrapper>
+      </div>
     </div>
   );
 }
 
 export { FlowReciver };
+
+{
+  /* {block.connectedTo?.map((connectedBlock) => (
+        <Xarrow
+          start={`${block?.placedID}-${block.id}`}
+          end={`${connectedBlock?.placedID}-${connectedBlock.id}`}
+          key={`${block?.placedID}-${block.id}-${connectedBlock?.placedID}-${connectedBlock.id}`}
+        />
+      ))} */
+}

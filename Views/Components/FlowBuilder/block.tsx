@@ -1,25 +1,15 @@
-import { useEffect, useState, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { RotatingLines } from "react-loader-spinner";
-import { CSS } from "@dnd-kit/utilities";
-
-import {
-  BlockProps,
-  PluginVariable,
-  PluginVariableType,
-  PluginVariableTypes,
-} from "./flow_builder_interfaces";
-
+import { HorusModal, HorusPopover } from "../reusable";
+import { BlockProps } from "./flow_builder_interfaces";
+import { PluginVariableType } from "./flow_builder_interfaces";
+import { PluginVariableView } from "./block_variables";
 import "./block.css";
 
-import anime from "animejs";
-
-import { Popover } from "@headlessui/react";
-import {
-  useSortable,
-  SortableContext,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { useDroppable } from "@dnd-kit/core";
+// Drag the blocks, drop the arrows
+import { useDraggable, useDroppable } from "@dnd-kit/core";
+import { ArrowBlockConnector } from "./arrow_connector";
+import { useXarrow } from "react-xarrows";
 
 interface DeleteBlockButtonProps {
   block: BlockProps;
@@ -32,13 +22,38 @@ interface PlayBlockButtonProps {
   onClick: () => Promise<void>;
 }
 
+function BlockVariablesButton({ onClick }) {
+  return (
+    <HorusPopover
+      trigger={
+        <button onClick={onClick}>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            className="w-5 h-5"
+          >
+            <path
+              fillRule="evenodd"
+              d="M7.84 1.804A1 1 0 018.82 1h2.36a1 1 0 01.98.804l.331 1.652a6.993 6.993 0 011.929 1.115l1.598-.54a1 1 0 011.186.447l1.18 2.044a1 1 0 01-.205 1.251l-1.267 1.113a7.047 7.047 0 010 2.228l1.267 1.113a1 1 0 01.206 1.25l-1.18 2.045a1 1 0 01-1.187.447l-1.598-.54a6.993 6.993 0 01-1.929 1.115l-.33 1.652a1 1 0 01-.98.804H8.82a1 1 0 01-.98-.804l-.331-1.652a6.993 6.993 0 01-1.929-1.115l-1.598.54a1 1 0 01-1.186-.447l-1.18-2.044a1 1 0 01.205-1.251l1.267-1.114a7.05 7.05 0 010-2.227L1.821 7.773a1 1 0 01-.206-1.25l1.18-2.045a1 1 0 011.187-.447l1.598.54A6.993 6.993 0 017.51 3.456l.33-1.652zM10 13a3 3 0 100-6 3 3 0 000 6z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </button>
+      }
+    >
+      <div className="plugin-description">Configure block</div>
+    </HorusPopover>
+  );
+}
+
 function DeleteBlockButton({ block, onClick }: DeleteBlockButtonProps) {
   const deleteBlock = () => {
     onClick(block);
   };
 
   return (
-    <CustomPopover
+    <HorusPopover
       trigger={
         <button onClick={deleteBlock}>
           <svg
@@ -57,7 +72,7 @@ function DeleteBlockButton({ block, onClick }: DeleteBlockButtonProps) {
       }
     >
       <div className="plugin-description">Delete block</div>
-    </CustomPopover>
+    </HorusPopover>
   );
 }
 
@@ -67,7 +82,7 @@ function PlayBlockButton({
   onClick,
 }: PlayBlockButtonProps) {
   return (
-    <CustomPopover
+    <HorusPopover
       trigger={
         isRunning ? (
           <RotatingLines
@@ -95,198 +110,24 @@ function PlayBlockButton({
       }
     >
       <div className="plugin-description">Execute block</div>
-    </CustomPopover>
+    </HorusPopover>
   );
 }
-
-const ItemTypes = {
-  BLOCK: "block",
-};
-
-const PluginVariable = <T extends PluginVariableType>(props: {
-  variable: PluginVariable<T>;
-  onChange: (value: T, id: string) => void;
-}) => {
-  const [value, setValue] = useState<T>(props.variable.value);
-
-  const handleChange = (value: T) => {
-    setValue(value);
-    props.onChange(value, props.variable.id);
-  };
-
-  useEffect(() => {
-    handleChange(props.variable.value);
-  }, [props.variable.value]);
-
-  return (
-    <div className="plugin-variable">
-      <div className="plugin-variable-name">{props.variable.name}</div>
-      <div className="plugin-variable-description">
-        {props.variable.description}
-      </div>
-      <div className="plugin-variable-value">
-        {/* Define an input based on the type */}
-
-        {/* If its a string, int or float, set a basic input */}
-        {props.variable.type === PluginVariableTypes.STRING && (
-          <input
-            type="text"
-            value={value as string}
-            onChange={(e) => handleChange(e.target.value as any)}
-          />
-        )}
-
-        {props.variable.type === PluginVariableTypes.INTEGER && (
-          <input
-            type="number"
-            value={value as number}
-            onChange={(e) => handleChange(e.target.value as any)}
-          />
-        )}
-
-        {props.variable.type === PluginVariableTypes.FLOAT && (
-          <input
-            type="number"
-            value={value as number}
-            onChange={(e) => handleChange(e.target.value as any)}
-          />
-        )}
-
-        {/* If its a boolean, set a checkbox */}
-        {props.variable.type === PluginVariableTypes.BOOLEAN && (
-          <input
-            type="checkbox"
-            checked={value as boolean}
-            onChange={(e) => handleChange(e.target.checked as any)}
-          />
-        )}
-
-        {/* If its a list of strings, set a dropdown */}
-        {props.variable.type === PluginVariableTypes.STRING_LIST && (
-          <select
-            value={value as string}
-            onChange={(e) => handleChange(e.target.value as any)}
-          >
-            {(props.variable.allowedValues as string[])?.map((value, index) => (
-              <option key={index} value={value}>
-                {value}
-              </option>
-            ))}
-          </select>
-        )}
-
-        {/* If its a list of integers, set a dropdown */}
-        {props.variable.type === PluginVariableTypes.INTEGER_LIST && (
-          <select
-            value={value as number}
-            onChange={(e) => handleChange(e.target.value as any)}
-          >
-            {(props.variable.allowedValues as number[])?.map((value, index) => (
-              <option key={index} value={value}>
-                {value}
-              </option>
-            ))}
-          </select>
-        )}
-
-        {/* If its a list of floats, set a dropdown */}
-        {props.variable.type === PluginVariableTypes.FLOAT_LIST && (
-          <select
-            value={value as number}
-            onChange={(e) => handleChange(e.target.value as any)}
-          >
-            {(props.variable.allowedValues as number[])?.map((value, index) => (
-              <option key={index} value={value}>
-                {value}
-              </option>
-            ))}
-          </select>
-        )}
-
-        {/* If its a list of booleans, set radio items*/}
-        {props.variable.type === PluginVariableTypes.BOOLEAN_LIST && (
-          <div className="flex flex-row">
-            {(props.variable.allowedValues as boolean[])?.map(
-              (value, index) => (
-                <div key={index} className="flex flex-row items-center">
-                  <input
-                    type="radio"
-                    checked={value === (value as boolean)}
-                    onChange={(e) => handleChange(value as any)}
-                  />
-                  <div className="ml-2">{value}</div>
-                </div>
-              )
-            )}
-          </div>
-        )}
-
-        {/* If the type is a FILE, set a file upload button */}
-        {props.variable.type === PluginVariableTypes.FILE && (
-          <input
-            type="file"
-            onChange={(e) => handleChange(e.target.files[0] as any)}
-          />
-        )}
-      </div>
-    </div>
-  );
-};
-
-const CustomPopover = ({ trigger, children }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const handleOpen = () => {
-    setIsOpen(true);
-  };
-  const handleClose = () => {
-    setIsOpen(false);
-  };
-
-  return (
-    <Popover className="relative">
-      <Popover.Button onMouseOver={handleOpen} onMouseLeave={handleClose}>
-        {trigger}
-      </Popover.Button>
-      {isOpen && (
-        <Popover.Panel className="absolute" static>
-          {children}
-        </Popover.Panel>
-      )}
-    </Popover>
-  );
-};
 
 function Block(block: BlockProps) {
   // Track hovering on info button to display the description instead of the plugin
   const [isInfoHovering, setIsInfoHovering] = useState(false);
-
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    isDragging,
-    transition,
-  } = useSortable({
-    id: block.isPlaced ? block.placedID : block.id,
-    data: { block: block },
-  });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    cursor: isDragging || block?.isOnAir ? "grabbing" : "grab",
-    opacity: isDragging ? 0.5 : 1,
-  };
 
   const handleChange = (value: PluginVariableType, id: string) => {
     var hasChanged = false;
     // Update the variable value by searching the PluginVariable by id
     const updatedVariables = block.variables.map((variable) => {
       if (variable.id === id) {
-        if (variable.value !== value) {
-          hasChanged = true;
-          variable.value = value;
+        if (variable.placedID === block.placedID) {
+          if (variable.value !== value) {
+            hasChanged = true;
+            variable.value = value;
+          }
         }
       }
       return variable;
@@ -306,71 +147,78 @@ function Block(block: BlockProps) {
     await block?.execute(block);
   };
 
-  const { isOver, setNodeRef: setNodeRefSubBlock } = useDroppable({
-    id: `${block.placedID}-sub-block-${block.id}`,
-    data: { block: block },
-  });
+  const [variablesModal, setVariablesModal] = useState(false);
 
-  const subBlocksView = () => {
-    if (!block.isSubBlock && block.isPlaced && block.subBlocks?.length > 0) {
-      return (
-        <div className="mt-2">
-          <SortableContext
-            items={block.placedSubBlocks || []}
-            strategy={verticalListSortingStrategy}
-          >
-            {block.placedSubBlocks?.map((subBlock, index) => (
-              <Block
-                key={`${subBlock.placedID}-${subBlock.id}`}
-                {...subBlock}
-                onChange={block.onChange}
-                execute={block.execute}
-                index={index}
-                deleteBlock={block.deleteBlock}
-              />
-            ))}
-          </SortableContext>
-          <div
-            ref={setNodeRefSubBlock}
-            className="plugin-block subblock-placeholder"
-          >
-            Place subblocks here...
-          </div>
-        </div>
-      );
-    }
+  const openVariablesModal = () => {
+    // Open the variables modal
+    setVariablesModal(true);
   };
+
+  const closeVariablesModal = () => {
+    // Close the variables modal
+    setVariablesModal(false);
+  };
+
+  const variablesModalView = (
+    <HorusModal
+      show={variablesModal}
+      onHide={closeVariablesModal}
+      header={<div className="text-xl font-bold">Variables</div>}
+      body={
+        <div>
+          {block.variables.map((variable, index) => (
+            <PluginVariableView
+              key={
+                variable.id +
+                "-" +
+                index +
+                "-" +
+                block.id +
+                "-" +
+                block.placedID
+              }
+              variable={variable}
+              onChange={handleChange}
+            />
+          ))}
+        </div>
+      }
+      footer={
+        <div className="flex flex-row justify-end">
+          <button className="app-button" onClick={closeVariablesModal}>
+            Close
+          </button>
+        </div>
+      }
+    />
+  );
 
   return (
     <div
       id={`${block?.placedID}-${block.id}`}
-      ref={setNodeRef}
-      style={style}
-      {...listeners}
-      {...attributes}
       className={`${
         block.isSubBlock && !block.isPlaced && !block.isOnAir ? "subblock" : ""
-      } plugin-block ${
-        block.isPlaced && isDragging ? "" : "plugin-block-placed"
-      }`}
+      } plugin-block ${block.isPlaced ? "" : "plugin-block-placed"}`}
     >
+      {variablesModalView}
       <div className="flex flew-row justify-between">
         <div style={{ fontWeight: "bold" }}>{block.name}</div>
         <div className="flex flex-row gap-1">
           {/* Play button to execute the block */}
-          {block.isPlaced && !block?.isSubBlock && (
-            <PlayBlockButton
-              isRunning={block.isRunning}
-              runError={block.runError}
-              onClick={handleExecute}
-            />
-          )}
           {/* Delete button to remove the block from the canvas */}
           {block.isPlaced && (
-            <DeleteBlockButton
-              block={block}
-              onClick={() => block.deleteBlock(block)}
-            />
+            <>
+              <PlayBlockButton
+                isRunning={block.isRunning}
+                runError={block.runError}
+                onClick={handleExecute}
+              />
+              <BlockVariablesButton onClick={openVariablesModal} />
+              <DeleteBlockButton
+                block={block}
+                onClick={() => block.deleteBlock(block)}
+              />
+            </>
           )}
 
           {!block.isPlaced && (
@@ -394,11 +242,14 @@ function Block(block: BlockProps) {
             </div>
           )}
         </div>
+        {/* <button className="nbd-btn" onClick={handleBlockConnection}>
+          Connect block
+        </button> */}
       </div>
       {block.isPlaced && (
         <div>
           {block.variables.map((variable, index) => (
-            <PluginVariable
+            <PluginVariableView
               key={variable.id}
               variable={variable}
               onChange={handleChange}
@@ -414,9 +265,69 @@ function Block(block: BlockProps) {
       >
         {isInfoHovering || block.isPlaced ? block.description : null}
       </div>
-      {subBlocksView()}
     </div>
   );
 }
 
-export { Block, ItemTypes, PluginVariable };
+function DraggableBlock(block: BlockProps) {
+  const updateXarrow = useXarrow();
+
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id: block.placedID ? `${block.placedID}-${block.id}` : block.id,
+    data: {
+      block: block,
+      updateXarrow: updateXarrow,
+    },
+  });
+
+  const { setNodeRef: setDropRef, isOver } = useDroppable({
+    id: block.placedID ? `${block.placedID}-${block.id}` : block.id,
+    data: {
+      block: block,
+    },
+  });
+
+  var style = {
+    transform: null,
+    top: 0,
+    left: 0,
+    cursor: "grab",
+    zIndex: 10,
+  };
+
+  if (block.isPlaced) {
+    style.transform = `translate(${block?.coords?.x}px, ${block?.coords?.y}px)`;
+  }
+
+  if (transform && block.isPlaced) {
+    const deltx = transform.x + block.coords.x;
+    const delty = transform.y + block.coords.y;
+    style.transform = `translate(${deltx}px, ${delty}px)`;
+  }
+
+  if (transform) {
+    style.cursor = "grabbing";
+  }
+
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setDropRef(ref.current);
+    setNodeRef(ref.current);
+  }, [ref]);
+
+  return (
+    <div
+      ref={ref}
+      style={style}
+      {...listeners}
+      {...attributes}
+      className={block.isPlaced ? "absolute" : "relative"}
+    >
+      <Block {...block} />
+      {block.isPlaced && <ArrowBlockConnector from={ref} block={block} />}
+    </div>
+  );
+}
+
+export { Block, DraggableBlock };

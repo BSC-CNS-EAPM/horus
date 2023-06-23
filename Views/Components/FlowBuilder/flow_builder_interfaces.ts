@@ -19,13 +19,18 @@ interface FlowReciverProps {
   openFlow?: boolean;
   flowName: string;
   placedBlocks: BlockProps[];
-  setPlacedBlocks: (blocks: BlockProps[]) => void;
+  setPlacedBlocks: (value: React.SetStateAction<BlockProps[]>) => void;
   savedID?: string;
   flowPath?: string;
   currentSaved: React.MutableRefObject<boolean>;
   setSaved: (saved: boolean) => void;
   placedIDCounter: React.MutableRefObject<number>;
 }
+
+export type Coordinates = {
+  x: number;
+  y: number;
+};
 
 interface BlockProps {
   id: string;
@@ -47,6 +52,10 @@ interface BlockProps {
   placedSubBlocks?: BlockProps[];
   parent?: BlockProps;
   isOnAir?: boolean;
+  coords?: Coordinates;
+  blockref: React.MutableRefObject<HTMLDivElement>;
+  connectedTo?: BlockProps[];
+  appearsOn?: BlockProps[];
 }
 
 enum PluginVariableTypes {
@@ -74,6 +83,12 @@ interface PluginVariable<T extends PluginVariableType> {
   type: PluginVariableTypes;
   value: T;
   allowedValues?: T[];
+  placedID: number;
+}
+
+interface ArrowProps {
+  from: BlockProps;
+  to: BlockProps;
 }
 
 export {
@@ -84,4 +99,5 @@ export {
   PluginVariableTypes,
   PluginVariableType,
   PluginVariable,
+  ArrowProps,
 };

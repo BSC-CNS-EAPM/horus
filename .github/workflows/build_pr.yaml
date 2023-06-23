@@ -18,41 +18,43 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - name: Setup conda
-        uses: conda-incubator/setup-miniconda@v2.2.0
-        with:
-          python-version: 3.9.16
-          add-pip-as-python-dependency: true
-          auto-activate-base: false
       - name: Install nodejs
         uses: actions/setup-node@v3
         with:
           node-version: "18.x"
       - name: Install dependencies
         run: |
-          npm run requirements
-          conda activate horus
-          python -m pip install pytest
+          npm run requirements-action
+      - name: Setup conda
+        uses: conda-incubator/setup-miniconda@v2.2.0
+        with:
+          python-version: 3.9.16
+          add-pip-as-python-dependency: true
+          auto-activate-base: false
+          environment-file: Devtools/Environment/conda_horus.yaml
+          activate-environment: horus
       - name: Build GUI
         run: npm run buildparcel
-      # - name: Test
-      #   run: npm run test
+      - name: Test
+        run: |
+          npm run test
       - name: Build
-        run: npm run build
+        run: |
+          npm run build
       - name: Package
-        run: npm run distribute
-      - name: Pull request artifacts
-        uses: gavv/pull-request-artifacts@v1.0.0
+        run: |
+          npm run distribute
+          cd dist/Packages
+          export FILENAME=$(ls *.deb)
+          echo "filename=$FILENAME" >> $GITHUB_ENV
+          echo "Produced artifact: $FILENAME"
+      - name: Upload Artifact
+        id: upload
+        uses: actions/upload-artifact@v3.1.2
         with:
-          # Commit hash that triggered PR
-          commit: ${{ github.event.pull_request.head.sha }}
-
-          # Token for current repo (used to post PR comment)
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-          # Whitespace-separated list of files to upload
-          artifacts: |
-            dist/Package
+          name: ${{ env.filename }}
+          path: dist/Packages/*.deb
+          if-no-files-found: error
 
   build-macos:
     permissions:
@@ -65,38 +67,40 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - name: Setup conda
-        uses: conda-incubator/setup-miniconda@v2.2.0
-        with:
-          python-version: 3.9.16
-          add-pip-as-python-dependency: true
-          auto-activate-base: false
       - name: Install nodejs
         uses: actions/setup-node@v3
         with:
           node-version: "18.x"
       - name: Install dependencies
         run: |
-          npm run requirements
-          conda activate horus
-          python -m pip install pytest
+          npm run requirements-action
+      - name: Setup conda
+        uses: conda-incubator/setup-miniconda@v2.2.0
+        with:
+          python-version: 3.9.16
+          add-pip-as-python-dependency: true
+          auto-activate-base: false
+          environment-file: Devtools/Environment/conda_horus.yaml
+          activate-environment: horus
       - name: Build GUI
         run: npm run buildparcel
       - name: Test
-        run: npm run test
+        run: |
+          npm run test
       - name: Build
-        run: npm run build
+        run: |
+          npm run build
       - name: Package
-        run: npm run distribute
-      - name: Pull request artifacts
-        uses: gavv/pull-request-artifacts@v1.0.0
+        run: |
+          npm run distribute
+          cd dist/Packages
+          export FILENAME=$(ls *.dmg)
+          echo "filename=$FILENAME" >> $GITHUB_ENV
+          echo "Produced artifact: $FILENAME"
+      - name: Upload Artifact
+        id: upload
+        uses: actions/upload-artifact@v3.1.2
         with:
-          # Commit hash that triggered PR
-          commit: ${{ github.event.pull_request.head.sha }}
-
-          # Token for current repo (used to post PR comment)
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-          # Whitespace-separated list of files to upload
-          artifacts: |
-            dist/Package
+          name: ${{ env.filename }}
+          path: dist/Packages/*.dmg
+          if-no-files-found: error

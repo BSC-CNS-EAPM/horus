@@ -1,6 +1,6 @@
-import { Socket } from "socket.io-client";
 import { horusPost } from "../../Utils/utils";
 import HorusMolstar from "../Molstar/HorusWrapper/horusmolstar";
+import { socket } from "../../Utils/socket";
 
 declare global {
   interface Window {
@@ -8,17 +8,19 @@ declare global {
   }
 }
 
-export default function getCommands(socket: Socket) {
+export default function getCommands() {
   return {
     echo: {
       description: "Echo a passed string.",
       usage: "echo <string>",
       fn: (...args) => args.join(" "),
     },
-    sendSocket: {
+    sendsocket: {
       description: "Send a message to the server.",
-      usage: "sendSocket <string>",
-      fn: (...args) => socket.emit("message", args.join(" ")),
+      usage: "sendsocket <string>",
+      fn: (...args) => {
+        socket.emit("message", "Hello from the client!");
+      },
     },
     sel: {
       description: "Focus a residue.",

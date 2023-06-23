@@ -97,7 +97,12 @@
   border-radius: 5px;
   padding: 1rem;
   width: calc(100% - 15rem);
-  overflow: auto;
+  overflow: hidden;
+}
+
+.current-flow-canvas {
+  height: calc(100% - 4rem);
+  position: relative;
 }
 
 /* Set all the inputs to 100% width */
@@ -129,4 +134,24 @@
   margin-right: 1rem;
   height: 3rem;
   width: 3rem;
+}
+
+.connect-blocks {
+  height: 1rem;
+  width: 1rem;
+  border-radius: 25%;
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  transform: translate(-50%, -100%);
+  background-color: var(--tech-blue);
+  z-index: -1;
+}
+
+.connecting-blocks {
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  transform: translate(-50%, -100%);
+  z-index: 2;
 }

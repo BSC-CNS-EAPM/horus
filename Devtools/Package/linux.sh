@@ -21,22 +21,36 @@ mkdir -p dist/linux/DEBIAN
 # Get version from git tag or branch name
 if [ -z "$1" ]
     then
-        echo "No version supplied, using latest git tag or branch name"
-        version=$(git describe --tags --abbrev=0 2>/dev/null)
-        if [ -z "$version" ]
+        echo "Using latest git tag or branch name"
+        branch=$(git describe --tags --abbrev=0 2>/dev/null)
+        if [ -z "$branch" ]
             then
-                version=$(git symbolic-ref -q --short HEAD)
-                version="$version-$(git rev-parse --short HEAD)"
+                branch=$(git symbolic-ref -q --short HEAD)
+                branch="$branch-$(git rev-parse --short HEAD)"
         fi
     else
-        version=$1
+        branch=$1
 fi
+
+branch="$branch"
+
+echo "Branch: $branch"
+
+# Get the version from package.json
+version=$(cat package.json | grep version | head -1 | awk -F: '{ print $2 }' | sed 's/[",]//g' | tr -d '[[:space:]]')
+
+echo "Version: $version"
+
+version="$version"
+
+# Get the system architecture
+arch=$(dpkg --print-architecture)
 
 # Create the control file inside dist/linux/DEBIAN
 cat > dist/linux/DEBIAN/control << EOF
 Package: Horus
-Version: $1
-Architecture: amd64
+Version: $version
+Architecture: $arch
 Maintainer: Nostrum Biodiscovery it@nostrumbiodiscovery.com
 Description: Horus visualizer and flow builder.
 EOF
@@ -45,15 +59,22 @@ EOF
 cat > dist/linux/DEBIAN/postinst << EOF
 #!/bin/bash
 
-ln -s /usr/local/bin/horus /usr/bin/horus
+ln -s /usr/local/bin/Horus/Horus /usr/bin/horus
 EOF
+
+# Add the required permissions to the postinst script
+chmod 775 dist/linux/DEBIAN/postinst
 
 # Create a postrm script inside dist/linux/DEBIAN
 cat > dist/linux/DEBIAN/postrm << EOF
 #!/bin/bash
 
-rm -f /usr/bin/horus
+rm -f /usr/bin/Horus
+rm -rf /usr/local/bin/Horus
 EOF
+
+# Add the required permissions to the postrm script
+chmod 775 dist/linux/DEBIAN/postrm
 
 # Create the usr directory inside dist/linux
 mkdir -p dist/linux/usr
@@ -68,12 +89,22 @@ mkdir -p dist/linux/usr/local/bin
 mkdir -p dist/linux/usr/local/bin/Horus
 
 # Copy the horus binaies to dist/linux/usr/local/bin
-cp -r dist/Horus dist/linux/usr/local/bin/Horus
+cp -r dist/Horus/* dist/linux/usr/local/bin/Horus/
 
-version="$version"
+echo "Creating the .deb file: Horus-$version-$branch-$arch.deb"
 
 # Package the files into a .deb file
-dpkg-deb --build dist/linux dist/Horus-$version.deb
+dpkg-deb --build dist/linux dist/Horus-$version-$branch-$arch.deb
+
+# Create the Packages directory inside dist/
+mkdir -p dist/Packages
+
+echo "Moving the .deb file to dist/Packages"
+
+# Move the .deb file to dist/Packages
+mv dist/Horus-$version-$branch-$arch.deb dist/Packages
+
+echo "Finished"
 
 # Remove the temporary files
 rm -rf dist/linux
