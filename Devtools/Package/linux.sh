@@ -108,3 +108,13 @@ echo "Finished"
 
 # Remove the temporary files
 rm -rf dist/linux
+
+# Create from the .deb file the .rpm file
+echo "Creating the .rpm file: Horus-$version-$branch-$arch.rpm"
+
+cd dist/Packages
+
+sudo alien -r Horus-$version-$branch-$arch.deb --scripts
+
+# Rename the .rpm file
+mv *.rpm Horus-$version-$branch-$arch.rpm

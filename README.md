@@ -55,6 +55,12 @@ Unfortunately, a Windows version cannot be provided at the moment. However, you 
    sudo apt install nodejs
    ```
 
+4. Optionally, install the alien package converter to generate the .rpm file from the .deb file for EL systems.
+
+   ```
+   sudo apt install alien
+   ```
+
 ## macOS
 
 1. Install Miniconda
