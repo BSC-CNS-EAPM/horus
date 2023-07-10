@@ -35,8 +35,16 @@ Unfortunately, a Windows version cannot be provided at the moment. However, you 
 
 1. Install required libraries for GTK:
 
+   1.1. Debian based
+
    ```
    sudo apt install libgirepository1.0-dev gcc libgtk-3-dev
+   ```
+
+   1.2. RedHat based
+
+   ```
+   sudo dnf install libgirepository1.0-devel gcc libgtk-3-devel
    ```
 
 2. Install Miniconda
@@ -55,10 +63,10 @@ Unfortunately, a Windows version cannot be provided at the moment. However, you 
    sudo apt install nodejs
    ```
 
-4. Optionally, install the alien package converter to generate the .rpm file from the .deb file for EL systems.
+4. In RedHat systems, remmeber to install the RPM tools
 
    ```
-   sudo apt install alien
+   sudo dnf install -y rpmdevtools rpmlint
    ```
 
 ## macOS
@@ -87,53 +95,6 @@ npm run requirements
 
 This will install all the required node packages and will create a new conda environment named 'horus' with all the needed python packages.
 
-## Optional dependencies
-
-### NBDSuite
-You will need to install NBDSuite manually. You can download the latest release from the [NBDSuite releases page](https://github.com/NBDsoftware/NBDSuite/releases). Once downloaded, unzip the file and run the following command:
-
-```
-python -m pip install nbdsuite-<version>.tar.gz
-```
-
-### Peleffy
-
-You will need to install Peleffy from source into the environment if you have an Apple Silicon Mac. To do so, follow these steps:
-
-1. Clone the peleffy repository:
-
-   ```
-   git clone https://github.com/martimunicoy/peleffy/tree/master
-   ```
-
-2. Checkout the latest tag
-
-   ```
-   git checkout tags/v1.4.4
-   ```
-
-3. Install peleffy
-
-   ```
-   python -m pip install .
-   ```
-
-Otherwise you can follow the instructions here:
-
-https://martimunicoy.github.io/peleffy/installation.html
-
-### AmberTools
-
-If you have an Apple Silicon Mac, you will need to install AmberTools from source into the environment. To do so, follow these steps:
-
-TODO
-
-Otherwise you can install directly from conda:
-
-```
-conda install -c conda-forge ambertools
-```
-
 # Run in development
 
 To run the application in development mode, make sure you are inside the `horus` environment and run the following command:
@@ -146,6 +107,12 @@ You can also run the app in server development mode (preferred):
 
 ```
 python Horus.py --debug --server
+```
+
+The app can also be run on "Browser mode" which is usefol for systems that do not have GPU acceleration:
+
+```
+python Horus.py --browser
 ```
 
 In debug mode, the app is accessible in the following url: [http://127.0.0.1:5001](http://127.0.0.1:5001)
@@ -171,3 +138,11 @@ In debug mode, the app is accessible in the following url: [http://127.0.0.1:500
    ```
    npm run clean
    ```
+
+# Distributing
+
+```
+npm run build
+```
+
+This will create a .dmg file on macOS, a .deb on Debian based systems and a .rpm file on RedHat based systems.
