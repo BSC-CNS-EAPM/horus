@@ -21,6 +21,82 @@ sys.path.append("../")
 appInfo = {"version": "0.0.1", "bundleIdentifier": "com.nostrumbiodiscovery.horus"}
 
 
+class WindowOptions:
+    """
+    Options for webview windows
+    """
+
+    width: int = 800
+    """
+    The initial width of the window
+    """
+
+    height: int = 600
+    """
+    The initial height of the window
+    """
+
+    resizable: bool = True
+    """
+    Whether the window is resizable
+    """
+
+    fullscreen: bool = False
+    """
+    Whether the window is fullscreen by default
+    """
+
+    min_size: typing.Tuple[int, int] = (200, 100)
+    """
+    The minimum size of the window
+    """
+
+    hidden: bool = False
+    """
+    Whether the window is hidden by default
+    """
+
+    frameless: bool = False
+    """
+    Whether the window is frameless
+    """
+
+    minimized: bool = False
+    """
+    Whether the window is minimized by default
+    """
+
+    on_top: bool = False
+    """
+    Whether the window is always on top
+    """
+
+    confirm_close: bool = False
+    """
+    Whether the user is asked to confirm closing the window
+    """
+
+    background_color: str = "#FFFFFF"
+    """
+    The background color of the window
+    """
+
+    text_select: bool = True
+    """
+    Whether text can be selected inside the window
+    """
+
+    transparent: bool = False
+    """
+    Whether the window is transparent
+    """
+
+    zoomable: bool = True
+    """
+    Whether the window can be zoomed
+    """
+
+
 class SingletonMeta(type):
     """
     This is a thread-safe implementation of Singleton.
@@ -62,23 +138,24 @@ class AppDelegate(metaclass=SingletonMeta):
     All of the windows that are currently open
     """
 
-    def __init__(self, debug=False):
+    def __init__(
+        self, debug: bool = False, server_mode: bool = False, browser: bool = False
+    ):
         """
         Initialize the AppDelegate.
         This will start the backend server and create the first window.
         """
         self.debug = debug
+        self.server_mode = server_mode
+        self.browser = browser
 
         # Set the app support directory
         self._appSupportDir()
 
         # Prepare the server
         self.server: HorusServer = HorusServer(
-            debug=self.debug, desktop=True, appSupportDir=self.appSupportDir
+            debug=self.debug, desktop=not server_mode, appSupportDir=self.appSupportDir
         )
-
-        # Start the server in a new thread
-        self._startServer()
 
     def _appSupportDir(self):
         # If we are, use the default system Application Support directory
@@ -129,7 +206,7 @@ class AppDelegate(metaclass=SingletonMeta):
 
         self.appSupportDir = appSupportDir
 
-    def _startServer(self):
+    def _startServerThread(self):
         """
         Starts the backend Flask server.
         This server will handle python modules and scripts in our app.
@@ -139,7 +216,12 @@ class AppDelegate(metaclass=SingletonMeta):
         self.server_thread.daemon = True
         self.server_thread.start()
 
-    def openWindow(self, title: str, url: typing.Optional[str] = None):
+    def openWindow(
+        self,
+        title: str,
+        url: typing.Optional[str] = None,
+        wo: WindowOptions = WindowOptions(),
+    ):
         """
         Creates a new window with the given title.
         If no url is given, the index page will be loaded.
@@ -147,10 +229,35 @@ class AppDelegate(metaclass=SingletonMeta):
         :param title: The title of the window
         :param url: The url to load
         """
+
+        # If no url is given, load the index page
         if url is None:
             url = self.server.baseURL
-        window = webview.create_window(title, url=url, width=1200, height=800)
+
+        # Create a new window with the given options
+        window = webview.create_window(
+            title,
+            url=url,
+            width=wo.width,
+            height=wo.height,
+            resizable=wo.resizable,
+            fullscreen=wo.fullscreen,
+            min_size=wo.min_size,
+            hidden=wo.hidden,
+            frameless=wo.frameless,
+            minimized=wo.minimized,
+            on_top=wo.on_top,
+            confirm_close=wo.confirm_close,
+            background_color=wo.background_color,
+            text_select=wo.text_select,
+            transparent=wo.transparent,
+            zoomable=wo.zoomable,
+        )
+
+        # Add the window to the list of windows
         self.windows.append(window)
+
+        # Return the window
         return window
 
     def applicationDidFinishLaunching(self):
@@ -158,8 +265,16 @@ class AppDelegate(metaclass=SingletonMeta):
         This will be called when the app is launched.
         It will create the first window and launch the app
         """
-        self.openWindow("Horus")
-        self._start()
+
+        if self.browser:
+            # Start browser mode
+            self._startBrowserMode()
+        elif self.server_mode:
+            # Start server mode
+            self._startServerMode()
+        else:
+            # Start app mode
+            self._startAppMode()
 
     def applicationWillTerminate(self):
         """
@@ -214,11 +329,83 @@ class AppDelegate(metaclass=SingletonMeta):
 
         return [fileMenu, pluginsMenu, settingsMenu]
 
-    def _start(self):
+    def _startAppMode(self):
         """
         This will start the window and set the shemsu token to the window object.
         """
-        webview.start(debug=self.debug, menu=self._menus())
+
+        # Start the server in a new thread
+        self._startServerThread()
+
+        # Wait for the server to start
+        import requests
+
+        while True:
+            try:
+                requests.get(self.server.baseURL)
+                break
+            except requests.exceptions.ConnectionError:
+                pass
+
+        # Get the GUI backend
+        gui = None
+        if self.platform == "darwin":
+            gui = "cocoa"
+        if self.platform == "linux":
+            gui = "qt"
+
+        homeURL = self.server.baseURL
+
+        wo = WindowOptions()
+        if self.browser:
+            homeURL += "/bmode"
+            wo.width = 300
+            wo.height = 250
+            wo.confirm_close = True
+            wo.resizable = False
+            wo.on_top = True
+
+            # Open the browser window
+            self.openBrowserMode()
+
+        homeURL = self.tokenize(homeURL)
+
+        # Open the first window
+        self.openWindow("Horus", url=homeURL, wo=wo)
+
+        # Start the webview
+        webview.start(debug=self.debug, menu=self._menus(), gui=gui)
+
+    def _startServerMode(self):
+        """
+        Starts the app in server mode. Initializes the server.
+        """
+
+        # Start the server
+        self.server.run(reloader=self.debug)
+
+    def _startBrowserMode(self):
+        """
+        Starts the app in browser mode.
+        Initializes the server and opens a browser window.
+        """
+
+        print(f"Opening browser to Horus at: {self.server.baseURL}")
+
+        # Start the app
+        self._startAppMode()
+
+    def openBrowserMode(self):
+        """
+        Opens a browser window to the server link.
+        """
+
+        import webbrowser
+
+        url = self.tokenize(self.server.baseURL)
+
+        # Opens a browser window to the server link
+        webbrowser.open(url)
 
     def openFileSelectDialog(
         self,
@@ -244,7 +431,7 @@ class AppDelegate(metaclass=SingletonMeta):
 
         return result
 
-    def openFolderSelectDialog(self) -> str:
+    def openFolderSelectDialog(self) -> typing.Optional[str]:
         """
         Opens a folder dialog and returns the path of the selected folder.
         """
@@ -268,7 +455,7 @@ class AppDelegate(metaclass=SingletonMeta):
         self,
         fileName: typing.Optional[str] = None,
         fileTypes: typing.Optional[typing.Tuple[str, ...]] = None,
-    ) -> str:
+    ) -> typing.Optional[str]:
         """
         Opens a save file dialog and returns the path of the selected file.
 
@@ -376,6 +563,8 @@ class AppDelegate(metaclass=SingletonMeta):
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,
             ) as p:
+                if p.stdout is None:
+                    return None
                 for line in p.stdout:
                     socketio.emit("printTerm", line)
                 return p
@@ -387,30 +576,24 @@ class AppDelegate(metaclass=SingletonMeta):
 
 
 def LaunchApp():
-    # Set the debug mode based on module compilation
-    debug: bool = not cython.compiled
-
-    # Check for the --debug flag (Only development)
+    # Check for the --debug flag (-d) (Only development)
     # Forces the server to run in debug mode
-    if "--debug" in sys.argv:
+    debug = False
+    if ("--debug" in sys.argv or "-d" in sys.argv) and not cython.compiled:
         debug = True
-    else:
-        debug = False
 
-    # Check for the -debug flag (Only development)
-    if "--server" in sys.argv:
-        # Start the server
-        from Server.server import HorusServer
+    # Check for the --browser (-b) flag
+    browser = False
+    if "--browser" in sys.argv or "-b" in sys.argv:
+        browser = True
 
-        server = HorusServer(debug=debug, desktop=False)
-
-        server.run(reloader=debug)
-
-        # Exit the app
-        sys.exit(0)
+    # Check for the --server (-s) flag
+    server_mode = False
+    if "--server" in sys.argv or "-s" in sys.argv:
+        server_mode = True
 
     # Prepare the app delegate
-    app = AppDelegate(debug)
+    app = AppDelegate(debug, server_mode, browser)
     """
     App Delegate is a singleton class that will handle the app
     """

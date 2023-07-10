@@ -58,5 +58,71 @@ export default function getCommands() {
         }
       },
     },
+    newflow: {
+      description: "Clear the flow and open a new one.",
+      usage: "newflow",
+      fn: async (...args) => {
+        // Emit an event to clear the flow
+        const event = new CustomEvent("terminalCommand", {
+          detail: { command: "newflow", args: args },
+        });
+
+        const result = await window.dispatchEvent(event);
+        return result;
+      },
+    },
+    saveflow: {
+      description: "Save the current flow.",
+      usage: "saveflow",
+      fn: async (...args) => {
+        // Emit an event to save the flow
+        const event = new CustomEvent("terminalCommand", {
+          detail: { command: "saveflow", args: args },
+        });
+
+        const result = await window.dispatchEvent(event);
+        return result;
+      },
+    },
+    conn: {
+      description: "Connects two blocks",
+      usage: "conn <block1-placedid> <block2-placedid>",
+      fn: async (...args) => {
+        // Emit an event to connect two blocks
+        const event = new CustomEvent("terminalCommand", {
+          detail: { command: "conn", args: args },
+        });
+
+        const result = await window.dispatchEvent(event);
+        return result;
+      },
+    },
+    run: {
+      description: "Execute the current flow.",
+      usage: "run <starting-block-placedid>",
+      fn: async (...args) => {
+        // Emit an event to execute the flow
+        const event = new CustomEvent("terminalCommand", {
+          detail: { command: "run", args: args },
+        });
+
+        const result = await window.dispatchEvent(event);
+        return result;
+      },
+    },
+    del: {
+      description: "Delete a block.",
+      usage: "del <block-placedid>",
+      fn: async (...args) => {
+        // Emit an event to delete a block
+        const event = new CustomEvent("terminalCommand", {
+          detail: { command: "del", args: args },
+        });
+
+        const result = await window.dispatchEvent(event);
+        console.log(result);
+        return result;
+      },
+    },
   };
 }

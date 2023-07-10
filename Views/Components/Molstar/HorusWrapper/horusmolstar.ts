@@ -75,7 +75,7 @@ class HorusMolstar {
         layout: {
           initial: {
             isExpanded: true,
-            showControls: true,
+            showControls: false,
           },
         },
         components: {
@@ -552,7 +552,7 @@ class HorusMolstar {
           new File([data], `state.${type}`)
         );
       } catch (e) {
-        console.log(e);
+        alert(e);
       }
     },
   };

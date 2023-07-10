@@ -242,28 +242,19 @@ function Block(block: BlockProps) {
             </div>
           )}
         </div>
-        {/* <button className="nbd-btn" onClick={handleBlockConnection}>
-          Connect block
-        </button> */}
       </div>
-      {block.isPlaced && (
-        <div>
-          {block.variables.map((variable, index) => (
-            <PluginVariableView
-              key={variable.id}
-              variable={variable}
-              onChange={handleChange}
-            />
-          ))}
-        </div>
-      )}
       <div
         className={
           "text-gray-500 transition-opacity duration-300 " +
           (isInfoHovering || block.isPlaced ? "opacity-100" : "opacity-0")
         }
       >
-        {isInfoHovering || block.isPlaced ? block.description : null}
+        {isInfoHovering || block.isPlaced ? (
+          <div>
+            <p>{block.description}</p>
+            {!block.isPlaced && block.id}
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -280,7 +271,7 @@ function DraggableBlock(block: BlockProps) {
     },
   });
 
-  const { setNodeRef: setDropRef, isOver } = useDroppable({
+  const { setNodeRef: setDropRef } = useDroppable({
     id: block.placedID ? `${block.placedID}-${block.id}` : block.id,
     data: {
       block: block,
@@ -292,7 +283,6 @@ function DraggableBlock(block: BlockProps) {
     top: 0,
     left: 0,
     cursor: "grab",
-    zIndex: 10,
   };
 
   if (block.isPlaced) {

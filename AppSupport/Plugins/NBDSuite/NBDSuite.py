@@ -204,3 +204,13 @@ pelePage = PluginPage(
 
 # Add the PELE results page to the plugin
 plugin.addPage(pelePage)
+
+# Define the PELE2 results page
+pelePage2 = PluginPage(
+    name="PELE2 results",
+    description="Analyse PELE2 results.",
+    html="pele_results.html",
+)
+
+# Add the PELE2 results page to the plugin
+plugin.addPage(pelePage2)

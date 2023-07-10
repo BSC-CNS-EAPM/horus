@@ -60,41 +60,36 @@ function BlockList() {
         onChange={(e) => setQuery(e.target.value)}
         showIcon={false}
       />
-      <div>
-        {blocks.length === 0 ? (
-          <div
-            className="flex flew-column gap-1 justify-center align-items-center"
-            style={{
-              marginTop: "calc(50vh - 6rem)",
-            }}
-          >
-            <RotatingLines
-              strokeColor="grey"
-              strokeWidth="5"
-              animationDuration="0.75"
-              width="40"
-            />
-            Loading blocks...
-          </div>
-        ) : (
-          filteredBlocks.map((block, index) => {
-            const prevBlock = index > 0 ? filteredBlocks[index - 1] : null;
-            const isDifferentPlugin =
-              prevBlock && prevBlock.plugin !== block.plugin;
-            return (
-              <div key={block.id}>
-                {(isDifferentPlugin || index == 0) && (
-                  <div>
-                    <div className="block-separator"></div>
-                    <div className="plugin-name-block">{block.plugin}</div>
-                  </div>
-                )}
-                <DraggableBlock {...block} />
-              </div>
-            );
-          })
-        )}
-      </div>
+      {blocks.length === 0 ? (
+        <div className="flex flex-col items-center justify-center h-full">
+          <RotatingLines
+            strokeColor="grey"
+            strokeWidth="5"
+            animationDuration="0.75"
+            width="40"
+          />
+          Loading blocks...
+        </div>
+      ) : (
+        filteredBlocks.map((block, index) => {
+          const prevBlock = index > 0 ? filteredBlocks[index - 1] : null;
+          const isDifferentPlugin =
+            prevBlock && prevBlock.plugin !== block.plugin;
+          const isLast = index === filteredBlocks.length - 1;
+          return (
+            <div key={block.id}>
+              {(isDifferentPlugin || index == 0) && (
+                <div>
+                  <div className="block-separator"></div>
+                  <div className="plugin-name-block">{block.plugin}</div>
+                </div>
+              )}
+              <DraggableBlock {...block} />
+              {isLast && <div className="pb-4"></div>}
+            </div>
+          );
+        })
+      )}
     </div>
   );
 }

@@ -37,7 +37,7 @@ jobs:
             }
             let body = `Download the artifacts for this pull request:\n`;
             for (const art of artifacts) {
-                body += `\n* [${art.name}](${art.archive_download_url})`;
+                body += `\n* [${art.name}](https://github.com/NBDsoftware/horus/suites/${run_id}/artifacts/${art.id})`;
             }
 
             const {data: comments} = await github.rest.issues.listComments({repo, owner, issue_number});

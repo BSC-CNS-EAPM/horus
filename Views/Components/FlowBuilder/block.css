@@ -84,12 +84,21 @@
   color: gray;
 }
 
+.block-search {
+  position: fixed;
+  z-index: 10;
+  background: white;
+  padding-top: 1rem;
+}
+
 .block-sidebar {
   /* Add a right border */
   border-right: 1px solid #e5e5e5;
   width: 15rem;
-  padding: 1rem;
-  overflow: auto;
+  padding-top: 1rem;
+  padding-inline: 1rem;
+  overflow-y: auto;
+  height: 100%;
 }
 
 .current-flow {
@@ -98,6 +107,17 @@
   padding: 1rem;
   width: calc(100% - 15rem);
   overflow: hidden;
+}
+
+.placed-id {
+  color: white;
+  padding: 2px;
+  text-align: center;
+}
+
+.top-bar-flow-reciver {
+  z-index: 10;
+  position: relative;
 }
 
 .current-flow-canvas {
@@ -123,11 +143,9 @@
 .flow-name {
   border: 1px solid black;
   border-radius: 20px;
-  padding: 15px;
-  /* Shadow */
+  padding-inline: 15px;
   box-shadow: black 2px 2px 10px -7px;
   margin-right: 1rem;
-  height: 3rem;
 }
 
 .flow-button {
@@ -137,13 +155,12 @@
 }
 
 .connect-blocks {
-  height: 1rem;
-  width: 1rem;
+  height: 2rem;
+  width: 2rem;
   border-radius: 25%;
   position: absolute;
-  top: 50%;
-  left: 100%;
-  transform: translate(-50%, -100%);
+  top: 10%;
+  left: 98%;
   background-color: var(--tech-blue);
   z-index: -1;
 }

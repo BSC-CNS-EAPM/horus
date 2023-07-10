@@ -21,6 +21,7 @@ __version__ = "0.0.1"
 
 class HorusServer:
     parcelURL = "http://127.0.0.1:1234"
+    browser = False
 
     def __init__(self, debug=False, desktop=False, appSupportDir=None):
         # App support directory
@@ -343,6 +344,7 @@ class HorusServer:
         def executeCommand():
             data = request.get_json()
             from App import AppDelegate
+
             try:
                 AppDelegate().executeCommand(data["command"], self.socketio)
                 return {"ok": True}
@@ -379,8 +381,38 @@ class HorusServer:
 
             return "OK"
 
+        @self.server.route("/bmode", methods=["GET"])
+        @desktopOnly
+        def bmode():
+            return flask.render_template("BrowserMode/index.html")
+
+        @self.server.route("/getbrowserurl", methods=["GET"])
+        @desktopOnly
+        @verifyToken
+        def getBrowserURL():
+            return flask.jsonify({"url": self.baseURL})
+
+        @self.server.route("/openbmode", methods=["GET"])
+        @desktopOnly
+        @verifyToken
+        def openBrowserMode():
+            from App import AppDelegate
+
+            AppDelegate().openBrowserMode()
+            return "OK"
+
         @self.server.route("/")
         def index():
+            # Get the query string
+            shemsu = request.args.get("shemsu", None)
+
+            if shemsu is not None:
+                import webview
+
+                if shemsu == webview.token:
+                    # Starting server in browser mode
+                    return flask.render_template("Main/index.html", shemsu=shemsu)
+
             return flask.render_template("Main/index.html")
 
         @self.server.after_request
@@ -435,12 +467,13 @@ class HorusServer:
                 e = "Error registering page for plugin " + page["id"] + ": " + str(e)
                 self.socketio.emit("printTerm", e)
 
-    def run(self, reloader=False):
+    def run(self, reloader: bool = False):
         # use_reloader has to be turned off in order to run in a secondary thread
 
         if not self.desktop:
             print("Running server mode at: http://" + self.host + ":" + str(self.port))
 
+        # Start the server
         self.socketio.run(
             self.server,
             host=self.host,

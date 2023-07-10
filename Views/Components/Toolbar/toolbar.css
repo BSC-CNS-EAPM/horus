@@ -17,6 +17,7 @@
 
 .toolbar-item:hover {
   background: #defcff;
+  cursor: pointer;
 }
 
 .toolbar {

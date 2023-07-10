@@ -1,13 +1,11 @@
 // Desc: This is the toolbar component
 import { Menu, Transition } from "@headlessui/react";
-import { Fragment, useEffect, useRef, useState } from "react";
-import { ChevronDownIcon } from "@heroicons/react/20/solid";
+import { Fragment, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import "../nbdbutton.css";
 import { horusGet } from "../../Utils/utils";
 import FlowBuilder from "../FlowBuilder/flow_builder";
 import "./toolbar.css";
-import { ChangeEventHandler } from "react";
 
 interface ToolBarItemProps {
   name: string;
@@ -43,7 +41,7 @@ function ToolBarItem(props: ToolBarItemProps) {
   }, [props.link]);
 
   return (
-    <button
+    <div
       onMouseOver={handleMouseOver}
       onMouseLeave={handleMouseLeave}
       className="toolbar-item"
@@ -61,7 +59,7 @@ function ToolBarItem(props: ToolBarItemProps) {
       ) : (
         <></>
       )}
-    </button>
+    </div>
   );
 }
 
@@ -100,6 +98,7 @@ function ToolbarMenu(props: ToolBarMenuProps) {
                 <Menu.Item key={item.name}>
                   {({ close }) => (
                     <ToolBarItem
+                      key={item.name}
                       {...item}
                       onClick={() => {
                         item.onClick?.();
@@ -184,11 +183,38 @@ const handleKeyDown = (event: KeyboardEvent) => {
   if (event.key === "t" && event.ctrlKey) {
     toggleConsole();
   }
+  if (event.code === "KeyZ" && event.ctrlKey && event.shiftKey) {
+    redoEvent();
+  }
+  if (event.code === "KeyZ" && event.ctrlKey && !event.shiftKey) {
+    undoEvent();
+  }
+  if (event.code === "KeyS" && event.ctrlKey) {
+    saveEvent();
+  }
 };
 
 const toggleConsole = () => {
   // Emit a toggleConsole event
   const event = new CustomEvent("toggleConsole");
+  window.dispatchEvent(event);
+};
+
+const undoEvent = () => {
+  // Emit an undo event
+  const event = new CustomEvent("undo");
+  window.dispatchEvent(event);
+};
+
+const redoEvent = () => {
+  // Emit an undo event
+  const event = new CustomEvent("redo");
+  window.dispatchEvent(event);
+};
+
+const saveEvent = () => {
+  // Emit a save event
+  const event = new CustomEvent("saveFlow");
   window.dispatchEvent(event);
 };
 
@@ -223,32 +249,10 @@ export default function HorusToolbar() {
     });
   }, []);
 
-  const loadPage = async (url: string) => {
-    const iFrameView = (
-      <iframe
-        id="plugin-page-iframe"
-        src="/plugins/pages"
-        style={{
-          width: "100%",
-          height: "100%",
-          border: "none",
-        }}
-      />
-    );
-
+  const loadPage = async (url: string, pagename: string) => {
     // Emit an event to the iframe
-    const event = new CustomEvent("secondView", { detail: iFrameView });
-
+    const event = new CustomEvent("mainViewURL", { detail: { url, pagename } });
     window.dispatchEvent(event);
-
-    try {
-      const iframe = document.getElementById(
-        "plugin-page-iframe"
-      ) as HTMLIFrameElement;
-      iframe.src = url;
-    } catch {
-      console.log("Error loading iframe");
-    }
   };
 
   const menus: ToolBarMenuProps[] = [
@@ -256,28 +260,63 @@ export default function HorusToolbar() {
       name: "Home",
       link: "/",
       svgPath: (
-        <path
-          fillRule="evenodd"
-          d="M9.293 2.293a1 1 0 011.414 0l7 7A1 1 0 0117 11h-1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-3a1 1 0 00-1-1H9a1 1 0 00-1 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-6H3a1 1 0 01-.707-1.707l7-7z"
-          clipRule="evenodd"
-        />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.5}
+          stroke="currentColor"
+          className="w-6 h-6"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
+          />
+        </svg>
       ),
       onClick: () => {
         // Set the secondary view to null
-        const event = new CustomEvent("secondView", { detail: null });
+        const event = new CustomEvent("mainView", { detail: <FlowBuilder /> });
         window.dispatchEvent(event);
       },
     },
     {
       name: "File",
       svgPath: (
-        <path d="M3 3.5A1.5 1.5 0 014.5 2h6.879a1.5 1.5 0 011.06.44l4.122 4.12A1.5 1.5 0 0117 7.622V16.5a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 013 16.5v-13z" />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.5}
+          stroke="currentColor"
+          className="w-6 h-6"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+          />
+        </svg>
       ),
       items: [
         {
           name: "New",
           svgPath: (
-            <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="w-6 h-6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m3.75 9v6m3-3H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+              />
+            </svg>
           ),
           onClick: () => {
             // Emit an event "newFlow"
@@ -285,12 +324,12 @@ export default function HorusToolbar() {
             // and will clear the flow
 
             // Set the secondary view to the flow builder
-            const secondView = <FlowBuilder />;
+            const mainView = <FlowBuilder />;
 
-            const secondViewEvent = new CustomEvent("secondView", {
-              detail: secondView,
+            const mainViewEvent = new CustomEvent("mainView", {
+              detail: mainView,
             });
-            window.dispatchEvent(secondViewEvent);
+            window.dispatchEvent(mainViewEvent);
 
             const newFlowEvent = new CustomEvent("newFlow", {
               detail: {},
@@ -301,11 +340,20 @@ export default function HorusToolbar() {
         {
           name: "Open flow",
           svgPath: (
-            <path
-              fillRule="evenodd"
-              d="M4.5 2A1.5 1.5 0 003 3.5v13A1.5 1.5 0 004.5 18h11a1.5 1.5 0 001.5-1.5V7.621a1.5 1.5 0 00-.44-1.06l-4.12-4.122A1.5 1.5 0 0011.378 2H4.5zm2.25 8.5a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5zm0 3a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5z"
-              clipRule="evenodd"
-            />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="w-6 h-6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776"
+              />
+            </svg>
           ),
           onClick: () => {
             // Emit an event "openFlow"
@@ -317,80 +365,96 @@ export default function HorusToolbar() {
             window.dispatchEvent(event);
           },
         },
+        {
+          name: "Save flow",
+          svgPath: (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="w-6 h-6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"
+              />
+            </svg>
+          ),
+          onClick: () => {
+            saveEvent();
+          },
+        },
       ],
     },
     {
       name: "Edit",
       svgPath: (
-        <>
-          <path d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z" />
-          <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0010 3H4.75A2.75 2.75 0 002 5.75v9.5A2.75 2.75 0 004.75 18h9.5A2.75 2.75 0 0017 15.25V10a.75.75 0 00-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5z" />
-        </>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.5}
+          stroke="currentColor"
+          className="w-6 h-6"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
+          />
+        </svg>
       ),
       items: [
         {
           name: "Undo",
-          link: "/undo",
+          onClick: () => {
+            // Emit an event "undo"
+            // This event will be captured by the flowReciever component
+            // and will undo the last action
+            undoEvent();
+          },
+          keyShortcut: "ctrl z",
           svgPath: (
-            <path
-              fillRule="evenodd"
-              d="M7.793 2.232a.75.75 0 01-.025 1.06L3.622 7.25h10.003a5.375 5.375 0 010 10.75H10.75a.75.75 0 010-1.5h2.875a3.875 3.875 0 000-7.75H3.622l4.146 3.957a.75.75 0 01-1.036 1.085l-5.5-5.25a.75.75 0 010-1.085l5.5-5.25a.75.75 0 011.06.025z"
-              clipRule="evenodd"
-            />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="w-6 h-6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"
+              />
+            </svg>
           ),
         },
         {
           name: "Redo",
-          link: "/redo",
+          onClick: () => {
+            redoEvent();
+          },
+          keyShortcut: "ctrl shift z",
           svgPath: (
-            <path
-              fillRule="evenodd"
-              d="M12.207 2.232a.75.75 0 00.025 1.06l4.146 3.958H6.375a5.375 5.375 0 000 10.75H9.25a.75.75 0 000-1.5H6.375a3.875 3.875 0 010-7.75h10.003l-4.146 3.957a.75.75 0 001.036 1.085l5.5-5.25a.75.75 0 000-1.085l-5.5-5.25a.75.75 0 00-1.06.025z"
-              clipRule="evenodd"
-            />
-          ),
-        },
-        {
-          name: "Copy",
-          link: "/copy",
-          svgPath: (
-            <path
-              fillRule="evenodd"
-              d="M13.887 3.182c.396.037.79.08 1.183.128C16.194 3.45 17 4.414 17 5.517V16.75A2.25 2.25 0 0114.75 19h-9.5A2.25 2.25 0 013 16.75V5.517c0-1.103.806-2.068 1.93-2.207.393-.048.787-.09 1.183-.128A3.001 3.001 0 019 1h2c1.373 0 2.531.923 2.887 2.182zM7.5 4A1.5 1.5 0 019 2.5h2A1.5 1.5 0 0112.5 4v.5h-5V4z"
-              clipRule="evenodd"
-            />
-          ),
-        },
-        {
-          name: "Cut",
-          link: "/cut",
-          svgPath: (
-            <>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="w-6 h-6"
+            >
               <path
-                fillRule="evenodd"
-                d="M1.469 3.75a3.5 3.5 0 005.617 4.11l.883.51c.025.092.147.116.21.043a3.75 3.75 0 01.5-.484c.286-.23.3-.709-.018-.892l-.825-.477A3.501 3.501 0 001.47 3.75zm2.03 3.482a2 2 0 112-3.464 2 2 0 01-2 3.464zM9.956 8.322a2.75 2.75 0 00-1.588 1.822L7.97 11.63l-.884.51a3.501 3.501 0 10.75 1.3l10.68-6.166a.75.75 0 00-.182-1.374l-.703-.189a2.75 2.75 0 00-1.78.123L9.955 8.322zM2.768 15.5a2 2 0 113.464-2 2 2 0 01-3.464 2z"
-                clipRule="evenodd"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15 15l6-6m0 0l-6-6m6 6H9a6 6 0 000 12h3"
               />
-              <path d="M12.52 11.89a.5.5 0 00.056.894l3.274 1.381a2.75 2.75 0 001.78.123l.704-.188a.75.75 0 00.18-1.374l-3.47-2.004a.5.5 0 00-.5 0L12.52 11.89z" />
-            </>
-          ),
-        },
-        {
-          name: "Paste",
-          link: "/paste",
-          svgPath: (
-            <>
-              <path
-                fillRule="evenodd"
-                d="M15.988 3.012A2.25 2.25 0 0118 5.25v6.5A2.25 2.25 0 0115.75 14H13.5V7A2.5 2.5 0 0011 4.5H8.128a2.252 2.252 0 011.884-1.488A2.25 2.25 0 0112.25 1h1.5a2.25 2.25 0 012.238 2.012zM11.5 3.25a.75.75 0 01.75-.75h1.5a.75.75 0 01.75.75v.25h-3v-.25z"
-                clipRule="evenodd"
-              />
-              <path
-                fillRule="evenodd"
-                d="M2 7a1 1 0 011-1h8a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V7zm2 3.25a.75.75 0 01.75-.75h4.5a.75.75 0 010 1.5h-4.5a.75.75 0 01-.75-.75zm0 3.5a.75.75 0 01.75-.75h4.5a.75.75 0 010 1.5h-4.5a.75.75 0 01-.75-.75z"
-                clipRule="evenodd"
-              />
-            </>
+            </svg>
           ),
         },
       ],
@@ -398,14 +462,25 @@ export default function HorusToolbar() {
     {
       name: "View",
       svgPath: (
-        <>
-          <path d="M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.5}
+          stroke="currentColor"
+          className="w-6 h-6"
+        >
           <path
-            fillRule="evenodd"
-            d="M.664 10.59a1.651 1.651 0 010-1.186A10.004 10.004 0 0110 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0110 17c-4.257 0-7.893-2.66-9.336-6.41zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
-            clipRule="evenodd"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
           />
-        </>
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+          />
+        </svg>
       ),
       items: [
         {
@@ -416,14 +491,16 @@ export default function HorusToolbar() {
           svgPath: (
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
               fill="none"
-              className="w-5 h-5"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="w-6 h-6"
             >
               <path
-                fillRule="evenodd"
-                d="M3.25 3A2.25 2.25 0 001 5.25v9.5A2.25 2.25 0 003.25 17h13.5A2.25 2.25 0 0019 14.75v-9.5A2.25 2.25 0 0016.75 3H3.25zm.943 8.752a.75.75 0 01.055-1.06L6.128 9l-1.88-1.693a.75.75 0 111.004-1.114l2.5 2.25a.75.75 0 010 1.114l-2.5 2.25a.75.75 0 01-1.06-.055zM9.75 10.25a.75.75 0 000 1.5h2.5a.75.75 0 000-1.5h-2.5z"
-                clipRule="evenodd"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z"
               />
             </svg>
           ),
@@ -431,30 +508,27 @@ export default function HorusToolbar() {
           keyShortcut: "ctrl T",
         },
         {
-          name: "Zoom In",
-          link: "/zoom-in",
+          name: "Center view",
+          onClick: () => {
+            const centerEvent = new CustomEvent("centerView");
+            window.dispatchEvent(centerEvent);
+          },
           svgPath: (
             <>
-              <path d="M9 6a.75.75 0 01.75.75v1.5h1.5a.75.75 0 010 1.5h-1.5v1.5a.75.75 0 01-1.5 0v-1.5h-1.5a.75.75 0 010-1.5h1.5v-1.5A.75.75 0 019 6z" />
-              <path
-                fillRule="evenodd"
-                d="M2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9zm7-5.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11z"
-                clipRule="evenodd"
-              />
-            </>
-          ),
-        },
-        {
-          name: "Zoom Out",
-          link: "/zoom-out",
-          svgPath: (
-            <>
-              <path d="M6.75 8.25a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-4.5z" />
-              <path
-                fillRule="evenodd"
-                d="M9 2a7 7 0 104.391 12.452l3.329 3.328a.75.75 0 101.06-1.06l-3.328-3.329A7 7 0 009 2zM3.5 9a5.5 5.5 0 1111 0 5.5 5.5 0 01-11 0z"
-                clipRule="evenodd"
-              />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="w-6 h-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25"
+                />
+              </svg>
             </>
           ),
         },
@@ -463,30 +537,55 @@ export default function HorusToolbar() {
     {
       name: "Extensions",
       svgPath: (
-        <path d="M12 4.467c0-.405.262-.75.559-1.027.276-.257.441-.584.441-.94 0-.828-.895-1.5-2-1.5s-2 .672-2 1.5c0 .362.171.694.456.953.29.265.544.6.544.994a.968.968 0 01-1.024.974 39.655 39.655 0 01-3.014-.306.75.75 0 00-.847.847c.14.993.242 1.999.306 3.014A.968.968 0 014.447 10c-.393 0-.729-.253-.994-.544C3.194 9.17 2.862 9 2.5 9 1.672 9 1 9.895 1 11s.672 2 1.5 2c.356 0 .683-.165.94-.441.276-.297.622-.559 1.027-.559a.997.997 0 011.004 1.03 39.747 39.747 0 01-.319 3.734.75.75 0 00.64.842c1.05.146 2.111.252 3.184.318A.97.97 0 0010 16.948c0-.394-.254-.73-.545-.995C9.171 15.693 9 15.362 9 15c0-.828.895-1.5 2-1.5s2 .672 2 1.5c0 .356-.165.683-.441.94-.297.276-.559.622-.559 1.027a.998.998 0 001.03 1.005c1.337-.05 2.659-.162 3.961-.337a.75.75 0 00.644-.644c.175-1.302.288-2.624.337-3.961A.998.998 0 0016.967 12c-.405 0-.75.262-1.027.559-.257.276-.584.441-.94.441-.828 0-1.5-.895-1.5-2s.672-2 1.5-2c.362 0 .694.17.953.455.265.291.601.545.995.545a.97.97 0 00.976-1.024 41.159 41.159 0 00-.318-3.184.75.75 0 00-.842-.64c-1.228.164-2.473.271-3.734.319A.997.997 0 0112 4.467z" />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.5}
+          stroke="currentColor"
+          className="w-6 h-6"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M14.25 6.087c0-.355.186-.676.401-.959.221-.29.349-.634.349-1.003 0-1.036-1.007-1.875-2.25-1.875s-2.25.84-2.25 1.875c0 .369.128.713.349 1.003.215.283.401.604.401.959v0a.64.64 0 01-.657.643 48.39 48.39 0 01-4.163-.3c.186 1.613.293 3.25.315 4.907a.656.656 0 01-.658.663v0c-.355 0-.676-.186-.959-.401a1.647 1.647 0 00-1.003-.349c-1.036 0-1.875 1.007-1.875 2.25s.84 2.25 1.875 2.25c.369 0 .713-.128 1.003-.349.283-.215.604-.401.959-.401v0c.31 0 .555.26.532.57a48.039 48.039 0 01-.642 5.056c1.518.19 3.058.309 4.616.354a.64.64 0 00.657-.643v0c0-.355-.186-.676-.401-.959a1.647 1.647 0 01-.349-1.003c0-1.035 1.008-1.875 2.25-1.875 1.243 0 2.25.84 2.25 1.875 0 .369-.128.713-.349 1.003-.215.283-.4.604-.4.959v0c0 .333.277.599.61.58a48.1 48.1 0 005.427-.63 48.05 48.05 0 00.582-4.717.532.532 0 00-.533-.57v0c-.355 0-.676.186-.959.401-.29.221-.634.349-1.003.349-1.035 0-1.875-1.007-1.875-2.25s.84-2.25 1.875-2.25c.37 0 .713.128 1.003.349.283.215.604.401.96.401v0a.656.656 0 00.658-.663 48.422 48.422 0 00-.37-5.36c-1.886.342-3.81.574-5.766.689a.578.578 0 01-.61-.58v0z"
+          />
+        </svg>
       ),
       items: pluginPages.map((page) => ({
         name: page.name,
-        link: "plugins/pages",
         svgPath: (
-          <path d="M12 4.467c0-.405.262-.75.559-1.027.276-.257.441-.584.441-.94 0-.828-.895-1.5-2-1.5s-2 .672-2 1.5c0 .362.171.694.456.953.29.265.544.6.544.994a.968.968 0 01-1.024.974 39.655 39.655 0 01-3.014-.306.75.75 0 00-.847.847c.14.993.242 1.999.306 3.014A.968.968 0 014.447 10c-.393 0-.729-.253-.994-.544C3.194 9.17 2.862 9 2.5 9 1.672 9 1 9.895 1 11s.672 2 1.5 2c.356 0 .683-.165.94-.441.276-.297.622-.559 1.027-.559a.997.997 0 011.004 1.03 39.747 39.747 0 01-.319 3.734.75.75 0 00.64.842c1.05.146 2.111.252 3.184.318A.97.97 0 0010 16.948c0-.394-.254-.73-.545-.995C9.171 15.693 9 15.362 9 15c0-.828.895-1.5 2-1.5s2 .672 2 1.5c0 .356-.165.683-.441.94-.297.276-.559.622-.559 1.027a.998.998 0 001.03 1.005c1.337-.05 2.659-.162 3.961-.337a.75.75 0 00.644-.644c.175-1.302.288-2.624.337-3.961A.998.998 0 0016.967 12c-.405 0-.75.262-1.027.559-.257.276-.584.441-.94.441-.828 0-1.5-.895-1.5-2s.672-2 1.5-2c.362 0 .694.17.953.455.265.291.601.545.995.545a.97.97 0 00.976-1.024 41.159 41.159 0 00-.318-3.184.75.75 0 00-.842-.64c-1.228.164-2.473.271-3.734.319A.997.997 0 0112 4.467z" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            className="w-6 h-6"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M8.25 4.5l7.5 7.5-7.5 7.5"
+            />
+          </svg>
         ),
         onClick: () => {
-          loadPage(page.url);
+          loadPage(page.url, page.name);
         },
       })),
     },
   ];
 
   return (
-    <div className="z-10 flex flex-row justify-between toolbar mt-1">
+    <div className="z-20 flex flex-row justify-between toolbar mt-1">
       <div className="flex flex-row gap-1 ml-1 mr-1">
         {menus.map((menu, index) => (
           <ToolbarMenu key={index} {...menu} />
         ))}
       </div>
       <div className="mr-1">
-        <SearchComponent />
+        <SearchComponent placeholder="Search..." onChange={() => {}} />
       </div>
     </div>
   );

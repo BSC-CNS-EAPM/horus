@@ -18,11 +18,11 @@ export default function Molstar() {
   const parent = createRef<HTMLDivElement>();
 
   useEffect(() => {
-    const molstar = new HorusMolstar();
-
-    molstar.init(parent.current);
-
-    window.molstar = molstar;
+    if (!window.molstar) {
+      const molstar = new HorusMolstar();
+      molstar.init(parent.current);
+      window.molstar = molstar;
+    }
   }, []);
 
   return (

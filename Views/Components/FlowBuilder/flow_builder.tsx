@@ -31,11 +31,7 @@ import { Block } from "./block";
 
 // =============================INTERFACES=============================
 // Import the block interface
-import {
-  BlockProps,
-  FlowBuilderProps,
-  PluginVariable,
-} from "./flow_builder_interfaces";
+import { BlockProps, FlowBuilderProps } from "./flow_builder_interfaces";
 // ====================================================================
 
 export default function FlowBuilder(props: FlowBuilderProps) {
@@ -113,38 +109,7 @@ export default function FlowBuilder(props: FlowBuilderProps) {
       return;
     }
 
-    // Create a new block with the new connection
-    // Adding to the connectedTo array the over block
-    const newBlock = {
-      ...currentBlock,
-      connectedTo: currentBlock.connectedTo
-        ? [...currentBlock.connectedTo, overBlock]
-        : [overBlock],
-    };
-
-    // Update the over block with the new connection
-    const newOverBlock = {
-      ...overBlock,
-      appearsOn: overBlock.appearsOn
-        ? [...overBlock.appearsOn, newBlock]
-        : [newBlock],
-    };
-
-    // Update the state
-    setPlacedBlocks((blocks) => {
-      const index = blocks.findIndex(
-        (b) => b.placedID === currentBlock?.placedID
-      );
-      const newBlocks = [...blocks];
-      newBlocks[index] = newBlock;
-
-      const overIndex = newBlocks.findIndex(
-        (b) => b.placedID === overBlock?.placedID
-      );
-      newBlocks[overIndex] = newOverBlock;
-
-      return newBlocks;
-    });
+    connectArrowBlock(setPlacedBlocks, currentBlock, overBlock);
   };
 
   const handleBlockMove = (event: DragEndEvent) => {
@@ -185,9 +150,15 @@ export default function FlowBuilder(props: FlowBuilderProps) {
       const index = blocks.findIndex(
         (b) => b.placedID === currentBlock?.placedID
       );
-      blocks[index] = newBlock;
-      return blocks;
+
+      const updatedBlocks = [...blocks];
+      updatedBlocks[index] = newBlock;
+
+      return updatedBlocks;
     });
+
+    // Update the saved state
+    setSaved(false);
   };
 
   function convertRemToPixels(rem) {
@@ -203,7 +174,7 @@ export default function FlowBuilder(props: FlowBuilderProps) {
       placedID: placedIDCounter.current,
       coords: {
         x: mousePos.current.x - convertRemToPixels(20),
-        y: mousePos.current.y - convertRemToPixels(8.2),
+        y: mousePos.current.y - convertRemToPixels(5 + 3.34),
       },
       variables: block.variables.map((variable) => {
         return {
@@ -213,12 +184,13 @@ export default function FlowBuilder(props: FlowBuilderProps) {
       }),
     };
 
+    const newPlacedBlocks = [...placedBlocks, newBlock];
+
     // Update the state
-    setPlacedBlocks([...placedBlocks, newBlock]);
+    setPlacedBlocks(newPlacedBlocks);
 
     // Update the placedIDCounter
     placedIDCounter.current += 1;
-
   };
 
   const handleBlockDrag = (event: DragStartEvent) => {
@@ -251,15 +223,6 @@ export default function FlowBuilder(props: FlowBuilderProps) {
     };
   };
 
-  useEffect(() => {
-    // Set a window event listener for the mousemove event
-    window.addEventListener("mousemove", handleMouseMove);
-
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-    };
-  }, []);
-
   const sensors = useSensors(mouseSensor);
 
   const measuring: MeasuringConfiguration = {
@@ -268,13 +231,14 @@ export default function FlowBuilder(props: FlowBuilderProps) {
     },
   };
 
-  const handleArrows = (event) => {
-    const { active } = event;
-    const updateXarrow = active.data?.current?.updateXarrow;
-    if (updateXarrow) {
-      updateXarrow();
-    }
-  };
+  // Events
+  useEffect(() => {
+    // Set a window event listener for the mousemove event
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+    };
+  }, []);
 
   return (
     // Setup the drag and drop context
@@ -283,7 +247,6 @@ export default function FlowBuilder(props: FlowBuilderProps) {
     <DndContext
       onDragEnd={handleDragEnd}
       onDragStart={handleBlockDrag}
-      onDragMove={handleArrows}
       collisionDetection={pointerWithin}
       sensors={sensors}
       measuring={measuring}
@@ -318,4 +281,43 @@ export default function FlowBuilder(props: FlowBuilderProps) {
       </DragOverlay>
     </DndContext>
   );
+}
+
+export function connectArrowBlock(
+  setPlacedBlocks: React.Dispatch<React.SetStateAction<BlockProps[]>>,
+  currentBlock: BlockProps,
+  overBlock: BlockProps
+) {
+  // Create a new block with the new connection
+  // Adding to the connectedTo array the over block
+  const newBlock = {
+    ...currentBlock,
+    connectedTo: currentBlock.connectedTo
+      ? [...currentBlock.connectedTo, overBlock]
+      : [overBlock],
+  };
+
+  // Update the over block with the new connection
+  const newOverBlock = {
+    ...overBlock,
+    appearsOn: overBlock.appearsOn
+      ? [...overBlock.appearsOn, newBlock]
+      : [newBlock],
+  };
+
+  // Update the state
+  setPlacedBlocks((blocks) => {
+    const index = blocks.findIndex(
+      (b) => b.placedID === currentBlock?.placedID
+    );
+    const newBlocks = [...blocks];
+    newBlocks[index] = newBlock;
+
+    const overIndex = newBlocks.findIndex(
+      (b) => b.placedID === overBlock?.placedID
+    );
+    newBlocks[overIndex] = newOverBlock;
+
+    return newBlocks;
+  });
 }

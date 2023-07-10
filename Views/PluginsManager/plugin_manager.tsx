@@ -101,7 +101,6 @@ function InstalledPlugins() {
               l < plugin.blocks[i].subBlocks[k].config.length;
               l++
             ) {
-              console.log("Config found!");
               newConfigBlocks.push(plugin.blocks[i].subBlocks[k].config[l]);
             }
           }
@@ -122,20 +121,12 @@ function InstalledPlugins() {
           (variable) => variable.id === id
         ).value = value;
       } else {
-        // If the change doesn't exist, create a new one
-        console.log(
-          "New change for variable with id: " + id,
-          "Value: " + value
-        );
         // Find the block that has the variable
         for (let i = 0; i < newConfigBlocks.length; i++) {
-          console.log("Checking variables: " + newConfigBlocks[i].variables);
           const variable = newConfigBlocks[i].variables.find(
             (variable) => variable.id === id
           );
           if (variable) {
-            console.log("Found variable");
-
             // Update the value of the variable
             variable.value = value;
 
@@ -153,7 +144,6 @@ function InstalledPlugins() {
       // Replace the config blocks with the tempChanges
       const newConfig = [...newConfigBlocks];
       for (let i = 0; i < tempChanges.length; i++) {
-        console.log(tempChanges[i]);
         const blockIndex = newConfig.findIndex(
           (block) => block.id === tempChanges[i].id
         );
@@ -304,7 +294,7 @@ function PluginCard(props: PluginCardProps) {
                   Dependencies:
                   <div className="dependencies-scroll">
                     {plugin.dependencies?.map((dependency) => {
-                      return <li>{dependency}</li>;
+                      return <li key={dependency}>{dependency}</li>;
                     })}
                   </div>
                 </div>

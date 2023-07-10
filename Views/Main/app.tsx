@@ -4,6 +4,8 @@ import HorusTerm from "../Components/Console/console";
 import { useEffect, useState } from "react";
 import { Route, Routes } from "react-router";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+import FlowBuilder from "../Components/FlowBuilder/flow_builder";
+import IFrameLoader from "../Components/IframeLoader/iframeloader";
 
 export default function ResizeHandle({
   horizontal = false,
@@ -27,13 +29,18 @@ export default function ResizeHandle({
 }
 
 export function App() {
-  const [secondView, setSecondView] = useState(null);
+  const [mainView, setMainView] = useState(<FlowBuilder />);
   const [showConsole, setShowConsole] = useState(false);
 
-  const handleSecondView = (event) => {
-    const secondView = event.detail;
+  const handleMainView = (event) => {
+    const mainView = event.detail;
+    setMainView(mainView);
+  };
 
-    setSecondView(secondView);
+  const handleIFrame = (event) => {
+    const key = event.detail.url + "-" + event.detail.pagename;
+    const iframe = <IFrameLoader key={key} {...event.detail} />;
+    setMainView(iframe);
   };
 
   const toggleConsole = () => {
@@ -41,26 +48,28 @@ export function App() {
   };
 
   useEffect(() => {
-    window.addEventListener("secondView", handleSecondView);
+    window.addEventListener("mainView", handleMainView);
+    window.addEventListener("mainViewURL", handleIFrame);
     window.addEventListener("toggleConsole", toggleConsole);
 
     return () => {
-      window.removeEventListener("secondView", handleSecondView);
+      window.removeEventListener("mainView", handleMainView);
+      window.removeEventListener("mainViewURL", handleIFrame);
       window.removeEventListener("toggleConsole", toggleConsole);
     };
   }, []);
 
-  const secondViewPanel = (
+  const mainViewPanel = (
     <>
-      <Panel minSize={30} order={1}>
-        {secondView}
+      <Panel minSize={30} order={3}>
+        {mainView}
       </Panel>
       <ResizeHandle horizontal={true} />
     </>
   );
 
   const molstarPanel = (
-    <Panel minSize={30}>
+    <Panel minSize={30} order={4} collapsible={true} defaultSize={0}>
       <Molstar />
     </Panel>
   );
@@ -68,19 +77,10 @@ export function App() {
   const consolePanel = (
     <>
       <ResizeHandle />
-      <Panel minSize={30}>
+      <Panel minSize={8} maxSize={50} order={2} defaultSize={20}>
         <HorusTerm />
       </Panel>
     </>
-  );
-
-  const molstarTerminalPanel = (
-    <Panel minSize={30} order={2}>
-      <PanelGroup direction="vertical">
-        {molstarPanel}
-        {showConsole && consolePanel}
-      </PanelGroup>
-    </Panel>
   );
 
   return (
@@ -91,9 +91,14 @@ export function App() {
           <Route
             path="/"
             element={
-              <PanelGroup direction="horizontal">
-                {secondView && secondViewPanel}
-                {molstarTerminalPanel}
+              <PanelGroup direction="vertical">
+                <Panel order={1}>
+                  <PanelGroup direction="horizontal">
+                    {mainViewPanel}
+                    {molstarPanel}
+                  </PanelGroup>
+                </Panel>
+                {showConsole && consolePanel}
               </PanelGroup>
             }
           />

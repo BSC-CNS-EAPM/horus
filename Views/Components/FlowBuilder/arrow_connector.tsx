@@ -28,6 +28,8 @@ function ArrowBlockConnector(props: ArrowConnectorProps) {
 
   var style = {
     transform: null,
+    alignItems: "center",
+    textAling: "center",
   };
 
   if (transform) {
@@ -35,15 +37,18 @@ function ArrowBlockConnector(props: ArrowConnectorProps) {
   }
 
   return (
-    <div
-      className={transform ? "connecting-blocks" : "connect-blocks"}
-      ref={ref}
-      style={style}
-      {...listeners}
-      {...attributes}
-    >
-      {transform && <Xarrow start={from} end={ref} />}
-    </div>
+    <>
+      <div
+        className={"connect-blocks"}
+        ref={ref}
+        style={style}
+        {...listeners}
+        {...attributes}
+      >
+        <div className="placed-id">{block.placedID}</div>
+        {transform && <Xarrow start={from} end={ref} />}
+      </div>
+    </>
   );
 }
 

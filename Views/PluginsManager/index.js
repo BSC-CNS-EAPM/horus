@@ -7,13 +7,20 @@ import { PluginManager } from "./plugin_manager";
 
 import 'bootstrap/dist/css/bootstrap.css';
 
-const container = document.getElementById("plugin-manager-root")
-container.className = "root-plugin-container";
-const root = ReactDOM.createRoot(container)
-root.render(
-    <React.StrictMode>
-        <BrowserRouter>
-            <PluginManager />
-        </BrowserRouter>
-    </React.StrictMode>
-)
+let container = null;
+
+document.addEventListener("DOMContentLoaded", () => {
+    if (!container) { // check if createRoot has already been called
+        container = document.getElementById("plugin-manager-root")
+        container.className = "root-plugin-container";
+        const root = ReactDOM.createRoot(container)
+        root.render(
+            <React.StrictMode>
+                <BrowserRouter>
+                    <PluginManager />
+                </BrowserRouter>
+            </React.StrictMode>
+        )
+    }
+});
+

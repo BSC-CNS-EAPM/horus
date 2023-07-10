@@ -5,7 +5,7 @@ import { horusGet, horusPost } from "../../Utils/utils";
 import { RotatingLines } from "react-loader-spinner";
 import { useDroppable, DndContext } from "@dnd-kit/core";
 import Xarrow, { Xwrapper } from "react-xarrows";
-import { HorusModal } from "../reusable";
+import { connectArrowBlock } from "./flow_builder";
 
 function FlowReciver(props: FlowReciverProps) {
   // Modal state
@@ -284,14 +284,14 @@ function FlowReciver(props: FlowReciverProps) {
 
   const handlingNew = useRef(false);
 
-  const handleNew = () => {
+  const handleNew = (bypass: boolean = false) => {
     if (handlingNew.current) {
       return;
     }
 
     handlingNew.current = true;
 
-    if (!currentSaved.current) {
+    if (!currentSaved.current && !bypass) {
       if (
         !confirm(
           "Current flow is not saved. Are you sure you want to create a new flow?"
@@ -305,27 +305,129 @@ function FlowReciver(props: FlowReciverProps) {
     savedID.current = "new_flow";
     flowPath.current = "";
     props.setPlacedBlocks([]);
-    props.placedIDCounter.current = 0;
+    props.placedIDCounter.current = 1;
     setSaved(true);
+    resetHistory();
     handlingNew.current = false;
+  };
+
+  const handleTerminalCommand = (e: CustomEvent) => {
+    const command = e.detail.command;
+    const args = e.detail.args;
+
+    if (command === "newflow") {
+      if (args[0] === "-y") {
+        handleNew(true);
+      } else {
+        handleNew();
+      }
+      return "Flow cleared";
+    }
+
+    if (command === "openflow") {
+      loadFlow();
+      return "Flow loaded";
+    }
+
+    if (command === "saveflow") {
+      handleSave();
+      return "Flow saved";
+    }
+
+    if (command === "del") {
+      console.log(args);
+      if (args[0] !== undefined) {
+        // Get the block by the placedID
+        const block = props.placedBlocks.find(
+          (b) => b.placedID === parseInt(args[0])
+        );
+
+        console.log(props.placedBlocks);
+
+        console.log(block);
+
+        if (!block) {
+          console.log("Block not found");
+          return "Block not found";
+        }
+        handleDelete(block);
+      }
+      return "Block deleted";
+    }
+
+    if (command === "conn") {
+      if (args[0] !== undefined && args[1] !== undefined) {
+        // Find the block by the placedID
+        const block1 = props.placedBlocks.find(
+          (b) => b.placedID === parseInt(args[0])
+        );
+
+        if (!block1) {
+          return "Block not found";
+        }
+
+        // Find the block by the placedID
+        const block2 = props.placedBlocks.find(
+          (b) => b.placedID === parseInt(args[1])
+        );
+
+        if (!block2) {
+          return "Block not found";
+        }
+
+        connectArrowBlock(props.setPlacedBlocks, block1, block2);
+      }
+    }
+
+    if (command === "run") {
+      if (args[0] !== undefined) {
+        // Get the block by the placedID
+        const block = props.placedBlocks.find(
+          (b) => b.placedID === parseInt(args[0])
+        );
+        if (!block) {
+          return "Block not found";
+        }
+        executeBlock(block);
+      }
+      return "Flow executed";
+    }
+
+    return "Command executed";
   };
 
   useEffect(() => {
     // Add an event listener to clear all the state when the "New" button is clicked in the toolbar
-    window.addEventListener("newFlow", handleNew);
+    window.addEventListener("newFlow", (e) => {
+      handleNew();
+    });
 
     // Add an event listener to load a flow when the "Open" button is clicked in the toolbar
     window.addEventListener("openFlow", loadFlow);
 
+    // Add an event listener to save a flow when the "Save" button is clicked in the toolbar
+    window.addEventListener("saveFlow", handleSave);
+
+    // Add an event listener for the terminal commands
+    window.addEventListener("terminalCommand", handleTerminalCommand);
+
+    // Add an event listener for the center view button
+    window.addEventListener("centerView", centerView);
+
     // Clean the event listener when the component is unmounted
     return () => {
-      window.removeEventListener("newFlow", handleNew);
+      window.removeEventListener("newFlow", (e) => {
+        handleNew();
+      });
       window.removeEventListener("openFlow", loadFlow);
+      window.removeEventListener("saveFlow", handleSave);
+      window.removeEventListener("terminalCommand", handleTerminalCommand);
+      window.removeEventListener("centerView", centerView);
     };
-  }, []);
+  }, [props.placedBlocks]);
 
   const topBarTitle = (
-    <h1 className="flex flex-row">
+    <h1 className="flex flex-row top-bar-flow-reciver">
       <input
         className="flow-name"
         type="text"
@@ -409,8 +511,6 @@ function FlowReciver(props: FlowReciverProps) {
         start={`${block?.placedID}-${block.id}`}
         end={`${connectedBlock?.placedID}-${connectedBlock.id}`}
         key={`${block?.placedID}-${block.id}-${connectedBlock?.placedID}-${connectedBlock.id}`}
-        startAnchor={["right"]}
-        endAnchor={["left", "top", "bottom"]}
       />
     ));
 
@@ -431,14 +531,188 @@ function FlowReciver(props: FlowReciverProps) {
 
   const placedBlocksView = props.placedBlocks.map(renderBlock);
 
+  const [isPanning, setIsPanning] = useState(false);
+
+  const [past, setPast] = useState<BlockProps[][]>([]);
+  const [future, setFuture] = useState<BlockProps[][]>([]);
+  const [present, setPresent] = useState<BlockProps[]>();
+
+  const resetHistory = () => {
+    setPast([]);
+    setFuture([]);
+    setPresent(props.placedBlocks);
+  };
+
+  const handleUndo = () => {
+    if (past.length < 1) {
+      return;
+    }
+
+    const undoTo = past[past.length - 1];
+
+    if (undoTo === undefined) {
+      return;
+    }
+
+    const newPast = past.slice(0, past.length - 1);
+
+    setFuture([present, ...future]);
+    props.setPlacedBlocks(undoTo);
+    setPresent(undoTo);
+    setPast(newPast);
+    setSaved(false);
+  };
+
+  const handleRedo = () => {
+    if (future.length < 1) {
+      return;
+    }
+
+    const redoTo = future[0];
+
+    if (redoTo === undefined) {
+      return;
+    }
+
+    const newFuture = future.slice(1);
+
+    setPast([...past, present]);
+    props.setPlacedBlocks(redoTo);
+    setPresent(redoTo);
+    setFuture(newFuture);
+    setSaved(false);
+  };
+
+  const updateHistory = (newPlacedBlocks: BlockProps[]) => {
+    setPast((prevPast) => [...prevPast, present]);
+    setPresent(newPlacedBlocks);
+    setFuture([]);
+  };
+
+  useEffect(() => {
+    function compareBlockLists(a: BlockProps[], b: BlockProps[]) {
+      if (isPanning === true) {
+        return true;
+      }
+      if (JSON.stringify(a) === JSON.stringify(b)) {
+        return true;
+      }
+      return false;
+    }
+
+    // If the placed blocks change, we update the history
+    if (!compareBlockLists(props.placedBlocks, present)) {
+      updateHistory(props.placedBlocks);
+    }
+
+    window.addEventListener("undo", handleUndo);
+    window.addEventListener("redo", handleRedo);
+    return () => {
+      window.removeEventListener("undo", handleUndo);
+      window.removeEventListener("redo", handleRedo);
+    };
+  }, [props.placedBlocks, past, future, present]);
+
+  const initialMousePosition = useRef({ x: 0, y: 0 });
+
+  const style = {
+    cursor: isPanning ? "grabbing" : "default",
+  };
+
   return (
-    <div className="current-flow">
+    <div className="current-flow cursor-grabbing">
       {topBarTitle}
-      <div className="current-flow-canvas" ref={setNodeRef}>
+      <div
+        className="current-flow-canvas"
+        ref={setNodeRef}
+        id="current-flow-canvas"
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMousePan}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        style={style}
+      >
         <Xwrapper>{placedBlocksView}</Xwrapper>
       </div>
     </div>
   );
+
+  function handleMouseDown(e) {
+    // Check that the user is clicking over the canvas and not anything else
+    if (e.target.id === "current-flow-canvas") {
+      setIsPanning(true);
+      document.onselectstart = function () {
+        return false;
+      };
+      initialMousePosition.current = {
+        x: e.clientX,
+        y: e.clientY,
+      };
+    }
+  }
+
+  function handleMousePan(e) {
+    // Move all blocks by delta
+    if (isPanning) {
+      // Get mouse delta
+      const deltaX = e.clientX - initialMousePosition.current.x;
+      const deltaY = e.clientY - initialMousePosition.current.y;
+
+      initialMousePosition.current = {
+        x: e.clientX,
+        y: e.clientY,
+      };
+      moveBlocksPan(deltaX, deltaY);
+    }
+  }
+
+  function centerView() {
+    // Set the first block to be at the center of the canvas
+    // Then move all blocks by delta respective to the first block
+    const firstBlockPos = props.placedBlocks[0]?.coords;
+
+    if (!firstBlockPos) {
+      return;
+    }
+
+    // Get the center of the canvas
+    const canvas = document.getElementById("current-flow-canvas");
+    const canvasWidth = canvas.clientWidth;
+    const canvasHeight = canvas.clientHeight;
+
+    const canvasCenter = {
+      x: canvasWidth / 3,
+      y: canvasHeight / 3,
+    };
+
+    const delta = {
+      x: -firstBlockPos.x + canvasCenter.x,
+      y: -firstBlockPos.y + canvasCenter.y,
+    };
+
+    moveBlocksPan(delta.x, delta.y);
+  }
+
+  function moveBlocksPan(deltaX: number, deltaY: number) {
+    props.setPlacedBlocks((blocks) =>
+      blocks.map((block) => {
+        return {
+          ...block,
+          coords: {
+            x: block.coords.x + deltaX,
+            y: block.coords.y + deltaY,
+          },
+        };
+      })
+    );
+  }
+
+  function handleMouseUp(e) {
+    setIsPanning(false);
+    document.onselectstart = function () {
+      return true;
+    };
+  }
 }
 
 export { FlowReciver };

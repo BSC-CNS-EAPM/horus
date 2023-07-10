@@ -1,4 +1,4 @@
-import os
+import os, sys, imp
 import shutil
 
 currentDir = os.getcwd()
@@ -61,6 +61,17 @@ imports += [
     "dns.asyncquery",
     "dns.versioned",
 ]
+
+if sys.platform == "linux":
+    # Try to use pyqt
+    try:
+        imp.find_module("PyQt5")
+        print("Using PyQt5 for Linux build")
+        imports += ["PyQt5", "PyQt5.QtCore", "PyQt5.QtWebEngineWidgets", "qtpy"]
+    except ImportError:
+        print("PyQT5 not found")
+        sys.exit(1)
+
 
 # Check that all the modules are installed in the environment
 try:
