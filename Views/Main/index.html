@@ -14,6 +14,8 @@
             window.pywebview = window.pywebview || {};
             window.pywebview.token = token;
         }
+        // Remove from the url the token
+        window.history.replaceState({}, document.title, "/");
     </script>
 
 </head>

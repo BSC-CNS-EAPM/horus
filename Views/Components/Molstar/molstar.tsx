@@ -1,5 +1,7 @@
 import { useEffect, createRef } from "react";
 
+import { socket } from "../../Utils/socket";
+
 // Load the molstar default style
 import "molstar/lib/mol-plugin-ui/skin/light.scss";
 
@@ -17,13 +19,30 @@ declare global {
 export default function Molstar() {
   const parent = createRef<HTMLDivElement>();
 
+  const loadMolstar = async () => {
+    const molstar = new HorusMolstar();
+    await molstar.init(parent.current);
+    window.molstar = molstar;
+  };
+
   useEffect(() => {
     if (!window.molstar) {
-      const molstar = new HorusMolstar();
-      molstar.init(parent.current);
-      window.molstar = molstar;
+      loadMolstar();
     }
+
+    socket.on("loadPDB", (data) => {
+      const molstar = window.molstar;
+      if (molstar) {
+        molstar.loadPDBString(data, "PDB");
+      }
+    });
+
+    return () => {
+      socket.off("loadPDB");
+    }
+
   }, []);
+
 
   return (
     <div

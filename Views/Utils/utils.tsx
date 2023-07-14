@@ -7,27 +7,22 @@ declare global {
   }
 }
 
-// Function to get the pywebview token
 function getShemsuToken() {
-  try {
-    return window.pywebview.token;
-  } catch (error) {
-    return "";
-  }
+  return window.pywebview?.token || window.parent?.pywebview?.token;
 }
 
 // Tokenize the urls with the shemsu token
-async function horusGet(url, headers?) {
+async function horusGet(url, headers?, shemsu?) {
   return await fetch(url, {
     method: "GET",
     headers: {
-      shemsu: getShemsuToken(),
+      shemsu: shemsu || getShemsuToken(),
       ...headers,
     },
   });
 }
 
-async function horusPost(url, headers, body) {
+async function horusPost(url, headers, body, shemsu?) {
   /* Send a post request to the server to open a window
    * @param {string} url - The url to send the request to
    * @param {object} headers - The headers to send with the request
@@ -37,7 +32,7 @@ async function horusPost(url, headers, body) {
   return await fetch(url, {
     method: "POST",
     headers: {
-      shemsu: getShemsuToken(),
+      shemsu: shemsu || getShemsuToken(),
       ...headers,
     },
     body: body,

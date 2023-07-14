@@ -5,6 +5,7 @@ import NBDButton from "../Components/nbdbutton";
 import "./plugin_manager.css";
 import { SearchComponent } from "../Components/Toolbar/toolbar";
 import { HorusModal, HorusModalProps } from "../Components/reusable";
+import { socket } from "../Utils/socket";
 
 import {
   HorusPlugin,
@@ -368,6 +369,34 @@ export function PluginManager() {
     size: "lg",
   });
 
+  useEffect(() => {
+    function updateText(data) {
+      // Always convert to string
+      data = data.toString();
+
+      setModalProps({
+        ...modalProps,
+        body: (
+          <div className="flex justify-center align-items-center">
+            <RotatingLines
+              strokeColor="grey"
+              strokeWidth="5"
+              animationDuration="0.75"
+            />
+            <div className="ml-2">{data}</div>
+          </div>
+        ),
+      });
+    }
+
+    // When recieving a message from the server, log it to the console
+    socket.on("installPluginDep", updateText);
+
+    return () => {
+      socket.off("installPluginDep", updateText);
+    };
+  }, []);
+
   // Open new window for plugin installation
   const installPlugin = async () => {
     setModalProps({
@@ -422,7 +451,10 @@ export function PluginManager() {
           <div className="flex flex-row gap-2 mr-2">
             <NBDButton text="Install plugin" action={installPlugin} />
             <NBDButton text="Open plugins folder" action={openPluginsFolder} />
-            <SearchComponent />
+            <SearchComponent
+              placeholder="Search plugins..."
+              onChange={() => {}}
+            />
           </div>
         </div>
         <div>

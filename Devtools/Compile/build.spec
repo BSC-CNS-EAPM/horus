@@ -1,5 +1,6 @@
 import os, sys, imp
 import shutil
+import matplotlib
 
 currentDir = os.getcwd()
 
@@ -16,7 +17,7 @@ cython_folder = os.path.join(currentDir, "build", "cython")
 gui_folder = os.path.join(currentDir, "GUI")
 
 # Include the default plugins folder
-default_plugins_folder = os.path.join(currentDir, "AppSupport", "Plugins")
+default_plugins_folder = os.path.join(currentDir, "AppSupport", "DefaultPlugins")
 
 # Delete any config folder in the AppSupport/Plugins/<pluginname>/ folder
 # Iterate over all the folders in AppSupport/Plugins
@@ -72,6 +73,21 @@ if sys.platform == "linux":
         print("PyQT5 not found")
         sys.exit(1)
 
+
+# ===========================
+# IMPORTANT
+# ===========================
+# Remember to import the
+# dependencies of the default
+# plugins
+# ===========================
+nbdsuite_deps = [
+    "nbdsuite",
+    "pandas",
+    "yaml",
+]
+
+imports += nbdsuite_deps
 
 # Check that all the modules are installed in the environment
 try:

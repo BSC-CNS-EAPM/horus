@@ -3,11 +3,12 @@ import sys
 import typing
 import json
 import uuid
-from HorusAPI import Plugin, PluginBlock
+from HorusAPI import Plugin, PluginBlock, PluginPage
 import io
 from contextlib import redirect_stdout, redirect_stderr
 import subprocess
 import imp
+import shutil
 
 
 # Define a overwrite exception
@@ -34,20 +35,29 @@ class PluginManager:
     # Track if the plugins need to be reloaded
     pluginChanges = True
 
-    def __init__(self, appSupportDir: str, desktop: bool) -> None:
-        self._pluginsDir(appSupportDir)
+    def __init__(self, appSupportDir: str, desktop: bool):
+        # Get the plugins and dependencies directory
+        self._pluginsDepsDir(appSupportDir)
 
+        # Assign desktop mode (opening of files, folders...)
         self.desktop = desktop
-
-        # Initialize the plugins
-        self._initializePlugins()
 
         # Save the current working dir
         self.workingDir = os.getcwd()
 
-    def _pluginsDir(self, appSupportDir):
+    def loadPlugins(self):
         """
-        Creates the plugins directory if it doesn't exist.
+        Initializes the plugins after the app has started.
+        """
+
+        print("Loading plugins...")
+
+        # Initialize the plugins
+        self._initializePlugins()
+
+    def _pluginsDepsDir(self, appSupportDir):
+        """
+        Creates the plugins and dependencies directory if they doesn't exist.
         - appSupportDir: The path to the AppSupport directory
         """
 
@@ -59,13 +69,23 @@ class PluginManager:
                 os.path.join(bundle_dir, "DefaultPlugins")
             )
         except AttributeError:
-            # We are not in a bundle
+            # We are not in a bundle, use the AppSupport/DefaultPlugins directory
+            self.defaultPluginsDir = os.path.join(appSupportDir, "DefaultPlugins")
             pass
 
         # Defines the plugins directory, which should be in the AppSupport directory
         self.pluginsDir = os.path.join(appSupportDir, "Plugins")
         if not os.path.exists(self.pluginsDir):
             os.mkdir(self.pluginsDir)
+
+        # Defines the dependencies directory, which should
+        # be in the AppSupport directory
+        self.depsDir = os.path.join(appSupportDir, "Dependencies")
+        if not os.path.exists(self.depsDir):
+            os.mkdir(self.depsDir)
+
+        # Add the dependencies directory to the PYTHON path
+        sys.path.append(self.depsDir)
 
     def installPlugin(self):
         """
@@ -90,8 +110,6 @@ class PluginManager:
         self.pluginChanges = True
 
     def _installPlugin(self, path):
-        import shutil
-
         # Get the name of the plugin
         pluginName = os.path.basename(path)
 
@@ -157,8 +175,13 @@ class PluginManager:
         """
         import shutil
 
-        pDir = self._getPlugin(pluginName)._path
-        pluginPath = os.path.join(self.pluginsDir, pDir)
+        plugin = self._getPlugin(pluginName)
+
+        # Delete dependencies
+        self._uninstallDependencies(plugin)
+
+        # Remove the plugin folder
+        pluginPath = os.path.join(self.pluginsDir, plugin._path)
         shutil.rmtree(pluginPath)
 
         self.pluginChanges = True
@@ -314,19 +337,81 @@ class PluginManager:
         return pluginModule.plugin
 
     def _installDependencies(self, plugin: Plugin):
+        """
+        Installs the dependencies of a plugin.
+
+        :param plugin: The plugin instance
+        """
+
         dependencies = plugin.info.get("dependencies", [])
         for dep in dependencies:
             try:
                 imp.find_module(dep)
             except ImportError:
-                result = subprocess.run(
-                    [sys.executable, "-m", "pip", "install", dep, "--upgrade"],
+                print(f"Installing dependency {dep}...")
+                with subprocess.Popen(
+                    [
+                        sys.executable,
+                        "-m",
+                        "pip",
+                        "install",
+                        dep,
+                        "--upgrade",
+                        "--target",
+                        self.depsDir,
+                    ],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
+                ) as p:
+                    if p.stdout is not None:
+                        for line in p.stdout:
+                            print(line)
+                            # emit("installPluginDep", line)
+
+                    if p.stderr is not None:
+                        for line in p.stderr:
+                            print(line)
+                            # emit("installPluginDep", line)
+                    if p.returncode != 0 and p.returncode is not None:
+                        print(f"Dependency {dep} could not be installed.")
+                        raise Exception(f"Dependency {dep} could not be installed.")
+
+    def _uninstallDependencies(self, plugin: Plugin):
+        """
+        Uninstalls the dependencies of a plugin.
+
+        :param plugin: The plugin instance
+        """
+
+        dependencies = plugin.info.get("dependencies", [])
+        for dep in dependencies:
+            # If the dependency is needed by another plugin, don't uninstall it
+            print("Trying to uninstall dependency", dep)
+            if any(
+                [
+                    dep in p.info.get("dependencies", [])
+                    for p in self.loadedPlugins
+                    if p != plugin
+                ]
+            ):
+                anyplu = any(
+                    [
+                        dep in p.info.get("dependencies", [])
+                        for p in self.loadedPlugins
+                        if p != plugin
+                    ]
                 )
-                if result.returncode != 0:
-                    print(f"Dependency {dep} could not be installed.")
-                    raise Exception(f"Dependency {dep} could not be installed.")
+                print(anyplu)
+                print("Dependency is needed by another plugin")
+                continue
+
+            try:
+                imp.find_module(dep)
+                print(f"Uninstalling dependency {dep}...")
+                shutil.rmtree(os.path.join(self.depsDir, dep))
+            except ImportError:
+                print(f"Dependency {dep} is not installed.")
+                raise Exception(f"Dependency {dep} is not installed.")
 
     def getPlugins(self):
         """
@@ -564,24 +649,37 @@ class PluginManager:
             # WIP implement server user folders
             return None
 
+    def _getPageInfo(self, pg: PluginPage, p: Plugin):
+        return {
+            "id": pg.id,
+            "plugin": p.info["name"],
+            "name": pg.name,
+            "description": pg.description,
+            "html": f"{p._path}/Pages/{pg.html}",
+            "url": f"/plugins/pages/{pg.id}",
+        }
+
+    def getPagesObject(self):
+        """
+        Returns a list of all the pages of all the plugins as Pages instances.
+        """
+        self._initializePlugins()
+        pages: list[PluginPage] = []
+        for p in self.loadedPlugins:
+            for pg in p.pages:
+                pg._pageInfo = self._getPageInfo(pg, p)
+                pages.append(pg)
+        return pages
+
     def getPages(self):
         """
-        Returns a list of all the pages of all the plugins.
+        Returns a list of all the pages of all the plugins in JSON format.
         """
         self._initializePlugins()
         pages: list[dict[str, str]] = []
         for p in self.loadedPlugins:
             for pg in p.pages:
-                pages.append(
-                    {
-                        "id": pg.id,
-                        "plugin": p.info["name"],
-                        "name": pg.name,
-                        "description": pg.description,
-                        "html": f"{p._path}/Pages/{pg.html}",
-                        "url": f"/plugins/pages/{pg.id}",
-                    }
-                )
+                pages.append(self._getPageInfo(pg, p))
         return pages
 
     def _blocksPlusSubBlocks(self, plugin: Plugin):
@@ -687,3 +785,11 @@ class PluginManager:
 
         # Return the output to print in horusterm
         return output
+
+    def reloadPlugins(self):
+        """
+        Force the PluginManager to reload the plugins.
+        """
+        self.pluginChanges = True
+        self._initializePlugins()
+        print("Plugins reloaded.")

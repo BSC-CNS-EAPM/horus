@@ -62,27 +62,24 @@ class HorusMolstar {
 
   plugin: PluginUIContext;
 
-  async init(target: string | HTMLElement) {
-    this.plugin = await createPluginUI(
-      typeof target === "string" ? document.getElementById(target)! : target,
-      {
-        ...DefaultPluginUISpec(),
-        animations: [AnimateModelIndex],
-        config: [
-          [PluginConfig.Viewport.ShowExpand, false],
-          [PluginConfig.Viewport.ShowControls, true],
-        ],
-        layout: {
-          initial: {
-            isExpanded: true,
-            showControls: false,
-          },
+  async init(target: HTMLDivElement) {
+    this.plugin = await createPluginUI(target, {
+      ...DefaultPluginUISpec(),
+      animations: [AnimateModelIndex],
+      config: [
+        [PluginConfig.Viewport.ShowExpand, false],
+        [PluginConfig.Viewport.ShowControls, true],
+      ],
+      layout: {
+        initial: {
+          isExpanded: true,
+          showControls: false,
         },
-        components: {
-          remoteState: "none",
-        },
-      }
-    );
+      },
+      components: {
+        remoteState: "none",
+      },
+    });
 
     const renderer = this.plugin.canvas3d!.props.renderer;
     PluginCommands.Canvas3D.SetSettings(this.plugin, {
@@ -659,6 +656,108 @@ class HorusMolstar {
       snapshot,
       durationMs: 250,
     });
+  }
+
+  async loadPDBString(pdbString, label) {
+    // Parse the data from the string
+    pdbString = this.parsePDB(pdbString);
+    // Load the parsed data
+    const data = await this.plugin.builders.data.rawData({
+      data: pdbString,
+      label: label,
+    });
+    const trajectory = await this.plugin.builders.structure.parseTrajectory(
+      data,
+      "pdb"
+    );
+    const model = await this.plugin.builders.structure.createModel(trajectory);
+    const structure = await this.plugin.builders.structure.createStructure(
+      model
+    );
+
+    const structureObject = {
+      structure: structure,
+      label: label,
+    };
+
+    const components = {
+      polymer: await this.plugin.builders.structure.tryCreateComponentStatic(
+        structure,
+        "polymer"
+      ),
+      ligand: await this.plugin.builders.structure.tryCreateComponentStatic(
+        structure,
+        "ligand"
+      ),
+      water: await this.plugin.builders.structure.tryCreateComponentStatic(
+        structure,
+        "water"
+      ),
+    };
+
+    var proteinColorType = "polymer-id";
+    var ligandColorType = "element-symbol";
+
+    const builder = this.plugin.builders.structure.representation;
+    const update = this.plugin.build();
+    if (components.polymer)
+      builder.buildRepresentation(
+        update,
+        components.polymer,
+        {
+          type: "cartoon",
+          typeParams: { alpha: 1 },
+          color: proteinColorType,
+          colorParams: { value: Color.fromRgb(1, 0, 0) },
+        },
+        { tag: "polymer" }
+      );
+    if (components.ligand)
+      builder.buildRepresentation(
+        update,
+        components.ligand,
+        {
+          type: "ball-and-stick",
+          color: ligandColorType,
+          colorParams: { value: Color.fromRgb(1, 0, 0) },
+        },
+        { tag: "ligand" }
+      );
+    if (components.water)
+      builder.buildRepresentation(
+        update,
+        components.water,
+        { type: "ball-and-stick", typeParams: { alpha: 0.6 } },
+        { tag: "water" }
+      );
+    await update.commit();
+  }
+
+  private parsePDB(pdbString) {
+    const wantedLines = [
+      "ATOM",
+      "HETATM",
+      "ANISOU",
+      "TER",
+      "ENDMDL",
+      "CONNECT",
+      "MASTER",
+      "END",
+    ];
+    const lines = pdbString.split("\n");
+
+    // Loop over the lines and only keep the lines that start with the 'wantedLines' strings
+    const filteredLines = lines.filter((line) => {
+      for (const wantedLine of wantedLines) {
+        if (line.startsWith(wantedLine)) return true;
+      }
+      return false;
+    });
+
+    // Join the lines back into a string
+    const filteredPDB = filteredLines.join("\n");
+
+    return filteredPDB;
   }
 }
 

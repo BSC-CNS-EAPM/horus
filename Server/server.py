@@ -65,6 +65,10 @@ class HorusServer:
         # Load the plugins pages
         self._pluginPages()
 
+        # Load the debug endpoints
+        if self.debug:
+            self._debugRoutes()
+
     def _getToken(self):
         if self.desktop:
             import webview
@@ -401,6 +405,42 @@ class HorusServer:
             AppDelegate().openBrowserMode()
             return "OK"
 
+        @self.server.route("/openfolder", methods=["GET"])
+        @verifyToken
+        def openFolder():
+            if self.desktop:
+                from App import AppDelegate
+
+                selFolder = AppDelegate().openFolderSelectDialog()
+            else:  # Implement folder picker for web/server mode
+                selFolder = "/example/path"
+
+            return flask.jsonify({"path": selFolder})
+
+        @self.server.route("/openfile", methods=["GET"])
+        @verifyToken
+        def openFile():
+            if self.desktop:
+                from App import AppDelegate
+
+                selFile = AppDelegate().openFileSelectDialog()
+            else:
+                selFile = "/Volumes/External/Descargas HDD/KRAS/input.yaml"
+
+            return flask.jsonify({"path": selFile})
+
+        @self.server.route("/savefile", methods=["GET"])
+        @verifyToken
+        def saveFile():
+            if self.desktop:
+                from App import AppDelegate
+
+                selFile = AppDelegate().saveFileSelectDialog()
+            else:
+                selFile = "/example/path"
+
+            return flask.jsonify({"path": selFile})
+
         @self.server.route("/")
         def index():
             # Get the query string
@@ -436,36 +476,79 @@ class HorusServer:
         Setup the plugin pages
         """
 
-        pages = self.pluginManager.getPages()
+        pages = self.pluginManager.getPagesObject()
 
         for page in pages:
-            htmlPath = page["html"]
-            url = f"/plugins/pages/{page['id']}/"
+            htmlPath = page._pageInfo["html"]
+            url = f"/plugins/pages/{page._pageInfo['id']}/"
 
-            # Create a blueprint for the page
-            blueprint = flask.Blueprint(
-                page["id"].replace(".", "_"),
-                __name__,
-                template_folder=os.path.dirname(htmlPath),
-                static_folder=os.path.dirname(htmlPath),
-                static_url_path=url,
-            )
+            def createBlueprint(htmlPath, url):
+                # Create a blueprint for the page
+                bp = flask.Blueprint(
+                    page._pageInfo["id"].replace(".", "_"),
+                    __name__,
+                    template_folder=os.path.dirname(htmlPath),
+                    static_folder=os.path.dirname(htmlPath),
+                    static_url_path=url,
+                )
 
-            # Define a function that captures the current htmlPath
-            def create_send_html(path):
-                @blueprint.route(url)
+                # Create a route for the html
+                @bp.route(url)
                 def send_html():
-                    return flask.render_template(os.path.basename(path))
+                    return flask.render_template(os.path.basename(htmlPath))
+
+                # Create a route for the static files
+                @bp.route(url + "<path:filename>")
+                def send_static(filename):
+                    return flask.send_from_directory(
+                        os.path.dirname(htmlPath), filename
+                    )
+
+                # Add the required endpoints
+                for ep in page.endpoints:
+                    # Verify that the enpoint url does not with a /
+                    # It will be added by the url
+                    if ep.url.startswith("/"):
+                        ep_url = url + ep.url[1:]
+                    else:
+                        ep_url = url + ep.url
+
+                    # Create the endpoint
+                    bp.add_url_rule(
+                        ep_url,
+                        view_func=ep.function,
+                        methods=ep.methods,
+                    )
+
+                return bp
 
             # Call the function with the current htmlPath
-            create_send_html(htmlPath)
+            bp = createBlueprint(htmlPath, url)
 
             # Register the blueprint
             try:
-                self.server.register_blueprint(blueprint)
+                self.server.register_blueprint(bp)
             except Exception as e:
-                e = "Error registering page for plugin " + page["id"] + ": " + str(e)
+                e = (
+                    "\033[91mError registering page for plugin "
+                    + page.id
+                    + ": "
+                    + str(e)
+                    + "\033[0m"
+                )
+                print(e)
                 self.socketio.emit("printTerm", e)
+
+    def _debugRoutes(self):
+        @self.server.route("/reloadplugins", methods=["GET"])
+        def realoadPlugins():
+            # Reload the plugin manager
+            self.pluginManager.reloadPlugins()
+
+            # Reload the plugin pages
+            self._pluginPages()
+
+            return "Reloaded"
 
     def run(self, reloader: bool = False):
         # use_reloader has to be turned off in order to run in a secondary thread

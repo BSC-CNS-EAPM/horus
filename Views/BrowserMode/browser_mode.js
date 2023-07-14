@@ -40,7 +40,9 @@ function BrowserMode() {
           className="object-fit"
           width={100}
         />
-        <RotatingLines></RotatingLines>
+        <RotatingLines
+          strokeColor="grey"
+        />
       </div>
     );
   }

@@ -156,3 +156,12 @@ AppSupport/Plugins/*/config/
 
 # Server flows folder
 flows/
+
+# NBDSuite plugin built GUI folder
+AppSupport/DefaultPlugins/NBDSuite/Pages
+
+# Non-default plugins
+AppSupport/Plugins/
+
+# Plugin dependencies
+AppSupport/Dependencies/

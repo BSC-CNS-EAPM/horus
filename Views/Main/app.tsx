@@ -104,7 +104,6 @@ export function App() {
           />
         </Routes>
       </div>
-      <HorusTerm />
     </div>
   );
 }

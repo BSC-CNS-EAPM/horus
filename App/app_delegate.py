@@ -1,6 +1,8 @@
 import sys
 import os
 import webview
+
+# Executing blocks
 import threading
 from threading import Lock
 import subprocess
@@ -365,9 +367,6 @@ class AppDelegate(metaclass=SingletonMeta):
             wo.resizable = False
             wo.on_top = True
 
-            # Open the browser window
-            self.openBrowserMode()
-
         homeURL = self.tokenize(homeURL)
 
         # Open the first window
@@ -410,7 +409,7 @@ class AppDelegate(metaclass=SingletonMeta):
     def openFileSelectDialog(
         self,
         allowMultiple: bool = False,
-        fileTypes: typing.Optional[typing.Tuple[str, ...]] = None,
+        fileTypes: typing.Tuple[str, ...] = ("All Files (*.*)",),
     ) -> typing.Tuple[str, ...]:
         """
         Opens a file dialog and returns the path of the selected file(s).
@@ -563,10 +562,12 @@ class AppDelegate(metaclass=SingletonMeta):
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,
             ) as p:
-                if p.stdout is None:
-                    return None
-                for line in p.stdout:
-                    socketio.emit("printTerm", line)
+                if p.stdout is not None:
+                    for line in p.stdout:
+                        socketio.emit("printTerm", line)
+                if p.stderr is not None:
+                    for line in p.stderr:
+                        socketio.emit("printTerm", line)
                 return p
 
         process = runCommand(command, socketio)

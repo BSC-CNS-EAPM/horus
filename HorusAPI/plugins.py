@@ -3,7 +3,39 @@ import typing
 import json
 
 
+class PluginEndpoint:
+    def __init__(self, url: str, methods: typing.List[str], function: typing.Callable):
+        """
+        Create a new PluginEndpoint.
+
+        :param url: The URL of the endpoint.
+        :param method: The method of the endpoint.
+        :param function: The function that will be called when the endpoint is accessed.
+        To the function the request object will be passed as the first argument.
+        Remember to define the function with the request argument.
+        """
+        self.url = url
+        self.methods = methods
+        self.function = function
+
+
 class PluginPage:
+    endpoints: typing.List[PluginEndpoint] = []
+    """
+    Define endpoints that the plugin can access from the defined pages.
+    The endpoint URL should be defined as a string, for example: "/my_endpoint".
+    Later, Horus will add the endpoint in the following format: 
+    "/plugins/pages/pluginid.pagename/my_endpoint".
+    Therefore, remember to perform any GET or POST request to that endpoint.
+
+    Note: pluginid and pagename are always lowercase.
+    """
+
+    _pageInfo: typing.Dict[str, typing.Any] = {}
+    """
+    Internal variable used to store the page info.
+    """
+
     def __init__(self, name: str, description: str, html: str):
         """
         Create a new PluginPage.
@@ -17,6 +49,14 @@ class PluginPage:
         self.name = name
         self.description = description
         self.html = html
+
+    def addEndpoint(self, endpoint: PluginEndpoint):
+        """
+        Add an endpoint to the page.
+
+        :param endpoint: The endpoint to add.
+        """
+        self.endpoints.append(endpoint)
 
 
 class VariableTypes:
