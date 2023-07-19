@@ -61,7 +61,7 @@ export function App() {
 
   const mainViewPanel = (
     <>
-      <Panel minSize={30} order={3}>
+      <Panel minSize={30} order={3} collapsible={true}>
         {mainView}
       </Panel>
       <ResizeHandle horizontal={true} />

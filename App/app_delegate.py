@@ -362,6 +362,9 @@ class AppDelegate(metaclass=SingletonMeta):
             wo.confirm_close = True
             wo.resizable = False
             wo.on_top = True
+        else:
+            wo.width = 1200
+            wo.height = 800
 
         homeURL = self.tokenize(homeURL)
 
