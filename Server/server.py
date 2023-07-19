@@ -1,6 +1,7 @@
 # Tools
 import os
 import sys
+import hashlib
 
 # Flask
 import flask
@@ -14,6 +15,8 @@ from functools import wraps
 
 # Import random to generate a random port number
 import random
+
+from HorusAPI import TempFile
 
 # Define version
 __version__ = "0.0.1"
@@ -47,6 +50,9 @@ class HorusServer:
         # Security token
         self.token = self._getToken()
 
+        # Token manager
+        self.tokenManager = TokenManager(self.token)
+
         # GUI directory
         self.guiDir = self._guiDir()
 
@@ -71,11 +77,16 @@ class HorusServer:
 
     def _getToken(self):
         if self.desktop:
-            import webview
+            try:
+                import webview
 
-            return webview.token
-        else:
-            return None
+                return webview.token
+            except ImportError:
+                raise Exception("Error: webview module not found")
+            except AttributeError:
+                raise Exception("Error: webview.token attribute not found")
+
+        return str(random.randint(1, 100000000))
 
     def _getFreePort(self):
         # Generate a random port number
@@ -317,7 +328,7 @@ class HorusServer:
                 }
                 return flask.jsonify(success)
             except Exception as e:
-                self.socketio.emit("printTerm", "Error: " + str(e))
+                self.socketio.emit("printTerm", str(e))
                 error = {
                     "ok": False,
                     "error": str(e),
@@ -425,21 +436,48 @@ class HorusServer:
 
                 selFile = AppDelegate().openFileSelectDialog()
             else:
-                selFile = "/Volumes/External/Descargas HDD/KRAS/input.yaml"
+                selFile = "/Users/cdominguez/Downloads/KRAS/input.yaml"
 
             return flask.jsonify({"path": selFile})
 
-        @self.server.route("/savefile", methods=["GET"])
+        @self.server.route("/savecontents", methods=["POST"])
         @verifyToken
         def saveFile():
+            # Get from the request the data to save
+            data = request.get_json()
+
+            contents = data.get("contents", None)
+            filename = data.get("filename", "File")
+
+            if contents is None:
+                return flask.jsonify({"ok": False, "msg": "No data to save"})
+
             if self.desktop:
+                # Select the path where to save the file
                 from App import AppDelegate
 
-                selFile = AppDelegate().saveFileSelectDialog()
-            else:
-                selFile = "/example/path"
+                selFile = AppDelegate().saveFileSelectDialog(filename)
 
-            return flask.jsonify({"path": selFile})
+                # If the user cancelled the dialog, return
+                if selFile is None:
+                    return flask.jsonify({"ok": False, "msg": "User cancelled"})
+
+                # Save the file
+                with open(selFile, "w") as f:
+                    f.write(contents)
+
+                return flask.jsonify({"ok": True})
+            else:
+                # If we are in server mode, download the file
+                tmpFile = TempFile(filename)
+                tmpFile.write(contents)
+                print("Returning file")
+                return flask.send_file(
+                    tmpFile.path,
+                    as_attachment=True,
+                    download_name="protein.pdb",
+                    mimetype="application/octet-stream",
+                )
 
         @self.server.route("/")
         def index():
@@ -564,3 +602,42 @@ class HorusServer:
             debug=self.debug,
             use_reloader=reloader,
         )
+
+
+class TokenManager:
+    """
+    Tokenize strings, paths...
+    """
+
+    salt = "shemsu"
+    """
+    A random generated number each time the server is started
+    """
+
+    def __init__(self, salt: str) -> None:
+        self.salt = salt
+
+    def tokenize(self, string: str) -> str:
+        """
+        Generates a token for the string given
+        Returns the token
+        """
+        # Add the salt to the string
+        salted_string = string + self.salt
+
+        # Encode the salted string as bytes
+        salted_bytes = salted_string.encode("utf-8")
+
+        # Hash the bytes using the SHA-256 algorithm
+        hash_object = hashlib.sha256(salted_bytes)
+
+        # Convert the resulting hash to a hexadecimal string
+        token = hash_object.hexdigest()
+
+        return token
+
+    def checkToken(self, token: str, string: str) -> bool:
+        """
+        Verifies if a given token corresponds with the given string
+        """
+        return token == self.tokenize(string)

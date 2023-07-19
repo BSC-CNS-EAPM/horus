@@ -13,7 +13,7 @@ import {
   PluginVariableType,
 } from "../Components/FlowBuilder/flow_builder_interfaces";
 
-import { RotatingLines } from "react-loader-spinner";
+import RotatingLines from "../Components/RotatingLines/rotatinglines";
 
 import { PluginVariableView } from "../Components/FlowBuilder/block_variables";
 
@@ -357,11 +357,7 @@ export function PluginManager() {
     header: "Installing plugin",
     body: (
       <div className="flex justify-center align-items-center">
-        <RotatingLines
-          strokeColor="grey"
-          strokeWidth="5"
-          animationDuration="0.75"
-        />
+        <RotatingLines />
       </div>
     ),
     footer: null,
@@ -378,11 +374,7 @@ export function PluginManager() {
         ...modalProps,
         body: (
           <div className="flex justify-center align-items-center">
-            <RotatingLines
-              strokeColor="grey"
-              strokeWidth="5"
-              animationDuration="0.75"
-            />
+            <RotatingLines />
             <div className="ml-2">{data}</div>
           </div>
         ),

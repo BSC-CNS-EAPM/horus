@@ -301,7 +301,7 @@ export default function HorusToolbar() {
       ),
       items: [
         {
-          name: "New",
+          name: "New flow",
           svgPath: (
             <svg
               xmlns="http://www.w3.org/2000/svg"

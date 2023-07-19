@@ -1,6 +1,9 @@
 import os, sys, imp
 import shutil
 import matplotlib
+import Bio
+import Bio.PDB
+import nbdsuite
 
 currentDir = os.getcwd()
 
@@ -63,15 +66,14 @@ imports += [
     "dns.versioned",
 ]
 
-if sys.platform == "linux":
-    # Try to use pyqt
-    try:
-        imp.find_module("PyQt5")
-        print("Using PyQt5 for Linux build")
-        imports += ["PyQt5", "PyQt5.QtCore", "PyQt5.QtWebEngineWidgets", "qtpy"]
-    except ImportError:
-        print("PyQT5 not found")
-        sys.exit(1)
+# # Try to use pyqt
+# try:
+#     imp.find_module("pyside6")
+#     print("Using PySide for build")
+#     imports += ["pyside6"]
+# except ImportError:
+#     print("PyQT5 not found")
+#     sys.exit(1)
 
 
 # ===========================
@@ -83,19 +85,35 @@ if sys.platform == "linux":
 # ===========================
 nbdsuite_deps = [
     "nbdsuite",
+    "nbdsuite.utils",
+    "nbdsuite.utils.helpers",
+    "nbdsuite.utils.helpers.common",
+    "Bio",
+    "Bio.PDB",
     "pandas",
     "yaml",
+    "biopython",
+    "adaptivepele",
+    "mdtraj",
 ]
 
 imports += nbdsuite_deps
 
 # Check that all the modules are installed in the environment
+import imp
+
+currentModule = ""
 try:
     for module in imports:
-        __import__(module)
+        currentModule = module
+        imp.find_module(module)
 except ImportError as e:
-    print(f"Error importing module: {e}. Cannot compile.")
-    exit(1)
+    try:
+        __import__(currentModule)
+    except ImportError:
+        print(f"Error importing module: {e}. Cannot compile.")
+        exit(1)
+
 
 # Compile the app
 a = Analysis(

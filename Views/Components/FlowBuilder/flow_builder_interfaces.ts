@@ -70,6 +70,7 @@ enum PluginVariableTypes {
   INT_RANGE = "[integer, integer]",
   FLOAT_RANGE = "[float, float]",
   FILE = "file",
+  STRUCTURE = "structure",
   // STRING_ARRAY = "string[]",
   // NUMBER_RANGE = "[number, number]"
 }

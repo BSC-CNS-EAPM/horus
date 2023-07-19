@@ -1,6 +1,121 @@
 from __future__ import annotations
 import typing
 import json
+import os
+
+
+class TempFile:
+    """Temporary file class used to store temporary files in user dirs"""
+
+    def __init__(self, name: str, folder: typing.Optional[str] = None):
+        """
+        - Name: The name of the file.
+        - Folder: The folder where the file will be stored.
+        If None, the file will bestored in the tmp folder.
+        """
+        if folder is None:
+            folder = self._tmpDir()
+
+        # Check if the user has as tmp folder, if not create it
+        if not os.path.exists(folder):
+            self._create_tmp_folder(folder)
+
+        # Randomize the file name in order to prevent file clashes
+        self.name = str(os.urandom(10).hex()) + name
+
+        # Define the path of the tmp folder
+        self.tmpFolder = folder
+
+        # Define the path of the file
+        self.path = os.path.join(self.tmpFolder, self.name)
+
+        # Create the file
+        self._create()
+
+    def _tmpDir(self):
+        # Assign the path of the tmp folder
+        # to the current python working directory
+        tmpName = "tmp"
+        return os.path.join(os.getcwd(), tmpName)
+
+    def __repr__(self):
+        return self.name
+
+    def __str__(self):
+        return self.path
+
+    def __eq__(self, other):
+        return self.path == other.path
+
+    def __hash__(self):
+        return hash(self.name + self.path)
+
+    def __del__(self):
+        # Delete the file
+        self.delete()
+
+        # If the tmp folder is empty, delete it
+        if len(os.listdir(self.tmpFolder)) == 0:
+            self.deleteTmpFolder()
+
+    def _create_tmp_folder(self, folder: str):
+        # Create a temporary folder
+        tmp_folder = os.path.join(folder)
+        os.mkdir(tmp_folder)
+
+    def _create(self):
+        # Create the file with the content of the string
+        with open(self.path, "w") as f:
+            f.write("")
+
+    def delete(self):
+        """
+        Delete the file.
+        """
+        os.remove(self.path)
+
+    def write(self, content: str):
+        """
+        Write content to the file
+
+        - content: The content to write to the file.
+        """
+        with open(self.path, "w") as f:
+            f.write(content)
+
+    def read(self):
+        """
+        Read the content of the file
+
+        :return: The content of the file as a string.
+        """
+        with open(self.path, "r") as f:
+            return f.read()
+
+    def deleteTmpFolder(self):
+        """
+        Deletes the tmp folder.
+        """
+        # Delete the tmp folder
+        import shutil
+
+        shutil.rmtree(self.tmpFolder)
+
+
+class PluginEndpoint:
+    def __init__(self, url: str, methods: typing.List[str], function: typing.Callable):
+        """
+        Create a new PluginEndpoint.
+
+        :param url: The URL of the endpoint.
+        :param method: The method of the endpoint.
+        :param function: The function that will be called when the endpoint is accessed.
+        To the function the request object will be passed as the first argument.
+        Remember to define the function with the request argument.
+        """
+        self.url = url
+        self.methods = methods
+        self.function = function
 
 
 class PluginEndpoint:
@@ -146,6 +261,18 @@ class VariableTypes:
 
     Will render as a file picker and the absolute path of the file will be used.
     Only available on the desktop app.
+    """
+
+    STRUCTURE = "structure"
+    """
+    A molecular structure to be selected from Mol*.
+
+    Will render as a dropdown with the list of loaded structures.
+    The type of the variable will be a dictionary with the following keys:
+    - id: The ID of the structure.
+    - name: The name of the structure.
+    - type: The type of the structure (CIF, PDB...).
+    - structure: The structure object (CIF, PDB... string)
     """
 
     @staticmethod

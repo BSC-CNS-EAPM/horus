@@ -5,14 +5,19 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { horusGet, horusPost } from "../../../../Views/Utils/utils";
-import Plot from "react-plotly.js";
+import { horusGet } from "../../../../Views/Utils/utils";
+import Plot, { PlotParams } from "react-plotly.js";
 import NBDSuiteData from "./nbdsuitedata";
 import HorusMolstar from "../../../../Views/Components/Molstar/HorusWrapper/horusmolstar";
+
+// CSS style
+import "./nbdsuite.css";
 
 import { AgGridReact } from "ag-grid-react"; // the AG Grid React Component
 import "ag-grid-community/styles/ag-grid.css"; // Core grid CSS, always needed
 import "ag-grid-community/styles/ag-theme-alpine.css"; // Optional theme CSS
+
+import { HorusModal } from "../../../../Views/Components/reusable";
 
 declare global {
   interface Window {
@@ -57,8 +62,44 @@ function OpenInputFile(props: OpenInputFileProps) {
     props.setOpenedFile(file);
   };
 
+  const openFolderIcon = (
+    <div
+      style={{
+        height: "4rem",
+        width: "4rem",
+        marginBottom: "1rem",
+      }}
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        strokeWidth={1.5}
+        stroke="currentColor"
+        className="w-6 h-6"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776"
+        />
+      </svg>
+    </div>
+  );
+
   return (
-    <div>
+    <div
+      className="flex-center-col"
+      style={{
+        margin: "auto",
+        justifyContent: "center",
+        marginTop: "1rem",
+        alignContent: "center",
+        alignItems: "center",
+        height: "100%",
+      }}
+    >
+      {openFolderIcon}
       <button onClick={openPickFile}>Open NBDSuite input</button>
     </div>
   );
@@ -66,6 +107,8 @@ function OpenInputFile(props: OpenInputFileProps) {
 
 interface PELEPlotProps {
   nbdData: NBDSuiteData;
+  addExtraData: (data: any) => void;
+  updateSelectedComplex: (e: any) => void;
 }
 
 function PELEPlot(props: PELEPlotProps) {
@@ -89,64 +132,9 @@ function PELEPlot(props: PELEPlotProps) {
   }, []);
 
   function dataToPlot() {
-    const clusterColors = {
-      A: "#636EFA",
-      B: "#EF553B",
-      C: "#00CC96",
-      D: "#AB63FA",
-      E: "#FFA15A",
-      Other: "#909091",
-    };
+    setData(nbdData.getPlot(xAxis, yAxis));
 
-    const dToP: Array<any> = [];
-    const legendEntries: any = {};
-    for (const d in nbdData.plotData) {
-      const currentData = nbdData.plotData[d];
-
-      const xValues = currentData[xAxis];
-      const yValues = currentData[yAxis];
-      const clusters = currentData.Cluster;
-
-      if (!xValues || !yValues || !clusters) {
-        continue;
-      }
-
-      let symbol = "circle";
-
-      if (d === "repr") {
-        symbol = "star";
-      }
-
-      for (let i = 0; i < xValues.length; i++) {
-        const cluster = clusters[i];
-        let showLegend = false;
-        if (!legendEntries[cluster]) {
-          legendEntries[cluster] = {
-            color: clusterColors[cluster] || "red",
-            symbol: symbol,
-          };
-          showLegend = true;
-        }
-        const data = {
-          x: [xValues[i]],
-          y: [yValues[i]],
-          type: "scatter",
-          mode: "markers",
-          marker: {
-            color: clusterColors[cluster] || clusterColors.Other,
-            symbol: symbol,
-          },
-          name: cluster,
-          // Hide the legend for the repr data
-          showlegend: showLegend,
-        };
-
-        dToP.push(data);
-      }
-    }
-    setData(dToP);
-
-    setLegendData(legendData);
+    // setLegendData(legendData);
   }
 
   useEffect(() => {
@@ -162,7 +150,7 @@ function PELEPlot(props: PELEPlotProps) {
   };
 
   const xAxisOptions = (
-    <select onChange={updateXAxis}>
+    <select onChange={updateXAxis} key={"x-axis"}>
       {axisOptions.map((c: string) => {
         return <option key={c}>{c}</option>;
       })}
@@ -170,40 +158,92 @@ function PELEPlot(props: PELEPlotProps) {
   );
 
   const yAxisOptions = (
-    <select onChange={updateYAxis}>
+    <select onChange={updateYAxis} key={"y-axis"}>
       {axisOptions.map((c: string) => {
         return <option key={c}>{c}</option>;
       })}
     </select>
   );
 
+  const complexesView = (
+    <select key={"complex-select"}>
+      {nbdData.complexes.map((c: any) => {
+        return <option onChange={props.updateSelectedComplex}>{c}</option>;
+      })}
+    </select>
+  );
+
+  const ref = useRef();
+
   return (
     <div>
-      <Plot
-        key={"plot"}
-        data={data}
-        layout={{ width: 900, height: 800, title: "Test plot" }}
-      />
-      {xAxisOptions}
-      {yAxisOptions}
+      <div
+        className="blurred-squared-div"
+        style={{
+          overflow: "hidden",
+        }}
+      >
+        <div>
+          <div className="title-color">{nbdData.simulationName}</div>
+          <Plot
+            ref={ref}
+            key={"plot"}
+            layout={{
+              autosize: true,
+              margin: {
+                l: 50,
+                r: 50,
+                b: 50,
+                t: 25,
+                pad: 0,
+              },
+            }}
+            data={data}
+            onClick={(e) => {
+              props.addExtraData(e.points[0].data.data);
+            }}
+            style={{
+              width: "100%",
+              height: "100%",
+              margin: "0",
+              padding: "0",
+              overflow: "hidden",
+            }}
+          />
+        </div>
+        <div
+          className="flex-center-row"
+          style={{
+            alignContent: "center",
+            justifyContent: "center",
+          }}
+        >
+          Select a complex:
+          {complexesView}
+          <div className="flex-center-row">
+            {xAxisOptions}
+            vs.
+            {yAxisOptions}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
 interface PELETableProps {
   nbdData: NBDSuiteData;
+  extraData: Array<any>;
 }
 
 function PELETable(props: PELETableProps) {
-  const gridRef = useRef(); // Optional - for accessing Grid's API
-  const [rowData, setRowData] = useState(); // Set rowData to Array of Objects, one Object per Row
+  const { nbdData, extraData } = props;
+
+  const gridRef = useRef<AgGridReact>(); // Optional - for accessing Grid's API
+  const [rowData, setRowData] = useState<Array<any>>(); // Set rowData to Array of Objects, one Object per Row
 
   // Each Column Definition results in one Column.
-  const [columnDefs, setColumnDefs] = useState([
-    { field: "make", filter: true },
-    { field: "model", filter: true },
-    { field: "price" },
-  ]);
+  const [columnDefs, setColumnDefs] = useState<any>([]);
 
   // DefaultColDef sets props common to all Columns
   const defaultColDef = useMemo(() => ({
@@ -212,106 +252,78 @@ function PELETable(props: PELETableProps) {
 
   // Example of consuming Grid Event
   const cellClickedListener = useCallback((event) => {
-    console.log("cellClicked", event);
+    // If the user clicked on the delete column
+    if (event.colDef.headerName === "Delete") {
+      const row = event.data;
+      gridRef.current?.api.applyTransaction({ remove: [row] });
+    }
+
+    // If the user clicked on the show column
+    if (event.colDef.headerName === "Add to view") {
+      const row = event.data;
+      nbdData.addPDBToMolstarFromRow(row);
+    }
+
+    // If the user clicked on the save column
+    if (event.colDef.headerName === "Save") {
+      const row = event.data;
+      nbdData.savePDBfromRow(row);
+    }
   }, []);
 
   function loadDataTable() {
-    const columnDefs = props.nbdData.axisOptions().map((c: string) => {
-      return { headerName: c, field: c };
-    });
-
-    let rowData = props.nbdData.plotData.repr;
-
-    const rdata = [];
-    for (const r in rowData) {
-      for (const c in rowData[r]) {
-        if (!rdata[c]) {
-          rdata[c] = {};
-        }
-
-        rdata[c][r] = rowData[r][c];
-      }
-    }
-
-    rowData = props.nbdData.plotData.norepr;
-
-    for (const r in rowData) {
-      for (const c in rowData[r]) {
-        if (!rdata[c]) {
-          rdata[c] = {};
-        }
-
-        rdata[c][r] = rowData[r][c];
-      }
-    }
-
-    setColumnDefs(columnDefs);
-    setRowData(rdata);
+    const { columns, rows } = nbdData.getTable();
+    setColumnDefs(columns);
+    setRowData(rows);
   }
 
   useEffect(() => {
-    if (props.nbdData) {
+    if (nbdData) {
       loadDataTable();
     }
   }, []);
 
-  // Example using Grid's API
-  const buttonListener = useCallback((e) => {
-    gridRef.current.api.deselectAll();
-  }, []);
+  // Merge the extra data into the rowData
+  useEffect(() => {
+    if (extraData && rowData) {
+      // Check if the row already exists in rowData
+      const rowExists = gridRef.current?.api.getRowNode(extraData["id"]);
+
+      if (!rowExists) {
+        // Add to the extra data the delete column
+        extraData["delete"] = "Delete";
+        // Add star * to the data if its not coming from the repr
+        if (extraData["Type"] !== "Representative") {
+          extraData["Cluster label"] = extraData["Cluster label"] + "*";
+        }
+        gridRef.current?.api.applyTransaction({
+          add: [extraData],
+        });
+        // setRowData([...rowData, extraData]);
+      }
+    }
+  }, [extraData]);
 
   return (
-    <div>
-      {/* Example using Grid's API */}
-      <button onClick={buttonListener}>Push Me</button>
-
+    <div className="blurred-squared-div">
+      <div className="title-color">Compare structures</div>
       {/* On div wrapping Grid a) specify theme CSS Class Class and b) sets Grid size */}
-      <div className="ag-theme-alpine" style={{ width: 500, height: 500 }}>
+      <div className="ag-theme-alpine">
         <AgGridReact
           ref={gridRef} // Ref for accessing Grid's API
+          className="pele-table" // CSS Styles for AgGridReact
           rowData={rowData} // Row Data for Rows
           columnDefs={columnDefs} // Column Defs for Columns
           defaultColDef={defaultColDef} // Default Column Properties
           animateRows={true} // Optional - set to 'true' to have rows animate when sorted
           rowSelection="multiple" // Options - allows click selection of rows
           onCellClicked={cellClickedListener} // Optional - registering for Grid Event
+          getRowId={(params) => params.data.id}
+          domLayout="autoHeight"
         />
       </div>
     </div>
   );
-  // const [rows, setRows] = useState<Array<any>>([]);
-  // const [columnDefs, setColumnDefs] = useState([
-  //   { field: "make", filter: true },
-  //   { field: "model", filter: true },
-  //   { field: "price" },
-  // ]);
-
-  // function loadDataTable() {
-  //   const columnDefs = props.nbdData.axisOptions().map((c: string) => {
-  //     return { headerName: c, field: c };
-  //   });
-
-  //   const rowData = JSON.stringify(props.nbdData.plotData.repr);
-
-  //   console.log([rowData]);
-
-  //   fetch("https://www.ag-grid.com/example-assets/row-data.json")
-  //     .then((result) => result.json())
-  //     .then((rowData) => setRows(rowData));
-  // }
-
-  // useEffect(() => {
-  //   if (props.nbdData) {
-  //     loadDataTable();
-  //   }
-  // }, [props.nbdData]);
-
-  // return (
-  //   <div>
-  //     <div>This is my first table</div>
-  //     <AgGridReact rowData={rows} columnDefs={columnDefs} />
-  //   </div>
-  // );
 }
 
 interface PELEInputProps {
@@ -333,11 +345,16 @@ function PELEInput(props: PELEInputProps) {
   }, []);
 
   return (
-    <textarea
-      value={info}
-      onChange={(e) => setInfo(e.target.value)}
-      style={{ height: "200px" }}
-    />
+    <div>
+      <div className="blurred-squared-div">
+        <div className="title-color">Input file</div>
+        <textarea
+          value={info || ""}
+          onChange={(e) => setInfo(e.target.value)}
+          style={{ minHeight: 500, height: "100%", width: "100%" }}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -351,25 +368,28 @@ function NBDSuiteResults() {
 
   const [error, setError] = useState(false);
 
+  const [extraData, setExtraData] = useState<Array<any>>([]);
+
   const errorMsg = useRef("");
   const NBDData = useRef<NBDSuiteData | null>(null);
 
-  const updateSelectedComplex = (e: any) => {
-    setSelectedComplex(e.target.value);
+  const addExtraData = (data: any) => {
+    setExtraData({ ...extraData, ...data });
   };
 
-  const complexesView = (
-    <select>
-      {complexes.map((c: any) => {
-        return <option onChange={updateSelectedComplex}>{c}</option>;
-      })}
-    </select>
-  );
+  const updateSelectedComplex = (e: any) => {
+    if (NBDData.current) {
+      NBDData.current!.selectedComplex = e.target.value;
+    }
+    setSelectedComplex(e.target.value);
+  };
 
   const fetchNBDData = async () => {
     const nbddata = new NBDSuiteData(openedFile);
 
     try {
+      await nbddata.getSimulationName();
+
       await nbddata.getComplexes();
 
       setComplexes(nbddata.complexes);
@@ -394,22 +414,33 @@ function NBDSuiteResults() {
     }
   }, [openedFile]);
 
-  return openedFile ? (
+  return (
     <div>
-      {error && <p>Error reading results {errorMsg.current}</p>}
-      <p>Opened: {openedFile}</p>
-      {complexesView}
-      {NBDData.current && (
+      {openedFile && (
         <div>
-          <PELEPlot nbdData={NBDData.current} />
-          <PELETable nbdData={NBDData.current} />
-          <PELEInput nbdData={NBDData.current} />
+          {error && <p>Error reading results {errorMsg.current}</p>}
+          {NBDData.current && (
+            <div className="flex-center-col">
+              <PELEPlot
+                nbdData={NBDData.current}
+                addExtraData={addExtraData}
+                updateSelectedComplex={updateSelectedComplex}
+              />
+              <PELETable nbdData={NBDData.current} extraData={extraData} />
+              <PELEInput nbdData={NBDData.current!} />
+            </div>
+          )}
         </div>
       )}
-      <button onClick={() => setOpenedFile("")}>Close</button>
+      <div
+        style={{
+          height: openedFile ? "100%" : "100vh",
+          marginBottom: openedFile ? "2rem" : 0,
+        }}
+      >
+        <OpenInputFile setOpenedFile={setOpenedFile} />
+      </div>
     </div>
-  ) : (
-    <OpenInputFile setOpenedFile={setOpenedFile} />
   );
 }
 

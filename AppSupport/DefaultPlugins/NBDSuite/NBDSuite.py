@@ -3,7 +3,7 @@ import yaml
 import re
 from flask import request
 import pandas as pd
-import json
+import typing as t
 
 from HorusAPI import (
     Plugin,
@@ -12,63 +12,9 @@ from HorusAPI import (
     VariableTypes,
     PluginPage,
     PluginEndpoint,
+    TempFile,
 )
 
-class TempFile:
-    # Temporary file class
-    # Used to store temporary files in user dirs
-    def __init__(self, name: str, user_dir: str):
-        # Check if the user has as tmp folder, if not create it
-        if not os.path.exists(os.path.join(user_dir, "tmp")):
-            self.__create_tmp_folder(user_dir)
-
-        # Randomize the file name in order to prevent file clashes
-        self.name = str(os.urandom(10).hex()) + name
-
-        # Define the path of the tmp folder
-        self.tmpFolder = os.path.join(user_dir, "tmp")
-
-        # Define the path of the file
-        self.path = os.path.join(self.tmpFolder, self.name)
-
-        # Create the file
-        self.__create()
-
-    def __repr__(self):
-        return self.name
-
-    def __str__(self):
-        return self.name
-
-    def __eq__(self, other):
-        return self.name == other.name and self.path == other.path
-
-    def __hash__(self):
-        return hash(self.name + self.path)
-
-    def __create_tmp_folder(self, user_dir: str):
-        # Create a temporary folder
-        tmp_folder = os.path.join(user_dir, "tmp")
-        os.mkdir(tmp_folder)
-
-    def __create(self):
-        # Create the file with the content of the string
-        with open(self.path, "w") as f:
-            f.write("")
-
-    def delete(self):
-        # Delete the file
-        os.remove(self.path)
-
-    def write(self, content: str):
-        # Write content to the file
-        with open(self.path, "w") as f:
-            f.write(content)
-
-    def read(self):
-        # Read the content of the file
-        with open(self.path, "r") as f:
-            return f.read()
 
 def createPlugin():
     plugin = Plugin(id="NBDSuite")
@@ -78,10 +24,7 @@ def createPlugin():
         "description": "The NBDSuite plugin for Horus",
         "author": "Nostrum Biodiscovery",
         "version": "0.0.1",
-        "dependencies": [
-            "nbdsuite",
-            "pandas",
-        ],
+        "dependencies": ["nbdsuite", "pandas", "biopython"],
     }
 
     # Define the variables for the Input Yaml block
@@ -369,7 +312,7 @@ def createPlugin():
     # Add the endpoint to the page
     nbdsuitepage.addEndpoint(plotData)
 
-    def loadPDB():
+    def loadInputPDB():
         data = request.json
 
         if data is None:
@@ -392,9 +335,9 @@ def createPlugin():
 
     # Add an endpoint for loading the input pdb
     loadPDBEndpoint = PluginEndpoint(
-        url="/loadPDB",
+        url="/loadInputPDB",
         methods=["POST"],
-        function=loadPDB,
+        function=loadInputPDB,
     )
 
     # Add the endpoint to the plugin
@@ -431,6 +374,76 @@ def createPlugin():
     # Add the endpoint to the plugin
     nbdsuitepage.addEndpoint(getInputInfoEndpoint)
 
+    def getPDB():
+        """
+        Parses the selected PDB from the table (and untruncates if necessary)
+        """
+
+        data = request.json
+
+        if data is None:
+            return {"ok": False, "msg": "No data provided."}
+
+        path = data.get("path", None)
+
+        if isinstance(path, list):
+            path = path[0]
+
+        if path is None:
+            return {"ok": False, "msg": "No data provided."}
+
+        try:
+            parser = NBDSuiteParser(path)
+            data = parser.getPDB(data)
+            return {"ok": True, "data": data}
+        except Exception as e:
+            return {"ok": False, "msg": str(e)}
+
+    # Add an endpoint for loading the input pdb
+    loadPDBEndpoint = PluginEndpoint(
+        url="/getPDB",
+        methods=["POST"],
+        function=getPDB,
+    )
+
+    # Add the endpoint to the plugin
+    nbdsuitepage.addEndpoint(loadPDBEndpoint)
+
+    def getInputSimulationName():
+        """
+        Returns the name of the input simulation
+        """
+
+        data = request.json
+
+        if data is None:
+            return {"ok": False, "msg": "No data provided."}
+
+        path = data.get("path", None)
+
+        if isinstance(path, list):
+            path = path[0]
+
+        if path is None:
+            return {"ok": False, "msg": "No data provided."}
+
+        try:
+            parser = NBDSuiteParser(path)
+            data = parser.getInputSimulationName()
+            return {"ok": True, "data": data}
+        except Exception as e:
+            return {"ok": False, "msg": str(e)}
+
+    # Add an endpoint for loading the input pdb
+    getInputSimulationNameEndpoint = PluginEndpoint(
+        url="/getInputSimulationName",
+        methods=["POST"],
+        function=getInputSimulationName,
+    )
+
+    # Add the endpoint to the plugin
+    nbdsuitepage.addEndpoint(getInputSimulationNameEndpoint)
+
     # Add the PELE results page to the plugin
     plugin.addPage(nbdsuitepage)
 
@@ -455,6 +468,22 @@ class NBDSuiteParser:
     """
     The path to the simulation folder.
     """
+
+    latestSimPath: str
+    """
+    The path to the latest simulation folder.
+    """
+
+    TRANSLATE_PLOT_DATA = {
+        "Cluster": "Cluster label",
+        "Step": "Step",
+        "bindingEnergy": "Binding energy",
+        "currentEnergy": "Current energy",
+        "epoch": "Epoch",
+        "ligandRMSD": "Ligand RMSD",
+        "ligandSASA": "Ligand SASA",
+        "numberOfAcceptedPeleSteps": "Accepted PELE steps",
+    }
 
     def __init__(self, inputPath: str):
         # Get the path to the simulation folder (remove the file from the path)
@@ -492,6 +521,12 @@ class NBDSuiteParser:
         # Return the input file as a string
         with open(self.inputPath) as f:
             return f.read()
+
+    def getInputSimulationName(self):
+        """
+        Returns the input simulation name.
+        """
+        return self.input["name"]
 
     def listComplexes(self):
         """
@@ -550,11 +585,10 @@ class NBDSuiteParser:
         """
 
         # Get the important paths
-        resultsCSV = os.path.join(self.latestSimPath, complex, "results", "results.csv")
-        infoCSV = os.path.join(self.latestSimPath, complex, "results", "info.csv")
-        topSelFile = os.path.join(
-            self.latestSimPath, complex, "results", "top_selections.csv"
-        )
+        complexPath = os.path.join(self.latestSimPath, complex)
+        resultsCSV = os.path.join(complexPath, "results", "results.csv")
+        infoCSV = os.path.join(complexPath, "results", "info.csv")
+        topSelFile = os.path.join(complexPath, "results", "top_selections.csv")
 
         # Read the results.csv file
         topDF = pd.read_csv(topSelFile)
@@ -594,7 +628,7 @@ class NBDSuiteParser:
             step = row["numberOfAcceptedPeleSteps"]
 
             if (trajectory, step) in cluster_representative_ids:
-                reprDF = reprDF.append(row)  # type: ignore
+                reprDF = pd.concat([reprDF, pd.DataFrame([row])], ignore_index=True)
 
         # Generate no representatives dataframe
         noreprDF = (
@@ -613,11 +647,61 @@ class NBDSuiteParser:
         reprDF = reprDF.sort_values(by=["Cluster"], ascending=False)
         noreprDF = noreprDF.sort_values(by=["Cluster"], ascending=False)
 
+        # Add filepath new column for the top selection proteins
+        reprDF["filename"] = reprDF["Cluster"].apply(lambda x: f"cluster_{x}.pdb")
+        reprDF["filepath"] = reprDF["filename"].apply(
+            lambda x: os.path.join(complexPath, "results", x)
+        )
+
+        # Add filepath new column for the no top selection proteins
+        noreprDF["filename"] = None
+        noreprDF["filepath"] = None
+
+        # Add filepath new column for the no cluster proteins
+        noclusterDF["filename"] = None
+        noclusterDF["filepath"] = None
+
+        # Add n new id column
+        reprDF["id"] = "R" + reprDF.index.astype(str)
+        noreprDF["id"] = "NR" + noreprDF.index.astype(str)
+        noclusterDF["id"] = "NC" + noclusterDF.index.astype(str)
+
+        # Add a "type" column to the dataframes
+        reprDF["Type"] = "Representative"
+        noreprDF["Type"] = "No representative"
+        noclusterDF["Type"] = "No cluster"
+
+        def truncateDecimals(df, decimals: int):
+            # Truncate the decimals of the dataframe data
+            df = df.round(decimals)
+            # Add trailing zeros to the decimals of columns that
+            # are floats
+            df = df.applymap(
+                lambda x: f"{x:.{decimals}f}" if isinstance(x, float) else x
+            )
+            # Convert back to float if possible
+            df = df.applymap(
+                lambda x: float(x)
+                if isinstance(x, str) and x.replace(".", "", 1).isdigit()
+                else x or x
+            )
+            return df
+
+        reprDF = truncateDecimals(reprDF, 3)
+        noreprDF = truncateDecimals(noreprDF, 3)
+        noclusterDF = truncateDecimals(noclusterDF, 3)
+
+        # Use the TRANSLATE_PLOT_DATA dict to rename the columns.
+        # If a entry is not present the column name is not changed.
+        reprDF = reprDF.rename(columns=self.TRANSLATE_PLOT_DATA)
+        noreprDF = noreprDF.rename(columns=self.TRANSLATE_PLOT_DATA)
+        noclusterDF = noclusterDF.rename(columns=self.TRANSLATE_PLOT_DATA)
+
         # Return the dataframes
         data = {
-            "nocluster": noclusterDF.to_dict("list"),
-            "repr": reprDF.to_dict("list"),
-            "norepr": noreprDF.to_dict("list"),
+            "nocluster": noclusterDF.to_dict(orient="records"),
+            "repr": reprDF.to_dict(orient="records"),
+            "norepr": noreprDF.to_dict(orient="records"),
         }
 
         return data
@@ -640,7 +724,7 @@ class NBDSuiteParser:
 
         return data
 
-    def untruncatePDB(self, truncatedPDB: str):
+    def untruncatePDB(self, truncatedPDBPath: str):
         """
         Reads and sends the untruncated PDB file to the frontend.
         """
@@ -675,7 +759,7 @@ class NBDSuiteParser:
             self.simulationPath, topolgy_merger_path, "complexes", ligandFilename
         )
 
-        from nbdsuite.utils.helpers.common import PDB # type: ignore
+        from nbdsuite.utils.helpers.common import PDB  # type: ignore
 
         ligandPDB = PDB(ligandPath)
 
@@ -686,20 +770,20 @@ class NBDSuiteParser:
             pdb = f.read()
 
         # Create a tmp file where the untruncated pdb will be stored
-        tmpfile = TempFile("untruncated.pdb", ".")
+        tmpfile = TempFile("untruncated.pdb")
         tmpfile.write(pdb)
 
         from nbdsuite.utils.helpers.common import pdb as pdb_helper  # type: ignore
 
         # Untruncate the pdbFile with the NBDSuite
         coordsUpdater = pdb_helper.PDBCoordsUpdater(
-            originalComplexPath, truncatedPDB, tmpfile.tmpFolder
+            originalComplexPath, truncatedPDBPath, tmpfile.tmpFolder
         )
 
         # Get the "flexible_residue_ids" values for the first row
         flexible_residue_ids = df["flexible_residue_ids"][0]
 
-        from nbdsuite.utils import string_to_link_ids_list # type: ignore
+        from nbdsuite.utils import string_to_link_ids_list  # type: ignore
 
         flexible_residue_ids = string_to_link_ids_list(flexible_residue_ids)
 
@@ -714,8 +798,103 @@ class NBDSuiteParser:
 
         untruncated_path = coordsUpdater.update_residues_subset(flexible_residue_ids)
 
-        # Get from click data the filepath
-        return dcc.send_file(untruncated_path, filename)
+        # Return the filepath
+        return untruncated_path
+
+    def _getPDBFromTrajectory(
+        self,
+        selectedComplex: str,
+        trajectoryPath: str,
+        step: str,
+        cluster: str = "Other",
+    ):
+        current_path = os.path.join(self.latestSimPath, selectedComplex, "results")
+
+        # Define the topoly path (adaptive.conf)
+        conf = os.path.join(self.latestSimPath, selectedComplex, "adaptive.conf")
+
+        # Repalce %20 with spaces in conf
+        conf = conf.replace("%20", " ")
+
+        # Read the file as JSON
+        import json
+
+        with open(conf, "r") as f:
+            conf = json.load(f)
+
+        # Get the topology path
+        topology = conf["generalParams"]["initialStructures"][0]
+
+        filename = f"{cluster}_{step}.pdb"
+
+        # Create a temp file for storing the pdb
+        tmp_pdb = TempFile(filename, self.path)
+
+        ##########################################################
+        # TEMPORARY DEVELOPMENT
+        # Get only the last part of the path as
+        # it can change depending on where PELE was run
+        # /shared/work/hmartin/NBDSuite_benchmark/cdk8/cdk8_test_1/ +
+        # + 9_adaptive_pele_simulation/complex_33/output/0/trajectory_2.xtc
+        # /dataweb/app/development/nbdsuite_gui/database_users_folder/ +
+        # + cdominguez/pele/cdk8_test_1/9_adaptive_pele_simulation/complex_33/results
+
+        # Get the last 3 parts of the path
+        xtc_path = "/".join(trajectoryPath.split("/")[-3:])
+        xtc_path = os.path.join(current_path, "..", xtc_path)
+        ##########################################################
+
+        # Using the NBDSuite, extract the pdb file
+        import nbdsuite.utils.helpers.common.xtc as xtc  # type: ignore
+
+        try:
+            xtc.extract_snapshot_from_xtc(xtc_path, tmp_pdb.path, topology, step)
+        except Exception as e:
+            import traceback
+
+            print(traceback.format_exc())
+            raise Exception(
+                f"Error while extracting the pdb file from the trajectory: {e}"
+            )
+
+        return tmp_pdb.path, filename
+
+    def getPDB(self, data: dict[str, t.Any]):
+        """
+        Reads and sends the PDB file to the frontend.
+        """
+
+        # Get the selected complex
+        selectedComplex = data["selectedComplex"]
+
+        # Get the filepath and filename
+        filepath = data["filepath"]
+        filename = data["filename"]
+
+        if filename is None:
+            # Get the trajectory and step
+            trajectory = data["trajectory"]
+            step = data["step"]
+
+            # Find the PDB from the trajectory
+            filename, filepath = self._getPDBFromTrajectory(
+                selectedComplex, trajectoryPath=trajectory, step=step
+            )
+
+        # Untruncate the pdbFile with the NBDSuite
+        untruncatedPath = self.untruncatePDB(filepath)
+
+        # Read the untruncated_path and store the pdb in a string
+        with open(untruncatedPath, "r") as f:
+            pdb = f.read()
+
+        # Remove the untruncated file
+        os.remove(untruncatedPath)
+
+        data = {"pdb": pdb, "name": filename}
+
+        # Return the pdb
+        return data
 
     @staticmethod
     def _getLastFolder(path, name):

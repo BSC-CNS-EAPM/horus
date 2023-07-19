@@ -2,7 +2,7 @@ import { Block, DraggableBlock } from "./block";
 import { BlockProps, FlowReciverProps } from "./flow_builder_interfaces";
 import { useEffect, useRef, useState } from "react";
 import { horusGet, horusPost } from "../../Utils/utils";
-import { RotatingLines } from "react-loader-spinner";
+import RotatingLines from "../RotatingLines/rotatinglines";
 import { useDroppable, DndContext } from "@dnd-kit/core";
 import Xarrow, { Xwrapper } from "react-xarrows";
 import { connectArrowBlock } from "./flow_builder";
@@ -141,6 +141,11 @@ function FlowReciver(props: FlowReciverProps) {
 
     // Check any error status code
     !result.ok ? toggleError() : toggleError(false);
+
+    // Stop the execution if there was an error
+    if (!result.ok) {
+      stopExecute.current = true;
+    }
 
     // Execute the connected blocks
     if (realBlock.connectedTo && realBlock.connectedTo.length > 0) {

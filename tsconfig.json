@@ -9,5 +9,9 @@
     },
     "include": [
         "Views/**/*"
+    ],
+    "typeRoots": [
+        "/Users/cdominguez/Developer/Horus/Views/Utils/CustomTypings",
+        "node_modules/@types"
     ]
 }

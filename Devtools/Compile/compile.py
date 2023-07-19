@@ -13,9 +13,9 @@ ext_modules = [
         ["Server/__init__.py"],
         include_package_data=True,  # type: ignore
     ),
-    Extension("HorusAPI", ["HorusAPI/plugins.py"]),
-    Extension("HorusAPI", ["HorusAPI/molstar.py"]),
-    Extension("HorusAPI", ["HorusAPI/__init__.py"]),
+    Extension("HorusAPI", ["HorusAPI/src/plugins.py"]),
+    Extension("HorusAPI", ["HorusAPI/src/molstar.py"]),
+    Extension("HorusAPI", ["HorusAPI/src/__init__.py"]),
 ]
 
 setup(

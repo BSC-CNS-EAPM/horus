@@ -2,7 +2,7 @@ import { horusGet } from "../../Utils/utils";
 import { useEffect, useState } from "react";
 import { BlockProps } from "./flow_builder_interfaces";
 import { Block, DraggableBlock } from "./block";
-import { RotatingLines } from "react-loader-spinner";
+import RotatingLines from "../RotatingLines/rotatinglines";
 import { SearchComponent } from "../Toolbar/toolbar";
 
 function getFilteredItems(query, blocks: BlockProps[]) {
@@ -62,12 +62,7 @@ function BlockList() {
       />
       {blocks.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-full">
-          <RotatingLines
-            strokeColor="grey"
-            strokeWidth="5"
-            animationDuration="0.75"
-            width="40"
-          />
+          <RotatingLines />
           Loading blocks...
         </div>
       ) : (

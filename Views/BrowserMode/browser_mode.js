@@ -6,7 +6,7 @@ import NBDButton from "../Components/nbdbutton";
 import { horusGet } from "../Utils/utils";
 import nostrum_logo from "../../Resources/horus.png";
 
-import { RotatingLines } from "react-loader-spinner";
+import RotatingLines from "../Components/RotatingLines/rotatinglines";
 
 function BrowserMode() {
   const [url, setUrl] = useState(null);
@@ -40,9 +40,7 @@ function BrowserMode() {
           className="object-fit"
           width={100}
         />
-        <RotatingLines
-          strokeColor="grey"
-        />
+        <RotatingLines />
       </div>
     );
   }

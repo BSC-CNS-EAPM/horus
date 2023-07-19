@@ -350,11 +350,7 @@ class AppDelegate(metaclass=SingletonMeta):
                 pass
 
         # Get the GUI backend
-        gui = None
-        if self.platform == "darwin":
-            gui = "cocoa"
-        if self.platform == "linux":
-            gui = "qt"
+        gui = "cocoa" if self.platform == "darwin" else "gtk"
 
         homeURL = self.server.baseURL
 
@@ -464,6 +460,9 @@ class AppDelegate(metaclass=SingletonMeta):
         ("Description (*.ext1;*.ext2...)", "Description 2 (*.ext3;*.ext4...)")
         """
 
+        if fileTypes is None:
+            fileTypes = ("All files (*.*)",)
+
         # Get the active window
         window = webview.windows[0]
 
@@ -480,6 +479,8 @@ class AppDelegate(metaclass=SingletonMeta):
                 return result[0]
             except IndexError:
                 return None
+        if result is None:
+            return None
         else:
             return str(result)
 

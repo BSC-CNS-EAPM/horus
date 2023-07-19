@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { RotatingLines } from "react-loader-spinner";
+import RotatingLines from "../RotatingLines/rotatinglines";
 import { HorusModal, HorusPopover } from "../reusable";
 import { BlockProps } from "./flow_builder_interfaces";
 import { PluginVariableType } from "./flow_builder_interfaces";
@@ -85,12 +85,7 @@ function PlayBlockButton({
     <HorusPopover
       trigger={
         isRunning ? (
-          <RotatingLines
-            strokeColor="grey"
-            strokeWidth="5"
-            animationDuration="0.75"
-            width="20"
-          />
+          <RotatingLines />
         ) : (
           <button onClick={onClick}>
             <svg

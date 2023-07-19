@@ -13,6 +13,7 @@ dependencies:
   - scipy
   - tk
   - pyyaml
+  - biopython
   - pip:
       - pywebview==4.1
       - flask-cors==3.0.10
@@ -26,5 +27,7 @@ dependencies:
       - Cython==3.0.0b3
       - paramiko
       - pytest
-# Pyobjc because on macOS we use native WebKit view
-# Qtpy because on Linux we use Qt WebEngine due to GTK issues on RHEL
+      - pyside6
+# Manual install due to Apple Silicon/ARM not available from repo
+# python -m pip install nbdsuite<version>.tar.gz
+

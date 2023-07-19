@@ -48,6 +48,18 @@ import {
   SupportedFormats,
 } from "./helpers";
 import { volumeStreamingControls } from "./ui/controls";
+import { Script } from "molstar/lib/mol-script/script";
+import { StructureSelection } from "molstar/lib/mol-model/structure/query";
+import {
+  CifExportContext,
+  Structure,
+  encode_mmCIF_categories,
+  to_mmCIF,
+} from "molstar/lib/mol-model/structure";
+import { Loci } from "molstar/lib/mol-model/structure/structure/element/loci";
+import { Mol2Writer as MolWriter } from "molstar/lib/mol-io/writer/mol2";
+
+// Style
 require("molstar/lib/mol-plugin-ui/skin/light.scss");
 
 class HorusMolstar {
@@ -658,6 +670,9 @@ class HorusMolstar {
     });
   }
 
+  // Loaded PDBfiles in the form of a string
+  loadedPDBs: { [key: string]: string } = {};
+
   async loadPDBString(pdbString, label) {
     // Parse the data from the string
     pdbString = this.parsePDB(pdbString);
@@ -731,6 +746,88 @@ class HorusMolstar {
         { tag: "water" }
       );
     await update.commit();
+
+    // If the label exists, add a number to the end of it
+    if (label in this.loadedPDBs) {
+      let i = 1;
+      while (label + i in this.loadedPDBs) {
+        i++;
+      }
+      label = label + i;
+    }
+
+    // Add the structure to the state
+    const newStructure = {
+      pdbString: pdbString,
+      name: label,
+    };
+
+    // Add the structure to the state
+    this.loadedPDBs[label] = pdbString;
+  }
+
+  private structureToCIF(loci: Loci) {
+    const name = loci.structure.label;
+    const structure = loci.structure;
+    return to_mmCIF(name, structure);
+  }
+
+  private extractFromLoci(loci: Loci) {
+    const label = loci.structure.label;
+    const id = loci.structure.model.id;
+    let sourceData;
+    let type;
+    try {
+      sourceData =
+        loci.structure.model.sourceData.data["source"].data.lines.data;
+      type = "pdb";
+    } catch (error) {
+      sourceData = this.structureToCIF(loci);
+      type = "cif";
+    }
+
+    const structureInfo = {
+      name: label,
+      id: id,
+      structure: sourceData,
+      type: type,
+    };
+
+    return structureInfo;
+  }
+
+  private getLociForStructure(structure: Structure) {
+    const selection = Script.getStructureSelection(
+      (Q) =>
+        Q.struct.generator.atomGroups({
+          "chain-test": Q.core.rel.eq(["B", Q.ammp("label_asym_id")]),
+        }),
+      structure
+    );
+
+    const loci = StructureSelection.toLociWithSourceUnits(selection);
+
+    return loci;
+  }
+
+  /*
+   * List all the structures in the current hierarchy
+   * @returns {Array} - List of structures
+   */
+  listStructures() {
+    const structures =
+      this.plugin.managers.structure.hierarchy.current.structures;
+    if (!structures) return;
+
+    const molList = [];
+    for (const structure of structures) {
+      const data = structure.cell.obj.data;
+      const loci = this.getLociForStructure(data);
+      const molInfo = this.extractFromLoci(loci);
+      molList.push(molInfo);
+    }
+
+    return molList;
   }
 
   private parsePDB(pdbString) {

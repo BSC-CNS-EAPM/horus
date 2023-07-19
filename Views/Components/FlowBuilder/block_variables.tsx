@@ -5,6 +5,7 @@ import {
   PluginVariableType,
   PluginVariableTypes,
 } from "./flow_builder_interfaces";
+import { horusGet } from "../../Utils/utils";
 
 const PluginVariableView = <T extends PluginVariableType>(props: {
   variable: PluginVariable<T>;
@@ -20,6 +21,26 @@ const PluginVariableView = <T extends PluginVariableType>(props: {
   useEffect(() => {
     handleChange(props.variable.value);
   }, [props.variable.value]);
+
+  const [structures, setStructures] = useState<any[]>([]);
+
+  const loadMolstarStructures = () => {
+    const molstar = window.molstar;
+    const structList = molstar?.listStructures();
+
+    if (!structList) return [];
+
+    setStructures(structList);
+
+    // Set the first structure as the default value
+    handleChange(structList[0]);
+  };
+
+  useEffect(() => {
+    if (props.variable.type === PluginVariableTypes.STRUCTURE) {
+      loadMolstarStructures();
+    }
+  }, []);
 
   return (
     <div className="plugin-variable">
@@ -124,12 +145,52 @@ const PluginVariableView = <T extends PluginVariableType>(props: {
           </div>
         )}
 
-        {/* If the type is a FILE, set a file upload button */}
+        {/* If the type is a FILE, set a button which, on the server, 
+        will open the server file explorer. On the client, will open the file pickers */}
         {props.variable.type === PluginVariableTypes.FILE && (
-          <input
-            type="file"
-            onChange={(e) => handleChange(e.target.files[0] as any)}
-          />
+          <button
+            onClick={async () => {
+              const request = await horusGet("/openfile");
+
+              const data = await request.json();
+
+              const file = data.path;
+
+              handleChange(file);
+            }}
+          >
+            Select file
+          </button>
+        )}
+
+        {/* If the type is a STRUCTURE, set a dropdown with the Mols* structures */}
+        {props.variable.type === PluginVariableTypes.STRUCTURE && (
+          <select
+            defaultValue=""
+            defaultChecked={true}
+            onChange={(e) => {
+              // Get the selected structure
+              const selectedStructure = structures.find(
+                (structure) => structure.name === e.target.value
+              );
+
+              handleChange(selectedStructure);
+            }}
+          >
+            {structures.length === 0 ? (
+              <option value="" disabled>
+                No loaded structures
+              </option>
+            ) : (
+              <>
+                {structures.map((structure, index) => (
+                  <option key={index} value={structure.name}>
+                    {structure.name}
+                  </option>
+                ))}
+              </>
+            )}
+          </select>
         )}
       </div>
     </div>

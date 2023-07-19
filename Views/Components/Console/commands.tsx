@@ -124,5 +124,19 @@ export default function getCommands() {
         return result;
       },
     },
+    listmol: {
+      description: "List structures in Mol*.",
+      usage: "listmol",
+      fn: async (...args) => {
+        const molstar = window.molstar;
+        const strucList = molstar.listStructures();
+
+        const names = strucList.map((struc) => struc.name);
+
+        // Parse as a string with \n as a separator
+        const strucListString = names.join("\n");
+        return strucListString;
+      },
+    },
   };
 }

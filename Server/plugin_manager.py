@@ -542,7 +542,10 @@ class PluginManager:
             os.chdir(os.path.dirname(workingDir))
 
             # Execute the block
-            block()
+            try:
+                block()
+            except Exception as e:
+               print(f"Error executing block {blockID}: {e}")
 
             # Get the output
             output = buf.getvalue()
