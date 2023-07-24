@@ -52,4 +52,66 @@ function ArrowBlockConnector(props: ArrowConnectorProps) {
   );
 }
 
-export { ArrowBlockConnector };
+interface PlacedXarrowProps {
+  block: BlockProps;
+  connectedBlock: BlockProps;
+  setPlacedBlocks: React.Dispatch<React.SetStateAction<BlockProps[]>>;
+}
+
+function PlacedXarrow(props: PlacedXarrowProps) {
+  const { block, connectedBlock, setPlacedBlocks } = props;
+
+  return (
+    <div
+      onClick={(e) => {
+        unconnectArrowBlock(setPlacedBlocks, block, connectedBlock);
+      }}
+    >
+      <Xarrow
+        start={`${block?.placedID}-${block.id}`}
+        end={`${connectedBlock?.placedID}-${connectedBlock.id}`}
+        key={`${block?.placedID}-${block.id}-${connectedBlock?.placedID}-${connectedBlock.id}`}
+      />
+    </div>
+  );
+}
+
+export { ArrowBlockConnector, PlacedXarrow };
+
+function unconnectArrowBlock(
+  setPlacedBlocks: React.Dispatch<React.SetStateAction<BlockProps[]>>,
+  currentBlock: BlockProps,
+  connectedBlock: BlockProps
+) {
+  // Remove the connected block from the connectedTo array of the current block
+  const newConnectedTo = currentBlock.connectedTo?.filter(
+    (block) => block.placedID !== connectedBlock.placedID
+  );
+
+  // Remove the current block from the appearsOn array of the connected block
+  const newAppearsOn = connectedBlock.appearsOn?.filter(
+    (block) => block.placedID !== currentBlock.placedID
+  );
+
+  // Update the state
+  setPlacedBlocks((blocks) => {
+    const index = blocks.findIndex(
+      (b) => b.placedID === currentBlock?.placedID
+    );
+    const newBlocks = [...blocks];
+    newBlocks[index] = {
+      ...newBlocks[index],
+      connectedTo: newConnectedTo,
+    };
+
+    const overIndex = newBlocks.findIndex(
+      (b) => b.placedID === connectedBlock?.placedID
+    );
+    newBlocks[overIndex] = {
+      ...newBlocks[overIndex],
+      appearsOn: newAppearsOn,
+    };
+
+    return newBlocks;
+  });
+}

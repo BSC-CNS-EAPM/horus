@@ -184,7 +184,25 @@ function PELEPlot(props: PELEPlotProps) {
         }}
       >
         <div>
-          <div className="title-color">{nbdData.simulationName}</div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <div className="title-color">{nbdData.simulationName}</div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "1rem",
+              }}
+            >
+              <div>Select a complex:</div>
+              {complexesView}
+            </div>
+          </div>
           <Plot
             ref={ref}
             key={"plot"}
@@ -218,8 +236,6 @@ function PELEPlot(props: PELEPlotProps) {
             justifyContent: "center",
           }}
         >
-          Select a complex:
-          {complexesView}
           <div className="flex-center-row">
             {xAxisOptions}
             vs.
@@ -304,9 +320,66 @@ function PELETable(props: PELETableProps) {
     }
   }, [extraData]);
 
+  const [metricLoading, setMetricLoading] = useState(false);
+
+  const newAtomAtomDistance = async () => {
+    setMetricLoading(true);
+    await nbdData.addAtomAtomDistance();
+    setMetricLoading(false);
+  };
+
+  const addMetricView = (
+    <select
+      defaultValue="add-metric"
+      defaultChecked={true}
+      onChange={(e) => {
+        if (e.target.value === "atom-atom") {
+          newAtomAtomDistance();
+        }
+        // Re-select the default value
+        e.target.value = "add-metric";
+      }}
+      value={"add-metric"}
+    >
+      <option key="add-metric" value={"add-metric"} disabled>
+        Add metric
+      </option>
+      <option key="new-metric-atom" value={"atom-atom"}>
+        Atom-Atom distance
+      </option>
+    </select>
+  );
+
   return (
     <div className="blurred-squared-div">
-      <div className="title-color">Compare structures</div>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <div className="title-color">Compare structures</div>
+        <div
+          style={{
+            display: "flex",
+            gap: "1rem",
+            alignItems: "center",
+          }}
+        >
+          {metricLoading ? <div className="loader"></div> : addMetricView}
+          <div>
+            <button
+              onClick={() => {
+                // Reset columns
+                gridRef.current?.columnApi.resetColumnState();
+              }}
+            >
+              Reset columns
+            </button>
+          </div>
+        </div>
+      </div>
       {/* On div wrapping Grid a) specify theme CSS Class Class and b) sets Grid size */}
       <div className="ag-theme-alpine">
         <AgGridReact

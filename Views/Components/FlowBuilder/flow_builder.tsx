@@ -176,7 +176,7 @@ export default function FlowBuilder(props: FlowBuilderProps) {
     const { over } = event;
 
     // If the over block is not the flow reciver, we don't move the block
-    if (over?.id !== "flow-reciver") {
+    if (!over?.id) {
       return;
     }
 

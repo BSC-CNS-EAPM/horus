@@ -6,6 +6,7 @@ import RotatingLines from "../RotatingLines/rotatinglines";
 import { useDroppable, DndContext } from "@dnd-kit/core";
 import Xarrow, { Xwrapper } from "react-xarrows";
 import { connectArrowBlock } from "./flow_builder";
+import { PlacedXarrow } from "./arrow_connector";
 
 function FlowReciver(props: FlowReciverProps) {
   // Modal state
@@ -85,7 +86,7 @@ function FlowReciver(props: FlowReciverProps) {
     flowPath.current = savedFlow.path;
   };
 
-  const executeInternal = async (block) => {
+  const executeInternal = async (block, inputs) => {
     // Get the updated block variables
     const variables = block.variables.reduce((acc, variable) => {
       // Return a dictionary with the variable name and value {name: value}
@@ -97,6 +98,7 @@ function FlowReciver(props: FlowReciverProps) {
       blockID: block.id,
       variables: variables,
       path: flowPath.current,
+      inputs: inputs ? inputs : {},
     });
 
     const headers = {
@@ -113,7 +115,7 @@ function FlowReciver(props: FlowReciverProps) {
 
   const stopExecute = useRef(false);
 
-  const executeBlock = async (block: BlockProps) => {
+  const executeBlock = async (block: BlockProps, input) => {
     if (stopExecute.current) {
       return;
     }
@@ -134,7 +136,7 @@ function FlowReciver(props: FlowReciverProps) {
       (b) => b.placedID === block.placedID
     );
 
-    const result = await executeInternal(realBlock);
+    const result = await executeInternal(realBlock, input);
 
     // Set the running button to false
     toggleSpinner(false);
@@ -147,10 +149,12 @@ function FlowReciver(props: FlowReciverProps) {
       stopExecute.current = true;
     }
 
+    const outputs = result.outputs;
+
     // Execute the connected blocks
     if (realBlock.connectedTo && realBlock.connectedTo.length > 0) {
       for (const connected of realBlock.connectedTo) {
-        await executeBlock(connected);
+        await executeBlock(connected, outputs);
       }
     }
 
@@ -340,19 +344,13 @@ function FlowReciver(props: FlowReciverProps) {
     }
 
     if (command === "del") {
-      console.log(args);
       if (args[0] !== undefined) {
         // Get the block by the placedID
         const block = props.placedBlocks.find(
           (b) => b.placedID === parseInt(args[0])
         );
 
-        console.log(props.placedBlocks);
-
-        console.log(block);
-
         if (!block) {
-          console.log("Block not found");
           return "Block not found";
         }
         handleDelete(block);
@@ -432,7 +430,7 @@ function FlowReciver(props: FlowReciverProps) {
   }, [props.placedBlocks]);
 
   const topBarTitle = (
-    <h1 className="flex flex-row top-bar-flow-reciver">
+    <div className="flex flex-row top-bar-flow-reciver flow-title">
       <input
         className="flow-name"
         type="text"
@@ -507,17 +505,17 @@ function FlowReciver(props: FlowReciverProps) {
           </svg>
         )}
       </button>
-    </h1>
+    </div>
   );
 
   const renderBlock = (block: BlockProps, index: number) => {
-    const connectedToBlocks = block.connectedTo?.map((connectedBlock) => (
-      <Xarrow
-        start={`${block?.placedID}-${block.id}`}
-        end={`${connectedBlock?.placedID}-${connectedBlock.id}`}
-        key={`${block?.placedID}-${block.id}-${connectedBlock?.placedID}-${connectedBlock.id}`}
-      />
-    ));
+    const connectedToBlocks = block.connectedTo?.map((connectedBlock) =>
+      PlacedXarrow({
+        block: block,
+        connectedBlock: connectedBlock,
+        setPlacedBlocks: props.setPlacedBlocks,
+      })
+    );
 
     return (
       <>
@@ -721,13 +719,3 @@ function FlowReciver(props: FlowReciverProps) {
 }
 
 export { FlowReciver };
-
-{
-  /* {block.connectedTo?.map((connectedBlock) => (
-        <Xarrow
-          start={`${block?.placedID}-${block.id}`}
-          end={`${connectedBlock?.placedID}-${connectedBlock.id}`}
-          key={`${block?.placedID}-${block.id}-${connectedBlock?.placedID}-${connectedBlock.id}`}
-        />
-      ))} */
-}

@@ -3,7 +3,7 @@ import RotatingLines from "../RotatingLines/rotatinglines";
 import { HorusModal, HorusPopover } from "../reusable";
 import { BlockProps } from "./flow_builder_interfaces";
 import { PluginVariableType } from "./flow_builder_interfaces";
-import { PluginVariableView } from "./block_variables";
+import { PluginVariableView, InputOutputView } from "./block_variables";
 import "./block.css";
 
 // Drag the blocks, drop the arrows
@@ -158,30 +158,83 @@ function Block(block: BlockProps) {
     <HorusModal
       show={variablesModal}
       onHide={closeVariablesModal}
-      header={<div className="text-xl font-bold">Variables</div>}
+      header={
+        <div className="text-xl font-bold">{block.name} - properties</div>
+      }
       body={
         <div>
-          {block.variables.map((variable, index) => (
-            <PluginVariableView
-              key={
-                variable.id +
-                "-" +
-                index +
-                "-" +
-                block.id +
-                "-" +
-                block.placedID
-              }
-              variable={variable}
-              onChange={handleChange}
-            />
-          ))}
+          {block.variables && block.variables.length > 0 && (
+            <div>
+              <h4>Variables</h4>
+              <div>
+                {block.variables.map((variable, index) => (
+                  <PluginVariableView
+                    key={
+                      variable.id +
+                      "-" +
+                      index +
+                      "-" +
+                      block.id +
+                      "-" +
+                      block.placedID
+                    }
+                    variable={variable}
+                    onChange={handleChange}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+          {block.inputs && block.inputs.length > 0 && (
+            <div>
+              <h4>Inputs</h4>
+              <div>
+                {block.inputs.map((variable, index) => (
+                  <InputOutputView
+                    key={
+                      variable.id +
+                      "-" +
+                      index +
+                      "-" +
+                      block.id +
+                      "-" +
+                      block.placedID
+                    }
+                    variable={variable}
+                    onChange={handleChange}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+          {block.outputs && block.outputs.length > 0 && (
+            <div>
+              <h4>Outputs</h4>
+              <div>
+                {block.outputs.map((variable, index) => (
+                  <InputOutputView
+                    key={
+                      variable.id +
+                      "-" +
+                      index +
+                      "-" +
+                      block.id +
+                      "-" +
+                      block.placedID
+                    }
+                    variable={variable}
+                    onChange={handleChange}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       }
       footer={
         <div className="flex flex-row justify-end">
           <button className="app-button" onClick={closeVariablesModal}>
-            Close
+            Save
           </button>
         </div>
       }
@@ -246,8 +299,8 @@ function Block(block: BlockProps) {
       >
         {isInfoHovering || block.isPlaced ? (
           <div>
-            <p>{block.description}</p>
-            {!block.isPlaced && block.id}
+            <div className="plugin-">{block.description}</div>
+            <div>{!block.isPlaced && block.id}</div>
           </div>
         ) : null}
       </div>

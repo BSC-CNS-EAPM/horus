@@ -38,6 +38,8 @@ interface BlockProps {
   description: string;
   plugin: string;
   variables: PluginVariable<PluginVariableType>[];
+  inputs: PluginVariable<PluginVariableType>[];
+  outputs: PluginVariable<PluginVariableType>[];
   isPlaced: boolean;
   onChange?: () => void;
   execute?: (block: BlockProps) => Promise<void>;
@@ -70,6 +72,7 @@ enum PluginVariableTypes {
   INT_RANGE = "[integer, integer]",
   FLOAT_RANGE = "[float, float]",
   FILE = "file",
+  FOLDER = "folder",
   STRUCTURE = "structure",
   // STRING_ARRAY = "string[]",
   // NUMBER_RANGE = "[number, number]"

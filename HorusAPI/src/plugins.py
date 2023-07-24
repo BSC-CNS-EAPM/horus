@@ -118,22 +118,6 @@ class PluginEndpoint:
         self.function = function
 
 
-class PluginEndpoint:
-    def __init__(self, url: str, methods: typing.List[str], function: typing.Callable):
-        """
-        Create a new PluginEndpoint.
-
-        :param url: The URL of the endpoint.
-        :param method: The method of the endpoint.
-        :param function: The function that will be called when the endpoint is accessed.
-        To the function the request object will be passed as the first argument.
-        Remember to define the function with the request argument.
-        """
-        self.url = url
-        self.methods = methods
-        self.function = function
-
-
 class PluginPage:
     endpoints: typing.List[PluginEndpoint] = []
     """
@@ -249,18 +233,16 @@ class VariableTypes:
     """
     A file.
 
-    - On the server: Will render as a regular browser file upload.
-    The file will be uploaded to the server.
-    - On the desktop: Will render as a file picker.
-    The file will be copied to the current flow folder.
+    - On the server: Will open the server file explorer.
+    - On the desktop: Will render as a system file picker.
     """
 
-    LOCAL_FILE = "local_file"
+    FOLDER = "folder"
     """
-    A file present on your local machine.
+    A folder.
 
-    Will render as a file picker and the absolute path of the file will be used.
-    Only available on the desktop app.
+    - On the server: Will open the server file explorer.
+    - On the desktop: Will render as a system folder picker.
     """
 
     STRUCTURE = "structure"
@@ -325,35 +307,25 @@ class PluginVariable:
         self.id = id
         self.allowedValues = allowedValues
 
-        # Initialize a hidden children list
-        self._children: typing.List[PluginVariable] = []
+    def toDict(self):
+        """
+        Convert the variable to a dictionary.
+        """
 
-    def addChild(self, child):
-        if not isinstance(child, PluginVariable):
-            raise Exception("The child must be a PluginVariable instance.")
-        self._children.append(child)
+        varDict = {
+            "name": self.name,
+            "id": self.id,
+            "description": self.description,
+            "type": self.type,
+            "value": ""
+            if self.defaultValue is None
+            else self.defaultValue
+            if not self.value
+            else self.value,
+            "allowedValues": self.allowedValues,
+        }
 
-    def getChild(self, name):
-        for child in self._children:
-            if child.name == name:
-                return child
-        raise Exception(f"Child {name} not found.")
-
-    def getChildren(self):
-        childList: list[dict[str, typing.Any]] = []
-        for child in self._children:
-            childDict = {
-                "name": child.name,
-                "description": child.description,
-                "type": child.type,
-                "defaultValue": child.defaultValue,
-                "value": child.value,
-                "id": child.id,
-                "allowedValues": child.allowedValues,
-                "children": child.getChildren(),
-            }
-            childList.append(childDict)
-        return childList
+        return varDict
 
 
 class PluginBlock:
@@ -363,6 +335,8 @@ class PluginBlock:
         description: str,
         action: typing.Optional[typing.Callable] = None,
         variables: typing.List[PluginVariable] = [],
+        inputs: typing.List[PluginVariable] = [],
+        outputs: typing.List[PluginVariable] = [],
     ):
         self.id: str = "baseplugin.block"
         """
@@ -392,6 +366,20 @@ class PluginBlock:
         Variables that can be used in the Block action
         """
 
+        self._outputs = outputs
+        """
+        The output that the block produces as a list of PluginVariables.
+        This information will be displayed in the flow builder.
+        The produced output can be used in the following blocks as input.
+        """
+
+        self._inputs = inputs
+        """
+        The input that the block receives as a list of PluginVariables.
+        This information will be displayed in the flow builder.
+        The input can be used in the block action.
+        """
+
         self._configs: typing.List[PluginConfig] = []
         """
         Configs that can be used to configure the block.
@@ -399,25 +387,18 @@ class PluginBlock:
         Allowed type: PluginConfig
         """
 
-        # The output that the block produces WIP / maybe not needed
-        self.output = None
-
-        # The input that the block receives WIP / maybe not needed
-        self.input = None
-
-        # Sublocks are blocks that can only be placed after this block
-        self._subBlocks: typing.List[PluginBlock] = []
-
-    def setAction(self, action: typing.Callable):
-        self.action = action
-
     # Define the call method to run the block
     def __call__(self, *args, **kwargs):
         if self.action is None:
-            raise Exception("The block has no action defined.")
-        return self.action(self, *args, **kwargs)
+            print("WARNING: No action defined for block", self.name)
+        else:
+            # Run the action
+            self.action(self, *args, **kwargs)
 
-    def updateValues(self, values: dict):
+        # Get the updated output as dictionary
+        return self.outputs
+
+    def _updateVariables(self, values: dict):
         """
         Updates the values of the variables of the block.
 
@@ -428,7 +409,18 @@ class PluginBlock:
             if variable.id in values.keys():
                 variable.value = values[variable.id]
 
-    def getVariables(self):
+    def _updateInputs(self, values: dict):
+        """
+        Updates the values of the inputs of the block.
+
+        :param values: A dictionary with the values to update
+        (JSON coming from frontend).
+        """
+        for variable in self._inputs:
+            if variable.id in values.keys():
+                variable.value = values[variable.id]
+
+    def _getVariables(self):
         """
         Returns a list of the variables of the block.
         """
@@ -441,7 +433,34 @@ class PluginBlock:
             varsDict[variable.id] = variable.value
         return varsDict
 
-    def getConfig(self, id: str):
+    @property
+    def inputs(self):
+        varsDict: dict[str, typing.Any] = {}
+        for variable in self._inputs:
+            varsDict[variable.id] = variable.value
+        return varsDict
+
+    @property
+    def outputs(self):
+        varsDict: dict[str, typing.Any] = {}
+        for variable in self._outputs:
+            varsDict[variable.id] = variable.value
+        return varsDict
+
+    def setOutput(self, id: str, value: typing.Any):
+        """
+        Sets the value of an output variable.
+
+        :param id: The id of the output variable.
+        :param value: The value to set.
+        """
+        for variable in self._outputs:
+            if variable.id == id:
+                variable.value = value
+                return
+        raise Exception(f"Output {id} not found.")
+
+    def _getConfig(self, id: str):
         """
         Returns a config by its ID.
 
@@ -452,14 +471,14 @@ class PluginBlock:
                 return config
         raise Exception(f"Config {id} not found.")
 
-    def getConfigs(self):
+    def _getConfigs(self):
         return self._configs
 
     @property
     def configs(self):
         configsDict: dict[str, typing.Any] = {}
         for config in self._configs:
-            for var in config.getVariables():
+            for var in config._getVariables():
                 configsDict[var.id] = var.value
         return configsDict
 
@@ -473,11 +492,11 @@ class PluginBlock:
         if isinstance(config, PluginConfig):
             config.id = f"{self.id}.{config.name}".replace(" ", "_").lower()
             try:
-                self.getConfig(config.id)
+                self._getConfig(config.id)
             except Exception:
                 self._configs.append(config)
 
-    def updateConfigs(self, configPath: str):
+    def _updateConfigs(self, configPath: str):
         """
         Updates the values of the configs of the block.
         From the config JSON file.
@@ -489,11 +508,11 @@ class PluginBlock:
 
         # Update the values of the configs
         for config in self._configs:
-            for var in config.getVariables():
+            for var in config._getVariables():
                 if var.id in configs.keys():
                     var.value = configs[var.id]
 
-    def createConfig(self, configPath: str):
+    def _createConfig(self, configPath: str):
         """
         Creates the config file for the block.
         """
@@ -508,7 +527,7 @@ class PluginBlock:
                     configs[config.id] = config.variables
                 json.dump(self.configs, configFile, indent=4)
 
-    def saveConfig(self, configPath: str, valuesToSave: dict[str, str]):
+    def _saveConfig(self, configPath: str, valuesToSave: dict[str, str]):
         """
         Saves the config file for the block with new values.
         """
@@ -527,16 +546,36 @@ class PluginBlock:
                 json.dump(configs, configFile, indent=4)
 
         # Update the values of the configs
-        self.updateConfigs(configPath)
+        self._updateConfigs(configPath)
 
-    def addSubBlock(self, block: PluginBlock):
+    def _toDict(self):
         """
-        Adds a subblock to the block.
+        Converts the block to a dictionary.
         """
-        self._subBlocks.append(block)
 
-    def getSubBlocks(self):
-        return self._subBlocks
+        blockDict = {
+            "id": self.id,
+            "name": self.name,
+            "description": self.description,
+            "variables": self._variablesToDict(self._variables),
+            "inputs": self._variablesToDict(self._inputs),
+            "outputs": self._variablesToDict(self._outputs),
+            "config": self._configToDict(),
+        }
+
+        return blockDict
+
+    def _variablesToDict(self, vars: typing.List[PluginVariable]):
+        varList: list[dict[str, typing.Any]] = []
+        for v in vars:
+            varList.append(v.toDict())
+        return varList
+
+    def _configToDict(self):
+        configList: list[dict[str, typing.Any]] = []
+        for c in self._getConfigs():
+            configList.append(c._toDict())
+        return configList
 
 
 class PluginConfig(PluginBlock):
@@ -669,10 +708,6 @@ class Plugin:
         for block in self._blocks:
             if block.id == id:
                 return block
-            # Search in the subblocks
-            for subBlock in block.getSubBlocks():
-                if subBlock.id == id:
-                    return subBlock
         raise Exception(f"Block {id} not found.")
 
     def getBlocks(self):
@@ -696,20 +731,10 @@ class Plugin:
                 self.getBlock(block.id)
             except Exception:
                 # Assign to the configs in the block the ID
-                for config in block.getConfigs():
+                for config in block._getConfigs():
                     config.id = f"{block.id}.config.{config.name}".replace(
                         " ", "_"
                     ).lower()
-
-                # Assign the ID to its subblocks
-                for subBlock in block.getSubBlocks():
-                    subBlock.id = f"{block.id}.{subBlock.name}".replace(
-                        " ", "_"
-                    ).lower()
-                    for config in subBlock.getConfigs():
-                        config.id = f"{subBlock.id}.config.{config.name}".replace(
-                            " ", "_"
-                        ).lower()
                 self._blocks.append(block)
 
     def _addBlocks(self):

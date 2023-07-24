@@ -3,11 +3,17 @@
 
 <head>
     <title>Shemsu error</title>
+    <script src="error.js" type="module"></script>
+    <link rel="stylesheet" href="error.css">
 </head>
 
 <body>
-    <div id="error"></div>
-    <script src="error.js" type="module"></script>
+    <div class="errorbody">
+        <div id="error"></div>
+        <div>
+            {{errormsg}}
+        </div>
+    </div>
 </body>
 
 </html>

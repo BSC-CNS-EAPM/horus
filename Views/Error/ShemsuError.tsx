@@ -9,9 +9,8 @@ import "./error.css";
 // Create a component for the error window
 function Error() {
   return (
-    <div className="error">
-      <h1>Shemsu Error</h1>
-      <p>Shemsu has encountered an error and cannot continue.</p>
+    <div>
+      <h1>Error</h1>
       <img src={horus_god} alt="Shemsu Error" className="shemsu-img" />
     </div>
   );

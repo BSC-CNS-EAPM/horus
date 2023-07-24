@@ -41,6 +41,8 @@ function BlockList() {
         description: b.description,
         plugin: b.plugin,
         variables: b.variables,
+        inputs: b.inputs,
+        outputs: b.outputs,
         isPlaced: false,
         subBlocks: b.subBlocks,
         coords: {
@@ -54,7 +56,7 @@ function BlockList() {
 
   return (
     <div className="block-sidebar">
-      <h1>Blocks</h1>
+      <div className="flow-title">Blocks</div>
       <SearchComponent
         placeholder="Search blocks..."
         onChange={(e) => setQuery(e.target.value)}

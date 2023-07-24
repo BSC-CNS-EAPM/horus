@@ -443,7 +443,7 @@ class NBDSuiteData {
           Accept: "application/octet-stream",
         };
 
-        const response = await horusPost(postTo, newHeader, body);
+        const response = await horusPost(postTo, header, body);
 
         const blob = await response.blob();
 
@@ -452,6 +452,38 @@ class NBDSuiteData {
         alert("Unable to save the file");
       }
     }
+  }
+
+  async addAtomAtomDistance() {
+    // Get from mosltar the selected atoms
+
+    const selectedAtoms = window.parent.molstar?.getSelectedStructures();
+
+    // Send the selected atoms to the server
+    const header = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    };
+
+    const body = JSON.stringify({
+      selectedAtoms: selectedAtoms,
+      selectedComplex: this.selectedComplex,
+    });
+
+    const postTo = window.location.href + "getAtomAtomDistance";
+
+    const response = await horusPost(postTo, header, body);
+
+    const data = await response.json();
+
+    if (!data.ok) {
+      alert(data.msg);
+    }
+
+    const atomAtomDistance = data.data;
+
+    // Add the atom-atom distance to the plot data
+    // ** WIP **
   }
 }
 

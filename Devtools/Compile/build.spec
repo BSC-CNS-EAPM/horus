@@ -95,6 +95,7 @@ nbdsuite_deps = [
     "biopython",
     "adaptivepele",
     "mdtraj",
+    "pydantic",
 ]
 
 imports += nbdsuite_deps

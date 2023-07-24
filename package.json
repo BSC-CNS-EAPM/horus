@@ -5,9 +5,9 @@
   "source": "Views/Main/index.html",
   "scripts": {
     "test": "python -m pytest",
-    "buildparcel": "parcel build Views/**/*.html --dist-dir GUI --no-optimize",
+    "buildparcel": "parcel build Views/**/*.html --dist-dir GUI --no-optimize && npm run parcel-nbdsuite&& cp -r Views/Favicon/ GUI/Favicon",
     "devparcel": "parcel Views/**/*.html",
-    "build": "npm run buildparcel && npm run parcel-nbdsuite && python Devtools/Compile/compile.py build_ext && pyinstaller Devtools/Compile/build.spec --noconfirm",
+    "build": "npm run buildparcel && python Devtools/Compile/compile.py build_ext && pyinstaller Devtools/Compile/build.spec --noconfirm",
     "distribute": "run-script-os",
     "distribute:linux": "./Devtools/Package/linux.sh",
     "distribute:darwin": "./Devtools/Package/macos.sh",
@@ -65,7 +65,9 @@
     "styled-components": "^5.3.10"
   },
   "devDependencies": {
+    "@parcel/packager-raw-url": "^2.9.3",
     "@parcel/transformer-sass": "^2.8.3",
+    "@parcel/transformer-webmanifest": "^2.9.3",
     "autoprefixer": "^10.4.14",
     "buffer": "^5.7.1",
     "parcel": "^2.8.3",

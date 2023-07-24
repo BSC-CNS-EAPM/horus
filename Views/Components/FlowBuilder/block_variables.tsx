@@ -48,6 +48,7 @@ const PluginVariableView = <T extends PluginVariableType>(props: {
       <div className="plugin-variable-description">
         {props.variable.description}
       </div>
+      <p className="plugin-variable-id">ID: {props.variable.id}</p>
       <div className="plugin-variable-value">
         {/* Define an input based on the type */}
 
@@ -159,7 +160,23 @@ const PluginVariableView = <T extends PluginVariableType>(props: {
               handleChange(file);
             }}
           >
-            Select file
+            {props.variable.value || "Select file"}
+          </button>
+        )}
+
+        {props.variable.type === PluginVariableTypes.FOLDER && (
+          <button
+            onClick={async () => {
+              const request = await horusGet("/openfolder");
+
+              const data = await request.json();
+
+              const file = data.path;
+
+              handleChange(file);
+            }}
+          >
+            {props.variable.value || "Select folder"}
           </button>
         )}
 
@@ -197,4 +214,19 @@ const PluginVariableView = <T extends PluginVariableType>(props: {
   );
 };
 
-export { PluginVariableView };
+const InputOutputView = <T extends PluginVariableType>(props: {
+  variable: PluginVariable<T>;
+  onChange: (value: T, id: string) => void;
+}) => {
+  return (
+    <div className="plugin-variable">
+      <div className="plugin-variable-name">{props.variable.name}</div>
+      <div className="plugin-variable-description">
+        {props.variable.description}
+      </div>
+      <div className="plugin-variable-id">ID: {props.variable.id}</div>
+    </div>
+  );
+};
+
+export { PluginVariableView, InputOutputView };

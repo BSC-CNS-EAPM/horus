@@ -31,18 +31,19 @@ export default function Molstar() {
     }
 
     socket.on("loadPDB", (data) => {
+      console.log("loadPDB, data: ", data);
       const molstar = window.molstar;
       if (molstar) {
-        molstar.loadPDBString(data, "PDB");
+        const label = data.label ? data.label : "PDB";
+        const pdb = data.pdb;
+        molstar.loadPDBString(pdb, label);
       }
     });
 
     return () => {
       socket.off("loadPDB");
-    }
-
+    };
   }, []);
-
 
   return (
     <div

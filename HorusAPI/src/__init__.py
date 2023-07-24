@@ -1,5 +1,5 @@
 # Export the HorusApp class from the app.py file
-from .plugins import (
+from HorusAPI.src.plugins import (
     Plugin,  # noqa: F401
     PluginBlock,  # noqa: F401
     PluginVariable,  # noqa: F401
@@ -10,4 +10,4 @@ from .plugins import (
     TempFile,  # noqa: F401
 )
 
-from .molstar import MolstarAPI  # noqa: F401
+from HorusAPI.src.molstar import MolstarAPI  # noqa: F401

@@ -9,13 +9,54 @@ import IFrameLoader from "../Components/IframeLoader/iframeloader";
 
 export default function ResizeHandle({
   horizontal = false,
+  molstar = false,
 }: {
   horizontal?: boolean;
+  molstar?: boolean;
 }) {
   const horizontalIcon = horizontal ? "Icon Icon-horizontal" : "Icon";
 
+  const reloadMolstar = (e) => {
+    if (e) {
+      const molstar = window.molstar;
+      if (molstar) {
+        // molstar.unload();
+      }
+    } else {
+      const molstar = window.molstar;
+      if (molstar) {
+        // molstar.redispose();
+      }
+    }
+  };
+
+  const iframePointer = (e) => {
+    if (e) {
+      const iframe = document.getElementById("iframe-loader");
+      if (iframe) {
+        iframe.style.pointerEvents = "none";
+      }
+    } else {
+      const iframe = document.getElementById("iframe-loader");
+      if (iframe) {
+        iframe.style.pointerEvents = "auto";
+      }
+    }
+  };
+
+  const handleOnDragging = (e) => {
+    if (molstar) {
+      reloadMolstar(e);
+    }
+
+    iframePointer(e);
+  };
+
   return (
-    <PanelResizeHandle className="ResizeHandleOuter">
+    <PanelResizeHandle
+      className="ResizeHandleOuter"
+      onDragging={handleOnDragging}
+    >
       <div className="ResizeHandleInner">
         <svg className={horizontalIcon} viewBox="0 0 24 24">
           <path
@@ -30,6 +71,8 @@ export default function ResizeHandle({
 
 export function App() {
   const [mainView, setMainView] = useState(<FlowBuilder />);
+  const [iframeView, setIframeView] = useState(null);
+  const [showIFrame, setShowIFrame] = useState(false);
   const [showConsole, setShowConsole] = useState(false);
 
   const handleMainView = (event) => {
@@ -40,7 +83,8 @@ export function App() {
   const handleIFrame = (event) => {
     const key = event.detail.url + "-" + event.detail.pagename;
     const iframe = <IFrameLoader key={key} {...event.detail} />;
-    setMainView(iframe);
+    setIframeView(iframe);
+    setShowIFrame(true);
   };
 
   const toggleConsole = () => {
@@ -64,14 +108,16 @@ export function App() {
       <Panel minSize={30} order={3} collapsible={true}>
         {mainView}
       </Panel>
-      <ResizeHandle horizontal={true} />
     </>
   );
 
   const molstarPanel = (
-    <Panel minSize={30} order={4} collapsible={true} defaultSize={0}>
-      <Molstar />
-    </Panel>
+    <>
+      <ResizeHandle horizontal={true} molstar={true} />
+      <Panel minSize={30} order={5} collapsible={true} defaultSize={0}>
+        <Molstar />
+      </Panel>
+    </>
   );
 
   const consolePanel = (
@@ -79,6 +125,15 @@ export function App() {
       <ResizeHandle />
       <Panel minSize={8} maxSize={50} order={2} defaultSize={20}>
         <HorusTerm />
+      </Panel>
+    </>
+  );
+
+  const iframeViewPanel = (
+    <>
+      <ResizeHandle horizontal={true} />
+      <Panel minSize={30} order={4} collapsible={true} defaultSize={30}>
+        {iframeView}
       </Panel>
     </>
   );
@@ -95,6 +150,7 @@ export function App() {
                 <Panel order={1}>
                   <PanelGroup direction="horizontal">
                     {mainViewPanel}
+                    {showIFrame && iframeViewPanel}
                     {molstarPanel}
                   </PanelGroup>
                 </Panel>

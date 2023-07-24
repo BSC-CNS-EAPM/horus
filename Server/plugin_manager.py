@@ -437,31 +437,35 @@ class PluginManager:
     def _getBlocksFromList(self, plugin: Plugin, blockList: list[PluginBlock]):
         newBlocks: list[dict[str, typing.Any]] = []
         for b in blockList:
-            newBlock = {
-                "id": b.id,
-                "plugin": plugin.info["name"],
-                "name": b.name,
-                "description": b.description,
-                "variables": self.getVariables(b),
-                "subBlocks": self._getBlocksFromList(plugin, b.getSubBlocks()),
-                "config": self._getConfigFromBlock(b),
-            }
+            newBlock = b._toDict()
+            newBlock["plugin"] = plugin.info["name"]
+            # newBlock = {
+            #     "id": b.id,
+            #     "plugin": plugin.info["name"],
+            #     "name": b.name,
+            #     "description": b.description,
+            #     "variables": self.getVariables(b),
+            #     # Deprecated:
+            #     # "subBlocks": self._getBlocksFromList(plugin, b.getSubBlocks()),
+            #     "config": self._getConfigFromBlock(b),
+            # }
             newBlocks.append(newBlock)
 
         return newBlocks
 
-    def _getConfigFromBlock(self, block: PluginBlock):
-        configs = []
-        for c in block.getConfigs():
-            configs.append(
-                {
-                    "id": c.id,
-                    "name": c.name,
-                    "description": c.description,
-                    "variables": self.getVariables(c),
-                }
-            )
-        return configs
+    # def _getConfigFromBlock(self, block: PluginBlock):
+    #     configs = []
+    #     for c in block.getConfigs():
+    #         configs.append(
+    #             c.toDict()
+    #             # {
+    #             #     "id": c.id,
+    #             #     "name": c.name,
+    #             #     "description": c.description,
+    #             #     "variables": self.getVariables(c),
+    #             # }
+    #         )
+    #     return configs
 
     def getBlocks(self):
         """
@@ -478,23 +482,9 @@ class PluginManager:
         Returns a list of all the variables of a block.
         """
         varList: list[dict[str, typing.Any]] = []
-        for v in block.getVariables():
+        for v in block._getVariables():
             # Get the children of the variable
-            varList.append(
-                {
-                    "name": v.name,
-                    "id": v.id,
-                    "description": v.description,
-                    "type": v.type,
-                    "value": ""
-                    if v.defaultValue is None
-                    else v.defaultValue
-                    if not v.value
-                    else v.value,
-                    "children": v.getChildren(),
-                    "allowedValues": v.allowedValues,
-                }
-            )
+            varList.append(v.toDict())
         return varList
 
     def _findBlock(self, fromBlockID: str):
@@ -518,7 +508,7 @@ class PluginManager:
 
         return block
 
-    def executeBlock(self, blockID, variables, workingDir):
+    def executeBlock(self, blockID, variables, inputs, workingDir):
         """
         Executes an action of a plugin.
         """
@@ -527,34 +517,48 @@ class PluginManager:
         block = self._findBlock(blockID)
 
         # Set the variables
-        block.updateValues(variables)
+        block._updateVariables(variables)
+
+        # Set the inputs
+        block._updateInputs(inputs)
 
         # Read the config file for the block
         configPath = self._blockConfigPath(block)
 
         if os.path.exists(configPath):
             # Set the config to execute the block
-            block.updateConfigs(configPath)
+            block._updateConfigs(configPath)
+
+        # Set the working dir to run python from
+        os.chdir(os.path.dirname(workingDir))
 
         # Capture all stdout and stderr output
+        error = False
+        errorMSG = ""
         with io.StringIO() as buf, redirect_stdout(buf), redirect_stderr(buf):
-            # Set the working dir to run python from
-            os.chdir(os.path.dirname(workingDir))
-
             # Execute the block
+            outputs = None
             try:
-                block()
+                outputs = block()
             except Exception as e:
-               print(f"Error executing block {blockID}: {e}")
+                print(f"Error executing block {blockID}: {e}")
+                error = True
+                errorMSG = str(e)
 
             # Get the output
-            output = buf.getvalue()
+            printOutput = buf.getvalue()
+
+        # Print the output to the regular terminal
+        print(printOutput)
 
         # Restore the working dir
         os.chdir(self.workingDir)
 
+        if error:
+            raise Exception(printOutput + "\n" + errorMSG)
+
         # Return the output
-        return output
+        return outputs, printOutput
 
     def _saveFlowInternal(self, flow, overwrite=False):
         """
@@ -577,7 +581,7 @@ class PluginManager:
             flow["savedID"] = str(uuid.uuid4())
 
         # Check if the savedID is the same as the current flow
-        if overwriteCaution and not overwrite:
+        if overwriteCaution and not overwrite and not self.desktop:
             raise OverwriteException(
                 name=flow["name"], path=flowPath, message="Trying to overwrite a flow."
             )
@@ -594,6 +598,7 @@ class PluginManager:
 
     def saveFlow(self, flow):
         overwrite = flow.get("overwrite")
+
         flowPath = flow.get("path")
         if not flowPath and flow.get("savedID") == "new_flow" and not overwrite:
             if self.desktop:
@@ -685,14 +690,14 @@ class PluginManager:
                 pages.append(self._getPageInfo(pg, p))
         return pages
 
-    def _blocksPlusSubBlocks(self, plugin: Plugin):
-        """
-        Returns a list of all the blocks of a plugin, including the subblocks.
-        """
-        blocks = plugin.blocks
-        for block in plugin.blocks:
-            blocks += block.getSubBlocks()
-        return blocks
+    # def _blocksPlusSubBlocks(self, plugin: Plugin):
+    #     """
+    #     Returns a list of all the blocks of a plugin, including the subblocks.
+    #     """
+    #     blocks = plugin.blocks
+    #     for block in plugin.blocks:
+    #         blocks += block.getSubBlocks()
+    #     return blocks
 
     def _initConfig(self, plugin: Plugin):
         """
@@ -709,18 +714,18 @@ class PluginManager:
 
             # If the config file does not exist, create it
             if not os.path.exists(configPath):
-                block.createConfig(configPath)
+                block._createConfig(configPath)
             else:
                 # If the config file exists, read it
-                block.updateConfigs(configPath)
+                block._updateConfigs(configPath)
 
         # Loop through all the blocks
         for block in plugin.blocks:
             initBlockConfig(block)
 
-            # Loop through the subblocks
-            for subBlock in block.getSubBlocks():
-                initBlockConfig(subBlock)
+            # # Loop through the subblocks
+            # for subBlock in block.getSubBlocks():
+            #     initBlockConfig(subBlock)
 
     def _blockConfigPath(self, block: PluginBlock):
         """
@@ -769,11 +774,11 @@ class PluginManager:
                 valuesToSave[variable["id"]] = variable["value"]
 
             # Save the config
-            block.saveConfig(blockConfigFile, valuesToSave)
+            block._saveConfig(blockConfigFile, valuesToSave)
 
             # Execute the config block
             pluginConfigID = blockID + ".config." + configId.split(".")[-1]
-            configBlock = block.getConfig(pluginConfigID)
+            configBlock = block._getConfig(pluginConfigID)
 
             with io.StringIO() as buf, redirect_stdout(buf), redirect_stderr(buf):
                 # Execute the config block

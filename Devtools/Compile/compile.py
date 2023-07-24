@@ -13,9 +13,13 @@ ext_modules = [
         ["Server/__init__.py"],
         include_package_data=True,  # type: ignore
     ),
-    Extension("HorusAPI", ["HorusAPI/src/plugins.py"]),
-    Extension("HorusAPI", ["HorusAPI/src/molstar.py"]),
-    Extension("HorusAPI", ["HorusAPI/src/__init__.py"]),
+    Extension("HorusAPI.src.plugins", ["HorusAPI/src/plugins.py"]),
+    Extension("HorusAPI.src.molstar", ["HorusAPI/src/molstar.py"]),
+    Extension(
+        "HorusAPI.__init__",
+        ["HorusAPI/src/__init__.py"],
+        include_package_data=True,  # type: ignore
+    ),
 ]
 
 setup(
@@ -35,6 +39,6 @@ for file in os.listdir("App"):
     if file.endswith(".c"):
         os.remove(os.path.join("App", file))
 
-for file in os.listdir("HorusAPI"):
+for file in os.listdir("HorusAPI/src"):
     if file.endswith(".c"):
-        os.remove(os.path.join("HorusAPI", file))
+        os.remove(os.path.join("HorusAPI/src", file))

@@ -58,7 +58,12 @@ class HorusServer:
 
         # Setup the server
         self.server = self._setupServer()
+
+        # Setup the regular routes
         self._routes()
+
+        # Setup the favicons
+        self._favicons()
 
         # Setup SocketIO
         self.socketio = SocketIO(
@@ -74,6 +79,14 @@ class HorusServer:
         # Load the debug endpoints
         if self.debug:
             self._debugRoutes()
+
+        # Init MolstarAPI
+        from HorusAPI import MolstarAPI
+
+        self.molapi = MolstarAPI(self.socketio)
+
+        # Setup exception handlers
+        self._exceptionHandlers()
 
     def _getToken(self):
         if self.desktop:
@@ -203,7 +216,9 @@ class HorusServer:
         # Setup the error page
         @self.server.errorhandler(404)
         def pageNotFound(e):
-            return flask.redirect("/")
+            return flask.render_template("Error/error.html")
+
+        # Setup a template not found error
 
         @self.server.route("/proteo")
         def proteo():
@@ -321,10 +336,14 @@ class HorusServer:
                 variables = data["variables"]
                 blockID = data["blockID"]
                 workingDir = data["path"]
-                output = self.pluginManager.executeBlock(blockID, variables, workingDir)
-                self.socketio.emit("printTerm", output)
+                inputs = data["inputs"]
+                outputs, printOutput = self.pluginManager.executeBlock(
+                    blockID, variables, inputs, workingDir
+                )
+                self.socketio.emit("printTerm", printOutput)
                 success = {
                     "ok": True,
+                    "outputs": outputs,
                 }
                 return flask.jsonify(success)
             except Exception as e:
@@ -424,6 +443,7 @@ class HorusServer:
 
                 selFolder = AppDelegate().openFolderSelectDialog()
             else:  # Implement folder picker for web/server mode
+                print("WARNING: Folder picker not implemented for web/server mode")
                 selFolder = "/example/path"
 
             return flask.jsonify({"path": selFolder})
@@ -436,6 +456,7 @@ class HorusServer:
 
                 selFile = AppDelegate().openFileSelectDialog()
             else:
+                print("WARNING: File picker not implemented for web/server mode")
                 selFile = "/Users/cdominguez/Downloads/KRAS/input.yaml"
 
             return flask.jsonify({"path": selFile})
@@ -471,13 +492,27 @@ class HorusServer:
                 # If we are in server mode, download the file
                 tmpFile = TempFile(filename)
                 tmpFile.write(contents)
-                print("Returning file")
                 return flask.send_file(
                     tmpFile.path,
                     as_attachment=True,
                     download_name="protein.pdb",
                     mimetype="application/octet-stream",
                 )
+
+        @self.server.route("/loadPDB", methods=["POST"])
+        @verifyToken
+        def loadPDB():
+            # Loads the pdb file into mol*, this is a bridge for MolstarAPI
+            data = request.get_json()
+
+            pdb = data.get("pdb", None)
+
+            if pdb is None:
+                return flask.jsonify({"ok": False, "msg": "No data to load"})
+
+            self.socketio.emit("loadPDB", data)
+
+            return flask.jsonify({"ok": True})
 
         @self.server.route("/")
         def index():
@@ -587,6 +622,68 @@ class HorusServer:
             self._pluginPages()
 
             return "Reloaded"
+
+    def _exceptionHandlers(self):
+        @self.server.errorhandler(Exception)
+        def exceptionHandler(e: Exception):
+            # Get the full traceback as string
+            import traceback
+
+            tb = traceback.format_exc()
+
+            # Print the traceback to the terminal
+            print(tb)
+
+            return flask.render_template("Error/error.html", errormsg=str(tb))
+
+    def _favicons(self):
+        @self.server.route("/favicon.ico")
+        def favicon():
+            return flask.send_from_directory(
+                os.path.join(self.guiDir, "Favicon"),
+                "favicon.ico",
+                mimetype="image/vnd.microsoft.icon",
+            )
+
+        @self.server.route("/apple-touch-icon.png")
+        def apple_touch_icon():
+            return flask.send_from_directory(
+                os.path.join(self.guiDir, "Favicon"),
+                "apple-touch-icon.png",
+                mimetype="image/png",
+            )
+
+        @self.server.route("/favicon-32x32.png")
+        def favicon_32x32():
+            return flask.send_from_directory(
+                os.path.join(self.guiDir, "Favicon"),
+                "favicon-32x32.png",
+                mimetype="image/png",
+            )
+
+        @self.server.route("/favicon-16x16.png")
+        def favicon_16x16():
+            return flask.send_from_directory(
+                os.path.join(self.guiDir, "Favicon"),
+                "favicon-16x16.png",
+                mimetype="image/png",
+            )
+
+        @self.server.route("/site.webmanifest")
+        def site_webmanifest():
+            return flask.send_from_directory(
+                os.path.join(self.guiDir, "Favicon"),
+                "site.webmanifest",
+                mimetype="application/manifest+json",
+            )
+
+        @self.server.route("/safari-pinned-tab.svg")
+        def safari_pinned_tab():
+            return flask.send_from_directory(
+                os.path.join(self.guiDir, "Favicon"),
+                "safari-pinned-tab.svg",
+                mimetype="image/svg+xml",
+            )
 
     def run(self, reloader: bool = False):
         # use_reloader has to be turned off in order to run in a secondary thread

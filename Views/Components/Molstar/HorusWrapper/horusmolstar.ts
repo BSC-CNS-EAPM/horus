@@ -51,13 +51,11 @@ import { volumeStreamingControls } from "./ui/controls";
 import { Script } from "molstar/lib/mol-script/script";
 import { StructureSelection } from "molstar/lib/mol-model/structure/query";
 import {
-  CifExportContext,
   Structure,
-  encode_mmCIF_categories,
+  StructureProperties,
   to_mmCIF,
 } from "molstar/lib/mol-model/structure";
 import { Loci } from "molstar/lib/mol-model/structure/structure/element/loci";
-import { Mol2Writer as MolWriter } from "molstar/lib/mol-io/writer/mol2";
 
 // Style
 require("molstar/lib/mol-plugin-ui/skin/light.scss");
@@ -74,8 +72,15 @@ class HorusMolstar {
 
   plugin: PluginUIContext;
 
+  target: HTMLDivElement;
+
   async init(target: HTMLDivElement) {
-    this.plugin = await createPluginUI(target, {
+    this.target = target;
+    await this.initPlugin();
+  }
+
+  private async initPlugin() {
+    this.plugin = await createPluginUI(this.target, {
       ...DefaultPluginUISpec(),
       animations: [AnimateModelIndex],
       config: [
@@ -104,6 +109,31 @@ class HorusMolstar {
     });
 
     this.plugin.behaviors.layout.leftPanelTabName.next("data");
+  }
+
+  latetstSnapshot: PluginState.Snapshot = void 0;
+
+  // Method to unload the 3D canvas
+  unload() {
+    // Save the state
+    this.latetstSnapshot = this.snapshot.get({
+      data: true,
+      canvas3d: true,
+      camera: true,
+    });
+
+    // Remove the plugin
+    this.plugin?.dispose();
+  }
+
+  async redispose() {
+    // Init the plugin
+    await this.initPlugin();
+
+    console.log("Redispose snapshot: ", this.latetstSnapshot);
+
+    // Load the state
+    this.snapshot.set(this.latetstSnapshot);
   }
 
   get state() {
@@ -828,6 +858,46 @@ class HorusMolstar {
     }
 
     return molList;
+  }
+
+  /*
+   * Get the structures selected
+   * @returns {Array} - List of structures
+   */
+  getSelectedStructures() {
+    const selections = Array.from(
+      this.plugin.managers.structure.selection.entries.values()
+    );
+    const selectionList = [];
+    for (const { structure } of selections) {
+      if (!structure) continue;
+
+      Structure.eachAtomicHierarchyElement(structure, {
+        atom: (loc) => {
+          const sourceIndex = StructureProperties.atom.sourceIndex(loc);
+          const auth_comp_id = StructureProperties.atom.auth_comp_id(loc);
+          const auth_atom_id = StructureProperties.atom.auth_atom_id(loc);
+          const type = StructureProperties.atom.type_symbol(loc);
+          const x = StructureProperties.atom.x(loc);
+          const y = StructureProperties.atom.y(loc);
+          const z = StructureProperties.atom.z(loc);
+
+          const atomInfo = {
+            sourceIndex: sourceIndex,
+            auth_comp_id: auth_comp_id,
+            auth_atom_id: auth_atom_id,
+            type: type,
+            x: x,
+            y: y,
+            z: z,
+          };
+
+          selectionList.push(atomInfo);
+        },
+      });
+    }
+
+    return selectionList;
   }
 
   private parsePDB(pdbString) {
