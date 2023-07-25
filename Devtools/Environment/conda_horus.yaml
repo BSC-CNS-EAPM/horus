@@ -21,7 +21,7 @@ dependencies:
       - qtpy; sys_platform == 'linux'
       # - PyQt5; sys_platform == 'linux'
       # - PyQtWebEngine; sys_platform == 'linux'
-      - pyside2; sys_platform == 'linux'
+      # - pyside2; sys_platform == 'linux'
       - flask-socketio
       - eventlet
       - gevent
