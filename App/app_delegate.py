@@ -447,12 +447,9 @@ class AppDelegate(metaclass=SingletonMeta):
         )
 
         if isinstance(result, tuple):
-            try:
-                return result[0]
-            except IndexError:
-                return None
-        else:
-            return result
+            result = "".join(result)
+
+        return result
 
     def saveFileSelectDialog(
         self,
@@ -483,14 +480,9 @@ class AppDelegate(metaclass=SingletonMeta):
         )
 
         if isinstance(result, tuple):
-            try:
-                return result[0]
-            except IndexError:
-                return None
-        if result is None:
-            return None
-        else:
-            return str(result)
+            result = "".join(result)
+
+        return result
 
     @staticmethod
     def tokenize(url: str):
