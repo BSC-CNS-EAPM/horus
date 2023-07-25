@@ -7,7 +7,8 @@ from HorusAPI import Plugin, PluginBlock, PluginPage
 import io
 from contextlib import redirect_stdout, redirect_stderr
 import subprocess
-import imp
+import importlib.util
+import pkg_resources
 import shutil
 
 
@@ -275,6 +276,22 @@ class PluginManager:
         # Get the folder path
         pluginDir = os.path.dirname(pluginPath)
 
+        # Dependencies for the plugin
+        depsDir = os.path.join(pluginDir, "deps")
+
+        # Create the deps folder
+        if not os.path.exists(depsDir):
+            os.mkdir(depsDir)
+
+        try:
+            # Set the python path to the dependencies folder
+            sys.path.append(depsDir)
+            # Install dependencies
+            self._installDependencies(plugin, depsDir)
+        finally:
+            # Remove the python path to the dependencies folder
+            sys.path.pop()
+
         # Create the config folder
         configDir = os.path.join(pluginDir, "config")
 
@@ -292,8 +309,6 @@ class PluginManager:
 
         :param pluginPath: The path to the plugin file
         """
-
-        import importlib.util
 
         # Load the plugin file and obtain the plugin variable
         spec = importlib.util.spec_from_file_location("pluginFile", pluginPath)
@@ -336,7 +351,7 @@ class PluginManager:
         # Return the loaded plugin instace
         return pluginModule.plugin
 
-    def _installDependencies(self, plugin: Plugin):
+    def _installDependencies(self, plugin: Plugin, depsDir: str):
         """
         Installs the dependencies of a plugin.
 
@@ -346,72 +361,40 @@ class PluginManager:
         dependencies = plugin.info.get("dependencies", [])
         for dep in dependencies:
             try:
-                imp.find_module(dep)
-            except ImportError:
-                print(f"Installing dependency {dep}...")
-                with subprocess.Popen(
-                    [
-                        sys.executable,
-                        "-m",
-                        "pip",
-                        "install",
-                        dep,
-                        "--upgrade",
-                        "--target",
-                        self.depsDir,
-                    ],
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                ) as p:
-                    if p.stdout is not None:
-                        for line in p.stdout:
-                            print(line)
-                            # emit("installPluginDep", line)
-
-                    if p.stderr is not None:
-                        for line in p.stderr:
-                            print(line)
-                            # emit("installPluginDep", line)
-                    if p.returncode != 0 and p.returncode is not None:
-                        print(f"Dependency {dep} could not be installed.")
-                        raise Exception(f"Dependency {dep} could not be installed.")
-
-    def _uninstallDependencies(self, plugin: Plugin):
-        """
-        Uninstalls the dependencies of a plugin.
-
-        :param plugin: The plugin instance
-        """
-
-        dependencies = plugin.info.get("dependencies", [])
-        for dep in dependencies:
-            # If the dependency is needed by another plugin, don't uninstall it
-            print("Trying to uninstall dependency", dep)
-            if any(
-                [
-                    dep in p.info.get("dependencies", [])
-                    for p in self.loadedPlugins
-                    if p != plugin
-                ]
-            ):
-                anyplu = any(
-                    [
-                        dep in p.info.get("dependencies", [])
-                        for p in self.loadedPlugins
-                        if p != plugin
-                    ]
+                # Check if the dependency is already installed
+                pkg_resources.get_distribution(dep)
+            except pkg_resources.DistributionNotFound:
+                print(
+                    f"Installing dependency {dep} for plugin {plugin.info['name']}..."
                 )
-                print(anyplu)
-                print("Dependency is needed by another plugin")
-                continue
+                self._installDepInternal(dep, depsDir)
 
-            try:
-                imp.find_module(dep)
-                print(f"Uninstalling dependency {dep}...")
-                shutil.rmtree(os.path.join(self.depsDir, dep))
-            except ImportError:
-                print(f"Dependency {dep} is not installed.")
-                raise Exception(f"Dependency {dep} is not installed.")
+    def _installDepInternal(self, dep: str, depsDir: str):
+        with subprocess.Popen(
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "install",
+                dep,
+                "--upgrade",
+                "--target",
+                depsDir,
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        ) as p:
+            if p.stdout is not None:
+                for line in p.stdout:
+                    print(line)
+                    # emit("installPluginDep", line
+            if p.stderr is not None:
+                for line in p.stderr:
+                    print(line)
+                    # emit("installPluginDep", line)
+            if p.returncode != 0 and p.returncode is not None:
+                print(f"Dependency {dep} could not be installed.")
+                raise Exception(f"Dependency {dep} could not be installed.")
 
     def getPlugins(self):
         """
@@ -532,6 +515,13 @@ class PluginManager:
         # Set the working dir to run python from
         os.chdir(os.path.dirname(workingDir))
 
+        # Find the plugin
+        plugin = self._getPluginByID(blockID.split(".")[0])
+
+        # Add to the python path the dependencies folder of the plugin
+        depsDir = os.path.join(plugin._path, "deps")
+        sys.path.append(depsDir)
+
         # Capture all stdout and stderr output
         error = False
         errorMSG = ""
@@ -553,6 +543,9 @@ class PluginManager:
 
         # Restore the working dir
         os.chdir(self.workingDir)
+
+        # Restore the python path
+        sys.path.pop()
 
         if error:
             raise Exception(printOutput + "\n" + errorMSG)
