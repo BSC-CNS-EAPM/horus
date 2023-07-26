@@ -9,7 +9,6 @@ from HorusAPI import (
 from Bio.PDB.MMCIFParser import MMCIFParser
 from Bio.PDB import PDBIO
 import os
-import typing as t
 
 plugin = Plugin(id="horus")
 
@@ -18,6 +17,9 @@ plugin.info = {
     "description": "Base plugin for Horus",
     "author": "Horus",
     "version": "0.0.1",
+    "dependencies": [
+        "biopython",
+    ],
 }
 
 structureVariable = PluginVariable(

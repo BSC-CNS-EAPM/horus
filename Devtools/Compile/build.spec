@@ -1,9 +1,6 @@
-import os, sys, imp
+import os
+import imp
 import shutil
-import matplotlib
-import Bio
-import Bio.PDB
-import nbdsuite
 
 currentDir = os.getcwd()
 
@@ -76,33 +73,31 @@ imports += [
 #     sys.exit(1)
 
 
-# ===========================
-# IMPORTANT
-# ===========================
-# Remember to import the
-# dependencies of the default
-# plugins
-# ===========================
-nbdsuite_deps = [
-    "nbdsuite",
-    "nbdsuite.utils",
-    "nbdsuite.utils.helpers",
-    "nbdsuite.utils.helpers.common",
-    "Bio",
-    "Bio.PDB",
-    "pandas",
-    "yaml",
-    "biopython",
-    "adaptivepele",
-    "mdtraj",
-    "pydantic",
-]
+# # ===========================
+# # IMPORTANT
+# # ===========================
+# # Remember to import the
+# # dependencies of the default
+# # plugins
+# # ===========================
+# nbdsuite_deps = [
+#     "nbdsuite",
+#     "nbdsuite.utils",
+#     "nbdsuite.utils.helpers",
+#     "nbdsuite.utils.helpers.common",
+#     "Bio",
+#     "Bio.PDB",
+#     "pandas",
+#     "yaml",
+#     "biopython",
+#     "adaptivepele",
+#     "mdtraj",
+#     "pydantic",
+# ]
 
-imports += nbdsuite_deps
+# imports += nbdsuite_deps
 
 # Check that all the modules are installed in the environment
-import imp
-
 currentModule = ""
 try:
     for module in imports:
@@ -117,7 +112,7 @@ except ImportError as e:
 
 
 # Compile the app
-a = Analysis(
+a = Analysis(  # noqa # type: ignore
     entry_point,
     pathex=[],
     binaries=[],
@@ -134,9 +129,9 @@ a = Analysis(
     cipher=None,
     noarchive=False,
 )
-pyz = PYZ(a.pure, a.zipped_data, cipher=None)  # noqa: F821
+pyz = PYZ(a.pure, a.zipped_data, cipher=None)  # noqa # type: ignore
 
-exe = EXE(
+exe = EXE(  # noqa # type: ignore
     pyz,
     a.scripts,
     [],
@@ -153,7 +148,7 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
 )
-coll = COLLECT(
+coll = COLLECT(  # noqa # type: ignore
     exe,
     a.binaries,
     a.zipfiles,
@@ -166,7 +161,7 @@ coll = COLLECT(
 
 macos_icon = os.path.join(currentDir, "Resources", "horus.icns")
 
-app = BUNDLE(
+app = BUNDLE(  # noqa # type: ignore
     coll,
     name="Horus.app",
     icon=macos_icon,
