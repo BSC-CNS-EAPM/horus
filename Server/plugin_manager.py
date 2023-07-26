@@ -178,9 +178,6 @@ class PluginManager:
 
         plugin = self._getPlugin(pluginName)
 
-        # Delete dependencies
-        self._uninstallDependencies(plugin)
-
         # Remove the plugin folder
         pluginPath = os.path.join(self.pluginsDir, plugin._path)
         shutil.rmtree(pluginPath)
@@ -359,11 +356,15 @@ class PluginManager:
         """
 
         dependencies = plugin.info.get("dependencies", [])
+        installedDeps = os.listdir(depsDir)
+
+        # Split installed dependencies to get the name of the package
+        installedDeps = [d.split("-")[0] for d in installedDeps]
+
+        # Iterate through the dependencies
         for dep in dependencies:
-            try:
-                # Check if the dependency is already installed
-                pkg_resources.get_distribution(dep)
-            except pkg_resources.DistributionNotFound:
+            # If the dependency is not installed, install it
+            if dep not in installedDeps:
                 print(
                     f"Installing dependency {dep} for plugin {plugin.info['name']}..."
                 )
@@ -377,7 +378,6 @@ class PluginManager:
                 "pip",
                 "install",
                 dep,
-                "--upgrade",
                 "--target",
                 depsDir,
             ],
