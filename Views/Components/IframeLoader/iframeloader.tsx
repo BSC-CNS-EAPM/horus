@@ -24,7 +24,7 @@ function IFrameLoader({ url, pagename }: IFrameLoaderProps) {
   };
 
   return (
-    <div id="iframe-loader">
+    <div id="iframe-loader" className="h-full w-full p-0 m-0">
       {loading && (
         <div className="flex flex-col items-center justify-center h-full">
           <RotatingLines />
