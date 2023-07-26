@@ -151,17 +151,23 @@ GUI/
 # Package lock
 package-lock.json
 
-# Default plugins config
+# Plugins config
 AppSupport/Plugins/*/config/
 
 # Server flows folder
 flows/
 
-# NBDSuite plugin built GUI folder
-AppSupport/DefaultPlugins/NBDSuite/Pages
-
 # Non-default plugins
 AppSupport/Plugins/
+
+# Include NBDSuite plugin
+!AppSupport/Plugins/NBDSuite/
+
+# Exclude NBDSuite Plugin config
+AppSupport/Plugins/NBDSuite/config/
+
+# Exclude NBDSuite plugin built GUI folder
+AppSupport/Plugins/NBDSuite/Pages
 
 # Plugin dependencies
 AppSupport/Dependencies/
