@@ -63,39 +63,6 @@ imports += [
     "dns.versioned",
 ]
 
-# # Try to use pyqt
-# try:
-#     imp.find_module("pyside6")
-#     print("Using PySide for build")
-#     imports += ["pyside6"]
-# except ImportError:
-#     print("PyQT5 not found")
-#     sys.exit(1)
-
-
-# # ===========================
-# # IMPORTANT
-# # ===========================
-# # Remember to import the
-# # dependencies of the default
-# # plugins
-# # ===========================
-# nbdsuite_deps = [
-#     "nbdsuite",
-#     "nbdsuite.utils",
-#     "nbdsuite.utils.helpers",
-#     "nbdsuite.utils.helpers.common",
-#     "Bio",
-#     "Bio.PDB",
-#     "pandas",
-#     "yaml",
-#     "biopython",
-#     "adaptivepele",
-#     "mdtraj",
-#     "pydantic",
-# ]
-
-# imports += nbdsuite_deps
 
 # Check that all the modules are installed in the environment
 currentModule = ""

@@ -1,8 +1,5 @@
 import pytest
 from Server import HorusServer
-from Server import PluginManager
-from HorusAPI import Plugin
-import os
 
 
 @pytest.fixture
@@ -13,11 +10,6 @@ def desktopServer():
 @pytest.fixture
 def server():
     return HorusServer(desktop=False)
-
-
-@pytest.fixture
-def pluginManager():
-    return PluginManager("AppSupport", False)
 
 
 def test_desktop_server_init(desktopServer):
@@ -38,26 +30,173 @@ def test_gui_dir(desktopServer):
     assert isinstance(gui_dir, str)
 
 
-def test_checkPlugin(pluginManager):
-    # Create a mock plugin file
-    pluginPath = "Tests/TestServer/test_plugin.py"
-    with open(pluginPath, "w") as f:
-        f.write("from HorusAPI import Plugin\nplugin = Plugin(id='test')")
+def test_gui_dir_debug_mode_parcel_running(mocker):
+    # Create an instance of HorusServer with debug and parcelURL set to True
+    server = HorusServer(debug=True)
+    server._checkParcel = mocker.Mock(return_value=True)
 
-    # Call the _checkPlugin function
-    plugin = pluginManager._checkPlugin(pluginPath)
+    # Mock os.path.abspath and os.path.join
+    mocker.patch(
+        "os.path.abspath", side_effect=lambda x: x
+    )  # No actual path joining, just return the input
+    mocker.patch(
+        "os.path.join", side_effect=lambda *args: "/".join(args)
+    )  # Join path components with a "/"
 
-    # Clean up the mock plugin file
-    os.remove(pluginPath)
+    # Mock the os.path.dirname method to simulate a module
+    mocker.patch("os.path.dirname", return_value="/path/to/your_module")
 
-    # Check that the plugin is valid
-    assert plugin is not None
-    assert isinstance(plugin, Plugin)
-    assert plugin.info["name"] == "Plugin"
-    assert plugin.info["version"] == "0.0.1"
-    assert plugin.info["author"] == "None"
-    assert plugin.info["description"] == "None"
-    assert plugin.info["dependencies"] == ["None"]
+    # Call the _guiDir method
+    gui_dir = server._guiDir()
 
-    # Check that the comparison operators work
-    assert plugin == plugin
+    # Assert that the GUI directory is constructed as expected
+    assert gui_dir == "/path/to/your_module/../dist"
+
+
+def test_gui_dir_debug_mode_parcel_not_running(mocker):
+    # Create an instance of HorusServer with debug and parcelURL set to True
+    server = HorusServer(debug=True)
+    server._checkParcel = mocker.Mock(return_value=False)
+
+    # Mock os.path.abspath and os.path.join
+    mocker.patch(
+        "os.path.abspath", side_effect=lambda x: x
+    )  # No actual path joining, just return the input
+    mocker.patch(
+        "os.path.join", side_effect=lambda *args: "/".join(args)
+    )  # Join path components with a "/"
+
+    # Mock the os.path.dirname method to simulate a module
+    mocker.patch("os.path.dirname", return_value="/path/to/your_executable")
+
+    # Mock the sys._MEIPASS attribute to simulate a frozen executable environment
+    mocker.patch("sys._MEIPASS", "/path/to/your_executable", create=True)
+
+    # Call the _guiDir method
+    gui_dir = server._guiDir()
+
+    # Assert that the GUI directory is constructed as expected
+    assert gui_dir == "/path/to/your_executable/GUI"
+
+
+def test_gui_dir_frozen_executable(mocker):
+    # Create an instance of HorusServer with debug and parcelURL set to False
+    server = HorusServer(debug=False)
+
+    # Mock os.path.abspath and os.path.join
+    mocker.patch(
+        "os.path.abspath", side_effect=lambda x: x
+    )  # No actual path joining, just return the input
+    mocker.patch(
+        "os.path.join", side_effect=lambda *args: "/".join(args)
+    )  # Join path components with a "/"
+
+    # Mock the os.path.dirname method to simulate a module
+    mocker.patch("os.path.dirname", return_value="/path/to/your_executable")
+
+    # Mock the sys._MEIPASS attribute to simulate a frozen executable environment
+    mocker.patch("sys._MEIPASS", "/path/to/your_executable", create=True)
+
+    # Call the _guiDir method
+    gui_dir = server._guiDir()
+
+    # Assert that the GUI directory is constructed as expected for a frozen executable
+    assert gui_dir == "/path/to/your_executable/GUI"
+
+
+def test_gui_dir_not_frozen_executable(mocker):
+    # Create an instance of HorusServer with debug and parcelURL set to False
+    server = HorusServer(debug=False)
+
+    # Mock os.path.abspath and os.path.join
+    mocker.patch(
+        "os.path.abspath", side_effect=lambda x: x
+    )  # No actual path joining, just return the input
+
+    # Mock the os.path.dirname method to simulate a module
+    mocker.patch("os.path.dirname", return_value="/path/to/your_executable")
+
+    # Call the _guiDir method without mocking sys._MEIPASS to simulate
+    # a non-frozen executable environment
+    with pytest.raises(Exception, match="App not frozen and GUI directory not found"):
+        server._guiDir()
+
+
+def test_get_token_desktop(mocker):
+    # Create an instance of HorusServer with desktop set to True
+    server = HorusServer(desktop=True)
+
+    # Mock the webview module and its token attribute
+    mocked_token = "mocked_token"
+    mocker.patch("webview.token", mocked_token)
+
+    # Call the _getToken method
+    token = server._getToken()
+
+    # Assert that the token returned is the mocked value
+    assert token == mocked_token
+
+
+def test_get_token_no_desktop(mocker):
+    # Create an instance of HorusServer with desktop set to False
+    server = HorusServer(desktop=False)
+
+    # Call the _getToken method
+    token = server._getToken()
+
+    # Assert that the token is a string containing only digits
+    assert token.isdigit()
+
+
+def test_check_parcel_server_running(mocker):
+    # Create an instance of HorusServer with a mock parcel URL
+    server = HorusServer()
+
+    # Mock requests.get to simulate a successful response
+    mocker.patch("requests.get", side_effect=lambda *args, **kwargs: mocker.Mock())
+
+    # Call the _checkParcel method
+    result = server._checkParcel()
+
+    # Assert that the result is True when the parcel server is running
+    assert result is True
+
+
+def test_check_parcel_server_not_running(mocker):
+    # Create an instance of HorusServer with a mock parcel URL
+    server = HorusServer()
+
+    # Mock requests.get to simulate a ConnectionError
+    # when trying to connect to the parcel server
+    from requests.exceptions import ConnectionError
+
+    mocker.patch("requests.get", side_effect=ConnectionError)
+
+    # Call the _checkParcel method
+    result = server._checkParcel()
+
+    # Assert that the result is False when the parcel server is not running
+    assert result is False
+
+
+def test_tokenize():
+    server = HorusServer()
+
+    test_string = "Hello, World!"
+
+    # Test tokenization of a string
+    assert isinstance(server.tokenManager.tokenize(test_string), str)
+
+
+def test_checkToken():
+    # Create an instance of TokenManager with a specific salt
+    server = HorusServer()
+
+    # Test token verification for a valid token
+    test_string = "Hello, World!"
+    token = server.tokenManager.tokenize(test_string)
+    assert server.tokenManager.checkToken(token, test_string) is True
+
+    # Test token verification for an invalid token
+    invalid_token = "invalid_token"
+    assert server.tokenManager.checkToken(invalid_token, test_string) is False
