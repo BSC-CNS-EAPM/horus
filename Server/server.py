@@ -274,8 +274,7 @@ class HorusServer:
         def isDesktop():
             return flask.jsonify(self.desktop)
 
-        @self.server.route("/plugins/", methods=["GET", "POST"])
-        @verifyToken
+        @self.server.route("/plugins/", methods=["GET"])
         @desktopOnly
         def pluginsManager():
             return flask.render_template("PluginsManager/index.html", shemsu=self.token)
