@@ -275,9 +275,10 @@ class HorusServer:
             return flask.jsonify(self.desktop)
 
         @self.server.route("/plugins/", methods=["GET", "POST"])
+        @verifyToken
         @desktopOnly
         def pluginsManager():
-            return flask.render_template("PluginsManager/index.html")
+            return flask.render_template("PluginsManager/index.html", shemsu=self.token)
 
         @self.server.route("/plugins/install", methods=["GET"])
         @desktopOnly

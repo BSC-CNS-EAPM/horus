@@ -296,7 +296,9 @@ class AppDelegate(metaclass=SingletonMeta):
             self.openWindow("Horus")
 
         def openPlugins():
-            self.openWindow("Plugins", url=self.server.baseURL + "/plugins/")
+            pluginsURL = self.server.baseURL + "/plugins/"
+            pluginsURL = self.tokenize(pluginsURL)
+            self.openWindow("Plugins", url=pluginsURL)
 
         fileMenu = wm.Menu(
             "File",
