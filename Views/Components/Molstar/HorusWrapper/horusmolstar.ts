@@ -86,15 +86,18 @@ class HorusMolstar {
       config: [
         [PluginConfig.Viewport.ShowExpand, false],
         [PluginConfig.Viewport.ShowControls, true],
+        [PluginConfig.Viewport.ShowSelectionMode, true],
       ],
       layout: {
         initial: {
           isExpanded: true,
           showControls: false,
+          
         },
       },
       components: {
         remoteState: "none",
+        
       },
     });
 
@@ -872,8 +875,11 @@ class HorusMolstar {
     for (const { structure } of selections) {
       if (!structure) continue;
 
+      const loc = this.getLociForStructure(structure);
+
       Structure.eachAtomicHierarchyElement(structure, {
         atom: (loc) => {
+          const resID = StructureProperties.residue.label_seq_id(loc);
           const sourceIndex = StructureProperties.atom.sourceIndex(loc);
           const auth_comp_id = StructureProperties.atom.auth_comp_id(loc);
           const auth_atom_id = StructureProperties.atom.auth_atom_id(loc);
@@ -883,6 +889,7 @@ class HorusMolstar {
           const z = StructureProperties.atom.z(loc);
 
           const atomInfo = {
+            residue: resID,
             sourceIndex: sourceIndex,
             auth_comp_id: auth_comp_id,
             auth_atom_id: auth_atom_id,
