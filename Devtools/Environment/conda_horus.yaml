@@ -8,17 +8,12 @@ dependencies:
   - pyinstaller==5.10.1
   - flask==2.3.2
   - requests==2.29.0
-  - rdkit
-  - openmm
-  - scipy
-  - tk
-  - pyyaml
-  - biopython
   - pip:
       - pywebview==4.1
       - flask-cors==3.0.10
       - pyobjc==9.1.1; sys_platform == 'darwin'
       - pygobject; sys_platform == 'linux'
+      - pycairo; sys_platform == 'linux'
       - flask-socketio
       - eventlet
       - gevent
