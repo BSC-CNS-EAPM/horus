@@ -8,7 +8,6 @@ import io
 from contextlib import redirect_stdout, redirect_stderr
 import subprocess
 import importlib.util
-import pkg_resources
 import shutil
 
 
@@ -353,6 +352,7 @@ class PluginManager:
         Installs the dependencies of a plugin.
 
         :param plugin: The plugin instance
+        :param depsDir: The path to the dependencies folder
         """
 
         dependencies = plugin.info.get("dependencies", [])
