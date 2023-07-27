@@ -356,18 +356,33 @@ class PluginManager:
         """
 
         dependencies = plugin.info.get("dependencies", [])
-        installedDeps = os.listdir(depsDir)
+        listedDeps = os.listdir(depsDir)
 
-        # Split installed dependencies to get the name of the package
-        installedDeps = [d.split("-")[0] for d in installedDeps]
+        # Get the installed dependencies
+        installedDeps = {}
+        for idep in listedDeps:
+            if ".dist-info" not in idep:
+                continue
+            name = idep.split("-")[0].lower()
+            version = idep.split("-")[1].split(".dist")[0]
+            installedDeps[name] = version
 
-        # Iterate through the dependencies
+        # Iterate through the required dependencies
         for dep in dependencies:
-            # If the dependency is not installed, install it
-            if dep not in installedDeps:
+            name = dep.split("==")[0].lower()
+            version = dep.split("==")[1] if "==" in dep else None
+
+            exists = installedDeps.get(name, None)
+
+            if exists is None:
                 print(
                     f"Installing dependency {dep} for plugin {plugin.info['name']}..."
                 )
+                self._installDepInternal(dep, depsDir)
+                continue
+
+            if exists != version and version is not None:
+                print(f"Upgrading dependency {dep} for plugin {plugin.info['name']}...")
                 self._installDepInternal(dep, depsDir)
 
     def _installDepInternal(self, dep: str, depsDir: str):
@@ -380,6 +395,7 @@ class PluginManager:
                 dep,
                 "--target",
                 depsDir,
+                "--upgrade",
             ],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
