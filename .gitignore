@@ -170,7 +170,7 @@ AppSupport/Plugins/NBDSuite/config/
 AppSupport/Plugins/NBDSuite/Pages
 
 # Plugin dependencies
-AppSupport/Dependencies/
+AppSupport/DefaultPlugins/*/deps/
 
 # Ignore pip build files
 *.egg-info/
