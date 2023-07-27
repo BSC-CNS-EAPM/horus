@@ -6,8 +6,6 @@ from HorusAPI import (
     TempFile,
     MolstarAPI,
 )
-from Bio.PDB.MMCIFParser import MMCIFParser
-from Bio.PDB import PDBIO
 import os
 
 plugin = Plugin(id="horus")
@@ -39,6 +37,9 @@ savenameVariable = PluginVariable(
 
 
 def CIFtoPDB(cifFile: str, pdbFile: str):
+    from Bio.PDB.MMCIFParser import MMCIFParser
+    from Bio.PDB import PDBIO
+
     pdbfile = pdbFile or cifFile.replace(".cif", ".pdb")
 
     # Not sure why biopython needs this to read a cif file
