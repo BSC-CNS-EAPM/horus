@@ -85,7 +85,11 @@ function PlayBlockButton({
     <HorusPopover
       trigger={
         isRunning ? (
-          <RotatingLines />
+          <RotatingLines
+            style={{
+              height: "1.25rem",
+            }}
+          />
         ) : (
           <button onClick={onClick}>
             <svg

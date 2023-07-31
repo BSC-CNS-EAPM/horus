@@ -7,6 +7,15 @@ import { useDroppable, DndContext } from "@dnd-kit/core";
 import Xarrow, { Xwrapper } from "react-xarrows";
 import { connectArrowBlock } from "./flow_builder";
 import { PlacedXarrow } from "./arrow_connector";
+import NBDButton from "../nbdbutton";
+import { debounce } from "../reusable";
+
+// Define the selectedRemote on the window object
+declare global {
+  interface Window {
+    selectedRemote?: string;
+  }
+}
 
 function FlowReciver(props: FlowReciverProps) {
   // Modal state
@@ -19,18 +28,76 @@ function FlowReciver(props: FlowReciverProps) {
 
   // Executing state
   const [executingAll, setExecutingAll] = useState(false);
+  const [currentExecuting, setCurrentExecuting] = useState<BlockProps>(null);
+
+  // Selected cluster
+  const [remotesOptions, setRemotesOptions] = useState<string[]>([]);
+  const [selectedRemote, setSelectedRemote] = useState<string | null>(null);
+  const [remoteConnected, setRemoteConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+
+  const connectRemote = async () => {
+    setIsConnecting(true);
+    setRemoteConnected(false);
+    const header = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    };
+
+    const body = JSON.stringify({
+      remote: selectedRemote,
+    });
+
+    const response = await horusPost("/remotes/connect", header, body);
+    const data = await response.json();
+
+    if (!data.ok) {
+      alert(data.msg);
+      setRemoteConnected(false);
+    } else {
+      setRemoteConnected(true);
+    }
+
+    setIsConnecting(false);
+  };
+
+  useEffect(() => {
+    if (selectedRemote) {
+      connectRemote();
+      // Set the selected remote to the global window variable
+      window.selectedRemote = selectedRemote;
+    }
+  }, [selectedRemote]);
 
   const { setNodeRef } = useDroppable({
     id: "flow-reciver",
   });
 
+  const handleSaveAs = async () => {
+    const oldSavedID = savedID.current;
+    const oldFlowPath = flowPath.current;
+    savedID.current = "new_flow";
+    flowPath.current = "";
+    await handleSave();
+    if (savedID.current === "new_flow") {
+      savedID.current = oldSavedID;
+      flowPath.current = oldFlowPath;
+    }
+  };
+
+  const debouncedHandleSaveAs = debounce(handleSaveAs, 1000);
+
   const handleSave = async () => {
-    const body = JSON.stringify({
+    const saveContents = {
       name: flowName,
       blocks: props.placedBlocks,
       savedID: savedID.current,
       path: flowPath.current,
-    });
+      remote: selectedRemote,
+      // currentExecuting: currentExecuting,
+    };
+
+    const body = JSON.stringify(saveContents);
 
     const headers = {
       "Content-Type": "application/json",
@@ -48,9 +115,11 @@ function FlowReciver(props: FlowReciverProps) {
     const overwrite = savedFlow.overwrite;
     const existingName = savedFlow.existingName;
     const path = overwrite ? savedFlow.path : flowPath.current;
+    const desktop = savedFlow.desktop;
 
     if (
       overwrite &&
+      !desktop &&
       !confirm(
         "Flow with the same name already exists. Are you sure you want to overwrite the flow?"
       )
@@ -59,13 +128,13 @@ function FlowReciver(props: FlowReciverProps) {
     }
 
     if (overwrite) {
-      const overwriteBody = JSON.stringify({
-        name: overwrite ? existingName : savedFlow.name,
-        blocks: props.placedBlocks,
-        savedID: savedID.current,
+      const overwriteContents = {
+        ...saveContents,
+        name: existingName,
         path: path,
         overwrite: true,
-      });
+      };
+      const overwriteBody = JSON.stringify(overwriteContents);
 
       const overwriteResponse = await horusPost(
         "/saveflow",
@@ -81,7 +150,7 @@ function FlowReciver(props: FlowReciverProps) {
     }
 
     setSaved(true);
-    setFlowName(savedFlow.name);
+    // setFlowName(savedFlow.name);
     savedID.current = savedFlow.savedID;
     flowPath.current = savedFlow.path;
   };
@@ -106,9 +175,17 @@ function FlowReciver(props: FlowReciverProps) {
       Accept: "application/json",
     };
 
+    setCurrentExecuting(block);
+    // Save the flow with the current executing block
+    await handleSave();
+
     const response = await horusPost("/plugins/executeblock", headers, body);
 
     const data = await response.json();
+
+    setCurrentExecuting(null);
+    // Save the flow with the current executing block
+    await handleSave();
 
     return data;
   };
@@ -161,6 +238,8 @@ function FlowReciver(props: FlowReciverProps) {
     setExecutingAll(false);
 
     stopExecute.current = false;
+
+    await handleSave();
 
     function toggleSpinner(status = true) {
       props.setPlacedBlocks(
@@ -272,6 +351,9 @@ function FlowReciver(props: FlowReciverProps) {
 
     // Set the placed blocks
     props.setPlacedBlocks(openedFlow.blocks);
+
+    // Set the selected remote
+    setSelectedRemote(openedFlow.remote);
 
     // Set the placedIDCounter
     // Search for the highest placedID in the blocks and subblocks
@@ -391,13 +473,34 @@ function FlowReciver(props: FlowReciverProps) {
         if (!block) {
           return "Block not found";
         }
-        executeBlock(block);
+        executeBlock(block, null);
       }
       return "Flow executed";
     }
 
     return "Command executed";
   };
+
+  const fetchRemotes = async () => {
+    const response = await horusGet("/remotes/names");
+    const data = await response.json();
+
+    if (!data.ok) {
+      alert(data.error);
+      return;
+    }
+
+    setRemotesOptions(data.remotes);
+
+    if (selectedRemote === null) {
+      setSelectedRemote("Local");
+    }
+  };
+
+  useEffect(() => {
+    // Fetch remotes
+    fetchRemotes();
+  }, []);
 
   useEffect(() => {
     // Add an event listener to clear all the state when the "New" button is clicked in the toolbar
@@ -410,6 +513,9 @@ function FlowReciver(props: FlowReciverProps) {
 
     // Add an event listener to save a flow when the "Save" button is clicked in the toolbar
     window.addEventListener("saveFlow", handleSave);
+
+    // Add an event listener to save a flow when the "Save As.." button is clicked in the toolbar
+    window.addEventListener("saveFlowAs", debouncedHandleSaveAs);
 
     // Add an event listener for the terminal commands
     window.addEventListener("terminalCommand", handleTerminalCommand);
@@ -424,14 +530,21 @@ function FlowReciver(props: FlowReciverProps) {
       });
       window.removeEventListener("openFlow", loadFlow);
       window.removeEventListener("saveFlow", handleSave);
+      window.removeEventListener("saveFlowAs", debouncedHandleSaveAs);
       window.removeEventListener("terminalCommand", handleTerminalCommand);
       window.removeEventListener("centerView", centerView);
     };
   }, [props.placedBlocks]);
 
+  const [showRemotes, setShowRemotes] = useState(false);
+
   const topBarTitle = (
     <div className="flex flex-row top-bar-flow-reciver flow-title">
       <input
+        style={{
+          // Set the border color to red if the flow is not saved
+          borderColor: currentSaved.current ? "black" : "orange",
+        }}
         className="flow-name"
         type="text"
         id="flow-name"
@@ -439,7 +552,7 @@ function FlowReciver(props: FlowReciverProps) {
         onChange={onNameChange}
         value={flowName}
       />
-      <button onClick={handleSave} className="flow-button">
+      {/* <button onClick={handleSave} className="flow-button">
         {currentSaved.current ? (
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -469,42 +582,64 @@ function FlowReciver(props: FlowReciverProps) {
             />
           </svg>
         )}
-      </button>
-      <button
-        onClick={stopExecutingAll}
-        className="flow-button"
-        style={{
-          cursor: executingAll ? "pointer" : "default",
-        }}
-      >
-        {executingAll ? (
-          <RotatingLines
-            strokeColor="grey"
-            strokeWidth="5"
-            animationDuration="0.75"
-            width="40"
-          />
-        ) : (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+      </button> */}
+      <div className="flex flex-col gap-0 items-center text-center">
+        <button
+          onClick={stopExecutingAll}
+          className="flow-button"
+          style={{
+            cursor: executingAll ? "pointer" : "default",
+          }}
+        >
+          {executingAll ? (
+            <RotatingLines
+            // strokeColor="grey"
+            // strokeWidth="5"
+            // animationDuration="0.75"
+            // width="40"
             />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z"
-            />
-          </svg>
-        )}
-      </button>
+          ) : (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill={isConnecting ? "orange" : remoteConnected ? "green" : "red"}
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z"
+              />
+            </svg>
+          )}
+        </button>
+        <div
+          style={{
+            fontSize: "small",
+            cursor: "context-menu",
+          }}
+          onClick={(e) => {
+            fetchRemotes();
+            setShowRemotes(!showRemotes);
+          }}
+        >
+          {selectedRemote}
+        </div>
+      </div>
+      {
+        <ContextMenuRemotes
+          remotes={remotesOptions}
+          setSelectedRemote={setSelectedRemote}
+          show={showRemotes}
+          setShow={setShowRemotes}
+        />
+      }
     </div>
   );
 
@@ -623,7 +758,7 @@ function FlowReciver(props: FlowReciverProps) {
   };
 
   return (
-    <div className="current-flow cursor-grabbing">
+    <div className="current-flow">
       {topBarTitle}
       <div
         className="current-flow-canvas"
@@ -716,6 +851,49 @@ function FlowReciver(props: FlowReciverProps) {
       return true;
     };
   }
+}
+
+interface ContextMenuRemotesProps {
+  remotes: string[];
+  setSelectedRemote: (remote: string) => void;
+  show: boolean;
+  setShow: (show: boolean) => void;
+}
+
+function ContextMenuRemotes(props: ContextMenuRemotesProps) {
+  return (
+    <div className={props.show ? "remotes active" : "remotes"}>
+      {props.remotes.length > 0 ? (
+        <div
+          style={{
+            fontSize: "initial",
+            width: "8rem",
+          }}
+        >
+          {props.remotes.map((option) => (
+            <div
+              style={{
+                width: "100%",
+              }}
+              onClick={() => {
+                props.setSelectedRemote(option);
+                props.setShow(false);
+              }}
+            >
+              {option}
+              {
+                // Add hr if its not the last element
+                props.remotes.indexOf(option) !== props.remotes.length - 1 &&
+                  props.remotes.length > 1 && <hr style={{ margin: 0 }} />
+              }
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div>Local</div>
+      )}
+    </div>
+  );
 }
 
 export { FlowReciver };

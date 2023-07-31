@@ -85,6 +85,8 @@ class HorusServer:
 
         self.molapi = MolstarAPI(self.socketio)
 
+        self._molstarAPIRoutes()
+
         # Setup exception handlers
         self._exceptionHandlers()
 
@@ -249,6 +251,7 @@ class HorusServer:
                     "existingName": oe.name,
                     "path": oe.path,
                     "overwrite": True,
+                    "desktop": self.desktop,
                 }
             except Exception as e:
                 success = {
@@ -283,7 +286,7 @@ class HorusServer:
         @desktopOnly
         def installPlugin():
             try:
-                self.pluginManager.installPlugin()
+                self.pluginManager.installPlugin(self.socketio)
                 success = {
                     "ok": True,
                 }
@@ -297,9 +300,24 @@ class HorusServer:
         @self.server.route("/plugins/uninstall", methods=["POST"])
         @desktopOnly
         def uninstallPlugin():
-            pluginName = request.get_json()["name"]
-            self.pluginManager.uninstallPlugin(pluginName)
-            return "OK"
+            data = request.get_json()
+            pluginName = data.get("name", None)
+            if pluginName is None:
+                success = {
+                    "ok": False,
+                    "message": "Plugin name not provided.",
+                }
+            try:
+                self.pluginManager.uninstallPlugin(pluginName)
+                success = {
+                    "ok": True,
+                }
+            except Exception as e:
+                success = {
+                    "ok": False,
+                    "message": str(e),
+                }
+            return success
 
         @self.server.route("/desktop/appsupportdir", methods=["GET"])
         @desktopOnly
@@ -337,10 +355,9 @@ class HorusServer:
                 blockID = data["blockID"]
                 workingDir = data["path"]
                 inputs = data["inputs"]
-                outputs, printOutput = self.pluginManager.executeBlock(
-                    blockID, variables, inputs, workingDir
+                outputs = self.pluginManager.executeBlock(
+                    blockID, variables, inputs, workingDir, self.socketio
                 )
-                self.socketio.emit("printTerm", printOutput)
                 success = {
                     "ok": True,
                     "outputs": outputs,
@@ -397,22 +414,6 @@ class HorusServer:
             from App import AppDelegate
 
             AppDelegate().openWindow(name, fullURL)
-            return "OK"
-
-        @self.server.route("/desktop/configureSSH", methods=["GET", "POST"])
-        @desktopOnly
-        def configureSSH():
-            # If the method was GET, return the SSH config page
-            if request.method == "GET":
-                return flask.render_template("SSHAgent/SSHConfig.html")
-
-            # If it was POST, save the SSH config
-            if request.method == "POST":
-                from App import AppDelegate
-
-                AppDelegate().configureSSH(request.get_json())
-                return "OK"
-
             return "OK"
 
         @self.server.route("/bmode", methods=["GET"])
@@ -499,20 +500,115 @@ class HorusServer:
                     mimetype="application/octet-stream",
                 )
 
-        @self.server.route("/loadPDB", methods=["POST"])
+        @self.server.route("/remotes", methods=["GET"])
+        @desktopOnly
+        def remotes():
+            return flask.render_template("Remotes/index.html")
+
+        @self.server.route("/remotes/list", methods=["GET"])
+        @desktopOnly
+        def listRemotes():
+            from App import AppDelegate
+
+            return flask.jsonify(AppDelegate().listRemotes())
+
+        @self.server.route("/remotes/names", methods=["GET"])
         @verifyToken
-        def loadPDB():
-            # Loads the pdb file into mol*, this is a bridge for MolstarAPI
+        def listRemoteNames():
+            try:
+                from App import AppDelegate
+
+                remotes = AppDelegate().listRemotes()
+
+                remotes = [r["name"] for r in remotes]
+
+                # Append the local machine if there are remotes
+                if len(remotes) > 0:
+                    remotes.append("Local")
+
+                success = {
+                    "ok": True,
+                    "remotes": remotes,
+                }
+            except Exception as e:
+                success = {
+                    "ok": False,
+                    "msg": str(e),
+                }
+            return flask.jsonify(success)
+
+        @self.server.route("/remotes/configure", methods=["POST"])
+        @desktopOnly
+        def configureRemote():
             data = request.get_json()
 
-            pdb = data.get("pdb", None)
+            if data is None:
+                return flask.jsonify({"ok": False, "msg": "No data to save"})
 
-            if pdb is None:
-                return flask.jsonify({"ok": False, "msg": "No data to load"})
+            try:
+                from App import AppDelegate
 
-            self.socketio.emit("loadPDB", data)
+                AppDelegate().configureRemote(data)
+                return flask.jsonify({"ok": True})
+            except Exception as e:
+                return flask.jsonify({"ok": False, "msg": str(e)})
 
-            return flask.jsonify({"ok": True})
+        @self.server.route("/remotes/delete", methods=["POST"])
+        @desktopOnly
+        def deleteRemote():
+            data = request.get_json()
+
+            nameToDelete = data.get("name", None)
+
+            if data is None or nameToDelete is None:
+                return flask.jsonify({"ok": False, "msg": "Missing data"})
+
+            try:
+                from App import AppDelegate
+
+                AppDelegate().deleteRemote(nameToDelete)
+                return flask.jsonify({"ok": True})
+            except Exception as e:
+                return flask.jsonify({"ok": False, "msg": str(e)})
+
+        @self.server.route("/remotes/connect", methods=["POST"])
+        @desktopOnly
+        def connectRemote():
+            data = request.get_json()
+
+            remote = data.get("remote", None)
+
+            if data is None or remote is None:
+                return flask.jsonify({"ok": False, "msg": "Missing data"})
+
+            try:
+                from App import AppDelegate
+
+                AppDelegate().connectRemote(remote)
+                return flask.jsonify({"ok": True})
+            except Exception as e:
+                return flask.jsonify({"ok": False, "msg": str(e)})
+
+        @self.server.route("/remotes/command", methods=["POST"])
+        @desktopOnly
+        def remoteCommand():
+            data = request.get_json()
+            if data is None:
+                return flask.jsonify({"ok": False, "msg": "Missing data"})
+
+            remote = data.get("remote", None)
+            command = data.get("command", None)
+
+            if remote is None or command is None:
+                return flask.jsonify({"ok": False, "msg": "Missing command or remote"})
+
+            try:
+                from App import AppDelegate
+
+                out = AppDelegate().remote.command(command)
+                return flask.jsonify({"ok": True, "output": str(out)})
+            except Exception as e:
+                return flask.jsonify({"ok": False, "msg": str(e)})
 
         @self.server.route("/")
         def index():
@@ -533,6 +629,21 @@ class HorusServer:
             # Disable caching
             response.headers["Cache-Control"] = "no-store"
             return response
+
+    def _molstarAPIRoutes(self):
+        @self.server.route("/loadPDB", methods=["POST"])
+        def loadPDB():
+            # Loads the pdb file into mol*, this is a bridge for MolstarAPI
+            data = request.get_json()
+
+            pdb = data.get("pdb", None)
+
+            if pdb is None:
+                return flask.jsonify({"ok": False, "msg": "No data to load"})
+
+            self.socketio.emit("loadPDB", data)
+
+            return flask.jsonify({"ok": True})
 
     def _socketIORoutes(self):
         """

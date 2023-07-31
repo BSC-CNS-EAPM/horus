@@ -4,7 +4,7 @@
   "description": "Molecular visualizer from nostrum Biodiscovery",
   "source": "Views/Main/index.html",
   "scripts": {
-    "test": "python -m pytest",
+    "test": "python -m pytest tests/",
     "buildparcel": "parcel build Views/**/*.html --dist-dir GUI --no-scope-hoist && cp -r Views/Favicon/ GUI/Favicon",
     "devparcel": "parcel Views/**/*.html",
     "build": "npm run buildparcel && python Devtools/Compile/compile.py build_ext && pyinstaller Devtools/Compile/build.spec --noconfirm",
@@ -20,6 +20,7 @@
     "requirements-action:linux": "sudo apt-get update && sudo apt-get install -y libgirepository1.0-dev gcc libgtk-3-dev && npm install",
     "requirements-action:darwin": "npm install && npm install --global create-dmg",
     "clean": "rm -rf dist build GUI .parcel-cache .pytest_cache AppSupport/Plugins/NBDSuite/Pages/*",
+    "build-nbdsuite-plugin": "cd AppSupport/Plugins/NBDSuite && zip -r NBDSuite.hp . -x *.DS_Store -x '*__pycache__*' -x 'dev/*' -x 'deps/*' -x 'config/*' && cd ../../.. && mv AppSupport/Plugins/NBDSuite/NBDSuite.hp dist/NBDSuite.hp",
     "parcel-nbdsuite": "parcel build AppSupport/Plugins/NBDSuite/dev/nbdsuite.html --dist-dir AppSupport/Plugins/NBDSuite/Pages --public-url ./",
     "parcel-nbdsuite-dev": "parcel AppSupport/Plugins/NBDSuite/dev/nbdsuite.html --dist-dir AppSupport/Plugins/NBDSuite/Pages --public-url ./",
     "build-horusapi": "cd HorusAPI && python setup.py bdist_wheel && cd .."

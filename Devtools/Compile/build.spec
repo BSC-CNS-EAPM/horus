@@ -1,6 +1,7 @@
 import os
 import imp
 import shutil
+import sys
 
 currentDir = os.getcwd()
 
@@ -39,7 +40,7 @@ datas = [
 ]
 
 # Required modules
-imports = ["webview", "flask", "requests"]
+imports = ["webview", "flask", "requests", "fabric"]
 
 # Add all the submodules required by flask_socketio
 imports += [
@@ -63,6 +64,11 @@ imports += [
     "dns.versioned",
 ]
 
+# Modules required by Fabric
+imports += [
+    "fabric",
+]
+
 
 # Check that all the modules are installed in the environment
 currentModule = ""
@@ -75,7 +81,7 @@ except ImportError as e:
         __import__(currentModule)
     except ImportError:
         print(f"Error importing module: {e}. Cannot compile.")
-        exit(1)
+        sys.exit(1)
 
 
 # Compile the app

@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>Manage plugins</title>
+    <title>Manage remotes</title>
     <link href="../Main/index.css" rel="stylesheet" id="css-id">
     <script src="index.js" type="module" id="js-id"></script>
     <script>
@@ -13,12 +13,12 @@
             window.pywebview.token = token;
         }
         // Remove from the url the token
-        window.history.replaceState({}, document.title, "/plugins/");
+        window.history.replaceState({}, document.title, "/remotes");
     </script>
 </head>
 
 <body>
-    <div id="plugin-manager-root"></div>
+    <div id="remotes-root"></div>
 </body>
 
 </html>

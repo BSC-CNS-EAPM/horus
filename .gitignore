@@ -158,16 +158,13 @@ AppSupport/Plugins/*/config/
 flows/
 
 # Non-default plugins
-AppSupport/Plugins/
+AppSupport/Plugins/*
 
-# Include NBDSuite plugin
+# Include NBDSuite plugin except the config and Pages folder
 !AppSupport/Plugins/NBDSuite/
-
-# Exclude NBDSuite Plugin config
 AppSupport/Plugins/NBDSuite/config/
-
-# Exclude NBDSuite plugin built GUI folder
-AppSupport/Plugins/NBDSuite/Pages
+AppSupport/Plugins/NBDSuite/Pages/
+AppSupport/Plugins/NBDSuite/deps/
 
 # Plugin dependencies
 AppSupport/DefaultPlugins/*/deps/

@@ -189,6 +189,9 @@ const handleKeyDown = (event: KeyboardEvent) => {
   if (event.code === "KeyZ" && event.ctrlKey && !event.shiftKey) {
     undoEvent();
   }
+  if (event.code === "KeyS" && event.ctrlKey && event.shiftKey) {
+    saveAsEvent();
+  }
   if (event.code === "KeyS" && event.ctrlKey) {
     saveEvent();
   }
@@ -215,6 +218,12 @@ const redoEvent = () => {
 const saveEvent = () => {
   // Emit a save event
   const event = new CustomEvent("saveFlow");
+  window.dispatchEvent(event);
+};
+
+const saveAsEvent = () => {
+  // Emit a save event
+  const event = new CustomEvent("saveFlowAs");
   window.dispatchEvent(event);
 };
 
@@ -301,7 +310,7 @@ export default function HorusToolbar() {
       ),
       items: [
         {
-          name: "New flow",
+          name: "New",
           svgPath: (
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -338,7 +347,7 @@ export default function HorusToolbar() {
           },
         },
         {
-          name: "Open flow",
+          name: "Open",
           svgPath: (
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -366,7 +375,7 @@ export default function HorusToolbar() {
           },
         },
         {
-          name: "Save flow",
+          name: "Save",
           svgPath: (
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -385,6 +394,28 @@ export default function HorusToolbar() {
           ),
           onClick: () => {
             saveEvent();
+          },
+        },
+        {
+          name: "Save as...",
+          svgPath: (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="w-6 h-6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3l3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"
+              />
+            </svg>
+          ),
+          onClick: () => {
+            saveAsEvent();
           },
         },
       ],

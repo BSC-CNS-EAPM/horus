@@ -11,8 +11,10 @@ from flask_socketio import SocketIO
 import typing
 
 from Server import HorusServer
+from Server import RemotesAPI
 
 import cython
+import json
 
 from threading import Lock
 
@@ -145,8 +147,17 @@ class AppDelegate(metaclass=SingletonMeta):
     All of the windows that are currently open
     """
 
+    remote: RemotesAPI = None
+    """
+    The remote API
+    """
+
     def __init__(
-        self, debug: bool = False, server_mode: bool = False, browser: bool = False
+        self,
+        debug: bool = False,
+        server_mode: bool = False,
+        browser: bool = False,
+        debugURL: typing.Optional[str] = None,
     ):
         """
         Initialize the AppDelegate.
@@ -155,6 +166,7 @@ class AppDelegate(metaclass=SingletonMeta):
         self.debug = debug
         self.server_mode = server_mode
         self.browser = browser
+        self.debugURL = debugURL
 
         # Set the app support directory
         self._appSupportDir()
@@ -324,15 +336,13 @@ class AppDelegate(metaclass=SingletonMeta):
             ],
         )
 
-        def openSSHConfig():
-            self.openWindow(
-                "SSH Config", url=self.server.baseURL + "/desktop/configureSSH"
-            )
+        def openRemotes():
+            self.openWindow("Remotes", url=self.server.baseURL + "/remotes")
 
         settingsMenu = wm.Menu(
             "Settings",
             [
-                wm.MenuAction("SSH configuration", openSSHConfig),
+                wm.MenuAction("Remotes", openRemotes),
             ],
         )
 
@@ -372,6 +382,9 @@ class AppDelegate(metaclass=SingletonMeta):
         else:
             wo.width = 1200
             wo.height = 800
+
+        if self.debugURL is not None:
+            homeURL = f"{self.server.baseURL}/{self.debugURL}"
 
         homeURL = self.tokenize(homeURL)
 
@@ -481,8 +494,16 @@ class AppDelegate(metaclass=SingletonMeta):
             file_types=fileTypes,
         )
 
+        if result is None:
+            return None
+
+        # On Linux, the result is a tuple
         if isinstance(result, tuple):
             result = "".join(result)
+
+        # On compiled macOS, the result is a pyobjc_unicode object
+        if self.platform == "darwin":
+            result = str(result)
 
         return result
 
@@ -493,33 +514,149 @@ class AppDelegate(metaclass=SingletonMeta):
         """
         return f"{url}?shemsu={webview.token}"
 
-    def configureSSH(self, sshConfig: dict):
+    def configureRemote(self, newConfig: dict):
         """
         Configures the SSH connection for HPC clusters
 
-        param sshConfig: A dictionary containing the ssh configuration
+        param newConfig: An object containing the ssh configuration
         {
-            user: str,
+            name: str,
+            username: str,
             host: str,
             port: int,
             keys: str,
+            proxyCommand: str,
         }
         """
 
+        # Check that the config is valid
+        if newConfig.get("name") is None:
+            raise Exception("The name of the remote is required")
+
+        if newConfig.get("username") is None:
+            raise Exception("The user of the remote is required")
+
+        if newConfig.get("host") is None:
+            raise Exception("The host of the remote is required")
+
+        if newConfig.get("port") is None:
+            raise Exception("The port of the remote is required")
+
+        if newConfig.get("keys") is None and newConfig.get("password") is None:
+            raise Exception("Either the keys or the password of the remote is required")
+
+        if newConfig.get("keys") is not None and newConfig.get("password") is not None:
+            raise Exception("Either the keys or the password of the remote is required")
+
+        if newConfig.get("keys") is not None and not os.path.exists(newConfig["keys"]):
+            raise Exception("The keys file does not exist")
+
+        if newConfig["name"].lower() == "local":
+            # The local remote does not need to be configured
+            raise Exception("The local machine does not need to be configured")
+
+        remotesPath = os.path.join(self.appSupportDir, "remotes.json")
+
+        if os.path.exists(remotesPath):
+            # Load and update the existing ssh configuration
+            with open(remotesPath, "r") as f:
+                remotesConfig: typing.Dict[str, str] = json.load(f)
+
+            # Check if the remote already exists
+            if newConfig["name"] in remotesConfig.keys():
+                # Update the remote
+                remotesConfig[newConfig["name"]] = newConfig
+            else:
+                # Create a new remote
+                remotesConfig.update({newConfig["name"]: newConfig})
+
+        else:
+            # Create a new ssh configuration
+            remotesConfig = {newConfig["name"]: newConfig}
+
+        with open(remotesPath, "w") as f:
+            json.dump(remotesConfig, f)
+
+    def listRemotes(self):
+        """
+        Loads the ssh configuration file and returns the list of remotes
+        """
+
+        remotesFile = os.path.join(self.appSupportDir, "remotes.json")
+
+        if not os.path.exists(remotesFile):
+            return []
+
         import json
 
-        user_data = {
-            "user": sshConfig["user"],
-            "host": sshConfig["host"],
-            "port": sshConfig["port"],
-            "dir": sshConfig["dir"],
-        }
+        with open(remotesFile, "r") as f:
+            remotesConfig: typing.Dict[str:str] = json.load(f)
 
-        with open(f"{self.appSupportDir}/ssh.json", "w") as f:
-            json.dump(user_data, f)
+        # Convert the remotes configuration to a list
+        remotes = []
+        for name, config in remotesConfig.items():
+            remotes.append(config)
 
-        with open(f"{self.appSupportDir}/ssh.key", "w") as f:
-            f.write(sshConfig["keys"])
+        return remotes
+
+    def deleteRemote(self, name: str):
+        """
+        Removes a remote from the ssh configuration file
+
+        :param name: The name of the remote to remove
+        """
+
+        remotesFile = os.path.join(self.appSupportDir, "remotes.json")
+
+        if not os.path.exists(remotesFile):
+            return
+
+        import json
+
+        with open(remotesFile, "r") as f:
+            remotesConfig: typing.Dict[str:str] = json.load(f)
+
+        # Remove the remote
+        remotesConfig.pop(name)
+
+        with open(remotesFile, "w") as f:
+            json.dump(remotesConfig, f)
+
+    def connectRemote(self, name: str):
+        """
+        Connects to a remote machine
+
+        :param name: The name of the remote to connect
+        """
+
+        remotesFile = os.path.join(self.appSupportDir, "remotes.json")
+
+        if not os.path.exists(remotesFile):
+            raise Exception("The remotes configuration file does not exist")
+
+        import json
+
+        with open(remotesFile, "r") as f:
+            remotesConfig: typing.Dict[str:str] = json.load(f)
+
+        # Check if the remote exists
+        if name not in remotesConfig.keys() and name.lower() != "local":
+            raise Exception(f"The remote {name} does not exist")
+
+        if name.lower() == "local":
+            self.remote = RemotesAPI("Local", local=True)
+        else:
+            # Get the remote configuration if its not the local machine
+            selectedRemote = remotesConfig[name]
+
+            # Init the Remote
+            self.remote = RemotesAPI(selectedRemote)
+
+            # Connect to the remote
+            self.remote.connect()
+
+        if not self.remote.isConnected:
+            raise Exception("Could not connect to the remote")
 
     def openAppSupportDir(self):
         """
@@ -583,8 +720,24 @@ def LaunchApp():
     # Check for the --debug flag (-d) (Only development)
     # Forces the server to run in debug mode
     debug = False
+    debugURL = None
     if ("--debug" in sys.argv or "-d" in sys.argv) and not cython.compiled:
         debug = True
+
+        # Check for the -f --force-production flag
+        if "--force-production" in sys.argv or "-f" in sys.argv:
+            debug = False
+
+        # Check for the --url (-u) flag
+        if "--url" in sys.argv or "-u" in sys.argv:
+            index = (
+                sys.argv.index("--url") if "--url" in sys.argv else sys.argv.index("-u")
+            )
+            try:
+                debugURL = sys.argv[index + 1]
+            except IndexError:
+                print("No debug URL provided. Usage: -d -u <url>")
+                sys.exit(1)
 
     # Check for the --browser (-b) flag
     browser = False
@@ -600,7 +753,7 @@ def LaunchApp():
         server_mode = True
 
     # Prepare the app delegate
-    app = AppDelegate(debug, server_mode, browser)
+    app = AppDelegate(debug, server_mode, browser, debugURL)
     """
     App Delegate is a singleton class that will handle the app
     """

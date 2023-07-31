@@ -8,6 +8,7 @@ ext_modules = [
     Extension("App", ["App/__init__.py"]),
     Extension("Server.server", ["Server/server.py"]),
     Extension("Server.plugin_manager", ["Server/plugin_manager.py"]),
+    Extension("Server.remotes_manager", ["Server/remotes_manager.py"]),
     Extension(
         "Server.__init__",
         ["Server/__init__.py"],

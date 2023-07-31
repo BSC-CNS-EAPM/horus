@@ -4,6 +4,74 @@ import json
 import os
 
 
+class PluginRemote:
+    def __init__(self, remote) -> None:
+        self._remote = remote
+
+    def submitSlurm(self, script: str):
+        """
+        Runs a Slurm script on the remote.
+        :param script: The script path or the script as a string to run on the cluster.
+        """
+        self._remote.connect()
+        output = self._remote.runScript(script)
+        self._remote.disconnect()
+        return output
+
+    def remoteCommand(self, command: str):
+        """
+        Executes a command on the remote.
+        The output of the command will be returned.
+
+        :param command: The command to execute.
+        """
+        output = self._remote.command(command)
+
+        return output
+
+    def sendData(self, source: str, destination: str):
+        """
+        Sends a file to the remote.
+        :param file: The path to the file to send.
+        """
+
+        # Fix the ~ in the remote path (https://github.com/fabric/fabric/issues/2228)
+
+        if "~" in destination:
+            destination = destination.replace("~", self.userHome)
+
+        self._remote.transferTo(source, destination)
+
+    def getData(self, source: str, destination: str):
+        """
+        Gets a file from the remote.
+        :param file: The path to the file to get.
+        """
+
+        # Fix the ~ in the remote path
+        if "~" in source:
+            source = source.replace("~", self.userHome)
+
+        self._remote.transferFrom(source, destination)
+
+    @property
+    def userHome(self):
+        """
+        Returns the expanded user home directory.
+        """
+
+        return self._remote.userHome
+
+    @property
+    def horusDir(self):
+        """
+        Returns the Horus directory on the remote.
+        If on local, returns the flow directory.
+        """
+
+        return self._remote.horusDir
+
+
 class TempFile:
     """Temporary file class used to store temporary files in user dirs"""
 
@@ -123,7 +191,7 @@ class PluginPage:
     """
     Define endpoints that the plugin can access from the defined pages.
     The endpoint URL should be defined as a string, for example: "/my_endpoint".
-    Later, Horus will add the endpoint in the following format: 
+    Later, Horus will add the endpoint in the following format:
     "/plugins/pages/pluginid.pagename/my_endpoint".
     Therefore, remember to perform any GET or POST request to that endpoint.
 
@@ -340,7 +408,7 @@ class PluginBlock:
     ):
         self.id: str = "baseplugin.block"
         """
-        The id of the block. 
+        The id of the block.
         It is composed by the plugin name and the name of the block.
         The addBlock() method of the Plugin class will automatically
         assign the id to the block.
@@ -576,6 +644,12 @@ class PluginBlock:
         for c in self._getConfigs():
             configList.append(c._toDict())
         return configList
+
+    def _setRemote(self, remote):
+        """
+        Sets the remote of the block.
+        """
+        self.remote = PluginRemote(remote)
 
 
 class PluginConfig(PluginBlock):

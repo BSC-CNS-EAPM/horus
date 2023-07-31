@@ -14,10 +14,10 @@ dependencies:
       - pyobjc==9.1.1; sys_platform == 'darwin'
       - pygobject; sys_platform == 'linux'
       - pycairo; sys_platform == 'linux'
-      - flask-socketio
-      - eventlet
-      - gevent
+      - flask-socketio==5.3.4
+      - eventlet==0.33.3
+      - gevent==22.10.2
       - Cython==3.0.0b3
-      - paramiko
-      - pytest
-      - pytest-mock
+      - pytest==7.3.1
+      - pytest-mock=3.11.1
+      - fabric==3.1.0

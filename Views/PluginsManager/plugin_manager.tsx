@@ -6,7 +6,6 @@ import "./plugin_manager.css";
 import { SearchComponent } from "../Components/Toolbar/toolbar";
 import { HorusModal, HorusModalProps } from "../Components/reusable";
 import { socket } from "../Utils/socket";
-
 import {
   HorusPlugin,
   BlockProps,
@@ -206,7 +205,7 @@ function InstalledPlugins() {
         </div>
       ),
       show: true,
-      size: "xl",
+      size: "sm",
     });
   };
 
@@ -274,7 +273,13 @@ function PluginCard(props: PluginCardProps) {
       Accept: "application/json",
     };
 
-    await horusPost("/plugins/uninstall", headers, body);
+    const response = await horusPost("/plugins/uninstall", headers, body);
+
+    const data = await response.json();
+
+    if (!data.ok) {
+      alert("Error deleting plugin");
+    }
 
     // Refresh page
     window.location.reload();
@@ -356,31 +361,45 @@ export function PluginManager() {
   const [modalProps, setModalProps] = useState<HorusModalProps>({
     header: "Installing plugin",
     body: (
-      <div className="flex justify-center align-items-center">
+      <div className="flex justify-center align-items-center flex-col">
         <RotatingLines />
+        <div className="text-center">{"Select a plugin to install..."}</div>
       </div>
     ),
-    footer: null,
+    footer: (
+      <div className="text-center">
+        Please wait while the plugin is being installed. This may take a while.
+      </div>
+    ),
     show: false,
     size: "lg",
   });
 
-  useEffect(() => {
-    function updateText(data) {
-      // Always convert to string
-      data = data.toString();
+  const updateText = (data) => {
+    let stringData = data.toString();
 
-      setModalProps({
-        ...modalProps,
-        body: (
-          <div className="flex justify-center align-items-center">
-            <RotatingLines />
-            <div className="ml-2">{data}</div>
-          </div>
-        ),
-      });
+    // Strip the string
+    stringData = stringData.replace(/(\r\n|\n|\r)/gm, "");
+
+    if (stringData === "" || stringData === " ") {
+      return;
     }
 
+    // Update the state
+    setModalProps((currentModalProps) => {
+      return {
+        ...currentModalProps,
+        body: (
+          <div className="flex justify-center align-items-center flex-col">
+            <RotatingLines />
+            <div className="text-center">{stringData}</div>
+          </div>
+        ),
+      };
+    });
+  };
+
+  useEffect(() => {
     // When recieving a message from the server, log it to the console
     socket.on("installPluginDep", updateText);
 
@@ -450,6 +469,14 @@ export function PluginManager() {
           </div>
         </div>
         <div>
+          {/* Add a hidden rotating lines div because otherwise the rotating lines will not be shown in the modal */}
+          <div
+            style={{
+              display: "none",
+            }}
+          >
+            <RotatingLines />
+          </div>
           {installingModal}
           <InstalledPlugins />
         </div>

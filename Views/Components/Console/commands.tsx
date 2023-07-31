@@ -5,6 +5,7 @@ import { socket } from "../../Utils/socket";
 declare global {
   interface Window {
     molstar?: HorusMolstar;
+    selectedRemote?: string;
   }
 }
 
@@ -136,6 +137,32 @@ export default function getCommands() {
         // Parse as a string with \n as a separator
         const strucListString = names.join("\n");
         return strucListString;
+      },
+    },
+    remote: {
+      description: "Execute a command on a remote server.",
+      usage: "remote <command>",
+      fn: async (...args) => {
+        const header = {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        };
+        const body = JSON.stringify({
+          command: args.join(" "),
+          remote: window.selectedRemote,
+        });
+        try {
+          const response = await horusPost("/remotes/command", header, body);
+          const data = await response.json();
+
+          if (data.ok) {
+            return data.output;
+          }
+
+          return "Error running command: " + data.msg;
+        } catch (e) {
+          return e.message;
+        }
       },
     },
   };

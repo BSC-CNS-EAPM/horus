@@ -108,7 +108,7 @@ You can also run the app in server development mode (preferred):
 python Horus.py --debug --server
 ```
 
-The app can also be run on "Browser mode" which is usefol for systems that do not have GPU acceleration:
+The app can also be run on "Browser mode" which is useful for systems that do not have GPU acceleration:
 
 ```
 python Horus.py --browser

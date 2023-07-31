@@ -33,7 +33,7 @@ function BrowserMode() {
 
   if (error || !url) {
     return (
-      <div className="flex flex-col justify-center items-center overflow-hidden">
+      <div className="flex flex-col justify-center items-center overflow-hidden h-full">
         <img
           src={nostrum_logo}
           alt="Nostrum Logo"

@@ -9,6 +9,7 @@ from contextlib import redirect_stdout, redirect_stderr
 import subprocess
 import importlib.util
 import shutil
+from flask_socketio import SocketIO
 
 
 # Define a overwrite exception
@@ -87,7 +88,7 @@ class PluginManager:
         # Add the dependencies directory to the PYTHON path
         sys.path.append(self.depsDir)
 
-    def installPlugin(self):
+    def installPlugin(self, socketio: SocketIO):
         """
         Opens the file dialog to select a plugin file
         and installs it to the plugins folder.
@@ -105,7 +106,8 @@ class PluginManager:
             return
 
         for f in files:
-            self._installPlugin(f)
+            with PrintCapturer(socketio, "installPluginDep"):
+                self._installPlugin(f)
 
         self.pluginChanges = True
 
@@ -400,14 +402,23 @@ class PluginManager:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
         ) as p:
-            if p.stdout is not None:
-                for line in p.stdout:
-                    print(line)
-                    # emit("installPluginDep", line
-            if p.stderr is not None:
+            # Print the output
+            for line in p.stdout:
+                strippedOut = line.decode("utf-8").strip()
+                if strippedOut != "":
+                    print(strippedOut)
+
+            # Print the error
+            if p.stderr:
                 for line in p.stderr:
-                    print(line)
-                    # emit("installPluginDep", line)
+                    strippedErr = line.decode("utf-8").strip()
+                    if strippedErr != "":
+                        print(strippedErr)
+
+            # Wait for the process to finish
+            p.wait()
+
+            # Check the return code
             if p.returncode != 0 and p.returncode is not None:
                 print(f"Dependency {dep} could not be installed.")
                 raise Exception(f"Dependency {dep} could not be installed.")
@@ -507,9 +518,22 @@ class PluginManager:
 
         return block
 
-    def executeBlock(self, blockID, variables, inputs, workingDir):
+    def executeBlock(
+        self,
+        blockID,
+        variables,
+        inputs,
+        workingDir,
+        socketio: SocketIO,
+    ):
         """
         Executes an action of a plugin.
+
+        :param blockID: The id of the block to execute.
+        :param variables: The variables of the block.
+        :param inputs: The inputs of the block.
+        :param workingDir: The working directory to execute the block.
+        :param selectedRemote: If any, the remote where to execute the block.
         """
 
         # Find the block
@@ -538,24 +562,24 @@ class PluginManager:
         depsDir = os.path.join(plugin._path, "deps")
         sys.path.append(depsDir)
 
-        # Capture all stdout and stderr output
+        # Get the cluster api from the app delegate
+        from App import AppDelegate
+
+        rAPI = AppDelegate().remote
+
+        # Update the block with the remote configuration
+        block._setRemote(rAPI)
+
+        # Execute the block
         error = False
         errorMSG = ""
-        with io.StringIO() as buf, redirect_stdout(buf), redirect_stderr(buf):
-            # Execute the block
-            outputs = None
-            try:
+        outputs = None
+        try:
+            with PrintCapturer(socketio):
                 outputs = block()
-            except Exception as e:
-                print(f"Error executing block {blockID}: {e}")
-                error = True
-                errorMSG = str(e)
-
-            # Get the output
-            printOutput = buf.getvalue()
-
-        # Print the output to the regular terminal
-        print(printOutput)
+        except Exception as e:
+            error = True
+            errorMSG = str(e)
 
         # Restore the working dir
         os.chdir(self.workingDir)
@@ -564,10 +588,10 @@ class PluginManager:
         sys.path.pop()
 
         if error:
-            raise Exception(printOutput + "\n" + errorMSG)
+            raise Exception(errorMSG)
 
-        # Return the output
-        return outputs, printOutput
+        # Return the output of the block
+        return outputs
 
     def _saveFlowInternal(self, flow, overwrite=False):
         """
@@ -623,7 +647,7 @@ class PluginManager:
                 if not flowPath.endswith(".flow"):
                     flowPath += ".flow"
                 flow["path"] = flowPath
-                flow["name"] = os.path.basename(flowPath).replace(".flow", "")
+                # flow["name"] = os.path.basename(flowPath).replace(".flow", "")
             else:
                 flowPath = os.path.join("flows", flow.get("name") + ".flow")
                 overwrite = True
@@ -810,3 +834,27 @@ class PluginManager:
         self.pluginChanges = True
         self._initializePlugins()
         print("Plugins reloaded.")
+
+
+class PrintCapturer:
+    def __init__(self, socketio: SocketIO, printTo: str = "printTerm"):
+        self.socketio = socketio
+        self.printTo = printTo
+
+    def write(self, message):
+        self.socketio.emit(self.printTo, message)
+        self.old_stdout.write(message)
+        self.socketio.sleep(0)
+
+    def flush(self):
+        self.old_stdout.flush()
+
+    def __enter__(self):
+        self.old_stdout = sys.stdout
+        self.old_stderr = sys.stderr
+        sys.stdout = self
+        sys.stderr = self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        sys.stdout = self.old_stdout
+        sys.stderr = self.old_stderr
