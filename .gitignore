@@ -161,10 +161,11 @@ flows/
 AppSupport/Plugins/*
 
 # Include NBDSuite plugin except the config and Pages folder
-!AppSupport/Plugins/NBDSuite/
-AppSupport/Plugins/NBDSuite/config/
-AppSupport/Plugins/NBDSuite/Pages/
-AppSupport/Plugins/NBDSuite/deps/
+!AppSupport/Plugins/nbdsuite/
+!AppSupport/Plugins/nbdsuite/flows
+AppSupport/Plugins/nbdsuite/config/
+AppSupport/Plugins/nbdsuite/Pages/
+AppSupport/Plugins/nbdsuite/deps/
 
 # Plugin dependencies
 AppSupport/DefaultPlugins/*/deps/
@@ -180,3 +181,27 @@ AppSupport/DefaultPlugins/*/config/
 
 # Ignore HorusAPI .c
 HorusAPI/src/*.c
+
+# Recent flows
+AppSupport/recent_flows.json
+
+# User settings
+AppSupport/settings.json
+
+# Add .hypothesis (pytest)
+.hypothesis/
+
+# Include the .env of the App (doe snot include sensitive data)
+!App/.env
+
+# Singularity images
+*.sif
+
+# Slurm .out and .err
+*.err
+*.out
+
+* Yarn
+yarn.lock
+
+etc/

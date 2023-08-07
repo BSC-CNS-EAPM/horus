@@ -312,7 +312,12 @@ function FlowReciver(props: FlowReciverProps) {
 
   const openingFlow = useRef(false);
 
-  const loadFlow = async () => {
+  const loadFlow = async (
+    openRecent: {
+      savedID: string;
+      path: string;
+    } = null
+  ) => {
     if (openingFlow.current) {
       return;
     }
@@ -330,8 +335,28 @@ function FlowReciver(props: FlowReciverProps) {
       }
     }
 
-    const response = await horusGet("/openflow");
-    const data = await response.json();
+    let data = {
+      ok: false,
+      flow: null,
+      error: "Early error opening flow",
+    };
+
+    console.log("Open recent: ", openRecent);
+    if (openRecent !== null) {
+      const header = {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      };
+      const body = JSON.stringify({
+        savedID: openRecent.savedID,
+        path: openRecent.path,
+      });
+      const response = await horusPost("/openRecentFlow", header, body);
+      data = await response.json();
+    } else {
+      const response = await horusGet("/openflow");
+      data = await response.json();
+    }
 
     if (!data.ok) {
       alert(data.error);
@@ -502,6 +527,12 @@ function FlowReciver(props: FlowReciverProps) {
     fetchRemotes();
   }, []);
 
+  const handleOpenFlow = (
+    e: CustomEvent<{ savedID: string; path: string }>
+  ) => {
+    loadFlow(Object.keys(e.detail).length === 0 ? null : e.detail);
+  };
+
   useEffect(() => {
     // Add an event listener to clear all the state when the "New" button is clicked in the toolbar
     window.addEventListener("newFlow", (e) => {
@@ -509,7 +540,7 @@ function FlowReciver(props: FlowReciverProps) {
     });
 
     // Add an event listener to load a flow when the "Open" button is clicked in the toolbar
-    window.addEventListener("openFlow", loadFlow);
+    window.addEventListener("openFlow", handleOpenFlow);
 
     // Add an event listener to save a flow when the "Save" button is clicked in the toolbar
     window.addEventListener("saveFlow", handleSave);
@@ -528,13 +559,13 @@ function FlowReciver(props: FlowReciverProps) {
       window.removeEventListener("newFlow", (e) => {
         handleNew();
       });
-      window.removeEventListener("openFlow", loadFlow);
+      window.removeEventListener("openFlow", handleOpenFlow);
       window.removeEventListener("saveFlow", handleSave);
       window.removeEventListener("saveFlowAs", debouncedHandleSaveAs);
       window.removeEventListener("terminalCommand", handleTerminalCommand);
       window.removeEventListener("centerView", centerView);
     };
-  }, [props.placedBlocks]);
+  }, [props.placedBlocks, flowName, selectedRemote, currentExecuting]);
 
   const [showRemotes, setShowRemotes] = useState(false);
 
@@ -601,7 +632,13 @@ function FlowReciver(props: FlowReciverProps) {
           ) : (
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              fill={isConnecting ? "orange" : remoteConnected ? "green" : "red"}
+              fill={
+                isConnecting
+                  ? "var(--light-orange)"
+                  : remoteConnected
+                  ? "var(--light-green)"
+                  : "var(--light-red)"
+              }
               viewBox="0 0 24 24"
               strokeWidth={1.5}
               stroke="currentColor"

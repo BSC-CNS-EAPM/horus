@@ -227,3 +227,24 @@
   cursor: pointer;
   transform: translateY(0%);
 }
+
+.hover-description {
+  background-color: var(--broken-white);
+  border-radius: 5px;
+  box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.18);
+  width: 10rem;
+  text-align: center;
+  z-index: 99;
+  border: 1px solid black;
+  position: absolute;
+  left: -5rem;
+}
+
+.blocks-loading {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin-top: -5rem;
+  text-align: center;
+}

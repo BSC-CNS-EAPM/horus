@@ -1,30 +1,16 @@
 import os
 import sys
 import typing
-import json
-import uuid
 from HorusAPI import Plugin, PluginBlock, PluginPage
 import io
 from contextlib import redirect_stdout, redirect_stderr
 import subprocess
+
+# from eventlet.green import subprocess
 import importlib.util
 import shutil
 from flask_socketio import SocketIO
-
-
-# Define a overwrite exception
-class OverwriteException(Exception):
-    def __init__(self, name: str, path: str, message: str):
-        """
-        An exception that is raised when trying to overwrite a file.
-
-        - name: The name of the file (without extension)
-        - path: The path to the file (with extension)
-        - message: The error message
-        """
-        super().__init__(message)
-        self.name = name
-        self.path = path
+import json
 
 
 class PluginManager:
@@ -45,13 +31,6 @@ class PluginManager:
 
         # Save the current working dir
         self.workingDir = os.getcwd()
-
-    def loadPlugins(self):
-        """
-        Initializes the plugins after the app has started.
-        """
-
-        print("Loading plugins...")
 
         # Initialize the plugins
         self._initializePlugins()
@@ -81,12 +60,12 @@ class PluginManager:
 
         # Defines the dependencies directory, which should
         # be in the AppSupport directory
-        self.depsDir = os.path.join(appSupportDir, "Dependencies")
-        if not os.path.exists(self.depsDir):
-            os.mkdir(self.depsDir)
+        # self.depsDir = os.path.join(appSupportDir, "Dependencies")
+        # if not os.path.exists(self.depsDir):
+        #     os.mkdir(self.depsDir)
 
-        # Add the dependencies directory to the PYTHON path
-        sys.path.append(self.depsDir)
+        # # Add the dependencies directory to the PYTHON path
+        # sys.path.append(self.depsDir)
 
     def installPlugin(self, socketio: SocketIO):
         """
@@ -97,7 +76,7 @@ class PluginManager:
 
         try:
             files = AppDelegate().openFileSelectDialog(
-                allowMultiple=True, fileTypes=("Horus plugins (*.hp;*.py)",)
+                allowMultiple=True, fileTypes=("Horus plugins (*.hp)",)
             )
         except Exception as e:
             raise Exception(f"Failed to get plugin path: {e}")
@@ -107,6 +86,7 @@ class PluginManager:
 
         for f in files:
             with PrintCapturer(socketio, "installPluginDep"):
+                print("Installing plugin: " + f)
                 self._installPlugin(f)
 
         self.pluginChanges = True
@@ -119,17 +99,23 @@ class PluginManager:
         pluginName = os.path.splitext(pluginName)[0]
 
         # Create a folder with the same name as the plugin
-        newPluginDir = os.path.join(self.pluginsDir, pluginName)
+        newPluginDir = os.path.join(self.pluginsDir, "tmpInstall")
 
         if os.path.exists(newPluginDir):
-            raise Exception(f"Plugin {os.path.basename(path)} already installed.")
+            raise Exception(
+                f"Plugin with name {os.path.basename(path)} already installed."
+            )
 
         os.mkdir(newPluginDir)
+
+        print("Copying plugin to tmp folder...")
 
         newPlugin = shutil.copy(path, newPluginDir)
 
         # If the plugin is provided in .hp format, unzip it
         if newPlugin.endswith(".hp"):
+            print("Unzipping plugin...")
+
             # Unzip the plugin
             import zipfile
 
@@ -138,12 +124,25 @@ class PluginManager:
 
             # Remove the .hp file
             os.remove(newPlugin)
+        else:
+            raise Exception("Invalid plugin format. (.hp expected)")
 
         # Get the .py file
-        newPlugin = os.path.join(newPluginDir, pluginName + ".py")
+        # newPlugin = os.path.join(newPluginDir, pluginName + ".py")
 
         try:
-            self._loadPlugin(newPlugin)
+            print("Checking plugin...")
+            loadedPlugin = self._loadPlugin(newPluginDir)
+            # If everything went correct, move the plugin to its folder
+            pluginFinalPath = os.path.join(self.pluginsDir, loadedPlugin.id)
+            if not os.path.exists(pluginFinalPath):
+                print("Saving plugin to its folder...")
+                shutil.move(newPluginDir, pluginFinalPath)
+            else:
+                raise Exception(
+                    f"Plugin {loadedPlugin.id} already exists.\
+                    Uninstall it first to install the new version."
+                )
         except Exception as e:
             shutil.rmtree(newPluginDir)
             raise Exception(e)
@@ -181,6 +180,7 @@ class PluginManager:
 
         # Remove the plugin folder
         pluginPath = os.path.join(self.pluginsDir, plugin._path)
+
         shutil.rmtree(pluginPath)
 
         self.pluginChanges = True
@@ -192,35 +192,19 @@ class PluginManager:
         """
 
         # List the directories present in the plugins directory
-        installed = os.listdir(self.pluginsDir)
+        plugins = [
+            os.path.join(self.pluginsDir, p)
+            for p in os.listdir(self.pluginsDir)
+            if not p.startswith(".")
+        ]
 
         # List the directories present in the default plugins directory
-        try:
-            defaultPlugins = os.listdir(self.defaultPluginsDir)
-            installed += defaultPlugins
-        except AttributeError:
-            # We are not in a bundle
-            defaultPlugins = []
-
-        # Filter the python files
-        plugins = []
-        for pl in installed:
-            # Get the plugin file based on the folder name + .py
-            pluginFile = os.path.join(self.pluginsDir, pl, pl + ".py")
-            # Check if the plugin file exists
-            # (this is needed because in macOS .DS_Store.py files are
-            # listed but don't exist)
-            if os.path.exists(pluginFile):
-                plugins.append(pluginFile)
-
-        for pl in defaultPlugins:
-            # Get the plugin file based on the folder name + .py
-            pluginFile = os.path.join(self.defaultPluginsDir, pl, pl + ".py")
-            # Check if the plugin file exists
-            # (this is needed because in macOS .DS_Store.py files are
-            # listed but don't exist)
-            if os.path.exists(pluginFile):
-                plugins.append(pluginFile)
+        defaultPlugins = [
+            os.path.join(self.defaultPluginsDir, p)
+            for p in os.listdir(self.defaultPluginsDir)
+            if not p.startswith(".")
+        ]
+        plugins += defaultPlugins
 
         return plugins
 
@@ -256,23 +240,56 @@ class PluginManager:
 
         self.pluginChanges = False
 
-    def _loadPlugin(self, pluginPath: str):
+    def _loadPlugin(self, pluginPath: str) -> Plugin:
         """
         Loads a plugin from the given path.
+
+        :param pluginPath: The path to the plugin folder
         """
+
+        if not os.path.isdir(pluginPath):
+            raise Exception(f"Plugin {pluginPath} must be a directory.")
 
         try:
             plugin = self._checkPlugin(pluginPath)
         except Exception as e:
-            raise Exception(f"Error loading plugin {os.path.basename(pluginPath)}: {e}")
+            raise Exception(f"Error loading plugin: {e}")
 
         # Check that the plugin is not already loaded
         for p in self.loadedPlugins:
             if p == plugin:
                 return
 
-        # Get the folder path
-        pluginDir = os.path.dirname(pluginPath)
+        # Create the config folder
+        configDir = os.path.join(pluginPath, "config")
+
+        if not os.path.exists(configDir):
+            os.mkdir(configDir)
+
+        # Add the plugin to the loaded plugins
+        self.loadedPlugins.append(plugin)
+
+        # Init the plugin config
+        self._initConfig(plugin)
+
+        # Return the plugin in case its needed
+        return plugin
+
+    def _checkPlugin(self, pluginDir) -> Plugin:
+        """
+        Checks if a plugin is valid.
+
+        :param pluginPath: The path to the plugin folder
+        """
+
+        # Load the plugin.meta
+        pluginMeta = os.path.join(pluginDir, "plugin.meta")
+        if not os.path.exists(pluginMeta):
+            raise Exception("The plugin does not contain a plugin.meta file.")
+
+        # Load the plugin.meta
+        with open(pluginMeta, "r") as f:
+            pluginMeta = json.load(f)
 
         # Dependencies for the plugin
         depsDir = os.path.join(pluginDir, "deps")
@@ -281,40 +298,31 @@ class PluginManager:
         if not os.path.exists(depsDir):
             os.mkdir(depsDir)
 
-        try:
-            # Set the python path to the dependencies folder
-            sys.path.append(depsDir)
-            # Install dependencies
-            self._installDependencies(plugin, depsDir)
-        finally:
-            # Remove the python path to the dependencies folder
-            sys.path.pop()
+        # Set the python path to the dependencies folder
+        sys.path.append(depsDir)
 
-        # Create the config folder
-        configDir = os.path.join(pluginDir, "config")
+        # Install dependencies
+        self._installDependencies(pluginMeta, depsDir)
 
-        if not os.path.exists(configDir):
-            os.mkdir(configDir)
+        # Get the entry point from meta
+        entryPoint = pluginMeta.get("pluginFile", None)
+        if entryPoint is None:
+            raise Exception("The plugin does not contain a pluginFile entry.")
 
-        self.loadedPlugins.append(plugin)
-
-        # Init the plugin config
-        self._initConfig(plugin)
-
-    def _checkPlugin(self, pluginPath) -> Plugin:
-        """
-        Checks if a plugin is valid.
-
-        :param pluginPath: The path to the plugin file
-        """
+        pluginPath = os.path.join(pluginDir, entryPoint)
 
         # Load the plugin file and obtain the plugin variable
         spec = importlib.util.spec_from_file_location("pluginFile", pluginPath)
         if spec is None:
-            raise Exception(f"Failed to create module spec for {pluginPath}")
+            raise Exception(f"Failed to create module spec for {entryPoint}")
         pluginModule = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(pluginModule)  # type: ignore
-
+        try:
+            spec.loader.exec_module(pluginModule)  # type: ignore
+        except Exception as e:
+            raise Exception(f"Failed to load plugin {entryPoint}: {e}")
+        finally:
+            # Pop the appended deps dir from the sys.path
+            sys.path.pop()
         # Check that the plugin variable exists
         if not hasattr(pluginModule, "plugin"):
             raise Exception("The plugin has not declared a plugin variable.")
@@ -333,31 +341,28 @@ class PluginManager:
         # Add to the plugin the full path of the containing folder
         pluginModule.plugin._path = os.path.dirname(pluginPath)
 
-        # Check if the plugin is a default plugin
-        try:
-            if pluginPath.startswith(self.defaultPluginsDir):
-                pluginModule.plugin.info["default"] = True
-            else:
-                pluginModule.plugin.info["default"] = False
-        except AttributeError:
-            # We are not in a bundle
-            pass
+        # With the path set, load the metadata
+        pluginModule.plugin.loadPluginMeta()
 
-        # Install the plugin dependencies
-        # self._installDependencies(pluginModule.plugin)
+        # Check if the plugin is a default plugin
+        if pluginPath.startswith(self.defaultPluginsDir):
+            pluginModule.plugin.info["default"] = True
+        else:
+            pluginModule.plugin.info["default"] = False
 
         # Return the loaded plugin instace
         return pluginModule.plugin
 
-    def _installDependencies(self, plugin: Plugin, depsDir: str):
+    def _installDependencies(self, pluginMeta: typing.Dict[str, str], depsDir: str):
         """
         Installs the dependencies of a plugin.
 
-        :param plugin: The plugin instance
+        :param plugin: The plugin meta info
         :param depsDir: The path to the dependencies folder
         """
 
-        dependencies = plugin.info.get("dependencies", [])
+        dependencies = pluginMeta.get("dependencies", [])
+        pluginName = pluginMeta.get("name", "Unknown")
         listedDeps = os.listdir(depsDir)
 
         # Get the installed dependencies
@@ -377,20 +382,86 @@ class PluginManager:
             exists = installedDeps.get(name, None)
 
             if exists is None:
-                print(
-                    f"Installing dependency {dep} for plugin {plugin.info['name']}..."
-                )
+                print(f"Installing dependency {dep} for plugin {pluginName}...")
                 self._installDepInternal(dep, depsDir)
                 continue
 
             if exists != version and version is not None:
-                print(f"Upgrading dependency {dep} for plugin {plugin.info['name']}...")
+                print(f"Upgrading dependency {dep} for plugin {pluginName}...")
                 self._installDepInternal(dep, depsDir)
 
     def _installDepInternal(self, dep: str, depsDir: str):
+        """
+        Installs a dependency for a plugin.
+
+        :param dep: The dependency to install
+        :param depsDir: The path to the dependencies folder
+        """
+
+        # First check that the user has a valid
+        # python interpreter when the app is frozen
+        # Unfortunately, PyInstaller does not include
+        # the python interpreter in the bundle, therefore
+        # to install dependencies we need to use the system
+        # python interpreter. If the user does not have a
+        # valid python interpreter, we cannot install dependencies
+        # and we need to raise an exception.
+        interpreter = "python"
+        try:
+            # Get the interpreter from the user settings
+            from App import AppDelegate
+
+            interpreter = (
+                AppDelegate().appSettings.getSetting("dependenciesInterpreter").value
+            )
+        except Exception as e:
+            msg = f"Could not get the python interpreter from the user settings: {e}"
+            msg += "\nDefaulting to system python interpreter."
+            print(msg)
+
+        # Check if the app is frozen
+        if getattr(sys, "frozen", False):
+            # Check if the python interpreter is valid
+            p = subprocess.Popen(
+                [interpreter, "--version"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                stdin=subprocess.PIPE,
+            )
+
+            # Wait for the process to finish
+            p.wait()
+
+            # Get the result
+            try:
+                version = p.stdout.read().decode("utf-8").strip().split(" ")[-1]
+            except Exception as e:
+                raise Exception(
+                    f"Could not get the intalled python interpreter version: {e}."
+                )
+
+            from App import AppDelegate
+
+            appPythonVersion = AppDelegate().APP_INFO["PYTHON_VERSION"]
+
+            exceptionMsg = (
+                "In order to install additional dependencies, "
+                "you need to have a valid python interpreter "
+                f"installed on your system with python v{appPythonVersion}. "
+                "You can select a specific interpreter in the settings."
+            )
+
+            # Check the return code
+            if p.returncode != 0 and p.returncode is not None:
+                raise Exception(exceptionMsg)
+
+            if version != appPythonVersion:
+                exceptionMsg += f" (Currently detected python v{version})"
+                raise Exception(exceptionMsg)
+
         with subprocess.Popen(
             [
-                sys.executable,
+                interpreter,
                 "-m",
                 "pip",
                 "install",
@@ -398,9 +469,11 @@ class PluginManager:
                 "--target",
                 depsDir,
                 "--upgrade",
+                "--no-input",
             ],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
+            stdin=subprocess.PIPE,
         ) as p:
             # Print the output
             for line in p.stdout:
@@ -593,103 +666,6 @@ class PluginManager:
         # Return the output of the block
         return outputs
 
-    def _saveFlowInternal(self, flow, overwrite=False):
-        """
-        Saves a flow to a file. (overwrites if already exists)
-        """
-
-        flowPath = flow["path"]
-
-        # Read the savedID from the file if it exists
-        overwriteCaution = False
-        if os.path.exists(flowPath) and not overwrite:
-            with open(flowPath, "r") as f:
-                saved_flow = json.load(f)
-                savedID = saved_flow.get("savedID")
-                if savedID != flow.get("savedID"):
-                    overwriteCaution = True
-
-        # Create a new savedID if it doesn't exist or is "new_flow"
-        if not flow.get("savedID") or flow["savedID"] == "new_flow":
-            flow["savedID"] = str(uuid.uuid4())
-
-        # Check if the savedID is the same as the current flow
-        if overwriteCaution and not overwrite and not self.desktop:
-            raise OverwriteException(
-                name=flow["name"], path=flowPath, message="Trying to overwrite a flow."
-            )
-
-        # Set the current folder as the flow folder
-        flow["path"] = flowPath
-
-        # Save the flow (overwrite if already exists)
-        with open(flowPath, "w") as f:
-            json.dump(flow, f)
-
-        # Return the saved flow
-        return flow
-
-    def saveFlow(self, flow):
-        overwrite = flow.get("overwrite")
-
-        flowPath = flow.get("path")
-        if not flowPath and flow.get("savedID") == "new_flow" and not overwrite:
-            if self.desktop:
-                from App import AppDelegate
-
-                filename = flow.get("name", "New flow") + ".flow"
-                fileTypes = ("Flow (*.flow)",)
-                flowPath = AppDelegate().saveFileSelectDialog(
-                    filename, fileTypes=fileTypes
-                )
-                if not flowPath:
-                    raise Exception("No path selected.")
-                if not flowPath.endswith(".flow"):
-                    flowPath += ".flow"
-                flow["path"] = flowPath
-                # flow["name"] = os.path.basename(flowPath).replace(".flow", "")
-            else:
-                flowPath = os.path.join("flows", flow.get("name") + ".flow")
-                overwrite = True
-                flow["path"] = flowPath
-        return self._saveFlowInternal(flow, overwrite)
-
-    def _openFlowInternal(self, flowPath):
-        """
-        Opens a flow from a file.
-        """
-
-        # Read the flow file
-        with open(flowPath, "r") as f:
-            flow = json.load(f)
-
-        # Set the flow path
-        flow["path"] = flowPath
-
-        # Return the flow
-        return flow
-
-    def openFlow(self):
-        """
-        Opens the file select dialog to open a flow.
-        """
-        if self.desktop:
-            from App import AppDelegate
-
-            flowPath = AppDelegate().openFileSelectDialog(
-                allowMultiple=False, fileTypes=("Flow (*.flow)",)
-            )
-
-            if flowPath:
-                if isinstance(flowPath, tuple):
-                    flowPath = flowPath[0]
-                return self._openFlowInternal(str(flowPath))
-            else:
-                return None
-        else:
-            # WIP implement server user folders
-            return None
-
     def _getPageInfo(self, pg: PluginPage, p: Plugin):
         return {
             "id": pg.id,
@@ -698,6 +674,7 @@ class PluginManager:
             "description": pg.description,
             "html": f"{p._path}/Pages/{pg.html}",
             "url": f"/plugins/pages/{pg.id}",
+            "deps": os.path.join(p._path, "deps"),
         }
 
     def getPagesObject(self):
@@ -834,6 +811,41 @@ class PluginManager:
         self.pluginChanges = True
         self._initializePlugins()
         print("Plugins reloaded.")
+
+    def listFlows(self):
+        """
+        Returns a list of the default flows provided by the plugins
+        """
+
+        flows = []
+        # Load the predefined flows
+        for p in self.loadedPlugins:
+            flows += p._flows
+
+        return flows
+
+    def loadPredefinedFlow(self, savedID: str):
+        """
+        Returns a predefined flow with the given savedID.
+        """
+
+        flows = self.listFlows()
+        loadedFLow = None
+        for f in flows:
+            if f["savedID"] == savedID:
+                from App import AppDelegate
+
+                loadedFLow = AppDelegate()._openFlowInternal(f["path"])
+                break
+        if not loadedFLow:
+            raise Exception("Flow not found.")
+
+        # Replace the savedID and the flow path so
+        # the forntend can save it to another location
+        loadedFLow["savedID"] = "new_flow"
+        loadedFLow["path"] = None
+
+        return loadedFLow
 
 
 class PrintCapturer:

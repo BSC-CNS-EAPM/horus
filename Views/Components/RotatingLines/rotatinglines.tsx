@@ -2,7 +2,7 @@ import rotatinglines from "./rotating.gif";
 
 export default function RotatingLines(props: any) {
   return (
-    <div className="flex flex-col items-center justify-center h-full">
+    <div className="flex flex-col items-center justify-center">
       <img
         src={rotatinglines}
         alt="rotating lines"

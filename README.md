@@ -37,13 +37,31 @@ Unfortunately, a Windows version cannot be provided at the moment. However, you 
    1.1. Debian based
 
    ```
-   sudo apt install libgirepository1.0-dev gcc libgtk-3-dev
+   sudo apt install libgirepository1.0-dev \
+   gcc g++ \
+   python3-gi \
+   python3-gi-cairo \
+   gir1.2-gtk-4.0 \
+   gir1.2-webkit2-4.0 \
+   libgtk-4-dev
    ```
 
    1.2. RedHat based
 
    ```
-   sudo dnf install libgirepository1.0-devel gcc libgtk-3-devel
+   sudo dnf install redhat-lsb-core \
+   gobject-introspection-devel \
+   cairo-gobject-devel \
+   pkg-config \
+   python3-devel \
+   gtk3 \
+   gtk3-devel \
+   python3-gobject \
+   webkit2gtk3 \
+   webkit2gtk3-devel \
+   libcanberra-gtk3 \
+   PackageKit-gtk3-module \
+   glib2-devel dbus-glib-devel
    ```
 
 2. Install Miniconda
@@ -54,6 +72,8 @@ Unfortunately, a Windows version cannot be provided at the moment. However, you 
 
 3. Install Nodejs
 
+   3.1. Debian based
+
    ```
    curl -sL https://deb.nodesource.com/setup_18.x -o /tmp/nodesource_setup.sh
 
@@ -62,7 +82,17 @@ Unfortunately, a Windows version cannot be provided at the moment. However, you 
    sudo apt install nodejs
    ```
 
-4. In RedHat systems, remmeber to install the RPM tools
+   3.2. RedHat based
+
+   ```
+   curl -sL https://rpm.nodesource.com/setup_18.x -o /tmp/nodesource_setup.sh
+
+   sudo bash /tmp/nodesource_setup.sh
+
+   sudo dnf install nodejs
+   ```
+
+4. In RedHat systems, remmeber to install the RPM tools to build the .RPM package
 
    ```
    sudo dnf install -y rpmdevtools rpmlint
@@ -141,7 +171,7 @@ In debug mode, the app is accessible in the following url: [http://127.0.0.1:500
 # Distributing
 
 ```
-npm run build
+npm run distribute
 ```
 
 This will create a .dmg file on macOS, a .deb on Debian based systems and a .rpm file on RedHat based systems.

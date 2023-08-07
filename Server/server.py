@@ -68,8 +68,8 @@ class HorusServer:
         # Setup SocketIO
         self.socketio = SocketIO(
             self.server,
-            cors_allowed_origins="*",
-            async_mode=("threading" if self.debug else "eventlet"),
+            cors_allowed_origins="*" if self.debug else self.baseURL,
+            async_mode="threading" if self.debug else "eventlet",
         )
         self._socketIORoutes()
 
@@ -191,6 +191,9 @@ class HorusServer:
     def _routes(self):
         # Create a wrapper for token verification
         def verifyToken(func):
+            # ====DISABLE IT FOR NOW ====
+            return func
+
             @wraps(func)
             def wrapper(*args, **kwargs):
                 if self.token is None or self.debug:
@@ -222,10 +225,6 @@ class HorusServer:
 
         # Setup a template not found error
 
-        @self.server.route("/proteo")
-        def proteo():
-            return flask.render_template("proteopedia-wrapper/index.html")
-
         @self.server.route("/error")
         def error():
             return flask.render_template("Error/error.html")
@@ -233,11 +232,12 @@ class HorusServer:
         @self.server.route("/saveflow", methods=["POST"])
         @verifyToken
         def createFlow():
-            from .plugin_manager import OverwriteException
+            from App import OverwriteException
+            from App import AppDelegate
 
             flowData = request.get_json()
             try:
-                flow = self.pluginManager.saveFlow(flowData)
+                flow = AppDelegate().saveFlow(flowData)
                 success = {
                     "ok": True,
                     "name": flow["name"],
@@ -263,9 +263,96 @@ class HorusServer:
         @self.server.route("/openflow", methods=["GET"])
         @verifyToken
         def openFlow():
+            from App import AppDelegate
+
+            print("Opening flow ")
             try:
-                flow = self.pluginManager.openFlow()
+                if self.desktop:
+                    flow = AppDelegate().openFlow()
+                else:
+                    raise Exception("This function is only available on desktop mode.")
                 success = {"ok": True, "flow": flow}
+            except Exception as e:
+                success = {
+                    "ok": False,
+                    "error": str(e),
+                }
+            return flask.jsonify(success)
+
+        @self.server.route("/recentFlows", methods=["GET"])
+        @verifyToken
+        def recentFlows():
+            from App import AppDelegate
+
+            try:
+                flows = AppDelegate().listRecentFlows()
+                # Convert the flows to a list
+                values = flows.values()
+                flows = [flow for flow in values]
+
+                success = {"ok": True, "flows": flows}
+            except Exception as e:
+                success = {
+                    "ok": False,
+                    "error": str(e),
+                }
+            return flask.jsonify(success)
+
+        @self.server.route("/cleanRecents", methods=["GET"])
+        @verifyToken
+        def cleanRecents():
+            from App import AppDelegate
+
+            try:
+                AppDelegate().cleanRecentFlows()
+                success = {"ok": True}
+            except Exception as e:
+                success = {
+                    "ok": False,
+                    "error": str(e),
+                }
+            return flask.jsonify(success)
+
+        # @self.server.route("/openRecentflow", methods=["GET"])
+        # @verifyToken
+        # def openRecentFlow():
+        #     from App import AppDelegate
+
+        #     try:
+        #         flowData = request.get_json()
+        #         savedID = flowData.get("savedID", None)
+        #         if savedID is None:
+        #             raise Exception("No savedID provided")
+        #         flow = AppDelegate().openRecentFlow(savedID)
+        #         success = {"ok": True, "flow": flow}
+        #     except Exception as e:
+        #         success = {
+        #             "ok": False,
+        #             "error": str(e),
+        #         }
+        #     return flask.jsonify(success)
+
+        @self.server.route("/openRecentFlow", methods=["POST"])
+        @verifyToken
+        def openRecentflow():
+            try:
+                data = request.get_json()
+                if data is None:
+                    raise Exception("No data provided")
+                savedID = data.get("savedID", None)
+                path = data.get("path", None)
+                if path is not None:
+                    from App import AppDelegate
+
+                    flow = AppDelegate()._openFlowInternal(path)
+                else:
+                    if savedID is None:
+                        raise Exception("No savedID provided")
+                    flow = self.pluginManager.loadPredefinedFlow(savedID)
+                success = {
+                    "ok": True,
+                    "flow": flow,
+                }
             except Exception as e:
                 success = {
                     "ok": False,
@@ -287,6 +374,7 @@ class HorusServer:
         def installPlugin():
             try:
                 self.pluginManager.installPlugin(self.socketio)
+                self.socketio.emit("pluginChanges")
                 success = {
                     "ok": True,
                 }
@@ -309,6 +397,7 @@ class HorusServer:
                 }
             try:
                 self.pluginManager.uninstallPlugin(pluginName)
+                self.socketio.emit("pluginChanges")
                 success = {
                     "ok": True,
                 }
@@ -390,6 +479,25 @@ class HorusServer:
                 }
                 return flask.jsonify(error)
 
+        @self.server.route("/plugins/flows", methods=["GET"])
+        @verifyToken
+        def listFlows():
+            try:
+                flows = self.pluginManager.listFlows()
+                # Remove the paths
+                for flow in flows:
+                    flow.pop("path", None)
+                success = {
+                    "ok": True,
+                    "flows": flows,
+                }
+            except Exception as e:
+                success = {
+                    "ok": False,
+                    "error": str(e),
+                }
+            return flask.jsonify(success)
+
         @self.server.route("/desktop/command", methods=["POST", "GET"])
         @desktopOnly
         def executeCommand():
@@ -435,6 +543,29 @@ class HorusServer:
 
             AppDelegate().openBrowserMode()
             return "OK"
+
+        @self.server.route("/about", methods=["GET"])
+        @verifyToken
+        def about():
+            return flask.render_template("About/index.html", shemsu=self.token)
+
+        @self.server.route("/about/version", methods=["GET"])
+        @verifyToken
+        def version():
+            try:
+                from App import AppDelegate
+
+                version = AppDelegate().APP_INFO["APP_VERSION"]
+                success = {
+                    "ok": True,
+                    "version": version,
+                }
+            except Exception as e:
+                success = {
+                    "ok": False,
+                    "msg": str(e),
+                }
+            return flask.jsonify(success)
 
         @self.server.route("/openfolder", methods=["GET"])
         @verifyToken
@@ -610,6 +741,16 @@ class HorusServer:
             except Exception as e:
                 return flask.jsonify({"ok": False, "msg": str(e)})
 
+        @self.server.route("/settings")
+        @desktopOnly
+        def settings():
+            from App import AppDelegate
+
+            settings = AppDelegate().appSettings.listSettings()
+
+            return flask.jsonify({"ok": True, "settings": settings})
+            return flask.render_template("Settings/index.html")
+
         @self.server.route("/")
         def index():
             # Get the query string
@@ -660,6 +801,18 @@ class HorusServer:
         Setup the plugin pages
         """
 
+        # Create a wrapper function to add to
+        # python path the plugin deps folder
+        def viewFunctionWrapper(func, page, ep):
+            @wraps(func)
+            def wrapper(*args, **kwargs):
+                sys.path.append(page._pageInfo["deps"])
+                result = ep.function(*args, **kwargs)
+                sys.path.remove(page._pageInfo["deps"])
+                return result
+
+            return wrapper
+
         pages = self.pluginManager.getPagesObject()
 
         for page in pages:
@@ -700,7 +853,7 @@ class HorusServer:
                     # Create the endpoint
                     bp.add_url_rule(
                         ep_url,
-                        view_func=ep.function,
+                        view_func=viewFunctionWrapper(ep.function, page, ep),
                         methods=ep.methods,
                     )
 

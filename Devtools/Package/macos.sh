@@ -41,3 +41,6 @@ dmg=$(find dist/Packages -name "*.dmg")
 
 # Rename the dmg file
 mv "$dmg" dist/Packages/Horus-$version-$branch.dmg
+
+# Remove the Horus folder
+rm -rf dist/Horus

@@ -36,6 +36,12 @@ version="$version"
 # Get the system architecture
 arch=$(dpkg --print-architecture)
 
+# Get the system name (el8, ubuntu, etc)
+system=$(lsb_release -is)
+
+# Set a filename variable
+filename=Horus-$version-$branch-$arch-$system
+
 # Create the control file inside dist/linux/DEBIAN
 cat > dist/linux/DEBIAN/control << EOF
 Package: Horus
@@ -59,8 +65,8 @@ chmod 775 dist/linux/DEBIAN/postinst
 cat > dist/linux/DEBIAN/postrm << EOF
 #!/bin/bash
 
-rm -f /usr/bin/Horus
-rm -rf /usr/local/bin/Horus
+rm /usr/bin/horus
+rm -r /usr/local/bin/Horus
 EOF
 
 # Add the required permissions to the postrm script
@@ -81,20 +87,21 @@ mkdir -p dist/linux/usr/local/bin/Horus
 # Copy the horus binaies to dist/linux/usr/local/bin
 cp -r dist/Horus/* dist/linux/usr/local/bin/Horus/
 
-echo "Creating the .deb file: Horus-$version-$branch-$arch.deb"
+echo "Creating the .deb file: $filename.deb"
 
 # Package the files into a .deb file
-dpkg-deb --build dist/linux dist/Horus-$version-$branch-$arch.deb
-
-# Create the Packages directory inside dist/
-mkdir -p dist/Packages
-
-echo "Moving the .deb file to dist/Packages"
-
-# Move the .deb file to dist/Packages
-mv dist/Horus-$version-$branch-$arch.deb dist/Packages
+dpkg-deb --build dist/linux dist/$filename.deb
 
 # Remove the temporary files
 rm -rf dist/linux
+
+# Zip the Horus folder
+cd dist
+
+# Zip the Horus folder
+zip -rq $filename.zip Horus/
+
+# Remove the Horus folder
+rm -rf Horus/
 
 echo "Finished"

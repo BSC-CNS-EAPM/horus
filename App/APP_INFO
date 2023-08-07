@@ -1,0 +1,7 @@
+NAME = Horus
+
+APP_VERSION = 0.0.1a
+
+PYTHON_VERSION = 3.9.16
+
+BUNDLE_IDENTIFIER = com.nostrumbiodiscovery.horus

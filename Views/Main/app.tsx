@@ -81,6 +81,11 @@ export function App() {
   };
 
   const handleIFrame = (event) => {
+    const hasURL = event?.detail?.url;
+    if (!hasURL) {
+      setShowIFrame(false);
+      return;
+    }
     const key = event.detail.url + "-" + event.detail.pagename;
     const iframe = <IFrameLoader key={key} {...event.detail} />;
     setIframeView(iframe);

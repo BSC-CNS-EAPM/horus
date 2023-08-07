@@ -680,38 +680,19 @@ class Plugin:
     Base class for all plugins.
     """
 
+    info: dict[str, str] = {
+        "name": "Unnamed plugin",
+        "version": "0.0.1",
+        "author": "None",
+        "description": "None",
+        "dependencies": ["None"],
+    }
+
     def __init__(self, id: str):
         """
         Initializes the plugin.
 
         :param id: The id of the plugin.
-        """
-
-        self.pythonInterpreter = None
-        """
-        The python interpreter path used to run the plugin.
-        Defaults to the Horus python interpreter.
-        If you need to use a different interpreter, when the plugin is run,
-        please specify the path to the interpreter.
-
-        WIP
-        """
-
-        self.info: dict[str, typing.Any] = {
-            "name": "Plugin",
-            "version": "0.0.1",
-            "author": "None",
-            "description": "None",
-            "dependencies": ["None"],
-        }
-        """
-        Information about the plugin.
-
-        :param name: The name of the plugin
-        :param version: The version of the plugin
-        :param author: The author of the plugin
-        :param description: A description of the plugin
-        :param dependencies: A list of dependencies of the plugin
         """
 
         self._filename: str = ""
@@ -771,6 +752,24 @@ class Plugin:
     # Define the str function to print(plugin)
     def __str__(self):
         return self.info["name"]
+
+    def loadPluginMeta(self):
+        """
+        Loads the information about the plugin from the plugin.meta file.
+
+        - name: The name of the plugin
+        - version: The version of the plugin
+        - author: The author of the plugin
+        - description: A description of the plugin
+        - dependencies: A list of dependencies of the plugin
+        """
+
+        metaPath = os.path.join(self._path, "plugin.meta")
+        if os.path.exists(metaPath):
+            with open(metaPath, "r") as metaFile:
+                self.info = json.load(metaFile)
+        else:
+            raise Exception("plugin.meta file not found.")
 
     # Function to get a block by its ID
     def getBlock(self, id):
@@ -864,3 +863,46 @@ class Plugin:
 
             # Add the page to the list of pages
             self.addPage(attr)
+
+    @property
+    def _flows(self):
+        """
+        Returns a list of the flows contained
+        in the 'flows' folder of the plugin.
+
+        Internal use only.
+        """
+
+        # Get a list of the *.flow files in the flows folder
+        flowsDir = os.path.join(self._path, "flows")
+
+        # If the flows folder does not exist, no flows are present
+        if not os.path.exists(flowsDir):
+            return []
+
+        # Get the list of flows
+        flows = []
+        for file in os.listdir(flowsDir):
+            if file.endswith(".flow"):
+                # Get the path of the flow file
+                filePath = os.path.join(flowsDir, file)
+
+                # Read the flow file to get the name of the flow
+                flowName = "Unnamed flow"
+                savedID = "flow_id"
+                with open(filePath, "r") as f:
+                    flow = json.load(f)
+                    flowName = flow.get("name", "Unnamed flow")
+                    savedID = flow.get("savedID", "flow_id")
+
+                # Add the flow to the list
+                flowInfo = {
+                    "name": flowName,
+                    "path": filePath,
+                    "plugin_id": self.id,
+                    "plugin_name": self.info["name"],
+                    "savedID": savedID,
+                }
+                flows.append(flowInfo)
+
+        return flows

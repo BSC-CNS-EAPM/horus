@@ -209,6 +209,25 @@ function InstalledPlugins() {
     });
   };
 
+  const deletingPluginModal = (pluginName: string) => {
+    setModalProps({
+      header: "Deleting plugin",
+      body: (
+        <div className="flex justify-center align-items-center flex-col">
+          <RotatingLines />
+          <div className="text-center">{"Deleting plugin " + pluginName}</div>
+        </div>
+      ),
+      footer: (
+        <div className="text-center">
+          Please wait while the plugin is being deleted. This may take a while.
+        </div>
+      ),
+      show: true,
+      size: "lg",
+    });
+  };
+
   const dummyPlguins = () => {
     const fakePluginList = [];
     for (let i = 0; i < 10; i++) {
@@ -242,12 +261,20 @@ function InstalledPlugins() {
               configPlugin={() => {
                 openPluginConfiguration(plugin);
               }}
+              deleteModal={deletingPluginModal}
             />
           );
         })}
         {/* Render errors */}
         {pluginList.errors?.map((error) => {
-          return <PluginCard key={error.name} plugin={error} error={true} />;
+          return (
+            <PluginCard
+              key={error.name}
+              plugin={error}
+              error={true}
+              deleteModal={deletingPluginModal}
+            />
+          );
         })}
       </div>
     </div>
@@ -258,12 +285,16 @@ interface PluginCardProps {
   plugin: HorusPlugin;
   error: boolean;
   configPlugin?: () => void;
+  deleteModal?: (name: string) => void;
 }
 
 function PluginCard(props: PluginCardProps) {
-  const { plugin, error, configPlugin } = props;
+  const { plugin, error, configPlugin, deleteModal } = props;
 
   const deletePlugin = async () => {
+    // Show the deleting plugin modal
+    deleteModal(plugin.name);
+
     const body = JSON.stringify({
       name: plugin.name,
     });

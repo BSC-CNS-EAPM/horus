@@ -25,11 +25,14 @@ echo "Version: $version"
 
 version="$version"
 
-# Get the system architecture
-arch=$(dpkg --print-architecture)
+# Get the system architecture (we are in RHEL/CentOS, so it will always be x86_64)
+arch=$(uname -m)
+
+# Get the system name (el8, ubuntu, etc)
+system=$(lsb_release -is)
 
 # Set a filename variable
-filename=Horus-$version-$branch-$arch
+filename=Horus-$version-$branch-$arch-$system
 
 # Log the status
 echo "Creating the .rpm file: $filename.rpm"
@@ -41,8 +44,11 @@ cd dist
 # This creates the rpmbuild folder in the user's home directory
 rpmdev-setuptree
 
-# Move the compiled software into the SOURCES folder
-mv Horus ~/rpmbuild/SOURCES/
+# Copy the compiled software into the SOURCES folder
+cp -r Horus ~/rpmbuild/SOURCES/
+
+# Ignore RPATH
+export QA_SKIP_RPATHS=1
 
 # Create a .spec file
 cat > ~/rpmbuild/SPECS/horus.spec << EOF
@@ -90,18 +96,22 @@ EOF
 echo "Building..."
 rpmbuild -bb ~/rpmbuild/SPECS/horus.spec
 
-# Move the generated .rpm package to dist/Packages
-mkdir Packages
-
 # Find the generated rpm file under ~/rpmbuild/RPMS/**/*.rpm
 generated_rpm=$(find ~/rpmbuild/RPMS/ -name "*.rpm")
 
 # Rename and move the generated .rpm file
-mv $generated_rpm Packages/$filename.rpm
+mv $generated_rpm $filename.rpm
 
 echo "Created $filename.rpm"
 
 # Remove the rpmbuild folder
 rm -rf ~/rpmbuild/
 
+# Zip the Horus folder
+zip -rq $filename.zip Horus
+
+# Remove the Horus folder
+rm -rf Horus/
+
+echo "Finished"
 

@@ -49,7 +49,9 @@ class RemotesAPI:
     Whether the remote is local or not.
     """
 
-    def __init__(self, selectedRemote: t.Dict[str, t.Any], local: bool = False):
+    def __init__(
+        self, selectedRemote: t.Optional[t.Dict[str, t.Any]], local: bool = False
+    ):
         """
         Create a new ClusterAPI object.
 
@@ -74,48 +76,45 @@ class RemotesAPI:
         Connect to the remote.
         """
 
-        if self.isLocal:
-            self.horusDir = os.getcwd()
-            return
-
         # Check if connection details are provided
-        if self.host is None:
-            raise Exception("No hostname provided.")
-        if self.port is None:
-            raise Exception("No port provided.")
-        if self.username is None:
-            raise Exception("No username provided.")
-        if self.password is None and self.key is None:
-            raise Exception("No password or key provided.")
+        if not self.isLocal:
+            if self.host is None:
+                raise Exception("No hostname provided.")
+            if self.port is None:
+                raise Exception("No port provided.")
+            if self.username is None:
+                raise Exception("No username provided.")
+            if self.password is None and self.key is None:
+                raise Exception("No password or key provided.")
 
-        # Set kwargs for connection
-        connect_kwargs = {}
+            # Set kwargs for connection
+            connect_kwargs = {}
 
-        if self.password is not None:
-            connect_kwargs["password"] = self.password
+            if self.password is not None:
+                connect_kwargs["password"] = self.password
 
-        if self.key is not None:
-            connect_kwargs["key_filename"] = self.key
+            if self.key is not None:
+                connect_kwargs["key_filename"] = self.key
 
-        # Connect
-        if self.password is not None:
-            self.conn = fabric.Connection(
-                host=self.host,
-                port=self.port,
-                user=self.username,
-                connect_kwargs={
-                    **connect_kwargs,
-                },
-                gateway=self.proxyCommand or None,
-            )
-        else:
-            raise Exception("No connection method provided.")
+            # Connect
+            if self.password is not None:
+                self.conn = fabric.Connection(
+                    host=self.host,
+                    port=self.port,
+                    user=self.username,
+                    connect_kwargs={
+                        **connect_kwargs,
+                    },
+                    gateway=self.proxyCommand or None,
+                )
+            else:
+                raise Exception("No connection method provided.")
 
         # Set the path to the .horus folder on the remote
-        self.horusDir = self.userHome + "/.horus/"
+        self.horusDir = os.path.join(self.userHome, ".horus")
 
         # Create the .horus folder in the remote home directory
-        self.conn.run(f"mkdir -p {self.horusDir}")
+        self.command(f"mkdir -p {self.horusDir}")
 
     @property
     def userHome(self):
@@ -124,7 +123,7 @@ class RemotesAPI:
 
         :return: The path to the remote home directory.
         """
-        return self.conn.run("echo $HOME").stdout.strip()
+        return self.command("echo $HOME")
 
     def runScript(
         self, script: t.Optional[str] = None, scriptPath: t.Optional[str] = None
@@ -147,7 +146,7 @@ class RemotesAPI:
 
     def command(self, command: str):
         """
-        Runs a command on the remote.
+        Runs a command on the remote (or locally).
 
         :param command: The command to run.
         :return: The output of the command.

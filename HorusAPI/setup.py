@@ -1,9 +1,6 @@
 import setuptools
-import sys
 import subprocess
 import json
-
-release = False
 
 
 def get_git_version():
@@ -32,12 +29,11 @@ def get_git_version():
         branch = f"{branch}-{subroc}"
         print("Using latest git branch: ", branch)
         release = False
-    return branch
+    return branch, release
 
 
 # Get version from git tag or branch name
-print("Using latest git tag or branch name")
-branch = get_git_version()
+branch, release = get_git_version()
 
 # Get the version from package.json
 with open("../package.json") as json_file:

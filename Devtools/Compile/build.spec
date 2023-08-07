@@ -2,6 +2,7 @@ import os
 import imp
 import shutil
 import sys
+from PyInstaller.utils.hooks import collect_all
 
 currentDir = os.getcwd()
 
@@ -33,10 +34,26 @@ for plugin in os.listdir(default_plugins_folder):
         if os.path.isdir(os.path.join(plugin_folder, file)) and file == "config":
             shutil.rmtree(os.path.join(plugin_folder, file))
 
+# .env file
+app_info_file = os.path.join(currentDir, "App", "APP_INFO")
+
+# Open the APP INFO file and load as a dict
+APP_INFO = {}
+with open(app_info_file, "r") as f:
+    for line in f:
+        if "=" in line:
+            key, value = line.split("=")
+            APP_INFO[key.strip()] = value.strip()
+
+# Default settings
+default_settings = os.path.join(currentDir, "App", "default_settings.json")
+
 datas = [
     (gui_folder, "GUI"),
     (cython_folder, "."),
     (default_plugins_folder, "DefaultPlugins"),
+    (app_info_file, "."),
+    (default_settings, "."),
 ]
 
 # Required modules
@@ -64,11 +81,11 @@ imports += [
     "dns.versioned",
 ]
 
-# Modules required by Fabric
-imports += [
-    "fabric",
-]
+# Import biopython for the Horus default plugin
+imports += ["Bio", "Bio.PDB"]
 
+# Imports that are not included by default
+imports += ["cmath", "syscolors"]
 
 # Check that all the modules are installed in the environment
 currentModule = ""
@@ -83,12 +100,15 @@ except ImportError as e:
         print(f"Error importing module: {e}. Cannot compile.")
         sys.exit(1)
 
+binaries = []
+
+debug = False
 
 # Compile the app
 a = Analysis(  # noqa # type: ignore
     entry_point,
     pathex=[],
-    binaries=[],
+    binaries=binaries,
     datas=datas,
     # Include the default libraries
     hiddenimports=imports,
@@ -102,6 +122,7 @@ a = Analysis(  # noqa # type: ignore
     cipher=None,
     noarchive=False,
 )
+
 pyz = PYZ(a.pure, a.zipped_data, cipher=None)  # noqa # type: ignore
 
 exe = EXE(  # noqa # type: ignore
@@ -109,17 +130,18 @@ exe = EXE(  # noqa # type: ignore
     a.scripts,
     [],
     exclude_binaries=True,
-    name="Horus",
-    debug=False,
+    name=APP_INFO["NAME"],
+    debug=debug,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=False,
+    console=debug,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    version=APP_INFO["APP_VERSION"],
 )
 coll = COLLECT(  # noqa # type: ignore
     exe,
@@ -129,7 +151,7 @@ coll = COLLECT(  # noqa # type: ignore
     strip=False,
     upx=True,
     upx_exclude=[],
-    name="Horus",
+    name=APP_INFO["NAME"],
 )
 
 macos_icon = os.path.join(currentDir, "Resources", "horus.icns")
@@ -138,5 +160,6 @@ app = BUNDLE(  # noqa # type: ignore
     coll,
     name="Horus.app",
     icon=macos_icon,
-    bundle_identifier="com.nostrumbiodiscovery.com",
+    bundle_identifier=APP_INFO["BUNDLE_IDENTIFIER"],
+    version=APP_INFO["APP_VERSION"],
 )

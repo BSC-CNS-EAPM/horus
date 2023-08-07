@@ -29,25 +29,6 @@ NBDSuiteParser = mod.NBDSuiteParser
 def createPlugin():
     plugin = Plugin(id="NBDSuite")
 
-    plugin.info = {
-        "name": "NBDSuite",
-        "description": "The NBDSuite plugin for Horus",
-        "author": "Nostrum Biodiscovery",
-        "version": "0.0.1",
-        "dependencies": [
-            # "nbdsuite"
-            # It is not distributed by pip,
-            # thus it will be installed manually in the deps folder
-            "pandas",
-            "biopython",
-            "pydantic==1.10.11",
-            "rdkit",
-            "openmm",
-            "scipy",
-            "pyyaml",
-        ],
-    }
-
     cpusVariable = PluginVariable(
         name="CPUs",
         id="cpus",
@@ -518,6 +499,27 @@ time python -m nbdsuite.main {name}.yaml
 
     # Add the block to the plugin
     plugin.addBlock(inducedFitRefinementBlock)
+
+    # Create a test block that imports nbdsuite
+    def testBlock(block: PluginBlock):
+        print("Trying to import nbdsuite...")
+        import nbdsuite
+
+        print("Imported nbdsuite successfully.")
+        print("Version: ", nbdsuite.__version__)
+
+    # Define the block
+    testBlock = PluginBlock(
+        name="Test NBDSuite import",
+        description="Test NBDSuite import",
+        action=testBlock,
+        variables=[],
+        inputs=[],
+        outputs=[],
+    )
+
+    # Add the block to the plugin
+    plugin.addBlock(testBlock)
 
     # ========== PAGES ========== #
 

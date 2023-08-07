@@ -15,10 +15,13 @@
     --tech-gray: #616161;
     --tech-black: #212121;
     --tech-white: #ffffff;
+    --broken-white: #f5f5f5;
 
     /* Custom colors */
     --light-orange: #ffcc80;
     --light-red: #ef9a9a;
+    --light-green: #a5d6a7;
+    --light-blue: #90caf9;
   }
 }
 

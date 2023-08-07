@@ -92,12 +92,10 @@ class HorusMolstar {
         initial: {
           isExpanded: true,
           showControls: false,
-          
         },
       },
       components: {
         remoteState: "none",
-        
       },
     });
 

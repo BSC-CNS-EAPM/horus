@@ -42,7 +42,7 @@ function BlockVariablesButton({ onClick }) {
         </button>
       }
     >
-      <div className="plugin-description">Configure block</div>
+      <div className="hover-description">Configure block</div>
     </HorusPopover>
   );
 }
@@ -71,7 +71,7 @@ function DeleteBlockButton({ block, onClick }: DeleteBlockButtonProps) {
         </button>
       }
     >
-      <div className="plugin-description">Delete block</div>
+      <div className="hover-description">Delete block</div>
     </HorusPopover>
   );
 }
@@ -108,7 +108,7 @@ function PlayBlockButton({
         )
       }
     >
-      <div className="plugin-description">Execute block</div>
+      <div className="hover-description">Execute block</div>
     </HorusPopover>
   );
 }

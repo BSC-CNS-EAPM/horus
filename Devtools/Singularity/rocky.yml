@@ -1,0 +1,71 @@
+Bootstrap: docker
+From: rockylinux:8
+
+%environment
+    # Setup conda variables
+    export PATH="/opt/conda/bin:${PATH}"
+    
+
+%files
+    package.json /package.json
+    Devtools/Environment/conda_horus.yaml /Devtools/Environment/conda_horus.yaml
+
+%post
+    # Install basic dependencies
+    dnf install -y \
+    gcc \
+    gcc-c++ \
+    git \
+    curl \
+    redhat-lsb-core \
+    zip
+
+    # GTK
+    dnf install -y \
+    gobject-introspection-devel \
+    cairo-gobject-devel \
+    pkg-config \
+    gtk3-devel \
+    webkit2gtk3-devel \
+    libcanberra-gtk3 \
+    PackageKit-gtk3-module \
+    glib2-devel \
+    dbus-glib-devel \
+    atk-devel \
+    glibc-devel
+
+    # Install rpm tools
+    dnf install -y rpmdevtools rpmlint
+
+    # Install miniconda
+    curl -LO https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+    bash Miniconda3-latest-Linux-x86_64.sh -b -p /opt/conda
+    rm Miniconda3-latest-Linux-x86_64.sh
+    echo "source /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc
+    echo "conda activate base" >> ~/.bashrc
+
+    # Activate conda environment and install requirements
+    . /opt/conda/etc/profile.d/conda.sh
+    conda activate base
+
+    # Install nodejs 18
+    curl -sL https://rpm.nodesource.com/setup_18.x -o /tmp/nodesource_setup.sh
+    bash /tmp/nodesource_setup.sh
+    dnf install -y nodejs
+
+    # Install requirements
+    npm run requirements
+
+    # Fix parcel with yarn
+    npm install yarn
+    npx yarn
+
+%runscript
+    # Source conda
+    . /opt/conda/etc/profile.d/conda.sh
+    # Activate conda environment
+    conda activate horus
+    # Build horus
+    npm run build
+    # Create the packages
+    npm run distribute

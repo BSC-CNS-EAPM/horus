@@ -11,16 +11,6 @@ import time
 
 plugin = Plugin(id="horus")
 
-plugin.info = {
-    "name": "Horus",
-    "description": "Base plugin for Horus",
-    "author": "Horus",
-    "version": "0.0.1",
-    "dependencies": [
-        "biopython",
-    ],
-}
-
 structureVariable = PluginVariable(
     name="Structure",
     id="structure",
