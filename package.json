@@ -21,6 +21,7 @@
     "requirements-action:darwin": "npm install && npm install --global create-dmg",
     "clean": "rm -rf build GUI .parcel-cache .pytest_cache AppSupport/Plugins/NBDSuite/Pages/*",
     "clean-all": "npm run clean && rm -rf dist",
+    "clean-build": "rm -rf build",
     "build-nbdsuite-plugin": "sh Devtools/Compile/build_nbdsuite_plugin.sh",
     "parcel-nbdsuite": "parcel build AppSupport/Plugins/NBDSuite/dev/nbdsuite.html --dist-dir AppSupport/Plugins/NBDSuite/Pages --public-url ./",
     "parcel-nbdsuite-dev": "parcel AppSupport/Plugins/NBDSuite/dev/nbdsuite.html --dist-dir AppSupport/Plugins/NBDSuite/Pages --public-url ./",

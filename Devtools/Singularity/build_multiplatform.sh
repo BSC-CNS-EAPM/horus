@@ -7,10 +7,14 @@
 #SBATCH --nodes=1
 #SBATCH --time=01:00:00
 
-# Build for Rocky Linux 8 (cluster is this OS)
+# Build singularity images
 echo "Building Rocky Linux 8 image..."
 singularity build Devtools/Singularity/rocky.sif Devtools/Singularity/rocky.yml
 echo "Finished building Rocky Linux 8 image"
+
+echo "Building Ubuntu 22.04 image..."
+singularity build Devtools/Singularity/ubuntu.sif Devtools/Singularity/ubuntu.yml
+echo "Finished building Ubuntu 22.04 image"
 
 # Clean the build folder using the singularity image
 echo "Running npm run clean-all using Node from Rocky image..."
@@ -21,14 +25,12 @@ echo "Building Horus for Rocky Linux 8..."
 singularity run --bind .:/ Devtools/Singularity/rocky.sif
 echo "Finished building Horus for Rocky Linux 8"
 
-# Clean the build folder using the Rocky singularity image
-echo "Running npm run clean using Node from Rocky image..."
-singularity exec --bind .:/ Devtools/Singularity/rocky.sif npm run clean
+# Clean the compiled files
+echo "Running npm run clean-all using Node from Rocky image..."
+singularity exec --bind .:/ Devtools/Singularity/rocky.sif npm run clean-build
+
 
 # Build for Ubuntu 20.04
-echo "Building Ubuntu 20.04 image..."
-singularity build Devtools/Singularity/ubuntu.sif Devtools/Singularity/ubuntu.yml
-echo "Finished building Ubuntu 20.04 image"
 echo "Building Horus for Ubuntu 20.04..."
 singularity run --bind .:/ Devtools/Singularity/ubuntu.sif
 echo "Finished building Horus for Ubuntu 20.04"

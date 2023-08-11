@@ -2,7 +2,6 @@ import os
 import imp
 import shutil
 import sys
-from PyInstaller.utils.hooks import collect_all
 
 currentDir = os.getcwd()
 
@@ -99,6 +98,11 @@ except ImportError as e:
     except ImportError:
         print(f"Error importing module: {e}. Cannot compile.")
         sys.exit(1)
+
+# If we are on el8 linux, include QT5 libraries
+# Execute a 'uname -a' and check if the output contains 'el8'
+if ".el8." in os.popen("uname -a").read():
+    imports += ["PyQt5", "PyQt5.QtCore", "PyQt5.QtGui", "PyQt5.QtWidgets", "PyQt5.QtWebEngineWidgets", "PyQt5.QtWebChannel"]
 
 binaries = []
 

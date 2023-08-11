@@ -64,6 +64,10 @@ Unfortunately, a Windows version cannot be provided at the moment. However, you 
    glib2-devel dbus-glib-devel
    ```
 
+   1.3. Optional, QT5
+
+   If you want to compile a QT5 version of Horus, remember to install the QT5 library alongside with python bindings.
+
 2. Install Miniconda
 
    ```
@@ -175,3 +179,40 @@ npm run distribute
 ```
 
 This will create a .dmg file on macOS, a .deb on Debian based systems and a .rpm file on RedHat based systems.
+
+
+# Horus with QT
+
+   Horus can be used with QT instead of GTK (useful for older distributions). Install the required QT5 libraries along with Python bindings to compile a QT version of the app. Currently, the Rocky version of Horus is built with QT automatically.
+
+   You can force Horus to run with QT using the following flag for the compiled app
+
+   ```
+   ./Horus --gui=qt
+   ```
+
+   Or using an environment variable
+
+   ```
+   export HORUS_GUI=qt
+   ```
+
+   For low graphics systems where QT or GTK cannot create a GL context, run can Horus in browser mode if your web browser supports WebGL. This is mandatory for running Horus in `Nice`.
+
+   ```
+   ./Horus -b
+   ```
+
+   or
+
+   ```
+   ./Horus --browser
+   ```
+
+   Furthermore, it is recommended for edge cases where GPU acceleration is not directly accessible, to force QT with software rendering, alognside with browser mode. For running Horus inside `Nice` the final procedure will be:
+
+   ```
+   export HORUS_GUI=qt
+   export QT_QUICK_BACKEND=software
+   ./Horus --browser
+   ```

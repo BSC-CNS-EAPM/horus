@@ -469,8 +469,18 @@ class AppDelegate(metaclass=SingletonMeta):
             except requests.exceptions.ConnectionError:
                 pass
 
-        # Get the GUI backend
-        gui = "cocoa" if self.platform == "darwin" else "gtk"
+        def guiBacked():
+            # Check in the args for the --gui=qt or --gui=gtk
+            # Or in the env variable HORUS_GUI
+            for arg in sys.argv:
+                if arg.startswith("--gui="):
+                    return arg.split("=")[1]
+            if os.getenv("HORUS_GUI") is not None:
+                return os.getenv("HORUS_GUI")
+            
+            # Default to "cocoa" on macOS
+            # and "gtk" on Linux
+            return "cocoa" if self.platform == "darwin" else "gtk"
 
         homeURL = self.server.baseURL
 
@@ -495,7 +505,7 @@ class AppDelegate(metaclass=SingletonMeta):
         self.openWindow("Horus", url=homeURL, wo=wo)
 
         # Start the webview
-        webview.start(debug=self.debug, menu=self._menus(), gui=gui)
+        webview.start(debug=self.debug, menu=self._menus(), gui=guiBacked())
 
     def _startServerMode(self):
         """

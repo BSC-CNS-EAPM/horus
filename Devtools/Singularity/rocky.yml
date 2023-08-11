@@ -11,6 +11,12 @@ From: rockylinux:8
     Devtools/Environment/conda_horus.yaml /Devtools/Environment/conda_horus.yaml
 
 %post
+
+    # Enable EPEL repo
+    dnf install -y 'dnf-command(config-manager)'
+    dnf config-manager --set-enabled powertools
+    dnf install -y epel-release
+
     # Install basic dependencies
     dnf install -y \
     gcc \
@@ -20,7 +26,7 @@ From: rockylinux:8
     redhat-lsb-core \
     zip
 
-    # GTK
+    # Install GTK even though on Rocky QT will be used
     dnf install -y \
     gobject-introspection-devel \
     cairo-gobject-devel \
@@ -30,9 +36,10 @@ From: rockylinux:8
     libcanberra-gtk3 \
     PackageKit-gtk3-module \
     glib2-devel \
-    dbus-glib-devel \
-    atk-devel \
-    glibc-devel
+    dbus-glib-devel
+
+    # QT
+    dnf install -y python3-qt5
 
     # Install rpm tools
     dnf install -y rpmdevtools rpmlint
@@ -59,6 +66,11 @@ From: rockylinux:8
     # Fix parcel with yarn
     npm install yarn
     npx yarn
+
+    # Because on Rocky we are using QT,
+    # we need to install pywebview with the QT backend
+    conda activate horus
+    python -m pip install pywebview[qt]==4.2.2
 
 %runscript
     # Source conda

@@ -32,7 +32,7 @@ arch=$(uname -m)
 system=$(lsb_release -is)
 
 # Set a filename variable
-filename=Horus-$version-$branch-$arch-$system
+filename=Horus-$version-$branch-$arch-$system-QT5
 
 # Log the status
 echo "Creating the .rpm file: $filename.rpm"
