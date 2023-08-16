@@ -180,39 +180,38 @@ npm run distribute
 
 This will create a .dmg file on macOS, a .deb on Debian based systems and a .rpm file on RedHat based systems.
 
-
 # Horus with QT
 
-   Horus can be used with QT instead of GTK (useful for older distributions). Install the required QT5 libraries along with Python bindings to compile a QT version of the app. Currently, the Rocky version of Horus is built with QT automatically.
+Horus can be used with QT instead of GTK (useful for older distributions). Install the required QT5 libraries along with Python bindings to compile a QT version of the app. Currently, the Rocky version of Horus is built with QT automatically.
 
-   You can force Horus to run with QT using the following flag for the compiled app
+You can force Horus to run with QT using the following flag for the compiled app:
 
-   ```
-   ./Horus --gui=qt
-   ```
+```
+./Horus --gui=qt
+```
 
-   Or using an environment variable
+Or using an environment variable:
 
-   ```
-   export HORUS_GUI=qt
-   ```
+```
+export HORUS_GUI=qt
+```
 
-   For low graphics systems where QT or GTK cannot create a GL context, run can Horus in browser mode if your web browser supports WebGL. This is mandatory for running Horus in `Nice`.
+For systems with limited graphics capabilities, in cases where QT or GTK are unable to establish a GL context, yet standard web browsers such as Firefox or Chrome can, Horus offers the option of running in browser mode. This mode is essential for utilizing Horus in `Nice`.
 
-   ```
-   ./Horus -b
-   ```
+```
+./Horus -b
+```
 
-   or
+or
 
-   ```
-   ./Horus --browser
-   ```
+```
+./Horus --browser
+```
 
-   Furthermore, it is recommended for edge cases where GPU acceleration is not directly accessible, to force QT with software rendering, alognside with browser mode. For running Horus inside `Nice` the final procedure will be:
+Furthermore, it is recommended for edge cases where GPU acceleration is not directly accessible, to force QT with software rendering, alognside with browser mode. For running Horus inside `Nice` the final procedure will be:
 
-   ```
-   export HORUS_GUI=qt
-   export QT_QUICK_BACKEND=software
-   ./Horus --browser
-   ```
+```
+export HORUS_GUI=qt
+export QT_QUICK_BACKEND=software
+./Horus --browser
+```
