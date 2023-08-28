@@ -473,11 +473,9 @@ class FlowManager:
 
         # Save the flow (overwrite if already exists)
         if len(flow.blocks) == 0:
-            print(flow.currentExecuting)
-            print(flow.name)
-            print(flow.savedID)
-            print(flow.path)
-            print("Trying to save empty flow, cancelling")
+            raise Exception(
+                "Trying to save empty flow. Please save flows that contain placed blocks."
+            )
         else:
             flow.write()
 
