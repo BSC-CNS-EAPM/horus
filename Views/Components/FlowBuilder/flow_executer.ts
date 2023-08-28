@@ -191,6 +191,7 @@ export default class FlowExecuter {
       newBlock = {
         ...newBlock,
         finishedExecution: false,
+        isRunning: true,
       };
       this.setCurrentExecuting(newBlock.placedID);
     }
