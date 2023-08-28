@@ -297,7 +297,6 @@ class HorusServer:
                     "ok": False,
                     "error": str(exc),
                 }
-            print("Returning saveflow request")
             return flask.jsonify(success)
 
         @self.server.route("/openflow", methods=["GET"])
@@ -452,7 +451,6 @@ class HorusServer:
         @self.server.route("/plugins/executeblock", methods=["POST"])
         @verifyToken
         def executeBlock():
-            print("Recived request to execute block")
             data = request.get_json()
             # Execute the action from a given block
             try:
@@ -484,7 +482,6 @@ class HorusServer:
                     "ok": False,
                     "error": errorMSG,
                 }
-            print("Returning executeblock request")
             return flask.jsonify(success)
 
         @self.server.route("/plugins/checkRemoteBlock", methods=["POST"])
