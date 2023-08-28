@@ -12,11 +12,11 @@ Horus is a cross-platform graphical user interface of the NBDSuite, a collection
 ## Linux
 
 1. Download the latest Linux release from the [releases page]()
-2. Unzip the application on your usual applications folder
-3. Run the application by executing the `Horus` file:
+2. Install the .deb/.rpm depending on your distro
+3. Run the application by executing the `horus` command:
 
    ```
-   ./Horus
+   horus
    ```
 
 ## macOS
@@ -27,7 +27,7 @@ Horus is a cross-platform graphical user interface of the NBDSuite, a collection
 
 ## Windows
 
-Unfortunately, a Windows version cannot be provided at the moment. However, you can run the web version of the application by following the instructions below.
+Unfortunately, a Windows version cannot be provided at the moment. However, you can run the web version of the application by clicking [here](app.nostrumbiodiscovery.com).
 
 # Development dependencies
 
