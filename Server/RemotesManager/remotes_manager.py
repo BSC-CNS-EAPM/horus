@@ -360,7 +360,6 @@ class RemotesAPI:
         """
         Disconnect from the remote when the object is deleted.
         """
-        print(f"Disconnecting {self.name} because the object is deleted")
         self.disconnect()
 
     @property
