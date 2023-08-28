@@ -1,3 +1,8 @@
+#  pylint: disable=invalid-name
+"""
+The AppDelegate module manages windows and the server execution mode.
+It is the entry point of the Application.
+"""
+
 # Export the App() function from the app_delegate.py file
-from .app_delegate import LaunchApp, AppDelegate  # noqa: F401
-from .app_delegate import OverwriteException  # noqa: F401
+from App.app_delegate import launchApp, AppDelegate  # noqa: F401

@@ -2,21 +2,13 @@ from __future__ import annotations
 import typing
 import json
 import os
+from enum import Enum
+from copy import deepcopy
 
 
 class PluginRemote:
     def __init__(self, remote) -> None:
         self._remote = remote
-
-    def submitSlurm(self, script: str):
-        """
-        Runs a Slurm script on the remote.
-        :param script: The script path or the script as a string to run on the cluster.
-        """
-        self._remote.connect()
-        output = self._remote.runScript(script)
-        self._remote.disconnect()
-        return output
 
     def remoteCommand(self, command: str):
         """
@@ -54,6 +46,17 @@ class PluginRemote:
 
         self._remote.transferFrom(source, destination)
 
+    def submitJob(self, script: str) -> int:
+        """
+        Submit a slurm job to the queue system of the cluster (SLURM)
+
+        :param script: The script to submit as a string
+        or the path to the script to submit.
+        :return: The job ID.
+        """
+
+        return self._remote.submitJob(script)
+
     @property
     def userHome(self):
         """
@@ -70,104 +73,6 @@ class PluginRemote:
         """
 
         return self._remote.horusDir
-
-
-class TempFile:
-    """Temporary file class used to store temporary files in user dirs"""
-
-    def __init__(self, name: str, folder: typing.Optional[str] = None):
-        """
-        - Name: The name of the file.
-        - Folder: The folder where the file will be stored.
-        If None, the file will bestored in the tmp folder.
-        """
-        if folder is None:
-            folder = self._tmpDir()
-
-        # Check if the user has as tmp folder, if not create it
-        if not os.path.exists(folder):
-            self._create_tmp_folder(folder)
-
-        # Randomize the file name in order to prevent file clashes
-        self.name = str(os.urandom(10).hex()) + name
-
-        # Define the path of the tmp folder
-        self.tmpFolder = folder
-
-        # Define the path of the file
-        self.path = os.path.join(self.tmpFolder, self.name)
-
-        # Create the file
-        self._create()
-
-    def _tmpDir(self):
-        # Assign the path of the tmp folder
-        # to the current python working directory
-        tmpName = "tmp"
-        return os.path.join(os.getcwd(), tmpName)
-
-    def __repr__(self):
-        return self.name
-
-    def __str__(self):
-        return self.path
-
-    def __eq__(self, other):
-        return self.path == other.path
-
-    def __hash__(self):
-        return hash(self.name + self.path)
-
-    def __del__(self):
-        # Delete the file
-        self.delete()
-
-        # If the tmp folder is empty, delete it
-        if len(os.listdir(self.tmpFolder)) == 0:
-            self.deleteTmpFolder()
-
-    def _create_tmp_folder(self, folder: str):
-        # Create a temporary folder
-        tmp_folder = os.path.join(folder)
-        os.mkdir(tmp_folder)
-
-    def _create(self):
-        # Create the file with the content of the string
-        with open(self.path, "w") as f:
-            f.write("")
-
-    def delete(self):
-        """
-        Delete the file.
-        """
-        os.remove(self.path)
-
-    def write(self, content: str):
-        """
-        Write content to the file
-
-        - content: The content to write to the file.
-        """
-        with open(self.path, "w") as f:
-            f.write(content)
-
-    def read(self):
-        """
-        Read the content of the file
-
-        :return: The content of the file as a string.
-        """
-        with open(self.path, "r") as f:
-            return f.read()
-
-    def deleteTmpFolder(self):
-        """
-        Deletes the tmp folder.
-        """
-        # Delete the tmp folder
-        import shutil
-
-        shutil.rmtree(self.tmpFolder)
 
 
 class PluginEndpoint:
@@ -227,6 +132,13 @@ class PluginPage:
 
 
 class VariableTypes:
+    ANY = "any"
+    """
+    Any type of variable.
+
+    Will render as a text input.
+    """
+
     STRING = "string"
     """
     A regular string like "Hello world".
@@ -325,6 +237,77 @@ class VariableTypes:
     - structure: The structure object (CIF, PDB... string)
     """
 
+    HETERORES = "heterores"
+    """
+    A hetero residue to be selected from a loaded structure.
+
+    Will render as a list of hetero residues.
+    The type of the variable will be a dictionary with the following keys:
+    - index: The index of the residue in the structure.
+    - name: The name of the residue.
+    - atoms: The list of atoms in the residue.
+    - structure: The structure object variable where the atom is located.
+    This last variable contains the properties of the STRUCTURE variable.
+    """
+
+    STDRES = "stdres"
+    """
+    A standard residue to be selected from a loaded structure.
+
+    Will render as a dropdown with the list of standard residues.
+    The type of the variable will be a dictionary with the following keys:
+    - index: The index of the residue in the structure.
+    - name: The name of the residue.
+    - atoms: The list of atoms in the residue.
+    - structure: The structure object variable where the atom is located.
+    This last variable contains the properties of the STRUCTURE variable.
+    """
+
+    ATOM = "atom"
+    """
+    An atom to be selected from a loaded structure.
+
+    Will render as a dropdown with the list of atoms as an interactive atom selector.
+    The type of the variable will be a dictionary with the following keys:
+    - index: The index of the atom in the structure.
+    - name: The name of the atom.
+    - element: The element of the atom.
+    - residue: The residue of the atom.
+    - structure: The structure object variable where the atom is located.
+    This last variable contains the properties of the STRUCTURE variable.
+    """
+
+    CHAIN = "chain"
+    """
+    A chain to be selected from a loaded structure.
+
+    Will render as a dropdown with the list of chains.
+    The type of the variable will be a dictionary with the following keys:
+    - index: The index of the chain in the structure.
+    - name: The name of the chain.
+    - residues: The list of residues in the chain.
+    - structure: The structure object variable where the atom is located.
+    This last variable contains the properties of the STRUCTURE variable.
+    """
+
+    SPHERE = "sphere"
+    """
+    A sphere to be rendered in Mol*.
+
+    Will render as an interactive sphere viewer. The user can select the
+    center and the radius of the sphere.
+    The type of the variable will be a dictionary with the following keys:
+    - center: The center of the sphere as a list of floats [x, y, z].
+    - radius: The radius of the sphere as a float.
+    """
+
+    SMILES = "smiles"
+    """
+    A single molecule SMILES string.
+
+    Will render as the JSME viewer (https://jsme-editor.github.io/)
+    """
+
     @staticmethod
     def getTypes():
         """
@@ -340,6 +323,10 @@ class VariableTypes:
 
 
 class PluginVariable:
+    """
+    Class that defines a variable that can be used in a PluginBlock.
+    """
+
     id: str = "baseplugin.variable"
 
     def __init__(
@@ -375,29 +362,149 @@ class PluginVariable:
         self.id = id
         self.allowedValues = allowedValues
 
-    def toDict(self):
+    def toDict(self, minimal: bool = False):
         """
         Convert the variable to a dictionary.
         """
 
-        varDict = {
-            "name": self.name,
-            "id": self.id,
-            "description": self.description,
-            "type": self.type,
-            "value": ""
-            if self.defaultValue is None
-            else self.defaultValue
-            if not self.value
-            else self.value,
-            "allowedValues": self.allowedValues,
-        }
+        if minimal:
+            varDict = {
+                "id": self.id,
+                "value": self.value if self.value else self.defaultValue,
+            }
+        else:
+            varDict = {
+                "name": self.name,
+                "id": self.id,
+                "description": self.description,
+                "type": self.type,
+                "value": self.value if self.value else self.defaultValue,
+                "allowedValues": self.allowedValues,
+            }
 
         return varDict
 
+    def __str__(self):
+        return json.dumps(self.toDict(), indent=4)
+
+
+class PluginBlockTypes(Enum):
+    """
+    The different types of blocks.
+    """
+
+    BASE = "base"
+    """
+    A regular block.
+    """
+
+    INPUT = "input"
+    """
+    A block that can be used as input.
+    """
+
+    ACTION = "action"
+    """
+    A block that runs an action.
+    """
+
+    SLURM = "slurm"
+    """
+    A block that runs an action on a Slurm queue.
+    """
+
+    CONFIG = "config"
+    """
+    A block designed to store configuration variables.
+    """
+
+    def __str__(self):
+        return self.value
+
+
+class BlockVarPair:
+    """
+    A connection of a block for a given variable of that block.
+    """
+
+    def __init__(self, blockPlacedID: int, blockID: str, variableID: str):
+        self.blockPlacedID = blockPlacedID
+        self.blockID = blockID
+        self.variableID = variableID
+
+    def _toDict(self):
+        """
+        Converts the connection to a dictionary.
+        """
+
+        pairDict = {
+            "placedID": self.blockPlacedID,
+            "blockID": self.blockID,
+            "variableID": self.variableID,
+        }
+
+        return pairDict
+
+    def __str__(self):
+        return json.dumps(self._toDict(), indent=4)
+
+
+class BlockConnection:
+    """
+    A connection between blocks and variables.
+    """
+
+    def __init__(
+        self,
+        origin: BlockVarPair,
+        destination: BlockVarPair,
+        isCyclic: bool,
+        cycles: int = 0,
+    ):
+        self.origin = origin
+        self.destination = destination
+        self.isCyclic = isCyclic
+        self.cycles = cycles
+
+    def _toDict(self):
+        """
+        Converts the connection to a dictionary.
+        """
+
+        connectionDict = {
+            "origin": self.origin._toDict(),  # pylint: disable=protected-access
+            "destination": (
+                self.destination._toDict()
+            ),  # pylint: disable=protected-access
+            "isCyclic": self.isCyclic,
+            "cycles": self.cycles,
+        }
+
+        return connectionDict
+
+    def __str__(self):
+        return json.dumps(self._toDict(), indent=4)
+
 
 class PluginBlock:
-    def __init__(
+    """
+    The base block class for Horus blocks.
+    """
+
+    # Internal variables, used when saving the flow and in the frontend
+    _position: typing.List[float] = [0, 0]
+    _isPlaced: bool = False
+    _isRunning: bool = False
+    _runError: bool = False
+    _placedID: typing.Optional[int] = 0
+    _finishedExecution: bool = False
+    _storedOutputs: dict[str, typing.Any] = {}
+    _variableConnections: typing.List[BlockConnection] = []
+    _variableConnectionsReferences: typing.List[BlockConnection] = []
+    _connectedTo: typing.List[int] = []
+    _connectedToReferences: typing.List[int] = []
+
+    def __init__(  # pylint: disable=dangerous-default-value
         self,
         name: str,
         description: str,
@@ -405,8 +512,9 @@ class PluginBlock:
         variables: typing.List[PluginVariable] = [],
         inputs: typing.List[PluginVariable] = [],
         outputs: typing.List[PluginVariable] = [],
+        blockType: PluginBlockTypes = PluginBlockTypes.BASE,
     ):
-        self.id: str = "baseplugin.block"
+        self.id: str = "baseplugin.block"  # pylint: disable=invalid-name
         """
         The id of the block.
         It is composed by the plugin name and the name of the block.
@@ -455,6 +563,16 @@ class PluginBlock:
         Allowed type: PluginConfig
         """
 
+        if blockType not in (PluginBlockTypes):
+            raise Exception(  # pylint: disable=broad-exception-raised
+                f"Invalid block type {blockType}. Allowed types: {PluginBlockTypes}"
+            )
+
+        self.TYPE: PluginBlockTypes = blockType  # pylint: disable=invalid-name
+        """
+        The type of the block. Internal use only.
+        """
+
     # Define the call method to run the block
     def __call__(self, *args, **kwargs):
         if self.action is None:
@@ -484,6 +602,8 @@ class PluginBlock:
         :param values: A dictionary with the values to update
         (JSON coming from frontend).
         """
+
+        print("Updating inputs", values)
         for variable in self._inputs:
             if variable.id in values.keys():
                 variable.value = values[variable.id]
@@ -616,6 +736,24 @@ class PluginBlock:
         # Update the values of the configs
         self._updateConfigs(configPath)
 
+    def _connectionsToDict(self, references: bool = False):
+        """
+        Converts the connections of the block to a dictionary.
+        """
+        connections: typing.List[typing.Dict[str, typing.Any]] = []
+        if references:
+            for connection in self._variableConnectionsReferences:
+                connections.append(
+                    connection._toDict()
+                )  # pylint: disable=protected-access
+        else:
+            for connection in self._variableConnections:
+                connections.append(
+                    connection._toDict()
+                )  # pylint: disable=protected-access
+
+        return connections
+
     def _toDict(self):
         """
         Converts the block to a dictionary.
@@ -629,14 +767,31 @@ class PluginBlock:
             "inputs": self._variablesToDict(self._inputs),
             "outputs": self._variablesToDict(self._outputs),
             "config": self._configToDict(),
+            "type": str(self.TYPE),
+            "position": {"x": self._position[0], "y": self._position[1]},
+            "isPlaced": self._isPlaced,
+            "isRunning": self._isRunning,
+            "runError": self._runError,
+            "placedID": self._placedID,
+            "finishedExecution": self._finishedExecution,
+            "storedOutputs": self._storedOutputs,
+            "variableConnections": self._connectionsToDict(),
+            "variableConnectionsReference": self._connectionsToDict(True),
+            "connectedTo": self._connectedTo,
+            "connectedToReference": self._connectedToReferences,
         }
 
         return blockDict
 
-    def _variablesToDict(self, vars: typing.List[PluginVariable]):
+    def __str__(self):
+        return json.dumps(self._toDict(), indent=4)
+
+    def _variablesToDict(
+        self, vars: typing.List[PluginVariable], minimal: bool = False
+    ):
         varList: list[dict[str, typing.Any]] = []
         for v in vars:
-            varList.append(v.toDict())
+            varList.append(v.toDict(minimal=minimal))
         return varList
 
     def _configToDict(self):
@@ -645,11 +800,155 @@ class PluginBlock:
             configList.append(c._toDict())
         return configList
 
+    _isOriginal = True
+    """
+    Wether the block is original (created by the plugin) or not.
+    """
+
+    remote: PluginRemote
+    """
+    The RemoteAPI for the block.
+    """
+
     def _setRemote(self, remote):
         """
         Sets the remote of the block.
         """
+        if self._isOriginal:
+            msg = (
+                "\033[31mERROR: Setting remote on original block is not allowed. "
+                + "This can lead to unexpected behaviour. Remember to "
+                + "copy the block using block.copy() if you want to use it "
+                + "in the pipeline.\033[0m"
+            )
+            print(msg)
+            raise Exception(msg)  # pylint: disable=broad-exception-raised
         self.remote = PluginRemote(remote)
+
+    def copy(self):
+        """
+        Returns a deep copy of the block in order to not
+        modify the original reference.
+        """
+        copy = deepcopy(self)
+        copy._isOriginal = False  # pylint: disable=protected-access
+        return copy
+
+    def _parseInternalVariables(self, blockJSON: typing.Dict[str, typing.Any]):
+        """
+        Updates the block with the internal variables.
+        """
+
+        isPlaced: bool = blockJSON.get("isPlaced", False)
+        isRunning: bool = blockJSON.get("isRunning", False)
+        runError: bool = blockJSON.get("runError", False)
+        placedID: int = blockJSON.get("placedID", 0)
+        finishedExecution: bool = blockJSON.get("finishedExecution", True)
+
+        position: typing.Dict[str, float] = blockJSON.get("position", [None, None])
+        xPos: float = position.get("x", 0)
+        yPos: float = position.get("y", 0)
+
+        storedOutputs: typing.Dict[str, str] = blockJSON.get("storedOutputs", None)
+
+        variableConnections: typing.List[typing.Dict[str, typing.Any]] = blockJSON.get(
+            "variableConnections", []
+        )
+        variableConnectionsReference: typing.List[
+            typing.Dict[str, typing.Any]
+        ] = blockJSON.get("variableConnectionsReference", [])
+
+        connectedTo: typing.List[int] = blockJSON.get("connectedTo", [])
+        connectedToReference: typing.List[int] = blockJSON.get(
+            "connectedToReference", []
+        )
+
+        def parseVariableConnection(connection: typing.Dict[str, typing.Any]):
+            origin = connection.get("origin", None)
+            destination = connection.get("destination", None)
+            isCyclic = connection.get("isCyclic", False)
+            cycles = connection.get("cycles", 0)
+
+            if origin is None or destination is None:
+                raise Exception(
+                    "Invalid flow object."
+                )  # pylint: disable=broad-exception-raised
+
+            originPlacedID = origin.get("placedID", None)
+            originBlockID = origin.get("blockID", None)
+            originVariableID = origin.get("variableID", None)
+            originPair = BlockVarPair(originPlacedID, originBlockID, originVariableID)
+
+            destinationPlacedID = destination.get("placedID", None)
+            destinationBlockID = destination.get("blockID", None)
+            destinationVariableID = destination.get("variableID", None)
+            destinationPair = BlockVarPair(
+                destinationPlacedID, destinationBlockID, destinationVariableID
+            )
+
+            return BlockConnection(originPair, destinationPair, isCyclic, cycles)
+
+        # Parse the variableConnections
+        parsedVariableConnections: typing.List[BlockConnection] = []
+        for connection in variableConnections:
+            parsedVariableConnections.append(parseVariableConnection(connection))
+
+        # Parse the variableConnectionsReference
+        parsedVariableConnectionsReference: typing.List[BlockConnection] = []
+        for connection in variableConnectionsReference:
+            parsedVariableConnectionsReference.append(
+                parseVariableConnection(connection)
+            )
+
+        # Parse the variable values
+        variablesJSON = blockJSON.get("variables", {})
+        variablesJSONParsed = {}
+        for variable in variablesJSON:
+            varID = variable.get("id", None)
+            if varID is None:
+                raise Exception(
+                    "Invalid flow object."
+                )  # pylint: disable=broad-exception-raised
+            variablesJSONParsed[varID] = variable.get("value", None)
+
+        # Update the variables with the values the user has set
+        self._updateVariables(variablesJSONParsed)
+
+        # Update the internal variables
+        self._isPlaced = isPlaced
+        self._isRunning = isRunning
+        self._runError = runError
+        self._position = [xPos, yPos]
+        self._placedID = placedID
+        self._finishedExecution = finishedExecution
+        self._storedOutputs = storedOutputs
+        self._variableConnections = parsedVariableConnections
+        self._variableConnectionsReferences = parsedVariableConnectionsReference
+        self._connectedTo = connectedTo
+        self._connectedToReferences = connectedToReference
+
+    def _minimalEncode(self):
+        """
+        Encode only the blockID and the internal variables.
+        """
+
+        blockDict = {
+            "id": self.id,
+            "isPlaced": self._isPlaced,
+            "position": {"x": self._position[0], "y": self._position[1]},
+            "isRunning": self._isRunning,
+            "runError": self._runError,
+            "placedID": self._placedID,
+            "finishedExecution": self._finishedExecution,
+            "storedOutputs": self._storedOutputs,
+            "variables": self._variablesToDict(self._variables, minimal=True),
+            "variableConnections": self._connectionsToDict(),
+            "variableConnectionsReference": self._connectionsToDict(True),
+            "connectedTo": self._connectedTo,
+            "connectedToReference": self._connectedToReferences,
+        }
+
+        return blockDict
 
 
 class PluginConfig(PluginBlock):
@@ -661,18 +960,131 @@ class PluginConfig(PluginBlock):
     using the block.config["variable_id"] syntax.
     """
 
-    def __init__(
+    def __init__(  # pylint: disable=dangerous-default-value
         self,
         name,
         description,
         action: typing.Optional[typing.Callable] = None,
         variables: typing.List[PluginVariable] = [],
     ):
+        """
+        :param name: The name of the block.
+        :param description: The description of the block.
+        :param action: The action of the block. Will be run when storing the config.
+        :param variables: The variables of the block.
+        """
         # Raise an error if the variables are empty
         if len(variables) == 0:
-            raise Exception("A PluginConfig must have at least one variable.")
+            raise Exception(  # pylint: disable=broad-exception-raised
+                "A PluginConfig must have at least one variable."
+            )
 
-        super().__init__(name, description, action, variables)
+        super().__init__(
+            name, description, action, variables, blockType=PluginBlockTypes.CONFIG
+        )
+
+
+class InputBlock(PluginBlock):
+    """
+    The InputBlock class is a special type of block that is used to get input from
+    the user. It works as a regular PluginBlock but only shows its PluginVariable.
+    Its output will be automatically set to the value the variable has if it does
+    not have a defined action.
+    """
+
+    def __init__(
+        self,
+        name,
+        description,
+        variable: PluginVariable,
+        action: typing.Optional[typing.Callable] = None,
+    ):
+        """
+        :param name: The name of the block.
+        :param description: The description of the block.
+        :param variable: The variable of the block.
+        """
+
+        # Check that the variable is a PluginVariable instance
+        if not isinstance(variable, PluginVariable):
+            raise Exception(  # pylint: disable=broad-exception-raised
+                "The variable must be a single PluginVariable instance."
+            )
+
+        super().__init__(
+            name,
+            description,
+            action=action,
+            variables=[variable],
+            outputs=[variable],
+            blockType=PluginBlockTypes.INPUT,
+        )
+
+    # Override the __call__ method to return
+    # the value of the variable as the output
+    def __call__(self, *args, **kwargs):
+        # If the block has an action, run it
+        if self.action is not None:
+            return super().__call__(*args, **kwargs)
+
+        # If the block does not have an action, return the value of the variable
+        self._outputs[0].value = self._variables[0].value
+
+        return self.outputs
+
+
+class SlurmBlock(PluginBlock):
+    """
+    The SlurmBlock class is a special type of block that is used to run an action
+    in a remote server. It works as a regular PluginBlock but it has two actions,
+    one before the job is submitted and one after the job is completed.
+    """
+
+    def __init__(  # pylint: disable=dangerous-default-value
+        self,
+        name: str,
+        description: str,
+        initialAction: typing.Callable,
+        finalAction: typing.Callable,
+        variables: typing.List[PluginVariable] = [],
+        inputs: typing.List[PluginVariable] = [],
+        outputs: typing.List[PluginVariable] = [],
+    ):
+        """
+        :param name: The name of the block.
+        :param description: The description of the block.
+        :param initialAction: The action of the block before the job is submitted.
+        :param finalAction: The action of the block after the job is completed.
+        :param variables: The variables of the block.
+        :param inputs: The inputs of the block.
+        :param outputs: The outputs of the block.
+        """
+        super().__init__(
+            name,
+            description,
+            action=initialAction,
+            variables=variables,
+            inputs=inputs,
+            outputs=outputs,
+            blockType=PluginBlockTypes.SLURM,
+        )
+        self.initalAction = initialAction
+        self.finalAction = finalAction
+
+    def __call__(self, *args, **kwargs):
+        # If the block has not submitted the job, run the first action
+        # If the job has been submitted, han has ended, run the second action
+        try:
+            if self.remote._remote.didRemoteBlockFinish():
+                self.action = self.finalAction
+            else:
+                return
+        except Exception:
+            # If the JobID is not found (maybe cleared because a re-run is
+            # required by the user) set the action to the initial action
+            self.action = self.initalAction
+
+        return super().__call__(*args, **kwargs)
 
 
 class Plugin:
@@ -680,7 +1092,7 @@ class Plugin:
     Base class for all plugins.
     """
 
-    info: dict[str, str] = {
+    info: dict[str, typing.Any] = {
         "name": "Unnamed plugin",
         "version": "0.0.1",
         "author": "None",
@@ -808,6 +1220,7 @@ class Plugin:
                     config.id = f"{block.id}.config.{config.name}".replace(
                         " ", "_"
                     ).lower()
+
                 self._blocks.append(block)
 
     def _addBlocks(self):

@@ -1,71 +1,29 @@
+"""
+App Delegate
+"""
+
+# Basic imports
 import sys
 import os
-import webview
-
-# Executing blocks
 import threading
 import subprocess
-from flask_socketio import SocketIO
+import webbrowser
 
 # Import type annotations
 import typing
 
-from Server import HorusServer
-from Server import RemotesAPI
-
+# Compilation variables (cython.compiled)
 import cython
-import json
-import uuid
-import datetime
 
-from threading import Lock
+# PyWebview
+import webview
+import webview.menu as wm
 
-
-# Define the SingletonMeta class for the AppDelegate and MolstarAPI classes
-class SingletonMeta(type):
-    """
-    This is a thread-safe implementation of Singleton.
-
-    Intened for internal use only.
-    """
-
-    _instances = {}
-
-    _lock: Lock = Lock()
-    """
-    We now have a lock object that will be used to synchronize threads during
-    first access to the Singleton.
-    """
-    _lock_event = threading.Event()
-
-    def __call__(cls, *args, **kwargs):
-        """
-        Possible changes to the value of the `__init__` argument do not affect
-        the returned instance.
-        """
-        # Now, imagine that the program has just been launched. Since there's no
-        # Singleton instance yet, multiple threads can simultaneously pass the
-        # previous conditional and reach this point almost at the same time. The
-        # first of them will acquire lock and will proceed further, while the
-        # rest will wait here.
-        lock_acquired = cls._lock.acquire(timeout=1)  # Wait for the lock for 1 second
-        if not lock_acquired:
-            cls._lock_event.set()  # Notify the waiting threads
-            raise TimeoutError("Trying to access unitialized Singleton instance")
-        try:
-            # The first thread to acquire the lock, reaches this conditional,
-            # goes inside and creates the Singleton instance. Once it leaves the
-            # lock block, a thread that might have been waiting for the lock
-            # release may then enter this section. But since the Singleton field
-            # is already initialized, the thread won't create a new object.
-            if cls not in cls._instances:
-                instance = super().__call__(*args, **kwargs)
-                cls._instances[cls] = instance
-        finally:
-            cls._lock.release()
-            cls._lock_event.set()  # Notify the waiting threads that lock is released
-
-        return cls._instances[cls]
+# Server
+import requests
+from flask_socketio import SocketIO
+from Server import HorusServer
+from HorusAPI import HorusSingleton
 
 
 # Add to the pythonpath the path of the project
@@ -148,22 +106,11 @@ class WindowOptions:
     """
 
 
-# Define a overwrite exception for the saveFlow method
-class OverwriteException(Exception):
-    def __init__(self, name: str, path: str, message: str):
-        """
-        An exception that is raised when trying to overwrite a file.
+class AppDelegate(metaclass=HorusSingleton):
+    """
+    The AppDelegate class
+    """
 
-        - name: The name of the file (without extension)
-        - path: The path to the file (with extension)
-        - message: The error message
-        """
-        super().__init__(message)
-        self.name = name
-        self.path = path
-
-
-class AppDelegate(metaclass=SingletonMeta):
     @property
     def windows(self):
         """
@@ -174,11 +121,6 @@ class AppDelegate(metaclass=SingletonMeta):
 
         return openedWindows
 
-    remote: RemotesAPI = None
-    """
-    The remote API
-    """
-
     APP_INFO = {}
     """
     Stores relevant information about the app, such as
@@ -188,10 +130,15 @@ class AppDelegate(metaclass=SingletonMeta):
     - bundleIdentifier: The bundle identifier of the app
     """
 
+    serverThread: typing.Optional[threading.Thread] = None
+    """
+    The separate thread where the server runs
+    """
+
     def __init__(
         self,
         debug: bool = False,
-        server_mode: bool = False,
+        serverMode: bool = False,
         browser: bool = False,
         debugURL: typing.Optional[str] = None,
     ):
@@ -200,7 +147,7 @@ class AppDelegate(metaclass=SingletonMeta):
         This will start the backend server and create the first window.
         """
         self.debug = debug
-        self.server_mode = server_mode
+        self.serverMode = serverMode
         self.browser = browser
         self.debugURL = debugURL
 
@@ -210,12 +157,19 @@ class AppDelegate(metaclass=SingletonMeta):
         # Set the app support directory
         self._appSupportDir()
 
-        # Load the settings
-        self.appSettings = HorusSettings(self.appSupportDir)
+        # # Load the settings
+        # from App import SettingsManager  # pylint: disable=import-outside-toplevel
+
+        # self.appSettings = SettingsManager(self.appSupportDir)
+
+        # # Load the flow manager
+        # from App import FlowManager  # pylint: disable=import-outside-toplevel
+
+        # self.flowManager = FlowManager(self.appSupportDir)
 
         # Prepare the server
         self.server: HorusServer = HorusServer(
-            debug=self.debug, desktop=not server_mode, appSupportDir=self.appSupportDir
+            debug=self.debug, desktop=not serverMode, appSupportDir=self.appSupportDir
         )
 
     def _loadAppInfo(self):
@@ -224,15 +178,14 @@ class AppDelegate(metaclass=SingletonMeta):
         """
 
         # Get the path to the APP_INFO file
-        try:
-            sys._MEIPASS  # type: ignore
-            envPath = os.path.join(sys._MEIPASS, "APP_INFO")
-        except AttributeError:
+        if hasattr(sys, "_MEIPASS"):
+            envPath = os.path.join(sys._MEIPASS, "APP_INFO")  # type: ignore pylint: disable=protected-access
+        else:
             envPath = os.path.join("App", "APP_INFO")
 
         # Load the app info from the APP_INFO file
-        with open(envPath, "r") as f:
-            lines = f.readlines()
+        with open(envPath, "r", encoding="utf-8") as file:
+            lines = file.readlines()
 
         appInfo = {}
         # Parse the lines
@@ -255,7 +208,7 @@ class AppDelegate(metaclass=SingletonMeta):
             # Set the value
             appInfo[key] = value
 
-        self.APP_INFO = appInfo
+        self.APP_INFO = appInfo  # pylint: disable=invalid-name
 
     def _appSupportDir(self):
         # If we are, use the default system Application Support directory
@@ -264,10 +217,7 @@ class AppDelegate(metaclass=SingletonMeta):
         # On Linux this is ~/.local/share
         self.platform = sys.platform
 
-        try:
-            # Check if we are in a frozen executable
-            sys._MEIPASS  # type: ignore
-
+        if hasattr(sys, "_MEIPASS"):
             if self.platform == "darwin":
                 appSupportDir = os.path.join(
                     os.path.expanduser("~"),
@@ -282,7 +232,9 @@ class AppDelegate(metaclass=SingletonMeta):
                         appSupportDir, self.APP_INFO["BUNDLE_IDENTIFIER"]
                     )
                 else:
-                    raise Exception("APPDATA environment variable not set")
+                    raise Exception(  # pylint: disable=broad-exception-raised
+                        "APPDATA environment variable not set"
+                    )
             elif self.platform == "linux":
                 appSupportDir = os.path.join(
                     os.path.expanduser("~"),
@@ -291,9 +243,11 @@ class AppDelegate(metaclass=SingletonMeta):
                     self.APP_INFO["BUNDLE_IDENTIFIER"],
                 )
             else:
-                raise Exception(f"Unsupported platform {self.platform}")
+                raise Exception(  # pylint: disable=broad-exception-raised
+                    f"Unsupported platform {self.platform}"
+                )
 
-        except AttributeError:
+        else:
             # If we are not in a frozen executable,
             # place the Application Support directory in the project directory
             # (Development)
@@ -312,15 +266,15 @@ class AppDelegate(metaclass=SingletonMeta):
         This server will handle python modules and scripts in our app.
         """
 
-        self.server_thread = threading.Thread(target=self.server.run)
-        self.server_thread.daemon = True
-        self.server_thread.start()
+        self.serverThread = threading.Thread(target=self.server.run)
+        self.serverThread.daemon = True
+        self.serverThread.start()
 
     def openWindow(
         self,
         title: str,
         url: typing.Optional[str] = None,
-        wo: WindowOptions = WindowOptions(),
+        wo: WindowOptions = WindowOptions(),  # pylint: disable=invalid-name
         forceNew: bool = False,
     ):
         """
@@ -382,7 +336,7 @@ class AppDelegate(metaclass=SingletonMeta):
         if self.browser:
             # Start browser mode
             self._startBrowserMode()
-        elif self.server_mode:
+        elif self.serverMode:
             # Start server mode
             self._startServerMode()
         else:
@@ -393,11 +347,9 @@ class AppDelegate(metaclass=SingletonMeta):
         """
         This will be called after the last window is closed.
         """
-        pass
+        print("Closing Horus...")
 
     def _menus(self):
-        import webview.menu as wm
-
         def newHorus():
             self.openWindow("Horus", forceNew=True)
 
@@ -460,11 +412,9 @@ class AppDelegate(metaclass=SingletonMeta):
         self._startServerThread()
 
         # Wait for the server to start
-        import requests
-
         while True:
             try:
-                requests.get(self.server.baseURL)
+                requests.get(self.server.baseURL, timeout=1)
                 break
             except requests.exceptions.ConnectionError:
                 pass
@@ -477,24 +427,24 @@ class AppDelegate(metaclass=SingletonMeta):
                     return arg.split("=")[1]
             if os.getenv("HORUS_GUI") is not None:
                 return os.getenv("HORUS_GUI")
-            
+
             # Default to "cocoa" on macOS
             # and "gtk" on Linux
             return "cocoa" if self.platform == "darwin" else "gtk"
 
         homeURL = self.server.baseURL
 
-        wo = WindowOptions()
+        windowOptions = WindowOptions()
         if self.browser:
             homeURL += "/bmode"
-            wo.width = 300
-            wo.height = 250
-            wo.confirm_close = True
-            wo.resizable = False
-            wo.on_top = True
+            windowOptions.width = 300
+            windowOptions.height = 250
+            windowOptions.confirm_close = True  # pylint: disable=invalid-name
+            windowOptions.resizable = False
+            windowOptions.on_top = True  # pylint: disable=invalid-name
         else:
-            wo.width = 1200
-            wo.height = 800
+            windowOptions.width = 1200
+            windowOptions.height = 800
 
         if self.debugURL is not None:
             homeURL = f"{self.server.baseURL}/{self.debugURL}"
@@ -502,7 +452,7 @@ class AppDelegate(metaclass=SingletonMeta):
         homeURL = self.tokenize(homeURL)
 
         # Open the first window
-        self.openWindow("Horus", url=homeURL, wo=wo)
+        self.openWindow("Horus", url=homeURL, wo=windowOptions)
 
         # Start the webview
         webview.start(debug=self.debug, menu=self._menus(), gui=guiBacked())
@@ -530,9 +480,6 @@ class AppDelegate(metaclass=SingletonMeta):
         """
         Opens a browser window to the server link.
         """
-
-        import webbrowser
-
         url = self.tokenize(self.server.baseURL)
 
         # Opens a browser window to the server link
@@ -570,11 +517,13 @@ class AppDelegate(metaclass=SingletonMeta):
         window = webview.windows[0]
 
         # Open the folder dialog
-        result: typing.Tuple[str, ...] = window.create_file_dialog(
+        result: typing.Optional[str] = window.create_file_dialog(
             webview.FOLDER_DIALOG, allow_multiple=False
         )
 
         if isinstance(result, tuple):
+            # On linux, depending on the desktop environment
+            # the result is a tuple instead of a string
             result = "".join(result)
 
         return result
@@ -627,143 +576,6 @@ class AppDelegate(metaclass=SingletonMeta):
         """
         return f"{url}?shemsu={webview.token}"
 
-    def configureRemote(self, newConfig: dict):
-        """
-        Configures the SSH connection for HPC clusters
-
-        param newConfig: An object containing the ssh configuration
-        {
-            name: str,
-            username: str,
-            host: str,
-            port: int,
-            keys: str,
-            proxyCommand: str,
-        }
-        """
-
-        # Check that the config is valid
-        if newConfig.get("name") is None:
-            raise Exception("The name of the remote is required")
-
-        if newConfig.get("username") is None:
-            raise Exception("The user of the remote is required")
-
-        if newConfig.get("host") is None:
-            raise Exception("The host of the remote is required")
-
-        if newConfig.get("port") is None:
-            raise Exception("The port of the remote is required")
-
-        if newConfig.get("keys") is None and newConfig.get("password") is None:
-            raise Exception("Either the keys or the password of the remote is required")
-
-        if newConfig.get("keys") is not None and newConfig.get("password") is not None:
-            raise Exception("Either the keys or the password of the remote is required")
-
-        if newConfig.get("keys") is not None and not os.path.exists(newConfig["keys"]):
-            raise Exception("The keys file does not exist")
-
-        if newConfig["name"].lower() == "local":
-            # The local remote does not need to be configured
-            raise Exception("The local machine does not need to be configured")
-
-        remotesPath = os.path.join(self.appSupportDir, "remotes.json")
-
-        if os.path.exists(remotesPath):
-            # Load and update the existing ssh configuration
-            with open(remotesPath, "r") as f:
-                remotesConfig: typing.Dict[str, str] = json.load(f)
-
-            # Check if the remote already exists
-            if newConfig["name"] in remotesConfig.keys():
-                # Update the remote
-                remotesConfig[newConfig["name"]] = newConfig
-            else:
-                # Create a new remote
-                remotesConfig.update({newConfig["name"]: newConfig})
-
-        else:
-            # Create a new ssh configuration
-            remotesConfig = {newConfig["name"]: newConfig}
-
-        with open(remotesPath, "w") as f:
-            json.dump(remotesConfig, f)
-
-    def listRemotes(self):
-        """
-        Loads the ssh configuration file and returns the list of remotes
-        """
-
-        remotesFile = os.path.join(self.appSupportDir, "remotes.json")
-
-        if not os.path.exists(remotesFile):
-            return []
-
-        with open(remotesFile, "r") as f:
-            remotesConfig: typing.Dict[str:str] = json.load(f)
-
-        # Convert the remotes configuration to a list
-        remotes = []
-        for name, config in remotesConfig.items():
-            remotes.append(config)
-
-        return remotes
-
-    def deleteRemote(self, name: str):
-        """
-        Removes a remote from the ssh configuration file
-
-        :param name: The name of the remote to remove
-        """
-
-        remotesFile = os.path.join(self.appSupportDir, "remotes.json")
-
-        if not os.path.exists(remotesFile):
-            return
-
-        with open(remotesFile, "r") as f:
-            remotesConfig: typing.Dict[str:str] = json.load(f)
-
-        # Remove the remote
-        remotesConfig.pop(name)
-
-        with open(remotesFile, "w") as f:
-            json.dump(remotesConfig, f)
-
-    def connectRemote(self, name: str):
-        """
-        Connects to a remote machine
-
-        :param name: The name of the remote to connect
-        """
-
-        remotesFile = os.path.join(self.appSupportDir, "remotes.json")
-
-        remotesConfig: typing.Dict[str:str] = {}
-        if os.path.exists(remotesFile):
-            with open(remotesFile, "r") as f:
-                remotesConfig = json.load(f)
-
-        # Check if the remote exists
-        if name not in remotesConfig.keys() and name.lower() != "local":
-            raise Exception(f"The remote {name} does not exist")
-
-        if name.lower() == "local":
-            self.remote = RemotesAPI(None, local=True)
-        else:
-            # Get the remote configuration if its not the local machine
-            selectedRemote = remotesConfig[name]
-
-            # Init the Remote
-            self.remote = RemotesAPI(selectedRemote)
-
-            # Connect to the remote
-            self.remote.connect()
-
-        if not self.remote.isConnected:
-            raise Exception("Could not connect to the remote")
-
     def openAppSupportDir(self):
         """
         Opens the Application Support directory
@@ -779,7 +591,6 @@ class AppDelegate(metaclass=SingletonMeta):
 
         :param path: The path to open
         """
-        import subprocess
 
         if self.platform == "darwin":
             subprocess.Popen(["open", path])
@@ -795,9 +606,7 @@ class AppDelegate(metaclass=SingletonMeta):
         :param command: The command to execute
         """
 
-        def runCommand(
-            command: str, socketio: SocketIO
-        ) -> typing.Optional[subprocess.Popen]:
+        def runCommand(command: str, socketio: SocketIO) -> typing.Optional[subprocess.Popen]:
             # Run a command in the os terminal and
             # capture the output and error in the same variable
 
@@ -807,449 +616,26 @@ class AppDelegate(metaclass=SingletonMeta):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,
-            ) as p:
-                if p.stdout is not None:
-                    for line in p.stdout:
+            ) as process:
+                if process.stdout is not None:
+                    for line in process.stdout:
                         socketio.emit("printTerm", line)
-                if p.stderr is not None:
-                    for line in p.stderr:
+                if process.stderr is not None:
+                    for line in process.stderr:
                         socketio.emit("printTerm", line)
-                return p
+                return process
 
         process = runCommand(command, socketio)
         if process:
             thread = threading.Thread(target=process.wait)
             thread.start()
 
-    def _saveFlowInternal(self, flow, overwrite=False):
-        """
-        Saves a flow to a file. (overwrites if already exists)
-        """
 
-        flowPath = flow["path"]
-
-        # Read the savedID from the file if it exists
-        overwriteCaution = False
-        if os.path.exists(flowPath) and not overwrite:
-            with open(flowPath, "r") as f:
-                saved_flow = json.load(f)
-                savedID = saved_flow.get("savedID")
-                if savedID != flow.get("savedID"):
-                    overwriteCaution = True
-
-        # Create a new savedID if it doesn't exist or is "new_flow"
-        if not flow.get("savedID") or flow["savedID"] == "new_flow":
-            flow["savedID"] = str(uuid.uuid4())
-
-        # Check if the savedID is the same as the current flow
-        if overwriteCaution and not overwrite and self.server_mode:
-            raise OverwriteException(
-                name=flow["name"], path=flowPath, message="Trying to overwrite a flow."
-            )
-
-        # Set the current folder as the flow folder
-        flow["path"] = flowPath
-
-        # Set the date
-        flow["date"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        # Save the flow (overwrite if already exists)
-        with open(flowPath, "w") as f:
-            json.dump(flow, f)
-
-        # Add the flow to the recent flows list
-        self._addToRecentFlows(flow)
-
-        # Return the saved flow
-        return flow
-
-    def saveFlow(self, flow):
-        overwrite = flow.get("overwrite")
-
-        flowPath = flow.get("path")
-        if not flowPath and flow.get("savedID") == "new_flow" and not overwrite:
-            if not self.server_mode:
-                filename = flow.get("name", "New flow") + ".flow"
-                fileTypes = ("Flow (*.flow)",)
-                flowPath = self.saveFileSelectDialog(filename, fileTypes=fileTypes)
-                if not flowPath:
-                    raise Exception("No path selected.")
-                if not flowPath.endswith(".flow"):
-                    flowPath += ".flow"
-                flow["path"] = flowPath
-                # flow["name"] = os.path.basename(flowPath).replace(".flow", "")
-            else:
-                flowPath = os.path.join("flows", flow.get("name") + ".flow")
-                overwrite = True
-                flow["path"] = flowPath
-        return self._saveFlowInternal(flow, overwrite)
-
-    def _openFlowInternal(self, flowPath):
-        """
-        Opens a flow from a file.
-        """
-
-        # Check that the file exists
-        if not os.path.exists(flowPath):
-            raise Exception("The flow file does not exist")
-
-        # Read the flow file
-        with open(flowPath, "r") as f:
-            flow = json.load(f)
-
-        # Set the flow path
-        flow["path"] = flowPath
-
-        # Add the flow to the recent flows list
-        # self.addToRecentFlows(flow)
-
-        # Return the flow
-        return flow
-
-    def openFlow(self):
-        """
-        Opens the file select dialog to open a flow.
-        """
-        if not self.server_mode:
-            flowPath = self.openFileSelectDialog(
-                allowMultiple=False, fileTypes=("Flow (*.flow)",)
-            )
-
-            if flowPath:
-                if isinstance(flowPath, tuple):
-                    flowPath = flowPath[0]
-                return self._openFlowInternal(str(flowPath))
-            else:
-                return None
-        else:
-            # WIP implement server user folders
-            return None
-
-    @property
-    def recentFlowsPath(self):
-        """
-        Returns the path to the recent flows file
-        """
-
-        path = os.path.join(self.appSupportDir, "recent_flows.json")
-
-        if not os.path.exists(path):
-            with open(path, "w") as f:
-                json.dump([], f)
-
-        return path
-
-    def listRecentFlows(self) -> typing.Dict[str, typing.Dict[str, str]]:
-        """
-        Returns the list of recent flows
-        """
-
-        with open(self.recentFlowsPath, "r") as f:
-            recentFlows: typing.Dict[str:str] = json.load(f)
-
-        # If the recent flows is empty, create an empty dict
-        if not recentFlows:
-            recentFlows = {}
-
-        return recentFlows
-
-    def _addToRecentFlows(self, flow: typing.Dict[str, str]):
-        """
-        Adds a given flow to the recent flows list
-
-        :param flow: The flow to add
-        """
-
-        recentFlows = self.listRecentFlows()
-
-        # Add the flow to the recent flows list
-        savedID = flow.get("savedID", None)
-
-        if savedID is None:
-            raise Exception("The flow does not have a savedID")
-
-        recentFlows[savedID] = {
-            "name": flow.get("name", "Unnamed flow"),
-            "path": flow.get("path", None),
-            "savedID": flow.get("savedID", None),
-            "date": flow.get("date", None),
-        }
-
-        # Remove the oldest flow if the list is longer than 10
-        while len(recentFlows) > 10:
-            oldestFlow = None
-            for savedID in recentFlows:
-                if oldestFlow is None:
-                    oldestFlow = savedID
-                elif recentFlows[savedID]["date"] < recentFlows[oldestFlow]["date"]:
-                    oldestFlow = savedID
-            del recentFlows[oldestFlow]
-
-        # Write the recent flows list to the file
-        with open(self.recentFlowsPath, "w") as f:
-            json.dump(recentFlows, f)
-
-    def openRecentFlow(self, savedID: str):
-        """
-        Opens a recent flow
-
-        :param savedID: The savedID of the flow to open
-        """
-
-        # Get the recent flows list
-        recentFlows = self.listRecentFlows()
-
-        # Check if the savedID exists
-        flow = recentFlows.get(savedID, None)
-
-        if flow is None:
-            raise Exception("The savedID does not exist")
-
-        return self._openFlowInternal(flow["path"])
-
-    def cleanRecentFlows(self):
-        """
-        Cleans the recent flows list
-        """
-
-        with open(self.recentFlowsPath, "w") as f:
-            json.dump({}, f)
-
-
-class Setting:
+def launchApp():
     """
-    A setting of the App
+    Launches the app.
     """
 
-    id = "unnamed_setting"
-    """
-    The ID of the setting
-    """
-
-    name = "Unnamed setting"
-    """
-    A short name of the setting
-    """
-
-    value = None
-    """
-    The value of the setting
-    """
-
-    description = "No description"
-    """
-    The description of the setting
-    """
-
-    category = "General"
-    """
-    The category of the setting
-    """
-
-    def __init__(
-        self,
-        id: str,
-        name: str,
-        value: typing.Any,
-        description: str,
-        category: str = "General",
-    ):
-        """
-        Create a Setting instance
-
-        :param id: The ID of the setting
-        :param name: A short name of the setting
-        :param value: The value of the setting
-        :param description: The description of the setting
-        """
-        self.id = id
-        self.name = name
-        self.value = value
-        self.description = description
-        self.category = category
-
-    # Define comparison operators
-    def __eq__(self, other):
-        return self.id == other.id
-
-    def __ne__(self, other):
-        return self.id != other.id
-
-    # Define a method to get a JSON serializable dict of the setting
-    def toDict(self):
-        """
-        Serializes the setting to a dict
-        """
-
-        return {
-            "name": self.name,
-            "value": self.value,
-            "description": self.description,
-            "category": self.category,
-        }
-
-
-class HorusSettings:
-    """
-    Manage the Horus app settings
-    """
-
-    settings: typing.Dict[str, Setting] = {}
-    """
-    The settings of the app
-
-    :type: dict[str, Setting]
-    - key: The ID of the setting
-    - value: The setting instance
-    """
-
-    def __init__(self, appSupportDir: str) -> None:
-        """
-        Manage and load the settings of the app
-
-        :param appSupportDir: The path to the app support directory
-        """
-
-        # Define the default settings path based on if the app is frozen
-        try:
-            bundle_dir = sys._MEIPASS  # type: ignore
-            self.defaultSettingsPath = os.path.abspath(
-                os.path.join(bundle_dir, "default_settings.json")
-            )
-        except AttributeError:
-            self.defaultSettingsPath = os.path.join("App", "default_settings.json")
-
-        # Define the user settings path
-        self.userSettingsPath = os.path.join(appSupportDir, "settings.json")
-
-        # Load the settings
-        self._loadSettings()
-
-    def _createSettings(self):
-        """
-        If no settings file exists, create one with the default settings
-        """
-
-        # Check if the default settings file exists
-        if not os.path.exists(self.defaultSettingsPath):
-            raise Exception("The default settings file does not exist")
-
-        # Load the default settings
-        with open(self.defaultSettingsPath, "r") as f:
-            defaultSettings = json.load(f)
-
-        # Write the default settings to the user settings file
-        with open(self.userSettingsPath, "w") as f:
-            json.dump(defaultSettings, f)
-
-    def _loadSettings(self):
-        """
-        Loads the settings from the settings file
-        """
-
-        # Check if the settings file exists
-        if not os.path.exists(self.userSettingsPath):
-            # Create the settings file
-            self._createSettings()
-
-        # Load the settings
-        with open(self.userSettingsPath, "r") as f:
-            fileSettings = json.load(f)
-
-        # Instantiate the settings
-        self.settings = {}
-        for key, value in fileSettings.items():
-            try:
-                newSetting = Setting(
-                    key,
-                    value["name"],
-                    value["value"],
-                    value["description"],
-                    value["category"],
-                )
-            except KeyError:
-                print("The setting file is corrupted for setting", key)
-                continue
-
-            # If the setting already exists, raise an exception
-            if newSetting.id in self.settings:
-                raise Exception(
-                    f"The setting {newSetting.id} is duplicated.\
-                    Make sure that each setting has a unique ID."
-                )
-
-            # Add the setting to the settings list
-            self.settings[newSetting.id] = newSetting
-
-    def getSetting(self, id: str) -> Setting:
-        """
-        Returns a setting by its ID
-
-        :param id: The ID of the setting
-        """
-
-        # Get the setting
-        setting = self.settings.get(id, None)
-
-        if setting is None:
-            raise Exception("The setting does not exist")
-
-        return setting
-
-    def restoreDefaults(self):
-        """
-        Restores the default settings
-        """
-
-        # Load the default settings
-        with open(self.defaultSettingsPath, "r") as f:
-            defaultSettings = json.load(f)
-
-        # Write the default settings to the user settings file
-        with open(self.userSettingsPath, "w") as f:
-            json.dump(defaultSettings, f)
-
-        # Reload the settings
-        self._loadSettings()
-
-    def updateSetting(self, setting: Setting):
-        """
-        Updates a setting
-
-        :param setting: The setting instance updated to save
-        """
-
-        self.settings[setting.id] = setting
-
-        # Save the settings
-        self.saveSettings()
-
-    def saveSettings(self):
-        """
-        Updates the user settings file
-        """
-
-        settingsToSave = {}
-
-        for id, setting in self.settings.items():
-            settingsToSave[id] = setting.toDict()
-
-        # Save the settings
-        with open(self.userSettingsPath, "w") as f:
-            json.dump(settingsToSave, f)
-
-    def listSettings(self):
-        """
-        Returns the list of settings as a JSON object
-        """
-
-        with open(self.userSettingsPath, "r") as f:
-            settings = json.load(f)
-
-        return settings
-
-
-def LaunchApp():
     # Check for the --debug flag (-d) (Only development)
     # Forces the server to run in debug mode
     debug = False
@@ -1263,9 +649,7 @@ def LaunchApp():
 
         # Check for the --url (-u) flag
         if "--url" in sys.argv or "-u" in sys.argv:
-            index = (
-                sys.argv.index("--url") if "--url" in sys.argv else sys.argv.index("-u")
-            )
+            index = sys.argv.index("--url") if "--url" in sys.argv else sys.argv.index("-u")
             try:
                 debugURL = sys.argv[index + 1]
             except IndexError:

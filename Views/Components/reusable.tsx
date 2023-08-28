@@ -1,9 +1,9 @@
-import React, { Fragment, useState } from 'react';
-import Button from 'react-bootstrap/Button';
-import Modal from 'react-bootstrap/Modal';
-import { Listbox, Transition } from '@headlessui/react'
-import { CheckIcon, ChevronUpDownIcon } from '@heroicons/react/20/solid'
-import { Popover } from "@headlessui/react";
+import React, { Fragment, useState } from "react";
+import Modal from "react-bootstrap/Modal";
+import { Listbox, Transition } from "@headlessui/react";
+import { CheckIcon, ChevronUpDownIcon } from "@heroicons/react/20/solid";
+import { Popover, Combobox } from "@headlessui/react";
+import { useEffect } from "react";
 
 const HorusPopover = ({ trigger, children }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -28,11 +28,13 @@ const HorusPopover = ({ trigger, children }) => {
   );
 };
 
-function debounce(func, timeout = 300){
+function debounce(func, timeout = 300) {
   let timer;
   return (...args) => {
     clearTimeout(timer);
-    timer = setTimeout(() => { func.apply(this, args); }, timeout);
+    timer = setTimeout(() => {
+      func.apply(this, args);
+    }, timeout);
   };
 }
 
@@ -41,38 +43,40 @@ interface HorusModalProps {
   onHide?: () => void;
   header: React.ReactNode;
   body: React.ReactNode;
-  footer: React.ReactNode
+  footer: React.ReactNode;
   size?: "sm" | "lg" | "xl" | "xxl";
 }
 
 function HorusModal(props: HorusModalProps) {
-  const sizeClass = props.size ? `modal-${props.size}` : '';
+  const sizeClass = props.size ? `modal-${props.size}` : "";
   return (
     <>
-      <Modal show={props.show} onHide={props.onHide} dialogClassName={sizeClass}>
+      <Modal
+        show={props.show}
+        onHide={props.onHide}
+        dialogClassName={sizeClass}
+      >
         <Modal.Header>
           <Modal.Title>{props.header}</Modal.Title>
         </Modal.Header>
         <Modal.Body>{props.body}</Modal.Body>
-        <Modal.Footer>
-          {props.footer}
-        </Modal.Footer>
+        <Modal.Footer>{props.footer}</Modal.Footer>
       </Modal>
     </>
   );
 }
 
 const people = [
-  { name: 'Wade Cooper' },
-  { name: 'Arlene Mccoy' },
-  { name: 'Devon Webb' },
-  { name: 'Tom Cook' },
-  { name: 'Tanya Fox' },
-  { name: 'Hellen Schmidt' },
-]
+  { name: "Wade Cooper" },
+  { name: "Arlene Mccoy" },
+  { name: "Devon Webb" },
+  { name: "Tom Cook" },
+  { name: "Tanya Fox" },
+  { name: "Hellen Schmidt" },
+];
 
 function HorusDropdown() {
-  const [selected, setSelected] = useState(people[0])
+  const [selected, setSelected] = useState(people[0]);
 
   return (
     <div className="fixed top-16 w-72">
@@ -98,7 +102,8 @@ function HorusDropdown() {
                 <Listbox.Option
                   key={personIdx}
                   className={({ active }) =>
-                    `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-amber-100 text-amber-900' : 'text-gray-900'
+                    `relative cursor-default select-none py-2 pl-10 pr-4 ${
+                      active ? "bg-amber-100 text-amber-900" : "text-gray-900"
                     }`
                   }
                   value={person}
@@ -106,8 +111,9 @@ function HorusDropdown() {
                   {({ selected }) => (
                     <>
                       <span
-                        className={`block truncate ${selected ? 'font-medium' : 'font-normal'
-                          }`}
+                        className={`block truncate ${
+                          selected ? "font-medium" : "font-normal"
+                        }`}
                       >
                         {person.name}
                       </span>
@@ -125,7 +131,14 @@ function HorusDropdown() {
         </div>
       </Listbox>
     </div>
-  )
+  );
 }
 
-export { HorusModal, HorusDropdown, HorusModalProps, debounce, HorusPopover }
+type HorusComboboxProps = {
+  selectedData: Array<any>;
+  data: any[];
+  onChange: (value: any) => void;
+  displayValue: (value: any) => string;
+};
+
+export { HorusModal, HorusDropdown, HorusModalProps, debounce, HorusPopover };

@@ -1,6 +1,7 @@
 import pytest
 from App import AppDelegate
-from App.app_delegate import Setting, HorusSettings
+from Server.SettingsManager import Setting
+from Server.SettingsManager import SettingsManager as HorusSettings
 import os
 import json
 
@@ -13,7 +14,7 @@ def appDelegate_default():
 def test_AppDelegate_startup(appDelegate_default: AppDelegate):
     # Check basic props
     assert appDelegate_default.debug is False
-    assert appDelegate_default.server_mode is False
+    assert appDelegate_default.serverMode is False
     assert appDelegate_default.browser is False
 
     # Check app info

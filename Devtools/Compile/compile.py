@@ -1,52 +1,89 @@
+from distutils.sysconfig import get_config_vars as default_get_config_vars
+import distutils.sysconfig as dsc
+from setuptools import setup
+from distutils.extension import Extension
+from Cython.Distutils import build_ext  # type: ignore
+import os
+
+
 # manipulate get_config_vars:
 # 1. step: wrap functionality and filter
-from distutils.sysconfig import get_config_vars as default_get_config_vars
-
 def remove_pthread(x):
-    if type(x) is str:
+    if isinstance(x, str):
         # x.replace(" -pthread ") would be probably enough...
         # but we want to make sure we make it right for every input
-        if x=="-pthread":
+        if x == "-pthread":
             return ""
         if x.startswith("-pthread "):
-            return remove_pthread(x[len("-pthread "):])
+            return remove_pthread(x[len("-pthread ") :])  # noqa: E203
         if x.endswith(" -pthread"):
-            return remove_pthread(x[:-len(" -pthread")])
+            return remove_pthread(x[: -len(" -pthread")])
         return x.replace(" -pthread ", " ")
     return x
 
-def my_get_config_vars(*args):
-  result = default_get_config_vars(*args)
-  # sometimes result is a list and sometimes a dict:
-  if type(result) is list:
-     return [remove_pthread(x) for x in result]
-  elif type(result) is dict:
-     return {k : remove_pthread(x) for k,x in result.items()}
-  else:
-     raise Exception("cannot handle type"+type(result))
 
-# 2.step: replace    
-import distutils.sysconfig as dsc
+def my_get_config_vars(*args):
+    result = default_get_config_vars(*args)
+    # sometimes result is a list and sometimes a dict:
+    if isinstance(result, list):
+        return [remove_pthread(x) for x in result]
+    elif isinstance(result, dict):
+        return {k: remove_pthread(x) for k, x in result.items()}
+    else:
+        raise Exception("cannot handle type" + str(type(result)))
+
+
+# 2.step: replace
 dsc.get_config_vars = my_get_config_vars
 
-from setuptools import setup
-from distutils.extension import Extension
-from Cython.Distutils import build_ext # type: ignore
-import os
-
 ext_modules = [
-    Extension("App", ["App/app_delegate.py"]),
-    Extension("App", ["App/__init__.py"]),
+    # Compile the AppDelegate
+    Extension("App.app_delegate", ["App/app_delegate.py"]),
+    Extension("App.__init__", ["App/__init__.py"], include_package_data=True),  # type: ignore
+    # Compile the Server
     Extension("Server.server", ["Server/server.py"]),
-    Extension("Server.plugin_manager", ["Server/plugin_manager.py"]),
-    Extension("Server.remotes_manager", ["Server/remotes_manager.py"]),
     Extension(
         "Server.__init__",
         ["Server/__init__.py"],
         include_package_data=True,  # type: ignore
     ),
+    # Compile the server extension
+    # Flow manager
+    Extension("Server.FlowManager.flow_manager", ["Server/FlowManager/flow_manager.py"]),
+    Extension(
+        "Server.FlowManager.__init__",
+        ["Server/FlowManager/__init__.py"],
+        include_package_data=True,  # type: ignore
+    ),
+    # Remotes manager
+    Extension(
+        "Server.RemotesManager.remotes_manager", ["Server/RemotesManager/remotes_manager.py"]
+    ),
+    Extension(
+        "Server.RemotesManager.__init__",
+        ["Server/RemotesManager/__init__.py"],
+        include_package_data=True,  # type: ignore
+    ),
+    # Settings manager
+    Extension(
+        "Server.SettingsManager.settings_manager", ["Server/SettingsManager/settings_manager.py"]
+    ),
+    Extension(
+        "Server.SettingsManager.__init__",
+        ["Server/SettingsManager/__init__.py"],
+        include_package_data=True,  # type: ignore
+    ),
+    # Plugin manager
+    Extension("Server.PluginManager.plugin_manager", ["Server/PluginManager/plugin_manager.py"]),
+    Extension(
+        "Server.PluginManager.__init__",
+        ["Server/PluginManager/__init__.py"],
+        include_package_data=True,  # type: ignore
+    ),
+    # Compile the HorusAPI
     Extension("HorusAPI.src.plugins", ["HorusAPI/src/plugins.py"]),
     Extension("HorusAPI.src.molstar", ["HorusAPI/src/molstar.py"]),
+    Extension("HorusAPI.src.utils", ["HorusAPI/src/utils.py"]),
     Extension(
         "HorusAPI.__init__",
         ["HorusAPI/src/__init__.py"],
@@ -61,13 +98,22 @@ setup(
     # Set the build dir to be build/cython
     script_args=["build_ext", "-b", "build/cython"],
     # Disable the -lpthread flag
-    
 )
+
+print("Deleting generated .c files")
 
 # Remove the generated C files
 for file in os.listdir("Server"):
-    if file.endswith(".c"):
-        os.remove(os.path.join("Server", file))
+    filePath = os.path.join("Server", file)
+    if filePath.endswith(".c"):
+        os.remove(filePath)
+    # List other directories inside
+    if os.path.isdir(filePath):
+        for fileInside in os.listdir(filePath):
+            filePathInside = os.path.join(filePath, fileInside)
+            if filePathInside.endswith(".c"):
+                os.remove(filePathInside)
+
 
 for file in os.listdir("App"):
     if file.endswith(".c"):

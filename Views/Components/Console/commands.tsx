@@ -23,6 +23,14 @@ export default function getCommands() {
         socket.emit("message", "Hello from the client!");
       },
     },
+    molreset: {
+      description: "Reset Mol* viewer",
+      usage: "molreset",
+      fn: (...args) => {
+        const molstar = window.molstar;
+        return molstar ? molstar.reset() : "Molstar is not defined.";
+      },
+    },
     sel: {
       description: "Focus a residue.",
       usage: "focus <residue>",
@@ -121,7 +129,6 @@ export default function getCommands() {
         });
 
         const result = await window.dispatchEvent(event);
-        console.log(result);
         return result;
       },
     },

@@ -1,9 +1,17 @@
 import { useState, useEffect, useRef } from "react";
 import RotatingLines from "../RotatingLines/rotatinglines";
 import { HorusModal, HorusPopover } from "../reusable";
-import { BlockProps } from "./flow_builder_interfaces";
-import { PluginVariableType } from "./flow_builder_interfaces";
-import { PluginVariableView, InputOutputView } from "./block_variables";
+import {
+  Block,
+  BlockVarPair,
+  PluginVariable,
+  PluginVariableTypes,
+} from "./flow_builder_types";
+import {
+  PluginVariableView,
+  InputOutputView,
+  VariableBallView,
+} from "./block_variables";
 import "./block.css";
 
 // Drag the blocks, drop the arrows
@@ -12,8 +20,8 @@ import { ArrowBlockConnector } from "./arrow_connector";
 import { useXarrow } from "react-xarrows";
 
 interface DeleteBlockButtonProps {
-  block: BlockProps;
-  onClick: (block: BlockProps) => void;
+  block: Block;
+  onClick: (block: Block) => void;
 }
 
 interface PlayBlockButtonProps {
@@ -113,38 +121,66 @@ function PlayBlockButton({
   );
 }
 
-function Block(block: BlockProps) {
+function InputRunningSpinner(props: { isRunning: boolean }) {
+  if (props.isRunning) {
+    return (
+      <RotatingLines
+        style={{
+          height: "1.25rem",
+        }}
+      />
+    );
+  }
+}
+
+function BlockView(block: Block) {
   // Track hovering on info button to display the description instead of the plugin
   const [isInfoHovering, setIsInfoHovering] = useState(false);
 
-  const handleChange = (value: PluginVariableType, id: string) => {
-    var hasChanged = false;
+  const handleChange = (value: any, id: string) => {
+    // var hasChanged = false;
     // Update the variable value by searching the PluginVariable by id
-    const updatedVariables = block.variables.map((variable) => {
+    block.variables.map((variable) => {
+      // THIS NEEDS TO BE REFACTORED BECAUSE IDK HOW IS THE STATE BEING UPDATED
       if (variable.id === id) {
-        if (variable.placedID === block.placedID) {
-          if (variable.value !== value) {
-            hasChanged = true;
-            variable.value = value;
-          }
+        if (variable.value !== value) {
+          // hasChanged = true;
+          variable.value = value;
         }
       }
       return variable;
     });
 
     // Update the block variables
-    block.variables = updatedVariables;
+    // block.variables = updatedVariables;
 
     // Call the onChange function
-    if (hasChanged) {
-      block?.onChange();
-    }
+    // if (hasChanged) {
+    block?.onChange(block.placedID);
+    // }
   };
 
   const handleExecute = async () => {
     // Call the execute function
     await block?.execute(block);
   };
+
+  const checkRemoteStatus = async (block: Block) => {
+    await block?.checkRemoteStatus(block);
+  };
+
+  // If the block is a remote block and is running, fetch every 10 seconds the status
+  // When the block stops running, stop fetching and proceed to execute the second
+  // part of the remote block
+  useEffect(() => {
+    if (block.type === "slurm" && block.isRunning) {
+      const interval = setInterval(() => {
+        checkRemoteStatus(block);
+      }, 10000);
+
+      return () => clearInterval(interval);
+    }
+  }, [block.isRunning]);
 
   const [variablesModal, setVariablesModal] = useState(false);
 
@@ -205,7 +241,6 @@ function Block(block: BlockProps) {
                       block.placedID
                     }
                     variable={variable}
-                    onChange={handleChange}
                   />
                 ))}
               </div>
@@ -227,7 +262,6 @@ function Block(block: BlockProps) {
                       block.placedID
                     }
                     variable={variable}
-                    onChange={handleChange}
                   />
                 ))}
               </div>
@@ -245,27 +279,60 @@ function Block(block: BlockProps) {
     />
   );
 
+  const hasPlayButton = () => {
+    if (block.type === "input") {
+      return false;
+    }
+
+    return true;
+
+    let hasPlayButton = block?.connectedToReference?.length === 0;
+    const hasVariablesConnected = block?.variableConnections?.length > 0;
+
+    if (hasVariablesConnected) {
+      // If the variables connected are all of them "input" type,
+      // then the block can be executed
+      hasPlayButton = block?.variableConnections?.every(
+        (variableConnection) => variableConnection.origin.blockType === "input"
+      );
+    }
+    return hasPlayButton;
+  };
+
+  const remoteStyle = block.type === "slurm" ? "remote-block" : "";
+
   return (
     <div
       id={`${block?.placedID}-${block.id}`}
-      className={`${
-        block.isSubBlock && !block.isPlaced && !block.isOnAir ? "subblock" : ""
-      } plugin-block ${block.isPlaced ? "" : "plugin-block-placed"}`}
+      // ${
+      //   block.isSubBlock && !block.isPlaced && !block.isOnAir ? "subblock" : ""
+      // }
+      className={`plugin-block ${block.isPlaced ? "" : "plugin-block-placed"}`}
     >
       {variablesModalView}
-      <div className="flex flew-row justify-between">
+      <div className="flex flex-row justify-between ${remoteStyle}">
         <div style={{ fontWeight: "bold" }}>{block.name}</div>
-        <div className="flex flex-row gap-1">
+        <div className="flex flex-row gap-1 items-baseline">
           {/* Play button to execute the block */}
           {/* Delete button to remove the block from the canvas */}
           {block.isPlaced && (
             <>
-              <PlayBlockButton
-                isRunning={block.isRunning}
-                runError={block.runError}
-                onClick={handleExecute}
-              />
-              <BlockVariablesButton onClick={openVariablesModal} />
+              {block.finishedExecution && (
+                <FinishedCheck runError={block.runError} />
+              )}
+              {hasPlayButton() ? (
+                <PlayBlockButton
+                  isRunning={block.isRunning}
+                  runError={block.runError}
+                  onClick={handleExecute}
+                />
+              ) : (
+                <InputRunningSpinner isRunning={block.isRunning} />
+              )}
+              {block.type !== "input" && (
+                <BlockVariablesButton onClick={openVariablesModal} />
+              )}
+
               <DeleteBlockButton
                 block={block}
                 onClick={() => block.deleteBlock(block)}
@@ -301,18 +368,43 @@ function Block(block: BlockProps) {
           (isInfoHovering || block.isPlaced ? "opacity-100" : "opacity-0")
         }
       >
-        {isInfoHovering || block.isPlaced ? (
+        {isInfoHovering || (block.isPlaced && block.type !== "input") ? (
           <div>
-            <div className="plugin-">{block.description}</div>
-            <div>{!block.isPlaced && block.id}</div>
+            <div className="plugin-description">{block.description}</div>
+            {block.type === "slurm" && (
+              <div className="remote-block-cloud">
+                <ServerIcon /> Slurm Block
+              </div>
+            )}
           </div>
         ) : null}
+
+        {block.type === "input" && block.isPlaced && (
+          <div>
+            <PluginVariableView
+              key={
+                block.variables[0].id +
+                "-" +
+                0 +
+                "-" +
+                block.id +
+                "-" +
+                block.placedID
+              }
+              variable={block.variables[0]}
+              onChange={handleChange}
+              hideName={true}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function DraggableBlock(block: BlockProps) {
+function InputBlock(block: Block) {}
+
+function DraggableBlockView(block: Block) {
   const updateXarrow = useXarrow();
 
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
@@ -323,7 +415,11 @@ function DraggableBlock(block: BlockProps) {
     },
   });
 
-  const { setNodeRef: setDropRef } = useDroppable({
+  const {
+    setNodeRef: setDropRef,
+    active,
+    isOver,
+  } = useDroppable({
     id: block.placedID ? `${block.placedID}-${block.id}` : block.id,
     data: {
       block: block,
@@ -338,12 +434,12 @@ function DraggableBlock(block: BlockProps) {
   };
 
   if (block.isPlaced) {
-    style.transform = `translate(${block?.coords?.x}px, ${block?.coords?.y}px)`;
+    style.transform = `translate(${block?.position?.x}px, ${block?.position?.y}px)`;
   }
 
   if (transform && block.isPlaced) {
-    const deltx = transform.x + block.coords.x;
-    const delty = transform.y + block.coords.y;
+    const deltx = transform.x + block.position.x;
+    const delty = transform.y + block.position.y;
     style.transform = `translate(${deltx}px, ${delty}px)`;
   }
 
@@ -358,6 +454,67 @@ function DraggableBlock(block: BlockProps) {
     setNodeRef(ref.current);
   }, [ref]);
 
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [tryingToConnect, setTryingToConnect] = useState<{
+    variableID: string;
+    variableType: PluginVariableTypes;
+    variableAllowedValues: Array<string>;
+  } | null>(null);
+
+  useEffect(() => {
+    if (active && isOver) {
+      const id = active.id as string;
+      if (id.includes("-connector")) {
+        const blockVarPair = active.data.current.blockVarPair as BlockVarPair;
+        setIsConnecting(true);
+        setTryingToConnect({
+          variableID: blockVarPair.variableID,
+          variableType: blockVarPair.variableType,
+          variableAllowedValues: blockVarPair.variableAllowedValues,
+        });
+        return;
+      }
+    }
+
+    setIsConnecting(false);
+    setTryingToConnect(null);
+  }, [active, isOver]);
+
+  const placedBlockConnector = () => {
+    // For input blocks, we only have one variable
+    if (block.type === "input") {
+      const variable = block.variables[0];
+      return (
+        <ArrowBlockConnector from={ref} block={block} variable={variable} />
+      );
+    }
+
+    // For other blocks, we need to set the output as the variable
+    const output = block.outputs[0];
+    return <ArrowBlockConnector from={ref} block={block} variable={output} />;
+  };
+
+  const variablesConnectorView = () => {
+    if (block.type === "input") {
+      return <>{placedBlockConnector()}</>;
+    }
+
+    return (
+      <>
+        {placedBlockConnector()}
+        <VariableBallView
+          key={block.id + "-" + block.placedID}
+          variables={block.inputs}
+          isConnecting={isConnecting}
+          tryingToConnect={tryingToConnect}
+          placedID={block.placedID}
+          block={block}
+          // updateXarrow={updateXarrow}
+        />
+      </>
+    );
+  };
+
   return (
     <div
       ref={ref}
@@ -366,10 +523,71 @@ function DraggableBlock(block: BlockProps) {
       {...attributes}
       className={block.isPlaced ? "absolute" : "relative"}
     >
-      <Block {...block} />
-      {block.isPlaced && <ArrowBlockConnector from={ref} block={block} />}
+      <BlockView {...block} />
+      {block.isPlaced && variablesConnectorView()}
     </div>
   );
 }
 
-export { Block, DraggableBlock };
+export { BlockView, DraggableBlockView };
+
+function FinishedCheck(props: { runError: boolean }) {
+  if (props.runError) {
+    return (
+      <div>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={2}
+          stroke="red"
+          className="w-5 h-5"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
+          />
+        </svg>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        strokeWidth={2}
+        stroke="green"
+        className="w-5 h-5"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
+      </svg>
+    </div>
+  );
+}
+
+function ServerIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.5}
+      stroke="currentColor"
+      className="w-6 h-6"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7m0 0a3 3 0 01-3 3m0 3h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008zm-3 6h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008z"
+      />
+    </svg>
+  );
+}

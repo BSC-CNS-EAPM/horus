@@ -1,14 +1,17 @@
-import { Block, DraggableBlock } from "./block";
-import { BlockProps, FlowReciverProps } from "./flow_builder_interfaces";
+import { BlockView, DraggableBlockView } from "./block_view";
 import { useEffect, useRef, useState } from "react";
 import { horusGet, horusPost } from "../../Utils/utils";
 import RotatingLines from "../RotatingLines/rotatinglines";
-import { useDroppable, DndContext } from "@dnd-kit/core";
-import Xarrow, { Xwrapper } from "react-xarrows";
-import { connectArrowBlock } from "./flow_builder";
-import { PlacedXarrow } from "./arrow_connector";
-import NBDButton from "../nbdbutton";
+import { useDroppable } from "@dnd-kit/core";
+import { Xwrapper } from "react-xarrows";
+import {
+  VariableConnectionArrow,
+  BlockConnectionArrow,
+} from "./arrow_connector";
 import { debounce } from "../reusable";
+import { Block, BlockVarPair } from "./flow_builder_types";
+import FlowExecuter from "./flow_executer";
+import { FlowBuilderController } from "./flow_builder_hooks";
 
 // Define the selectedRemote on the window object
 declare global {
@@ -16,6 +19,24 @@ declare global {
     selectedRemote?: string;
   }
 }
+
+type FlowReciverProps = {
+  flowName: string;
+  placedBlocks: Block[];
+  savedID?: string;
+  flowPath?: string;
+  currentSaved: React.MutableRefObject<boolean>;
+  placedIDCounter: React.MutableRefObject<number>;
+  flowBuilderController: FlowBuilderController;
+
+  setPlacedBlocks: React.Dispatch<React.SetStateAction<Array<Block>>>;
+  setSaved: (saved: boolean) => void;
+  unconnectBlocks: (currentBlock: Block, connectedBlock: Block) => void;
+  unconnectVariables: (connection: {
+    origin: BlockVarPair;
+    destination: BlockVarPair;
+  }) => void;
+};
 
 function FlowReciver(props: FlowReciverProps) {
   // Modal state
@@ -28,7 +49,7 @@ function FlowReciver(props: FlowReciverProps) {
 
   // Executing state
   const [executingAll, setExecutingAll] = useState(false);
-  const [currentExecuting, setCurrentExecuting] = useState<BlockProps>(null);
+  const [currentExecuting, setCurrentExecuting] = useState<number | null>(null);
 
   // Selected cluster
   const [remotesOptions, setRemotesOptions] = useState<string[]>([]);
@@ -88,14 +109,18 @@ function FlowReciver(props: FlowReciverProps) {
   const debouncedHandleSaveAs = debounce(handleSaveAs, 1000);
 
   const handleSave = async () => {
+    const molstarState = await window.molstar?.snapshot.get();
     const saveContents = {
       name: flowName,
       blocks: props.placedBlocks,
       savedID: savedID.current,
       path: flowPath.current,
       remote: selectedRemote,
-      // currentExecuting: currentExecuting,
+      currentExecuting: flowExecuter.current.currentExecuting,
+      molstarState: molstarState,
     };
+
+    console.log("Saving flow: ", saveContents);
 
     const body = JSON.stringify(saveContents);
 
@@ -155,48 +180,16 @@ function FlowReciver(props: FlowReciverProps) {
     flowPath.current = savedFlow.path;
   };
 
-  const executeInternal = async (block, inputs) => {
-    // Get the updated block variables
-    const variables = block.variables.reduce((acc, variable) => {
-      // Return a dictionary with the variable name and value {name: value}
-      acc[variable.id] = variable.value;
-      return acc;
-    }, {});
+  const flowExecuter = useRef(
+    new FlowExecuter(
+      setCurrentExecuting,
+      props.setPlacedBlocks,
+      setExecutingAll,
+      handleSave
+    )
+  );
 
-    const body = JSON.stringify({
-      blockID: block.id,
-      variables: variables,
-      path: flowPath.current,
-      inputs: inputs ? inputs : {},
-    });
-
-    const headers = {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    };
-
-    setCurrentExecuting(block);
-    // Save the flow with the current executing block
-    await handleSave();
-
-    const response = await horusPost("/plugins/executeblock", headers, body);
-
-    const data = await response.json();
-
-    setCurrentExecuting(null);
-    // Save the flow with the current executing block
-    await handleSave();
-
-    return data;
-  };
-
-  const stopExecute = useRef(false);
-
-  const executeBlock = async (block: BlockProps, input) => {
-    if (stopExecute.current) {
-      return;
-    }
-
+  const executeBlock = async (block: Block): Promise<void> => {
     setExecutingAll(true);
 
     // Check that the flow is saved
@@ -205,64 +198,72 @@ function FlowReciver(props: FlowReciverProps) {
       await handleSave();
     }
 
-    // Set the running spinner for the current block
-    toggleSpinner();
+    // // Set blocks as not executed
+    // props.setPlacedBlocks(
+    //   props.placedBlocks.map((b) => {
+    //     b.finishedExecution = false;
+    //     return b;
+    //   })
+    // );
 
-    // Find the actual block in the placedBlocks array
-    const realBlock = props.placedBlocks.find(
-      (b) => b.placedID === block.placedID
+    // Update the placedBlocks in the FlowExecuter
+    flowExecuter.current.updatePlacedBlocks(props.placedBlocks);
+    flowExecuter.current.updateFlowPath(flowPath.current);
+    flowExecuter.current.setSavedID(savedID.current);
+
+    // Set the running spinner for the current block
+    flowExecuter.current.stopExecute = false;
+    const executed = await flowExecuter.current.executeBlock(
+      block.placedID,
+      true
     );
 
-    const result = await executeInternal(realBlock, input);
-
-    // Set the running button to false
-    toggleSpinner(false);
-
     // Check any error status code
-    !result.ok ? toggleError() : toggleError(false);
+    executed === true ? toggleError(block, false) : toggleError(block);
 
-    // Stop the execution if there was an error
-    if (!result.ok) {
-      stopExecute.current = true;
-    }
+    // Update the placedBlocks in the view
+    props.setPlacedBlocks(flowExecuter.current.placedBlocks);
 
-    const outputs = result.outputs;
-
-    // Execute the connected blocks
-    if (realBlock.connectedTo && realBlock.connectedTo.length > 0) {
-      for (const connected of realBlock.connectedTo) {
-        await executeBlock(connected, outputs);
-      }
-    }
+    flowExecuter.current.stopExecute = false;
 
     setExecutingAll(false);
 
-    stopExecute.current = false;
+    // If there is a block still running, set executingAll to true
+    for (const block of flowExecuter.current.placedBlocks) {
+      if (block.isRunning) {
+        setExecutingAll(true);
+        break;
+      }
+    }
 
     await handleSave();
-
-    function toggleSpinner(status = true) {
-      props.setPlacedBlocks(
-        props.placedBlocks.map((b) => {
-          if (b.placedID === block.placedID) {
-            b.isRunning = status;
-          }
-          return b;
-        })
-      );
-    }
-
-    function toggleError(status = true) {
-      props.setPlacedBlocks(
-        props.placedBlocks.map((b) => {
-          if (b.placedID === block.placedID) {
-            b.runError = status;
-          }
-          return b;
-        })
-      );
-    }
   };
+
+  const checkRemoteBlock = async (block: Block): Promise<void> => {
+    flowExecuter.current.checkRemoteBlock(block);
+  };
+
+  function toggleSpinner(block: Block, status: boolean = true) {
+    props.setPlacedBlocks(
+      props.placedBlocks.map((b) => {
+        if (b.placedID === block.placedID) {
+          b.isRunning = status;
+        }
+        return b;
+      })
+    );
+  }
+
+  function toggleError(block: Block, status: boolean = true) {
+    props.setPlacedBlocks(
+      props.placedBlocks.map((b) => {
+        if (b.placedID === block.placedID) {
+          b.runError = status;
+        }
+        return b;
+      })
+    );
+  }
 
   const stopExecutingAll = async () => {
     if (!executingAll) {
@@ -273,7 +274,9 @@ function FlowReciver(props: FlowReciverProps) {
       return;
     }
 
-    stopExecute.current = true;
+    setExecutingAll(false);
+
+    flowExecuter.current.stopExecute = true;
   };
 
   const onNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -281,32 +284,152 @@ function FlowReciver(props: FlowReciverProps) {
     setSaved(false);
   };
 
-  const handleDelete = (block: BlockProps) => {
-    // Loop over the block "appearsOn" and delete the block from the connectedTo list
-    if (block.appearsOn) {
-      for (const aB of block.appearsOn) {
-        props.setPlacedBlocks(
-          props.placedBlocks.map((b) => {
-            if (b.placedID === aB.placedID) {
-              b.connectedTo = b.connectedTo.filter(
-                (c) => c.placedID !== block.placedID
-              );
-            }
-            return b;
-          })
+  const handleDelete = (block: Block) => {
+    let updatedPlacedBlocks = props.placedBlocks;
+
+    // Delete the connections to this block in
+    // the connected blocks REFERENCE of the block to delete
+    if (block.connectedToReference && block.connectedToReference.length > 0) {
+      for (const connected of block.connectedToReference) {
+        // Find in the placedBlocks the connected block
+        const realConnected = updatedPlacedBlocks.find(
+          (b) => b.placedID === connected
         );
+
+        // Remove the reference to the block to delete
+        realConnected.connectedTo = realConnected.connectedTo.filter(
+          (b) => b !== block.placedID
+        );
+
+        // Update the placedBlocks array
+        updatedPlacedBlocks = updatedPlacedBlocks.map((b) => {
+          if (b.placedID === realConnected.placedID) {
+            b.connectedTo = realConnected.connectedTo;
+          }
+          return b;
+        });
       }
     }
 
-    // Delete a block from the current flow
-    props.setPlacedBlocks(
-      props.placedBlocks.filter((b) => b.placedID !== block.placedID)
+    // Delete the connection REFERENCE in the connected
+    // blocks of the block to delete
+    if (block.connectedTo && block.connectedTo.length > 0) {
+      for (const connected of block.connectedTo) {
+        // Find in the placedBlocks the connected block
+        const realConnected = updatedPlacedBlocks.find(
+          (b) => b.placedID === connected
+        );
+
+        // Remove the reference to the block to delete
+        realConnected.connectedToReference =
+          realConnected.connectedToReference.filter(
+            (b) => b !== block.placedID
+          );
+
+        // Update the placedBlocks array
+        updatedPlacedBlocks = updatedPlacedBlocks.map((b) => {
+          if (b.placedID === realConnected.placedID) {
+            b.connectedToReference = realConnected.connectedToReference;
+          }
+          return b;
+        });
+
+        // Update the placedBlocks array
+        updatedPlacedBlocks = updatedPlacedBlocks.map((b) => {
+          if (b.placedID === realConnected.placedID) {
+            b.connectedToReference = realConnected.connectedToReference;
+          }
+          return b;
+        });
+      }
+    }
+
+    // Delete the variable connections
+    // going out from this block to
+    // the connected blocks. For example,
+    // this is an input block connected to an action
+    // block. The action block is who stores the connection,
+    // Therefore if we delete the input block, the connection
+    // needs to be removed from the action block. Luckily,
+    // when connecting variables, a reference to the connection
+    // is istored in the input block. Therefore, we can use that
+    // reference to find the real block and remove the connections
+    // that depend on this block
+    if (
+      block.variableConnectionsReference &&
+      block.variableConnectionsReference.length > 0
+    ) {
+      for (const varConnected of block.variableConnectionsReference) {
+        // Find the real block from where the variable goes to
+        const realBlock = updatedPlacedBlocks.find(
+          (b) => b.placedID === varConnected.destination.placedID
+        );
+
+        // Remove from the real block the variable connection
+        realBlock.variableConnections = realBlock.variableConnections.filter(
+          (v) => v.origin.placedID !== block.placedID
+        );
+
+        // Update the placedBlocks array
+        updatedPlacedBlocks = updatedPlacedBlocks.map((b) => {
+          if (b.placedID === realBlock.placedID) {
+            b.variableConnections = realBlock.variableConnections;
+          }
+          return b;
+        });
+      }
+    }
+
+    // If the block to be deleted is the action block for example,
+    // the reference of the connection stored in the input block
+    // needs to be removed. Therefore we need to read the block connections
+    // and remove the reference to this connection in the input block
+    if (block.variableConnections && block.variableConnections.length > 0) {
+      for (const varConnected of block.variableConnections) {
+        // Find the real block from where the variable comes from
+        const realBlock = updatedPlacedBlocks.find(
+          (b) => b.placedID === varConnected.origin.placedID
+        );
+
+        // Remove from the real block the variable connection reference
+        realBlock.variableConnectionsReference =
+          realBlock.variableConnectionsReference.filter(
+            (v) => v.origin.placedID !== block.placedID
+          );
+
+        // Update the placedBlocks array
+        updatedPlacedBlocks = updatedPlacedBlocks.map((b) => {
+          if (b.placedID === realBlock.placedID) {
+            b.variableConnectionsReference =
+              realBlock.variableConnectionsReference;
+          }
+          return b;
+        });
+      }
+    }
+
+    // Delete the block
+    updatedPlacedBlocks = props.placedBlocks.filter(
+      (b) => b.placedID !== block.placedID
     );
+
+    // Update the placedBlocks array
+    props.setPlacedBlocks(updatedPlacedBlocks);
 
     setSaved(false);
   };
 
-  const onblockChange = () => {
+  const onBlockChange = (blockPlacedID: number) => {
+    // Update the finishedExecution status
+    // Update the placedBlocks array
+    props.setPlacedBlocks((currentBlocks) => {
+      return currentBlocks.map((b) => {
+        if (b.placedID === blockPlacedID) {
+          b.finishedExecution = false;
+        }
+        return b;
+      });
+    });
     setSaved(false);
   };
 
@@ -321,7 +444,6 @@ function FlowReciver(props: FlowReciverProps) {
     if (openingFlow.current) {
       return;
     }
-
     openingFlow.current = true;
 
     if (!currentSaved.current) {
@@ -341,7 +463,6 @@ function FlowReciver(props: FlowReciverProps) {
       error: "Early error opening flow",
     };
 
-    console.log("Open recent: ", openRecent);
     if (openRecent !== null) {
       const header = {
         "Content-Type": "application/json",
@@ -369,12 +490,32 @@ function FlowReciver(props: FlowReciverProps) {
       return;
     }
 
+    // Set the molstar state at the beggining in case blocks need structures
+    if (window.molstar && openedFlow.molstarState) {
+      await window.molstar.snapshot.set(openedFlow.molstarState);
+    }
+
     // Set the flow name
     setFlowName(openedFlow.name);
     savedID.current = openedFlow.savedID;
     flowPath.current = openedFlow.path;
+    flowExecuter.current.setSavedID(savedID.current);
+    flowExecuter.current.updatePlacedBlocks(openedFlow.blocks);
+    flowExecuter.current.updateFlowPath(flowPath.current);
 
-    // Set the placed blocks
+    // If any of the blocks is runnign set executingAll to true
+    for (const block of openedFlow.blocks) {
+      if (block.placedID === openedFlow.currentExecuting) {
+        setExecutingAll(true);
+        break;
+      }
+    }
+
+    // Parse the blocks
+    // const parsedBlocks =
+    //   await props.flowBuilderController.parseBlocksFromOpenedFlow(
+    //     openedFlow.blocks
+    //   );
     props.setPlacedBlocks(openedFlow.blocks);
 
     // Set the selected remote
@@ -391,6 +532,9 @@ function FlowReciver(props: FlowReciverProps) {
       }
     }
     props.placedIDCounter.current = Math.max(...placedIDs) + 1;
+
+    // Set the current executing block
+    setCurrentExecuting(openedFlow.currentExecuting);
 
     // Set the saved state
     setSaved(true);
@@ -485,7 +629,8 @@ function FlowReciver(props: FlowReciverProps) {
           return "Block not found";
         }
 
-        connectArrowBlock(props.setPlacedBlocks, block1, block2);
+        // connectArrowBlock(props.setPlacedBlocks, block1, block2);
+        return "Command not implemented yet";
       }
     }
 
@@ -498,7 +643,7 @@ function FlowReciver(props: FlowReciverProps) {
         if (!block) {
           return "Block not found";
         }
-        executeBlock(block, null);
+        executeBlock(block);
       }
       return "Flow executed";
     }
@@ -642,6 +787,9 @@ function FlowReciver(props: FlowReciverProps) {
               viewBox="0 0 24 24"
               strokeWidth={1.5}
               stroke="currentColor"
+              onClick={() => {
+                !remoteConnected && connectRemote();
+              }}
             >
               <path
                 strokeLinecap="round"
@@ -680,26 +828,40 @@ function FlowReciver(props: FlowReciverProps) {
     </div>
   );
 
-  const renderBlock = (block: BlockProps, index: number) => {
-    const connectedToBlocks = block.connectedTo?.map((connectedBlock) =>
-      PlacedXarrow({
-        block: block,
-        connectedBlock: connectedBlock,
-        setPlacedBlocks: props.setPlacedBlocks,
-      })
-    );
+  const renderBlock = (block: Block, index: number) => {
+    const connectedVars = block.variableConnections?.map((connection) => {
+      return VariableConnectionArrow({
+        connection: connection,
+        unconnectVariables: props.unconnectVariables,
+        isSecond: connection.isCyclic,
+        cycleNumber: connection.cycles,
+      });
+    });
+
+    const connectedBlocks = block.connectedTo?.map((connection) => {
+      return BlockConnectionArrow({
+        currentBlock: block,
+        connectedBlock: props.placedBlocks.find(
+          (b) => b.placedID === connection
+        ),
+        unconnectBlocks: props.unconnectBlocks,
+      });
+    });
 
     return (
       <>
-        <DraggableBlock
+        <DraggableBlockView
           key={`${block.placedID}-${block.id}`}
           {...block}
-          onChange={onblockChange}
+          onChange={onBlockChange}
           execute={executeBlock}
-          index={index}
+          // // index={index}
           deleteBlock={handleDelete}
+          isRunning={block.placedID === currentExecuting}
+          checkRemoteStatus={checkRemoteBlock}
         />
-        {connectedToBlocks}
+        {connectedVars}
+        {connectedBlocks}
       </>
     );
   };
@@ -708,9 +870,9 @@ function FlowReciver(props: FlowReciverProps) {
 
   const [isPanning, setIsPanning] = useState(false);
 
-  const [past, setPast] = useState<BlockProps[][]>([]);
-  const [future, setFuture] = useState<BlockProps[][]>([]);
-  const [present, setPresent] = useState<BlockProps[]>();
+  const [past, setPast] = useState<Block[][]>([]);
+  const [future, setFuture] = useState<Block[][]>([]);
+  const [present, setPresent] = useState<Block[]>();
 
   const resetHistory = () => {
     setPast([]);
@@ -758,14 +920,14 @@ function FlowReciver(props: FlowReciverProps) {
     setSaved(false);
   };
 
-  const updateHistory = (newPlacedBlocks: BlockProps[]) => {
+  const updateHistory = (newPlacedBlocks: Block[]) => {
     setPast((prevPast) => [...prevPast, present]);
     setPresent(newPlacedBlocks);
     setFuture([]);
   };
 
   useEffect(() => {
-    function compareBlockLists(a: BlockProps[], b: BlockProps[]) {
+    function compareBlockLists(a: Block[], b: Block[]) {
       if (isPanning === true) {
         return true;
       }
@@ -844,7 +1006,7 @@ function FlowReciver(props: FlowReciverProps) {
   function centerView() {
     // Set the first block to be at the center of the canvas
     // Then move all blocks by delta respective to the first block
-    const firstBlockPos = props.placedBlocks[0]?.coords;
+    const firstBlockPos = props.placedBlocks[0]?.position;
 
     if (!firstBlockPos) {
       return;
@@ -869,13 +1031,13 @@ function FlowReciver(props: FlowReciverProps) {
   }
 
   function moveBlocksPan(deltaX: number, deltaY: number) {
-    props.setPlacedBlocks((blocks) =>
-      blocks.map((block) => {
+    props.setPlacedBlocks((blocks: Array<Block>) =>
+      blocks.map((block: Block) => {
         return {
           ...block,
-          coords: {
-            x: block.coords.x + deltaX,
-            y: block.coords.y + deltaY,
+          position: {
+            x: block.position.x + deltaX,
+            y: block.position.y + deltaY,
           },
         };
       })

@@ -111,9 +111,9 @@ function RemoteView(props: RemoteViewProps) {
     const response = await horusPost("/remotes/delete", header, body);
 
     if (response.ok) {
-      console.log("Remote deleted successfully");
+      alert("Remote deleted successfully");
     } else {
-      console.error("Failed to delete remote");
+      alert("Failed to delete remote");
     }
 
     props.updateList();
@@ -214,8 +214,6 @@ function NewRemote(props: NewRemoteProps) {
     const data = await result.json();
 
     setKeyPath(data.path);
-
-    console.log(data);
   };
 
   return (

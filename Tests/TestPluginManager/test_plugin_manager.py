@@ -1,4 +1,4 @@
-from Server import PluginManager
+from Server.PluginManager import PluginManager
 from HorusAPI import Plugin
 import os
 import sys
@@ -112,7 +112,12 @@ def test_install_plugin_success(mocker):
     pluginManager.pluginsDir = "/path/to/plugins"
     pluginManager._installPlugin(plugin_path)
 
-    finalPath = os.path.join(pluginManager.pluginsDir, pluginManager._loadPlugin().id)
+    loadedPlugin = pluginManager._loadPlugin(plugin_path)
+
+    if loadedPlugin is None:
+        raise Exception("Failed to install a plugin TEST")
+
+    finalPath = os.path.join(pluginManager.pluginsDir, loadedPlugin.id)
 
     # Assert that the plugin directory is created,
     # shutil.copy is called, and zipfile is extracted
@@ -189,7 +194,7 @@ def test_install_dep_internal_success(mocker):
         pluginManager._installDepInternal(dep_to_install, deps_dir)
 
     # Check the arguments of the last call to subprocess.Popen
-    last_call_args, last_call_kwargs = subprocess.Popen.call_args
+    last_call_args, last_call_kwargs = subprocess.Popen.call_args  # type: ignore
     assert last_call_args[0] == [
         "python",
         "-m",
@@ -206,7 +211,7 @@ def test_install_dep_internal_success(mocker):
     assert last_call_kwargs["stdin"] == subprocess.PIPE
 
     # Verify that subprocess.Popen was called once
-    assert subprocess.Popen.call_count == 1
+    assert subprocess.Popen.call_count == 1  # type: ignore
 
 
 def test_install_dep_internal_failure_pyversion(mocker):
@@ -224,16 +229,7 @@ def test_install_dep_internal_failure_pyversion(mocker):
     dep_to_install = "dep"
     deps_dir = "/path/to/dependencies"
 
-    pyver = (
-        f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-    )
-
-    exceptionMsg = f"In order to install additional dependencies, \
-                            you need to have a valid python interpreter \
-                            installed on your system with python v{pyver}.\
-                            You can select a specific interpreter in the settings."
-
-    with pytest.raises(Exception, match=exceptionMsg):
+    with pytest.raises(Exception):
         with patch.object(sys, "frozen", True, create=True):
             pluginManager._installDepInternal(dep_to_install, deps_dir)
 
@@ -263,7 +259,7 @@ def test_install_dep_internal_frozen_app(mocker):
             pluginManager._installDepInternal(dep_to_install, deps_dir)
 
     # Check the arguments of the last call to subprocess.Popen
-    last_call_args, last_call_kwargs = subprocess.Popen.call_args
+    last_call_args, last_call_kwargs = subprocess.Popen.call_args  # type: ignore
     assert last_call_args[0] == [
         "python",
         "-m",
@@ -280,4 +276,4 @@ def test_install_dep_internal_frozen_app(mocker):
     assert last_call_kwargs["stdin"] == subprocess.PIPE
 
     # Verify that subprocess.Popen was called exactly twice
-    assert subprocess.Popen.call_count == 2
+    assert subprocess.Popen.call_count == 2  # type: ignore

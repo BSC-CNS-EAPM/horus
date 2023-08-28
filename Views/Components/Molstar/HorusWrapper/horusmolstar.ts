@@ -38,7 +38,6 @@ import { getFormattedTime } from "molstar/lib/mol-util/date";
 import { download } from "molstar/lib/mol-util/download";
 import { RxEventHelper } from "molstar/lib/mol-util/rx-event-helper";
 import { EvolutionaryConservation } from "./annotation";
-import { createProteopediaCustomTheme } from "./coloring";
 import { PluginConfig } from "molstar/lib/mol-plugin/config";
 import {
   LoadParams,
@@ -56,7 +55,9 @@ import {
   to_mmCIF,
 } from "molstar/lib/mol-model/structure";
 import { Loci } from "molstar/lib/mol-model/structure/structure/element/loci";
-
+import { UUID } from "molstar/lib/mol-util";
+import { addSphereTo } from "./sphere";
+import { DockingSphereRepresentationProvider } from "./sphere";
 // Style
 require("molstar/lib/mol-plugin-ui/skin/light.scss");
 
@@ -109,19 +110,47 @@ class HorusMolstar {
       },
     });
 
+    this.plugin.representation.structure.registry.add(
+      DockingSphereRepresentationProvider
+    );
     this.plugin.behaviors.layout.leftPanelTabName.next("data");
+
+    // Add the coordinates event listener
+    this.coordinatesListener();
   }
 
-  latetstSnapshot: PluginState.Snapshot = void 0;
+  private coordinatesListener() {
+    this.plugin.behaviors.interaction.click.subscribe((e) => {
+      if (e.position != undefined) {
+        const x = e.position[0].toFixed(1);
+        const y = e.position[1].toFixed(1);
+        const z = e.position[2].toFixed(1);
+
+        // Send the values through a custom event "molstar-coordinates"
+        const event = new CustomEvent("molstar-coordinates", {
+          detail: {
+            x: Number(x),
+            y: Number(y),
+            z: Number(z),
+          },
+        });
+        window.dispatchEvent(event);
+      }
+      e = undefined;
+    });
+  }
+
+  latestSnapshot: any;
+
+  // Reset molstar to a new state
+  async reset() {
+    this.initPlugin();
+  }
 
   // Method to unload the 3D canvas
-  unload() {
+  async unload() {
     // Save the state
-    this.latetstSnapshot = this.snapshot.get({
-      data: true,
-      canvas3d: true,
-      camera: true,
-    });
+    this.latestSnapshot = await this.snapshot.get();
 
     // Remove the plugin
     this.plugin?.dispose();
@@ -131,10 +160,8 @@ class HorusMolstar {
     // Init the plugin
     await this.initPlugin();
 
-    console.log("Redispose snapshot: ", this.latetstSnapshot);
-
     // Load the state
-    this.snapshot.set(this.latetstSnapshot);
+    this.snapshot.set(this.latestSnapshot);
   }
 
   get state() {
@@ -565,35 +592,57 @@ class HorusMolstar {
     },
   };
 
-  snapshot = {
-    get: (params?: PluginState.SnapshotParams) => {
-      return this.plugin.state.getSnapshot(params);
-    },
-    set: (snapshot: PluginState.Snapshot) => {
-      return this.plugin.state.setSnapshot(snapshot);
-    },
-    download: async (
-      type: "molj" | "molx" = "molj",
-      params?: PluginState.SnapshotParams
-    ) => {
-      const data = await this.plugin.managers.snapshot.serialize({
-        type,
-        params,
-      });
-      download(data, `mol-star_state_${getFormattedTime()}.${type}`);
-    },
-    fetch: async (url: string, type: "molj" | "molx" = "molj") => {
-      try {
-        const data = await this.plugin.runTask(
-          this.plugin.fetch({ url, type: "binary" })
+  private async getSession() {
+    const sessionSnapshot =
+      await this.plugin.managers.snapshot.getStateSnapshot();
+
+    let sessionObject = {
+      session: sessionSnapshot,
+    };
+
+    const assets: [UUID, Asset][] = [];
+
+    for (const { asset, file } of this.plugin.managers.asset.assets) {
+      assets.push([asset.id, asset]);
+      sessionObject[`assets/${asset.id}`] = await file.text();
+    }
+
+    if (assets.length > 0) {
+      sessionObject["assets.json"] = assets;
+    }
+
+    return sessionObject;
+  }
+
+  private async loadSession(session) {
+    const assets = session["assets.json"];
+    const assetData = Object.create(null);
+
+    for (const [k, v] of Object.entries(session)) {
+      if (k === "session" || k === "assets.json") continue;
+      const name = k.substring(k.indexOf("/") + 1);
+      assetData[name] = v;
+    }
+
+    if (assets) {
+      for (const [id, asset] of assets) {
+        this.plugin.managers.asset.set(
+          asset,
+          new File([assetData[id]], asset.name)
         );
-        this.loadedParams = { ...this.emptyLoadedParams };
-        return await this.plugin.managers.snapshot.open(
-          new File([data], `state.${type}`)
-        );
-      } catch (e) {
-        alert(e);
       }
+    }
+
+    const snapshot = session.session;
+    await this.plugin.managers.snapshot.setStateSnapshot(snapshot);
+  }
+
+  snapshot = {
+    get: async () => {
+      return await this.getSession();
+    },
+    set: async (snapshot: string) => {
+      await this.loadSession(snapshot);
     },
   };
 
@@ -753,7 +802,7 @@ class HorusMolstar {
         {
           type: "cartoon",
           typeParams: { alpha: 1 },
-          color: proteinColorType,
+          color: proteinColorType as any,
           colorParams: { value: Color.fromRgb(1, 0, 0) },
         },
         { tag: "polymer" }
@@ -764,7 +813,7 @@ class HorusMolstar {
         components.ligand,
         {
           type: "ball-and-stick",
-          color: ligandColorType,
+          color: ligandColorType as any,
           colorParams: { value: Color.fromRgb(1, 0, 0) },
         },
         { tag: "ligand" }
@@ -804,7 +853,14 @@ class HorusMolstar {
   }
 
   private extractFromLoci(loci: Loci) {
-    const label = loci.structure.label;
+    let label = loci.structure.label;
+
+    if (label === "") {
+      label = loci.structure.model.label;
+    }
+
+    label = label.split("|")[0];
+
     const id = loci.structure.model.id;
     let sourceData;
     let type;
@@ -841,13 +897,16 @@ class HorusMolstar {
     return loci;
   }
 
+  private structures() {
+    return this.plugin.managers.structure.hierarchy.current.structures;
+  }
+
   /*
    * List all the structures in the current hierarchy
    * @returns {Array} - List of structures
    */
   listStructures() {
-    const structures =
-      this.plugin.managers.structure.hierarchy.current.structures;
+    const structures = this.structures();
     if (!structures) return;
 
     const molList = [];
@@ -859,6 +918,155 @@ class HorusMolstar {
     }
 
     return molList;
+  }
+
+  private getResiduesFromStructure(
+    structure: Structure,
+    get?: "all" | "hetero" | "standard" | "chain",
+    unique: boolean = true
+  ) {
+    const loci = this.getLociForStructure(structure);
+    let molInfo = this.extractFromLoci(loci);
+
+    molInfo = {
+      ...molInfo,
+      structure: molInfo.name,
+    };
+
+    const resInfo = [];
+    Structure.eachAtomicHierarchyElement(structure, {
+      atom: (loc) => {
+        // auth_comp_id is the 3 letter code for the residue like "ALA", "GLY", etc.
+        let auth_comp_id = StructureProperties.atom.auth_comp_id(loc);
+
+        if (get === "hetero" && standardResidues.includes(auth_comp_id)) return;
+        else if (get === "standard" && !standardResidues.includes(auth_comp_id))
+          return;
+
+        // resID is the residue number (1, 2, 3, etc.)
+        const resID = StructureProperties.residue.label_seq_id(loc);
+
+        // Source index is the index of the atom in the structure
+        const sourceIndex = StructureProperties.atom.sourceIndex(loc);
+        const auth_atom_id = StructureProperties.atom.auth_atom_id(loc);
+        const chainID = StructureProperties.chain.label_asym_id(loc);
+        const type = StructureProperties.atom.type_symbol(loc);
+        const x = StructureProperties.atom.x(loc);
+        const y = StructureProperties.atom.y(loc);
+        const z = StructureProperties.atom.z(loc);
+
+        // If the molInfo.ID and the current auth_comp_id are already in the
+        // heteroInfo array, then don't add it again
+        if (unique) {
+          for (const info of resInfo) {
+            if (
+              info.structure.id === molInfo.id &&
+              info.auth_comp_id === auth_comp_id
+            ) {
+              return;
+            }
+          }
+        }
+
+        // For standard residues, we need to add the residue one time per atom
+        if (get == "standard") {
+          for (const info of resInfo) {
+            if (info.residue === resID) {
+              return;
+            }
+          }
+        }
+
+        if (get == "chain") {
+          for (const info of resInfo) {
+            if (info.chainID === chainID) {
+              return;
+            }
+          }
+        }
+
+        // If auth_comp_id has 2 characters instead of 3, then add a space
+        // before it
+        if (auth_comp_id.length === 2) {
+          auth_comp_id = " " + auth_comp_id;
+        }
+
+        const atomInfo = {
+          name: `${auth_comp_id}:${resID} - ${molInfo.name}`,
+          residue: resID,
+          chainID: chainID,
+          sourceIndex: sourceIndex,
+          auth_comp_id: auth_comp_id,
+          auth_atom_id: auth_atom_id,
+          type: type,
+          x: x,
+          y: y,
+          z: z,
+          structure: molInfo,
+        };
+
+        resInfo.push(atomInfo);
+      },
+    });
+
+    return resInfo;
+  }
+
+  /*
+   * List the hetero residues in the current loaded structures
+   * @returns {Array} - List of hetero residues
+   */
+  listHeteroRes() {
+    const structures = this.structures();
+
+    if (!structures) return;
+
+    const heteroList = [];
+    for (const structure of structures) {
+      const data = structure.cell.obj.data;
+      const residues = this.getResiduesFromStructure(data, "hetero");
+      heteroList.push(...residues);
+    }
+
+    return heteroList;
+  }
+
+  /*
+   * List the standard residues in the current loaded structures
+   * @returns {Array} - List of standard residues
+   */
+  listStdRes() {
+    const structures = this.structures();
+
+    if (!structures) return;
+
+    const stdList = [];
+    for (const structure of structures) {
+      const data = structure.cell.obj.data;
+      const residues = this.getResiduesFromStructure(data, "standard", false);
+      stdList.push(...residues);
+    }
+
+    return stdList;
+  }
+
+  /*
+   * List the chains in the current loaded structures
+   * @returns {Array} - List of chains
+   */
+  listChains() {
+    const structures = this.structures();
+
+    if (!structures) return;
+
+    const chainList = [];
+    for (const structure of structures) {
+      const data = structure.cell.obj.data;
+      const chains = this.getResiduesFromStructure(data, "chain");
+      chainList.push(...chains);
+    }
+
+    return chainList;
   }
 
   /*
@@ -873,7 +1081,13 @@ class HorusMolstar {
     for (const { structure } of selections) {
       if (!structure) continue;
 
-      const loc = this.getLociForStructure(structure);
+      const loci = this.getLociForStructure(structure);
+      let molInfo = this.extractFromLoci(loci);
+
+      molInfo = {
+        ...molInfo,
+        structure: null,
+      };
 
       Structure.eachAtomicHierarchyElement(structure, {
         atom: (loc) => {
@@ -895,6 +1109,7 @@ class HorusMolstar {
             x: x,
             y: y,
             z: z,
+            structure: molInfo,
           };
 
           selectionList.push(atomInfo);
@@ -931,6 +1146,79 @@ class HorusMolstar {
 
     return filteredPDB;
   }
+
+  /*
+   * Add a sphere to the current structure
+   * @returns {String} - The ref of the sphere
+   */
+  async addSphere(
+    position: {
+      x: number;
+      y: number;
+      z: number;
+    },
+    radius: number,
+    deletePrevius?: string
+  ): Promise<string> {
+    if (deletePrevius) {
+      // Remove the previous sphere
+      const builder = this.plugin.state.data.build();
+      builder.delete(deletePrevius);
+      builder.commit();
+    }
+
+    const structureFirst = this.structures()[0];
+    if (!structureFirst) {
+      alert("To visualize an sphere, at least one structure must be loaded.");
+      return;
+    }
+    const structureRef = structureFirst.cell.transform.ref;
+    const structure: any = this.plugin.state.data.cells.get(structureRef);
+
+    const sphere = {
+      x: position.x,
+      y: position.y,
+      z: position.z,
+      radius: radius,
+      color: ColorNames.aquamarine,
+      alpha: 0.5,
+    };
+
+    const sphereRef = await addSphereTo(this.plugin, structure, sphere);
+
+    return sphereRef;
+  }
 }
+
+/*
+ * Standard residues
+ */
+const standardResidues = [
+  "ALA",
+  "ARG",
+  "ASN",
+  "ASP",
+  "CYS",
+  "GLN",
+  "GLU",
+  "GLY",
+  "HIS",
+  "ILE",
+  "LEU",
+  "LYS",
+  "MET",
+  "PHE",
+  "PRO",
+  "SER",
+  "THR",
+  "TRP",
+  "TYR",
+  "VAL",
+  "GLH",
+  "ASH",
+  "CYX",
+  "HID",
+  "HIE",
+];
 
 export default HorusMolstar;

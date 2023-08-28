@@ -4,7 +4,7 @@ import { Fragment, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import "../nbdbutton.css";
 import { horusGet } from "../../Utils/utils";
-import FlowBuilder from "../FlowBuilder/flow_builder";
+import { FlowBuilderView } from "../FlowBuilder/flow_builder_view";
 import "./toolbar.css";
 import { socket } from "../../Utils/socket";
 
@@ -323,7 +323,9 @@ export default function HorusToolbar() {
       ),
       onClick: () => {
         // Set the secondary view to null
-        const event = new CustomEvent("mainView", { detail: <FlowBuilder /> });
+        const event = new CustomEvent("mainView", {
+          detail: <FlowBuilderView />,
+        });
         window.dispatchEvent(event);
       },
     },
@@ -370,7 +372,7 @@ export default function HorusToolbar() {
             // and will clear the flow
 
             // Set the secondary view to the flow builder
-            const mainView = <FlowBuilder />;
+            const mainView = <FlowBuilderView />;
 
             const mainViewEvent = new CustomEvent("mainView", {
               detail: mainView,
@@ -719,7 +721,7 @@ function PredefinedFlowsSearch() {
     const data = await responsePredefined.json();
 
     if (!responsePredefined.ok) {
-      alert("Error: " + data.error);
+      alert("Error getting flows: " + data.error);
       return;
     }
 
@@ -735,7 +737,7 @@ function PredefinedFlowsSearch() {
     const recentFlowsData = await recentFlowsResponse.json();
 
     if (!recentFlowsData.ok) {
-      alert("Error: " + data.error);
+      alert("Error getting recent flows: " + data.error);
       return;
     }
 

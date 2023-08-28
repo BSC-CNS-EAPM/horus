@@ -1,0 +1,33 @@
+{
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter"
+  },
+  "black-formatter.args": [
+    "--line-length",
+    "98"
+  ],
+  "python.analysis.typeCheckingMode": "basic",
+  "pylint.args": [
+    "--const-naming-style",
+    "camelCase",
+    "--function-naming-style",
+    "camelCase",
+    "--method-naming-style",
+    "camelCase",
+    "--argument-naming-style",
+    "camelCase",
+    "--attr-naming-style",
+    "camelCase",
+    "--variable-naming-style",
+    "camelCase",
+    "--class-naming-style",
+    "PascalCase",
+    "--max-line-length",
+    "98",
+    // Disable broad exception
+    "--disable",
+    "broad-exception-raised",
+    "broad-exception-caught"
+  ],
+  "cmake.configureOnOpen": true
+}

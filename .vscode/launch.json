@@ -1,0 +1,30 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Horus server mode",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/Horus.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--server",
+                "--debug"
+            ]
+        },
+        {
+            "name": "Debug Horus desktop (browser) mode",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/Horus.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--browser",
+                "--debug"
+            ]
+        },
+    ]
+}

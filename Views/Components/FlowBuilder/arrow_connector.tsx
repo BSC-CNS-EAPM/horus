@@ -1,24 +1,46 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Xarrow, { refType, useXarrow, Xwrapper } from "react-xarrows";
-import { BlockProps } from "./flow_builder_interfaces";
-import { useDraggable } from "@dnd-kit/core";
+import { Block, PluginVariable } from "./flow_builder_types";
+import { DragOverlay, useDraggable } from "@dnd-kit/core";
+import { BlockVarPair } from "./flow_builder_types";
 
 interface ArrowConnectorProps {
-  // The block that the arrow is coming from (html ref)
+  /**
+   * The variable that the arrow is coming from (html ref)
+   */
   from: React.MutableRefObject<any> | string;
-  block: BlockProps;
+
+  /**
+   * The variable that is being dragged (html ref)
+   */
+  variable: PluginVariable;
+
+  /**
+   * The block that the arrow is coming from
+   */
+  block: Block;
 }
 
 function ArrowBlockConnector(props: ArrowConnectorProps) {
-  const { from, block } = props;
+  const { from, block, variable } = props;
 
   const ref = useRef<HTMLDivElement>(null);
+
+  const blockVarPair: BlockVarPair = {
+    placedID: block.placedID,
+    blockID: block.id,
+    blockType: block.type,
+
+    variableID: variable?.id,
+    variableType: variable?.type,
+    variableAllowedValues: variable?.allowedValues,
+  };
 
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: `${block.placedID}-${block.id}-connector`,
     data: {
       type: "connector",
-      block: block,
+      blockVarPair: blockVarPair,
     },
   });
 
@@ -26,92 +48,139 @@ function ArrowBlockConnector(props: ArrowConnectorProps) {
     setNodeRef(ref.current);
   }, [ref]);
 
-  var style = {
+  var style: React.CSSProperties = {
     transform: null,
     alignItems: "center",
-    textAling: "center",
+    textAlign: "center",
+    cursor: "grab",
   };
 
+  let arrow = "arrow-right";
+  const connectBlocks = "connect-blocks";
   if (transform) {
     style.transform = `translate(${transform.x}px, ${transform.y}px)`;
+    style.cursor = "grabbing";
+    arrow = null;
   }
 
-  return (
-    <>
-      <div
-        className={"connect-blocks"}
-        ref={ref}
-        style={style}
-        {...listeners}
-        {...attributes}
-      >
-        <div className="placed-id">{block.placedID}</div>
-        {transform && <Xarrow start={from} end={ref} />}
-      </div>
-    </>
-  );
-}
+  if (!variable) {
+    // Set the color to black
+    style.filter = "brightness(0%)";
+  }
 
-interface PlacedXarrowProps {
-  block: BlockProps;
-  connectedBlock: BlockProps;
-  setPlacedBlocks: React.Dispatch<React.SetStateAction<BlockProps[]>>;
-}
-
-function PlacedXarrow(props: PlacedXarrowProps) {
-  const { block, connectedBlock, setPlacedBlocks } = props;
+  const [showOutputName, setShowOutputName] = useState(false);
 
   return (
     <div
+      onMouseOver={() => setShowOutputName(true)}
+      onMouseLeave={() => setShowOutputName(false)}
+      ref={ref}
+      className={connectBlocks}
+      style={style}
+      {...listeners}
+      {...attributes}
+    >
+      {showOutputName && variable && (
+        <div
+          style={{
+            position: "absolute",
+            left: "1rem",
+          }}
+          className="variable-squared"
+        >
+          {variable.name}
+        </div>
+      )}
+
+      <div className={arrow}>
+        {transform && (
+          <Xarrow
+            start={from}
+            end={ref}
+            endAnchor={"right"}
+            dashness={{ animation: -2 }}
+            color={variable ? "#0d47a1" : "black"}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+type VariableConnectionArrowProps = {
+  connection: {
+    origin: BlockVarPair;
+    destination: BlockVarPair;
+  };
+  unconnectVariables: (connection: {
+    origin: BlockVarPair;
+    destination: BlockVarPair;
+  }) => void;
+  isSecond: boolean;
+  cycleNumber: number;
+};
+
+function VariableConnectionArrow(props: VariableConnectionArrowProps) {
+  const { origin, destination } = props.connection;
+  const { unconnectVariables, isSecond, cycleNumber } = props;
+
+  const start = `${origin.placedID}-${origin.blockID}`;
+  const end = `connect-${destination.variableID}-${destination.placedID}`;
+
+  return (
+    <div
+      key={"div-variable" + start + end}
       onClick={(e) => {
-        unconnectArrowBlock(setPlacedBlocks, block, connectedBlock);
+        unconnectVariables(props.connection);
       }}
     >
       <Xarrow
-        start={`${block?.placedID}-${block.id}`}
-        end={`${connectedBlock?.placedID}-${connectedBlock.id}`}
-        key={`${block?.placedID}-${block.id}-${connectedBlock?.placedID}-${connectedBlock.id}`}
+        start={start}
+        end={end}
+        key={start + end}
+        endAnchor={["left", "right"]}
+        startAnchor={["left", "right", "top"]}
+        color={isSecond ? "#f57f17" : "#0d47a1"}
+        labels={
+          isSecond && {
+            start: <div>Cycles: {cycleNumber}</div>,
+          }
+        }
       />
     </div>
   );
 }
 
-export { ArrowBlockConnector, PlacedXarrow };
+type BlockConnectionArrowProps = {
+  currentBlock: Block;
+  connectedBlock: Block;
+  unconnectBlocks: (currentBlock: Block, connectedBlock: Block) => void;
+};
 
-function unconnectArrowBlock(
-  setPlacedBlocks: React.Dispatch<React.SetStateAction<BlockProps[]>>,
-  currentBlock: BlockProps,
-  connectedBlock: BlockProps
-) {
-  // Remove the connected block from the connectedTo array of the current block
-  const newConnectedTo = currentBlock.connectedTo?.filter(
-    (block) => block.placedID !== connectedBlock.placedID
+function BlockConnectionArrow(props: BlockConnectionArrowProps) {
+  const { currentBlock, connectedBlock, unconnectBlocks } = props;
+
+  const start = `${currentBlock.placedID}-${currentBlock.id}`;
+  const end = `${connectedBlock.placedID}-${connectedBlock.id}`;
+
+  return (
+    <div
+      key={"div-block-connect" + start + end}
+      onClick={(e) => {
+        unconnectBlocks(currentBlock, connectedBlock);
+      }}
+    >
+      <Xarrow
+        start={start}
+        end={end}
+        key={start + end}
+        startAnchor={["left", "right", "top"]}
+        endAnchor={["left", "right", "top"]}
+        animateDrawing={0.25}
+        color="black"
+      />
+    </div>
   );
-
-  // Remove the current block from the appearsOn array of the connected block
-  const newAppearsOn = connectedBlock.appearsOn?.filter(
-    (block) => block.placedID !== currentBlock.placedID
-  );
-
-  // Update the state
-  setPlacedBlocks((blocks) => {
-    const index = blocks.findIndex(
-      (b) => b.placedID === currentBlock?.placedID
-    );
-    const newBlocks = [...blocks];
-    newBlocks[index] = {
-      ...newBlocks[index],
-      connectedTo: newConnectedTo,
-    };
-
-    const overIndex = newBlocks.findIndex(
-      (b) => b.placedID === connectedBlock?.placedID
-    );
-    newBlocks[overIndex] = {
-      ...newBlocks[overIndex],
-      appearsOn: newAppearsOn,
-    };
-
-    return newBlocks;
-  });
 }
+
+export { ArrowBlockConnector, VariableConnectionArrow, BlockConnectionArrow };

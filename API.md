@@ -1,7 +1,9 @@
 # API Specification
 
 ## General
+
 ### Version
+
 Route: `/api/version/`
 
 Method: `GET`
@@ -15,7 +17,6 @@ Route: `/api/nbdsuite/forcefields/`
 Method: `GET`
 
 Response: `{["forcefield1", "forcefield2", ...]}`
-
 
 ## Flows and blocks
 ### Flows
@@ -33,6 +34,7 @@ Method: `GET`
 Response: `{["block1", "block2", ...]}`
 
 ## Plugins
+
 Route: `/api/plugins/`
 
 Method: `GET`

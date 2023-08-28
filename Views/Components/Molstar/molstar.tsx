@@ -1,5 +1,4 @@
 import { useEffect, createRef } from "react";
-
 import { socket } from "../../Utils/socket";
 
 // Load the molstar default style
@@ -31,7 +30,6 @@ export default function Molstar() {
     }
 
     socket.on("loadPDB", (data) => {
-      console.log("loadPDB, data: ", data);
       const molstar = window.molstar;
       if (molstar) {
         const label = data.label ? data.label : "PDB";

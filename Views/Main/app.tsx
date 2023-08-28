@@ -4,7 +4,7 @@ import HorusTerm from "../Components/Console/console";
 import { useEffect, useState } from "react";
 import { Route, Routes } from "react-router";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
-import FlowBuilder from "../Components/FlowBuilder/flow_builder";
+import { FlowBuilderView } from "../Components/FlowBuilder/flow_builder_view";
 import IFrameLoader from "../Components/IframeLoader/iframeloader";
 
 export default function ResizeHandle({
@@ -70,7 +70,7 @@ export default function ResizeHandle({
 }
 
 export function App() {
-  const [mainView, setMainView] = useState(<FlowBuilder />);
+  const [mainView, setMainView] = useState(<FlowBuilderView />);
   const [iframeView, setIframeView] = useState(null);
   const [showIFrame, setShowIFrame] = useState(false);
   const [showConsole, setShowConsole] = useState(false);

@@ -11,6 +11,7 @@
     "rdkit",
     "openmm",
     "scipy",
-    "pyyaml"
+    "pyyaml",
+    "peleffy"
   ]
 }

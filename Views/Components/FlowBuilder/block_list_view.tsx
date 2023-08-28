@@ -1,67 +1,56 @@
-import { horusGet } from "../../Utils/utils";
-import { useEffect, useState } from "react";
-import { BlockProps } from "./flow_builder_interfaces";
-import { Block, DraggableBlock } from "./block";
+// React hooks
+import { useEffect, useRef, useState } from "react";
+
+// Types for TypeScript
+import { Block } from "./flow_builder_types";
+import { FlowBuilderController } from "./flow_builder_hooks";
+
+// React components
+import { DraggableBlockView } from "./block_view";
 import RotatingLines from "../RotatingLines/rotatinglines";
 import { SearchComponent } from "../Toolbar/toolbar";
+
+// Socket.io to fetch new blocks
 import { socket } from "../../Utils/socket";
+
+// CSS
 import "./block.css";
 
-function getFilteredItems(query, blocks: BlockProps[]) {
-  if (!query) {
-    return blocks;
-  }
+type BlockListViewProps = {
+  flowBuilderController: FlowBuilderController;
+};
 
-  return blocks.filter((block) => {
-    const blockName = block.name.toLowerCase();
-    const blockPlugin = block.plugin.toLowerCase();
-    return (
-      blockName.includes(query.toLowerCase()) ||
-      blockPlugin.includes(query.toLowerCase())
-    );
-  });
-}
-
-function BlockList() {
-  // Fetch the blocks from the server api
-  const [blocks, setBlocks] = useState<BlockProps[]>([]);
-
-  const [query, setQuery] = useState<string>("");
-
-  const filteredBlocks = getFilteredItems(query, blocks);
-
+/**
+ * Renders the block list view component, which displays a list of draggable blocks that can be added to the flow builder canvas.
+ * @param flowBuilderController The controller for the flow builder
+ * @returns The block list view component
+ */
+function BlockListView({ flowBuilderController }: BlockListViewProps) {
+  // View state
+  const blockList = useRef<Array<Block>>([]);
+  const [filteredBlocks, setFilteredBlocks] = useState<Array<Block>>([]);
   const [loadingBlocks, setLoadingBlocks] = useState<boolean>(true);
 
   // Fetch the blocks from the server api
   const fetchBlocks = async () => {
     setLoadingBlocks(true);
 
-    const response = await horusGet("/plugins/listblocks");
+    const fetchedBlocks = await flowBuilderController.fetchBlocks();
 
-    const data = await response.json();
-
-    // Parse the blocks
-    const fb = data.map((b: any) => ({
-      id: b.id,
-      name: b.name,
-      description: b.description,
-      plugin: b.plugin,
-      variables: b.variables,
-      inputs: b.inputs,
-      outputs: b.outputs,
-      isPlaced: false,
-      subBlocks: b.subBlocks,
-      coords: {
-        x: 0,
-        y: 0,
-      },
-    }));
-
-    setBlocks(fb);
+    blockList.current = fetchedBlocks;
+    setFilteredBlocks(fetchedBlocks);
 
     setLoadingBlocks(false);
   };
 
+  // Filter the blocks
+  const filterBlocks = (search: string) => {
+    setFilteredBlocks(
+      flowBuilderController.filterBlocks(search, blockList.current)
+    );
+  };
+
+  // Side effects
   useEffect(() => {
     // Fetch the blocks from the server api
     fetchBlocks();
@@ -74,6 +63,7 @@ function BlockList() {
     };
   }, []);
 
+  // Views
   const loadingBlocksView = (
     <div className="blocks-loading">
       <RotatingLines />
@@ -82,7 +72,7 @@ function BlockList() {
   );
 
   const loadedBlocksView =
-    blocks.length === 0 ? (
+    filteredBlocks.length === 0 ? (
       <div className="flex flex-col items-center justify-center h-full">
         No blocks...
       </div>
@@ -97,22 +87,23 @@ function BlockList() {
             {(isDifferentPlugin || index == 0) && (
               <div>
                 <div className="block-separator"></div>
-                <div className="plugin-name-block">{block.plugin}</div>
+                <div className="plugin-name-block">{block.plugin.name}</div>
               </div>
             )}
-            <DraggableBlock {...block} />
+            <DraggableBlockView {...block} />
             {isLast && <div className="pb-4"></div>}
           </div>
         );
       })
     );
 
+  // Render
   return (
     <div className="block-sidebar">
       <div className="flow-title">Blocks</div>
       <SearchComponent
         placeholder="Search blocks..."
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={(event) => filterBlocks(event.target.value)}
         showIcon={false}
       />
       {loadingBlocks ? loadingBlocksView : loadedBlocksView}
@@ -120,4 +111,4 @@ function BlockList() {
   );
 }
 
-export { BlockList };
+export { BlockListView };

@@ -61,6 +61,7 @@ imports = ["webview", "flask", "requests", "fabric"]
 # Add all the submodules required by flask_socketio
 imports += [
     "flask_socketio",
+    "flask_cors",
     "engineio.async_drivers.eventlet",
     "eventlet",
     "eventlet.hubs.epolls",
@@ -102,7 +103,14 @@ except ImportError as e:
 # If we are on el8 linux, include QT5 libraries
 # Execute a 'uname -a' and check if the output contains 'el8'
 if ".el8." in os.popen("uname -a").read():
-    imports += ["PyQt5", "PyQt5.QtCore", "PyQt5.QtGui", "PyQt5.QtWidgets", "PyQt5.QtWebEngineWidgets", "PyQt5.QtWebChannel"]
+    imports += [
+        "PyQt5",
+        "PyQt5.QtCore",
+        "PyQt5.QtGui",
+        "PyQt5.QtWidgets",
+        "PyQt5.QtWebEngineWidgets",
+        "PyQt5.QtWebChannel",
+    ]
 
 binaries = []
 

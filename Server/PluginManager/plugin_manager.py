@@ -5,6 +5,7 @@ from HorusAPI import Plugin, PluginBlock, PluginPage
 import io
 from contextlib import redirect_stdout, redirect_stderr
 import subprocess
+from copy import deepcopy
 
 # from eventlet.green import subprocess
 import importlib.util
@@ -45,9 +46,7 @@ class PluginManager:
         # directory as the executable bundle
         try:
             bundle_dir = sys._MEIPASS  # type: ignore
-            self.defaultPluginsDir = os.path.abspath(
-                os.path.join(bundle_dir, "DefaultPlugins")
-            )
+            self.defaultPluginsDir = os.path.abspath(os.path.join(bundle_dir, "DefaultPlugins"))
         except AttributeError:
             # We are not in a bundle, use the AppSupport/DefaultPlugins directory
             self.defaultPluginsDir = os.path.join(appSupportDir, "DefaultPlugins")
@@ -102,9 +101,7 @@ class PluginManager:
         newPluginDir = os.path.join(self.pluginsDir, "tmpInstall")
 
         if os.path.exists(newPluginDir):
-            raise Exception(
-                f"Plugin with name {os.path.basename(path)} already installed."
-            )
+            raise Exception(f"Plugin with name {os.path.basename(path)} already installed.")
 
         os.mkdir(newPluginDir)
 
@@ -133,6 +130,10 @@ class PluginManager:
         try:
             print("Checking plugin...")
             loadedPlugin = self._loadPlugin(newPluginDir)
+
+            if loadedPlugin is None:
+                raise Exception(f"Error installing '{path}'. PluginLoader returned None.")
+
             # If everything went correct, move the plugin to its folder
             pluginFinalPath = os.path.join(self.pluginsDir, loadedPlugin.id)
             if not os.path.exists(pluginFinalPath):
@@ -240,7 +241,7 @@ class PluginManager:
 
         self.pluginChanges = False
 
-    def _loadPlugin(self, pluginPath: str) -> Plugin:
+    def _loadPlugin(self, pluginPath: str) -> typing.Optional[Plugin]:
         """
         Loads a plugin from the given path.
 
@@ -299,7 +300,7 @@ class PluginManager:
             os.mkdir(depsDir)
 
         # Set the python path to the dependencies folder
-        sys.path.append(depsDir)
+        self._includeDepsPath(pluginDir)
 
         # Install dependencies
         self._installDependencies(pluginMeta, depsDir)
@@ -322,7 +323,7 @@ class PluginManager:
             raise Exception(f"Failed to load plugin {entryPoint}: {e}")
         finally:
             # Pop the appended deps dir from the sys.path
-            sys.path.pop()
+            self._removeDepsPath(pluginDir)
         # Check that the plugin variable exists
         if not hasattr(pluginModule, "plugin"):
             raise Exception("The plugin has not declared a plugin variable.")
@@ -346,9 +347,9 @@ class PluginManager:
 
         # Check if the plugin is a default plugin
         if pluginPath.startswith(self.defaultPluginsDir):
-            pluginModule.plugin.info["default"] = True
+            pluginModule.plugin.info["default"] = True  # type: ignore
         else:
-            pluginModule.plugin.info["default"] = False
+            pluginModule.plugin.info["default"] = False  # type: ignore
 
         # Return the loaded plugin instace
         return pluginModule.plugin
@@ -398,6 +399,9 @@ class PluginManager:
         :param depsDir: The path to the dependencies folder
         """
 
+        # Get the interpreter and python version from the user settings
+        from App import AppDelegate
+
         # First check that the user has a valid
         # python interpreter when the app is frozen
         # Unfortunately, PyInstaller does not include
@@ -406,14 +410,12 @@ class PluginManager:
         # python interpreter. If the user does not have a
         # valid python interpreter, we cannot install dependencies
         # and we need to raise an exception.
-        interpreter = "python"
+        interpreter: str = "python"
         try:
-            # Get the interpreter from the user settings
-            from App import AppDelegate
-
-            interpreter = (
-                AppDelegate().appSettings.getSetting("dependenciesInterpreter").value
+            interpreter = str(
+                AppDelegate().server.settingsManager.getSetting("dependenciesInterpreter").value
             )
+
         except Exception as e:
             msg = f"Could not get the python interpreter from the user settings: {e}"
             msg += "\nDefaulting to system python interpreter."
@@ -433,14 +435,9 @@ class PluginManager:
             p.wait()
 
             # Get the result
-            try:
-                version = p.stdout.read().decode("utf-8").strip().split(" ")[-1]
-            except Exception as e:
-                raise Exception(
-                    f"Could not get the intalled python interpreter version: {e}."
-                )
-
-            from App import AppDelegate
+            if p.stdout is None:
+                raise Exception("Could not get the intalled python interpreter version.")
+            version = p.stdout.read().decode("utf-8").strip().split(" ")[-1]
 
             appPythonVersion = AppDelegate().APP_INFO["PYTHON_VERSION"]
 
@@ -476,6 +473,10 @@ class PluginManager:
             stdin=subprocess.PIPE,
         ) as p:
             # Print the output
+
+            if p.stdout is None:
+                raise Exception("Could not get the output of the pip install command.")
+
             for line in p.stdout:
                 strippedOut = line.decode("utf-8").strip()
                 if strippedOut != "":
@@ -570,9 +571,9 @@ class PluginManager:
             varList.append(v.toDict())
         return varList
 
-    def _findBlock(self, fromBlockID: str):
+    def findBlock(self, fromBlockID: str):
         """
-        Finds a block from an action id.
+        Finds a block from a block ID or raises an exception if not found.
         """
         # Split the id
         pluginID = fromBlockID.split(".")[0]
@@ -591,13 +592,34 @@ class PluginManager:
 
         return block
 
+    def _includeDepsPath(self, pluginDir: str):
+        """
+        Adds the deps folder of the plugin to the python path.
+        """
+        depsDir = os.path.join(pluginDir, "deps")
+        includeDir = os.path.join(pluginDir, "Include")
+        sys.path.append(depsDir)
+        sys.path.append(includeDir)
+
+    def _removeDepsPath(self, pluginDir: str):
+        """
+        Removes the deps folder of the plugin from the python path.
+        """
+        depsDir = os.path.join(pluginDir, "deps")
+        includeDir = os.path.join(pluginDir, "Include")
+        sys.path.remove(depsDir)
+        sys.path.remove(includeDir)
+
     def executeBlock(
         self,
-        blockID,
-        variables,
-        inputs,
-        workingDir,
+        blockID: str,
+        blockPlacedID: int,
+        variables: dict,
+        inputs: dict,
+        workingDir: str,
+        flowSavedID: str,
         socketio: SocketIO,
+        resetRemoteBlock: bool = False,
     ):
         """
         Executes an action of a plugin.
@@ -609,21 +631,22 @@ class PluginManager:
         :param selectedRemote: If any, the remote where to execute the block.
         """
 
-        # Find the block
-        block = self._findBlock(blockID)
+        # Find the block object to execute
+        # Copy it so we don't modify the original
+        block = self.findBlock(blockID).copy()
 
         # Set the variables
-        block._updateVariables(variables)
+        block._updateVariables(variables)  # pylint: disable=protected-access
 
         # Set the inputs
-        block._updateInputs(inputs)
+        block._updateInputs(inputs)  # pylint: disable=protected-access
 
         # Read the config file for the block
         configPath = self._blockConfigPath(block)
 
         if os.path.exists(configPath):
             # Set the config to execute the block
-            block._updateConfigs(configPath)
+            block._updateConfigs(configPath)  # pylint: disable=protected-access
 
         # Set the working dir to run python from
         os.chdir(os.path.dirname(workingDir))
@@ -632,16 +655,21 @@ class PluginManager:
         plugin = self._getPluginByID(blockID.split(".")[0])
 
         # Add to the python path the dependencies folder of the plugin
-        depsDir = os.path.join(plugin._path, "deps")
-        sys.path.append(depsDir)
+        self._includeDepsPath(plugin._path)  # pylint: disable=protected-access
 
         # Get the cluster api from the app delegate
-        from App import AppDelegate
+        from App import AppDelegate  # pylint: disable=import-outside-toplevel
 
-        rAPI = AppDelegate().remote
+        rAPI = AppDelegate().server.remoteManager.remote
+        if rAPI is None:
+            raise Exception("No cluster selected.")  #  pylint: disable=broad-exception-raised
+        rAPI._blockID = blockID  # pylint: disable=protected-access
+        rAPI._blockPlacedID = blockPlacedID  # pylint: disable=protected-access
+        rAPI._flowSavedID = flowSavedID  # pylint: disable=protected-access
+        rAPI._resetRemoteBlock = resetRemoteBlock  # pylint: disable=protected-access
 
         # Update the block with the remote configuration
-        block._setRemote(rAPI)
+        block._setRemote(rAPI)  # pylint: disable=protected-access
 
         # Execute the block
         error = False
@@ -650,15 +678,15 @@ class PluginManager:
         try:
             with PrintCapturer(socketio):
                 outputs = block()
-        except Exception as e:
+        except Exception as exc:  # pylint: disable=broad-exception-caught
             error = True
-            errorMSG = str(e)
+            errorMSG = str(exc)
 
         # Restore the working dir
         os.chdir(self.workingDir)
 
         # Restore the python path
-        sys.path.pop()
+        self._removeDepsPath(plugin._path)  # pylint: disable=protected-access
 
         if error:
             raise Exception(errorMSG)
@@ -790,7 +818,7 @@ class PluginManager:
             pluginConfigID = blockID + ".config." + configId.split(".")[-1]
             configBlock = block._getConfig(pluginConfigID)
 
-            with io.StringIO() as buf, redirect_stdout(buf), redirect_stderr(buf):
+            with io.StringIO() as buf, redirect_stdout(buf), redirect_stderr(buf):  # type: ignore
                 # Execute the config block
                 configBlock()
 
@@ -823,29 +851,6 @@ class PluginManager:
             flows += p._flows
 
         return flows
-
-    def loadPredefinedFlow(self, savedID: str):
-        """
-        Returns a predefined flow with the given savedID.
-        """
-
-        flows = self.listFlows()
-        loadedFLow = None
-        for f in flows:
-            if f["savedID"] == savedID:
-                from App import AppDelegate
-
-                loadedFLow = AppDelegate()._openFlowInternal(f["path"])
-                break
-        if not loadedFLow:
-            raise Exception("Flow not found.")
-
-        # Replace the savedID and the flow path so
-        # the forntend can save it to another location
-        loadedFLow["savedID"] = "new_flow"
-        loadedFLow["path"] = None
-
-        return loadedFLow
 
 
 class PrintCapturer:

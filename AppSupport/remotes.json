@@ -1,1 +1,20 @@
-{"bright": {"name": "bright", "host": "10.0.0.3", "username": "cdominguez", "password": "", "port": "22", "keyPath": ["/Users/cdominguez/.ssh/id_rsa.pub"], "proxyCommand": ""}, "nbdcalc": {"name": "nbdcalc", "host": "10.0.0.3", "username": "nbdweb", "password": "", "port": "22", "keyPath": "/shared/work/cdominguez/ifr", "proxyCommand": "ssh -Y -q nbd nc nbdcalc01 22"}}
+{
+  "bright": {
+    "name": "bright",
+    "host": "10.0.0.3",
+    "username": "cdominguez",
+    "password": "",
+    "port": "22",
+    "keyPath": ["/Users/cdominguez/.ssh/id_rsa.pub"],
+    "proxyCommand": ""
+  },
+  "nbdcalc": {
+    "name": "nbdcalc",
+    "host": "10.0.0.3",
+    "username": "nbdweb",
+    "password": "",
+    "port": "22",
+    "keyPath": "/shared/work/cdominguez/ifr",
+    "proxyCommand": "ssh -Y -q nbd nc nbdcalc01 22"
+  }
+}

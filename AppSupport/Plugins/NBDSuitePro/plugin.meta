@@ -1,0 +1,8 @@
+{
+  "name": "NBDSuite - Pro",
+  "description": "The advanced NBDSuite plugin for Horus",
+  "author": "Nostrum Biodiscovery",
+  "version": "0.0.1",
+  "pluginFile": "NBDSuitePro.py",
+  "dependencies": []
+}
