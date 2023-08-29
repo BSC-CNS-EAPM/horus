@@ -64,6 +64,11 @@ def createPlugin():
     # Add the getData block to the plugin
     plugin.addBlock(getDataBlock)
 
+    from Blocks.SendData import sendDataBlock  # type: ignore
+
+    # add the sendData block to the plugin
+    plugin.addBlock(sendDataBlock)
+
     from Blocks.PrintVariable import printBlock  # type: ignore
 
     # Add the print block to the plugin
