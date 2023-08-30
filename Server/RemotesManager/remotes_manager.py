@@ -87,6 +87,7 @@ class RemotesAPI:
         if local or selectedRemote is None:
             self.isLocal = True
             self.name = "Local"
+            self.remoteName = "Local"
             return
 
         # Set the remote details
@@ -311,9 +312,9 @@ class RemotesAPI:
 
             print("Transferring...")
 
-            container_local = os.path.dirname(
+            container_local = os.path.dirname(  # pylint: disable=invalid-name
                 destination
-            )  # pylint: disable=invalid-name
+            )
             destination = os.path.join(container_local, zipPath)
 
             print(f"Getting {source} to {destination}")
@@ -372,7 +373,11 @@ class RemotesAPI:
         if self.isLocal:
             return True
 
-        return self.conn.is_connected
+        try:
+            return self.conn.is_connected
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            print(f"Could not check if remote {self.name} is connected. {exc}")
+            return False
 
     # Slurm management
     _flowSavedID: t.Optional[str] = None

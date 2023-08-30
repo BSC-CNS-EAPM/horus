@@ -64,7 +64,7 @@ From: rockylinux:8
     npm run requirements
 
     # Fix parcel with yarn
-    npm install yarn
+    npm install --legacy-peer-deps yarn
     npx yarn
 
     # Because on Rocky we are using QT,

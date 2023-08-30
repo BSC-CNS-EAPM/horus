@@ -54,7 +54,7 @@ From: ubuntu:22.04
     npm run requirements
 
     # Fix parcel with yarn
-    npm install yarn
+    npm install --legacy-peer-deps yarn
     npx yarn
 
 %runscript

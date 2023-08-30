@@ -141,6 +141,8 @@ class AppDelegate(metaclass=HorusSingleton):
         serverMode: bool = False,
         browser: bool = False,
         debugURL: typing.Optional[str] = None,
+        host: typing.Optional[str] = None,
+        port: typing.Optional[int] = None,
     ):
         """
         Initialize the AppDelegate.
@@ -157,19 +159,9 @@ class AppDelegate(metaclass=HorusSingleton):
         # Set the app support directory
         self._appSupportDir()
 
-        # # Load the settings
-        # from App import SettingsManager  # pylint: disable=import-outside-toplevel
-
-        # self.appSettings = SettingsManager(self.appSupportDir)
-
-        # # Load the flow manager
-        # from App import FlowManager  # pylint: disable=import-outside-toplevel
-
-        # self.flowManager = FlowManager(self.appSupportDir)
-
         # Prepare the server
         self.server: HorusServer = HorusServer(
-            debug=self.debug, desktop=not serverMode, appSupportDir=self.appSupportDir
+            debug=self.debug, desktop=not serverMode, appSupportDir=self.appSupportDir, host=host, port=port
         )
 
     def _loadAppInfo(self):
@@ -669,8 +661,31 @@ def launchApp():
             print("Server mode overrides browser mode")
         server_mode = True
 
+    # Check for the --port (-p) flag to force a port on the app
+    port = None
+    if "--port" in sys.argv or "-p" in sys.argv:
+        index = sys.argv.index("--port") if "--port" in sys.argv else sys.argv.index("-p")
+        try:
+            port = int(sys.argv[index + 1])
+        except IndexError:
+            print("No port provided. Usage: -p <port>")
+            sys.exit(1)
+        except ValueError:
+            print("Invalid port provided. Usage: -p <port>")
+            sys.exit(1)
+
+    # Check for the --host (-h) flag to force a host on the app
+    host = None
+    if "--host" in sys.argv or "-h" in sys.argv:
+        index = sys.argv.index("--host") if "--host" in sys.argv else sys.argv.index("-h")
+        try:
+            host = sys.argv[index + 1]
+        except IndexError:
+            print("No host provided. Usage: -h <host>")
+            sys.exit(1)
+
     # Prepare the app delegate
-    app = AppDelegate(debug, server_mode, browser, debugURL)
+    app = AppDelegate(debug, server_mode, browser, debugURL, host, port)
     """
     App Delegate is a singleton class that will handle the app
     """

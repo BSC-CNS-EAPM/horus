@@ -55,7 +55,7 @@ class HorusServer:
     parcelURL = "http://127.0.0.1:1234"
     browser = False
 
-    def __init__(self, debug=False, desktop=False, appSupportDir=None):
+    def __init__(self, debug=False, desktop=False, appSupportDir=None, host=None, port=None):
         # App support directory
         if appSupportDir is None:
             self.appSupportDir = os.path.abspath(os.path.join("AppSupport"))
@@ -67,8 +67,8 @@ class HorusServer:
 
         # Basic Flask setup
         self.debug = debug
-        self.host = "127.0.0.1"
-        self.port = self._getFreePort()
+        self.host = host if host else "127.0.0.1"
+        self.port = port if port else self._getFreePort()
         self.baseURL = f"http://{self.host}:{self.port}"
 
         # Initialize the plugin manager
