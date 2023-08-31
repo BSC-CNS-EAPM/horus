@@ -56,12 +56,12 @@ class RemotesAPI:
     The proxy command to connect to the remote cluster with.
     """
 
-    horusDir = "~/.horus/"
+    workDir: str = "~/.horus/"
     """
-    The path to the .horus folder on the remote.
+    The path to the working dir folder on the remote.
     """
 
-    isLocal = False
+    isLocal: bool = False
     """
     Whether the remote is local or not.
     """
@@ -71,9 +71,7 @@ class RemotesAPI:
     The selected remote name.
     """
 
-    def __init__(
-        self, selectedRemote: t.Optional[t.Dict[str, t.Any]], local: bool = False
-    ):
+    def __init__(self, selectedRemote: t.Optional[t.Dict[str, t.Any]], local: bool = False):
         """
         Create a new ClusterAPI object.
 
@@ -99,6 +97,7 @@ class RemotesAPI:
         self.key = selectedRemote.get("key", None)
         self.proxyCommand = selectedRemote.get("proxyCommand", None)
         self.remoteName = selectedRemote.get("name", "Unnamed Remote")
+        self.workDir = selectedRemote.get("workDir", "~/.horus/")
 
     def connect(self):
         """
@@ -108,17 +107,11 @@ class RemotesAPI:
         # Check if connection details are provided
         if not self.isLocal:
             if self.host is None:
-                raise Exception(
-                    "No hostname provided."
-                )  # pylint: disable=broad-exception-raised
+                raise Exception("No hostname provided.")  # pylint: disable=broad-exception-raised
             if self.port is None:
-                raise Exception(
-                    "No port provided."
-                )  # pylint: disable=broad-exception-raised
+                raise Exception("No port provided.")  # pylint: disable=broad-exception-raised
             if self.username is None:
-                raise Exception(
-                    "No username provided."
-                )  # pylint: disable=broad-exception-raised
+                raise Exception("No username provided.")  # pylint: disable=broad-exception-raised
             if self.password is None and self.key is None:
                 raise Exception(  # pylint: disable=broad-exception-raised
                     "No password or key provided."
@@ -157,11 +150,13 @@ class RemotesAPI:
                     "No connection method provided."
                 )
 
-        # Set the path to the .horus folder on the remote
-        self.horusDir = os.path.join(self.userHome, ".horus")
+        if "~" in self.workDir:
+            # Replace the ~ with the user home directory for compatibility
+            # with the fabric library
+            self.workDir = self.workDir.replace("~", self.userHome)
 
         # Create the .horus folder in the remote home directory
-        self.command(f"mkdir -p {self.horusDir}")
+        self.command(f"mkdir -p {self.workDir}")
 
     @property
     def userHome(self):
@@ -198,9 +193,7 @@ class RemotesAPI:
                         process.stderr.read().decode("utf-8").strip()
                     )
                 else:
-                    raise Exception(
-                        "Command failed."
-                    )  # pylint: disable=broad-exception-raised
+                    raise Exception("Command failed.")  # pylint: disable=broad-exception-raised
 
             # Return the stdout and stderr as a string
             if process.stdout is not None:
@@ -212,9 +205,7 @@ class RemotesAPI:
 
         # If the command failed, raise an exception
         if out.failed:
-            raise Exception(
-                out.stderr.strip()
-            )  # pylint: disable=broad-exception-raised
+            raise Exception(out.stderr.strip())  # pylint: disable=broad-exception-raised
 
         # Return the stdout and stderr as a string
         return out.stdout.strip()
@@ -228,7 +219,7 @@ class RemotesAPI:
         """
 
         if destination is None or destination == "":
-            destination = self.horusDir
+            destination = self.workDir
 
         if self.isLocal:
             os.system(f"cp -r {source} {destination}")
@@ -279,7 +270,7 @@ class RemotesAPI:
         """
 
         if source is None or source == "":
-            source = self.horusDir
+            source = self.workDir
 
         if destination is None or destination == "":
             destination = os.getcwd()
@@ -312,9 +303,7 @@ class RemotesAPI:
 
             print("Transferring...")
 
-            container_local = os.path.dirname(  # pylint: disable=invalid-name
-                destination
-            )
+            container_local = os.path.dirname(destination)  # pylint: disable=invalid-name
             destination = os.path.join(container_local, zipPath)
 
             print(f"Getting {source} to {destination}")
@@ -517,14 +506,10 @@ class RemotesAPI:
             )
 
         if self._flowSavedID is None:
-            raise Exception(
-                "Flow ID not set."
-            )  # pylint: disable=broad-exception-raised
+            raise Exception("Flow ID not set.")  # pylint: disable=broad-exception-raised
 
         if self._blockPlacedID is None:
-            raise Exception(
-                "Block placedID not set."
-            )  # pylint: disable=broad-exception-raised
+            raise Exception("Block placedID not set.")  # pylint: disable=broad-exception-raised
 
         status = self.getRemoteBlockStatus(self._flowSavedID, self._blockPlacedID)
 
@@ -668,6 +653,7 @@ class RemotesManager:
             port: int,
             keys: str,
             proxyCommand: str,
+            workDir: str
         }
         """
 

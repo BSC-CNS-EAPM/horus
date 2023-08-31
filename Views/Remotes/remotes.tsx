@@ -23,6 +23,7 @@ export default function ConfigRemotes() {
         port: remote.port,
         keyPath: remote.keyPath,
         proxyCommand: remote.proxyCommand,
+        workDir: remote.workDir,
       };
     });
 
@@ -152,6 +153,7 @@ interface NewRemoteProps {
     port: string;
     keyPath: string;
     proxyCommand: string;
+    workDir: string;
   };
 }
 
@@ -163,6 +165,7 @@ function NewRemote(props: NewRemoteProps) {
   const [port, setPort] = useState("");
   const [keyPath, setKeyPath] = useState("");
   const [proxyCommand, setProxyCommand] = useState("");
+  const [workDir, setWorkDir] = useState("");
 
   // Use useEffect to update the state whenever props.data changes
   useEffect(() => {
@@ -173,11 +176,10 @@ function NewRemote(props: NewRemoteProps) {
     setPort(props.data?.port || "");
     setKeyPath(props.data?.keyPath || "");
     setProxyCommand(props.data?.proxyCommand || "");
+    setWorkDir(props.data?.workDir || "");
   }, [props.data]);
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
+  const handleSubmit = async () => {
     const newConfig = {
       name: name,
       host: host,
@@ -186,6 +188,7 @@ function NewRemote(props: NewRemoteProps) {
       port: port,
       keyPath: keyPath,
       proxyCommand: proxyCommand,
+      workDir: workDir,
     };
 
     const header = {
@@ -201,7 +204,7 @@ function NewRemote(props: NewRemoteProps) {
 
     if (!data.ok) {
       alert("Failed to configure remote: " + data.msg);
-      return
+      return;
     }
 
     props.hidemodal();
@@ -298,6 +301,16 @@ function NewRemote(props: NewRemoteProps) {
                   placeholder="A proxy command to use (optional)"
                   value={proxyCommand}
                   onChange={(event) => setProxyCommand(event.target.value)}
+                />
+              </div>
+              <div className="plugin-variable">
+                <div className="plugin-variable-name">Working directory</div>
+                <input
+                  className="plugin-variable-value text-center"
+                  type="text"
+                  placeholder="Specify a working directory on the remote (optional)"
+                  value={workDir}
+                  onChange={(event) => setWorkDir(event.target.value)}
                 />
               </div>
             </div>

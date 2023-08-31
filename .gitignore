@@ -212,5 +212,8 @@ yarn.lock
 
 etc/
 
+# Remotes
+AppSupport/remotes.json
+
 # Queues
 AppSupport/queue.json
