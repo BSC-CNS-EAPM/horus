@@ -619,6 +619,7 @@ class PluginManager:
         workingDir: str,
         flowSavedID: str,
         socketio: SocketIO,
+        selectedInputGroup: str,
         resetRemoteBlock: bool = False,
     ):
         """
@@ -634,6 +635,9 @@ class PluginManager:
         # Find the block object to execute
         # Copy it so we don't modify the original
         block = self.findBlock(blockID).copy()
+
+        # Set the selected input group
+        block.selectedInputGroup = selectedInputGroup
 
         # Set the variables
         block._updateVariables(variables)  # pylint: disable=protected-access
@@ -671,6 +675,8 @@ class PluginManager:
         # Update the block with the remote configuration
         block._setRemote(rAPI)  # pylint: disable=protected-access
 
+        print("Executing block: " + blockID)
+
         # Execute the block
         error = False
         errorMSG = ""
@@ -681,6 +687,8 @@ class PluginManager:
         except Exception as exc:  # pylint: disable=broad-exception-caught
             error = True
             errorMSG = str(exc)
+
+        print("Block executed: " + blockID)
 
         # Restore the working dir
         os.chdir(self.workingDir)

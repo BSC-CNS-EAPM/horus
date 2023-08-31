@@ -1,4 +1,5 @@
-from HorusAPI import PluginVariable, PluginBlock, VariableTypes
+from HorusAPI import PluginVariable, PluginBlock, VariableTypes, VariableGroup
+import os
 
 # Inputs
 complex_data_input = PluginVariable(
@@ -26,13 +27,45 @@ system_data_input = PluginVariable(
     type=VariableTypes.STRUCTURE,
 )
 
-ligand_data_input = PluginVariable(
-    name="Ligand data",
+ligand_data_input_file = PluginVariable(
+    name="Ligand data file",
     id="ligand_data",
     description="Path to a Ligand PDB file. This should contain \
     only the Ligand.",
     type=VariableTypes.FILE,
     allowedValues=["pdb", "sdf", "smi", "smiles"],
+)
+
+ligand_data_structure = PluginVariable(
+    name="Ligand data",
+    id="ligand_data",
+    description="The Ligand structure.",
+    type=VariableTypes.STRUCTURE,
+)
+
+# Define the different input groups
+ligandFileInput = VariableGroup(
+    id="ligandFileInput",
+    variables=[
+        system_data_input,
+        ligand_data_input_file,
+    ],
+)
+
+ligandSelectionInput = VariableGroup(
+    id="ligandSelectionInput",
+    variables=[
+        complex_data_input,
+        complex_ligand_selection_input,
+    ],
+)
+
+ligandStructureInput = VariableGroup(
+    id="ligandStructureInput",
+    variables=[
+        system_data_input,
+        ligand_data_structure,
+    ],
 )
 
 # Variables
@@ -127,9 +160,7 @@ def generateGeneralBlock(block: PluginBlock):
         in ["cpus", "verbosity", "working_directory", "name", "static_name", "restart"]
     ]
     if missing_variables:
-        raise Exception(
-            f"Missing variables in the General block: {', '.join(missing_variables)}"
-        )
+        raise Exception(f"Missing variables in the General block: {', '.join(missing_variables)}")
 
     system_data = block.inputs.get("system_data", None)
     ligand_data = block.inputs.get("ligand_data", None)
@@ -145,6 +176,7 @@ def generateGeneralBlock(block: PluginBlock):
     if ligand_data is not None and complex_ligand_selection is not None:
         raise Exception("Both ligand data and complex ligand selection provided.")
 
+    inputContents = None
     if ligand_data is not None:
         inputContents = inputYAML(
             system_data,
@@ -177,7 +209,16 @@ def generateGeneralBlock(block: PluginBlock):
             seed,
         )
 
+    if inputContents is None:
+        raise Exception("No input contents generated.")
+
     # Write the yaml
+    if os.path.exists(f"{name}.yaml"):
+        qty = 1
+        while os.path.exists(f"{name}_{qty}.yaml"):
+            qty += 1
+        name = f"{name}_{qty}"
+
     with open(f"{name}.yaml", "w") as f:
         f.write(inputContents)
 
@@ -200,11 +241,10 @@ generalBlock = PluginBlock(
         static_name_variable,
         seed_variable,
     ],
-    inputs=[
-        # complex_data_input,
-        system_data_input,
-        ligand_data_input,
-        complex_ligand_selection_input,
+    inputGroups=[
+        ligandFileInput,
+        ligandSelectionInput,
+        ligandStructureInput,
     ],
     outputs=[output_yaml],
 )

@@ -18,6 +18,7 @@ import "./block.css";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { ArrowBlockConnector } from "./arrow_connector";
 import { useXarrow } from "react-xarrows";
+import NBDButton from "../nbdbutton";
 
 interface DeleteBlockButtonProps {
   block: Block;
@@ -225,24 +226,26 @@ function BlockView(block: Block) {
               </div>
             </div>
           )}
-          {block.inputs && block.inputs.length > 0 && (
+          {block.inputs && (
             <div>
               <h4>Inputs</h4>
               <div>
-                {block.inputs.map((variable, index) => (
-                  <InputOutputView
-                    key={
-                      variable.id +
-                      "-" +
-                      index +
-                      "-" +
-                      block.id +
-                      "-" +
-                      block.placedID
-                    }
-                    variable={variable}
-                  />
-                ))}
+                {block.inputs.map((variableGroup) =>
+                  variableGroup.variables.map((variable, index) => (
+                    <InputOutputView
+                      key={
+                        variable.id +
+                        "-" +
+                        index +
+                        "-" +
+                        block.id +
+                        "-" +
+                        block.placedID
+                      }
+                      variable={variable}
+                    />
+                  ))
+                )}
               </div>
             </div>
           )}
@@ -404,9 +407,15 @@ function BlockView(block: Block) {
 
 function InputBlock(block: Block) {}
 
-function DraggableBlockView(block: Block) {
-  const updateXarrow = useXarrow();
+type DraggableBlockViewProps = {
+  block: Block;
+  updateBlockSelectedGroup?: (blockID: number, selectedInputGroup) => void;
+};
 
+function DraggableBlockView(props: DraggableBlockViewProps) {
+  const { block, updateBlockSelectedGroup } = props;
+
+  const updateXarrow = useXarrow();
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: block.placedID ? `${block.placedID}-${block.id}` : block.id,
     data: {
@@ -494,6 +503,52 @@ function DraggableBlockView(block: Block) {
     return <ArrowBlockConnector from={ref} block={block} variable={output} />;
   };
 
+  const handleSelectedInputGroupChange = (direction: "up" | "down") => {
+    if (block.inputs.length === 1) {
+      return;
+    }
+
+    // Get the selected group index
+    const selectedInputGroupIndex = block.inputs.findIndex((input) => {
+      return input.id === block.selectedInputGroup;
+    });
+
+    let newIndex = selectedInputGroupIndex;
+    if (direction === "up") {
+      if (selectedInputGroupIndex === block.inputs.length - 1) {
+        newIndex = 0;
+      } else {
+        newIndex++;
+      }
+    }
+
+    if (direction === "down") {
+      if (selectedInputGroupIndex === 0) {
+        newIndex = block.inputs.length - 1;
+      } else {
+        newIndex--;
+      }
+    }
+
+    // Get the selected group
+    let selectedInputGroup = block.inputs[0].id;
+    block.inputs.forEach((input, index) => {
+      if (index === newIndex) {
+        selectedInputGroup = input.id;
+      }
+    });
+
+    // Update the block state
+    updateBlockSelectedGroup(block.placedID, selectedInputGroup);
+
+    // Call the onChange function of the block
+    block.onChange(block.placedID);
+  };
+
+  const visibleInputs = block.inputs.find(
+    (inputGroup) => inputGroup.id === block.selectedInputGroup
+  );
+
   const variablesConnectorView = () => {
     if (block.type === "input") {
       return <>{placedBlockConnector()}</>;
@@ -502,15 +557,18 @@ function DraggableBlockView(block: Block) {
     return (
       <>
         {placedBlockConnector()}
-        <VariableBallView
-          key={block.id + "-" + block.placedID}
-          variables={block.inputs}
-          isConnecting={isConnecting}
-          tryingToConnect={tryingToConnect}
-          placedID={block.placedID}
-          block={block}
-          // updateXarrow={updateXarrow}
-        />
+        <div className="flex flex-row gap-1">
+          <VariableBallView
+            key={block.id + "-" + block.placedID}
+            variables={visibleInputs.variables}
+            isConnecting={isConnecting}
+            tryingToConnect={tryingToConnect}
+            placedID={block.placedID}
+            block={block}
+            handleSelectedInputGroupChange={handleSelectedInputGroupChange}
+            // updateXarrow={updateXarrow}
+          />
+        </div>
       </>
     );
   };

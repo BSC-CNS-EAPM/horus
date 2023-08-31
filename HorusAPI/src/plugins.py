@@ -388,6 +388,44 @@ class PluginVariable:
         return json.dumps(self.toDict(), indent=4)
 
 
+class VariableGroup:
+    """
+    A group of varaibles to be used together as input.
+    """
+
+    variables: typing.List[PluginVariable] = []
+    """
+    The variables contained in the group
+    """
+
+    def __init__(self, id: str, variables: typing.List[PluginVariable]) -> None:
+        """
+        Initialize a VariableGroup
+
+        :param id: The ID of the variable group (must be unique).
+        :param variables: The list of variables in the group.
+        """
+
+        self.id = id
+        """
+        The id of the input group
+        """
+
+        self.variables = variables
+        """
+        The variables contained in the input group
+        """
+
+    def toDict(self):
+        """
+        Converts the variable group to a dictionary.
+        """
+
+        groupDict = {"id": self.id, "variables": [var.toDict() for var in self.variables]}
+
+        return groupDict
+
+
 class PluginBlockTypes(Enum):
     """
     The different types of blocks.
@@ -473,9 +511,7 @@ class BlockConnection:
 
         connectionDict = {
             "origin": self.origin._toDict(),  # pylint: disable=protected-access
-            "destination": (
-                self.destination._toDict()
-            ),  # pylint: disable=protected-access
+            "destination": (self.destination._toDict()),  # pylint: disable=protected-access
             "isCyclic": self.isCyclic,
             "cycles": self.cycles,
         }
@@ -504,6 +540,12 @@ class PluginBlock:
     _connectedTo: typing.List[int] = []
     _connectedToReferences: typing.List[int] = []
 
+    selectedInputGroup: str = "default"
+    """
+    The ID of the selected input group. THis gets updated when the user
+    selects a different input group in the frontend.
+    """
+
     def __init__(  # pylint: disable=dangerous-default-value
         self,
         name: str,
@@ -511,6 +553,7 @@ class PluginBlock:
         action: typing.Optional[typing.Callable] = None,
         variables: typing.List[PluginVariable] = [],
         inputs: typing.List[PluginVariable] = [],
+        inputGroups: typing.List[VariableGroup] = [],
         outputs: typing.List[PluginVariable] = [],
         blockType: PluginBlockTypes = PluginBlockTypes.BASE,
     ):
@@ -549,12 +592,36 @@ class PluginBlock:
         The produced output can be used in the following blocks as input.
         """
 
-        self._inputs = inputs
+        if len(inputs) > 0 and len(inputGroups) > 0:
+            raise Exception(  # pylint: disable=broad-exception-raised
+                "A block can only have inputs or input groups, not both."
+            )
+
+        if len(inputs) > 0:
+            inputGroups = [VariableGroup("default", inputs)]
+
+        # self._inputs = inputs
+        # """
+        # The input that the block receives as a list of PluginVariables.
+        # This information will be displayed in the flow builder.
+        # The input can be used in the block action.
+        # """
+
+        if len(inputGroups) > 0:
+            self.selectedInputGroup = inputGroups[0].id
+
+        self._inputGroups: typing.Dict[str, VariableGroup] = {}
         """
-        The input that the block receives as a list of PluginVariables.
-        This information will be displayed in the flow builder.
-        The input can be used in the block action.
+        The input groups that the block receives as a list of VariableGroups.
+        The different groups will be showed as scrollable pages in the block inputs.
+        The input group's ID can be used in the block action to know which grup the user is using.
+        The inputs can be used in the block action.
+
+        It is a dictionary with the ID of the group as key and the VariableGroup as value.
         """
+
+        for ig in inputGroups:
+            self._inputGroups[ig.id] = ig
 
         self._configs: typing.List[PluginConfig] = []
         """
@@ -602,9 +669,11 @@ class PluginBlock:
         :param values: A dictionary with the values to update
         (JSON coming from frontend).
         """
-
-        print("Updating inputs", values)
-        for variable in self._inputs:
+        try:
+            inputs = self._inputGroups[self.selectedInputGroup].variables
+        except KeyError as keye:
+            raise Exception(f"Input group {self.selectedInputGroup} not found in block inputs. Current block inputs are: {self._inputGroups.keys()}") from keye
+        for variable in inputs:
             if variable.id in values.keys():
                 variable.value = values[variable.id]
 
@@ -624,7 +693,11 @@ class PluginBlock:
     @property
     def inputs(self):
         varsDict: dict[str, typing.Any] = {}
-        for variable in self._inputs:
+        try:
+            inputs = self._inputGroups[self.selectedInputGroup].variables
+        except KeyError as keye:
+            raise Exception(f"Input group {self.selectedInputGroup} not found in block inputs. Current block inputs are: {self._inputGroups.keys()}") from keye
+        for variable in inputs:
             varsDict[variable.id] = variable.value
         return varsDict
 
@@ -743,14 +816,10 @@ class PluginBlock:
         connections: typing.List[typing.Dict[str, typing.Any]] = []
         if references:
             for connection in self._variableConnectionsReferences:
-                connections.append(
-                    connection._toDict()
-                )  # pylint: disable=protected-access
+                connections.append(connection._toDict())  # pylint: disable=protected-access
         else:
             for connection in self._variableConnections:
-                connections.append(
-                    connection._toDict()
-                )  # pylint: disable=protected-access
+                connections.append(connection._toDict())  # pylint: disable=protected-access
 
         return connections
 
@@ -764,7 +833,7 @@ class PluginBlock:
             "name": self.name,
             "description": self.description,
             "variables": self._variablesToDict(self._variables),
-            "inputs": self._variablesToDict(self._inputs),
+            "inputs": self._inputGroupsToDict(self._inputGroups),
             "outputs": self._variablesToDict(self._outputs),
             "config": self._configToDict(),
             "type": str(self.TYPE),
@@ -776,9 +845,10 @@ class PluginBlock:
             "finishedExecution": self._finishedExecution,
             "storedOutputs": self._storedOutputs,
             "variableConnections": self._connectionsToDict(),
-            "variableConnectionsReference": self._connectionsToDict(True),
+            "variableConnectionsReference": self._connectionsToDict(references=True),
             "connectedTo": self._connectedTo,
             "connectedToReference": self._connectedToReferences,
+            "selectedInputGroup": self.selectedInputGroup,
         }
 
         return blockDict
@@ -786,13 +856,17 @@ class PluginBlock:
     def __str__(self):
         return json.dumps(self._toDict(), indent=4)
 
-    def _variablesToDict(
-        self, vars: typing.List[PluginVariable], minimal: bool = False
-    ):
+    def _variablesToDict(self, vars: typing.List[PluginVariable], minimal: bool = False):
         varList: list[dict[str, typing.Any]] = []
         for v in vars:
             varList.append(v.toDict(minimal=minimal))
         return varList
+
+    def _inputGroupsToDict(self, inputGroups: typing.Dict[str, VariableGroup]):
+        inputGroupsList: list[dict[str, typing.Any]] = []
+        for k, v in inputGroups.items():
+            inputGroupsList.append(v.toDict())
+        return inputGroupsList
 
     def _configToDict(self):
         configList: list[dict[str, typing.Any]] = []
@@ -844,6 +918,7 @@ class PluginBlock:
         runError: bool = blockJSON.get("runError", False)
         placedID: int = blockJSON.get("placedID", 0)
         finishedExecution: bool = blockJSON.get("finishedExecution", True)
+        selectedInputGroup: str = blockJSON.get("selectedInputGroup", "default")
 
         position: typing.Dict[str, float] = blockJSON.get("position", [None, None])
         xPos: float = position.get("x", 0)
@@ -854,14 +929,12 @@ class PluginBlock:
         variableConnections: typing.List[typing.Dict[str, typing.Any]] = blockJSON.get(
             "variableConnections", []
         )
-        variableConnectionsReference: typing.List[
-            typing.Dict[str, typing.Any]
-        ] = blockJSON.get("variableConnectionsReference", [])
+        variableConnectionsReference: typing.List[typing.Dict[str, typing.Any]] = blockJSON.get(
+            "variableConnectionsReference", []
+        )
 
         connectedTo: typing.List[int] = blockJSON.get("connectedTo", [])
-        connectedToReference: typing.List[int] = blockJSON.get(
-            "connectedToReference", []
-        )
+        connectedToReference: typing.List[int] = blockJSON.get("connectedToReference", [])
 
         def parseVariableConnection(connection: typing.Dict[str, typing.Any]):
             origin = connection.get("origin", None)
@@ -870,9 +943,7 @@ class PluginBlock:
             cycles = connection.get("cycles", 0)
 
             if origin is None or destination is None:
-                raise Exception(
-                    "Invalid flow object."
-                )  # pylint: disable=broad-exception-raised
+                raise Exception("Invalid flow object.")  # pylint: disable=broad-exception-raised
 
             originPlacedID = origin.get("placedID", None)
             originBlockID = origin.get("blockID", None)
@@ -896,9 +967,7 @@ class PluginBlock:
         # Parse the variableConnectionsReference
         parsedVariableConnectionsReference: typing.List[BlockConnection] = []
         for connection in variableConnectionsReference:
-            parsedVariableConnectionsReference.append(
-                parseVariableConnection(connection)
-            )
+            parsedVariableConnectionsReference.append(parseVariableConnection(connection))
 
         # Parse the variable values
         variablesJSON = blockJSON.get("variables", {})
@@ -906,12 +975,11 @@ class PluginBlock:
         for variable in variablesJSON:
             varID = variable.get("id", None)
             if varID is None:
-                raise Exception(
-                    "Invalid flow object."
-                )  # pylint: disable=broad-exception-raised
+                raise Exception("Invalid flow object.")  # pylint: disable=broad-exception-raised
             variablesJSONParsed[varID] = variable.get("value", None)
 
         # Update the variables with the values the user has set
+        self.selectedInputGroup = selectedInputGroup
         self._updateVariables(variablesJSONParsed)
 
         # Update the internal variables
@@ -946,6 +1014,7 @@ class PluginBlock:
             "variableConnectionsReference": self._connectionsToDict(True),
             "connectedTo": self._connectedTo,
             "connectedToReference": self._connectedToReferences,
+            "selectedInputGroup": self.selectedInputGroup,
         }
 
         return blockDict
@@ -979,9 +1048,7 @@ class PluginConfig(PluginBlock):
                 "A PluginConfig must have at least one variable."
             )
 
-        super().__init__(
-            name, description, action, variables, blockType=PluginBlockTypes.CONFIG
-        )
+        super().__init__(name, description, action, variables, blockType=PluginBlockTypes.CONFIG)
 
 
 class InputBlock(PluginBlock):
@@ -1016,6 +1083,7 @@ class InputBlock(PluginBlock):
             description,
             action=action,
             variables=[variable],
+            inputs=[variable],
             outputs=[variable],
             blockType=PluginBlockTypes.INPUT,
         )
@@ -1217,9 +1285,7 @@ class Plugin:
             except Exception:
                 # Assign to the configs in the block the ID
                 for config in block._getConfigs():
-                    config.id = f"{block.id}.config.{config.name}".replace(
-                        " ", "_"
-                    ).lower()
+                    config.id = f"{block.id}.config.{config.name}".replace(" ", "_").lower()
 
                 self._blocks.append(block)
 

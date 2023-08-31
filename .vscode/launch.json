@@ -12,7 +12,9 @@
             "console": "integratedTerminal",
             "args": [
                 "--server",
-                "--debug"
+                "--debug",
+                "--host",
+                "0.0.0.0"
             ]
         },
         {
@@ -23,7 +25,9 @@
             "console": "integratedTerminal",
             "args": [
                 "--browser",
-                "--debug"
+                "--debug",
+                "--host",
+                "0.0.0.0"
             ]
         },
     ]

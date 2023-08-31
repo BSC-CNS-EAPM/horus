@@ -7,7 +7,7 @@ import {
   PluginVariable,
   PluginVariableTypes,
 } from "./flow_builder_types";
-import { horusGet } from "../../Utils/utils";
+import { horusGet, horusPost } from "../../Utils/utils";
 import NBDButton from "../nbdbutton";
 import { SearchComponent } from "../Toolbar/toolbar";
 
@@ -175,13 +175,23 @@ const PluginVariableView = (props: PluginVariableViewProps) => {
         {props.variable.type === PluginVariableTypes.FILE && (
           <button
             onClick={async () => {
-              const request = await horusGet("/openfile");
+              const header = {
+                "Content-Type": "application/json",
+                accept: "application/json",
+              };
+
+              const body = JSON.stringify({
+                extensions: props.variable.allowedValues,
+              });
+
+              const request = await horusPost("/openfile", header, body);
 
               const data = await request.json();
 
-              const file = data.path;
+              // If the data.path is a list, store only the first element
+              const path = Array.isArray(data.path) ? data.path[0] : data.path;
 
-              handleChange(file);
+              handleChange(path);
             }}
           >
             {props.variable.value || "Select file"}
@@ -835,6 +845,8 @@ type VariableBallViewProps = {
   } | null;
   placedID: number;
   block: Block;
+
+  handleSelectedInputGroupChange: (direction: "up" | "down") => void;
 };
 
 function VariableBallView(props: VariableBallViewProps) {
@@ -861,6 +873,64 @@ function VariableBallView(props: VariableBallViewProps) {
   // Calcultate the height of the ball group
   const ballGroupHeight = props.variables.length * 2;
 
+  const selectedPage = props.block.inputs.findIndex(
+    (input) => input.id === props.block.selectedInputGroup
+  );
+
+  const changeInputGroupView = props.block.inputs.length > 1 &&
+    props.block.variableConnections.length === 0 && (
+      <div
+        className="flex flex-row gap-1 items-center justify-between text-center p-0 m-0"
+        style={{
+          width: "10rem",
+        }}
+      >
+        <NBDButton
+          action={() => {
+            props.handleSelectedInputGroupChange("down");
+          }}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            className="w-4 h-4 -rotate-90"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M4.5 15.75l7.5-7.5 7.5 7.5"
+            />
+          </svg>
+        </NBDButton>
+        <div>
+          {selectedPage + 1} / {props.block.inputs.length}
+        </div>
+        <NBDButton
+          action={() => {
+            props.handleSelectedInputGroupChange("up");
+          }}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            className="w-4 h-4 -rotate-90"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M19.5 8.25l-7.5 7.5-7.5-7.5"
+            />
+          </svg>
+        </NBDButton>
+      </div>
+    );
+
   return (
     <div key={props.variables.map((variable) => variable.id).join("-")}>
       <div
@@ -886,6 +956,7 @@ function VariableBallView(props: VariableBallViewProps) {
             }}
           />
         ))}
+        {changeInputGroupView}
       </div>
     </div>
   );
@@ -927,11 +998,18 @@ function VariableConnectView(props: VariableConnectViewProps) {
       return true;
     }
 
+    if (
+      variableType === PluginVariableTypes.FILE &&
+      otherVariableType === PluginVariableTypes.FILE
+    ) {
+      if (allowedValues.includes("*") || tryingToConnect.includes("*")) {
+        return true;
+      }
+    }
+
     for (let i = 0; i < allowedValues.length; i++) {
-      for (let j = 0; j < tryingToConnect.length; j++) {
-        if (allowedValues[i] === tryingToConnect[j]) {
-          return true;
-        }
+      if (tryingToConnect.includes(allowedValues[i])) {
+        return true;
       }
     }
     return false;

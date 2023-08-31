@@ -454,12 +454,19 @@ class HorusServer:
             data = request.get_json()
             # Execute the action from a given block
             try:
-                variables = data["variables"]
-                blockID = data["blockID"]
-                workingDir = data["path"]
-                inputs = data["inputs"]
-                flowSavedID = data["flowSavedID"]
-                blockPlacedID = data["blockPlacedID"]
+                try:
+                    variables = data["variables"]
+                    blockID = data["blockID"]
+                    workingDir = data["path"]
+                    inputs = data["inputs"]
+                    flowSavedID = data["flowSavedID"]
+                    blockPlacedID = data["blockPlacedID"]
+                    selectedInputGroup = data["selectedInputGroup"]
+                except KeyError as keye:
+                    raise Exception(  # pylint: disable=broad-exception-raised
+                        f"Missing key: {keye} in executeBlock request."
+                    )
+                
                 resetRemote = data.get("resetRemote", False)
                 outputs = self.pluginManager.executeBlock(
                     blockID,
@@ -469,6 +476,7 @@ class HorusServer:
                     workingDir,
                     flowSavedID,
                     self.socketio,
+                    selectedInputGroup=selectedInputGroup,
                     resetRemoteBlock=resetRemote,
                 )
                 success = {
@@ -634,16 +642,23 @@ class HorusServer:
 
             return flask.jsonify({"path": selFolder})
 
-        @self.server.route("/openfile", methods=["GET"])
+        @self.server.route("/openfile", methods=["GET", "POST"])
         @verifyToken
         def openFile():
+            extensions = ("All Files (*.*)",)
+            if request.method == "POST":
+                recivedExtensions = request.get_json().get("extensions")
+                if recivedExtensions:
+                    extensions = tuple(f"{ext} files (*.{ext})" for ext in recivedExtensions if ext != "*")
+                    if not extensions:
+                        extensions = ("All Files (*.*)",)
             if self.desktop:
-                from App import AppDelegate  # pylint: disable=import-outside-toplevel
+                from App import AppDelegate
 
-                selFile = AppDelegate().openFileSelectDialog()
+                selFile = AppDelegate().openFileSelectDialog(fileTypes=extensions)
             else:
-                print("WARNING: File picker not implemented for web/server mode")
-                selFile = "/Users/cdominguez/Downloads/KRAS/input.yaml"
+                print("WARNING: File picker not implemented for server mode")
+                selFile = "/example/path"
 
             return flask.jsonify({"path": selFile})
 

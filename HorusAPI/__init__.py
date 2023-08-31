@@ -6,6 +6,7 @@ from .src import (  # noqa: F401
     SlurmBlock,  # noqa: F401
     PluginVariable,  # noqa: F401
     VariableTypes,  # noqa: F401
+    VariableGroup,  # noqa: F401
     PluginPage,  # noqa: F401
     PluginConfig,  # noqa: F401
     PluginEndpoint,  # noqa: F401

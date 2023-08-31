@@ -90,7 +90,7 @@ function BlockListView({ flowBuilderController }: BlockListViewProps) {
                 <div className="plugin-name-block">{block.plugin.name}</div>
               </div>
             )}
-            <DraggableBlockView {...block} />
+            <DraggableBlockView block={block} />
             {isLast && <div className="pb-4"></div>}
           </div>
         );

@@ -52,6 +52,11 @@ enum BlockTypes {
   CONFIG = "config",
 }
 
+type VariableGroup = {
+  id: string;
+  variables: Array<PluginVariable>;
+};
+
 type Block = {
   // Basic info about the block
   id: string;
@@ -62,8 +67,9 @@ type Block = {
 
   // Variables, inputs, outputs
   variables: Array<PluginVariable>;
-  inputs: Array<PluginVariable>;
+  inputs: Array<VariableGroup>;
   outputs: Array<PluginVariable>;
+  selectedInputGroup: string;
 
   // Block config
   config: Block;
@@ -111,7 +117,7 @@ type Block = {
 
   // Block functions
   execute: (block: Block) => Promise<void>;
-  zonChange: (blockPlacedID: number) => void;
+  onChange: (blockPlacedID: number) => void;
   deleteBlock: (block: Block) => void;
   checkRemoteStatus: (block: Block) => Promise<void>;
 };

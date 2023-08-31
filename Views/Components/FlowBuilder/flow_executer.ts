@@ -105,6 +105,7 @@ export default class FlowExecuter {
       flowSavedID: this.flowSavedID,
       resetRemote: resetRemote,
       blockPlacedID: block.placedID,
+      selectedInputGroup: block.selectedInputGroup,
     });
 
     const headers = {

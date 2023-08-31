@@ -489,6 +489,8 @@ class AppDelegate(metaclass=HorusSingleton):
         :param fileTypes: A tuple of strings of file types to filter the files.
         The tuple must be in the format:
         ("Description (*.ext1;*.ext2...)", "Description 2 (*.ext3;*.ext4...)")
+
+        :returns: A tuple of strings of the selected files
         """
 
         # Get the active window

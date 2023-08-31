@@ -120,8 +120,6 @@ function FlowReciver(props: FlowReciverProps) {
       molstarState: molstarState,
     };
 
-    console.log("Saving flow: ", saveContents);
-
     const body = JSON.stringify(saveContents);
 
     const headers = {
@@ -178,6 +176,23 @@ function FlowReciver(props: FlowReciverProps) {
     // setFlowName(savedFlow.name);
     savedID.current = savedFlow.savedID;
     flowPath.current = savedFlow.path;
+  };
+
+  const updateBlockSelectedGroup = (
+    placedID: number,
+    selectedInputGroup: string
+  ) => {
+    // Search in the placed blocks for the block with the given palced ID
+
+    // Update the placedBlocks array
+    props.setPlacedBlocks((currentBlocks) => {
+      return currentBlocks.map((b) => {
+        if (b.placedID === placedID) {
+          b.selectedInputGroup = selectedInputGroup;
+        }
+        return b;
+      });
+    });
   };
 
   const flowExecuter = useRef(
@@ -848,17 +863,22 @@ function FlowReciver(props: FlowReciverProps) {
       });
     });
 
+    const blockToRender = {
+      ...block,
+      onChange: onBlockChange,
+      execute: executeBlock,
+      // // index={index}
+      deleteBlock: handleDelete,
+      isRunning: block.placedID === currentExecuting,
+      checkRemoteStatus: checkRemoteBlock,
+    };
+
     return (
       <>
         <DraggableBlockView
           key={`${block.placedID}-${block.id}`}
-          {...block}
-          onChange={onBlockChange}
-          execute={executeBlock}
-          // // index={index}
-          deleteBlock={handleDelete}
-          isRunning={block.placedID === currentExecuting}
-          checkRemoteStatus={checkRemoteBlock}
+          block={blockToRender}
+          updateBlockSelectedGroup={updateBlockSelectedGroup}
         />
         {connectedVars}
         {connectedBlocks}

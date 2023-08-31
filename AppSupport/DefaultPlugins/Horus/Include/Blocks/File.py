@@ -5,6 +5,7 @@ fileVariable = PluginVariable(
     id="file",
     description="Select a file",
     type=VariableTypes.FILE,
+    allowedValues=["*"],
 )
 
 # Create the block "File"
