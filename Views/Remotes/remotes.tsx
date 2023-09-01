@@ -158,25 +158,25 @@ interface NewRemoteProps {
 }
 
 function NewRemote(props: NewRemoteProps) {
-  const [name, setName] = useState("");
-  const [host, setHost] = useState("");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [port, setPort] = useState("");
-  const [keyPath, setKeyPath] = useState("");
-  const [proxyCommand, setProxyCommand] = useState("");
-  const [workDir, setWorkDir] = useState("");
+  const [name, setName] = useState(null);
+  const [host, setHost] = useState(null);
+  const [username, setUsername] = useState(null);
+  const [password, setPassword] = useState(null);
+  const [port, setPort] = useState(null);
+  const [keyPath, setKeyPath] = useState(null);
+  const [proxyCommand, setProxyCommand] = useState(null);
+  const [workDir, setWorkDir] = useState(null);
 
   // Use useEffect to update the state whenever props.data changes
   useEffect(() => {
-    setName(props.data?.name || "");
-    setHost(props.data?.host || "");
-    setUsername(props.data?.username || "");
-    setPassword(props.data?.password || "");
-    setPort(props.data?.port || "");
-    setKeyPath(props.data?.keyPath || "");
-    setProxyCommand(props.data?.proxyCommand || "");
-    setWorkDir(props.data?.workDir || "");
+    setName(props.data?.name);
+    setHost(props.data?.host);
+    setUsername(props.data?.username);
+    setPassword(props.data?.password);
+    setPort(props.data?.port);
+    setKeyPath(props.data?.keyPath);
+    setProxyCommand(props.data?.proxyCommand);
+    setWorkDir(props.data?.workDir);
   }, [props.data]);
 
   const handleSubmit = async () => {

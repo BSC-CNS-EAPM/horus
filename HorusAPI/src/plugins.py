@@ -66,13 +66,13 @@ class PluginRemote:
         return self._remote.userHome
 
     @property
-    def horusDir(self):
+    def workDir(self):
         """
         Returns the Horus directory on the remote.
         If on local, returns the flow directory.
         """
 
-        return self._remote.horusDir
+        return self._remote.workDir
 
 
 class PluginEndpoint:
@@ -672,7 +672,9 @@ class PluginBlock:
         try:
             inputs = self._inputGroups[self.selectedInputGroup].variables
         except KeyError as keye:
-            raise Exception(f"Input group {self.selectedInputGroup} not found in block inputs. Current block inputs are: {self._inputGroups.keys()}") from keye
+            raise Exception(
+                f"Input group {self.selectedInputGroup} not found in block inputs. Current block inputs are: {self._inputGroups.keys()}"
+            ) from keye
         for variable in inputs:
             if variable.id in values.keys():
                 variable.value = values[variable.id]
@@ -696,7 +698,9 @@ class PluginBlock:
         try:
             inputs = self._inputGroups[self.selectedInputGroup].variables
         except KeyError as keye:
-            raise Exception(f"Input group {self.selectedInputGroup} not found in block inputs. Current block inputs are: {self._inputGroups.keys()}") from keye
+            raise Exception(
+                f"Input group {self.selectedInputGroup} not found in block inputs. Current block inputs are: {self._inputGroups.keys()}"
+            ) from keye
         for variable in inputs:
             varsDict[variable.id] = variable.value
         return varsDict

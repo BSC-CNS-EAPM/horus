@@ -133,7 +133,7 @@ def dockingJob(block: SlurmBlock):
     with open(f"{name}.yaml", "w") as f:
         f.write(inputFileContents)
 
-    simRemoteDir = os.path.join(block.remote.horusDir, name)
+    simRemoteDir = os.path.join(block.remote.workDir, name)
 
     # Create the simulation folder in the remote
     block.remote.remoteCommand(f"mkdir -p -v {simRemoteDir}")
@@ -173,7 +173,7 @@ def dockingJob(block: SlurmBlock):
 def finalAction(block: SlurmBlock):
     print("Downloading results...")
     name = block.variables.get("simulation_name", "docking")
-    simRemoteDir = os.path.join(block.remote.horusDir, name)
+    simRemoteDir = os.path.join(block.remote.workDir, name)
     destPath = os.path.join(os.getcwd(), name)
 
     print("Destination path:", destPath)

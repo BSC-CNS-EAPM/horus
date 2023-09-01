@@ -94,7 +94,7 @@ class RemotesAPI:
         self.port = selectedRemote.get("port", 22)
         self.username = selectedRemote.get("username", None)
         self.password = selectedRemote.get("password", None)
-        self.key = selectedRemote.get("key", None)
+        self.key = selectedRemote.get("keyPath", None)
         self.proxyCommand = selectedRemote.get("proxyCommand", None)
         self.remoteName = selectedRemote.get("name", "Unnamed Remote")
         self.workDir = selectedRemote.get("workDir", "~/.horus/")
@@ -127,7 +127,7 @@ class RemotesAPI:
                 connect_kwargs["key_filename"] = self.key
 
             # Connect
-            if self.password is not None:
+            if self.password is not None or self.key is not None:
                 try:
                     self.conn = fabric.Connection(
                         host=self.host,
@@ -144,7 +144,6 @@ class RemotesAPI:
                     raise Exception(  # pylint: disable=broad-exception-raised
                         f"Error connecting to {self.remoteName}: {exc}"
                     ) from exc
-
             else:
                 raise Exception(  # pylint: disable=broad-exception-raised
                     "No connection method provided."
@@ -651,7 +650,7 @@ class RemotesManager:
             username: str,
             host: str,
             port: int,
-            keys: str,
+            keyPath: str,
             proxyCommand: str,
             workDir: str
         }
@@ -670,14 +669,20 @@ class RemotesManager:
         if newConfig.get("port") is None:
             raise Exception("The port of the remote is required")
 
-        if newConfig.get("keys") is None and newConfig.get("password") is None:
+        if newConfig.get("keyPath") is None and newConfig.get("password") is None:
             raise Exception("Either the keys or the password of the remote is required")
 
-        if newConfig.get("keys") is not None and newConfig.get("password") is not None:
+        if newConfig.get("keyPath") is not None and newConfig.get("password") is not None:
             raise Exception("Either the keys or the password of the remote is required")
 
-        if newConfig.get("keys") is not None and not os.path.exists(newConfig["keys"]):
-            raise Exception("The keys file does not exist")
+        newKeyPath = newConfig.get("keyPath", None)
+        if newKeyPath is not None:
+            if isinstance(newKeyPath, list):
+                newKeyPath = newKeyPath[0]
+                newConfig["keyPath"] = newKeyPath
+
+            if not os.path.exists(newKeyPath):
+                raise Exception("The keys file does not exist")
 
         if newConfig["name"].lower() == "local":
             # The local remote does not need to be configured
