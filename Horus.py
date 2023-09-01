@@ -1,6 +1,6 @@
 #  pylint: disable=invalid-name
 """
-Entripoint for launching the Horus App
+Entry point for launching the Horus App
 """
 
 from App import launchApp

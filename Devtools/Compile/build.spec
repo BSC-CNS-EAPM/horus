@@ -44,6 +44,21 @@ with open(app_info_file, "r") as f:
             key, value = line.split("=")
             APP_INFO[key.strip()] = value.strip()
 
+# Set the version the same as the HorusAPI version
+sys.path.append(currentDir)
+import HorusAPI
+
+version = HorusAPI.__version__
+long_version = HorusAPI._version.long_version
+
+if "release" not in long_version:
+    branch = long_version.split("-")[1:]
+    branch = "-".join(branch)
+    # Add the branch name to the version with .dev
+    version += f".dev0+{branch}"
+
+APP_INFO["APP_VERSION"] = version
+
 # Default settings
 default_settings = os.path.join(currentDir, "App", "default_settings.json")
 
@@ -166,6 +181,11 @@ coll = COLLECT(  # noqa # type: ignore
     name=APP_INFO["NAME"],
 )
 
+# Replace the APP_INFO inside the created app for the updated one
+with open(os.path.join(currentDir, "dist", APP_INFO["NAME"], "APP_INFO"), "w") as f:
+    for key, value in APP_INFO.items():
+        f.write(f"{key} = {value}\n")
+
 macos_icon = os.path.join(currentDir, "Resources", "horus.icns")
 
 app = BUNDLE(  # noqa # type: ignore
@@ -175,3 +195,13 @@ app = BUNDLE(  # noqa # type: ignore
     bundle_identifier=APP_INFO["BUNDLE_IDENTIFIER"],
     version=APP_INFO["APP_VERSION"],
 )
+
+
+# If we are on macOS, replace also the APP_INFO inside the .app
+# Replace the APP_INFO inside the created app for the updated one
+bundleInfo = os.path.join(
+    currentDir, "dist", f"{APP_INFO['NAME']}.app", "Contents", "MacOS", "APP_INFO"
+)
+with open(bundleInfo, "w") as f:
+    for key, value in APP_INFO.items():
+        f.write(f"{key} = {value}\n")

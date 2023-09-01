@@ -1,51 +1,26 @@
 import setuptools
-import subprocess
-import json
 
+# Add to the path the HorusAPI package
+import os
+import sys
 
-def get_git_version():
-    # Get the latest git tag or branch name
-    try:
-        branch = (
-            subprocess.check_output(
-                ["git", "describe", "--tags", "--abbrev=0"], stderr=subprocess.DEVNULL
-            )
-            .decode()
-            .strip()
-        )
-        print("Using latest git tag: ", branch)
-        release = True
-    except subprocess.CalledProcessError:
-        branch = (
-            subprocess.check_output(["git", "symbolic-ref", "-q", "--short", "HEAD"])
-            .decode()
-            .strip()
-        )
-        subroc = (
-            subprocess.check_output(["git", "rev-parse", "--short", "HEAD"])
-            .decode()
-            .strip()
-        )
-        branch = f"{branch}-{subroc}"
-        print("Using latest git branch: ", branch)
-        release = False
-    return branch, release
+horusAPIPath = os.path.join(os.path.dirname(__file__), "..")
+sys.path.append(horusAPIPath)
 
+import HorusAPI
 
-# Get version from git tag or branch name
-branch, release = get_git_version()
+version = HorusAPI.__version__
+long_version = HorusAPI._version.long_version
 
-# Get the version from package.json
-with open("../package.json") as json_file:
-    data = json.load(json_file)
-    version = data.get("version", "")
-
-long_version = f"{version}-{branch}"
-
-if not release:
+# If long_version does not contain "release"
+# use the branch name as the version (with commit hash)
+if "release" not in long_version:
+    branch = long_version.split("-")[1:]
+    branch = "-".join(branch)
+    # Add the branch name to the version with .dev
     version += f".dev0+{branch}"
 
-print(f"Building version: {version}")
+print(f"Building version: {long_version}")
 
 # Create the HorusAPI package
 setuptools.setup(

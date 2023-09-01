@@ -62,8 +62,7 @@ class TempFile:
     def __init__(self, name: str, folder: typing.Optional[str] = None):
         """
         - Name: The name of the file.
-        - Folder: The folder where the file will be stored.
-        If None, the file will bestored in the tmp folder.
+        - Folder: The folder where the file will be stored. If None, the file will bestored in the tmp folder.
         """
         if folder is None:
             folder = self._tmpDir()

@@ -1,29 +1,10 @@
 #!/bin/bash
 
-# Get version from git tag or branch name
-if [ -z "$1" ]
-    then
-        echo "Using latest git tag or branch name"
-        branch=$(git describe --tags --abbrev=0 2>/dev/null)
-        if [ -z "$branch" ]
-            then
-                branch=$(git symbolic-ref -q --short HEAD)
-                branch="$branch-$(git rev-parse --short HEAD)"
-        fi
-    else
-        branch=$1
-fi
-
-branch="$branch"
-
-echo "Branch: $branch"
-
-# Get the version from package.json
-version=$(cat package.json | grep version | head -1 | awk -F: '{ print $2 }' | sed 's/[",]//g' | tr -d '[[:space:]]')
+# Get version from dist/Horus/APP_INFO
+# APP_INFO is a file with APP_VERSION = x.x.x
+version=$(cat dist/Horus/APP_INFO | grep "APP_VERSION" | awk -F' = ' '{print $2}')
 
 echo "Version: $version"
-
-version="$version"
 
 # Get the system architecture (we are in RHEL/CentOS, so it will always be x86_64)
 arch=$(uname -m)
@@ -32,7 +13,7 @@ arch=$(uname -m)
 system=$(lsb_release -is)
 
 # Set a filename variable
-filename=Horus-$version-$branch-$arch-$system-QT5
+filename=Horus-$version-$arch-$system-QT5
 
 # Log the status
 echo "Creating the .rpm file: $filename.rpm"

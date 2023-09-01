@@ -13,30 +13,17 @@ zip -rq NBDSuite.hp . -x *.DS_Store -x '*__pycache__*' -x 'dev/*' -x 'config/*'
 # Go back to the root directory
 cd ../../..
 
-# Get version from git tag or branch name
-if [ -z "$1" ]
-    then
-        echo "Using latest git tag or branch name"
-        branch=$(git describe --tags --abbrev=0 2>/dev/null)
-        if [ -z "$branch" ]
-            then
-                branch=$(git symbolic-ref -q --short HEAD)
-                branch="$branch-$(git rev-parse --short HEAD)"
-        fi
-    else
-        branch=$1
-fi
+app_version=$(cat dist/Horus/APP_INFO | grep "APP_VERSION" | awk -F' = ' '{print $2}')
 
-branch="$branch"
+# Get the plugin version from AppSupport/Plugins/nbdsuite/plugin.meta
+plugin_version=$(cat AppSupport/Plugins/NBDSuite/plugin.meta | grep "version" | awk -F'"' '{print $4}')
 
-echo "Branch: $branch"
+echo "Plugin version: $plugin_version"
+echo "App version: $app_version"
 
-# Get the version from AppSupport/Plugins/nbdsuite/plugin.meta.json
-version=$(cat AppSupport/Plugins/NBDSuite/plugin.meta | grep "version" | awk -F'"' '{print $4}')
+version="$plugin_version-Horus-$app_version"
 
-echo "Version: $version"
-
-version="$version"
+echo "Final version: $version"
 
 # Get also the kernel name (darwin or linux)
 kernel=$(uname -s | tr '[:upper:]' '[:lower:]')
@@ -48,7 +35,7 @@ arch=$(uname -m)
 mkdir -p dist
 
 # Move the plugin to the dist directory
-mv AppSupport/Plugins/NBDSuite/NBDSuite.hp dist/NBDSuite-$version-$branch-$kernel-$arch.hp
+mv AppSupport/Plugins/NBDSuite/NBDSuite.hp dist/NBDSuite-$version-$kernel-$arch.hp
 
 # Build the NBDSuite Pro plugin
 
@@ -63,30 +50,12 @@ zip -rq NBDSuite-Pro.hp . -x *.DS_Store -x '*__pycache__*' -x 'dev/*' -x 'config
 # Go back to the root directory
 cd ../../..
 
-# Get version from git tag or branch name
-if [ -z "$1" ]
-    then
-        echo "Using latest git tag or branch name"
-        branch=$(git describe --tags --abbrev=0 2>/dev/null)
-        if [ -z "$branch" ]
-            then
-                branch=$(git symbolic-ref -q --short HEAD)
-                branch="$branch-$(git rev-parse --short HEAD)"
-        fi
-    else
-        branch=$1
-fi
-
-branch="$branch"
-
-echo "Branch: $branch"
-
 # Get the version from plugin.meta
 version=$(cat AppSupport/Plugins/NBDSuitePro/plugin.meta | grep "version" | awk -F'"' '{print $4}')
 
 echo "Version: $version"
 
-version="$version"
+version="$version-horus-$app_version"
 
 # Get also the kernel name (darwin or linux)
 kernel=$(uname -s | tr '[:upper:]' '[:lower:]')
@@ -98,4 +67,4 @@ arch=$(uname -m)
 mkdir -p dist
 
 # Move the plugin to the dist directory
-mv AppSupport/Plugins/NBDSuitePro/NBDSuite-Pro.hp dist/NBDSuite-Pro-$version-$branch-$kernel-$arch.hp
+mv AppSupport/Plugins/NBDSuitePro/NBDSuite-Pro.hp dist/NBDSuite-Pro-$version-$kernel-$arch.hp

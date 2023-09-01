@@ -50,8 +50,8 @@ class PluginRemote:
         """
         Submit a slurm job to the queue system of the cluster (SLURM)
 
-        :param script: The script to submit as a string
-        or the path to the script to submit.
+        :param script: The script to submit as a string or the path to the script to submit.
+
         :return: The job ID.
         """
 
@@ -82,9 +82,7 @@ class PluginEndpoint:
 
         :param url: The URL of the endpoint.
         :param method: The method of the endpoint.
-        :param function: The function that will be called when the endpoint is accessed.
-        To the function the request object will be passed as the first argument.
-        Remember to define the function with the request argument.
+        :param function: The function that will be called when the endpoint is accessed. To the function the request object will be passed as the first argument. Remember to define the function with the request argument.
         """
         self.url = url
         self.methods = methods
@@ -114,8 +112,7 @@ class PluginPage:
 
         :param name: The name of the page.
         :param description: A description of the page.
-        :param html: The name of the HTML file (i.e. "my_page.html").
-        The html file must be located in the "Pages" folder of the plugin.
+        :param html: The name of the HTML file (i.e. "my_page.html"). The html file must be located in the "Pages" folder of the plugin.
         """
         self.id: str = "baseplugin.page"
         self.name = name
@@ -131,7 +128,7 @@ class PluginPage:
         self.endpoints.append(endpoint)
 
 
-class VariableTypes:
+class VariableTypes(str, Enum):
     ANY = "any"
     """
     Any type of variable.
@@ -162,7 +159,7 @@ class VariableTypes:
 
     BOOLEAN = "boolean"
     """
-    A boolean value: True or False.
+    A boolean value. True or False.
 
     Will render as a checkbox.
     """
@@ -321,6 +318,19 @@ class VariableTypes:
 
         return types
 
+    # Make the object JSON serializable
+    def __str__(self):
+        return self.value
+
+    def __repr__(self):
+        return self.value
+
+    def __eq__(self, other):
+        return self.value == other.value
+
+    def __hash__(self):
+        return hash(self.value)
+
 
 class PluginVariable:
     """
@@ -334,21 +344,17 @@ class PluginVariable:
         id: str,
         name: str,
         description: str,
-        type: str,
+        type: VariableTypes,
         defaultValue: typing.Optional[typing.Any] = None,
         allowedValues: typing.Optional[typing.List[typing.Any]] = None,
     ):
         """
-        Create a new PluginVariable.
-
         :param name: The name of the variable.
         :param description: A description of the variable.
         :param type: The type of the variable. Assign it using the VariableTypes class.
         :param defaultValue: The default value of the variable.
         :param id: The ID of the variable.
-        :param allowedValues: A list of allowed values for the variable
-        if it is a list, range or files.
-        Important to identify the variable in Block actions
+        :param allowedValues: A list of allowed values for the variable.
         """
         self.name = name
         self.description = description
@@ -426,7 +432,7 @@ class VariableGroup:
         return groupDict
 
 
-class PluginBlockTypes(Enum):
+class PluginBlockTypes(str, Enum):
     """
     The different types of blocks.
     """
@@ -1030,7 +1036,7 @@ class PluginConfig(PluginBlock):
     the plugin. It is not meant to be used in the pipeline. It works as a regular
     PluginBlock but it is shown only in the configuration page of the plugin.
     Its variables will be stored once set, and can be accessed by the Block actions
-    using the block.config["variable_id"] syntax.
+    using the block.configs["variable_id"] syntax.
     """
 
     def __init__(  # pylint: disable=dangerous-default-value
