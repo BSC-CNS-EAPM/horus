@@ -26,7 +26,7 @@ body {
 
 .plugin-list {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   flex-wrap: wrap;
   overflow-y: scroll;
   align-items: top;
@@ -37,7 +37,7 @@ body {
 .root-plugin-container {
   /* display: block;
     /* Expand the whole container to the full height of the page */
-  height: 100%;
+  /* height: 100%; */
   background-color: whitesmoke;
 }
 
@@ -47,7 +47,7 @@ body {
 }
 
 .plugin-card {
-  width: 500px;
+  width: 100%;
 }
 
 .plugin-manager-root {

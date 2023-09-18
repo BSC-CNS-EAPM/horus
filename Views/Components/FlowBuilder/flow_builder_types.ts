@@ -6,6 +6,7 @@ type HorusPlugin = {
   author: string;
   dependencies: Array<string>;
   blocks: Array<Block>;
+  default: boolean;
 };
 
 enum PluginVariableTypes {

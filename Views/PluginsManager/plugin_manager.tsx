@@ -8,17 +8,17 @@ import { HorusModal, HorusModalProps } from "../Components/reusable";
 import { socket } from "../Utils/socket";
 import {
   HorusPlugin,
-  BlockProps,
-  PluginVariableType,
-} from "../Components/FlowBuilder/flow_builder_interfaces";
+  Block,
+  PluginVariableTypes,
+} from "../Components/FlowBuilder/flow_builder_types";
 
 import RotatingLines from "../Components/RotatingLines/rotatinglines";
 
 import { PluginVariableView } from "../Components/FlowBuilder/block_variables";
 
 interface PluginConfigViewProps {
-  configBlocks: BlockProps[];
-  handleChange: (value: PluginVariableType, id: string) => void;
+  configBlocks: Block[];
+  handleChange: (value: PluginVariableTypes, id: string) => void;
 }
 
 function PluginConfigView(props: PluginConfigViewProps) {
@@ -42,9 +42,16 @@ function PluginConfigView(props: PluginConfigViewProps) {
   );
 }
 
-function InstalledPlugins() {
-  const [loading, setLoading] = useState(true);
-  const [pluginList, setPluginList] = useState(null);
+type InstalledPluginsProps = {
+  pluginList?: {
+    errors?: HorusPlugin[];
+    plugins?: HorusPlugin[];
+  };
+  loading: boolean;
+};
+
+function InstalledPlugins(props: InstalledPluginsProps) {
+  const { pluginList, loading } = props;
 
   const [modalProps, setModalProps] = useState<HorusModalProps>({
     header: null,
@@ -55,23 +62,7 @@ function InstalledPlugins() {
   });
 
   // Create a state to store the modified config
-  const [tempChanges, setTempChanges] = useState<BlockProps[]>([]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await horusGet("/plugins/list");
-        const data = await response.json();
-        setPluginList(data);
-        setLoading(false);
-      } catch (error) {
-        setPluginList(["Error loading plugins"]);
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
+  const [tempChanges, setTempChanges] = useState<Block[]>([]);
 
   if (loading) {
     return (
@@ -84,31 +75,16 @@ function InstalledPlugins() {
 
   const openPluginConfiguration = (plugin: HorusPlugin) => {
     // Get the config blocks from the plugin
-    const newConfigBlocks: BlockProps[] = [];
+    const newConfigBlocks: Block[] = [];
 
     // Loop through the blocks and subBlocks and store the ones that have config
     for (let i = 0; i < plugin.blocks.length; i++) {
       if (plugin.blocks[i].config) {
-        for (let j = 0; j < plugin.blocks[i].config.length; j++) {
-          newConfigBlocks.push(plugin.blocks[i].config[j]);
-        }
-      }
-      if (plugin.blocks[i].subBlocks) {
-        for (let k = 0; k < plugin.blocks[i].subBlocks.length; k++) {
-          if (plugin.blocks[i].subBlocks[k].config) {
-            for (
-              let l = 0;
-              l < plugin.blocks[i].subBlocks[k].config.length;
-              l++
-            ) {
-              newConfigBlocks.push(plugin.blocks[i].subBlocks[k].config[l]);
-            }
-          }
-        }
+        newConfigBlocks.push(plugin.blocks[i].config);
       }
     }
 
-    const handleModifyConfig = (value: PluginVariableType, id: string) => {
+    const handleModifyConfig = (value: PluginVariableTypes, id: string) => {
       const updatedChanges = [...tempChanges]; // Create a copy of tempChanges
       const existingChangeIndex = updatedChanges.findIndex(
         (change) => change.id === id
@@ -240,19 +216,24 @@ function InstalledPlugins() {
     return fakePluginList;
   };
 
+  const hasPlugins = pluginList?.plugins?.length > 0;
+
   return (
     <div>
       <HorusModal {...modalProps} />
       {/* Render loaded plugin data */}
       <div className="plugin-list gap-2">
-        {
-          // dummyPlguins().map((plugin) => {
-          //     return (
-          //         <PluginCard key={plugin.name} plugin={plugin} error={false} />
-          //     )
-          // })
-        }
-        {pluginList.plugins?.map((plugin) => {
+        {/* {dummyPlguins().map((plugin) => {
+          return <PluginCard key={plugin.name} plugin={plugin} error={false} />;
+        })} */}
+
+        {!hasPlugins && (
+          <div className="flex justify-center align-items-center flex-col">
+            <div className="text-center">No plugins found</div>
+          </div>
+        )}
+
+        {pluginList?.plugins?.map((plugin) => {
           return (
             <PluginCard
               key={plugin.name}
@@ -266,7 +247,7 @@ function InstalledPlugins() {
           );
         })}
         {/* Render errors */}
-        {pluginList.errors?.map((error) => {
+        {pluginList?.errors?.map((error) => {
           return (
             <PluginCard
               key={error.name}
@@ -326,10 +307,10 @@ function PluginCard(props: PluginCardProps) {
               <h6 className="card-subtitle text-muted">{plugin.description}</h6>
               <div>Version: {plugin.version}</div>
               <div>Author: {plugin.author}</div>
-              {plugin.dependencies ? (
+              {plugin.dependencies && plugin.dependencies.length > 0 ? (
                 <div>
                   Dependencies:
-                  <div className="dependencies-scroll">
+                  <div>
                     {plugin.dependencies?.map((dependency) => {
                       return <li key={dependency}>{dependency}</li>;
                     })}
@@ -344,9 +325,9 @@ function PluginCard(props: PluginCardProps) {
           )}
         </div>
         <div>
-          <div className="d-flex justify-content-between align-items-start">
+          <div className="d-flex justify-content-between gap-2">
             {!error && (
-              <button className="card-link" onClick={configPlugin}>
+              <button onClick={configPlugin}>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 20 20"
@@ -362,9 +343,9 @@ function PluginCard(props: PluginCardProps) {
               </button>
             )}
             {plugin.default ? (
-              <>Default plugin</>
+              <div>Default plugin</div>
             ) : (
-              <button className="card-link" onClick={deletePlugin}>
+              <button onClick={deletePlugin}>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
@@ -485,6 +466,57 @@ export function PluginManager() {
 
   const installingModal = <HorusModal {...modalProps} />;
 
+  const [pluginList, setPluginList] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [filteredPluginList, setFilteredPluginList] = useState(pluginList);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await horusGet("/plugins/list");
+        const data = await response.json();
+        setPluginList(data);
+        setFilteredPluginList(data);
+        setLoading(false);
+      } catch (error) {
+        setPluginList(["Error loading plugins"]);
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const filterPlugins = (event) => {
+    const searchTerm = event.target.value;
+
+    if (searchTerm === "") {
+      setFilteredPluginList(pluginList);
+      return;
+    }
+
+    const filteredPlugins = pluginList.plugins.filter((plugin) => {
+      return (
+        plugin.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        plugin.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        plugin.author.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    });
+
+    const filteredErrors = pluginList.errors.filter((plugin) => {
+      return (
+        plugin.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        plugin.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        plugin.author.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    });
+
+    setFilteredPluginList({
+      plugins: filteredPlugins,
+      errors: filteredErrors,
+    });
+  };
+
   return (
     <div className="root-plugin-container overflow-hidden">
       <div className="flex flex-col">
@@ -495,7 +527,7 @@ export function PluginManager() {
             <NBDButton text="Open plugins folder" action={openPluginsFolder} />
             <SearchComponent
               placeholder="Search plugins..."
-              onChange={() => {}}
+              onChange={filterPlugins}
             />
           </div>
         </div>
@@ -509,7 +541,7 @@ export function PluginManager() {
             <RotatingLines />
           </div>
           {installingModal}
-          <InstalledPlugins />
+          <InstalledPlugins pluginList={filteredPluginList} loading={loading} />
         </div>
       </div>
     </div>
