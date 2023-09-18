@@ -199,9 +199,10 @@ app = BUNDLE(  # noqa # type: ignore
 
 # If we are on macOS, replace also the APP_INFO inside the .app
 # Replace the APP_INFO inside the created app for the updated one
-bundleInfo = os.path.join(
-    currentDir, "dist", f"{APP_INFO['NAME']}.app", "Contents", "MacOS", "APP_INFO"
-)
-with open(bundleInfo, "w") as f:
-    for key, value in APP_INFO.items():
-        f.write(f"{key} = {value}\n")
+if sys.platform == "darwin":
+    bundleInfo = os.path.join(
+        currentDir, "dist", f"{APP_INFO['NAME']}.app", "Contents", "MacOS", "APP_INFO"
+    )
+    with open(bundleInfo, "w") as f:
+        for key, value in APP_INFO.items():
+            f.write(f"{key} = {value}\n")
