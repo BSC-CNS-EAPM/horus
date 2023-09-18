@@ -17,10 +17,8 @@ jobs:
           fetch-depth: 0 # fetch all history for all branches and tags
       - uses: mamba-org/setup-micromamba@v1
         with:
-          environment-name: horus_docs_env
-      - name: Sphinx requirements
-        run: |
-          python -m pip install -r HorusAPI/docs/requirements.txt
+          environment-file: Devtools/Environment/conda_horus.yaml
+          environment-name: horus_env
       - name: Build docs
         run: |
           cd HorusAPI/docs && make html
