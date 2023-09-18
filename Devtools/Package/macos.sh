@@ -11,6 +11,9 @@ version=$(cat dist/Horus.app/Contents/MacOS/APP_INFO | grep "APP_VERSION" | awk 
 
 echo "Version: $version"
 
+# Get the architecture of the system (Intel or Apple Silicon)
+arch=$(uname -m)
+
 # Create the package directory inside dist/
 mkdir -p dist/Packages
 
@@ -21,7 +24,7 @@ create-dmg --overwrite dist/Horus.app dist/Packages/
 dmg=$(find dist/Packages -name "*.dmg")
 
 # Rename the dmg file
-mv "$dmg" dist/Packages/Horus-$version.dmg
+mv "$dmg" dist/Packages/Horus-$version-$arch.dmg
 
 # Remove the Horus folder
 rm -rf dist/Horus
