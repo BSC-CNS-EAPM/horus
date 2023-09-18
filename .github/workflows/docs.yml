@@ -17,8 +17,8 @@ jobs:
           fetch-depth: 0 # fetch all history for all branches and tags
       - uses: mamba-org/setup-micromamba@v1
         with:
-          environment-file: Devtools/Environment/conda_horus.yaml
-          environment-name: horus_env
+          environment-file: Devtools/Environment/docs.yaml
+          environment-name: horus_docs
       - name: Build docs
         run: |
           cd HorusAPI/docs && make html
