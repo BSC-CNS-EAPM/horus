@@ -8,22 +8,36 @@ import getCommands from "./commands";
 import "./console.css";
 // Setup the terminal
 
+const storedMessages = [];
+
+socket.on("printTerm", (data) => {
+  storedMessages.push(data);
+});
+
 export default function HorusTerm() {
   // Create a ref to the Terminal and assign the Terminal type
   const term = React.createRef<Terminal>();
 
+  function printTerm(data) {
+    // Always convert to string
+    data = data.toString();
+
+    // Push the data to the terminal
+    term.current?.pushToStdout(data);
+
+    // Scroll to the bottom of the terminal
+    term.current?.scrollToBottom();
+  }
+
+  // On first render, print all stored messages
   useEffect(() => {
-    function printTerm(data) {
-      // Always convert to string
-      data = data.toString();
+    storedMessages.forEach((message) => {
+      printTerm(message);
+    });
+  }, []);
 
-      // Push the data to the terminal
-      term.current?.pushToStdout(data);
-
-      // Scroll to the bottom of the terminal
-      term.current?.scrollToBottom();
-    }
-
+  // When the component mounts, setup the socket
+  useEffect(() => {
     // When recieving a message from the server, log it to the console
     socket.on("printTerm", printTerm);
 
