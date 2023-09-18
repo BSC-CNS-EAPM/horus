@@ -371,6 +371,10 @@ class FlowManager:
         :param flow: The flow to add
         """
 
+        # If the flow is a default flow, don't add it to the recent flows list
+        if self.appSupportDir in flow.path:
+            return
+
         # Add the flow to the recent flows list
         savedID = flow.savedID
 
