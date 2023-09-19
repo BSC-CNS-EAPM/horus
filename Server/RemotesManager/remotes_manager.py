@@ -9,6 +9,7 @@ import subprocess
 import json
 import secrets
 import fabric
+import tarfile
 
 
 class RemotesAPI:
@@ -209,6 +210,14 @@ class RemotesAPI:
         # Return the stdout and stderr as a string
         return out.stdout.strip()
 
+    def _internalTransferTo(self, source: str, destination: str):
+        try:
+            self.conn.put(source, destination)
+        except BaseException as exc:
+            raise Exception(  # pylint: disable=broad-exception-raised
+                f"Error transferring data to {self.remoteName}:\n{exc}.\n Not enough space."
+            ) from exc
+
     def transferTo(self, source: str, destination: str):
         """
         Transfer a file from the local machine to the remote.
@@ -216,7 +225,7 @@ class RemotesAPI:
         :param source: The path to the file on the local machine.
         :param destination: The path to the file on the remote.
         """
-
+        print("Transferring data...")
         if destination is None or destination == "":
             destination = self.workDir
 
@@ -226,21 +235,17 @@ class RemotesAPI:
 
         # Check if the source is a folder
         if os.path.isdir(source):
-            # Change dir to the containing folder
-            prevDir = os.getcwd()
-            os.chdir(os.path.dirname(source))
-
             # Then zip the folder
-            folderName = os.path.basename(source)
-            sourceZip = os.path.join(source, "*")
+            print("Zipping folder...")
+            with tarfile.open(f"{source}.tar.gz", "w:gz") as tar:
+                tar.add(source, arcname=os.path.basename(source))
 
-            os.system(f"tar -czvf {folderName}.tar.gz {sourceZip}")
-            source = os.path.join(os.getcwd(), f"{folderName}.tar.gz")
+            source = os.path.join(os.getcwd(), f"{source}.tar.gz")
+            fileName = os.path.basename(source)
 
-            # Change dir back
-            os.chdir(prevDir)
-
-            self.conn.put(source, destination)
+            # Send the data to the remote
+            destinationFile = f"{os.path.join(destination, fileName)}"
+            self._internalTransferTo(source, destinationFile)
 
             # Remove the zip file
             os.remove(source)
@@ -248,17 +253,17 @@ class RemotesAPI:
             prevRemoteDir = self.command("pwd")
 
             # Unzip the remote file
-            self.command(f"cd {destination} && tar -xzvf {folderName}.tar.gz")
+            self.command(f"cd {destination} && tar -xzvf {fileName}")
 
             # Remove the zip file
-            self.command(f"cd {destination} && rm {folderName}.tar.gz")
+            self.command(f"cd {destination} && rm {fileName}")
 
             # Change dir back
             self.command(f"cd {prevRemoteDir}")
 
             return
 
-        self.conn.put(source, destination)
+        self._internalTransferTo(source, destination)
 
     def transferFrom(self, source: str, destination: str):
         """
@@ -319,7 +324,9 @@ class RemotesAPI:
             print("Unzipping local file...")
 
             # Unzip the local file
-            os.system(f"cd {container_local} && tar -xzvf {zipPath}")
+            with tarfile.open(zipPath, "r:gz") as tar:
+                tar.extractall(path=container_local)
+            # os.system(f"cd {container_local} && tar -xzvf {zipPath}")
 
             # Remove the zip file
             os.system(f"cd {container_local} && rm {zipPath}")

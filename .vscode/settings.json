@@ -29,5 +29,4 @@
     "broad-exception-raised",
     "broad-exception-caught"
   ],
-  "cmake.configureOnOpen": true
 }
