@@ -139,13 +139,13 @@ function BlockView(block: Block) {
   const [isInfoHovering, setIsInfoHovering] = useState(false);
 
   const handleChange = (value: any, id: string) => {
-    // var hasChanged = false;
+    var hasChanged = false;
     // Update the variable value by searching the PluginVariable by id
     block.variables.map((variable) => {
       // THIS NEEDS TO BE REFACTORED BECAUSE IDK HOW IS THE STATE BEING UPDATED
       if (variable.id === id) {
         if (variable.value !== value) {
-          // hasChanged = true;
+          hasChanged = true;
           variable.value = value;
         }
       }
@@ -156,9 +156,9 @@ function BlockView(block: Block) {
     // block.variables = updatedVariables;
 
     // Call the onChange function
-    // if (hasChanged) {
-    block?.onChange(block.placedID);
-    // }
+    if (hasChanged) {
+      block?.onChange(block.placedID);
+    }
   };
 
   const handleExecute = async () => {
@@ -313,9 +313,9 @@ function BlockView(block: Block) {
       className={`plugin-block ${block.isPlaced ? "" : "plugin-block-placed"}`}
     >
       {variablesModalView}
-      <div className="flex flex-row justify-between ${remoteStyle}">
+      <div className="flex flex-row justify-between ${remoteStyle} gap-2">
         <div style={{ fontWeight: "bold" }}>{block.name}</div>
-        <div className="flex flex-row gap-1 items-baseline">
+        <div className="flex flex-row gap-1 items-center">
           {/* Play button to execute the block */}
           {/* Delete button to remove the block from the canvas */}
           {block.isPlaced && (

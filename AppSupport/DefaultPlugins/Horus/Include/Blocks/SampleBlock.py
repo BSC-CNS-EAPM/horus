@@ -1,4 +1,4 @@
-from HorusAPI import PluginVariable, SlurmBlock, VariableTypes
+from HorusAPI import PluginVariable, SlurmBlock, VariableTypes, PluginConfig
 
 # First define the input to be used in the block
 inputFile = PluginVariable(
@@ -65,3 +65,25 @@ sendJobBlock = SlurmBlock(
     inputs=[inputFile],
     outputs=[outputFile],
 )
+
+
+configVariable = PluginVariable(
+    name="Config variable",
+    id="configVariable",
+    description="A variable that will be available in block.configs",
+    type=VariableTypes.STRING,
+)
+
+
+def configAction(block: SlurmBlock):
+    print("Config variable value: " + block.configs["configVariable"])
+
+
+configBlock = PluginConfig(
+    name="Config for the send a job block",
+    description="A block that will be available in the plugin configuration.",
+    action=configAction,
+    variables=[configVariable],
+)
+
+sendJobBlock.addConfig(configBlock)

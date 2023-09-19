@@ -164,7 +164,6 @@ const flowBuilderController = new FlowBuilderController();
 
 // Create a new flow builder hook
 const useFlowBuilder = () => {
-
   const dndTweaks = useDNDTweaks();
 
   const [placedBlocks, setPlacedBlocks] = useState<Array<Block>>([]);
@@ -409,6 +408,8 @@ const useFlowBuilder = () => {
         return b;
       });
     });
+
+    setSaved(false);
   };
 
   const unconnectVariables = (connection: {
@@ -454,6 +455,8 @@ const useFlowBuilder = () => {
         return b;
       });
     });
+
+    setSaved(false);
   };
 
   function connectBlocks(originPlacedID: number, destinationPlacedID: number) {

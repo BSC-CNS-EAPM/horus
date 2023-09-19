@@ -83,14 +83,6 @@ export default class FlowExecuter {
         if (fromRealBlock.finishedExecution) {
           inputs[connection.destination.variableID] =
             fromRealBlock.storedOutputs[connection.origin.variableID];
-          console.log(
-            "Setting input: ",
-            connection.destination.variableID,
-            " to ",
-            fromRealBlock.storedOutputs[connection.origin.variableID],
-            "from placedID: ",
-            fromRealBlock.placedID
-          );
         }
       } catch (e) {
         alert("Error receiving inputs from block " + fromRealBlock.name);

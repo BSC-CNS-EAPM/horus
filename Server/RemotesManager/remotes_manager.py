@@ -538,7 +538,7 @@ class RemotesAPI:
 
         if jobs is None:
             raise Exception(  # pylint: disable=broad-exception-raised
-                "Corrupted queue storage: flow not found."
+                "ERROR: Trying to fetch jobs for a flow that has not sent any. Did any SlurmBlock fail?"
             )
 
         # Get the jobID

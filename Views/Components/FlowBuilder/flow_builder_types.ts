@@ -73,7 +73,7 @@ type Block = {
   selectedInputGroup: string;
 
   // Block config
-  config: Block;
+  config: Array<Block>;
 
   // Block state
   isPlaced: boolean;

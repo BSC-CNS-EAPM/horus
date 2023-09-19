@@ -6,12 +6,26 @@ import { socket } from "../../Utils/socket";
 import Terminal from "react-console-emulator";
 import getCommands from "./commands";
 import "./console.css";
+
 // Setup the terminal
 
-const storedMessages = [];
+declare global {
+  interface Window {
+    horusTerm: {
+      ref: React.RefObject<Terminal>;
+      storedMessages: string[];
+    };
+  }
+}
 
+window.horusTerm = {
+  ref: null,
+  storedMessages: [],
+};
+
+// When recieving a message from the server, log it to the console
 socket.on("printTerm", (data) => {
-  storedMessages.push(data);
+  window.horusTerm.storedMessages.push(data);
 });
 
 export default function HorusTerm() {
@@ -30,14 +44,16 @@ export default function HorusTerm() {
   }
 
   // On first render, print all stored messages
-  useEffect(() => {
-    storedMessages.forEach((message) => {
-      printTerm(message);
-    });
-  }, []);
-
   // When the component mounts, setup the socket
   useEffect(() => {
+    // Set the ref
+    window.horusTerm.ref = term;
+
+    // Print all stored messages
+    window.horusTerm.storedMessages?.forEach((message) => {
+      printTerm(message);
+    });
+
     // When recieving a message from the server, log it to the console
     socket.on("printTerm", printTerm);
 
@@ -50,7 +66,7 @@ export default function HorusTerm() {
     <div id="console-div" className="horus-term">
       <Terminal
         commands={getCommands()}
-        promptLabel={"horus:~$"}
+        promptLabel={"horus:~$ "}
         ref={term}
         style={{
           border: "none",

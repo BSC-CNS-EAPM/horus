@@ -30,11 +30,14 @@ function PluginConfigView(props: PluginConfigViewProps) {
       {configBlocks.map((block, index) => {
         return block.variables.map((variable, index) => {
           return (
-            <PluginVariableView
-              key={variable.id}
-              variable={variable}
-              onChange={handleChange}
-            />
+            <div>
+              {block.name}
+              <PluginVariableView
+                key={variable.id}
+                variable={variable}
+                onChange={handleChange}
+              />
+            </div>
           );
         });
       })}
@@ -75,15 +78,14 @@ function InstalledPlugins(props: InstalledPluginsProps) {
 
   const openPluginConfiguration = (plugin: HorusPlugin) => {
     // Get the config blocks from the plugin
-    const newConfigBlocks: Block[] = [];
+    let newConfigBlocks: Block[] = [];
 
     // Loop through the blocks and subBlocks and store the ones that have config
     for (let i = 0; i < plugin.blocks.length; i++) {
-      if (plugin.blocks[i].config) {
-        newConfigBlocks.push(plugin.blocks[i].config);
+      if (plugin.blocks[i].config.length > 0) {
+        newConfigBlocks = [...newConfigBlocks, ...plugin.blocks[i].config];
       }
     }
-
     const handleModifyConfig = (value: PluginVariableTypes, id: string) => {
       const updatedChanges = [...tempChanges]; // Create a copy of tempChanges
       const existingChangeIndex = updatedChanges.findIndex(

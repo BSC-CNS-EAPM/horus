@@ -118,6 +118,7 @@ function FlowReciver(props: FlowReciverProps) {
       remote: selectedRemote,
       currentExecuting: flowExecuter.current.currentExecuting,
       molstarState: molstarState,
+      terminalOutput: window.horusTerm.storedMessages,
     };
 
     const body = JSON.stringify(saveContents);
@@ -171,7 +172,6 @@ function FlowReciver(props: FlowReciverProps) {
         return;
       }
     }
-
     setSaved(true);
     // setFlowName(savedFlow.name);
     savedID.current = savedFlow.savedID;
@@ -450,6 +450,8 @@ function FlowReciver(props: FlowReciverProps) {
 
   const openingFlow = useRef(false);
 
+  const [testSavedInternal, setTestSavedInternal] = useState(false);
+
   const loadFlow = async (
     openRecent: {
       savedID: string;
@@ -477,17 +479,23 @@ function FlowReciver(props: FlowReciverProps) {
       flow: null,
       error: "Early error opening flow",
     };
-
+    let isDefaultFlow = false;
     if (openRecent !== null) {
       const header = {
         "Content-Type": "application/json",
         Accept: "application/json",
       };
+
+      if (openRecent.path === undefined) {
+        isDefaultFlow = true;
+      }
+
       const body = JSON.stringify({
         savedID: openRecent.savedID,
         path: openRecent.path,
       });
       const response = await horusPost("/openRecentFlow", header, body);
+
       data = await response.json();
     } else {
       const response = await horusGet("/openflow");
@@ -517,6 +525,16 @@ function FlowReciver(props: FlowReciverProps) {
     flowExecuter.current.setSavedID(savedID.current);
     flowExecuter.current.updatePlacedBlocks(openedFlow.blocks);
     flowExecuter.current.updateFlowPath(flowPath.current);
+
+    // Set the terminal output
+    window.horusTerm.storedMessages = openedFlow.terminalOutput;
+
+    // Print all stored messages if the terminal is mounted
+    window.horusTerm.ref?.current?.pushToStdout(
+      window.horusTerm.storedMessages
+        ? window.horusTerm.storedMessages.join("\n")
+        : ""
+    );
 
     // If any of the blocks is runnign set executingAll to true
     for (const block of openedFlow.blocks) {
@@ -552,7 +570,11 @@ function FlowReciver(props: FlowReciverProps) {
     setCurrentExecuting(openedFlow.currentExecuting);
 
     // Set the saved state
-    setSaved(true);
+    setSaved(!isDefaultFlow);
+    // setTestSavedInternal(!isDefaultFlow);
+
+    // console.log("Setting currentsaved to true");
+    // currentSaved.current = true;
 
     openingFlow.current = false;
   };
@@ -584,6 +606,10 @@ function FlowReciver(props: FlowReciverProps) {
     setSaved(true);
     resetHistory();
     handlingNew.current = false;
+
+    // Clear the terminal
+    window.horusTerm.ref.current?.clearStdout();
+    window.horusTerm.storedMessages = [];
   };
 
   const handleTerminalCommand = (e: CustomEvent) => {
@@ -729,119 +755,121 @@ function FlowReciver(props: FlowReciverProps) {
 
   const [showRemotes, setShowRemotes] = useState(false);
 
-  const topBarTitle = (
-    <div className="flex flex-row top-bar-flow-reciver flow-title">
-      <input
-        style={{
-          // Set the border color to red if the flow is not saved
-          borderColor: currentSaved.current ? "black" : "orange",
-        }}
-        className="flow-name"
-        type="text"
-        id="flow-name"
-        placeholder={props.flowName}
-        onChange={onNameChange}
-        value={flowName}
-      />
-      {/* <button onClick={handleSave} className="flow-button">
-        {currentSaved.current ? (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"
-            />
-          </svg>
-        ) : (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="var(--light-orange)"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3l3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"
-            />
-          </svg>
-        )}
-      </button> */}
-      <div className="flex flex-col gap-0 items-center text-center">
-        <button
-          onClick={stopExecutingAll}
-          className="flow-button"
+  const topBarTitle = () => {
+    return (
+      <div className="flex flex-row top-bar-flow-reciver flow-title">
+        <input
           style={{
-            cursor: executingAll ? "pointer" : "default",
+            // Set the border color to red if the flow is not saved
+            borderColor: currentSaved.current ? "black" : "orange",
           }}
-        >
-          {executingAll ? (
-            <RotatingLines
-            // strokeColor="grey"
-            // strokeWidth="5"
-            // animationDuration="0.75"
-            // width="40"
-            />
-          ) : (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill={
-                isConnecting
-                  ? "var(--light-orange)"
-                  : remoteConnected
-                  ? "var(--light-green)"
-                  : "var(--light-red)"
-              }
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              onClick={() => {
-                !remoteConnected && connectRemote();
-              }}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z"
-              />
-            </svg>
-          )}
-        </button>
-        <div
-          style={{
-            fontSize: "small",
-            cursor: "context-menu",
-          }}
-          onClick={(e) => {
-            fetchRemotes();
-            setShowRemotes(!showRemotes);
-          }}
-        >
-          {selectedRemote}
-        </div>
-      </div>
-      {
-        <ContextMenuRemotes
-          remotes={remotesOptions}
-          setSelectedRemote={setSelectedRemote}
-          show={showRemotes}
-          setShow={setShowRemotes}
+          className="flow-name"
+          type="text"
+          id="flow-name"
+          placeholder={props.flowName}
+          onChange={onNameChange}
+          value={flowName}
         />
-      }
-    </div>
-  );
+        {/* <button onClick={handleSave} className="flow-button">
+      {currentSaved.current ? (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.5}
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"
+          />
+        </svg>
+      ) : (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="var(--light-orange)"
+          viewBox="0 0 24 24"
+          strokeWidth={1.5}
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3l3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"
+          />
+        </svg>
+      )}
+    </button> */}
+        <div className="flex flex-col gap-0 items-center text-center">
+          <button
+            onClick={stopExecutingAll}
+            className="flow-button"
+            style={{
+              cursor: executingAll ? "pointer" : "default",
+            }}
+          >
+            {executingAll ? (
+              <RotatingLines
+              // strokeColor="grey"
+              // strokeWidth="5"
+              // animationDuration="0.75"
+              // width="40"
+              />
+            ) : (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill={
+                  isConnecting
+                    ? "var(--light-orange)"
+                    : remoteConnected
+                    ? "var(--light-green)"
+                    : "var(--light-red)"
+                }
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                onClick={() => {
+                  !remoteConnected && connectRemote();
+                }}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z"
+                />
+              </svg>
+            )}
+          </button>
+          <div
+            style={{
+              fontSize: "small",
+              cursor: "context-menu",
+            }}
+            onClick={(e) => {
+              fetchRemotes();
+              setShowRemotes(!showRemotes);
+            }}
+          >
+            {selectedRemote}
+          </div>
+        </div>
+        {
+          <ContextMenuRemotes
+            remotes={remotesOptions}
+            setSelectedRemote={setSelectedRemote}
+            show={showRemotes}
+            setShow={setShowRemotes}
+          />
+        }
+      </div>
+    );
+  };
 
   const renderBlock = (block: Block, index: number) => {
     const connectedVars = block.variableConnections?.map((connection) => {
@@ -978,7 +1006,7 @@ function FlowReciver(props: FlowReciverProps) {
 
   return (
     <div className="current-flow">
-      {topBarTitle}
+      {topBarTitle()}
       <div
         className="current-flow-canvas"
         ref={setNodeRef}

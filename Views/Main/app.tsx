@@ -1,7 +1,7 @@
 import Molstar from "../Components/Molstar/molstar";
 import HorusToolbar from "../Components/Toolbar/toolbar";
 import HorusTerm from "../Components/Console/console";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Route, Routes } from "react-router";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { FlowBuilderView } from "../Components/FlowBuilder/flow_builder_view";
@@ -125,11 +125,15 @@ export function App() {
     </>
   );
 
+  // Instantiate the HorusTerm in a ref
+  // so that it is always available
+  const term = useRef(<HorusTerm />);
+
   const consolePanel = (
     <>
       <ResizeHandle />
       <Panel minSize={8} maxSize={50} order={2} defaultSize={20}>
-        <HorusTerm />
+        {term.current}
       </Panel>
     </>
   );

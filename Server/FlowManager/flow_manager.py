@@ -76,6 +76,11 @@ class Flow:
     The date the flow was last saved as a string (YYYY-MM-DD HH:MM:SS)
     """
 
+    terminalOutput: typing.Optional[typing.List[str]]
+    """
+    The terminal output produced by the flow
+    """
+
     @property
     def dateAsInt(self):
         """
@@ -99,6 +104,7 @@ class Flow:
         self.currentExecuting = flow.get("currentExecuting", None)
         self.molstarState = flow.get("molstarState", {})
         self.date = flow.get("date", None)
+        self.terminalOutput = flow.get("terminalOutput", None)
 
         # Parse the blocks
         blocksJSON = flow.get("blocks", [])
@@ -238,6 +244,7 @@ class Flow:
             "date": self.date,
             "blocks": blocksJSON,
             "molstarState": self.molstarState,
+            "terminalOutput": self.terminalOutput,
         }
 
         return flow

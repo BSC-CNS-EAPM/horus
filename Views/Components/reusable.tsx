@@ -16,9 +16,17 @@ const HorusPopover = ({ trigger, children }) => {
 
   return (
     <Popover className="relative">
-      <Popover.Button onMouseOver={handleOpen} onMouseLeave={handleClose}>
+      <Popover.Group
+        onMouseOver={handleOpen}
+        onMouseLeave={handleClose}
+        style={{
+          margin: "0",
+          padding: "0",
+          height: "1.25rem",
+        }}
+      >
         {trigger}
-      </Popover.Button>
+      </Popover.Group>
       {isOpen && (
         <Popover.Panel className="absolute" static>
           {children}
