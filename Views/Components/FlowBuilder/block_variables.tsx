@@ -170,6 +170,14 @@ const PluginVariableView = (props: PluginVariableViewProps) => {
           </div>
         )}
 
+        {/* If its a editable string list, set a table with editable rows */}
+        {props.variable.type === PluginVariableTypes.LIST && (
+          <ListView
+            variable={props.variable}
+            onChange={handleChange}
+          />
+        )}
+
         {/* If the type is a FILE, set a button which, on the server, 
         will open the server file explorer. On the client, will open the file pickers */}
         {props.variable.type === PluginVariableTypes.FILE && (
@@ -290,6 +298,136 @@ const PluginVariableView = (props: PluginVariableViewProps) => {
     </div>
   );
 };
+
+type ListViewProps = {
+  variable: PluginVariable;
+  onChange: (value: any) => void;
+};
+
+function ListView(props: ListViewProps) {
+  const [values, setValues] = useState(props.variable.value);
+
+  const handleChange = (value: any) => {
+    setValues(value);
+    props.onChange(value);
+  };
+
+  useEffect(() => {
+    handleChange(props.variable.value);
+  }, [props.variable.value]);
+
+  const addRow = () => {
+    let newValues = values ? [...values] : [];
+    if (props.variable.allowedValues) {
+      newValues.push({
+        value: "",
+        type: props.variable.allowedValues[0],
+      });
+    } else {
+      newValues = values ? [...values] : [];
+      newValues.push("");
+    }
+    handleChange(newValues);
+  };
+
+  const removeRow = (index: number) => {
+    if (!values) return;
+    const newValues = [...values];
+    newValues.splice(index, 1);
+    handleChange(newValues);
+  };
+
+  const handleRowValueChange = (index: number, value: string) => {
+    const newValues = [...values];
+    if (props.variable.allowedValues) {
+      newValues[index] = {
+        value: value,
+        type: props.variable.allowedValues[0],
+      };
+    } else {
+      newValues[index] = value;
+    }
+    handleChange(newValues);
+  };
+
+  const handleRowTypeChange = (index: number, type: string) => {
+    const newValues = [...values];
+    newValues[index] = {
+      value: newValues[index].value,
+      type: type,
+    };
+    handleChange(newValues);
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-row gap-2 justify-center my-2">
+        <NBDButton action={addRow}>Add row</NBDButton>
+        <NBDButton
+          action={() => {
+            handleChange([]);
+          }}
+        >
+          Clear
+        </NBDButton>
+      </div>
+      {/* <hr
+        style={{
+          margin: "0",
+          padding: "0",
+        }}
+      ></hr> */}
+      {values?.length > 0 && (
+        <div className="flex flex-col gap-2 pb-2">
+          {values?.map((value, index) => (
+            <div className="flex flex-row gap-2 items-center px-2">
+              <input
+                type="text"
+                className="plugin-variable-value"
+                value={props.variable.allowedValues ? value.value : value}
+                onChange={(e) => handleRowValueChange(index, e.target.value)}
+              />
+              {
+                // If the variable has a list of allowed values, set a dropdown
+                props.variable.allowedValues && (
+                  <select
+                    placeholder="Select an option"
+                    onChange={(e) => handleRowTypeChange(index, e.target.value)}
+                  >
+                    {props.variable.allowedValues.map((value, index) => (
+                      <option key={index} value={value}>
+                        {value}
+                      </option>
+                    ))}
+                  </select>
+                )
+              }
+              <button
+                onClick={() => removeRow(index)}
+                style={{
+                  width: "unset",
+                }}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="red"
+                  className="w-5 h-5"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.52.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 type VariableSubviewProps = {
   handleChange: (value: any, id: string) => void;
@@ -830,6 +968,7 @@ const InputOutputView = (props: { variable: PluginVariable }) => {
       <div className="plugin-variable-description">
         {props.variable.description}
       </div>
+      <div className="plugin-variable-id">Type: {props.variable.type}</div>
       <div className="plugin-variable-id">ID: {props.variable.id}</div>
     </div>
   );

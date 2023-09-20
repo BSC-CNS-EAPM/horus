@@ -50,6 +50,30 @@ the allowed values in the :bdg-secondary-line:`allowedValues` parameter. For exa
         allowedValues=["Red", "Green", "Blue"],
     )
 
+For the :bdg-secondary-line:`LIST` type, you can specify the type of the elements of the list
+using the :bdg-secondary-line:`allowedValues` parameter. For example:
+
+.. code-block:: python
+
+    inputlistWithAllowedValues = PluginVariable(
+        name="Residue indices",
+        id="values",
+        description="A list with values to be used as an input.",
+        type=VariableTypes.LIST,
+        allowedValues=["ResidueID", "Ligand selection", "Atom number"],
+    )
+
+This will render a two-column table in the :bdg-secondary-line:`Flow builder` with the first column
+containing the value and the second column containing a dropdown menu with the allowed values as the :bdg-secondary-line:`type`
+which corresponds to the :bdg-secondary-line:`allowedValues` parameter.
+
+.. image:: images/list_variable.png
+    :width: 500px
+    :align: center
+
+The variable returns an array of the form: [value1, value2...] but when providing :bdg-secondary-line:`allowedValues` the
+values are returned as a dictionary array of the form: [{"type": "allowedValue1", "value": value1}, {"type": "allowedValue2", "value": value2}...].
+
 VariableGroup
 =============
 

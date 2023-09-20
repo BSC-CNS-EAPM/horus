@@ -192,6 +192,15 @@ class VariableTypes(str, Enum):
     Will render as a radio items buttons.
     """
 
+    LIST = "list"
+    """
+    An initial empty list [] to which entries can be added.
+
+    Will render as a table with an input field and an add button. 
+    Using allowedValues will render a dropdown alongside the input field 
+    to select the type of the value to add.
+    """
+
     INT_RANGE = "[integer, integer]"
     """
     A range of integers like 1-10.

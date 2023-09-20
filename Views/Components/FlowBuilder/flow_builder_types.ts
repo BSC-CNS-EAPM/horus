@@ -19,6 +19,7 @@ enum PluginVariableTypes {
   INTEGER_LIST = "integer[]",
   FLOAT_LIST = "float[]",
   BOOLEAN_LIST = "boolean[]",
+  LIST = "list",
   INT_RANGE = "[integer, integer]",
   FLOAT_RANGE = "[float, float]",
   FILE = "file",

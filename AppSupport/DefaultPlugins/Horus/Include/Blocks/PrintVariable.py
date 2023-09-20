@@ -19,8 +19,6 @@ outputVariable = PluginVariable(
 def printVariable(block: PluginBlock):
     inputVariable = block.inputs.get("input", None)
 
-    print("Inputs: ", block.inputs)
-
     if inputVariable is None:
         raise Exception("No input provided.")
 

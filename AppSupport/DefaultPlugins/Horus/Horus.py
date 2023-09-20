@@ -74,10 +74,10 @@ def createPlugin():
     # Add the print block to the plugin
     plugin.addBlock(printBlock)
 
-    from Blocks.SampleBlock import sendJobBlock  # type: ignore
+    from Blocks.EditableStringBlock import listBlockInput  # type: ignore
 
-    # Add the sample block to the plugin
-    plugin.addBlock(sendJobBlock)
+    # Add the list block to the plugin
+    plugin.addBlock(listBlockInput)
 
     return plugin
 
