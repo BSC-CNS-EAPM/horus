@@ -329,14 +329,34 @@ class FlowManager:
         with open(self._recentFlowsPath, "w", encoding="utf-8") as file:
             json.dump(recentFlowsJSON, file)
 
+    def _updateRecentFlows(self):
+        """
+        Updates the recent flows file and removes non-existing flows
+        """
+        # Read the recent flows file
+        with open(self.recentFlowsPath, "r", encoding="utf-8") as file:
+            recentFlows = json.load(file)
+
+        updatedRecentFlows = {}
+        for flow in recentFlows:
+            path = recentFlows[flow]
+            if os.path.exists(path):
+                updatedRecentFlows[flow] = recentFlows[flow]
+            else:
+                print(f"Removing non-existing flow '{os.path.basename(path)}'")
+
+        with open(self._recentFlowsPath, "w", encoding="utf-8") as file:
+            json.dump(updatedRecentFlows, file)
+
+        return updatedRecentFlows
+
     def _recentsReader(self):
         """
         Reads the recent flows from the file
         """
 
-        # Read the recent flows file
-        with open(self.recentFlowsPath, "r", encoding="utf-8") as file:
-            recentFlows = json.load(file)
+        # Remove non-existing flows
+        recentFlows = self._updateRecentFlows()
 
         recentFlowsList = []
         # Parse the flows
