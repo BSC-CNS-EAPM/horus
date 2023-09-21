@@ -504,12 +504,14 @@ function FlowReciver(props: FlowReciverProps) {
 
     if (!data.ok) {
       alert(data.error);
+      openingFlow.current = false;
       return;
     }
 
     const openedFlow = data.flow;
 
     if (!openedFlow) {
+      openingFlow.current = false;
       return;
     }
 
