@@ -121,6 +121,46 @@ class PluginManager:
 
             # Remove the .hp file
             os.remove(newPlugin)
+
+            # For installing a plugin, it is required that the plugin files
+            # are located in the root of the extracted contents. If the plugin
+            # was packed packing the container folder instead, we need to move
+            # the files to the root of the extracted contents.
+
+            # Get the contents of the extracted folder
+            contents = os.listdir(newPluginDir)
+
+            # If the resulting extraction is a single folder, move the files
+            # to the root of the extracted contents
+            if len(contents) == 1 and os.path.isdir(os.path.join(newPluginDir, contents[0])):
+                print("Moving plugin files to the root of the extracted contents...")
+
+                # Get the folder name
+                folderName = contents[0]
+
+                # Rename it to some hash in order to prevent clashes
+                newFolderName = "tmp_" + str(hash(folderName))
+
+                oldFolderPath = os.path.join(newPluginDir, folderName)
+                newFolderPath = os.path.join(newPluginDir, newFolderName)
+
+                # Rename the folder
+                os.rename(
+                    oldFolderPath,
+                    newFolderPath,
+                )
+
+                # Get the files in the folder
+                folderContents = os.listdir(newFolderPath)
+
+                # Move the files to the root of the extracted contents
+                for f in folderContents:
+                    shutil.move(os.path.join(newFolderPath, f), newPluginDir)
+
+                # Remove the folder
+                print("Removing temporary plugin folder...")
+                shutil.rmtree(newFolderPath)
+
         else:
             raise Exception("Invalid plugin format. (.hp expected)")
 
