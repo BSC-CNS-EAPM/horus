@@ -74,7 +74,7 @@ def createPlugin():
     # Add the print block to the plugin
     plugin.addBlock(printBlock)
 
-    from Blocks.EditableStringBlock import listBlockInput  # type: ignore
+    from Blocks.ListInput import listBlockInput  # type: ignore
 
     # Add the list block to the plugin
     plugin.addBlock(listBlockInput)
