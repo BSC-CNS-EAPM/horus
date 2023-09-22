@@ -111,10 +111,10 @@ Unfortunately, a Windows version cannot be provided at the moment. However, you 
    brew install --cask miniconda
    ```
 
-2. Install Nodejs
+2. Install Node 18
 
    ```
-   brew install nodejs
+   brew install node@18
    ```
 
 # Development environment
