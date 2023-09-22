@@ -19,6 +19,7 @@ import socket
 
 # Flask
 import flask
+import jinja2
 from flask import request
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
@@ -983,18 +984,11 @@ class HorusServer:
             return "Reloaded"
 
     def _exceptionHandlers(self):
-        pass
-        # @self.server.errorhandler(Exception)
-        # def exceptionHandler(e: Exception):
-        #     # Get the full traceback as string
-        #     import traceback
+        @self.server.errorhandler(jinja2.exceptions.TemplateNotFound)
+        def templateNotFoundHandler(error):
+            errorMSG = f"View not found: {error}"
 
-        #     tb = traceback.format_exc()
-
-        #     # Print the traceback to the terminal
-        #     print(tb)
-
-        #     return flask.render_template("Error/error.html", errormsg=str(tb))
+            return flask.render_template("Error/error.html", errormsg=str(errorMSG))
 
     def _favicons(self):
         @self.server.route("/favicon.ico")
