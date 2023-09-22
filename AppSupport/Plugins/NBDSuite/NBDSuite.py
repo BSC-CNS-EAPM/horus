@@ -36,12 +36,6 @@ def createPlugin():
     # Add the PELE results page to the plugin
     nbdsuitePlugin.addPage(peleResultsPage)
 
-    try:
-        print("Hello World!")
-        raise Exception("Hello World!")
-    except Exception as exc:
-        print(exc)
-
     # Return the plugin
     return nbdsuitePlugin
 
