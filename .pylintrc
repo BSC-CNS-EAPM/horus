@@ -1,0 +1,23 @@
+[FORMAT]
+
+# Naming conventions
+const-naming-style=camelCase
+function-naming-style=camelCase
+method-naming-style=camelCase
+argument-naming-style=camelCase
+attr-naming-style=camelCase
+variable-naming-style=camelCase
+class-naming-style=PascalCase
+module-naming-style=any
+
+# Maximum line length
+max-line-length=98
+
+# Ignore broad exception catching and raising
+# W0718: Catching too general exception 'Exception'
+# W0719: Raising too general exception 'Exception'
+# E0401: Unable to import 'foo'. Pylance is who reports missing imports
+# C0415: Import outside toplevel.
+disable=W0718,W0719,E0401,C0415
+
+      
