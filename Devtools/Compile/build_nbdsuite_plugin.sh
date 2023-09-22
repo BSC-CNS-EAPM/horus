@@ -7,6 +7,9 @@ cd AppSupport/Plugins/NBDSuite
 
 echo "Building NBDSuite plugin..."
 
+echo "Compiling the view..."
+npm run parcel-nbdsuite
+
 # Zip the plugin
 zip -rq NBDSuite.hp . -x *.DS_Store -x '*__pycache__*' -x 'dev/*' -x 'config/*' 
 
