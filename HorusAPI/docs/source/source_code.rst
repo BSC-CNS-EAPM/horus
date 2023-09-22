@@ -49,7 +49,14 @@ RemoteAPI
 MolstarAPI
 ==========
 
-.. automodule:: src.molstar
+.. autoclass:: src.molstar.MolstarAPI
+   :members:
+
+
+ExtensionsAPI
+=============
+
+.. autoclass:: src.extensions.Extensions
    :members:
 
 Utils

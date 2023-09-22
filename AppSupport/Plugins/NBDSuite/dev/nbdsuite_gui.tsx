@@ -22,6 +22,7 @@ import { HorusModal } from "../../../../Views/Components/reusable";
 declare global {
   interface Window {
     molstar?: HorusMolstar;
+    extensionData: any;
   }
 }
 
@@ -486,6 +487,15 @@ function NBDSuiteResults() {
       fetchNBDData();
     }
   }, [openedFile]);
+
+  useEffect(() => {
+    if (window.parent.extensionData) {
+      const pathToOpen = window.parent.extensionData.path;
+      if (pathToOpen) {
+        setOpenedFile(pathToOpen);
+      }
+    }
+  }, []);
 
   return (
     <div>

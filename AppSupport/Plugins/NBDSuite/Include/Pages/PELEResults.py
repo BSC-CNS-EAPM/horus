@@ -3,7 +3,8 @@ from NBDSuiteParser import NBDSuiteParser
 from flask import request
 
 # Define the PELE results page
-PeleResultsPage = PluginPage(
+peleResultsPage = PluginPage(
+    id="peleresults",
     name="PELE Results",
     description="Analyse NBDSuite PELE results.",
     html="nbdsuite.html",
@@ -42,7 +43,7 @@ loadComplexesEndpoint = PluginEndpoint(
 )
 
 # Add the endpoint to the page
-PeleResultsPage.addEndpoint(loadComplexesEndpoint)
+peleResultsPage.addEndpoint(loadComplexesEndpoint)
 
 
 def loadTopSelections():
@@ -81,7 +82,7 @@ loadTopSelectionsEndpoint = PluginEndpoint(
 )
 
 # Add the endpoint to the page
-PeleResultsPage.addEndpoint(loadTopSelectionsEndpoint)
+peleResultsPage.addEndpoint(loadTopSelectionsEndpoint)
 
 
 def loadPlotData():
@@ -119,7 +120,7 @@ plotData = PluginEndpoint(
 )
 
 # Add the endpoint to the page
-PeleResultsPage.addEndpoint(plotData)
+peleResultsPage.addEndpoint(plotData)
 
 
 def loadInputPDB():
@@ -152,7 +153,7 @@ loadPDBEndpoint = PluginEndpoint(
 )
 
 # Add the endpoint to the plugin
-PeleResultsPage.addEndpoint(loadPDBEndpoint)
+peleResultsPage.addEndpoint(loadPDBEndpoint)
 
 
 def getInputInfo():
@@ -185,7 +186,7 @@ getInputInfoEndpoint = PluginEndpoint(
 )
 
 # Add the endpoint to the plugin
-PeleResultsPage.addEndpoint(getInputInfoEndpoint)
+peleResultsPage.addEndpoint(getInputInfoEndpoint)
 
 
 def getPDB():
@@ -222,7 +223,7 @@ loadPDBEndpoint = PluginEndpoint(
 )
 
 # Add the endpoint to the plugin
-PeleResultsPage.addEndpoint(loadPDBEndpoint)
+peleResultsPage.addEndpoint(loadPDBEndpoint)
 
 
 def getInputSimulationName():
@@ -259,7 +260,7 @@ getInputSimulationNameEndpoint = PluginEndpoint(
 )
 
 # Add the endpoint to the plugin
-PeleResultsPage.addEndpoint(getInputSimulationNameEndpoint)
+peleResultsPage.addEndpoint(getInputSimulationNameEndpoint)
 
 
 # Add atom-atom distance calculator endpoint
@@ -303,4 +304,4 @@ getAtomAtomDistanceEndpoint = PluginEndpoint(
 )
 
 # Add the endpoint to the page
-PeleResultsPage.addEndpoint(getAtomAtomDistanceEndpoint)
+peleResultsPage.addEndpoint(getAtomAtomDistanceEndpoint)

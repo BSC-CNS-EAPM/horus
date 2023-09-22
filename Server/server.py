@@ -133,6 +133,11 @@ class HorusServer:
 
         self.molapi = MolstarAPI(self.socketio)
 
+        # Init ExtensionsAPI
+        from HorusAPI import Extensions
+
+        self.extensionsAPI = Extensions(self.socketio)
+
         self._molstarAPIRoutes()
 
         # Setup exception handlers
@@ -466,7 +471,7 @@ class HorusServer:
                     raise Exception(  # pylint: disable=broad-exception-raised
                         f"Missing key: {keye} in executeBlock request."
                     )
-                
+
                 resetRemote = data.get("resetRemote", False)
                 outputs = self.pluginManager.executeBlock(
                     blockID,
@@ -649,7 +654,9 @@ class HorusServer:
             if request.method == "POST":
                 recivedExtensions = request.get_json().get("extensions")
                 if recivedExtensions:
-                    extensions = tuple(f"{ext} files (*.{ext})" for ext in recivedExtensions if ext != "*")
+                    extensions = tuple(
+                        f"{ext} files (*.{ext})" for ext in recivedExtensions if ext != "*"
+                    )
                     if not extensions:
                         extensions = ("All Files (*.*)",)
             if self.desktop:

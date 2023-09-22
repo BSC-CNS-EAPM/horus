@@ -67,6 +67,7 @@ Examples
 
     # Define the PELE results page
     myCustomViewPage = PluginPage(
+        id="customView",
         name="Custom view",
         description="View your results in a custom way",
         html="index.html", # The HTML file to load
@@ -94,5 +95,27 @@ Examples
     # Add the endpoint to the page
     myCustomViewPage.addEndpoint(customEndpoint)
 
+Extensions class
+----------------
 
+Apart from opening the extensions view from the menu, you can also use the :bdg-secondary-line:`Extensions` class
+to open the view directly from a :bdg-secondary-line:`Block` action. Using the :bdg-secondary-line:`open()` method you can pass
+data to your extension, that can be handled, for example, in a React useEffect hook. You will need
+the ID of the plugin that provides the extension, and the extension ID.
 
+In your block's action:
+
+.. code-block:: python
+
+    from HorusAPI import Extensions
+
+    # Open the extensions view
+    Extensions().open("mypluginid", "customView", {"someData": data})
+
+Inside the JavaScript file of your extension:
+
+.. code-block:: javascript
+    
+    // Get the data passed from the extension
+    const data = window.parent.extensionData; // Remember that extensions run inside an iframe
+    console.log(data.someData) // The object passed from the Extensions class

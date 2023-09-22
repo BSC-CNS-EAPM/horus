@@ -1,36 +1,49 @@
+"""
+Entry point for the NBDSuite plugin
+"""
+
 from HorusAPI import Plugin
 
 
 def createPlugin():
+    """
+    Generates the NBDSuite plugin and returns the instance
+    """
     # ========== Plugin Definition ========== #
 
-    plugin = Plugin(id="NBDSuite")
+    nbdsuitePlugin = Plugin(id="NBDSuite")
 
     # ========== Blocks ========== #
 
     from Blocks.Minimizer import minimizePDBBlock  # type: ignore
 
-    plugin.addBlock(minimizePDBBlock)
+    nbdsuitePlugin.addBlock(minimizePDBBlock)
 
     from Blocks.IFR import inducedFitRefinementBlock  # type: ignore
 
     # Add the block to the plugin
-    plugin.addBlock(inducedFitRefinementBlock)
+    nbdsuitePlugin.addBlock(inducedFitRefinementBlock)
 
     from Blocks.Docking import dockingBlock  # type: ignore
 
     # Add the block to the plugin
-    plugin.addBlock(dockingBlock)
+    nbdsuitePlugin.addBlock(dockingBlock)
 
     # ========== PAGES ========== #
 
-    from Pages.PELEResults import PeleResultsPage  # type: ignore
+    from Pages.PELEResults import peleResultsPage  # type: ignore # pylint: disable=no-name-in-module
 
     # Add the PELE results page to the plugin
-    plugin.addPage(PeleResultsPage)
+    nbdsuitePlugin.addPage(peleResultsPage)
+
+    try:
+        print("Hello World!")
+        raise Exception("Hello World!")
+    except Exception as exc:
+        print(exc)
 
     # Return the plugin
-    return plugin
+    return nbdsuitePlugin
 
 
 plugin = createPlugin()

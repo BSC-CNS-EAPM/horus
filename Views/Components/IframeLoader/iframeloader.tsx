@@ -1,15 +1,24 @@
 import { useEffect, useState } from "react";
 import RotatingLines from "../RotatingLines/rotatinglines";
 
+declare global {
+  interface Window {
+    extensionData: any;
+  }
+}
+
 interface IFrameLoaderProps {
   pagename: string;
   url: string;
+  data: any;
 }
 
-function IFrameLoader({ url, pagename }: IFrameLoaderProps) {
+function IFrameLoader({ url, pagename, data }: IFrameLoaderProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    window.extensionData = data;
+
     const iframe = document.getElementById(
       `${url}-${pagename}`
     ) as HTMLIFrameElement;
@@ -17,7 +26,7 @@ function IFrameLoader({ url, pagename }: IFrameLoaderProps) {
     return () => {
       iframe.removeEventListener("load", handleLoad);
     };
-  }, [url, pagename]);
+  }, [url, pagename, data]);
 
   const handleLoad = () => {
     setLoading(false);

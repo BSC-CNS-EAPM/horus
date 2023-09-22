@@ -15,6 +15,9 @@ from .src import (  # noqa: F401
 # Export the Molstar API
 from .src import MolstarAPI  # noqa: F401
 
+# Export the extensions API
+from .src import Extensions
+
 # Export the utility SingletonMeta class
 from .src import HorusSingleton, TempFile  # noqa: F401
 

@@ -6,6 +6,7 @@ import { Route, Routes } from "react-router";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { FlowBuilderView } from "../Components/FlowBuilder/flow_builder_view";
 import IFrameLoader from "../Components/IframeLoader/iframeloader";
+import { socket } from "../Utils/socket";
 
 export default function ResizeHandle({
   horizontal = false,
@@ -81,13 +82,30 @@ export function App() {
   };
 
   const handleIFrame = (event) => {
-    const hasURL = event?.detail?.url;
+    // Opening it from a block action yields a socket event
+    const hasPageURL = event?.pageURL;
+
+    let newEvent = event;
+    if (hasPageURL) {
+      // Create a new fake event object
+      newEvent = {
+        detail: {
+          pagename: "CalledFromBlockAction",
+          url: event.pageURL,
+          data: event?.data,
+        },
+      };
+    }
+
+    // Opening a new page from the GUI yields a regular JS event
+    const hasURL = newEvent?.detail?.url;
+
     if (!hasURL) {
       setShowIFrame(false);
       return;
     }
-    const key = event.detail.url + "-" + event.detail.pagename;
-    const iframe = <IFrameLoader key={key} {...event.detail} />;
+    const key = newEvent.detail.url + "-" + newEvent.detail.pagename;
+    const iframe = <IFrameLoader key={key} {...newEvent.detail} />;
     setIframeView(iframe);
     setShowIFrame(true);
   };
@@ -100,11 +118,13 @@ export function App() {
     window.addEventListener("mainView", handleMainView);
     window.addEventListener("mainViewURL", handleIFrame);
     window.addEventListener("toggleConsole", toggleConsole);
+    socket.on("openExtension", handleIFrame);
 
     return () => {
       window.removeEventListener("mainView", handleMainView);
       window.removeEventListener("mainViewURL", handleIFrame);
       window.removeEventListener("toggleConsole", toggleConsole);
+      socket.off("openExtension", handleIFrame);
     };
   }, []);
 

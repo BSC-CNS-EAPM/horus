@@ -5,6 +5,9 @@ from HorusAPI import TempFile
 import typing as t
 import re
 
+myVariable = 1
+my_var = 1
+
 
 class NBDSuiteParser:
     path: str
@@ -59,9 +62,7 @@ class NBDSuiteParser:
         self.simulationPath = os.path.join(self.path, self.input["name"])
 
         # Get the last adaptive simulation folder
-        adaptive_dir = self._getLastFolder(
-            self.simulationPath, "_adaptive_pele_simulation"
-        )
+        adaptive_dir = self._getLastFolder(self.simulationPath, "_adaptive_pele_simulation")
 
         # Define pele output path
         self.latestSimPath = os.path.join(self.simulationPath, adaptive_dir)
@@ -112,16 +113,12 @@ class NBDSuiteParser:
         """
 
         # Get the path to the top selection file
-        topSelFile = os.path.join(
-            self.latestSimPath, complex, "results", "top_selections.csv"
-        )
+        topSelFile = os.path.join(self.latestSimPath, complex, "results", "top_selections.csv")
 
         # Read the top selection file
         topSeldf = pd.read_csv(topSelFile)
 
-        topSelOptions = [
-            {"label": f"Cluster {i}", "value": i} for i in topSeldf["Cluster label"]
-        ]
+        topSelOptions = [{"label": f"Cluster {i}", "value": i} for i in topSeldf["Cluster label"]]
         return topSelOptions
 
     def getPlotData(self, complex: str):
@@ -229,9 +226,7 @@ class NBDSuiteParser:
             df = df.round(decimals)
             # Add trailing zeros to the decimals of columns that
             # are floats
-            df = df.applymap(
-                lambda x: f"{x:.{decimals}f}" if isinstance(x, float) else x
-            )
+            df = df.applymap(lambda x: f"{x:.{decimals}f}" if isinstance(x, float) else x)
             # Convert back to float if possible
             df = df.applymap(
                 lambda x: float(x)
@@ -297,9 +292,7 @@ class NBDSuiteParser:
 
         original_complex_filename = os.path.join("complexes", pdb_name)
 
-        topolgy_merger_path = self._getLastFolder(
-            self.simulationPath, "_topology_merger"
-        )
+        topolgy_merger_path = self._getLastFolder(self.simulationPath, "_topology_merger")
 
         originalComplexPath = os.path.join(
             self.simulationPath, topolgy_merger_path, original_complex_filename
@@ -406,9 +399,7 @@ class NBDSuiteParser:
             import traceback
 
             print(traceback.format_exc())
-            raise Exception(
-                f"Error while extracting the pdb file from the trajectory: {e}"
-            )
+            raise Exception(f"Error while extracting the pdb file from the trajectory: {e}")
 
         return tmp_pdb.path, filename
 
@@ -458,11 +449,11 @@ class NBDSuiteParser:
         # Generate a pair of atoms for each atom in the list (atom1, atom2)
         for i in range(len(atomList)):
             for j in range(i + 1, len(atomList)):
-                atomList.append((atomList[i], atomList[j]))
+                atomList.append((atomList[i], atomList[j]))  # type: ignore
 
         print("Atom list: ", atomList)
 
-        from .Include.AtomAtomDistance import compute_simulation_distance
+        from Include.AtomAtomDistance import compute_simulation_distance
 
         return compute_simulation_distance(trajectoriesPath, atomList)
 
@@ -471,9 +462,7 @@ class NBDSuiteParser:
         # This function returns the last folder of the different blocks
 
         # Get all the folders that contain the name
-        dirs = [
-            x for x in os.listdir(path) if x.endswith(name) and not x.startswith(".")
-        ]
+        dirs = [x for x in os.listdir(path) if x.endswith(name) and not x.startswith(".")]
 
         # If no folder is found, raise an exception
         if len(dirs) == 0:

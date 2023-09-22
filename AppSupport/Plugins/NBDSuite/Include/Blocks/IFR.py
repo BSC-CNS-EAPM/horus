@@ -1,4 +1,4 @@
-from HorusAPI import PluginVariable, SlurmBlock, VariableTypes
+from HorusAPI import PluginVariable, SlurmBlock, VariableTypes, Extensions
 from Utils import slurmScript
 import os
 
@@ -91,6 +91,13 @@ def inducedFitRefinement(block: SlurmBlock):
 
     complex_data_filename = os.path.basename(complex_data)
     complex_ligand_selection = block.inputs.get("ligand_selection", None)
+
+    # Parse the ligand selection
+    if complex_ligand_selection is not None:
+        chainID = complex_ligand_selection[0]["chainID"]
+        residue = complex_ligand_selection[0]["residue"]
+        complex_ligand_selection = f"{chainID}:{residue}"
+
     cpus = block.variables.get("cpus", 1)
 
     cpus = int(cpus)
@@ -126,7 +133,7 @@ def inducedFitRefinement(block: SlurmBlock):
     with open(f"{name}.yaml", "w") as f:
         f.write(inputFileContents)
 
-    simRemoteDir = os.path.join(block.remote.horusDir, name)
+    simRemoteDir = os.path.join(block.remote.workDir, name)
 
     # Create the simulation folder in the remote
     block.remote.remoteCommand(f"mkdir -p -v {simRemoteDir}")
@@ -134,9 +141,7 @@ def inducedFitRefinement(block: SlurmBlock):
     print(f"Created simulation folder in the remote at {simRemoteDir}")
     print("Sending data to the remote...")
     # Send the complex data to the remote
-    block.remote.sendData(
-        complex_data, os.path.join(simRemoteDir, complex_data_filename)
-    )
+    block.remote.sendData(complex_data, os.path.join(simRemoteDir, complex_data_filename))
 
     # Send the input YAML to the remote
     block.remote.sendData(f"{name}.yaml", os.path.join(simRemoteDir, f"{name}.yaml"))
@@ -167,30 +172,27 @@ def inducedFitRefinement(block: SlurmBlock):
 
 def finalAction(block: SlurmBlock):
     name = block.variables.get("simulation_name", "ifr")
-    simRemoteDir = os.path.join(block.remote.horusDir, name)
+    simRemoteDir = os.path.join(block.remote.workDir, name)
 
-    print("IFR calculation finished, compressing results...")
+    print("IFR calculation finished, downloading results...")
 
-    # Compress the results
-    tarFile = f"{name}.tar.gz"
-    block.remote.remoteCommand(f"cd {simRemoteDir} && tar -czvf {tarFile} *")
-    tarFileFinalPath = os.path.join(simRemoteDir, tarFile)
-
-    print("Results compressed, downloading results...")
-    destPath = os.path.join(os.getcwd(), tarFile)
+    destPath = os.path.join(os.getcwd(), name)
 
     # Transfer the results from the remote
-    block.remote.getData(tarFileFinalPath, destPath)
+    block.remote.getData(simRemoteDir, destPath)
 
     print(f"Results transfered to the local machine at: {destPath}")
 
-    # Uncompress the results
-    print("Uncompressing results...")
-    os.popen(f"tar -xzvf {destPath}")
-
-    print("Done. Setting output of block to the current working directory...")
+    print("Setting output of block to the results directory...")
     # Set the output
-    block.setOutput("path", os.getcwd())
+    block.setOutput("path", destPath)
+
+    # Open the results
+    print("Opening results...")
+
+    # Result path is the yaml input file
+    resultPath = os.path.join(destPath, f"{name}.yaml")
+    Extensions().open("nbdsuite", "peleresults", {"path": resultPath})
 
 
 # Define the block

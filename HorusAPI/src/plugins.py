@@ -106,15 +106,16 @@ class PluginPage:
     Internal variable used to store the page info.
     """
 
-    def __init__(self, name: str, description: str, html: str):
+    def __init__(self, id: str, name: str, description: str, html: str):
         """
         Create a new PluginPage.
 
+        :param id: The ID of the page.
         :param name: The name of the page.
         :param description: A description of the page.
         :param html: The name of the HTML file (i.e. "my_page.html"). The html file must be located in the "Pages" folder of the plugin.
         """
-        self.id: str = "baseplugin.page"
+        self.id = id
         self.name = name
         self.description = description
         self.html = html
@@ -1345,7 +1346,7 @@ class Plugin:
         # If the attribute is a PluginPage, add it to the list
         # Only add the page if it is not already in the list
         if isinstance(page, PluginPage):
-            page.id = f"{self.id}.{page.name}".replace(" ", "_").lower()
+            page.id = f"{self.id}.{page.id}".replace(" ", "_").lower()
             try:
                 self.getPage(page.id)
             except Exception:

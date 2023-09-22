@@ -15,6 +15,9 @@ from HorusAPI.src.plugins import (
 # Export the Molstar API
 from HorusAPI.src.molstar import MolstarAPI
 
+# Export the extensions API
+from HorusAPI.src.extensions import Extensions
+
 # Export the utility SingletonMeta class
 from HorusAPI.src.utils import SingletonMeta as HorusSingleton
 from HorusAPI.src.utils import TempFile
@@ -32,6 +35,7 @@ __all__ = [
     "PluginConfig",
     "PluginEndpoint",
     "MolstarAPI",
+    "Extensions",
     "HorusSingleton",
     "TempFile",
 ]
