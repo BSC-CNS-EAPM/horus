@@ -540,7 +540,7 @@ class BlockConnection:
 
 class PluginBlock:
     """
-    The base block class for Horus blocks.
+    The base block class for Horus blocks. Not to be used directly.
     """
 
     # Internal variables, used when saving the flow and in the frontend
@@ -613,7 +613,7 @@ class PluginBlock:
                 "A block can only have inputs or input groups, not both."
             )
 
-        if len(inputs) > 0:
+        if len(inputs) >= 0 and len(inputGroups) == 0:
             inputGroups = [VariableGroup("default", inputs)]
 
         # self._inputs = inputs
