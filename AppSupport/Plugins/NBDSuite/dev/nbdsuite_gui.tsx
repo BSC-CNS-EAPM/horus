@@ -115,6 +115,8 @@ interface PELEPlotProps {
 function PELEPlot(props: PELEPlotProps) {
   const nbdData = props.nbdData;
 
+  const ref = useRef<Plotly.PlotlyHTMLElement | null>(null);
+
   const [xAxis, setXAxis] = useState("");
   const [yAxis, setYAxis] = useState("");
 
@@ -151,7 +153,7 @@ function PELEPlot(props: PELEPlotProps) {
   };
 
   const xAxisOptions = (
-    <select onChange={updateXAxis} key={"x-axis"}>
+    <select onChange={updateXAxis} key={"x-axis"} value={xAxis}>
       {axisOptions.map((c: string) => {
         return <option key={c}>{c}</option>;
       })}
@@ -159,7 +161,7 @@ function PELEPlot(props: PELEPlotProps) {
   );
 
   const yAxisOptions = (
-    <select onChange={updateYAxis} key={"y-axis"}>
+    <select onChange={updateYAxis} key={"y-axis"} value={yAxis}>
       {axisOptions.map((c: string) => {
         return <option key={c}>{c}</option>;
       })}
@@ -173,8 +175,6 @@ function PELEPlot(props: PELEPlotProps) {
       })}
     </select>
   );
-
-  const ref = useRef();
 
   return (
     <div>
@@ -204,9 +204,11 @@ function PELEPlot(props: PELEPlotProps) {
               {complexesView}
             </div>
           </div>
+          {/* @ts-ignore */}
           <Plot
             ref={ref}
             key={"plot"}
+            useResizeHandler={true}
             layout={{
               autosize: true,
               margin: {

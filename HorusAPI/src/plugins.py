@@ -558,7 +558,7 @@ class PluginBlock:
 
     selectedInputGroup: str = "default"
     """
-    The ID of the selected input group. THis gets updated when the user
+    The ID of the selected input group. This gets updated when the user
     selects a different input group in the frontend.
     """
 
@@ -1136,6 +1136,7 @@ class SlurmBlock(PluginBlock):
         finalAction: typing.Callable,
         variables: typing.List[PluginVariable] = [],
         inputs: typing.List[PluginVariable] = [],
+        inputGroups: typing.List[VariableGroup] = [],
         outputs: typing.List[PluginVariable] = [],
     ):
         """
@@ -1145,6 +1146,7 @@ class SlurmBlock(PluginBlock):
         :param finalAction: The action of the block after the job is completed.
         :param variables: The variables of the block.
         :param inputs: The inputs of the block.
+        :param inputGroups: The input groups of the block.
         :param outputs: The outputs of the block.
         """
         super().__init__(
@@ -1153,6 +1155,7 @@ class SlurmBlock(PluginBlock):
             action=initialAction,
             variables=variables,
             inputs=inputs,
+            inputGroups=inputGroups,
             outputs=outputs,
             blockType=PluginBlockTypes.SLURM,
         )

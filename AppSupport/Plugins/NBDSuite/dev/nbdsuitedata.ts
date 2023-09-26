@@ -349,10 +349,10 @@ class NBDSuiteData {
     const trajectory = row["trajectory"];
     const step = row["Step"];
 
-    if (!filepath) {
-      alert("PDBs of non-representative data cannot be viewed yet");
-      return;
-    }
+    // if (!filepath) {
+    //   alert("PDBs of non-representative data cannot be viewed yet");
+    //   return;
+    // }
 
     const header = {
       "Content-Type": "application/json",
@@ -404,7 +404,8 @@ class NBDSuiteData {
     }
 
     // Add the pdb to molstar
-    window.parent.molstar?.loadPDBString(pdb.pdb, filename);
+    // @ts-ignore
+    window.parent.molstar?.loadPDBString(pdb.pdb, pdb.name);
   }
 
   async savePDBfromRow(row: any) {

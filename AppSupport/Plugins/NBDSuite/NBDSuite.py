@@ -15,9 +15,9 @@ def createPlugin():
 
     # ========== Blocks ========== #
 
-    from Blocks.Minimizer import minimizePDBBlock  # type: ignore
+    from Blocks.IFD import inducedFitDockingBlock  # type: ignore
 
-    nbdsuitePlugin.addBlock(minimizePDBBlock)
+    nbdsuitePlugin.addBlock(inducedFitDockingBlock)
 
     from Blocks.IFR import inducedFitRefinementBlock  # type: ignore
 

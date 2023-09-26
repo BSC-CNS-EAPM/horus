@@ -200,7 +200,7 @@ class Flow:
 
             if not found:
                 raise Exception(  # pylint: disable=broad-exception-raised
-                    "Corrupted flow. Variable destination is not valid."
+                    "Corrupted flow. Variable destination is not valid. "
                     + f"Variable ID '{destinationVarID}' of block "
                     + f"'{var.destination.blockID}' has changed."
                 )

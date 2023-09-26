@@ -1,5 +1,5 @@
 """
-Module containing the IFR block for the NBDSuite plugin
+Module containing the IFD block for the NBDSuite plugin
 """
 
 import os
@@ -9,63 +9,65 @@ from HorusAPI import PluginVariable, SlurmBlock, VariableTypes, Extensions, Vari
 # ==========================#
 # Variable inputs
 # ==========================#
-
-complexDataStruc = PluginVariable(
-    name="Complex struc.",
-    id="complexData",
-    description="The PDB file path with the ligand docked.",
+systemData = PluginVariable(
+    name="Protein",
+    id="protein",
+    description="The protein structure to dock the ligands into.",
     type=VariableTypes.STRUCTURE,
 )
 
-compelxDataFile = PluginVariable(
-    name="Complex file",
-    id="complexData",
-    description="The PDB file path with the ligand docked.",
-    type=VariableTypes.FILE,
-    allowedValues=["pdb"],
+ligandSmiles = PluginVariable(
+    name="Ligand SMILES",
+    id="ligand",
+    description="The ligand smiles to dock into the protein.",
+    type=VariableTypes.SMILES,
 )
 
-complexDataFolder = PluginVariable(
-    name="Complex folder",
-    id="complexData",
-    description="The folder containing the PDB file with the ligand docked.",
+ligandFile = PluginVariable(
+    name="Ligand file",
+    id="ligand",
+    description="The ligand file to dock into the protein.",
+    type=VariableTypes.FILE,
+    allowedValues=["sdf", "smi"],
+)
+
+ligandFolder = PluginVariable(
+    name="Ligand folder",
+    id="ligand",
+    description="The folder containing the ligands to dock into the protein.",
     type=VariableTypes.FOLDER,
 )
 
-ligandSelectionHeteroRes = PluginVariable(
-    name="Ligand residue",
-    id="ligand_selection",
-    description="The ligand selection hetero residue.",
-    type=VariableTypes.HETERORES,
-)
-
-ligandSelectionString = PluginVariable(
-    name="Ligand selection",
-    id="ligand_selection",
-    description="The ligand selection string.",
-    type=VariableTypes.STRING,
+dockingCenter = PluginVariable(
+    name="Docking center",
+    id="dockingCenter",
+    description="Docking center.",
+    type=VariableTypes.SPHERE,
 )
 
 # ==========================#
 # Input groups
 # ==========================#
 
-complexDataStructureGroup = VariableGroup(
-    id="complexDataStructure", variables=[complexDataStruc, ligandSelectionHeteroRes]
+ligandSmiGroup = VariableGroup(
+    id="ligandSmiGroup",
+    variables=[systemData, ligandSmiles, dockingCenter],
 )
 
-complexDataFileGroup = VariableGroup(
-    id="complexDataFile", variables=[compelxDataFile, ligandSelectionString]
+ligandFileGroup = VariableGroup(
+    id="ligandFileGroup",
+    variables=[systemData, ligandFile, dockingCenter],
 )
 
-complexDataFolderGroup = VariableGroup(
-    id="complexDataFolder", variables=[complexDataFolder, ligandSelectionString]
+ligandFolderGroup = VariableGroup(
+    id="ligandFolderGroup",
+    variables=[systemData, ligandFolder, dockingCenter],
 )
 
 # ==========================#
 # Other variables
 # ==========================#
-cpusIFR = PluginVariable(
+cpusIFD = PluginVariable(
     name="CPUs",
     id="cpus",
     description="Number of CPUs to use.",
@@ -73,15 +75,15 @@ cpusIFR = PluginVariable(
     defaultValue=4,
 )
 
-nameIFR = PluginVariable(
+nameIFD = PluginVariable(
     name="Simulation name",
     id="simulation_name",
     description="Name of the simulation.",
     type=VariableTypes.STRING,
-    defaultValue="ifr",
+    defaultValue="ifd",
 )
 
-flexibleRegionRadiusIFR = PluginVariable(
+flexibleRegionRadiusIFD = PluginVariable(
     name="Flexible region radius",
     id="flexible_region_radius",
     description="Radius of the flexible region.",
@@ -89,7 +91,7 @@ flexibleRegionRadiusIFR = PluginVariable(
     defaultValue=10.0,
 )
 
-frozenRegionRadiusIFR = PluginVariable(
+frozenRegionRadiusIFD = PluginVariable(
     name="Frozen region radius",
     id="frozen_region_radius",
     description="Radius of the frozen region.",
@@ -97,16 +99,16 @@ frozenRegionRadiusIFR = PluginVariable(
     defaultValue=15.0,
 )
 
-peleFFIFR = PluginVariable(
+peleFFIFD = PluginVariable(
     name="PELE force field",
     id="pele_force_field",
     description="PELE force field.",
     type=VariableTypes.STRING_LIST,
     defaultValue="openff-2.0.0",
-    allowedValues=["openff-2.0.0", "openff-1.3.0"],
+    allowedValues=["openff-2.0.0", "openff-1.3.0", "OPLS2005"],
 )
 
-peleStepsIFR = PluginVariable(
+peleStepsIFD = PluginVariable(
     name="PELE steps",
     id="pele_steps",
     description="PELE steps.",
@@ -114,7 +116,7 @@ peleStepsIFR = PluginVariable(
     defaultValue=5,
 )
 
-epochsIFR = PluginVariable(
+epochsIFD = PluginVariable(
     name="Epochs",
     id="epochs",
     description="PELE epochs.",
@@ -148,8 +150,7 @@ verbosity = PluginVariable(
     allowedValues=["INFO", "DEBUG", "WARNING", "ERROR", "CRITICAL"],
 )
 
-
-outputIFR = PluginVariable(
+outputIFD = PluginVariable(
     name="Simulation results",
     id="path",
     description="The folder containing the results.",
@@ -256,7 +257,15 @@ fixLigands = PluginVariable(
     defaultValue=False,
 )
 
-# Induced fit refinement
+# Induced fit docking
+rdockIterations = PluginVariable(
+    name="RDock iterations",
+    id="rdock_iterations",
+    description="RDock iterations.",
+    type=VariableTypes.INTEGER,
+    defaultValue=50,
+)
+
 sideChainPredictionResolution = PluginVariable(
     name="Side chain prediction resolution",
     id="pele_side_chain_prediction_resolution",
@@ -274,31 +283,31 @@ ligandResolution = PluginVariable(
 )
 
 
-# Induced fit refinement submission of job
-def inducedFitRefinement(block: SlurmBlock):  # pylint: disable=missing-function-docstring
-    complexDataValue = block.inputs.get("complexData", None)
+# Block's initial action
+def initialInducedFitDocking(block: SlurmBlock):  # pylint: disable=missing-function-docstring
+    systemDataValue = block.inputs.get("protein", None)
 
-    if complexDataValue is None:
-        raise Exception("No complex data provided.")
+    if systemData is None:
+        raise Exception("No protein structure provided for IFD.")
 
-    complexDataValue = os.path.basename(complexDataValue)
+    systemDataFilename = os.path.basename(systemDataValue)
 
-    ligandSelection = block.inputs.get("ligand_selection", None)
+    # Get the ligand info
+    ligandDataValue = block.inputs.get("ligand", None)
 
-    if ligandSelection is None:
-        raise Exception("No ligand selection provided.")
-
-    if block.selectedInputGroup == "complexDataStructure":
-        # Parse the ligand selection
-        chainID = ligandSelection[0]["chainID"]
-        residue = ligandSelection[0]["residue"]
-        ligandSelection = f"{chainID}:{residue}"
+    # If the input group is set to 'file' or 'folder', get the basename of the file
+    if (
+        block.selectedInputGroup == "ligandFileGroup"
+        or block.selectedInputGroup == "ligandFolderGroup"
+    ):
+        ligandDataValue = os.path.basename(ligandDataValue)
 
     cpus = int(block.variables.get("cpus", 2))
+
     if cpus < 2:
         raise Exception("CPUs must be greater than 1.")
 
-    name = block.variables.get("simulation_name", "ifr")
+    name = block.variables.get("simulation_name", "ifd")
     flexibleRegionRadius = block.variables.get("flexible_region_radius", 10.0)
     frozenRegionRadius = block.variables.get("frozen_region_radius", 15.0)
     forceField = block.variables.get("pele_force_field", "OPLS2005")
@@ -313,8 +322,8 @@ def inducedFitRefinement(block: SlurmBlock):  # pylint: disable=missing-function
     from Utils import GeneralInput
 
     generalInput = GeneralInput()
-    generalInput.systemDataInput = complexDataValue
-    generalInput.ligandDataInput = ligandSelection
+    generalInput.systemDataInput = systemDataValue
+    generalInput.ligandDataInput = ligandDataValue
     generalInput.nameInput = name
     generalInput.staticNameInput = block.variables.get("static_name", False)
     generalInput.cpusInput = cpus
@@ -342,7 +351,7 @@ def inducedFitRefinement(block: SlurmBlock):  # pylint: disable=missing-function
     topologyFixerInput.repairHeavyAtomsInput = block.variables.get("repair_heavy_atoms", True)
     topologyFixerInput.protonationPHInput = block.variables.get("protonation_ph", 7.0)
 
-    hetResiduesToDropValue = block.variables.get("het_residues_to_drop", None)
+    hetResiduesToDropValue = block.inputs.get("het_residues_to_drop", None)
     # Extract the "auth_comp_id" value from the
     # "het_res_to_drop" input and store it in a list
     if hetResiduesToDropValue is not None:
@@ -350,7 +359,7 @@ def inducedFitRefinement(block: SlurmBlock):  # pylint: disable=missing-function
     else:
         hetResiduesToDropValue = []
 
-    chainIDsToDropValue = block.variables.get("std_residues_to_drop", None)
+    chainIDsToDropValue = block.inputs.get("std_residues_to_drop", None)
 
     if chainIDsToDropValue is not None:
         chainIDsToDropValue = [residue["chainID"] for residue in chainIDsToDropValue]
@@ -363,14 +372,31 @@ def inducedFitRefinement(block: SlurmBlock):  # pylint: disable=missing-function
     topologyFixerInput.fixSystemsInput = block.variables.get("fix_systems", True)
     topologyFixerInput.fixLigandsInput = block.variables.get("fix_ligands", False)
 
-    from Utils import FlowInducedFitRefinementInput
+    dockingCenterValue = block.inputs.get("dockingCenter", None)
+    radius = dockingCenterValue["radius"]
+    x = dockingCenterValue["center"]["x"]  # pylint: disable=invalid-name
+    y = dockingCenterValue["center"]["y"]  # pylint: disable=invalid-name
+    z = dockingCenterValue["center"]["z"]  # pylint: disable=invalid-name
 
-    flowInducedFitRefinementInput = FlowInducedFitRefinementInput()
-    flowInducedFitRefinementInput.forceFieldInput = forceField
-    flowInducedFitRefinementInput.stepsInput = steps
-    flowInducedFitRefinementInput.epochsInput = epochs
-    flowInducedFitRefinementInput.flexibleRegionRadiusInput = flexibleRegionRadius
-    flowInducedFitRefinementInput.frozenRegionRadiusInput = frozenRegionRadius
+    from Utils import FlowInducedFitDockingInput
+
+    inducedFitDockingInput = FlowInducedFitDockingInput()
+    inducedFitDockingInput.dockingCenterInput = f"[{x}, {y}, {z}]"
+    inducedFitDockingInput.dockingRadiusInput = radius
+
+    inducedFitDockingInput.ligandResolutionInput = block.variables.get(
+        "pele_ligand_resolution", 40
+    )
+    inducedFitDockingInput.sideChainPredictionResolutionInput = block.variables.get(
+        "pele_side_chain_prediction_resolution", 40
+    )
+
+    inducedFitDockingInput.forceFieldInput = forceField
+    inducedFitDockingInput.stepsInput = steps
+    inducedFitDockingInput.epochsInput = epochs
+    inducedFitDockingInput.flexibleRegionRadiusIFDInput = flexibleRegionRadius
+    inducedFitDockingInput.frozenRegionRadiusIFDInput = frozenRegionRadius
+    inducedFitDockingInput.rdockIterationsInput = block.variables.get("rdock_iterations", 50)
 
     from Utils import NBDSuiteInputMerger
 
@@ -379,7 +405,7 @@ def inducedFitRefinement(block: SlurmBlock):  # pylint: disable=missing-function
             generalInput,
             topologyExtractorInput,
             topologyFixerInput,
-            flowInducedFitRefinementInput,
+            inducedFitDockingInput,
         ]
     )
 
@@ -394,8 +420,11 @@ def inducedFitRefinement(block: SlurmBlock):  # pylint: disable=missing-function
 
     print(f"Created simulation folder in the remote at {simRemoteDir}")
     print("Sending data to the remote...")
-    # Send the complex data to the remote
-    block.remote.sendData(complexDataValue, os.path.join(simRemoteDir, complexDataValue))
+    # Send the system data to the remote
+    block.remote.sendData(systemDataValue, os.path.join(simRemoteDir, systemDataFilename))
+
+    # Send the ligand data to the remote
+    block.remote.sendData(ligandDataValue, os.path.join(simRemoteDir, ligandDataValue))
 
     # Send the input YAML to the remote
     block.remote.sendData(f"{name}.yaml", os.path.join(simRemoteDir, f"{name}.yaml"))
@@ -415,20 +444,15 @@ def inducedFitRefinement(block: SlurmBlock):  # pylint: disable=missing-function
     # Run the simulation
     jobID = block.remote.submitJob(scriptPath)
 
-    # # Get the job ID
-    # jobID = out.split(" ")[-1].strip()
-
-    print(f"Simulation running with job ID {jobID}")
-
-    # Get the results
-    block.setOutput("path", simRemoteDir)
+    print(f"Simulation running with job ID {jobID}. Waiting for it to finish...")
 
 
+# Block's final action
 def finalAction(block: SlurmBlock):  # pylint: disable=missing-function-docstring
-    name = block.variables.get("simulation_name", "ifr")
+    name = block.variables.get("simulation_name", "ifd")
     simRemoteDir = os.path.join(block.remote.workDir, name)
 
-    print("IFR calculation finished, downloading results...")
+    print("IFD calculation finished, downloading results...")
 
     destPath = os.path.join(os.getcwd(), name)
 
@@ -451,15 +475,15 @@ def finalAction(block: SlurmBlock):  # pylint: disable=missing-function-docstrin
 
 
 # Define the block
-inducedFitRefinementBlock = SlurmBlock(
-    name="Induced fit refinement",
-    description="Perform an induced fit refinement simulation over an already docked complex.",
-    initialAction=inducedFitRefinement,
+inducedFitDockingBlock = SlurmBlock(
+    name="Induced fit docking",
+    description="Perform an induced fit docking simulation",
+    initialAction=initialInducedFitDocking,
     finalAction=finalAction,
     variables=[
         openResultsOnFinish,
-        nameIFR,
-        cpusIFR,
+        nameIFD,
+        cpusIFD,
         verbosity,
         staticName,
         checkTopology,
@@ -474,18 +498,15 @@ inducedFitRefinementBlock = SlurmBlock(
         chainIDsToDrop,
         fixSystems,
         fixLigands,
-        peleFFIFR,
-        peleStepsIFR,
-        epochsIFR,
-        flexibleRegionRadiusIFR,
-        frozenRegionRadiusIFR,
+        peleFFIFD,
+        peleStepsIFD,
+        epochsIFD,
+        flexibleRegionRadiusIFD,
+        frozenRegionRadiusIFD,
+        rdockIterations,
         sideChainPredictionResolution,
         ligandResolution,
     ],
-    inputGroups=[
-        complexDataStructureGroup,
-        complexDataFileGroup,
-        complexDataFolderGroup,
-    ],
-    outputs=[outputIFR],
+    inputGroups=[ligandSmiGroup, ligandFileGroup, ligandFolderGroup],
+    outputs=[outputIFD],
 )

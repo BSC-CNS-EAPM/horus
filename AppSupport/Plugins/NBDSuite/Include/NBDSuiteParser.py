@@ -369,7 +369,7 @@ class NBDSuiteParser:
             conf = json.load(f)
 
         # Get the topology path
-        topology = conf["generalParams"]["initialStructures"][0]
+        topology: str = conf["generalParams"]["initialStructures"][0]
 
         filename = f"{cluster}_{step}.pdb"
 
@@ -390,18 +390,22 @@ class NBDSuiteParser:
         xtc_path = os.path.join(current_path, "..", xtc_path)
         ##########################################################
 
+        # For the topology we need to find the pele_energy_minimizer folder
+        topology = os.path.join(
+            self.path, self.getInputSimulationName(), "/".join(topology.split("/")[-3:])
+        )
+
         # Using the NBDSuite, extract the pdb file
         import nbdsuite.utils.helpers.common.xtc as xtc  # type: ignore
 
         try:
             xtc.extract_snapshot_from_xtc(xtc_path, tmp_pdb.path, topology, step)
-        except Exception as e:
-            import traceback
+        except Exception as exc:
+            raise Exception(
+                f"Error while extracting the PDB file from the trajectory: {str(exc)}"
+            ) from exc
 
-            print(traceback.format_exc())
-            raise Exception(f"Error while extracting the pdb file from the trajectory: {e}")
-
-        return tmp_pdb.path, filename
+        return filename, tmp_pdb
 
     def getPDB(self, data: dict[str, t.Any]):
         """
@@ -421,9 +425,11 @@ class NBDSuiteParser:
             step = data["step"]
 
             # Find the PDB from the trajectory
-            filename, filepath = self._getPDBFromTrajectory(
+            filename, tmp_pdb = self._getPDBFromTrajectory(
                 selectedComplex, trajectoryPath=trajectory, step=step
             )
+
+            filepath = tmp_pdb.path
 
         # Untruncate the pdbFile with the NBDSuite
         untruncatedPath = self.untruncatePDB(filepath)
