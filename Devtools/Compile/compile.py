@@ -81,9 +81,10 @@ ext_modules = [
         include_package_data=True,  # type: ignore
     ),
     # Compile the HorusAPI
-    Extension("HorusAPI.src.plugins", ["HorusAPI/src/plugins.py"]),
-    Extension("HorusAPI.src.molstar", ["HorusAPI/src/molstar.py"]),
-    Extension("HorusAPI.src.utils", ["HorusAPI/src/utils.py"]),
+    Extension("HorusAPI.plugins", ["HorusAPI/src/plugins.py"]),
+    Extension("HorusAPI.molstar", ["HorusAPI/src/molstar.py"]),
+    Extension("HorusAPI.extensions", ["HorusAPI/src/extensions.py"]),
+    Extension("HorusAPI.utils", ["HorusAPI/src/utils.py"]),
     Extension(
         "HorusAPI.__init__",
         ["HorusAPI/src/__init__.py"],

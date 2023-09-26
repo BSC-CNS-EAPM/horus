@@ -1,5 +1,5 @@
 # Export the HorusAPI plugins
-from HorusAPI.src.plugins import (
+from .plugins import (
     Plugin,
     PluginBlock,
     InputBlock,
@@ -13,14 +13,14 @@ from HorusAPI.src.plugins import (
 )
 
 # Export the Molstar API
-from HorusAPI.src.molstar import MolstarAPI
+from .molstar import MolstarAPI
 
 # Export the extensions API
-from HorusAPI.src.extensions import Extensions
+from .extensions import Extensions
 
 # Export the utility SingletonMeta class
-from HorusAPI.src.utils import SingletonMeta as HorusSingleton
-from HorusAPI.src.utils import TempFile
+from .utils import SingletonMeta as HorusSingleton
+from .utils import TempFile
 
 # Set the exported modules
 __all__ = [
