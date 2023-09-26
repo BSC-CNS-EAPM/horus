@@ -64,9 +64,7 @@ def test_plugins_deps_dir_creation(mocker):
 
     # Mock os.path and sys._MEIPASS
     mocker.patch("os.path.join", side_effect=lambda *args: "/".join(args))
-    mocker.patch(
-        "os.path.exists", side_effect=lambda x: False
-    )  # Mock directory not existing
+    mocker.patch("os.path.exists", side_effect=lambda x: False)  # Mock directory not existing
     mocker.patch("os.mkdir")  # Mock the os.mkdir function
 
     # Call the _pluginsDepsDir method
@@ -110,6 +108,8 @@ def test_install_plugin_success(mocker):
     # Call the _installPlugin method
     plugin_path = "/path/to/my_plugin.hp"
     pluginManager.pluginsDir = "/path/to/plugins"
+    # Mock the os.listdir function to return a list of files
+    mocker.patch("os.listdir", return_value=["file1", "file2"])
     pluginManager._installPlugin(plugin_path)
 
     loadedPlugin = pluginManager._loadPlugin(plugin_path)
