@@ -130,6 +130,10 @@ class NBDSuiteData {
       complex: complex,
     });
 
+    if (complex === "") {
+      return;
+    }
+
     // The POST request header
     const header = {
       "Content-Type": "application/json",
@@ -210,14 +214,19 @@ class NBDSuiteData {
     const data = await request.json();
 
     if (!data.ok) {
-      throw new Error("Error getting input PDB");
+      alert(`Error getting input PDB: ${data.msg}`);
+      return;
     }
 
-    const pdb = data.data.pdb;
-    const name = data.data.name;
+    // Get the pdb data (pdb and name) form the data list
 
-    // Retrive the molstar object from the window
-    window.parent.molstar?.loadPDBString(pdb, name);
+    for (const d of data.data) {
+      const pdb = d.pdb;
+      const name = d.name;
+
+      // Retrive the molstar object from the window
+      window.parent.molstar?.loadPDBString(pdb, name);
+    }
   }
 
   /**
@@ -225,7 +234,7 @@ class NBDSuiteData {
    * @returns {string}
    * @memberof NBDSuiteData
    **/
-  getPlot(xAxis: string, yAxis: string) {
+  async getPlot(xAxis: string, yAxis: string, complex: string) {
     const clusterColors = {
       A: "#636EFA",
       B: "#EF553B",
@@ -234,6 +243,8 @@ class NBDSuiteData {
       E: "#FFA15A",
       Other: "#909091",
     };
+
+    await this.getPlotData(complex);
 
     const dToP: Array<any> = [];
     const legendEntries: any = {};
@@ -381,6 +392,10 @@ class NBDSuiteData {
     // Check the response data
     if (!data.ok) {
       alert(data.msg);
+    }
+
+    if (!data.data.couldUntruncate) {
+      alert("WARNING: Could not untruncate the pdb file");
     }
 
     // Get the pdb data (pdb and name)
