@@ -125,6 +125,8 @@ function PELEPlot(props: PELEPlotProps) {
 
   const [axisOptions, setAxisOptions] = useState<Array<string>>([]);
 
+  const [selectedComplex, setSelectedComplex] = useState("");
+
   useEffect(() => {
     const options = nbdData.axisOptions();
 
@@ -134,15 +136,15 @@ function PELEPlot(props: PELEPlotProps) {
     setYAxis(options[1]);
   }, []);
 
-  function dataToPlot() {
-    setData(nbdData.getPlot(xAxis, yAxis));
-
+  async function dataToPlot() {
+    const newData = await nbdData.getPlot(xAxis, yAxis, selectedComplex);
+    setData(newData);
     // setLegendData(legendData);
   }
 
   useEffect(() => {
     dataToPlot();
-  }, [xAxis, yAxis]);
+  }, [xAxis, yAxis, selectedComplex]);
 
   const updateXAxis = (e: any) => {
     setXAxis(e.target.value);
@@ -168,10 +170,15 @@ function PELEPlot(props: PELEPlotProps) {
     </select>
   );
 
+  const updateSelectedComplex = (e: any) => {
+    setSelectedComplex(e.target.value);
+    props.updateSelectedComplex(e);
+  };
+
   const complexesView = (
-    <select key={"complex-select"}>
+    <select key={"complex-select"} onChange={updateSelectedComplex}>
       {nbdData.complexes.map((c: any) => {
-        return <option onChange={props.updateSelectedComplex}>{c}</option>;
+        return <option>{c}</option>;
       })}
     </select>
   );
@@ -301,6 +308,13 @@ function PELETable(props: PELETableProps) {
       loadDataTable();
     }
   }, []);
+
+  useEffect(() => {
+    // Wait 0.5s for the table to load
+    setTimeout(() => {
+      loadDataTable();
+    }, 500);
+  }, [nbdData.selectedComplex]);
 
   // Merge the extra data into the rowData
   useEffect(() => {

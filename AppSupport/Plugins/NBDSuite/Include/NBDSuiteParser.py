@@ -260,22 +260,38 @@ class NBDSuiteParser:
         """
 
         # Get the path to the input PDB file
-        inputPDBName = self.input["system_data"]
+        inputPDBName = self.input.get("system_data", None)
 
-        inputPDB = os.path.join(self.path, inputPDBName)
+        if inputPDBName is None:
+            # Try with complex_data
+            inputPDBName = self.input.get("complex_data", None)
 
-        # Read the input PDB file
-        with open(inputPDB, "r") as f:
-            inputPDB = f.read()
+        if inputPDBName is None:
+            raise Exception("No input PDB file found in the input.yaml file")
 
-        data = {"pdb": inputPDB, "name": inputPDBName}
+        if not isinstance(inputPDBName, list):
+            inputPDBName = [inputPDBName]
+
+        data = []
+        for iPdb in inputPDBName:
+            inputPDB = os.path.join(self.path, iPdb)
+
+            # Read the input PDB file
+            with open(inputPDB, "r", encoding="utf-8") as file:
+                inputPDB = file.read()
+
+            currentPDB = {"pdb": inputPDB, "name": inputPDBName}
+            data.append(currentPDB)
 
         return data
 
-    def untruncatePDB(self, truncatedPDBPath: str):
+    def untruncatePDB(self, truncatedPDBPath: str, selectedComplex: str):
         """
         Reads and sends the untruncated PDB file to the frontend.
         """
+
+        # Get the complex ID
+        complexID = selectedComplex.split("_")[-1]
 
         # Get the topology_truncator folder
         tpTruncatorDir = self._getLastFolder(self.simulationPath, "_topology_truncator")
@@ -286,7 +302,11 @@ class NBDSuiteParser:
         # Load the csv as a pandas dataframe
         df = pd.read_csv(truncatorcsv)
 
-        original_complex = df["original_conformation"][0]
+        # To find the original complex, we need to find the row that has
+        # "truncated_complex_ref_id" equal to complexID
+        rowIndex = df.index[df["truncated_complex_ref_id"] == int(complexID)][0]
+
+        original_complex = df["original_conformation"][rowIndex]
 
         pdb_name = original_complex.split("/")[-1]
 
@@ -294,16 +314,12 @@ class NBDSuiteParser:
 
         topolgy_merger_path = self._getLastFolder(self.simulationPath, "_topology_merger")
 
-        originalComplexPath = os.path.join(
-            self.simulationPath, topolgy_merger_path, original_complex_filename
-        )
+        originalComplexPath = os.path.join(self.simulationPath, original_complex)
 
         # Add between the pdb name and the extension the "_ligand" string
         ligandFilename = pdb_name.split(".")[0] + "_ligand.pdb"
 
-        ligandPath = os.path.join(
-            self.simulationPath, topolgy_merger_path, "complexes", ligandFilename
-        )
+        ligandPath = os.path.join(os.path.split(originalComplexPath)[0], ligandFilename)
 
         from nbdsuite.utils.helpers.common import PDB  # type: ignore
 
@@ -431,17 +447,27 @@ class NBDSuiteParser:
 
             filepath = tmp_pdb.path
 
-        # Untruncate the pdbFile with the NBDSuite
-        untruncatedPath = self.untruncatePDB(filepath)
+        couldUntruncate = False
+        try:
+            # Untruncate the pdbFile with the NBDSuite
+            untruncatedPath = self.untruncatePDB(filepath, selectedComplex)
 
-        # Read the untruncated_path and store the pdb in a string
-        with open(untruncatedPath, "r") as f:
-            pdb = f.read()
+            # Read the untruncated_path and store the pdb in a string
+            with open(untruncatedPath, "r", encoding="utf-8") as file:
+                pdb = file.read()
 
-        # Remove the untruncated file
-        os.remove(untruncatedPath)
+            # Remove the untruncated file
+            os.remove(untruncatedPath)
+            couldUntruncate = True
+        except Exception:
+            # Read the filepath and store the pdb in a string
+            with open(filepath, "r", encoding="utf-8") as file:
+                pdb = file.read()
 
-        data = {"pdb": pdb, "name": filename}
+        if pdb is None or pdb == "":
+            raise Exception("Empty PDB")
+
+        data = {"pdb": pdb, "name": filename, "couldUntruncate": couldUntruncate}
 
         # Return the pdb
         return data
