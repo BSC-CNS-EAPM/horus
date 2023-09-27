@@ -455,7 +455,6 @@ class PluginManager:
             interpreter = str(
                 AppDelegate().server.settingsManager.getSetting("dependenciesInterpreter").value
             )
-
         except Exception as e:
             msg = f"Could not get the python interpreter from the user settings: {e}"
             msg += "\nDefaulting to system python interpreter."
@@ -477,9 +476,15 @@ class PluginManager:
             # Get the result
             if p.stdout is None:
                 raise Exception("Could not get the intalled python interpreter version.")
+
             version = p.stdout.read().decode("utf-8").strip().split(" ")[-1]
 
-            appPythonVersion = AppDelegate().APP_INFO["PYTHON_VERSION"]
+            try:
+                appPythonVersion = AppDelegate().APP_INFO["PYTHON_VERSION"]
+            except Exception as exc:
+                raise Exception(
+                    f"Could not get the python version from the app info: {exc}"
+                ) from exc
 
             exceptionMsg = (
                 "In order to install additional dependencies, "
@@ -751,6 +756,7 @@ class PluginManager:
             "html": f"{p._path}/Pages/{pg.html}",
             "url": f"/plugins/pages/{pg.id}",
             "deps": os.path.join(p._path, "deps"),
+            "pluginDir": p._path,
         }
 
     def getPagesObject(self):

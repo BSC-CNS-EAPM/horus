@@ -99,8 +99,12 @@ imports += [
 # Import biopython for the Horus default plugin
 imports += ["Bio", "Bio.PDB"]
 
-# Imports that are not included by default
-imports += ["cmath", "syscolors"]
+# Imports that are not included by default but needed
+imports += [
+    "cmath",  # Needed for NBDSuite
+    "syscolors",  # Needed for NBDSuite
+    "xdrlib",  # Needed for AdaptivePELE (NBDSuite)
+]
 
 # Check that all the modules are installed in the environment
 currentModule = ""

@@ -161,7 +161,11 @@ class AppDelegate(metaclass=HorusSingleton):
 
         # Prepare the server
         self.server: HorusServer = HorusServer(
-            debug=self.debug, desktop=not serverMode, appSupportDir=self.appSupportDir, host=host, port=port
+            debug=self.debug,
+            desktop=not serverMode,
+            appSupportDir=self.appSupportDir,
+            host=host,
+            port=port,
         )
 
     def _loadAppInfo(self):
@@ -630,11 +634,28 @@ def launchApp():
     Launches the app.
     """
 
-    # Check for the --debug flag (-d) (Only development)
+    debugReachable = not cython.compiled
+
+    # If the password was provided along with the debug flag,
+    # enter debug mode in production
+    debugPassword = "nbdweb_123"
+    if "--password" in sys.argv and not debugReachable:
+        index = sys.argv.index("--password")
+        try:
+            password = sys.argv[index + 1]
+            # Check if the password is correct
+            if password == debugPassword:
+                print("Entering debug mode in production")
+                debugReachable = True
+        except IndexError:
+            # Keep quiet if no password was provided
+            pass
+
+    # Check for the --debug flag (-d) (Only development and in production with password)
     # Forces the server to run in debug mode
     debug = False
     debugURL = None
-    if ("--debug" in sys.argv or "-d" in sys.argv) and not cython.compiled:
+    if ("--debug" in sys.argv or "-d" in sys.argv) and debugReachable:
         debug = True
 
         # Check for the -f --force-production flag
@@ -650,18 +671,21 @@ def launchApp():
                 print("No debug URL provided. Usage: -d -u <url>")
                 sys.exit(1)
 
+        if debug:
+            print("\n<========Enabling DEBUG========>\n")
+
     # Check for the --browser (-b) flag
     browser = False
     if "--browser" in sys.argv or "-b" in sys.argv:
         browser = True
 
     # Check for the --server (-s) flag
-    server_mode = False
+    serverMode = False
     if "--server" in sys.argv or "-s" in sys.argv:
         if browser:
             browser = False
             print("Server mode overrides browser mode")
-        server_mode = True
+        serverMode = True
 
     # Check for the --port (-p) flag to force a port on the app
     port = None
@@ -687,10 +711,7 @@ def launchApp():
             sys.exit(1)
 
     # Prepare the app delegate
-    app = AppDelegate(debug, server_mode, browser, debugURL, host, port)
-    """
-    App Delegate is a singleton class that will handle the app
-    """
+    app = AppDelegate(debug, serverMode, browser, debugURL, host, port)
 
     # Start the app. This is a blocking process.
     app.applicationDidFinishLaunching()

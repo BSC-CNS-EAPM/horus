@@ -115,11 +115,20 @@ class HorusServer:
         self._favicons()
 
         # Setup SocketIO
-        self.socketio = SocketIO(
-            self.server,
-            cors_allowed_origins="*" if self.debug else self.baseURL,
-            async_mode="threading" if self.debug else "eventlet",
-        )
+        try:
+            self.socketio = SocketIO(
+                self.server,
+                cors_allowed_origins="*" if self.debug else self.baseURL,
+                async_mode="threading" if self.debug else "eventlet",
+            )
+        except ValueError as valerr:
+            print(f"WARNING: Could not start socketio server: {valerr}. Forcing eventlet")
+            self.socketio = SocketIO(
+                self.server,
+                cors_allowed_origins="*" if self.debug else self.baseURL,
+                async_mode="eventlet",
+            )
+
         self._socketIORoutes()
 
         # Load the plugins pages
@@ -904,9 +913,13 @@ class HorusServer:
         def viewFunctionWrapper(func, page, endPoint):
             @wraps(func)
             def wrapper(*args, **kwargs):
-                sys.path.append(page._pageInfo["deps"])  # pylint: disable=protected-access
+                self.pluginManager._includeDepsPath(  # pylint: disable=protected-access
+                    page._pageInfo["pluginDir"]  # pylint: disable=protected-access
+                )
                 result = endPoint.function(*args, **kwargs)
-                sys.path.remove(page._pageInfo["deps"])  # pylint: disable=protected-access
+                self.pluginManager._removeDepsPath(  # pylint: disable=protected-access
+                    page._pageInfo["pluginDir"]  # pylint: disable=protected-access
+                )
                 return result
 
             return wrapper
