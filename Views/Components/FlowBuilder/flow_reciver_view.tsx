@@ -380,6 +380,14 @@ function FlowReciver(props: FlowReciverProps) {
           (b) => b.placedID === varConnected.destination.placedID
         );
 
+        if (!realBlock) {
+          // console.log(
+          //   "Error deleting variables: realBlock not found. Searched for ID: ",
+          //   varConnected.destination.placedID
+          // );
+          continue;
+        }
+
         // Remove from the real block the variable connection
         realBlock.variableConnections = realBlock.variableConnections.filter(
           (v) => v.origin.placedID !== block.placedID
@@ -609,8 +617,10 @@ function FlowReciver(props: FlowReciverProps) {
     resetHistory();
     handlingNew.current = false;
 
-    // Clear the terminal
-    window.horusTerm.ref.current?.clearStdout();
+    // Clear the terminal if present
+    if (window.horusTerm.ref && window.horusTerm.ref.current) {
+      window.horusTerm.ref.current.clearStdout();
+    }
     window.horusTerm.storedMessages = [];
   };
 
