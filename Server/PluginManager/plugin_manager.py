@@ -751,6 +751,7 @@ class PluginManager:
             "html": f"{p._path}/Pages/{pg.html}",
             "url": f"/plugins/pages/{pg.id}",
             "deps": os.path.join(p._path, "deps"),
+            "pluginDir": p._path,
         }
 
     def getPagesObject(self):
