@@ -2,10 +2,12 @@
 #SBATCH -J multiplatform-horus-build
 #SBATCH --output=horus-build.%j.out
 #SBATCH --error=horus-build.%j.out
-#SBATCH --ntasks=8
+#SBATCH --ntasks=4
 #SBATCH --mem-per-cpu=1000
 #SBATCH --nodes=1
 #SBATCH --time=01:00:00
+#SBATCH --qos=short
+#SBATCH --partition=short
 
 # Build singularity images
 echo "Building Rocky Linux 8 image..."
