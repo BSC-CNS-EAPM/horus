@@ -8,6 +8,8 @@ import os
 import threading
 import subprocess
 import webbrowser
+import logging
+import datetime
 
 # Import type annotations
 import typing
@@ -28,6 +30,127 @@ from HorusAPI import HorusSingleton
 
 # Add to the pythonpath the path of the project
 sys.path.append("../")
+
+
+class HorusLogger:
+    """
+    Logger for the app in production mode
+    """
+
+    horus: logging.Logger
+    """
+    The main logger for the app
+    """
+
+    capturer: logging.Logger
+    """
+    The logger for stdout and stderr
+    """
+
+    root: logging.Logger
+    """
+    The root logger
+    """
+
+    def __init__(self, appSupportDir: str) -> None:
+        # Define the logs folder
+        self.logDir = os.path.join(appSupportDir, "logs")
+
+        # Create the logs folder if it doesn't exist
+        if not os.path.exists(self.logDir):
+            os.mkdir(self.logDir)
+
+        # Clean the logs folder
+        self._cleanLogs()
+
+        # Init the logger
+        self._initLogger()
+
+    def _cleanLogs(self):
+        """
+        Clean the oldes logs if there are more than 5
+        """
+        # If there are more than 5 logs inside the logs folder,
+        # delete the oldest one
+        logs = os.listdir(self.logDir)
+        if len(logs) > 5:
+            logs = [os.path.join(self.logDir, log) for log in logs]
+            oldestLog = min(logs, key=os.path.getctime)
+            os.remove(os.path.join(self.logDir, oldestLog))
+
+    def _initLogger(self):
+        """
+        Init a new logger
+        """
+
+        # Horus logger
+        self.horus = logging.getLogger("Horus")
+        self.horus.setLevel(logging.NOTSET)
+
+        # Create new logger for stdout and stderr
+        self.capturer = logging.getLogger("Capturer")
+        self.capturer.setLevel(logging.NOTSET)
+
+        # Start a new log
+        date = datetime.datetime.now().strftime("%Y-%m-%d %H-%M-%S")
+        logFile = os.path.join(self.logDir, f"{date}.log")
+
+        # Create the file handler
+        fh = logging.FileHandler(logFile)  # pylint: disable=invalid-name
+        fh.setLevel(logging.NOTSET)
+
+        # Create formatter and add it to the file handler
+        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        fh.setFormatter(formatter)
+
+        # Add the handler to the root logger
+        self.root = logging.getLogger()
+        self.root.setLevel(logging.NOTSET)
+        self.root.addHandler(fh)
+
+        # Store the old stdout and stderr
+        oldStdout = sys.stdout
+        oldStderr = sys.stderr
+
+        class FakeWriter:
+            """
+            Fake writer class
+            """
+
+            def __init__(self, level: int, capturer: logging.Logger, oldStdOutErr) -> None:
+                self.level = level
+                """
+                The level of the fake writer
+                """
+
+                self.capturer = capturer
+                """
+                The STDOUT and STDERR capturer
+                """
+
+                self.oldStdOutErr = oldStdOutErr
+                """
+                The old STDOUT and STDERR to print to
+                """
+
+            def write(self, message):
+                """
+                Hook into the default stdout and stderr class
+                """
+                for line in message.rstrip().splitlines():
+                    self.capturer.log(self.level, line.rstrip())
+                    if self.level < logging.WARNING:
+                        self.oldStdOutErr.write(f"{line}\n")
+
+            def flush(self):
+                """
+                Hook the flush method
+                """
+                pass
+
+        # Set as the new stdout and stderr the capturer
+        sys.stdout = FakeWriter(logging.INFO, self.capturer, oldStdout)
+        sys.stderr = FakeWriter(logging.ERROR, self.capturer, oldStderr)
 
 
 class WindowOptions:
@@ -135,6 +258,11 @@ class AppDelegate(metaclass=HorusSingleton):
     The separate thread where the server runs
     """
 
+    logger: HorusLogger
+    """
+    The Horus logger
+    """
+
     def __init__(
         self,
         debug: bool = False,
@@ -167,6 +295,31 @@ class AppDelegate(metaclass=HorusSingleton):
             host=host,
             port=port,
         )
+
+        # Start the logger if needed
+        self._loadLogger()
+
+    def _loadLogger(self):
+        """
+        Starts a logger in production mode
+        """
+
+        # We don't need a logger in debug mode, as everything is printed to the console
+        if self.debug:
+            return
+
+        self.logger = HorusLogger(self.appSupportDir)
+
+        # Log the date and app info
+        self.logger.horus.info("Starting Horus %s", self.APP_INFO["APP_VERSION"])
+        self.logger.horus.info("Platform: %s", self.platform)
+        self.logger.horus.info("Debug: %s", self.debug)
+        self.logger.horus.info("Server Mode: %s", self.serverMode)
+        self.logger.horus.info("Browser Mode: %s", self.browser)
+        self.logger.horus.info("Debug URL: %s", self.debugURL)
+        self.logger.horus.info("Host: %s", self.server.host)
+        self.logger.horus.info("Port: %s", self.server.port)
+        self.logger.horus.info("AppSupport Dir: %s", self.appSupportDir)
 
     def _loadAppInfo(self):
         """

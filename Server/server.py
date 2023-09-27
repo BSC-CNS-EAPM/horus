@@ -7,6 +7,7 @@ The HorusServer module
 import os
 import sys
 import hashlib
+import logging
 
 # Decorators
 from functools import wraps
@@ -34,7 +35,7 @@ import webview
 from HorusAPI import TempFile
 
 # Flow manager
-from Server.FlowManager import FlowManager, Flow, OverwriteException
+from Server.FlowManager import FlowManager, OverwriteException
 
 # Settings manager
 from Server.SettingsManager import SettingsManager
@@ -275,17 +276,6 @@ class HorusServer:
 
             return wrapper
 
-        # Setup the error page
-        @self.server.errorhandler(404)
-        def pageNotFound(error):
-            return flask.render_template("Error/error.html", errormsg=str(error))
-
-        # Setup a template not found error
-
-        @self.server.route("/error")
-        def error():
-            return flask.render_template("Error/error.html")
-
         @self.server.route("/saveflow", methods=["POST"])
         @verifyToken
         def createFlow():
@@ -480,7 +470,7 @@ class HorusServer:
                 except KeyError as keye:
                     raise Exception(  # pylint: disable=broad-exception-raised
                         f"Missing key: {keye} in executeBlock request."
-                    )
+                    ) from keye
 
                 resetRemote = data.get("resetRemote", False)
                 outputs = self.pluginManager.executeBlock(
@@ -1001,7 +991,34 @@ class HorusServer:
         def templateNotFoundHandler(error):
             errorMSG = f"View not found: {error}"
 
+            horusLogger = logging.getLogger("Horus")
+            horusLogger.error(errorMSG)
+
             return flask.render_template("Error/error.html", errormsg=str(errorMSG))
+
+        # Setup the 404 page
+        @self.server.errorhandler(404)
+        def pageNotFound(error):
+            horusLogger = logging.getLogger("Horus")
+            horusLogger.error(f"{error}. {str(request)}")
+
+            return flask.render_template("Error/error.html", errormsg=str(error))
+
+        # Setup a template not found error
+        @self.server.route("/error")
+        def error():
+            horusLogger = logging.getLogger("Horus")
+            horusLogger.error("Error page requested")
+
+            return flask.render_template("Error/error.html")
+
+        # For extreme cases, setup a broad exception handler
+        @self.server.errorhandler(Exception)
+        def exceptionHandler(error):
+            horusLogger = logging.getLogger("Horus")
+            horusLogger.critical(f"{error}. {str(request)}")
+
+            return flask.render_template("Error/error.html", errormsg=str(error))
 
     def _favicons(self):
         @self.server.route("/favicon.ico")
