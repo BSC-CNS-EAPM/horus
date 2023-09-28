@@ -2,7 +2,7 @@
 RemoteAPI
 *********
 
-In order to manage the remote to which the user is connected to, you can use, withing the :bdg-secondary-line:`Block` execution, the :bdg-secondary-line:`RemoteAPI`.
+In order to manage the remote to which the user is connected to, you can use, within the :bdg-secondary-line:`Block` execution, the :bdg-secondary-line:`RemoteAPI`.
 The API is automatically instantiated and assigned to the current running block. Therefore, within the :bdg-secondary-line:`Block` action function,
 you can access it under 'block.remote'.
 

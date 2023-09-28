@@ -18,7 +18,7 @@ MolstarAPI
 ==========
 
 MolstarAPI is a library for creating and manipulating molecular structures in the embedded Mol* visualizer inside Horus.
-It is designed to be used withing :bdg-secondary-line:`Blocks` in order to add, visualize or edit
+It is designed to be used within :bdg-secondary-line:`Blocks` in order to add, visualize or edit
 molecular structures.
 
 In order to control the molecular visualizer within a :bdg-secondary-line:`Block` action, you need to import the

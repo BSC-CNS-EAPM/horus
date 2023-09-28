@@ -33,7 +33,7 @@ export default function getCommands() {
     },
     sel: {
       description: "Focus a residue.",
-      usage: "focus <residue>",
+      usage: "sel <residueID>",
       fn: (...args) => {
         const [selection, surroundRadius] = args;
         const options = { surroundRadius: parseInt(surroundRadius) };
