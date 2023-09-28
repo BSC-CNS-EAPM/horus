@@ -2,9 +2,11 @@
 Installation
 ************
 
-In order to develop :bdg-secondary-line:`Plugins` for Horus, you will need to
+In order to develop :bdg-secondary-line:`Plugins` for Horus, you should
 install the HorusAPI package in your python environment. This package contains the necessary
-classes and functions to interact with the Horus app.
+classes and functions to interact with the Horus app. The installation of the package is not mandatory, as the
+plugins will run inside Horus, not your virtual environment. The main attractive of installing the :bdg-secondary-line:`HorusAPI` is to be able to
+develop the plugins with type hints and code completion.
 
 Main installation
 =================

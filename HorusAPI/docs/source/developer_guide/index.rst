@@ -13,7 +13,7 @@ include PDB preparation, folder structure creation, submission of jobs to a clus
 An index of all the :bdg-secondary-line:`Blocks` that Horus implements by default can be found in the section
 :ref:`default-blocks` section.
 
-:bdg-secondary-line:`Blocks` can be connected to each other throught :bdg-secondary-line:`Variables` and are menat to be run in a :bdg-secondary-line:`Flow`. 
+:bdg-secondary-line:`Blocks` can be connected to each other throught :bdg-secondary-line:`Variables` and are meant to be run in a :bdg-secondary-line:`Flow`. 
 Any block can be run as a standalone task, but the real power of Horus comes from the ability to chain blocks together in a :bdg-secondary-line:`Flow`.
 
 .. image:: images/docking_flow.png
@@ -23,7 +23,7 @@ Any block can be run as a standalone task, but the real power of Horus comes fro
 
 In addition to :bdg-secondary-line:`Flows`, |Product| also has a feature
 called :bdg-secondary-line:`Extensions`, which allows developers to build custom views to represent any data using standard web technologies such as HTML, CSS and Javascript.
-For example, the NBDSuite extension comes with a wide variety of extensions that allow users to visualize and analyze the results of their simulations.
+For example, the NBDSuite plugin comes with a wide variety of extensions that allow users to visualize and analyze the results of their simulations.
 
 Usage
 =====
