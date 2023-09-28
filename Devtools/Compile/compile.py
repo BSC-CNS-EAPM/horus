@@ -94,11 +94,10 @@ ext_modules = [
 
 setup(
     name="Horus",
-    cmdclass={"build_ext": build_ext},  # type: ignore
+    cmdclass={"build_ext": build_ext},
     ext_modules=ext_modules,  # type: ignore
     # Set the build dir to be build/cython
     script_args=["build_ext", "-b", "build/cython"],
-    # Disable the -lpthread flag
 )
 
 print("Deleting generated .c files")

@@ -49,13 +49,15 @@ sys.path.append(currentDir)
 import HorusAPI
 
 version = HorusAPI.__version__
-long_version = HorusAPI._version.long_version
 
-if "release" not in long_version:
-    branch = long_version.split("-")[1:]
-    branch = "-".join(branch)
+if "release" not in version:
+    real_version = version.split("-")[0]
+    branch = "-".join(version.split("-")[1:])
     # Add the branch name to the version with .dev
-    version += f".dev0+{branch}"
+    version = f"{real_version}.dev0+{branch}"
+else:
+    # Remove the "release" word from the version
+    version = version.split("-")[0]
 
 APP_INFO["APP_VERSION"] = version
 

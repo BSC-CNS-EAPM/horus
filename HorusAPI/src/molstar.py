@@ -1,9 +1,8 @@
-from flask_socketio import SocketIO
 from .utils import SingletonMeta
 
 
 class MolstarAPI(metaclass=SingletonMeta):
-    def __init__(self, socketio: SocketIO = SocketIO()) -> None:
+    def __init__(self, socketio) -> None:
         self.socketio = socketio
 
     def addPDB(self, pdb: str, label: str = "PDB") -> None:

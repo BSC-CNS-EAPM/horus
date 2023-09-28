@@ -28,4 +28,4 @@ def get_git_version():
 # Get version from git tag or branch name
 branch, version = get_git_version()
 
-long_version = f"{version}-{branch}"
+version = f"{version}-{branch}"
