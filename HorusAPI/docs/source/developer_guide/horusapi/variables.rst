@@ -105,4 +105,12 @@ these two different types of inputs:
         ],
     )
 
-The :bdg-secondary-line:`VariableGroup` class has to be then assigned to the inputGroup parameter of a :bdg-secondary-line:`Block`.
+The :bdg-secondary-line:`VariableGroup` class has then to be assigned to the inputGroup parameter of a :bdg-secondary-line:`Block`.
+
+When running a :bdg-secondary-line:`Block` action, the selected group can be accessed using the :bdg-secondary-line:`selectedInputGroup` property of the :bdg-secondary-line:`Block` class:
+
+.. code-block:: python
+
+    def blockAction(block: SlurmBlock):
+        
+        selectedGroup = block.selectedInputGroup # Either "ligandFileInput" or "ligandSelectionInput" in our example
