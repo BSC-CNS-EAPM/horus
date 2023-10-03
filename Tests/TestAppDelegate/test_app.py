@@ -20,10 +20,7 @@ def test_AppDelegate_startup(appDelegate_default: AppDelegate):
     # Check app info
     assert appDelegate_default.APP_INFO != {}
     assert appDelegate_default.APP_INFO["NAME"] == "Horus"
-    assert (
-        appDelegate_default.APP_INFO["BUNDLE_IDENTIFIER"]
-        == "com.nostrumbiodiscovery.horus"
-    )
+    assert appDelegate_default.APP_INFO["BUNDLE_IDENTIFIER"] == "com.nostrumbiodiscovery.horus"
     assert appDelegate_default.APP_INFO["PYTHON_VERSION"] == "3.9.16"
 
 
@@ -136,11 +133,9 @@ def test_horus_settings_get_setting(horus_settings):
     setting = horus_settings.getSetting("dependenciesInterpreter")
 
     # Check that the setting was returned correctly
-    assert setting.name == "Dependencies python interpreter"
+    assert setting.name == "Python interpreter"
     assert setting.value == "python"
-    assert (
-        setting.description == "Python interpreter to use for dependencies installation"
-    )
+    assert setting.description == "Python interpreter path to use for dependencies installation"
     assert setting.category == "Dependencies"
 
 
@@ -187,7 +182,7 @@ def test_horus_settings_update_setting(horus_settings):
 
     # Update the setting
     setting.name = "new_name"
-    horus_settings.updateSetting(setting)
+    horus_settings._updateSetting(setting)
 
     # Check that the setting was updated correctly
     with open(horus_settings.userSettingsPath, "r") as f:
@@ -196,7 +191,7 @@ def test_horus_settings_update_setting(horus_settings):
     assert user_settings == {
         "dependenciesInterpreter": {
             "name": "new_name",
-            "description": "Python interpreter to use for dependencies installation",
+            "description": "Python interpreter path to use for dependencies installation",
             "category": "Dependencies",
             "value": "python",
         }
