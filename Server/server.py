@@ -1097,8 +1097,8 @@ class HorusServer:
         @self.server.errorhandler(404)
         def pageNotFound(error):
             errorMSG = (
-                "If you are trying to load an extension, "
-                + "make sure you restarted the server after installing it."
+                "If you are trying to load an extension, please"
+                + "make sure to restart the app after installing it."
             )
             horusLogger = logging.getLogger("Horus")
             horusLogger.error("Page not found: %s", str(error))
