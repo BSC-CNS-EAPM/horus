@@ -14,6 +14,7 @@ interface ToolBarItemProps {
   svgPath: React.ReactNode;
   onClick?: () => void;
   keyShortcut?: string;
+  children?: React.ReactNode;
 }
 
 function ToolBarItem(props: ToolBarItemProps) {
@@ -53,6 +54,7 @@ function ToolBarItem(props: ToolBarItemProps) {
     >
       <MenuIcon active={active || isOpen} svgPath={props.svgPath} />
       <div>{props.name}</div>
+      {props.children}
       {props.keyShortcut ? (
         <div className="ml-auto toolbar-item-key-shortcut">
           {props.keyShortcut}
@@ -70,6 +72,7 @@ interface ToolBarMenuProps {
   items?: ToolBarItemProps[];
   link?: string;
   onClick?: () => void;
+  children?: React.ReactNode;
 }
 
 function ToolbarMenu(props: ToolBarMenuProps) {

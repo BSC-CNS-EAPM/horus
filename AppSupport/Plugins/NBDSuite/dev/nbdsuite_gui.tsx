@@ -13,11 +13,13 @@ import HorusMolstar from "../../../../Views/Components/Molstar/HorusWrapper/horu
 // CSS style
 import "./nbdsuite.css";
 
+// Tailwind
+
 import { AgGridReact } from "ag-grid-react"; // the AG Grid React Component
 import "ag-grid-community/styles/ag-grid.css"; // Core grid CSS, always needed
 import "ag-grid-community/styles/ag-theme-alpine.css"; // Optional theme CSS
 
-import { HorusModal } from "../../../../Views/Components/reusable";
+import { HorusFileExplorer } from "../../../../Views/Components/FileExplorer/file_explorer";
 
 declare global {
   interface Window {
@@ -30,62 +32,26 @@ interface OpenFolderProps {
   setOpenedFolder: (value: React.SetStateAction<string>) => void;
 }
 
-function OpenFolder(props: OpenFolderProps) {
-  const openPickFolder = async () => {
-    const request = await horusGet("/openfolder");
-
-    const data = await request.json();
-
-    const folder = data.path;
-
-    props.setOpenedFolder(folder);
-  };
-
-  return (
-    <div>
-      <button onClick={openPickFolder}>Open Folder</button>
-    </div>
-  );
-}
-
 interface OpenInputFileProps {
   setOpenedFile: (value: React.SetStateAction<string>) => void;
 }
 
 function OpenInputFile(props: OpenInputFileProps) {
-  const openPickFile = async () => {
-    const request = await horusGet("/openfile");
-
-    const data = await request.json();
-
-    const file = data.path;
-
-    props.setOpenedFile(file);
-  };
-
   const openFolderIcon = (
-    <div
-      style={{
-        height: "4rem",
-        width: "4rem",
-        marginBottom: "1rem",
-      }}
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.5}
+      stroke="currentColor"
+      className="w-6 h-6"
     >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        strokeWidth={1.5}
-        stroke="currentColor"
-        className="w-6 h-6"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776"
-        />
-      </svg>
-    </div>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776"
+      />
+    </svg>
   );
 
   return (
@@ -100,8 +66,18 @@ function OpenInputFile(props: OpenInputFileProps) {
         height: "100%",
       }}
     >
-      {openFolderIcon}
-      <button onClick={openPickFile}>Open NBDSuite input</button>
+      <HorusFileExplorer
+        onFileConfirm={(file) => {
+          props.setOpenedFile(file);
+        }}
+        onFileSelect={(file) => {}}
+        allowedExtensions={["yaml"]}
+      >
+        <div className="flex flex-row gap-2 justify-center align-center items-center">
+          {openFolderIcon}
+          Open NBDSuite input
+        </div>
+      </HorusFileExplorer>
     </div>
   );
 }

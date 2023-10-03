@@ -10,6 +10,7 @@ import {
 import { horusGet, horusPost } from "../../Utils/utils";
 import NBDButton from "../nbdbutton";
 import { SearchComponent } from "../Toolbar/toolbar";
+import { HorusFileExplorer } from "../FileExplorer/file_explorer";
 
 type PluginVariableViewProps = {
   variable: PluginVariable;
@@ -172,54 +173,25 @@ const PluginVariableView = (props: PluginVariableViewProps) => {
 
         {/* If its a editable string list, set a table with editable rows */}
         {props.variable.type === PluginVariableTypes.LIST && (
-          <ListView
-            variable={props.variable}
-            onChange={handleChange}
-          />
+          <ListView variable={props.variable} onChange={handleChange} />
         )}
 
         {/* If the type is a FILE, set a button which, on the server, 
         will open the server file explorer. On the client, will open the file pickers */}
         {props.variable.type === PluginVariableTypes.FILE && (
-          <button
-            onClick={async () => {
-              const header = {
-                "Content-Type": "application/json",
-                accept: "application/json",
-              };
-
-              const body = JSON.stringify({
-                extensions: props.variable.allowedValues,
-              });
-
-              const request = await horusPost("/openfile", header, body);
-
-              const data = await request.json();
-
-              // If the data.path is a list, store only the first element
-              const path = Array.isArray(data.path) ? data.path[0] : data.path;
-
-              handleChange(path);
-            }}
-          >
-            {props.variable.value || "Select file"}
-          </button>
+          <FilePickerView
+            openFolder={false}
+            variable={props.variable}
+            onChange={handleChange}
+          />
         )}
 
         {props.variable.type === PluginVariableTypes.FOLDER && (
-          <button
-            onClick={async () => {
-              const request = await horusGet("/openfolder");
-
-              const data = await request.json();
-
-              const file = data.path;
-
-              handleChange(file);
-            }}
-          >
-            {props.variable.value || "Select folder"}
-          </button>
+          <FilePickerView
+            openFolder={true}
+            variable={props.variable}
+            onChange={handleChange}
+          />
         )}
 
         {/* If the type is a STRUCTURE, set a dropdown with the Mols* structures */}
@@ -298,6 +270,27 @@ const PluginVariableView = (props: PluginVariableViewProps) => {
     </div>
   );
 };
+
+type FilePickerViewProps = {
+  variable?: PluginVariable;
+  onChange: (value: any) => void;
+  openFolder?: boolean;
+};
+
+function FilePickerView(props: FilePickerViewProps) {
+  const { variable, onChange } = props;
+
+  return (
+    <HorusFileExplorer
+      onFileConfirm={onChange}
+      onFileSelect={onChange}
+      openFolder={props.openFolder}
+      allowedExtensions={variable?.allowedValues}
+    >
+      {variable.value || "Open file explorer..."}
+    </HorusFileExplorer>
+  );
+}
 
 type ListViewProps = {
   variable: PluginVariable;

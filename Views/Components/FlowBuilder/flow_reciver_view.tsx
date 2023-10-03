@@ -12,6 +12,7 @@ import { debounce } from "../reusable";
 import { Block, BlockVarPair } from "./flow_builder_types";
 import FlowExecuter from "./flow_executer";
 import { FlowBuilderController } from "./flow_builder_hooks";
+import { ServerFileExplorerModal } from "../FileExplorer/file_explorer";
 
 // Define the selectedRemote on the window object
 declare global {
@@ -44,7 +45,7 @@ function FlowReciver(props: FlowReciverProps) {
 
   // Saved flow vars
   const savedID = useRef(props.savedID ? props.savedID : "new_flow");
-  const flowPath = useRef(props.flowPath);
+  const flowPath = useRef(props.flowPath || "");
   const { currentSaved, setSaved } = props;
 
   // Executing state
@@ -99,7 +100,7 @@ function FlowReciver(props: FlowReciverProps) {
     const oldFlowPath = flowPath.current;
     savedID.current = "new_flow";
     flowPath.current = "";
-    await handleSave();
+    await preHandleSave();
     if (savedID.current === "new_flow") {
       savedID.current = oldSavedID;
       flowPath.current = oldFlowPath;
@@ -108,7 +109,15 @@ function FlowReciver(props: FlowReciverProps) {
 
   const debouncedHandleSaveAs = debounce(handleSaveAs, 1000);
 
+  const currentSaving = useRef(false);
+
   const handleSave = async () => {
+    if (currentSaving.current) {
+      return;
+    }
+
+    currentSaving.current = true;
+
     const molstarState = await window.molstar?.snapshot.get();
     const saveContents = {
       name: flowName,
@@ -130,6 +139,8 @@ function FlowReciver(props: FlowReciverProps) {
 
     const response = await horusPost("/saveflow", headers, body);
     var savedFlow = await response.json();
+
+    currentSaving.current = false;
 
     if (!savedFlow.ok) {
       alert(savedFlow.error);
@@ -460,6 +471,9 @@ function FlowReciver(props: FlowReciverProps) {
 
   const [testSavedInternal, setTestSavedInternal] = useState(false);
 
+  const [serverFilePickerOpen, setServerFilePickerOpen] = useState(false);
+  const [serverFolderPickerOpen, setServerFolderPickerOpen] = useState(false);
+
   const loadFlow = async (
     openRecent: {
       savedID: string;
@@ -728,8 +742,27 @@ function FlowReciver(props: FlowReciverProps) {
   const handleOpenFlow = (
     e: CustomEvent<{ savedID: string; path: string }>
   ) => {
-    loadFlow(Object.keys(e.detail).length === 0 ? null : e.detail);
+    const hasPath = e.detail.path !== undefined;
+    if (!window.isDesktop && !hasPath) {
+      setServerFilePickerOpen(true);
+    } else {
+      loadFlow(Object.keys(e.detail).length === 0 ? null : e.detail);
+    }
   };
+
+  // For the server mode, we need to open first the file picker in folder mode
+  // to select the saving folder
+  const preHandleSave = async () => {
+    if (!window.isDesktop && flowPath.current === "") {
+      // Open the file picker
+      setServerFolderPickerOpen(true);
+      return;
+    }
+
+    await handleSave();
+  };
+
+  const debounceHandleSave = debounce(preHandleSave, 1000);
 
   useEffect(() => {
     // Add an event listener to clear all the state when the "New" button is clicked in the toolbar
@@ -741,7 +774,7 @@ function FlowReciver(props: FlowReciverProps) {
     window.addEventListener("openFlow", handleOpenFlow);
 
     // Add an event listener to save a flow when the "Save" button is clicked in the toolbar
-    window.addEventListener("saveFlow", handleSave);
+    window.addEventListener("saveFlow", debounceHandleSave);
 
     // Add an event listener to save a flow when the "Save As.." button is clicked in the toolbar
     window.addEventListener("saveFlowAs", debouncedHandleSaveAs);
@@ -758,7 +791,7 @@ function FlowReciver(props: FlowReciverProps) {
         handleNew();
       });
       window.removeEventListener("openFlow", handleOpenFlow);
-      window.removeEventListener("saveFlow", handleSave);
+      window.removeEventListener("saveFlow", debounceHandleSave);
       window.removeEventListener("saveFlowAs", debouncedHandleSaveAs);
       window.removeEventListener("terminalCommand", handleTerminalCommand);
       window.removeEventListener("centerView", centerView);
@@ -1030,6 +1063,47 @@ function FlowReciver(props: FlowReciverProps) {
         style={style}
       >
         <Xwrapper>{placedBlocksView}</Xwrapper>
+        {/* Append the ServerFilePicker */}
+        <ServerFileExplorerModal
+          key={"serverFilePicker-flow-reciver"}
+          fileProps={{
+            openFolder: false,
+            allowedExtensions: ["flow"],
+            onFileSelect: () => {},
+            onFileConfirm: (path: string) => {
+              setServerFilePickerOpen(false);
+              // Load the flow
+              loadFlow({
+                savedID: null,
+                path: path,
+              });
+            },
+          }}
+          open={serverFilePickerOpen}
+          setOpen={setServerFilePickerOpen}
+        />
+        {/* This one is for saving */}
+        <ServerFileExplorerModal
+          // key={"serverFolderPicker-flow-reciver"}
+          fileProps={{
+            openFolder: true,
+            onFileSelect: () => {},
+            onFileConfirm: (path: string) => {
+              const strippedFlowName = flowName.replace(/[^a-zA-Z0-9]/g, "_");
+
+              // append the flow name
+              flowPath.current = path + "/" + strippedFlowName + ".flow";
+
+              savedID.current = "new_flow";
+
+              // Save the flow
+              // preHandleSave();
+              handleSave();
+            },
+          }}
+          open={serverFolderPickerOpen}
+          setOpen={setServerFolderPickerOpen}
+        />
       </div>
     </div>
   );

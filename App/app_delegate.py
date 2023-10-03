@@ -287,6 +287,9 @@ class AppDelegate(metaclass=HorusSingleton):
         # Set the app support directory
         self._appSupportDir()
 
+        # Start the logger if needed
+        self._loadLogger()
+
         # Prepare the server
         self.server: HorusServer = HorusServer(
             debug=self.debug,
@@ -295,9 +298,6 @@ class AppDelegate(metaclass=HorusSingleton):
             host=host,
             port=port,
         )
-
-        # Start the logger if needed
-        self._loadLogger()
 
     def _loadLogger(self):
         """
@@ -317,8 +317,6 @@ class AppDelegate(metaclass=HorusSingleton):
         self.logger.horus.info("Server Mode: %s", self.serverMode)
         self.logger.horus.info("Browser Mode: %s", self.browser)
         self.logger.horus.info("Debug URL: %s", self.debugURL)
-        self.logger.horus.info("Host: %s", self.server.host)
-        self.logger.horus.info("Port: %s", self.server.port)
         self.logger.horus.info("AppSupport Dir: %s", self.appSupportDir)
 
     def _loadAppInfo(self):

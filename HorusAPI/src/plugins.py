@@ -4,6 +4,7 @@ import json
 import os
 from enum import Enum
 from copy import deepcopy
+import logging
 
 
 class PluginRemote:
@@ -1392,8 +1393,13 @@ class Plugin:
                 # Read the flow file to get the name of the flow
                 flowName = "Unnamed flow"
                 savedID = "flow_id"
-                with open(filePath, "r") as f:
-                    flow = json.load(f)
+                with open(filePath, "r", encoding="utf-8") as flowFile:
+                    try:
+                        flow = json.load(flowFile)
+                    except Exception as exc:
+                        logging.getLogger("Horus").error("Error loading flow %s: %s", file, exc)
+                        continue
+
                     flowName = flow.get("name", "Unnamed flow")
                     savedID = flow.get("savedID", "flow_id")
 

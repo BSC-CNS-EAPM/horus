@@ -7,6 +7,13 @@ import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { FlowBuilderView } from "../Components/FlowBuilder/flow_builder_view";
 import IFrameLoader from "../Components/IframeLoader/iframeloader";
 import { socket } from "../Utils/socket";
+import { horusGet } from "../Utils/utils";
+
+declare global {
+  interface Window {
+    isDesktop: boolean;
+  }
+}
 
 export default function ResizeHandle({
   horizontal = false,
@@ -114,11 +121,26 @@ export function App() {
     setShowConsole((currentShowConsole) => !currentShowConsole);
   };
 
+  const fetchDesktop = async () => {
+    try {
+      const response = await horusGet("/isDesktop");
+      window.isDesktop = await response.json();
+    } catch (err) {
+      alert(
+        `Could not detect running mode. Expect errors while running the app. ${err}`
+      );
+      window.isDesktop = false;
+    }
+  };
+
   useEffect(() => {
     window.addEventListener("mainView", handleMainView);
     window.addEventListener("mainViewURL", handleIFrame);
     window.addEventListener("toggleConsole", toggleConsole);
     socket.on("openExtension", handleIFrame);
+
+    // Set the global isDesktop variable
+    fetchDesktop();
 
     return () => {
       window.removeEventListener("mainView", handleMainView);

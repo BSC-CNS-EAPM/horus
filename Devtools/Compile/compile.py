@@ -80,6 +80,13 @@ ext_modules = [
         ["Server/PluginManager/__init__.py"],
         include_package_data=True,  # type: ignore
     ),
+    # FileExplorer
+    Extension("Server.FileExplorer.file_explorer", ["Server/FileExplorer/file_explorer.py"]),
+    Extension(
+        "Server.FileExplorer.__init__",
+        ["Server/FileExplorer/__init__.py"],
+        include_package_data=True,  # type: ignore
+    ),
     # Compile the HorusAPI
     Extension("HorusAPI.plugins", ["HorusAPI/src/plugins.py"]),
     Extension("HorusAPI.molstar", ["HorusAPI/src/molstar.py"]),

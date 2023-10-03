@@ -46,6 +46,9 @@ from Server.RemotesManager import RemotesManager
 # Plugin manager
 from Server.PluginManager import PluginManager
 
+# Server explorer
+from Server.FileExplorer import FileExplorer
+
 
 class HorusServer:
     """
@@ -72,6 +75,25 @@ class HorusServer:
         self.host = host if host else "127.0.0.1"
         self.port = port if port else self._getFreePort()
         self.baseURL = f"http://{self.host}:{self.port}"
+
+        # Check that the baseURL is not in use
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        try:
+            sock.bind((self.host, self.port))
+        except OSError as ose:
+            raise Exception(  # pylint: disable=broad-exception-raised
+                f"Port {self.port} is already in use"
+            ) from ose
+
+        # If we are running on host 0.0.0.0, get the real base URL
+        if self.host == "0.0.0.0":
+            localIp = socket.gethostbyname(socket.gethostname())
+            self.baseURL = f"http://{localIp}:{self.port}"
+
+        logging.getLogger("Horus").info("Host: %s", self.host)
+        logging.getLogger("Horus").info("Port: %s", self.port)
+        logging.getLogger("Horus").info("BaseURL: %s", self.baseURL)
 
         # Initialize the plugin manager
         self.pluginManager = PluginManager(self.appSupportDir, self.desktop)
@@ -271,6 +293,7 @@ class HorusServer:
                         "ok": False,
                         "message": "This function is only available on desktop mode.",
                     }
+                    logging.getLogger("Horus").error(error["message"])
                     return flask.jsonify(error)
                 return func(*args, **kwargs)
 
@@ -379,7 +402,7 @@ class HorusServer:
                 }
             return flask.jsonify(success)
 
-        @self.server.route("/desktop/isDesktop", methods=["GET"])
+        @self.server.route("/isDesktop", methods=["GET"])
         def isDesktop():
             return flask.jsonify(self.desktop)
 
@@ -634,7 +657,41 @@ class HorusServer:
                 }
             return flask.jsonify(success)
 
-        @self.server.route("/openfolder", methods=["GET"])
+        @self.server.route("/filepicker", methods=["POST"])
+        @verifyToken
+        def filePicker():
+            path = request.get_json().get("path", os.getcwd())
+            extensions = request.get_json().get("extensions", None)
+
+            if extensions is not None and extensions == ["*"]:
+                extensions = None
+
+            if path is None:
+                path = os.getcwd()
+
+            if not os.path.exists(path):
+                success = {
+                    "ok": False,
+                    "msg": "Path does not exist",
+                }
+            elif not os.path.isdir(path):
+                success = {
+                    "ok": False,
+                    "msg": "Path is not a directory",
+                }
+            else:
+                fileExplorer = FileExplorer(path)
+                directoryContents = fileExplorer.listDirectory(extensions)
+                folderChain = fileExplorer.folderChain()
+                success = {
+                    "ok": True,
+                    "folderChain": folderChain,
+                    "contents": directoryContents,
+                }
+
+            return flask.jsonify(success)
+
+        @self.server.route("/openfolder", methods=["GET", "POST"])
         @verifyToken
         def openFolder():
             if self.desktop:
@@ -664,8 +721,12 @@ class HorusServer:
 
                 selFile = AppDelegate().openFileSelectDialog(fileTypes=extensions)
             else:
-                print("WARNING: File picker not implemented for server mode")
-                selFile = "/example/path"
+                errorMSG = (
+                    "ERROR: File picker is already implemented."
+                    + " If you are seeing this, something went wrong."
+                )
+                logging.getLogger("Horus").error(errorMSG)
+                selFile = errorMSG
 
             return flask.jsonify({"path": selFile})
 
@@ -771,7 +832,6 @@ class HorusServer:
                 return flask.jsonify({"ok": False, "msg": str(exc)})
 
         @self.server.route("/remotes/connect", methods=["POST"])
-        @desktopOnly
         def connectRemote():
             data = request.get_json()
 
@@ -780,10 +840,18 @@ class HorusServer:
             if data is None or remote is None:
                 return flask.jsonify({"ok": False, "msg": "Missing data"})
 
+            # If on server mode, allow only local connections
+            if not self.desktop and remote != "Local":
+                return flask.jsonify(
+                    {"ok": False, "msg": "Only local connections allowed on server mode"}
+                )
+
             try:
                 self.remoteManager.connectRemote(remote)
+                logging.getLogger("Horus").info("Connected to remote: %s", remote)
                 return flask.jsonify({"ok": True})
             except Exception as exc:  # pylint: disable=broad-exception-caught
+                logging.getLogger("Horus").error("Error connecting to remote: %s", exc)
                 return flask.jsonify({"ok": False, "msg": str(exc)})
 
         @self.server.route("/remotes/command", methods=["POST"])
@@ -999,10 +1067,14 @@ class HorusServer:
         # Setup the 404 page
         @self.server.errorhandler(404)
         def pageNotFound(error):
+            errorMSG = (
+                "If you are trying to load an extension, "
+                + "make sure you restarted the server after installing it."
+            )
             horusLogger = logging.getLogger("Horus")
-            horusLogger.error(f"{error}. {str(request)}")
+            horusLogger.error("Page not found: %s", str(error))
 
-            return flask.render_template("Error/error.html", errormsg=str(error))
+            return flask.render_template("Error/error.html", errormsg=errorMSG)
 
         # Setup a template not found error
         @self.server.route("/error")
@@ -1016,7 +1088,7 @@ class HorusServer:
         @self.server.errorhandler(Exception)
         def exceptionHandler(error):
             horusLogger = logging.getLogger("Horus")
-            horusLogger.critical(f"{error}. {str(request)}")
+            horusLogger.critical(f"{error}. Data: {str(request.data)}. Request: {str(request)}")
 
             return flask.render_template("Error/error.html", errormsg=str(error))
 
@@ -1076,7 +1148,7 @@ class HorusServer:
         # use_reloader has to be turned off in order to run in a secondary thread
 
         if not self.desktop:
-            print("Running server mode at: http://" + self.host + ":" + str(self.port))
+            print("Running server mode at: " + self.baseURL)
 
         # Start the server
 

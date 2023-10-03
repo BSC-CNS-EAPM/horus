@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { NBDSuiteResults } from "./nbdsuite_gui";
+import "bootstrap/dist/css/bootstrap.css";
 
 let container = null;
 

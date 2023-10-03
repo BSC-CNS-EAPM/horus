@@ -50,27 +50,31 @@ interface HorusModalProps {
   show: boolean;
   onHide?: () => void;
   header: React.ReactNode;
-  body: React.ReactNode;
+  body?: React.ReactNode;
   footer: React.ReactNode;
   size?: "sm" | "lg" | "xl" | "xxl";
+  contentClassName?: string;
+  children?: React.ReactNode;
 }
 
 function HorusModal(props: HorusModalProps) {
   const sizeClass = props.size ? `modal-${props.size}` : "";
   return (
-    <>
-      <Modal
-        show={props.show}
-        onHide={props.onHide}
-        dialogClassName={sizeClass}
-      >
-        <Modal.Header>
-          <Modal.Title>{props.header}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>{props.body}</Modal.Body>
-        <Modal.Footer>{props.footer}</Modal.Footer>
-      </Modal>
-    </>
+    <Modal
+      show={props.show}
+      onHide={props.onHide}
+      dialogClassName={sizeClass}
+      contentClassName={props.contentClassName}
+    >
+      <Modal.Header>
+        <Modal.Title>{props.header}</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        {props.body}
+        {props.children}
+      </Modal.Body>
+      <Modal.Footer>{props.footer}</Modal.Footer>
+    </Modal>
   );
 }
 

@@ -6,6 +6,7 @@ import io
 from contextlib import redirect_stdout, redirect_stderr
 import subprocess
 from copy import deepcopy
+import logging
 
 # from eventlet.green import subprocess
 import importlib.util
@@ -279,6 +280,9 @@ class PluginManager:
                 errorPlugin._path = pth
                 self.errorPlugins.append(errorPlugin)
 
+        logging.getLogger("Horus").info("Plugins initialized (%i).", len(self.loadedPlugins))
+        logging.getLogger("Horus").info("Error plugins (%i).", len(self.errorPlugins))
+
         self.pluginChanges = False
 
     def _loadPlugin(self, pluginPath: str) -> typing.Optional[Plugin]:
@@ -293,7 +297,9 @@ class PluginManager:
 
         try:
             plugin = self._checkPlugin(pluginPath)
+            logging.getLogger("Horus").info(f"Loaded plugin {plugin.info['name']}")
         except Exception as e:
+            logging.getLogger("Horus").error(f"Error loading plugin: {e}")
             raise Exception(f"Error loading plugin: {e}")
 
         # Check that the plugin is not already loaded
