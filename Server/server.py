@@ -291,18 +291,21 @@ class HorusServer:
 
         # Create a wrapper for checking if the app is on desktop mode or web mode
         def desktopOnly(func):
-            @wraps(func)
-            def wrapper(*args, **kwargs):
-                if not self.desktop and not self.debug:
-                    error = {
-                        "ok": False,
-                        "message": "This function is only available on desktop mode.",
-                    }
-                    logging.getLogger("Horus").error(error["message"])
-                    return flask.jsonify(error)
-                return func(*args, **kwargs)
+            # @wraps(func)
+            # def wrapper(*args, **kwargs):
+            #     if not self.desktop and not self.debug:
+            #         error = {
+            #             "ok": False,
+            #             "message": "This function is only available on desktop mode.",
+            #         }
+            #         logging.getLogger("Horus").error(error["message"])
+            #         return flask.jsonify(error)
+            #     return func(*args, **kwargs)
 
-            return wrapper
+            # return wrapper
+
+            # ====DISABLE IT FOR NOW ====
+            return func
 
         @self.server.route("/saveflow", methods=["POST"])
         @verifyToken
@@ -417,7 +420,7 @@ class HorusServer:
             return flask.render_template("PluginsManager/index.html", shemsu=self.token)
 
         @self.server.route("/plugins/install", methods=["POST"])
-        # @desktopOnly
+        @desktopOnly
         def installPlugin():
             data = request.get_json()
 
