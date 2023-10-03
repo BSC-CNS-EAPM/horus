@@ -249,7 +249,7 @@ function DesktopFileExplorer(props: FileExplorerProps) {
 }
 
 function HorusFileExplorer(props: FileExplorerProps) {
-  if (window.isDesktop) {
+  if (window.isDesktop || window.parent.isDesktop) {
     return <DesktopFileExplorer {...props} />;
   } else {
     return <ServerFileExplorer {...props} />;
