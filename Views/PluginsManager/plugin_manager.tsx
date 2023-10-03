@@ -15,6 +15,7 @@ import {
 import RotatingLines from "../Components/RotatingLines/rotatinglines";
 
 import { PluginVariableView } from "../Components/FlowBuilder/block_variables";
+import { HorusFileExplorer } from "../Components/FileExplorer/file_explorer";
 
 interface PluginConfigViewProps {
   configBlocks: Block[];
@@ -423,13 +424,22 @@ export function PluginManager() {
   }, []);
 
   // Open new window for plugin installation
-  const installPlugin = async () => {
+  const installPlugin = async (file) => {
     setModalProps({
       ...modalProps,
       show: true,
     });
 
-    const response = await horusGet("/plugins/install");
+    const header = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    };
+
+    const body = JSON.stringify({
+      file: file,
+    });
+
+    const response = await horusPost("/plugins/install", header, body);
     const data = await response.json();
 
     if (!data.ok) {
@@ -473,6 +483,13 @@ export function PluginManager() {
   const [filteredPluginList, setFilteredPluginList] = useState(pluginList);
 
   useEffect(() => {
+
+    // If we are on an iFrame (plugin manager server)
+    // get the isDesktop variable from the parent window
+    if (window.parent !== window) {
+      window.isDesktop = window.parent.isDesktop;
+    }
+
     const fetchData = async () => {
       try {
         const response = await horusGet("/plugins/list");
@@ -525,7 +542,15 @@ export function PluginManager() {
         <div className="plugin-manager-title flex">
           <h1>Plugin manager</h1>
           <div className="flex flex-row gap-2 mr-2">
-            <NBDButton text="Install plugin" action={installPlugin} />
+            <HorusFileExplorer
+              onFileConfirm={(file) => {
+                installPlugin(file);
+              }}
+              onFileSelect={() => {}}
+              allowedExtensions={["hp"]}
+            >
+              Install plugin
+            </HorusFileExplorer>
             <NBDButton text="Open plugins folder" action={openPluginsFolder} />
             <SearchComponent
               placeholder="Search plugins..."

@@ -67,24 +67,27 @@ class PluginManager:
         # # Add the dependencies directory to the PYTHON path
         # sys.path.append(self.depsDir)
 
-    def installPlugin(self, socketio: SocketIO):
+    def installPlugin(self, socketio: SocketIO, file: typing.Optional[str] = None):
         """
         Opens the file dialog to select a plugin file
         and installs it to the plugins folder.
         """
         from App import AppDelegate
 
-        try:
-            files = AppDelegate().openFileSelectDialog(
-                allowMultiple=True, fileTypes=("Horus plugins (*.hp)",)
-            )
-        except Exception as e:
-            raise Exception(f"Failed to get plugin path: {e}")
+        if file is None:
+            try:
+                files = AppDelegate().openFileSelectDialog(
+                    allowMultiple=True, fileTypes=("Horus plugins (*.hp)",)
+                )
+            except Exception as exc:
+                raise Exception(f"Failed to get plugin path: {exc}") from exc
+        else:
+            files = [file]
 
         if not files:
             return
 
-        for f in files:
+        for f in files:  # pylint: disable=invalid-name
             with PrintCapturer(socketio, "installPluginDep"):
                 print("Installing plugin: " + f)
                 self._installPlugin(f)

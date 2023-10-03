@@ -204,7 +204,7 @@ class SettingsManager:
         # Reload the settings
         self._loadSettings()
 
-    def updateSetting(self, setting: Setting):
+    def _updateSetting(self, setting: Setting):
         """
         Updates a setting
 
@@ -214,9 +214,9 @@ class SettingsManager:
         self.settings[setting.id] = setting
 
         # Save the settings
-        self.saveSettings()
+        self._saveSettings()
 
-    def saveSettings(self):
+    def _saveSettings(self):
         """
         Updates the user settings file
         """
@@ -227,15 +227,41 @@ class SettingsManager:
             settingsToSave[id] = setting.toDict()
 
         # Save the settings
-        with open(self.userSettingsPath, "w") as f:
-            json.dump(settingsToSave, f)
+        with open(self.userSettingsPath, "w", encoding="utf-8") as file:
+            json.dump(settingsToSave, file)
 
     def listSettings(self):
         """
         Returns the list of settings as a JSON object
         """
 
-        with open(self.userSettingsPath, "r") as f:
-            settings = json.load(f)
+        with open(self.userSettingsPath, "r", encoding="utf-8") as file:
+            settings = json.load(file)
 
-        return settings
+        settingsList = []
+        for settingID, setting in settings.items():
+            parsedSetting = {
+                "id": settingID,
+                "setting": setting,
+            }
+            settingsList.append(parsedSetting)
+
+        return settingsList
+
+    def saveSettings(self, newSettings: typing.List[typing.Dict[str, str]]):
+        """
+        Parses the settings recived from the user and stores them
+
+        :param newSettings: The new settings to save
+        """
+
+        # Loop over the new settings
+        for newSetting in newSettings:
+            # Get the setting
+            setting = self.getSetting(newSetting["id"])
+
+            # Update the setting
+            setting.value = newSetting["value"]
+
+            # Update the setting
+            self._updateSetting(setting)

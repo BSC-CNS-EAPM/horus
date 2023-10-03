@@ -76,20 +76,25 @@ class HorusServer:
         self.port = port if port else self._getFreePort()
         self.baseURL = f"http://{self.host}:{self.port}"
 
-        # Check that the baseURL is not in use
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-        try:
-            sock.bind((self.host, self.port))
-        except OSError as ose:
-            raise Exception(  # pylint: disable=broad-exception-raised
-                f"Port {self.port} is already in use"
-            ) from ose
-
         # If we are running on host 0.0.0.0, get the real base URL
+        localIp = None
         if self.host == "0.0.0.0":
             localIp = socket.gethostbyname(socket.gethostname())
             self.baseURL = f"http://{localIp}:{self.port}"
+
+        # Check that the baseURL is not in use
+        if not self.debug:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            try:
+                sock.bind((localIp or self.host, self.port))
+            except OSError as ose:
+                logging.getLogger("Horus").error(
+                    "Address %s is already in use. %s", self.baseURL, str(ose)
+                )
+                print(f"Address {self.baseURL} is already in use")
+                raise Exception(  # pylint: disable=broad-exception-raised
+                    f"Adress {self.baseURL} is already in use"
+                ) from ose
 
         logging.getLogger("Horus").info("Host: %s", self.host)
         logging.getLogger("Horus").info("Port: %s", self.port)
@@ -411,11 +416,15 @@ class HorusServer:
         def pluginsManager():
             return flask.render_template("PluginsManager/index.html", shemsu=self.token)
 
-        @self.server.route("/plugins/install", methods=["GET"])
-        @desktopOnly
+        @self.server.route("/plugins/install", methods=["POST"])
+        # @desktopOnly
         def installPlugin():
+            data = request.get_json()
+
+            path = data.get("file", None)
+
             try:
-                self.pluginManager.installPlugin(self.socketio)
+                self.pluginManager.installPlugin(self.socketio, path)
                 self.socketio.emit("pluginChanges")
                 success = {
                     "ok": True,
@@ -910,13 +919,30 @@ class HorusServer:
                 }
             return flask.jsonify(success)
 
-        @self.server.route("/settings")
-        @desktopOnly
+        @self.server.route("/settings", methods=["GET"])
         def settings():
             settings = self.settingsManager.listSettings()
 
             return flask.jsonify({"ok": True, "settings": settings})
             # return flask.render_template("Settings/index.html")
+
+        @self.server.route("/saveSettings", methods=["POST"])
+        def saveSettings():
+            data = request.get_json()
+
+            if data is None:
+                return flask.jsonify({"ok": False, "msg": "Missing data"})
+
+            settings = data.get("settings", None)
+
+            if settings is None:
+                return flask.jsonify({"ok": False, "msg": "Missing settings"})
+
+            try:
+                self.settingsManager.saveSettings(settings)
+                return flask.jsonify({"ok": True})
+            except Exception as exc:
+                return flask.jsonify({"ok": False, "msg": str(exc)})
 
         @self.server.route("/")
         def index():
@@ -1151,7 +1177,6 @@ class HorusServer:
             print("Running server mode at: " + self.baseURL)
 
         # Start the server
-
         self.socketio.run(
             self.server,
             host=self.host,

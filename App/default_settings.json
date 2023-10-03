@@ -1,7 +1,7 @@
 {
   "dependenciesInterpreter": {
-    "name": "Dependencies python interpreter",
-    "description": "Python interpreter to use for dependencies installation",
+    "name": "Python interpreter",
+    "description": "Python interpreter path to use for dependencies installation",
     "category": "Dependencies",
     "value": "python"
   }

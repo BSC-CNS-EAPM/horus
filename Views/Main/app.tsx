@@ -183,7 +183,7 @@ export function App() {
   const iframeViewPanel = (
     <>
       <ResizeHandle horizontal={true} />
-      <Panel minSize={30} order={4} collapsible={true} defaultSize={30}>
+      <Panel minSize={30} order={4} collapsible={true} defaultSize={50}>
         {iframeView}
       </Panel>
     </>
