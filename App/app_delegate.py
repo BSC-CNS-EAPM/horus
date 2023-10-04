@@ -514,6 +514,11 @@ class AppDelegate(metaclass=HorusSingleton):
             aboutURL = self.tokenize(aboutURL)
             self.openWindow("About Horus", url=aboutURL)
 
+        def settings():
+            settingsURL = self.server.baseURL + "/settingsView"
+            settingsURL = self.tokenize(settingsURL)
+            self.openWindow("Settings", url=settingsURL)
+
         fileMenu = wm.Menu(
             "File",
             [
@@ -548,6 +553,7 @@ class AppDelegate(metaclass=HorusSingleton):
         settingsMenu = wm.Menu(
             "Settings",
             [
+                wm.MenuAction("Settings", settings),
                 wm.MenuAction("Remotes", openRemotes),
             ],
         )
