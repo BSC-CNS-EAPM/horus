@@ -1,6 +1,19 @@
 #!/bin/bash
 
-# Build and zip the NBDsuite plugin (without the dependencies!)
+# Build and zip the NBDsuite plugin
+
+# Check for the existence of AdaptivePELE and nbdsuite folders ins AppSupport/Plugins/NBDSuite/deps
+if [ ! -d "AppSupport/Plugins/NBDSuite/deps/AdaptivePELE" ]; then
+    echo "AdaptivePELE dependency not installed in AppSupport/Plugins/NBDSuite/deps"
+    echo "Please clone the AdaptivePELE-Horus repository, build the wheel, and install the package in AppSupport/Plugins/NBDSuite/deps"
+    exit 1
+fi
+
+if [ ! -d "AppSupport/Plugins/NBDSuite/deps/nbdsuite" ]; then
+    echo "NBDSuite dependency not installed in AppSupport/Plugins/NBDSuite/deps"
+    echo "Please instal the NBDSuite in AppSupport/Plugins/NBDSuite/deps"
+    exit 1
+fi
 
 # Go to the nbdsuite directory
 cd AppSupport/Plugins/NBDSuite

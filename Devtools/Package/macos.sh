@@ -17,14 +17,29 @@ arch=$(uname -m)
 # Create the package directory inside dist/
 mkdir -p dist/Packages
 
-# Create the macOS DMG
-create-dmg --overwrite dist/Horus.app dist/Packages/
+# Move the Horus.app inside the package directory
+mv dist/Horus.app dist/Packages
 
-# Find the dmg file iside the Packages directory
-dmg=$(find dist/Packages -name "*.dmg")
+# Define the name
+name="Horus-$version-$arch.dmg"
 
-# Rename the dmg file
-mv "$dmg" dist/Packages/Horus-$version-$arch.dmg
+# Create the dmg file
+create-dmg \
+  --volname "Horus" \
+  --window-pos 200 120 \
+  --window-size 800 400 \
+  --icon-size 100 \
+  --volicon "Resources/horus_volume.icns" \
+  --icon "Horus.app" 200 190 \
+  --hide-extension "Horus.app" \
+  --app-drop-link 600 185 \
+  --background "Resources/nostrum_color.png" \
+  --codesign "CAD497EE3E18DA164E232E36F1B86B3572EDC768" \
+  "dist/$name" \
+  "dist/Packages"
 
-# Remove the Horus folder
-rm -rf dist/Horus
+# Move the conents of the dist/Packages directory to dist/
+mv dist/Packages/* dist/
+
+# Remove the Packages directory
+rm -rf dist/Packages
