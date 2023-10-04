@@ -2,7 +2,8 @@ name: Deploy HorusAPI documentation to Pages
 
 on:
   push:
-    branches: [main] # branch to trigger deployment
+    tags:
+      - "*"
 
 jobs:
   build_docs:
