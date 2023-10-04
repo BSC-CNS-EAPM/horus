@@ -26,8 +26,11 @@ find dist/Packages/Horus.app -name '*.DS_Store' -exec rm {} \;
 # Remove any previous signing
 codesign --remove-signature dist/Packages/Horus.app
 
+# Get the Apple Development signing identity (Code number)
+identity=$(security find-identity -v -p codesigning | grep "Apple" | awk -F' "' '{print $1}' | awk -F') ' '{print $2}')
+
 # Codesign the .app bundle
-codesign --deep -s "CAD497EE3E18DA164E232E36F1B86B3572EDC768" "dist/Packages/Horus.app"
+codesign --deep -s "$identity" "dist/Packages/Horus.app"
 
 # Define the name
 name="Horus-$version-$arch.dmg"
@@ -43,7 +46,7 @@ create-dmg \
   --hide-extension "Horus.app" \
   --app-drop-link 600 185 \
   --background "Resources/nostrum_color.png" \
-  --codesign "CAD497EE3E18DA164E232E36F1B86B3572EDC768" \
+  --codesign "$identity" \
   "dist/$name" \
   "dist/Packages"
 
