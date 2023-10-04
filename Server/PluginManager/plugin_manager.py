@@ -574,7 +574,7 @@ class PluginManager:
             errorPlugins.append(info)
         return {"plugins": listedPlugins, "errors": errorPlugins}
 
-    def _getBlocksFromList(self, plugin: Plugin, blockList: list[PluginBlock]):
+    def _getBlocksFromList(self, plugin: Plugin, blockList: typing.List[PluginBlock]):
         newBlocks: list[dict[str, typing.Any]] = []
         for b in blockList:
             newBlock = b._toDict()
@@ -846,7 +846,7 @@ class PluginManager:
 
         return blockConfigFile
 
-    def saveConfig(self, config: dict[str, typing.Any]):
+    def saveConfig(self, config: typing.Dict[str, typing.Any]):
         """
         Saves the config to the config file.
         """
