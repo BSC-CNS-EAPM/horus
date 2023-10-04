@@ -1,5 +1,6 @@
 from HorusAPI import PluginVariable, PluginBlock, VariableTypes, VariableGroup
 import os
+import random
 
 # Inputs
 complex_data_input = PluginVariable(
@@ -43,6 +44,14 @@ ligand_data_structure = PluginVariable(
     type=VariableTypes.STRUCTURE,
 )
 
+sequence_data_input = PluginVariable(
+    name="Sequence data",
+    id="sequence_data",
+    description="Path to a Sequence .fasta file.",
+    type=VariableTypes.FILE,
+    allowedValues=["fasta", "FASTA"],
+)
+
 # Define the different input groups
 ligandFileInput = VariableGroup(
     id="ligandFileInput",
@@ -65,6 +74,13 @@ ligandStructureInput = VariableGroup(
     variables=[
         system_data_input,
         ligand_data_structure,
+    ],
+)
+
+sequenceInput = VariableGroup(
+    id="sequenceInput",
+    variables=[
+        sequence_data_input,
     ],
 )
 
@@ -118,7 +134,7 @@ seed_variable = PluginVariable(
     description="Seed for NBD Suite's pseudo-random numbers generator for \
     reproducibility. When no seed is set, it will be initialized to a random number",
     type=VariableTypes.INTEGER,
-    defaultValue=None,
+    defaultValue=random.randint(0, 100000),
 )
 
 restart_variable = PluginVariable(
@@ -129,13 +145,40 @@ restart_variable = PluginVariable(
     defaultValue=False,
 )
 
+# PELE Specific variables
+pele_force_field = PluginVariable(
+    name="PELE Forcefield",
+    id="force_field",
+    description="Forcefield to employ in the parameterization of non-standard residues.",
+    type=VariableTypes.STRING_LIST,
+    defaultValue="OPLS2005",
+    allowedValues=["openff-2.0.0", "OPLS2005"],
+)
+
+pele_solvent = PluginVariable(
+    name="PELE Solvent",
+    id="solvent",
+    description="Solvent to employ in the parameterization of non-standard residues.",
+    type=VariableTypes.STRING_LIST,
+    defaultValue="OBC",
+    allowedValues=["OBC", "VDGBNP"],
+)
+
+pele_ligand_resolution = PluginVariable(
+    name="PELE Ligand Resolution",
+    id="ligand_resolution",
+    description=" Defines the resolution in degrees to consider when sampling the different rotatable bonds of the Ligand during a PELE simulation.",
+    type=VariableTypes.INTEGER,
+    defaultValue=30,
+)
+
 # Outputs
 output_yaml = PluginVariable(
     name="Input file",
     id="output_yaml",
     description="The input file for the NBD Suite.",
     type=VariableTypes.FILE,
-    allowedValues=["yaml"],
+    allowedValues=["nbdinput"],
 )
 
 
@@ -146,6 +189,10 @@ def generateGeneralBlock(block: PluginBlock):
     name = block.variables.get("simulation_name", None)
     static_name = block.variables.get("static_name", None)
     seed = block.variables.get("seed", None)
+
+    pele_force_field = block.variables.get("force_field", None)
+    pele_solvent = block.variables.get("solvent", None)
+    pele_ligand_resolution = block.variables.get("ligand_resolution", None)
 
     if seed == "":
         seed = None
@@ -162,25 +209,67 @@ def generateGeneralBlock(block: PluginBlock):
     if missing_variables:
         raise Exception(f"Missing variables in the General block: {', '.join(missing_variables)}")
 
-    system_data = block.inputs.get("system_data", None)
-    ligand_data = block.inputs.get("ligand_data", None)
-    # complex_data = block.inputs.get("complex_data", None)
-    complex_ligand_selection = block.inputs.get("complex_ligand_selection", None)
-
-    if system_data is None:
-        raise Exception("No system data provided.")
-
-    if ligand_data is None and complex_ligand_selection is None:
-        raise Exception("No ligand data provided.")
-
-    if ligand_data is not None and complex_ligand_selection is not None:
-        raise Exception("Both ligand data and complex ligand selection provided.")
-
     inputContents = None
-    if ligand_data is not None:
-        inputContents = inputYAML(
-            system_data,
-            ligand_data,
+    if block.selectedInputGroup != "sequenceInput":
+        system_data = block.inputs.get("system_data", None)
+        ligand_data = block.inputs.get("ligand_data", None)
+        # complex_data = block.inputs.get("complex_data", None)
+        complex_ligand_selection = block.inputs.get("complex_ligand_selection", None)
+
+        if system_data is None:
+            raise Exception("No system data provided.")
+
+        if ligand_data is None and complex_ligand_selection is None:
+            raise Exception("No ligand data provided.")
+
+        if ligand_data is not None and complex_ligand_selection is not None:
+            raise Exception("Both ligand data and complex ligand selection provided.")
+
+        if ligand_data is not None:
+            inputContents = inputYAML(
+                system_data,
+                ligand_data,
+                working_directory,
+                name,
+                static_name,
+                cpus,
+                verbosity,
+                restart,
+                seed,
+                pele_force_field,
+                pele_solvent,
+                pele_ligand_resolution,
+            )
+
+        if complex_ligand_selection is not None:
+            # From the complex_ligand_selection get the selection values
+            complex_ligand_selection = complex_ligand_selection[0]
+            chainID = complex_ligand_selection["chainID"]
+            residue = complex_ligand_selection["residue"]
+            complex_ligand_selection = f"{chainID}:{residue}"
+
+            inputContents = complexInputYAML(
+                system_data,
+                complex_ligand_selection,
+                working_directory,
+                name,
+                static_name,
+                cpus,
+                verbosity,
+                restart,
+                seed,
+                pele_force_field,
+                pele_solvent,
+                pele_ligand_resolution,
+            )
+    else:
+        sequence_data = block.inputs.get("sequence_data", None)
+
+        if sequence_data is None:
+            raise Exception("No sequence data provided.")
+
+        inputContents = sequenceInputYAML(
+            sequence_data,
             working_directory,
             name,
             static_name,
@@ -188,36 +277,20 @@ def generateGeneralBlock(block: PluginBlock):
             verbosity,
             restart,
             seed,
-        )
-
-    if complex_ligand_selection is not None:
-        # From the complex_ligand_selection get the selection values
-        complex_ligand_selection = complex_ligand_selection[0]
-        chainID = complex_ligand_selection["chainID"]
-        residue = complex_ligand_selection["residue"]
-        complex_ligand_selection = f"{chainID}:{residue}"
-
-        inputContents = complexInputYAML(
-            system_data,
-            complex_ligand_selection,
-            working_directory,
-            name,
-            static_name,
-            cpus,
-            verbosity,
-            restart,
-            seed,
+            pele_force_field,
+            pele_solvent,
+            pele_ligand_resolution,
         )
 
     if inputContents is None:
         raise Exception("No input contents generated.")
 
     # Write the yaml
-    if os.path.exists(f"{name}.yaml"):
-        qty = 1
-        while os.path.exists(f"{name}_{qty}.yaml"):
-            qty += 1
-        name = f"{name}_{qty}"
+    # if os.path.exists(f"{name}.yaml"):
+    #     qty = 1
+    #     while os.path.exists(f"{name}_{qty}.yaml"):
+    #         qty += 1
+    #     name = f"{name}_{qty}"
 
     with open(f"{name}.yaml", "w") as f:
         f.write(inputContents)
@@ -240,11 +313,15 @@ generalBlock = PluginBlock(
         restart_variable,
         static_name_variable,
         seed_variable,
+        pele_force_field,
+        pele_solvent,
+        pele_ligand_resolution,
     ],
     inputGroups=[
         ligandFileInput,
         ligandSelectionInput,
         ligandStructureInput,
+        sequenceInput,
     ],
     outputs=[output_yaml],
 )
@@ -260,9 +337,11 @@ def inputYAML(
     verbosity,
     restart,
     seed,
+    pele_forcefield,
+    pele_solvent,
+    pele_ligand_resolution,
 ):
-    return f"""
-system_data: {system_data}
+    return f"""system_data: {system_data}
 ligand_data: {ligand_data}
 working_directory: {working_directory}
 name: {name}
@@ -271,6 +350,9 @@ cpus: {cpus}
 verbosity: {verbosity}
 restart: {restart}
 seed: {seed}
+pele_forcefield: {pele_forcefield}
+pele_solvent: {pele_solvent}
+pele_ligand_resolution: {pele_ligand_resolution}
 pipeline:"""
 
 
@@ -284,9 +366,11 @@ def complexInputYAML(
     verbosity,
     restart,
     seed,
+    pele_forcefield,
+    pele_solvent,
+    pele_ligand_resolution,
 ):
-    return f"""
-complex_data: {system_data}
+    return f"""complex_data: {system_data}
 complex_ligand_selection: {ligand_data}
 working_directory: {working_directory}
 name: {name}
@@ -295,4 +379,34 @@ cpus: {cpus}
 verbosity: {verbosity}
 restart: {restart}
 seed: {seed}
+pele_forcefield: {pele_forcefield}
+pele_solvent: {pele_solvent}
+pele_ligand_resolution: {pele_ligand_resolution}
+pipeline:"""
+
+
+def sequenceInputYAML(
+    sequence_data,
+    working_directory,
+    name,
+    static_name,
+    cpus,
+    verbosity,
+    restart,
+    seed,
+    pele_forcefield,
+    pele_solvent,
+    pele_ligand_resolution,
+):
+    return f"""sequence_data: {sequence_data}
+working_directory: {working_directory}
+name: {name}
+static_name: {static_name}
+cpus: {cpus}
+verbosity: {verbosity}
+restart: {restart}
+seed: {seed}
+pele_forcefield: {pele_forcefield}
+pele_solvent: {pele_solvent}
+pele_ligand_resolution: {pele_ligand_resolution}
 pipeline:"""

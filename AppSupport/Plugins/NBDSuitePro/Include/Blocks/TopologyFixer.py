@@ -6,7 +6,7 @@ input_yaml = PluginVariable(
     id="input_yaml",
     description="The input file for the NBD Suite.",
     type=VariableTypes.FILE,
-    allowedValues=["yaml"],
+    allowedValues=["nbdinput"],
 )
 
 het_residues_to_drop_input = PluginVariable(
@@ -72,6 +72,7 @@ output_yaml = PluginVariable(
     id="output_yaml",
     description="The input file for the NBD Suite.",
     type=VariableTypes.FILE,
+    allowedValues=["nbdinput"],
 )
 
 
@@ -112,11 +113,15 @@ def generateTopologyFixerBlock(block: PluginBlock):
     # "het_res_to_drop" input and store it in a list
     if het_res_to_drop is not None:
         het_res_to_drop = [residue["auth_comp_id"] for residue in het_res_to_drop]
+    else:
+        het_res_to_drop = []
 
     chain_res_to_drop = block.inputs.get("std_residues_to_drop", None)
 
     if chain_res_to_drop is not None:
         chain_res_to_drop = [residue["chainID"] for residue in chain_res_to_drop]
+    else:
+        chain_res_to_drop = []
 
     inputContents = yamlContent(
         drop_water,

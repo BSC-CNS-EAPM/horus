@@ -22,6 +22,22 @@
     --light-red: #ef9a9a;
     --light-green: #a5d6a7;
     --light-blue: #90caf9;
+
+    /* NBD Colors */
+    --warm-white: #f8fafa;
+    --digital-black: #00091e;
+    --grey-nostrum: #586061;
+    --digital-blue: #001b60;
+    --tech-blue: #00467c;
+    --nbd-teal: #026d7c;
+    --vintage-code: #00a9ae;
+    --pop-code: #00cfbf;
+    --flash-green: #00ffcc;
+    --waring-orange: #ff7d00;
+    --danger-red: #ff2e00;
+    --teal-white: rgba(255, 255, 255, 0.7);
+    --shadow: rgba(0, 169, 174, 0.2);
+    --softer-blue: #008eae;
   }
 }
 

@@ -51,7 +51,7 @@ class PluginRemote:
         """
         Submit a slurm job to the queue system of the cluster (SLURM)
 
-        :param script: The script to submit as a string or the path to the script to submit.
+        :param script: The  absolute path to the script to submit.
 
         :return: The job ID.
         """

@@ -6,9 +6,9 @@
 
 .plugin-block {
   background-color: #fff;
-  border: 1px solid #e5e5e5;
-  border-radius: 15px;
-  box-shadow: black 2px 2px 10px -7px;
+  border: 1px solid var(--vintage-code);
+  border-radius: 5px;
+  box-shadow: var(--flash-green) 2px 2px 10px -7px;
   position: relative;
   transition: transform 0.2s ease-in-out;
   height: 100%;

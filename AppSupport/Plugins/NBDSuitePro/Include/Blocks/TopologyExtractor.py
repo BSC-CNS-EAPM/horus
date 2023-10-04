@@ -6,7 +6,7 @@ input_yaml = PluginVariable(
     id="input_yaml",
     description="The input file for the NBD Suite.",
     type=VariableTypes.FILE,
-    allowedValues=["yaml"],
+    allowedValues=["nbdinput"],
 )
 
 # Variables
@@ -62,7 +62,7 @@ output_yaml = PluginVariable(
     id="output_yaml",
     description="The input file for the NBD Suite.",
     type=VariableTypes.FILE,
-    allowedValues=["yaml"],
+    allowedValues=["nbdinput"],
 )
 
 

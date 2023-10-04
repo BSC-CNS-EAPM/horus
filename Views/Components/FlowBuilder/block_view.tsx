@@ -19,6 +19,7 @@ import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { ArrowBlockConnector } from "./arrow_connector";
 import { useXarrow } from "react-xarrows";
 import NBDButton from "../nbdbutton";
+import { SearchComponent } from "../Toolbar/toolbar";
 
 interface DeleteBlockButtonProps {
   block: Block;
@@ -134,6 +135,108 @@ function InputRunningSpinner(props: { isRunning: boolean }) {
   }
 }
 
+type VariableModalViewProps = {
+  block: Block;
+  handleChange: (value: any, id: string) => void;
+};
+
+function VariableModalView(props: VariableModalViewProps) {
+  const { block, handleChange } = props;
+
+  const variables = block.variables;
+
+  const [filteredVariables, setFilteredVariables] = useState(variables);
+
+  const filterVariables = (event: any) => {
+    const value = event.target.value;
+    const filteredVariables = variables.filter((variable) => {
+      return (
+        variable.name.toLowerCase().includes(value.toLowerCase()) ||
+        variable.description.toLowerCase().includes(value.toLowerCase())
+      );
+    });
+
+    setFilteredVariables(filteredVariables);
+  };
+
+  return (
+    <div>
+      {block.variables && block.variables.length > 0 && (
+        <div>
+          <div className="flex flex-row justify-between">
+            <h4>Variables</h4>
+            <SearchComponent
+              placeholder="Search variables"
+              onChange={filterVariables}
+            />
+          </div>
+          <div>
+            {filteredVariables.map((variable, index) => (
+              <PluginVariableView
+                key={
+                  variable.id +
+                  "-" +
+                  index +
+                  "-" +
+                  block.id +
+                  "-" +
+                  block.placedID
+                }
+                variable={variable}
+                onChange={handleChange}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+      {block.inputs && (
+        <div>
+          <h4>Inputs</h4>
+          <div>
+            {block.inputs.map((variableGroup) =>
+              variableGroup.variables.map((variable, index) => (
+                <InputOutputView
+                  key={
+                    variable.id +
+                    "-" +
+                    index +
+                    "-" +
+                    block.id +
+                    "-" +
+                    block.placedID
+                  }
+                  variable={variable}
+                />
+              ))
+            )}
+          </div>
+        </div>
+      )}
+      {block.outputs && block.outputs.length > 0 && (
+        <div>
+          <h4>Outputs</h4>
+          <div>
+            {block.outputs.map((variable, index) => (
+              <InputOutputView
+                key={
+                  variable.id +
+                  "-" +
+                  index +
+                  "-" +
+                  block.id +
+                  "-" +
+                  block.placedID
+                }
+                variable={variable}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function BlockView(block: Block) {
   // Track hovering on info button to display the description instead of the plugin
   const [isInfoHovering, setIsInfoHovering] = useState(false);
@@ -202,76 +305,7 @@ function BlockView(block: Block) {
       header={
         <div className="text-xl font-bold">{block.name} - properties</div>
       }
-      body={
-        <div>
-          {block.variables && block.variables.length > 0 && (
-            <div>
-              <h4>Variables</h4>
-              <div>
-                {block.variables.map((variable, index) => (
-                  <PluginVariableView
-                    key={
-                      variable.id +
-                      "-" +
-                      index +
-                      "-" +
-                      block.id +
-                      "-" +
-                      block.placedID
-                    }
-                    variable={variable}
-                    onChange={handleChange}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-          {block.inputs && (
-            <div>
-              <h4>Inputs</h4>
-              <div>
-                {block.inputs.map((variableGroup) =>
-                  variableGroup.variables.map((variable, index) => (
-                    <InputOutputView
-                      key={
-                        variable.id +
-                        "-" +
-                        index +
-                        "-" +
-                        block.id +
-                        "-" +
-                        block.placedID
-                      }
-                      variable={variable}
-                    />
-                  ))
-                )}
-              </div>
-            </div>
-          )}
-          {block.outputs && block.outputs.length > 0 && (
-            <div>
-              <h4>Outputs</h4>
-              <div>
-                {block.outputs.map((variable, index) => (
-                  <InputOutputView
-                    key={
-                      variable.id +
-                      "-" +
-                      index +
-                      "-" +
-                      block.id +
-                      "-" +
-                      block.placedID
-                    }
-                    variable={variable}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      }
+      body={<VariableModalView block={block} handleChange={handleChange} />}
       footer={
         <div className="flex flex-row justify-end">
           <button className="app-button" onClick={closeVariablesModal}>
