@@ -457,6 +457,10 @@ export function PluginManager() {
 
   // Open new window for plugin installation
   const installPlugin = async (file) => {
+    if (file === null || file === undefined) {
+      return;
+    }
+
     setModalProps({
       ...modalProps,
       show: true,
