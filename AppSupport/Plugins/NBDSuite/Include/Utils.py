@@ -17,7 +17,7 @@ def slurmScript(name, cpus, suiteEnvPath="/shared/work/NBDSuite/envs/nbdsuite-0.
 #SBATCH --nodes=1
 #SBATCH --time=01:00:00
 
-# Load user .bashrc
+## Load user .bashrc
 source ~/.bashrc
 
 ## Miniconda
