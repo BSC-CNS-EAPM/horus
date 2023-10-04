@@ -99,7 +99,7 @@ imports += [
 ]
 
 # Import biopython for the Horus default plugin
-imports += ["Bio", "Bio.PDB"]
+imports += ["Bio", "Bio.PDB", "numpy", "scipy", "scipy.spatial"]
 
 # Imports that are not included by default but needed
 imports += [
