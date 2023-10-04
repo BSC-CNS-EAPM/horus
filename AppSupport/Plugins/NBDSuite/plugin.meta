@@ -5,6 +5,7 @@
   "version": "0.0.1",
   "pluginFile": "NBDSuite.py",
   "dependencies": [
+    "AdaptivePELE",
     "pandas",
     "biopython",
     "pydantic==1.10.11",
