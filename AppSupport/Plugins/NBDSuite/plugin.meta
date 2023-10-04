@@ -13,6 +13,7 @@
     "openmm",
     "scipy",
     "pyyaml",
-    "peleffy"
+    "peleffy",
+    "mdtraj"
   ]
 }
