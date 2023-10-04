@@ -423,7 +423,7 @@ class AppDelegate(metaclass=HorusSingleton):
         url: typing.Optional[str] = None,
         wo: WindowOptions = WindowOptions(),  # pylint: disable=invalid-name
         forceNew: bool = False,
-    ):
+    ) -> webview.Window:
         """
         Creates a new window with the given title.
         If no url is given, the index page will be loaded.
@@ -446,7 +446,7 @@ class AppDelegate(metaclass=HorusSingleton):
                     # Focus the window
                     window.show()
                     window.restore()
-                    return
+                    return window
 
         # Tokenize the url
         url = self.tokenize(url)
@@ -470,6 +470,9 @@ class AppDelegate(metaclass=HorusSingleton):
             transparent=wo.transparent,
             zoomable=wo.zoomable,
         )
+
+        # Return the window
+        return window
 
         # Add the window to the list of windows
         # self.windows.append(window) # Not neccessary using the webview module
@@ -503,7 +506,8 @@ class AppDelegate(metaclass=HorusSingleton):
         def openPlugins():
             pluginsURL = self.server.baseURL + "/plugins/"
             pluginsURL = self.tokenize(pluginsURL)
-            self.openWindow("Plugins", url=pluginsURL)
+            pluginWindow = self.openWindow("Plugins", url=pluginsURL)
+            pluginWindow.evaluate_js(f"window.isDesktop = {not self.serverMode}")
 
         def aboutHorus():
             aboutURL = self.server.baseURL + "/about"
