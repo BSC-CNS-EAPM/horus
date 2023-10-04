@@ -308,7 +308,9 @@ class PluginManager:
         # Check that the plugin is not already loaded
         for p in self.loadedPlugins:
             if p == plugin:
-                return
+                raise Exception(
+                    f"Plugin {plugin.info['name']} already installed. In order to update it, uninstall it first."
+                )
 
         # Create the config folder
         configDir = os.path.join(pluginPath, "config")

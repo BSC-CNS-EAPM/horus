@@ -203,6 +203,7 @@ function ServerFileExplorer(props: FileExplorerProps) {
 function useDesktopExplorer(
   openFolder: boolean,
   onFileSelect: (path: string) => void,
+  onFileConfirm: (path: string) => void,
   allowedExtensions?: string[]
 ) {
   const openFilePicker = async () => {
@@ -225,6 +226,7 @@ function useDesktopExplorer(
     const path = Array.isArray(data.path) ? data.path[0] : data.path;
 
     onFileSelect(path);
+    onFileConfirm(path);
   };
 
   return {
@@ -238,6 +240,7 @@ function DesktopFileExplorer(props: FileExplorerProps) {
   const { openFilePicker } = useDesktopExplorer(
     openFolder,
     props.onFileSelect,
+    props.onFileConfirm,
     props.allowedExtensions
   );
 

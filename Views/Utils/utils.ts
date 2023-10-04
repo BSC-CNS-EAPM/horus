@@ -93,4 +93,23 @@ async function openWindow(name, url) {
   return data;
 }
 
-export { horusGet, horusPost, getVersion, getForceFields, openWindow };
+const fetchDesktop = async () => {
+  try {
+    const response = await horusGet("/isDesktop");
+    window.isDesktop = await response.json();
+  } catch (err) {
+    alert(
+      `Could not detect running mode. Expect errors while running the app. ${err}`
+    );
+    window.isDesktop = false;
+  }
+};
+
+export {
+  horusGet,
+  horusPost,
+  getVersion,
+  getForceFields,
+  openWindow,
+  fetchDesktop,
+};

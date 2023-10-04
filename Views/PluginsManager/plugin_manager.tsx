@@ -1,6 +1,6 @@
 // Create the main window view
 import { useState, useEffect } from "react";
-import { horusGet, horusPost } from "../Utils/utils";
+import { fetchDesktop, horusGet, horusPost } from "../Utils/utils";
 import NBDButton from "../Components/nbdbutton";
 import "./plugin_manager.css";
 import { SearchComponent } from "../Components/Toolbar/toolbar";
@@ -52,10 +52,11 @@ type InstalledPluginsProps = {
     plugins?: HorusPlugin[];
   };
   loading: boolean;
+  fetchData: () => void;
 };
 
 function InstalledPlugins(props: InstalledPluginsProps) {
-  const { pluginList, loading } = props;
+  const { pluginList, loading, fetchData: propFetchData } = props;
 
   const [modalProps, setModalProps] = useState<HorusModalProps>({
     header: null,
@@ -64,6 +65,15 @@ function InstalledPlugins(props: InstalledPluginsProps) {
     show: false,
     size: "xl",
   });
+
+  const fetchData = async () => {
+    setModalProps({
+      ...modalProps,
+      show: false,
+    });
+
+    propFetchData();
+  };
 
   // Create a state to store the modified config
   const [tempChanges, setTempChanges] = useState<Block[]>([]);
@@ -246,6 +256,7 @@ function InstalledPlugins(props: InstalledPluginsProps) {
                 openPluginConfiguration(plugin);
               }}
               deleteModal={deletingPluginModal}
+              fetchData={fetchData}
             />
           );
         })}
@@ -257,6 +268,7 @@ function InstalledPlugins(props: InstalledPluginsProps) {
               plugin={error}
               error={true}
               deleteModal={deletingPluginModal}
+              fetchData={fetchData}
             />
           );
         })}
@@ -270,10 +282,11 @@ interface PluginCardProps {
   error: boolean;
   configPlugin?: () => void;
   deleteModal?: (name: string) => void;
+  fetchData: () => void;
 }
 
 function PluginCard(props: PluginCardProps) {
-  const { plugin, error, configPlugin, deleteModal } = props;
+  const { plugin, error, configPlugin, deleteModal, fetchData } = props;
 
   const deletePlugin = async () => {
     // Show the deleting plugin modal
@@ -296,8 +309,8 @@ function PluginCard(props: PluginCardProps) {
       alert("Error deleting plugin");
     }
 
-    // Refresh page
-    window.location.reload();
+    // Fetch the new data
+    fetchData();
   };
 
   return (
@@ -390,6 +403,25 @@ export function PluginManager() {
     size: "lg",
   });
 
+  const installingModal = <HorusModal {...modalProps} />;
+
+  const [pluginList, setPluginList] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [filteredPluginList, setFilteredPluginList] = useState(pluginList);
+
+  const fetchData = async () => {
+    try {
+      const response = await horusGet("/plugins/list");
+      const data = await response.json();
+      setPluginList(data);
+      setFilteredPluginList(data);
+      setLoading(false);
+    } catch (error) {
+      setPluginList(["Error loading plugins"]);
+      setLoading(false);
+    }
+  };
+
   const updateText = (data) => {
     let stringData = data.toString();
 
@@ -443,23 +475,7 @@ export function PluginManager() {
     const data = await response.json();
 
     if (!data.ok) {
-      setModalProps({
-        header: "Error installing plugin",
-        body: data.message,
-        footer: (
-          <NBDButton
-            text="Close"
-            action={() =>
-              setModalProps({
-                ...modalProps,
-                show: false,
-              })
-            }
-          />
-        ),
-        show: true,
-      });
-      return;
+      alert("Error installing plugin: " + data.message);
     }
 
     setModalProps({
@@ -467,8 +483,8 @@ export function PluginManager() {
       show: false,
     });
 
-    // Refresh page
-    window.location.reload();
+    // Fetch the new data
+    fetchData();
   };
 
   // Open plugins folder
@@ -476,32 +492,12 @@ export function PluginManager() {
     await horusGet("/desktop/appsupportdir");
   };
 
-  const installingModal = <HorusModal {...modalProps} />;
-
-  const [pluginList, setPluginList] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [filteredPluginList, setFilteredPluginList] = useState(pluginList);
-
   useEffect(() => {
-
     // If we are on an iFrame (plugin manager server)
     // get the isDesktop variable from the parent window
     if (window.parent !== window) {
       window.isDesktop = window.parent.isDesktop;
     }
-
-    const fetchData = async () => {
-      try {
-        const response = await horusGet("/plugins/list");
-        const data = await response.json();
-        setPluginList(data);
-        setFilteredPluginList(data);
-        setLoading(false);
-      } catch (error) {
-        setPluginList(["Error loading plugins"]);
-        setLoading(false);
-      }
-    };
 
     fetchData();
   }, []);
@@ -536,12 +532,16 @@ export function PluginManager() {
     });
   };
 
+  useEffect(() => {
+    fetchDesktop();
+  }, []);
+
   return (
     <div className="root-plugin-container overflow-hidden">
       <div className="flex flex-col">
         <div className="plugin-manager-title flex">
           <h1>Plugin manager</h1>
-          <div className="flex flex-row gap-2 mr-2">
+          <div className="flex flex-row flex-wrap justify-center gap-2 mr-2">
             <HorusFileExplorer
               onFileConfirm={(file) => {
                 installPlugin(file);
@@ -568,7 +568,11 @@ export function PluginManager() {
             <RotatingLines />
           </div>
           {installingModal}
-          <InstalledPlugins pluginList={filteredPluginList} loading={loading} />
+          <InstalledPlugins
+            pluginList={filteredPluginList}
+            loading={loading}
+            fetchData={fetchData}
+          />
         </div>
       </div>
     </div>

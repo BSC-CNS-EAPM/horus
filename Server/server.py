@@ -922,6 +922,10 @@ class HorusServer:
                 }
             return flask.jsonify(success)
 
+        @self.server.route("/settingsView")
+        def settingsView():
+            return flask.render_template("Settings/index.html")
+
         @self.server.route("/settings", methods=["GET"])
         def settings():
             settings = self.settingsManager.listSettings()

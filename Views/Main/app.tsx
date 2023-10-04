@@ -7,7 +7,7 @@ import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { FlowBuilderView } from "../Components/FlowBuilder/flow_builder_view";
 import IFrameLoader from "../Components/IframeLoader/iframeloader";
 import { socket } from "../Utils/socket";
-import { horusGet } from "../Utils/utils";
+import { fetchDesktop, horusGet } from "../Utils/utils";
 
 declare global {
   interface Window {
@@ -121,18 +121,6 @@ export function App() {
     setShowConsole((currentShowConsole) => !currentShowConsole);
   };
 
-  const fetchDesktop = async () => {
-    try {
-      const response = await horusGet("/isDesktop");
-      window.isDesktop = await response.json();
-    } catch (err) {
-      alert(
-        `Could not detect running mode. Expect errors while running the app. ${err}`
-      );
-      window.isDesktop = false;
-    }
-  };
-
   useEffect(() => {
     window.addEventListener("mainView", handleMainView);
     window.addEventListener("mainViewURL", handleIFrame);
@@ -180,10 +168,29 @@ export function App() {
     </>
   );
 
+  const iFrameRef = useRef(null);
+
   const iframeViewPanel = (
     <>
       <ResizeHandle horizontal={true} />
-      <Panel minSize={30} order={4} collapsible={true} defaultSize={50}>
+      <Panel
+        ref={iFrameRef}
+        minSize={30}
+        order={4}
+        collapsible={true}
+        defaultSize={50}
+        onCollapse={
+          // Close the iframe when the panel is collapsed
+          () => {
+            // setShowIFrame(false);
+            // const size = iFrameRef.current.getSize();
+            // console.log("size", size);
+            // if (size === 30) {
+            //   setShowIFrame(false);
+            // }
+          }
+        }
+      >
         {iframeView}
       </Panel>
     </>
