@@ -743,7 +743,8 @@ function FlowReciver(props: FlowReciverProps) {
     e: CustomEvent<{ savedID: string; path: string }>
   ) => {
     const hasPath = e.detail.path !== undefined;
-    if (!window.isDesktop && !hasPath) {
+    const hasSavedID = e.detail.savedID !== undefined;
+    if (!window.isDesktop && (!hasPath && !hasSavedID)) {
       setServerFilePickerOpen(true);
     } else {
       loadFlow(Object.keys(e.detail).length === 0 ? null : e.detail);
