@@ -2,6 +2,9 @@ import { useState, useEffect } from "react";
 import { horusGet, horusPost } from "../Utils/utils";
 import NBDButton from "../Components/nbdbutton";
 
+// Import the css
+import "../Components/FlowBuilder/block.css";
+
 type Settings = {
   id: string;
   category: string;
