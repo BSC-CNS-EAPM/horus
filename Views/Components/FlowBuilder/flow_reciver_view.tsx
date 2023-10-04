@@ -112,6 +112,7 @@ function FlowReciver(props: FlowReciverProps) {
   const currentSaving = useRef(false);
 
   const handleSave = async () => {
+
     if (currentSaving.current) {
       return;
     }
@@ -743,7 +744,8 @@ function FlowReciver(props: FlowReciverProps) {
     e: CustomEvent<{ savedID: string; path: string }>
   ) => {
     const hasPath = e.detail.path !== undefined;
-    if (!window.isDesktop && !hasPath) {
+    const hasSavedID = e.detail.savedID !== undefined;
+    if (!window.isDesktop && (!hasPath && !hasSavedID)) {
       setServerFilePickerOpen(true);
     } else {
       loadFlow(Object.keys(e.detail).length === 0 ? null : e.detail);
@@ -753,7 +755,7 @@ function FlowReciver(props: FlowReciverProps) {
   // For the server mode, we need to open first the file picker in folder mode
   // to select the saving folder
   const preHandleSave = async () => {
-    if (!window.isDesktop && flowPath.current === "") {
+    if (!window.isDesktop && (flowPath.current === "" || flowPath.current === null)) {
       // Open the file picker
       setServerFolderPickerOpen(true);
       return;

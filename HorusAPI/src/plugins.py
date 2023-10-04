@@ -1377,7 +1377,7 @@ class Plugin:
         """
 
         # Get a list of the *.flow files in the flows folder
-        flowsDir = os.path.join(self._path, "flows")
+        flowsDir = os.path.join(self._path, "Flows")
 
         # If the flows folder does not exist, no flows are present
         if not os.path.exists(flowsDir):
