@@ -798,7 +798,7 @@ function PredefinedFlowsSearch() {
     const recentFlowsData = await recentFlowsResponse.json();
 
     if (!recentFlowsData.ok) {
-      alert("Error getting recent flows: " + data.error);
+      alert("Error getting recent flows: " + recentFlowsData.error);
       return;
     }
 
@@ -854,7 +854,9 @@ function PredefinedFlowsSearch() {
   const [isOnFocus, setIsOnFocus] = useState(false);
 
   useEffect(() => {
-    getFlows();
+    if (isOnFocus) {
+      getFlows();
+    }
   }, [isOnFocus]);
 
   const openFlow = (flow) => {
