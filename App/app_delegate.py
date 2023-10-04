@@ -837,12 +837,12 @@ def launchApp():
 
     # Check for the --browser (-b) flag
     browser = False
-    if "--browser" in sys.argv or "-b" in sys.argv:
+    if "--browser" in sys.argv or "-b" in sys.argv or os.getenv("HORUS_MODE") == "browser":
         browser = True
 
     # Check for the --server (-s) flag
     serverMode = False
-    if "--server" in sys.argv or "-s" in sys.argv:
+    if "--server" in sys.argv or "-s" in sys.argv or os.getenv("HORUS_MODE") == "server":
         if browser:
             browser = False
             print("Server mode overrides browser mode")
