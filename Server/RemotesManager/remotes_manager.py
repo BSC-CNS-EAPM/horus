@@ -215,7 +215,7 @@ class RemotesAPI:
             self.conn.put(source, destination)
         except BaseException as exc:
             raise Exception(  # pylint: disable=broad-exception-raised
-                f"Error transferring data to {self.remoteName}:\n{exc}.\n Not enough space."
+                f"Error transferring data to {self.remoteName}: {exc}."
             ) from exc
 
     def transferTo(self, source: str, destination: str):

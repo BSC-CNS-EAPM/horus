@@ -71,6 +71,9 @@ class SlurmProScript:
 #SBATCH --nodes={self.nodes}
 #SBATCH --time={self.time}
 
+## Load the user .bashrc
+source ~/.bashrc
+
 ## Modules
 {modules}
 
