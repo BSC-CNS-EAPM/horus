@@ -20,6 +20,15 @@ mkdir -p dist/Packages
 # Move the Horus.app inside the package directory
 mv dist/Horus.app dist/Packages
 
+# Remove any .DS_Store files inside the bundle (included with the DefaultIcon)
+find dist/Packages/Horus.app -name '*.DS_Store' -exec rm {} \;
+
+# Remove any previous signing
+codesign --remove-signature dist/Packages/Horus.app
+
+# Codesign the .app bundle
+codesign --deep -s "CAD497EE3E18DA164E232E36F1B86B3572EDC768" "dist/Packages/Horus.app"
+
 # Define the name
 name="Horus-$version-$arch.dmg"
 
