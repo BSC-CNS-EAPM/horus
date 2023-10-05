@@ -5,6 +5,7 @@ remote connections to the run Slurm blocks.
 
 import typing as t
 import os
+import logging
 import subprocess
 import json
 import secrets
@@ -419,8 +420,14 @@ class RemotesAPI:
 
         :return: The queue storage.
         """
-        with open(self.queueStoragePath, "r", encoding="utf-8") as file:
-            return json.load(file)
+        try:
+            with open(self.queueStoragePath, "r", encoding="utf-8") as file:
+                return json.load(file)
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            logging.getLogger("Horus").error(
+                f"Could not read queue storage: {exc}. Returning empty queue."
+            )
+            return {}
 
     def saveJob(self, jobID: int):
         """
@@ -477,20 +484,31 @@ class RemotesAPI:
                 f"Script {script} does not exist."
             ) from exc
 
+        # Get the directory of the script
         changeDirTo = os.path.dirname(script)
 
-        out = self.command(f"cd {changeDirTo} && sbatch {script}")
-
-        # Get the job ID
+        # Submit the job and get the job ID
         try:
+            out = self.command(f"cd {changeDirTo} && sbatch {script}")
             jobID = int(out.split(" ")[-1].strip())
         except Exception as exc:
+            logging.getLogger("Horus").error(
+                f"Error submitting job: {exc}."
+            )
             raise Exception(  # pylint: disable=broad-exception-raised
                 "Error submitting job. Could not get job ID."
             ) from exc
 
         # Save the job as running into the active jobs file
-        self.saveJob(jobID)
+        try:
+            self.saveJob(jobID)
+        except Exception as exc:
+            logging.getLogger("Horus").error(
+                f"Error saving job with ID {jobID}: {exc}."
+            )
+            raise Exception(  # pylint: disable=broad-exception-raised
+                f"Error saving job with ID {jobID} to the queue storage."
+            ) from exc
 
         return jobID
 
@@ -559,7 +577,13 @@ class RemotesAPI:
                 "Corrupted queue storage: block not found."
             )
 
-        return self.getJobStatus(jobID)
+        # Get the job status
+        status = self.getJobStatus(jobID)
+
+        # Update the queue storage
+        self.updateQueue(flowSavedID)
+
+        return status
 
     def getJobStatus(self, jobID: int) -> str:
         """
