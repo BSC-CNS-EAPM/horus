@@ -296,11 +296,13 @@ def initialInducedFitDocking(block: SlurmBlock):  # pylint: disable=missing-func
     ligandDataValue = block.inputs.get("ligand", None)
 
     # If the input group is set to 'file' or 'folder', get the basename of the file
+    ligandIsFile = False
     if (
         block.selectedInputGroup == "ligandFileGroup"
         or block.selectedInputGroup == "ligandFolderGroup"
     ):
         ligandDataValue = os.path.basename(ligandDataValue)
+        ligandIsFile = True
 
     cpus = int(block.variables.get("cpus", 2))
 
@@ -424,7 +426,8 @@ def initialInducedFitDocking(block: SlurmBlock):  # pylint: disable=missing-func
     block.remote.sendData(systemDataValue, os.path.join(simRemoteDir, systemDataFilename))
 
     # Send the ligand data to the remote
-    block.remote.sendData(ligandDataValue, os.path.join(simRemoteDir, ligandDataValue))
+    if ligandIsFile:
+        block.remote.sendData(ligandDataValue, os.path.join(simRemoteDir, ligandDataValue))
 
     # Send the input YAML to the remote
     block.remote.sendData(f"{name}.yaml", os.path.join(simRemoteDir, f"{name}.yaml"))
