@@ -306,7 +306,7 @@ function PluginCard(props: PluginCardProps) {
     const data = await response.json();
 
     if (!data.ok) {
-      alert("Error deleting plugin");
+      alert("Error deleting plugin: " + data.message);
     }
 
     // Fetch the new data
