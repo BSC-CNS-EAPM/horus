@@ -511,7 +511,21 @@ class PluginManager:
             if p.returncode != 0 and p.returncode is not None:
                 raise Exception(exceptionMsg)
 
-            if version != appPythonVersion:
+            # Check that the major and minor version of python matches
+            major = version.split(".")[0]
+            minor = version.split(".")[1]
+
+            appVersionMajor = appPythonVersion.split(".")[0]
+            appVersionMinor = appPythonVersion.split(".")[1]
+
+            majorMatches = major == appVersionMajor
+            minorMatches = minor == appVersionMinor
+
+            # Both major and minor versions must match (eg. 3.9.12 == 3.9.15)
+            # Patch versions are ignored
+            bothMatch = majorMatches and minorMatches
+
+            if not bothMatch:
                 exceptionMsg += f" (Currently detected python v{version})"
                 raise Exception(exceptionMsg)
 
