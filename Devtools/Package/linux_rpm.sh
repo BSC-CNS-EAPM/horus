@@ -15,78 +15,82 @@ system=$(lsb_release -is)
 # Set a filename variable
 filename=Horus-$version-$arch-$system-QT5
 
-# Log the status
-echo "Creating the .rpm file: $filename.rpm"
-
 # Go to the dist folder
 cd dist
 
-# Create the file tree nedded to build RPM
-# This creates the rpmbuild folder in the user's home directory
-rpmdev-setuptree
+# # Log the status
+# echo "Creating the .rpm file: $filename.rpm"
 
-# Copy the compiled software into the SOURCES folder
-cp -r Horus ~/rpmbuild/SOURCES/
+# # Create the file tree nedded to build RPM
+# # This creates the rpmbuild folder in the user's home directory
+# rpmdev-setuptree
 
-# Ignore RPATH
-export QA_SKIP_RPATHS=1
+# # Copy the compiled software into the SOURCES folder
+# cp -r Horus ~/rpmbuild/SOURCES/
 
-# Create a .spec file
-cat > ~/rpmbuild/SPECS/horus.spec << EOF
-Name:           Horus
-Version:        $version
-Release:        1%{?dist}
-Summary:        Molecular visualizer
+# # Ignore RPATH
+# export QA_SKIP_RPATHS=1
 
-License:        MIT
-Source0:        Horus
+# # Create a .spec file
+# cat > ~/rpmbuild/SPECS/horus.spec << EOF
+# Name:           Horus
+# Version:        $version
+# Release:        1%{?dist}
+# Summary:        Molecular visualizer
 
-%description
-Horus visualizer and flow builder.
+# License:        MIT
+# Source0:        Horus
 
-%prep
-# No prep steps required
+# %description
+# Horus visualizer and flow builder.
 
-%build
-# No build steps required
+# %prep
+# # No prep steps required
 
-%install
-# Remove the buildroot
-rm -rf %{buildroot}
-# Create the buildroot
-mkdir -p %{buildroot}/%{_bindir}
-# Copy the compiled software to the buildroot
-cp -r %{_sourcedir}/Horus %{buildroot}/%{_bindir}
+# %build
+# # No build steps required
 
-%files
-%{_bindir}/Horus
+# %install
+# # Remove the buildroot
+# rm -rf %{buildroot}
+# # Create the buildroot
+# mkdir -p %{buildroot}/%{_bindir}
+# # Copy the compiled software to the buildroot
+# cp -r %{_sourcedir}/Horus %{buildroot}/%{_bindir}
 
-%post
-# Create a symlink to the executable
-ln -s %{_bindir}/Horus/horus %{_bindir}/horus
+# %files
+# %{_bindir}/Horus
 
-%postun
-rm -f %{_bindir}/horus
-rm -rf %{_bindir}/Horus/
+# %post
+# # Create a symlink to the executable
+# ln -s %{_bindir}/Horus/horus %{_bindir}/horus
 
-%changelog
-# No changelog
-EOF
+# %postun
+# rm -f %{_bindir}/horus
+# rm -rf %{_bindir}/Horus/
 
-# Build the package
-echo "Building..."
-rpmbuild -bb ~/rpmbuild/SPECS/horus.spec
+# %changelog
+# # No changelog
+# EOF
 
-# Find the generated rpm file under ~/rpmbuild/RPMS/**/*.rpm
-generated_rpm=$(find ~/rpmbuild/RPMS/ -name "*.rpm")
+# # Build the package
+# echo "Building..."
+# rpmbuild -bb ~/rpmbuild/SPECS/horus.spec
 
-# Rename and move the generated .rpm file
-mv $generated_rpm $filename.rpm
+# # Find the generated rpm file under ~/rpmbuild/RPMS/**/*.rpm
+# generated_rpm=$(find ~/rpmbuild/RPMS/ -name "*.rpm")
 
-echo "Created $filename.rpm"
+# # Rename and move the generated .rpm file
+# mv $generated_rpm $filename.rpm
 
-# Remove the rpmbuild folder
-rm -rf ~/rpmbuild/
+# echo "Created $filename.rpm"
+
+# # Remove the rpmbuild folder
+# rm -rf ~/rpmbuild/
+
+echo "Removing libstdc++.so.6 from the bundle (issue #68)"
+
+rm -rf Horus/libstdc++.so.6
 
 # Zip the Horus folder
 zip -rq $filename.zip Horus
