@@ -53,6 +53,10 @@ From: ubuntu:22.04
     # Install requirements
     npm run requirements
 
+    # Update conda environment with Ubuntu-specific packages
+    conda activate horus
+    python -m pip install pygobject pycairo
+
     # Fix parcel with yarn
     npm install --legacy-peer-deps yarn
     npx yarn
@@ -60,9 +64,12 @@ From: ubuntu:22.04
 %runscript
     # Source conda
     . /opt/conda/etc/profile.d/conda.sh
+
     # Activate conda environment
     conda activate horus
+
     # Build horus
     npm run build
+    
     # Create the packages
     npm run distribute

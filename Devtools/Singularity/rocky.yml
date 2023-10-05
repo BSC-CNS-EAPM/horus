@@ -72,12 +72,16 @@ From: rockylinux:8
     conda activate horus
     python -m pip install pywebview[qt]==4.2.2
 
+
 %runscript
     # Source conda
     . /opt/conda/etc/profile.d/conda.sh
+
     # Activate conda environment
     conda activate horus
+
     # Build horus
     npm run build
+
     # Create the packages
     npm run distribute
