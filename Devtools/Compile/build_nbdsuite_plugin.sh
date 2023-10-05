@@ -11,7 +11,7 @@ fi
 
 if [ ! -d "AppSupport/Plugins/NBDSuite/deps/nbdsuite" ]; then
     echo "NBDSuite dependency not installed in AppSupport/Plugins/NBDSuite/deps"
-    echo "Please instal the NBDSuite in AppSupport/Plugins/NBDSuite/deps"
+    echo "Please install the NBDSuite in AppSupport/Plugins/NBDSuite/deps"
     exit 1
 fi
 
@@ -44,6 +44,13 @@ echo "Final version: $version"
 # Get also the kernel name (darwin or linux)
 kernel=$(uname -s | tr '[:upper:]' '[:lower:]')
 
+# Get the system name (el8, ubuntu, macos, etc)
+if [ "$kernel" == "darwin" ]; then
+    system="macos$(sw_vers -productVersion | awk -F'.' '{print $1}')"
+else
+    system=$(lsb_release -is)
+fi
+
 # Finally get the architecture
 arch=$(uname -m)
 
@@ -51,7 +58,7 @@ arch=$(uname -m)
 mkdir -p dist
 
 # Move the plugin to the dist directory
-mv AppSupport/Plugins/NBDSuite/NBDSuite.hp dist/NBDSuite-$version-$kernel-$arch.hp
+mv AppSupport/Plugins/NBDSuite/NBDSuite.hp dist/NBDSuite-$version-$system-$arch.hp
 
 # Build the NBDSuite Pro plugin
 
@@ -73,14 +80,5 @@ echo "Version: $version"
 
 version="$version-horus-$app_version"
 
-# Get also the kernel name (darwin or linux)
-kernel=$(uname -s | tr '[:upper:]' '[:lower:]')
-
-# Finally get the architecture
-arch=$(uname -m)
-
-# Create the dist directory if it doesn't exist
-mkdir -p dist
-
 # Move the plugin to the dist directory
-mv AppSupport/Plugins/NBDSuitePro/NBDSuite-Pro.hp dist/NBDSuite-Pro-$version-$kernel-$arch.hp
+mv AppSupport/Plugins/NBDSuitePro/NBDSuite-Pro.hp dist/NBDSuite-Pro-$version-$system-$arch.hp
