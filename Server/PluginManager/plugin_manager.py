@@ -226,7 +226,10 @@ class PluginManager:
         # Remove the plugin folder
         pluginPath = os.path.join(self.pluginsDir, plugin._path)
 
-        shutil.rmtree(pluginPath)
+        try:
+            shutil.rmtree(pluginPath)
+        except Exception as exc:
+            raise Exception(f"{exc}. Try restarting the app") from exc
 
         self.pluginChanges = True
         self._initializePlugins()
