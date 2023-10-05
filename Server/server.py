@@ -855,7 +855,7 @@ class HorusServer:
             # If on server mode, allow only local connections
             if not self.desktop and remote != "Local":
                 return flask.jsonify(
-                    {"ok": False, "msg": "Only local connections allowed on server mode"}
+                    {"ok": False, "msg": "Only local connections are allowed on server mode"}
                 )
 
             try:
