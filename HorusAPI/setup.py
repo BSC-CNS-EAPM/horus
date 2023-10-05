@@ -78,7 +78,8 @@ setuptools.setup(
     zip_safe=False,
 )
 
-# Restore the src/__init__.py file
+# Restore the original src/__init__.py file
+os.system("rm src/__init__.py")
 os.system("mv src/__init__.py.bak src/__init__.py")
 
 # Because in the wheel the .pyi files are not included,
