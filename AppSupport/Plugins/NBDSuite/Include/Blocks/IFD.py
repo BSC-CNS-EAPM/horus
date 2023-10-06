@@ -353,7 +353,7 @@ def initialInducedFitDocking(block: SlurmBlock):  # pylint: disable=missing-func
     topologyFixerInput.repairHeavyAtomsInput = block.variables.get("repair_heavy_atoms", True)
     topologyFixerInput.protonationPHInput = block.variables.get("protonation_ph", 7.0)
 
-    hetResiduesToDropValue = block.inputs.get("het_residues_to_drop", None)
+    hetResiduesToDropValue = block.variables.get("het_residues_to_drop", None)
     # Extract the "auth_comp_id" value from the
     # "het_res_to_drop" input and store it in a list
     if hetResiduesToDropValue is not None:
@@ -361,7 +361,7 @@ def initialInducedFitDocking(block: SlurmBlock):  # pylint: disable=missing-func
     else:
         hetResiduesToDropValue = []
 
-    chainIDsToDropValue = block.inputs.get("std_residues_to_drop", None)
+    chainIDsToDropValue = block.variables.get("std_residues_to_drop", None)
 
     if chainIDsToDropValue is not None:
         chainIDsToDropValue = [residue["chainID"] for residue in chainIDsToDropValue]
