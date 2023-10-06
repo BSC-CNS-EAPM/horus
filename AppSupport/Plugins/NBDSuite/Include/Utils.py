@@ -157,6 +157,7 @@ class FlowInducedFitDockingInput(BaseNBDSuiteInput):
     ligandResolutionInput = ""
     sideChainPredictionResolutionInput = ""
     forceFieldInput = ""
+    peleSolventInput = ""
     stepsInput = ""
     epochsInput = ""
     flexibleRegionRadiusIFDInput = ""
@@ -174,7 +175,7 @@ class FlowInducedFitDockingInput(BaseNBDSuiteInput):
     docking_radius: {self.dockingRadiusInput}
     max_conformations_to_take: 5
     pele_forcefield: {self.forceFieldInput}
-    pele_solvent: OBC
+    pele_solvent: {self.peleSolventInput}
     pele_ligand_resolution: {self.ligandResolutionInput}
     pele_minimizer_ediff: 1.0
     pele_minimizer_rmstol: 1.0
@@ -225,6 +226,7 @@ class FlowInducedFitRefinementInput(BaseNBDSuiteInput):
     """
 
     forceFieldInput = ""
+    peleSolventInput = ""
     stepsInput = ""
     epochsInput = ""
     flexibleRegionRadiusInput = ""
@@ -234,6 +236,7 @@ class FlowInducedFitRefinementInput(BaseNBDSuiteInput):
         return f"""- flow: induced_fit_refinement
   options:
     pele_forcefield: {self.forceFieldInput}
+    pele_solvent: {self.peleSolventInput}
     pele_steps: {self.stepsInput}
     adaptive_epochs: {self.epochsInput}
     flexible_region_radius: {self.flexibleRegionRadiusInput}

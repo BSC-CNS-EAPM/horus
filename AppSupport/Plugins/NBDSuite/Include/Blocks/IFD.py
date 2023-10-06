@@ -108,6 +108,15 @@ peleFFIFD = PluginVariable(
     allowedValues=["openff-2.0.0", "openff-1.3.0", "OPLS2005"],
 )
 
+peleSolventIFD = PluginVariable(
+    name="PELE solvent",
+    id="pele_solvent",
+    description="PELE solvent.",
+    defaultValue="OBC",
+    type=VariableTypes.STRING_LIST,
+    allowedValues=["OBC", "VDGBNP"],
+)
+
 peleStepsIFD = PluginVariable(
     name="PELE steps",
     id="pele_steps",
@@ -394,6 +403,7 @@ def initialInducedFitDocking(block: SlurmBlock):  # pylint: disable=missing-func
     )
 
     inducedFitDockingInput.forceFieldInput = forceField
+    inducedFitDockingInput.peleSolventInput = block.variables.get("pele_solvent", "OBC")
     inducedFitDockingInput.stepsInput = steps
     inducedFitDockingInput.epochsInput = epochs
     inducedFitDockingInput.flexibleRegionRadiusIFDInput = flexibleRegionRadius
@@ -502,6 +512,7 @@ inducedFitDockingBlock = SlurmBlock(
         fixSystems,
         fixLigands,
         peleFFIFD,
+        peleSolventIFD,
         peleStepsIFD,
         epochsIFD,
         flexibleRegionRadiusIFD,

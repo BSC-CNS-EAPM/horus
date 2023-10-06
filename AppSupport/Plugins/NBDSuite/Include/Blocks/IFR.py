@@ -103,7 +103,16 @@ peleFFIFR = PluginVariable(
     description="PELE force field.",
     type=VariableTypes.STRING_LIST,
     defaultValue="openff-2.0.0",
-    allowedValues=["openff-2.0.0", "openff-1.3.0"],
+    allowedValues=["openff-2.0.0", "openff-1.3.0", "OPLS2005"],
+)
+
+peleSolventIFR = PluginVariable(
+    name="PELE solvent",
+    id="pele_solvent",
+    description="PELE solvent.",
+    defaultValue="OBC",
+    type=VariableTypes.STRING_LIST,
+    allowedValues=["OBC", "VDGBNP"],
 )
 
 peleStepsIFR = PluginVariable(
@@ -373,6 +382,7 @@ def inducedFitRefinement(block: SlurmBlock):  # pylint: disable=missing-function
 
     flowInducedFitRefinementInput = FlowInducedFitRefinementInput()
     flowInducedFitRefinementInput.forceFieldInput = forceField
+    flowInducedFitRefinementInput.peleSolventInput = block.variables.get("pele_solvent", "OBC")
     flowInducedFitRefinementInput.stepsInput = steps
     flowInducedFitRefinementInput.epochsInput = epochs
     flowInducedFitRefinementInput.flexibleRegionRadiusInput = flexibleRegionRadius
@@ -481,6 +491,7 @@ inducedFitRefinementBlock = SlurmBlock(
         fixSystems,
         fixLigands,
         peleFFIFR,
+        peleSolventIFR,
         peleStepsIFR,
         epochsIFR,
         flexibleRegionRadiusIFR,
