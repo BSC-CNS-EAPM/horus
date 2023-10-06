@@ -2,7 +2,7 @@
   "name": "NBDSuite",
   "description": "The NBDSuite plugin for Horus",
   "author": "Nostrum Biodiscovery",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "pluginFile": "NBDSuite.py",
   "dependencies": [
     "AdaptivePELE",
