@@ -288,11 +288,16 @@ def inducedFitRefinement(block: SlurmBlock):  # pylint: disable=missing-function
     if ligandSelection is None:
         raise Exception("No ligand selection provided.")
 
+    isComplex = False
     if block.selectedInputGroup == "complexDataStructure":
         # Parse the ligand selection
         chainID = ligandSelection[0]["chainID"]
         residue = ligandSelection[0]["residue"]
         ligandSelection = f"{chainID}:{residue}"
+        isComplex = True
+
+    if block.selectedInputGroup == "complexDataFile":
+        isComplex = True
 
     cpus = int(block.variables.get("cpus", 2))
     if cpus < 2:
@@ -313,6 +318,7 @@ def inducedFitRefinement(block: SlurmBlock):  # pylint: disable=missing-function
     from Utils import GeneralInput
 
     generalInput = GeneralInput()
+    generalInput.isComplex = isComplex
     generalInput.systemDataInput = complexDataValue
     generalInput.ligandDataInput = ligandSelection
     generalInput.nameInput = name

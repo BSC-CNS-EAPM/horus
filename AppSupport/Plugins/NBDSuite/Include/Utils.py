@@ -4,6 +4,7 @@ Utilities for the NBDSuite plugin.
 
 import typing
 
+
 def slurmScript(name, cpus, suiteEnvPath="/shared/work/NBDSuite/envs/nbdsuite-0.0.1rc1"):
     """
     Generate the SLURM script for the simulation.
@@ -58,6 +59,8 @@ class GeneralInput(BaseNBDSuiteInput):
     The general input block.
     """
 
+    isComplex: bool = False
+
     systemDataInput = ""
     ligandDataInput = ""
     nameInput = ""
@@ -66,13 +69,26 @@ class GeneralInput(BaseNBDSuiteInput):
     verbosityInput = ""
 
     def toYaml(self) -> str:
-        return f"""system_data: {self.systemDataInput}
-ligand_data: {self.ligandDataInput}
+        return f"""{self._inputsInput()}
 name: {self.nameInput}
 static_name: {self.staticNameInput}
 cpus: {self.cpusInput}
 verbosity: {self.verbosityInput}
 pipeline:"""
+
+    def _inputsInput(self) -> str:
+        if self.isComplex:
+            return self._complexInput()
+        else:
+            return self._systemInput()
+
+    def _systemInput(self) -> str:
+        return f"""system_data: {self.systemDataInput}
+ligand_data: {self.ligandDataInput}"""
+
+    def _complexInput(self) -> str:
+        return f"""complex_data: {self.systemDataInput}
+complex_ligand_selection: {self.ligandDataInput}"""
 
 
 class TopologyExtractorInput(BaseNBDSuiteInput):
