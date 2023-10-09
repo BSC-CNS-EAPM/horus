@@ -5,6 +5,7 @@ import NBDButton from "../Components/nbdbutton";
 
 import "../Components/FlowBuilder/block.css";
 import "../PluginsManager/plugin_manager.css";
+import { HorusFileExplorer } from "../Components/FileExplorer/file_explorer";
 
 export default function ConfigRemotes() {
   const [remotes, setRemotes] = useState([]);
@@ -190,7 +191,6 @@ function NewRemote(props: NewRemoteProps) {
       proxyCommand: proxyCommand,
       workDir: workDir,
     };
-
     const header = {
       "Content-Type": "application/json",
       Accept: "application/json",
@@ -219,6 +219,16 @@ function NewRemote(props: NewRemoteProps) {
     setKeyPath(data.path);
   };
 
+  const filterNullValue = (event, setter) => {
+    const value = event.target.value;
+
+    if (value === "") {
+      setter(null);
+    } else {
+      setter(value);
+    }
+  };
+
   return (
     <div>
       <HorusModal
@@ -233,7 +243,7 @@ function NewRemote(props: NewRemoteProps) {
                   type="text"
                   placeholder="The name of the remote"
                   value={name}
-                  onChange={(event) => setName(event.target.value)}
+                  onChange={(event) => filterNullValue(event, setName)}
                 />
               </div>
               <div className="plugin-variable">
@@ -243,7 +253,7 @@ function NewRemote(props: NewRemoteProps) {
                   type="text"
                   placeholder="The host of the remote"
                   value={host}
-                  onChange={(event) => setHost(event.target.value)}
+                  onChange={(event) => filterNullValue(event, setHost)}
                 />
               </div>
               <div className="plugin-variable">
@@ -253,7 +263,7 @@ function NewRemote(props: NewRemoteProps) {
                   type="text"
                   placeholder="Your username on the remote"
                   value={username}
-                  onChange={(event) => setUsername(event.target.value)}
+                  onChange={(event) => filterNullValue(event, setUsername)}
                 />
               </div>
               <div className="plugin-variable">
@@ -267,7 +277,7 @@ function NewRemote(props: NewRemoteProps) {
                   // Disable autocomplete
                   autoComplete="new-password"
                   value={password}
-                  onChange={(event) => setPassword(event.target.value)}
+                  onChange={(event) => filterNullValue(event, setPassword)}
                 />
               </div>
               <div className="plugin-variable">
@@ -277,7 +287,7 @@ function NewRemote(props: NewRemoteProps) {
                   type="text"
                   placeholder="The port of the remote"
                   value={port}
-                  onChange={(event) => setPort(event.target.value)}
+                  onChange={(event) => filterNullValue(event, setPort)}
                 />
               </div>
               <div className="plugin-variable">
@@ -288,9 +298,14 @@ function NewRemote(props: NewRemoteProps) {
                     type="text"
                     placeholder="Optional if using password"
                     value={keyPath}
-                    onChange={(event) => setKeyPath(event.target.value)}
+                    onChange={(event) => filterNullValue(event, setKeyPath)}
                   />
-                  <NBDButton action={openFilePicker}>Select file...</NBDButton>
+                  <HorusFileExplorer
+                    onFileConfirm={(path) => filterNullValue(path, setKeyPath)}
+                    onFileSelect={() => {}}
+                  >
+                    Pick file...
+                  </HorusFileExplorer>
                 </div>
               </div>
               <div className="plugin-variable">
@@ -300,7 +315,7 @@ function NewRemote(props: NewRemoteProps) {
                   type="text"
                   placeholder="A proxy command to use (optional)"
                   value={proxyCommand}
-                  onChange={(event) => setProxyCommand(event.target.value)}
+                  onChange={(event) => filterNullValue(event, setProxyCommand)}
                 />
               </div>
               <div className="plugin-variable">
@@ -310,7 +325,7 @@ function NewRemote(props: NewRemoteProps) {
                   type="text"
                   placeholder="Specify a working directory on the remote (optional)"
                   value={workDir}
-                  onChange={(event) => setWorkDir(event.target.value)}
+                  onChange={(event) => filterNullValue(event, setWorkDir)}
                 />
               </div>
             </div>

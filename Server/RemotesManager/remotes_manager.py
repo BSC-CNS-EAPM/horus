@@ -492,9 +492,7 @@ class RemotesAPI:
             out = self.command(f"cd {changeDirTo} && sbatch {script}")
             jobID = int(out.split(" ")[-1].strip())
         except Exception as exc:
-            logging.getLogger("Horus").error(
-                f"Error submitting job: {exc}."
-            )
+            logging.getLogger("Horus").error(f"Error submitting job: {exc}.")
             raise Exception(  # pylint: disable=broad-exception-raised
                 "Error submitting job. Could not get job ID."
             ) from exc
@@ -503,9 +501,7 @@ class RemotesAPI:
         try:
             self.saveJob(jobID)
         except Exception as exc:
-            logging.getLogger("Horus").error(
-                f"Error saving job with ID {jobID}: {exc}."
-            )
+            logging.getLogger("Horus").error(f"Error saving job with ID {jobID}: {exc}.")
             raise Exception(  # pylint: disable=broad-exception-raised
                 f"Error saving job with ID {jobID} to the queue storage."
             ) from exc
@@ -701,10 +697,14 @@ class RemotesManager:
             raise Exception("The port of the remote is required")
 
         if newConfig.get("keyPath") is None and newConfig.get("password") is None:
-            raise Exception("Either the keys or the password of the remote is required")
+            raise Exception(
+                "Either the keys or the password of the remote is required. None provided."
+            )
 
         if newConfig.get("keyPath") is not None and newConfig.get("password") is not None:
-            raise Exception("Either the keys or the password of the remote is required")
+            raise Exception(
+                "While configuring a remote either the keys or the password is required, not both."
+            )
 
         newKeyPath = newConfig.get("keyPath", None)
         if newKeyPath is not None:

@@ -521,7 +521,7 @@ class AppDelegate(metaclass=HorusSingleton):
 
         fileMenu = wm.Menu(
             "File",
-            [
+            [  # type: ignore
                 # wm.MenuAction("New...", None),
                 # wm.MenuAction("Open...", None),
                 # wm.MenuAction("Save project...", None),
@@ -540,7 +540,7 @@ class AppDelegate(metaclass=HorusSingleton):
         pluginsMenu = wm.Menu(
             "Plugins",
             [
-                wm.MenuAction(
+                wm.MenuAction(  # type: ignore
                     "Manage...",
                     openPlugins,
                 )
@@ -552,7 +552,7 @@ class AppDelegate(metaclass=HorusSingleton):
 
         settingsMenu = wm.Menu(
             "Settings",
-            [
+            [  # type: ignore
                 wm.MenuAction("Settings", settings),
                 wm.MenuAction("Remotes", openRemotes),
             ],
@@ -576,14 +576,16 @@ class AppDelegate(metaclass=HorusSingleton):
             except requests.exceptions.ConnectionError:
                 pass
 
-        def guiBacked():
+        def guiBacked() -> str:
             # Check in the args for the --gui=qt or --gui=gtk
             # Or in the env variable HORUS_GUI
             for arg in sys.argv:
                 if arg.startswith("--gui="):
                     return arg.split("=")[1]
-            if os.getenv("HORUS_GUI") is not None:
-                return os.getenv("HORUS_GUI")
+
+            envGUI = os.getenv("HORUS_GUI")
+            if envGUI is not None:
+                return envGUI
 
             # Default to "cocoa" on macOS
             # and "gtk" on Linux
@@ -612,7 +614,7 @@ class AppDelegate(metaclass=HorusSingleton):
         self.openWindow("Horus", url=homeURL, wo=windowOptions)
 
         # Start the webview
-        webview.start(debug=self.debug, menu=self._menus(), gui=guiBacked())
+        webview.start(debug=self.debug, menu=self._menus(), gui=guiBacked())  # type: ignore
 
     def _startServerMode(self):
         """
@@ -646,7 +648,7 @@ class AppDelegate(metaclass=HorusSingleton):
         self,
         allowMultiple: bool = False,
         fileTypes: typing.Tuple[str, ...] = ("All Files (*.*)",),
-    ) -> typing.Tuple[str, ...]:
+    ) -> typing.Optional[typing.Sequence[str]]:
         """
         Opens a file dialog and returns the path of the selected file(s).
 
@@ -662,13 +664,13 @@ class AppDelegate(metaclass=HorusSingleton):
         window = webview.windows[0]
 
         # Open the file dialog
-        result: typing.Tuple[str, ...] = window.create_file_dialog(
+        result: typing.Optional[typing.Sequence[str]] = window.create_file_dialog(
             webview.OPEN_DIALOG, allow_multiple=allowMultiple, file_types=fileTypes
         )
 
         return result
 
-    def openFolderSelectDialog(self) -> typing.Optional[str]:
+    def openFolderSelectDialog(self) -> typing.Optional[typing.Sequence[str]]:
         """
         Opens a folder dialog and returns the path of the selected folder.
         """
@@ -676,7 +678,7 @@ class AppDelegate(metaclass=HorusSingleton):
         window = webview.windows[0]
 
         # Open the folder dialog
-        result: typing.Optional[str] = window.create_file_dialog(
+        result: typing.Optional[typing.Sequence[str]] = window.create_file_dialog(
             webview.FOLDER_DIALOG, allow_multiple=False
         )
 
@@ -689,9 +691,9 @@ class AppDelegate(metaclass=HorusSingleton):
 
     def saveFileSelectDialog(
         self,
-        fileName: typing.Optional[str] = None,
+        fileName: str = "flow",
         fileTypes: typing.Optional[typing.Tuple[str, ...]] = None,
-    ) -> typing.Optional[str]:
+    ) -> typing.Optional[typing.Sequence[str]]:
         """
         Opens a save file dialog and returns the path of the selected file.
 
