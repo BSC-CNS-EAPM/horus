@@ -9,7 +9,7 @@ import {
   BlockConnectionArrow,
 } from "./arrow_connector";
 import { debounce } from "../reusable";
-import { Block, BlockVarPair } from "./flow_builder_types";
+import { Block, BlockVarPair, PluginVariableTypes } from "./flow_builder_types";
 import FlowExecuter from "./flow_executer";
 import { FlowBuilderController } from "./flow_builder_hooks";
 import { ServerFileExplorerModal } from "../FileExplorer/file_explorer";
@@ -37,6 +37,13 @@ type FlowReciverProps = {
     origin: BlockVarPair;
     destination: BlockVarPair;
   }) => void;
+
+  isConnecting: boolean;
+  tryingToConnect: {
+    variableID: string;
+    variableType: PluginVariableTypes;
+    variableAllowedValues: Array<string>;
+  };
 };
 
 function FlowReciver(props: FlowReciverProps) {
@@ -112,7 +119,6 @@ function FlowReciver(props: FlowReciverProps) {
   const currentSaving = useRef(false);
 
   const handleSave = async () => {
-
     if (currentSaving.current) {
       return;
     }
@@ -745,7 +751,7 @@ function FlowReciver(props: FlowReciverProps) {
   ) => {
     const hasPath = e.detail.path !== undefined;
     const hasSavedID = e.detail.savedID !== undefined;
-    if (!window.isDesktop && (!hasPath && !hasSavedID)) {
+    if (!window.isDesktop && !hasPath && !hasSavedID) {
       setServerFilePickerOpen(true);
     } else {
       loadFlow(Object.keys(e.detail).length === 0 ? null : e.detail);
@@ -755,7 +761,10 @@ function FlowReciver(props: FlowReciverProps) {
   // For the server mode, we need to open first the file picker in folder mode
   // to select the saving folder
   const preHandleSave = async () => {
-    if (!window.isDesktop && (flowPath.current === "" || flowPath.current === null)) {
+    if (
+      !window.isDesktop &&
+      (flowPath.current === "" || flowPath.current === null)
+    ) {
       // Open the file picker
       setServerFolderPickerOpen(true);
       return;
@@ -954,6 +963,8 @@ function FlowReciver(props: FlowReciverProps) {
           key={`${block.placedID}-${block.id}`}
           block={blockToRender}
           updateBlockSelectedGroup={updateBlockSelectedGroup}
+          isConnecting={props.isConnecting}
+          tryingToConnect={props.tryingToConnect}
         />
         {connectedVars}
         {connectedBlocks}

@@ -79,6 +79,12 @@ def createPlugin():
     # Add the list block to the plugin
     plugin.addBlock(listBlockInput)
 
+    # # Development sample block
+    # from Blocks.SampleBlock import sampleBlock  # type: ignore
+
+    # # Add the sample block to the plugin
+    # plugin.addBlock(sampleBlock)
+
     return plugin
 
 

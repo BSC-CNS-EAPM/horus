@@ -12,7 +12,7 @@
   position: relative;
   transition: transform 0.2s ease-in-out;
   height: 100%;
-  max-width: 20rem;
+  max-width: 21rem;
   min-width: 10rem;
   padding: 10px;
   margin-bottom: 1rem;
@@ -316,7 +316,8 @@
   transition: margin-top 0.2s ease-in-out, opacity 0.2s ease-in-out;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  max-width: 100%;
+  gap: 0.5rem;
 }
 
 .variable-ball-group-shown {
@@ -330,9 +331,21 @@
   border: 1px solid #000;
   border-radius: 5px;
   width: 10rem;
-  position: absolute;
+  /* position: absolute; */
   box-shadow: 4px 4px 8px #0000002e;
   justify-content: start;
+  padding-inline-start: 0.5rem;
+}
+
+.output-squared {
+  background-color: var(--broken-white);
+  text-align: center;
+  z-index: 99;
+  border: 1px solid #000;
+  border-radius: 5px;
+  min-width: 10rem;
+  /* position: absolute; */
+  box-shadow: 4px 4px 8px #0000002e;
   padding-inline-start: 0.5rem;
 }
 

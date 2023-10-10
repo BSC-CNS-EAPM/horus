@@ -50,6 +50,8 @@ function FlowBuilderView() {
           flowBuilderController={flowBuilderState.flowBuilderController}
           unconnectBlocks={flowBuilderState.unconnectBlocks}
           unconnectVariables={flowBuilderState.unconnectVariables}
+          isConnecting={flowBuilderState.isConnecting}
+          tryingToConnect={flowBuilderState.tryingToConnect}
         />
       </div>
       <DragOverlay dropAnimation={null}>

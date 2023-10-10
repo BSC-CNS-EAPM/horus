@@ -1,9 +1,38 @@
-from HorusAPI import PluginVariable, PluginBlock, VariableTypes, MolstarAPI
+"""
+Visualize PDB block
+"""
+
 import os
+from HorusAPI import PluginVariable, PluginBlock, VariableTypes, MolstarAPI, VariableGroup
 
 
 class NoPDBFileException(Exception):
-    pass
+    """
+    Exception raised when the input is not a PDB file.
+    """
+
+
+def addToMolstar(f: str):
+    """
+    Adds the given PDB file to Mol*
+    """
+    if isinstance(f, list):
+        f = f[0]
+
+    extension = f.split(".")[-1]
+    if extension != "pdb":
+        raise NoPDBFileException("Input is not a PDB file.")
+
+    # Read the file
+    with open(f, "r", encoding="utf-8") as fopen:
+        pdb = fopen.read()
+
+    filename = f.split("/")[-1]
+
+    print(f"Adding {filename} to Mol*")
+
+    # Create the structure
+    MolstarAPI().addPDB(pdb, filename)
 
 
 # Create a block that adds a given pdb to Mol*
@@ -12,53 +41,37 @@ def addPDB(block: PluginBlock):
     Adds a PDB file to Mol*
     """
 
-    def addToMolstar(f: str):
-        if isinstance(f, list):
-            f = f[0]
+    if block.selectedInputGroup == "fileInputGroup":
+        # Get the file
+        path = block.inputs.get("file", None)
 
-        extension = f.split(".")[-1]
-        if extension != "pdb":
-            raise NoPDBFileException("Input is not a PDB file.")
+        if path is not None:
+            addToMolstar(path)
+            return
 
-        # Read the file
-        with open(f, "r") as fopen:
-            pdb = fopen.read()
+    if block.selectedInputGroup == "folderInputGroup":
+        # Get the folder
+        path = block.inputs.get("folder", None)
 
-        filename = f.split("/")[-1]
+        if path is not None:
+            if not os.path.isdir(path):
+                raise Exception("Input is not a folder.")
 
-        print(f"Adding {filename} to Mol*")
+            filelist = os.listdir(path)
+            pdbFound = False
 
-        # Create the structure
-        MolstarAPI().addPDB(pdb, filename)
+            for f in filelist:
+                try:
+                    pdbFullPath = os.path.join(path, f)
+                    addToMolstar(pdbFullPath)
+                    pdbFound = True
+                except NoPDBFileException:
+                    pass
 
-    # Get the file
-    path = block.inputs.get("file", None)
-
-    if path is not None:
-        addToMolstar(path)
-        return
-
-    path = block.inputs.get("folder", None)
-
-    if path is not None:
-        if not os.path.isdir(path):
-            raise Exception("Input is not a folder.")
-
-        filelist = os.listdir(path)
-        pdb_found = False
-
-        for f in filelist:
-            try:
-                pdbFullPath = os.path.join(path, f)
-                addToMolstar(pdbFullPath)
-                pdb_found = True
-            except NoPDBFileException:
-                pass
-
-        if not pdb_found:
-            raise Exception("No PDB found in the folder.")
-
-        return
+            if not pdbFound:
+                raise Exception("No PDB found in the folder.")
+            else:
+                return
 
     raise Exception("No input provided.")
 
@@ -77,9 +90,19 @@ visualizePDBfolder = PluginVariable(
     type=VariableTypes.FOLDER,
 )
 
+visualizePDBfolderGroup = VariableGroup(
+    id="folderInputGroup",
+    variables=[visualizePDBfolder],
+)
+
+visualizePDBfileGroup = VariableGroup(
+    id="fileInputGroup",
+    variables=[visualizePDBinput],
+)
+
 addPDBBlock = PluginBlock(
     name="Visualize PDB",
     description="Adds a PDB to Mol* from a file or all PDBs from a folder path",
     action=addPDB,
-    inputs=[visualizePDBinput, visualizePDBfolder],
+    inputGroups=[visualizePDBfileGroup, visualizePDBfolderGroup],
 )

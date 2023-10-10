@@ -1,16 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import RotatingLines from "../RotatingLines/rotatinglines";
 import { HorusModal, HorusPopover } from "../reusable";
-import {
-  Block,
-  BlockVarPair,
-  PluginVariable,
-  PluginVariableTypes,
-} from "./flow_builder_types";
+import { Block, PluginVariableTypes } from "./flow_builder_types";
 import {
   PluginVariableView,
   InputOutputView,
   VariableBallView,
+  OutputConnectView,
 } from "./block_variables";
 import "./block.css";
 
@@ -18,7 +14,6 @@ import "./block.css";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { ArrowBlockConnector } from "./arrow_connector";
 import { useXarrow } from "react-xarrows";
-import NBDButton from "../nbdbutton";
 import { SearchComponent } from "../Toolbar/toolbar";
 
 interface DeleteBlockButtonProps {
@@ -443,6 +438,12 @@ function InputBlock(block: Block) {}
 
 type DraggableBlockViewProps = {
   block: Block;
+  isConnecting: boolean;
+  tryingToConnect: {
+    variableID: string;
+    variableType: PluginVariableTypes;
+    variableAllowedValues: Array<string>;
+  };
   updateBlockSelectedGroup?: (blockID: number, selectedInputGroup) => void;
 };
 
@@ -458,11 +459,7 @@ function DraggableBlockView(props: DraggableBlockViewProps) {
     },
   });
 
-  const {
-    setNodeRef: setDropRef,
-    active,
-    isOver,
-  } = useDroppable({
+  const { setNodeRef: setDropRef } = useDroppable({
     id: block.placedID ? `${block.placedID}-${block.id}` : block.id,
     data: {
       block: block,
@@ -497,44 +494,15 @@ function DraggableBlockView(props: DraggableBlockViewProps) {
     setNodeRef(ref.current);
   }, [ref]);
 
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [tryingToConnect, setTryingToConnect] = useState<{
-    variableID: string;
-    variableType: PluginVariableTypes;
-    variableAllowedValues: Array<string>;
-  } | null>(null);
-
-  useEffect(() => {
-    if (active && isOver) {
-      const id = active.id as string;
-      if (id.includes("-connector")) {
-        const blockVarPair = active.data.current.blockVarPair as BlockVarPair;
-        setIsConnecting(true);
-        setTryingToConnect({
-          variableID: blockVarPair.variableID,
-          variableType: blockVarPair.variableType,
-          variableAllowedValues: blockVarPair.variableAllowedValues,
-        });
-        return;
-      }
-    }
-
-    setIsConnecting(false);
-    setTryingToConnect(null);
-  }, [active, isOver]);
-
-  const placedBlockConnector = () => {
-    // For input blocks, we only have one variable
-    if (block.type === "input") {
-      const variable = block.variables[0];
-      return (
-        <ArrowBlockConnector from={ref} block={block} variable={variable} />
-      );
-    }
-
-    // For other blocks, we need to set the output as the variable
-    const output = block.outputs[0];
-    return <ArrowBlockConnector from={ref} block={block} variable={output} />;
+  const outputConnectors = () => {
+    return block.outputs.length === 0 ? (
+      <ArrowBlockConnector from={ref} block={block} />
+    ) : (
+      <OutputConnectView
+        key={"output-connectors-" + block.id + "-" + block.placedID}
+        block={block}
+      />
+    );
   };
 
   const handleSelectedInputGroupChange = (direction: "up" | "down") => {
@@ -585,23 +553,29 @@ function DraggableBlockView(props: DraggableBlockViewProps) {
 
   const variablesConnectorView = () => {
     if (block.type === "input") {
-      return <>{placedBlockConnector()}</>;
+      return <>{outputConnectors()}</>;
     }
 
     return (
       <>
-        {placedBlockConnector()}
         <div className="flex flex-row gap-1">
           <VariableBallView
             key={block.id + "-" + block.placedID}
             variables={visibleInputs.variables}
-            isConnecting={isConnecting}
-            tryingToConnect={tryingToConnect}
+            isConnecting={props.isConnecting}
+            tryingToConnect={props.tryingToConnect}
             placedID={block.placedID}
             block={block}
             handleSelectedInputGroupChange={handleSelectedInputGroupChange}
             // updateXarrow={updateXarrow}
           />
+          {outputConnectors()}
+          {/* {block.outputs && (
+            <OutputConnectView
+              key={"output-connectors-" + block.id + "-" + block.placedID}
+              block={block}
+            />
+          )} */}
         </div>
       </>
     );

@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
-import Xarrow, { refType, useXarrow, Xwrapper } from "react-xarrows";
+import { useEffect, useRef } from "react";
+import Xarrow from "react-xarrows";
 import { Block, PluginVariable } from "./flow_builder_types";
-import { DragOverlay, useDraggable } from "@dnd-kit/core";
+import { useDraggable } from "@dnd-kit/core";
 import { BlockVarPair } from "./flow_builder_types";
 
 interface ArrowConnectorProps {
@@ -11,18 +11,13 @@ interface ArrowConnectorProps {
   from: React.MutableRefObject<any> | string;
 
   /**
-   * The variable that is being dragged (html ref)
-   */
-  variable: PluginVariable;
-
-  /**
    * The block that the arrow is coming from
    */
   block: Block;
 }
 
 function ArrowBlockConnector(props: ArrowConnectorProps) {
-  const { from, block, variable } = props;
+  const { from, block } = props;
 
   const ref = useRef<HTMLDivElement>(null);
 
@@ -31,9 +26,9 @@ function ArrowBlockConnector(props: ArrowConnectorProps) {
     blockID: block.id,
     blockType: block.type,
 
-    variableID: variable?.id,
-    variableType: variable?.type,
-    variableAllowedValues: variable?.allowedValues,
+    variableID: null,
+    variableType: null,
+    variableAllowedValues: null,
   };
 
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
@@ -53,45 +48,24 @@ function ArrowBlockConnector(props: ArrowConnectorProps) {
     alignItems: "center",
     textAlign: "center",
     cursor: "grab",
+    filter: "brightness(0%)",
   };
 
   let arrow = "arrow-right";
-  const connectBlocks = "connect-blocks";
   if (transform) {
     style.transform = `translate(${transform.x}px, ${transform.y}px)`;
     style.cursor = "grabbing";
     arrow = null;
   }
 
-  if (!variable) {
-    // Set the color to black
-    style.filter = "brightness(0%)";
-  }
-
-  const [showOutputName, setShowOutputName] = useState(false);
-
   return (
     <div
-      onMouseOver={() => setShowOutputName(true)}
-      onMouseLeave={() => setShowOutputName(false)}
       ref={ref}
-      className={connectBlocks}
+      className="connect-blocks"
       style={style}
       {...listeners}
       {...attributes}
     >
-      {showOutputName && variable && (
-        <div
-          style={{
-            position: "absolute",
-            left: "1rem",
-          }}
-          className="variable-squared"
-        >
-          {variable.name}
-        </div>
-      )}
-
       <div className={arrow}>
         {transform && (
           <Xarrow
@@ -99,7 +73,7 @@ function ArrowBlockConnector(props: ArrowConnectorProps) {
             end={ref}
             endAnchor={"right"}
             dashness={{ animation: -2 }}
-            color={variable ? "#0d47a1" : "black"}
+            color={"black"}
           />
         )}
       </div>
@@ -124,7 +98,7 @@ function VariableConnectionArrow(props: VariableConnectionArrowProps) {
   const { origin, destination } = props.connection;
   const { unconnectVariables, isSecond, cycleNumber } = props;
 
-  const start = `${origin.placedID}-${origin.blockID}`;
+  const start = `output-drag-${origin.variableID}-${origin.placedID}-connector`;
   const end = `connect-${destination.variableID}-${destination.placedID}`;
 
   return (
@@ -138,8 +112,8 @@ function VariableConnectionArrow(props: VariableConnectionArrowProps) {
         start={start}
         end={end}
         key={start + end}
-        endAnchor={["left", "right"]}
-        startAnchor={["left", "right", "top"]}
+        endAnchor={["left"]}
+        startAnchor={["right"]}
         color={isSecond ? "#f57f17" : "#0d47a1"}
         labels={
           isSecond && {

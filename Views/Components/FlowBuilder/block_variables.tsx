@@ -1,16 +1,16 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Jsme } from "jsme-react";
-import { useDroppable } from "@dnd-kit/core";
+import { useDraggable, useDroppable } from "@dnd-kit/core";
 import {
   Block,
   BlockVarPair,
   PluginVariable,
   PluginVariableTypes,
 } from "./flow_builder_types";
-import { horusGet, horusPost } from "../../Utils/utils";
 import NBDButton from "../nbdbutton";
 import { SearchComponent } from "../Toolbar/toolbar";
 import { HorusFileExplorer } from "../FileExplorer/file_explorer";
+import Xarrow from "react-xarrows";
 
 type PluginVariableViewProps = {
   variable: PluginVariable;
@@ -1217,7 +1217,7 @@ function VariableConnectView(props: VariableConnectViewProps) {
       <div
         ref={setNodeRef}
         id={id}
-        className="flex flex-row gap-1 align-center items-center absolute variable-squared"
+        className="flex flex-row gap-1 align-center items-center variable-squared"
       >
         <div className={classNameVariableBall} />
         {props.variable.name}
@@ -1226,4 +1226,102 @@ function VariableConnectView(props: VariableConnectViewProps) {
   );
 }
 
-export { PluginVariableView, InputOutputView, VariableBallView };
+type OutputConnectViewProps = {
+  block: Block;
+};
+
+function OutputConnectView(props: OutputConnectViewProps) {
+  return (
+    <div className="variable-ball-group variable-ball-group-shown">
+      {props.block.outputs.map((output, index) => (
+        <OutputVariableBallConnector
+          key={index}
+          blockVarPair={{
+            placedID: props.block.placedID,
+            blockID: props.block.id,
+            blockType: props.block.type,
+            variableID: output.id,
+            variableType: output.type,
+            variableAllowedValues: output.allowedValues,
+          }}
+          name={output.name}
+        />
+      ))}
+    </div>
+  );
+}
+
+type OutputVariableBallConnectorProps = {
+  blockVarPair: BlockVarPair;
+  name: string;
+};
+
+const outputSVG = (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={1.5}
+    stroke="currentColor"
+    className="w-6 h-6"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M11.25 4.5l7.5 7.5-7.5 7.5m-6-15l7.5 7.5-7.5 7.5"
+    />
+  </svg>
+);
+
+function OutputVariableBallConnector(props: OutputVariableBallConnectorProps) {
+  const id = `output-drag-${props.blockVarPair.variableID}-${props.blockVarPair.placedID}-connector`;
+
+  const { setNodeRef, transform, listeners, attributes } = useDraggable({
+    id: id,
+    data: {
+      blockVarPair: props.blockVarPair,
+      type: "connector",
+    },
+  });
+
+  let style = {};
+  if (transform) {
+    style = {
+      transform: `translate(${transform.x}px, ${transform.y}px)`,
+    };
+  }
+
+  const ref = useRef(null);
+
+  useEffect(() => {
+    setNodeRef(ref.current);
+  }, [ref]);
+
+  return (
+    <div
+      id={id}
+      className="flex flex-row gap-1 align-center items-center output-squared justify-between"
+    >
+      {props.name}
+      <div style={style} id={id} ref={ref} {...listeners} {...attributes}>
+        {outputSVG}
+        {transform && (
+          <Xarrow
+            start={id}
+            end={ref}
+            endAnchor={"right"}
+            dashness={{ animation: -2 }}
+            color={"#0d47a1"}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+export {
+  PluginVariableView,
+  InputOutputView,
+  VariableBallView,
+  OutputConnectView,
+};

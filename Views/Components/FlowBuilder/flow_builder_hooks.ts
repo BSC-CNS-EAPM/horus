@@ -3,7 +3,7 @@ import {
   Block,
   BlockVarPair,
   HorusPlugin,
-  PluginVariable,
+  PluginVariableTypes,
 } from "./flow_builder_types";
 import {
   DragEndEvent,
@@ -197,6 +197,7 @@ const useFlowBuilder = () => {
 
     // Check for an variable-variable / block-block connection
     if (active.data.current.type === "connector") {
+      handleVariableConnectionAllowed(event);
       handleArrowBlockConnection(event);
       return;
     }
@@ -350,6 +351,7 @@ const useFlowBuilder = () => {
     const { active } = event;
 
     if (active.data.current.type === "connector") {
+      handleVariableConnectionAllowed(event);
       return;
     }
 
@@ -430,7 +432,12 @@ const useFlowBuilder = () => {
     const newDestinationBlock: Block = {
       ...destinationBlock,
       variableConnections: destinationBlock.variableConnections.filter((b) => {
-        return b.origin.placedID !== originBlock.placedID;
+        // Delete the connection that comes from the same block
+        const sameBlock = b.origin.placedID === originBlock.placedID;
+        // Delete the connection that comes from the same variable
+        const sameVar = b.origin.variableID === connection.origin.variableID;
+
+        return !(sameBlock && sameVar);
       }),
     };
 
@@ -439,7 +446,15 @@ const useFlowBuilder = () => {
       ...originBlock,
       variableConnectionsReference:
         originBlock.variableConnectionsReference.filter((b) => {
-          return b.destination.placedID !== destinationBlock.placedID;
+          // Delete the connection that goes to the same block
+          const sameBlock =
+            b.destination.placedID === destinationBlock.placedID;
+
+          // Delete the connection that goes to the same variable
+          const sameVar =
+            b.destination.variableID === connection.destination.variableID;
+
+          return !(sameBlock && sameVar);
         }),
     };
 
@@ -597,6 +612,33 @@ const useFlowBuilder = () => {
     });
   }
 
+  const [tryingToConnect, setTryingToConnect] = useState<{
+    variableID: string;
+    variableType: PluginVariableTypes;
+    variableAllowedValues: Array<string>;
+  } | null>(null);
+
+  const [isConnecting, setIsConnecting] = useState(false);
+
+  const handleVariableConnectionAllowed = (event: DragStartEvent) => {
+    const { active } = event;
+
+    const id = active.id as string;
+    if (id.includes("-connector")) {
+      const blockVarPair = active.data.current.blockVarPair as BlockVarPair;
+      setIsConnecting(true);
+      setTryingToConnect({
+        variableID: blockVarPair.variableID,
+        variableType: blockVarPair.variableType,
+        variableAllowedValues: blockVarPair.variableAllowedValues,
+      });
+      return;
+    }
+
+    setIsConnecting(false);
+    setTryingToConnect(null);
+  };
+
   return {
     handleMouseMove,
     placedBlocks,
@@ -612,6 +654,8 @@ const useFlowBuilder = () => {
     dndTweaks,
     unconnectBlocks,
     unconnectVariables,
+    isConnecting,
+    tryingToConnect,
     // handleBlockDragOver,
   };
 };
