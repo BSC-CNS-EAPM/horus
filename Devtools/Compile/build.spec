@@ -1,5 +1,9 @@
+"""
+PyInstaller build script for Horus
+"""
+
 import os
-import imp
+import imp  # pylint: disable=deprecated-module
 import shutil
 import sys
 
@@ -38,7 +42,7 @@ app_info_file = os.path.join(currentDir, "App", "APP_INFO")
 
 # Open the APP INFO file and load as a dict
 APP_INFO = {}
-with open(app_info_file, "r") as f:
+with open(app_info_file, "r", encoding="utf-8") as f:
     for line in f:
         if "=" in line:
             key, value = line.split("=")
@@ -46,7 +50,7 @@ with open(app_info_file, "r") as f:
 
 # Set the version the same as the HorusAPI version
 sys.path.append(currentDir)
-import HorusAPI
+import HorusAPI  # pylint: disable=wrong-import-position
 
 version = HorusAPI.__version__
 
@@ -60,6 +64,17 @@ else:
     version = version.split("-")[0]
 
 APP_INFO["APP_VERSION"] = version
+
+# Update the Horus plugin version to the same as the HorusAPI version
+with open("AppSupport/DefaultPlugins/Horus/plugin.meta", "r", encoding="utf-8") as f:
+    pluginMetaHorusBackup = f.readlines()
+
+with open("AppSupport/DefaultPlugins/Horus/plugin.meta", "w", encoding="utf-8") as f:
+    for line in pluginMetaHorusBackup:
+        if "version" in line:
+            f.write(f'\t"version": "{version}",\n')
+        else:
+            f.write(line)
 
 # Default settings
 default_settings = os.path.join(currentDir, "App", "default_settings.json")
@@ -138,7 +153,7 @@ binaries = []
 debug = False
 
 # Compile the app
-a = Analysis(  # noqa # type: ignore
+a = Analysis(  # type: ignore pylint: disable=undefined-variable
     entry_point,
     pathex=[],
     binaries=binaries,
@@ -156,9 +171,9 @@ a = Analysis(  # noqa # type: ignore
     noarchive=False,
 )
 
-pyz = PYZ(a.pure, a.zipped_data, cipher=None)  # noqa # type: ignore
+pyz = PYZ(a.pure, a.zipped_data, cipher=None)  # type: ignore pylint: disable=undefined-variable
 
-exe = EXE(  # noqa # type: ignore
+exe = EXE(  # type: ignore pylint: disable=undefined-variable
     pyz,
     a.scripts,
     [],
@@ -176,7 +191,7 @@ exe = EXE(  # noqa # type: ignore
     entitlements_file=None,
     version=APP_INFO["APP_VERSION"],
 )
-coll = COLLECT(  # noqa # type: ignore
+coll = COLLECT(  # type: ignore pylint: disable=undefined-variable
     exe,
     a.binaries,
     a.zipfiles,
@@ -188,13 +203,15 @@ coll = COLLECT(  # noqa # type: ignore
 )
 
 # Replace the APP_INFO inside the created app for the updated one
-with open(os.path.join(currentDir, "dist", APP_INFO["NAME"], "APP_INFO"), "w") as f:
+with open(
+    os.path.join(currentDir, "dist", APP_INFO["NAME"], "APP_INFO"), "w", encoding="utf-8"
+) as f:
     for key, value in APP_INFO.items():
         f.write(f"{key} = {value}\n")
 
 macos_icon = os.path.join(currentDir, "Resources", "horus.icns")
 
-app = BUNDLE(  # noqa # type: ignore
+app = BUNDLE(  # type: ignore pylint: disable=undefined-variable
     coll,
     name="Horus.app",
     icon=macos_icon,
@@ -209,6 +226,12 @@ if sys.platform == "darwin":
     bundleInfo = os.path.join(
         currentDir, "dist", f"{APP_INFO['NAME']}.app", "Contents", "MacOS", "APP_INFO"
     )
-    with open(bundleInfo, "w") as f:
+    with open(bundleInfo, "w", encoding="utf-8") as f:
         for key, value in APP_INFO.items():
             f.write(f"{key} = {value}\n")
+
+
+# Restore the original plugin.meta file
+with open("AppSupport/DefaultPlugins/Horus/plugin.meta", "w", encoding="utf-8") as f:
+    for line in pluginMetaHorusBackup:
+        f.write(line)
