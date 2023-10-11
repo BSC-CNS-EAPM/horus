@@ -504,7 +504,8 @@ class AppDelegate(metaclass=HorusSingleton):
             self.logger.root.handlers = []
 
         # Stop the server
-        self.serverThread.join()  # type: ignore
+        # if self.serverThread is not None:
+        #     self.serverThread.join(timeout=1)  # type: ignore
 
     def _menus(self):
         def newHorus():

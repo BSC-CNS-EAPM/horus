@@ -154,6 +154,11 @@ function VariableModalView(props: VariableModalViewProps) {
     setFilteredVariables(filteredVariables);
   };
 
+  // Variables to shown on the inputs accordingly to the block.selectedInputGroup
+  const visibleInputs = block.inputs.find(
+    (inputGroup) => inputGroup.id === block.selectedInputGroup
+  ).variables;
+
   return (
     <div>
       {block.variables && block.variables.length > 0 && (
@@ -188,22 +193,20 @@ function VariableModalView(props: VariableModalViewProps) {
         <div>
           <h4>Inputs</h4>
           <div>
-            {block.inputs.map((variableGroup) =>
-              variableGroup.variables.map((variable, index) => (
-                <InputOutputView
-                  key={
-                    variable.id +
-                    "-" +
-                    index +
-                    "-" +
-                    block.id +
-                    "-" +
-                    block.placedID
-                  }
-                  variable={variable}
-                />
-              ))
-            )}
+            {visibleInputs.map((variable, index) => (
+              <InputOutputView
+                key={
+                  variable.id +
+                  "-" +
+                  index +
+                  "-" +
+                  block.id +
+                  "-" +
+                  block.placedID
+                }
+                variable={variable}
+              />
+            ))}
           </div>
         </div>
       )}
