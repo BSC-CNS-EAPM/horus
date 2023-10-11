@@ -228,7 +228,8 @@ function FlowReciver(props: FlowReciverProps) {
     // Check that the flow is saved
     if (!currentSaved.current) {
       // Save the flow
-      await handleSave();
+      await preHandleSave();
+      return;
     }
 
     // // Set blocks as not executed
