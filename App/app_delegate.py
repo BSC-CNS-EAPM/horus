@@ -499,6 +499,13 @@ class AppDelegate(metaclass=HorusSingleton):
         """
         print("Closing Horus...")
 
+        # Stop the logger
+        if not self.debug:
+            self.logger.root.handlers = []
+
+        # Stop the server
+        self.serverThread.join()  # type: ignore
+
     def _menus(self):
         def newHorus():
             self.openWindow("Horus", forceNew=True)
