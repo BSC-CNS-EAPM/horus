@@ -347,13 +347,13 @@ class NBDSuiteParser:
 
         from nbdsuite.utils import string_to_link_ids_list  # type: ignore
 
-        flexible_residue_ids = string_to_link_ids_list(flexible_residue_ids)
+        flexible_residue_ids = string_to_link_ids_list(flexible_residue_ids, include_icodes=True)
 
         formatted_flexible_residue_ids = list()
         for flexible_residue_id in flexible_residue_ids:
-            chain, resnum = flexible_residue_id.split(":")
+            chain, resnum, icode = flexible_residue_id.split(":")
             resnum = int(resnum)
-            formatted_flexible_residue_ids.append((chain, resnum))
+            formatted_flexible_residue_ids.append((chain, resnum, icode))
         flexible_residue_ids = formatted_flexible_residue_ids
 
         flexible_residue_ids.append(ligandID)
