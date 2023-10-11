@@ -4,5 +4,7 @@
   "author": "Nostrum Biodiscovery",
   "version": "0.0.1",
   "pluginFile": "NBDSuitePro.py",
-  "dependencies": []
+  "dependencies": [
+    "pyyaml"
+  ]
 }

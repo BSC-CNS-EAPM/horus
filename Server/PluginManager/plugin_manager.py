@@ -683,6 +683,19 @@ class PluginManager:
         sys.path.remove(depsDir)
         sys.path.remove(includeDir)
 
+        # Remove them also from the sys.modules
+        for key, module in list(sys.modules.items()):
+            # Get the module path
+            modulePath = module.__file__ if hasattr(module, "__file__") else None
+
+            # If the module is not a file, skip it
+            if modulePath is None:
+                continue
+
+            # If the module is in the deps folder, remove it
+            if modulePath.startswith(depsDir) or modulePath.startswith(includeDir):
+                del sys.modules[key]
+
     def executeBlock(
         self,
         blockID: str,
