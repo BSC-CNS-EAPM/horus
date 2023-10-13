@@ -74,7 +74,7 @@ class PluginRemote:
         """
 
         return self._remote.workDir
-    
+
     @property
     def name(self):
         """
@@ -82,6 +82,14 @@ class PluginRemote:
         """
 
         return self._remote.name
+
+    @property
+    def host(self):
+        """
+        Returns the host adress of the remote.
+        """
+
+        return self._remote.host
 
 
 class PluginEndpoint:
