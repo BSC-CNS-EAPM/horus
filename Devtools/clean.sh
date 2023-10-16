@@ -12,10 +12,10 @@ rm -rf HorusAPI/stubs
 # Remove the generated .C files
 rm -rf HorusAPI/src/*.c
 
-# Remove NBDSuite plugin deps (except for nbdsuite and adaptivepele)
+# Remove NBDSuite plugin deps (except for nbdsuite)
 # in the AppSupport/Plugins/NBDSuite/deps directory
 cd AppSupport/Plugins/NBDSuite/deps
-find . -maxdepth 1 -not -name 'nbdsuite*' -not -name 'AdaptivePELE*' -not -name "." -not -name ".." -exec rm -rf {} +
+find . -maxdepth 1 -not -name 'nbdsuite*' -not -name "." -not -name ".." -exec rm -rf {} +
 cd ../../../../
 
 # Remove the Horus plugin deps
