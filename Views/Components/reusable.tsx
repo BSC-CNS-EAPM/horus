@@ -2,30 +2,46 @@ import React, { Fragment, useState } from "react";
 import Modal from "react-bootstrap/Modal";
 import { Listbox, Transition } from "@headlessui/react";
 import { CheckIcon, ChevronUpDownIcon } from "@heroicons/react/20/solid";
-import { Popover, Combobox } from "@headlessui/react";
-import { useEffect } from "react";
+import { Popover } from "@headlessui/react";
 
-const HorusPopover = ({ trigger, children }) => {
+type HorusPopoverProps = {
+  trigger: React.ReactNode;
+  children: React.ReactNode;
+
+  onOpen?: () => void;
+  onClose?: () => void;
+  disableHover?: boolean;
+};
+
+const HorusPopover = (props: HorusPopoverProps) => {
+  const { trigger, children, disableHover } = props;
+
   const [isOpen, setIsOpen] = useState(false);
   const handleOpen = () => {
     setIsOpen(true);
+    if (props?.onOpen) props?.onOpen();
   };
   const handleClose = () => {
     setIsOpen(false);
+    if (props?.onClose) props?.onClose();
+  };
+
+  const handleClickTrigger = () => {
+    setIsOpen(!isOpen);
   };
 
   return (
     <Popover className="relative">
       <Popover.Group
-        onMouseOver={handleOpen}
-        onMouseLeave={handleClose}
+        onMouseOver={disableHover ? () => {} : handleOpen}
+        onMouseLeave={disableHover ? () => {} : handleClose}
         style={{
           margin: "0",
           padding: "0",
           height: "1.25rem",
         }}
       >
-        {trigger}
+        <div onClick={handleClickTrigger}>{trigger}</div>
       </Popover.Group>
       {isOpen && (
         <Popover.Panel className="absolute" static>
@@ -52,7 +68,8 @@ interface HorusModalProps {
   header: React.ReactNode;
   body?: React.ReactNode;
   footer: React.ReactNode;
-  size?: "sm" | "lg" | "xl" | "xxl";
+  fullscreen?: boolean;
+  size?: "sm" | "lg" | "xl";
   contentClassName?: string;
   children?: React.ReactNode;
 }
@@ -65,6 +82,8 @@ function HorusModal(props: HorusModalProps) {
       onHide={props.onHide}
       dialogClassName={sizeClass}
       contentClassName={props.contentClassName}
+      fullscreen={props.fullscreen ? true : "false"}
+      size={props.size}
     >
       <Modal.Header>
         <Modal.Title>{props.header}</Modal.Title>

@@ -10,6 +10,7 @@ from .plugins import (
     PluginPage,
     PluginConfig,
     PluginEndpoint,
+    VariableList,
 )
 
 # Export the Molstar API
@@ -31,6 +32,7 @@ __all__ = [
     "PluginVariable",
     "VariableTypes",
     "VariableGroup",
+    "VariableList",
     "PluginPage",
     "PluginConfig",
     "PluginEndpoint",

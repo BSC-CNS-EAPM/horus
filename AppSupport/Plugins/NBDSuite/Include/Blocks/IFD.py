@@ -51,16 +51,22 @@ dockingCenter = PluginVariable(
 
 ligandSmiGroup = VariableGroup(
     id="ligandSmiGroup",
+    name="Ligand SMILES",
+    description="Pass a ligand SMILES to dock into the protein.",
     variables=[systemData, ligandSmiles, dockingCenter],
 )
 
 ligandFileGroup = VariableGroup(
     id="ligandFileGroup",
+    name="Ligand file",
+    description="Pass a ligand file to dock into the protein.",
     variables=[systemData, ligandFile, dockingCenter],
 )
 
 ligandFolderGroup = VariableGroup(
     id="ligandFolderGroup",
+    name="Ligand folder",
+    description="Pass a folder containing ligand files to dock into the protein.",
     variables=[systemData, ligandFolder, dockingCenter],
 )
 

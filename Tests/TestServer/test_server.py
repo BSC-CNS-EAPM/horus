@@ -4,7 +4,7 @@ from Server import HorusServer
 
 @pytest.fixture
 def desktopServer():
-    return HorusServer(desktop=True)
+    return HorusServer(desktop=True, port=5001)
 
 
 @pytest.fixture
@@ -81,7 +81,7 @@ def test_gui_dir_debug_mode_parcel_not_running(mocker):
 
 def test_gui_dir_frozen_executable(mocker):
     # Create an instance of HorusServer with debug and parcelURL set to False
-    server = HorusServer(debug=False)
+    server = HorusServer(debug=False, port=5001)
 
     # Mock os.path.abspath and os.path.join
     mocker.patch(
@@ -106,7 +106,7 @@ def test_gui_dir_frozen_executable(mocker):
 
 def test_gui_dir_not_frozen_executable(mocker):
     # Create an instance of HorusServer with debug and parcelURL set to False
-    server = HorusServer(debug=False)
+    server = HorusServer(debug=False, port=5001)
 
     # Mock os.path.abspath and os.path.join
     mocker.patch(
@@ -124,7 +124,7 @@ def test_gui_dir_not_frozen_executable(mocker):
 
 def test_get_token_desktop(mocker):
     # Create an instance of HorusServer with desktop set to True
-    server = HorusServer(desktop=True)
+    server = HorusServer(desktop=True, port=5001)
 
     # Mock the webview module and its token attribute
     mocked_token = "mocked_token"
@@ -139,7 +139,7 @@ def test_get_token_desktop(mocker):
 
 def test_get_token_no_desktop(mocker):
     # Create an instance of HorusServer with desktop set to False
-    server = HorusServer(desktop=False)
+    server = HorusServer(desktop=False, port=5001)
 
     # Call the _getToken method
     token = server._getToken()
@@ -150,7 +150,7 @@ def test_get_token_no_desktop(mocker):
 
 def test_check_parcel_server_running(mocker):
     # Create an instance of HorusServer with a mock parcel URL
-    server = HorusServer()
+    server = HorusServer(port=5001)
 
     # Mock requests.get to simulate a successful response
     mocker.patch("requests.get", side_effect=lambda *args, **kwargs: mocker.Mock())
@@ -164,7 +164,7 @@ def test_check_parcel_server_running(mocker):
 
 def test_check_parcel_server_not_running(mocker):
     # Create an instance of HorusServer with a mock parcel URL
-    server = HorusServer()
+    server = HorusServer(port=5001)
 
     # Mock requests.get to simulate a ConnectionError
     # when trying to connect to the parcel server
@@ -180,7 +180,7 @@ def test_check_parcel_server_not_running(mocker):
 
 
 def test_tokenize():
-    server = HorusServer()
+    server = HorusServer(port=5001)
 
     test_string = "Hello, World!"
 
@@ -190,7 +190,7 @@ def test_tokenize():
 
 def test_checkToken():
     # Create an instance of TokenManager with a specific salt
-    server = HorusServer()
+    server = HorusServer(port=5001)
 
     # Test token verification for a valid token
     test_string = "Hello, World!"

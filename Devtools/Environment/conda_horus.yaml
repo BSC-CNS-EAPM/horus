@@ -25,3 +25,4 @@ dependencies:
       - nbsphinx==0.9.3
       - sphinx_copybutton==0.5.2
       - mypy==1.5.1
+      - biopython==1.81

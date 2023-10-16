@@ -210,15 +210,6 @@ class VariableTypes(str, Enum):
     Will render as a radio items buttons.
     """
 
-    LIST = "list"
-    """
-    An initial empty list [] to which entries can be added.
-
-    Will render as a table with an input field and an add button. 
-    Using allowedValues will render a dropdown alongside the input field 
-    to select the type of the value to add.
-    """
-
     INT_RANGE = "[integer, integer]"
     """
     A range of integers like 1-10.
@@ -332,6 +323,22 @@ class VariableTypes(str, Enum):
     Will render as the JSME viewer (https://jsme-editor.github.io/)
     """
 
+    _GROUP = "group"
+    """
+    DO NOT USE IN PluginVariable class. 
+    VariableGroup will be automatically converted to a group of variables.
+    """
+
+    LIST = "list"
+
+    _LIST = "_list"
+    """
+    DO NOT USE IN PluginVariable class.
+    VariableList will be automatically converted to a list of variables.
+
+    Will render as a table with an input field and an add button. 
+    """
+
     @staticmethod
     def getTypes():
         """
@@ -390,6 +397,13 @@ class PluginVariable:
         if type not in VariableTypes.getTypes():
             raise Exception(f"Invalid type {type}.")
 
+        if type == VariableTypes._GROUP and not isinstance(self, VariableGroup):
+            raise Exception(
+                "You cannot use VariableTypes._GROUP in PluginVariable. "
+                + "Use VariableGroup class instead. "
+                + f"(While loading variable ID: {id}, name: {name}, description: {description})"
+            )
+
         self.defaultValue = defaultValue
         self.value = defaultValue
         self.id = id
@@ -404,6 +418,7 @@ class PluginVariable:
             varDict = {
                 "id": self.id,
                 "value": self.value if self.value else self.defaultValue,
+                "type": self.type,
             }
         else:
             varDict = {
@@ -421,7 +436,7 @@ class PluginVariable:
         return json.dumps(self.toDict(), indent=4)
 
 
-class VariableGroup:
+class VariableGroup(PluginVariable):
     """
     A group of varaibles to be used together as input.
     """
@@ -431,32 +446,131 @@ class VariableGroup:
     The variables contained in the group
     """
 
-    def __init__(self, id: str, variables: typing.List[PluginVariable]) -> None:
+    def __init__(
+        self,
+        id: str,  # pylint: disable=redefined-builtin
+        name: str,
+        description: str,
+        variables: typing.List[PluginVariable],
+        allowedValues: typing.Optional[typing.List[typing.Any]] = None,
+    ) -> None:
         """
         Initialize a VariableGroup
 
         :param id: The ID of the variable group (must be unique).
+        :param name: The name of the variable group.
+        :param description: A description of the variable group.
         :param variables: The list of variables in the group.
-        """
-
-        self.id = id
-        """
-        The id of the input group
+        :param allowedValues: In this case, the allowed values will indicate in
+        the GUI which groups can be connected (with the same allowedValues)
         """
 
         self.variables = variables
         """
-        The variables contained in the input group
+        The variables contained in the variable group
         """
 
-    def toDict(self):
+        super().__init__(
+            id=id,
+            name=name,
+            description=description,
+            type=VariableTypes._GROUP,
+            defaultValue=None,
+            allowedValues=allowedValues,
+        )
+
+    def toDict(self, minimal: bool = False):
         """
         Converts the variable group to a dictionary.
         """
 
-        groupDict = {"id": self.id, "variables": [var.toDict() for var in self.variables]}
+        if minimal:
+            groupDict = {
+                "id": self.id,
+                "variables": [var.toDict(minimal) for var in self.variables],
+                "type": self.type,
+            }
+        else:
+            groupDict = {
+                "id": self.id,
+                "name": self.name,
+                "type": self.type,
+                "description": self.description,
+                "variables": [var.toDict(minimal) for var in self.variables],
+                "allowedValues": self.allowedValues,
+            }
 
         return groupDict
+
+    def _updateVariablesInGroup(self, values: dict):
+        """
+        Update the values of the variables inside this group
+        """
+
+        for variable in self.variables:
+            if variable.id in values.keys():
+                variable.value = values[variable.id]
+
+
+class VariableList(PluginVariable):
+    """
+    A list of the designed input variables.
+    """
+
+    def __init__(
+        self,
+        id: str,
+        name: str,
+        description: str,
+        prototypes: typing.List[PluginVariable],
+        allowedValues: typing.Optional[typing.List[typing.Any]] = None,
+    ):
+        super().__init__(
+            id=id,
+            name=name,
+            description=description,
+            type=VariableTypes._LIST,
+            defaultValue=None,
+            allowedValues=allowedValues,
+        )
+
+        # prototypes cannot be VariableGroups
+        for prot in prototypes:
+            if isinstance(prot, VariableGroup):
+                raise Exception(
+                    f"Variable {prot.id} is a VariableGroup inside "
+                    + f"{self.id}. You cannot use VariableGroups inside VariableLists."
+                )
+
+        self.prototypes = prototypes
+        """
+        The prototypes of the variables in the list.
+        """
+
+    def toDict(self, minimal: bool = False):
+        """
+        Converts the variable list to a dictionary.
+        """
+
+        if minimal:
+            listDict = {
+                "id": self.id,
+                "variables": [var.toDict(minimal) for var in self.prototypes],
+                "value": self.value if self.value else None,
+                "type": self.type,
+            }
+        else:
+            listDict = {
+                "id": self.id,
+                "name": self.name,
+                "type": self.type,
+                "value": self.value if self.value else None,
+                "description": self.description,
+                "variables": [var.toDict(minimal) for var in self.prototypes],
+                "allowedValues": self.allowedValues,
+            }
+
+        return listDict
 
 
 class PluginBlockTypes(str, Enum):
@@ -590,6 +704,10 @@ class PluginBlock:
         outputs: typing.List[PluginVariable] = [],
         blockType: PluginBlockTypes = PluginBlockTypes.BASE,
     ):
+        """
+        Initialize a PluginBlock.
+        """
+
         self.id: str = "baseplugin.block"  # pylint: disable=invalid-name
         """
         The id of the block.
@@ -613,6 +731,21 @@ class PluginBlock:
         The action that the block performs.
         """
 
+        # Check that neither variables, nor inputs, nor outputs contain nested VariableGroups
+        def checkNestedVariables(variables: typing.List[PluginVariable]):
+            for var in variables:
+                if isinstance(var, VariableGroup):
+                    for v in var.variables:
+                        if isinstance(v, VariableGroup):
+                            raise Exception(
+                                f"Variable {v.id} is a VariableGroup inside "
+                                + f"{var.id} on block {self.id}. "
+                                + "You cannot use nested VariableGroups."
+                            )
+
+        checkNestedVariables(variables)
+        checkNestedVariables(outputs)
+
         self._variables = variables
         """
         Variables that can be used in the Block action
@@ -631,7 +764,10 @@ class PluginBlock:
             )
 
         if len(inputs) >= 0 and len(inputGroups) == 0:
-            inputGroups = [VariableGroup("default", inputs)]
+            inputGroups = [VariableGroup("default", "Default", "The default input group", inputs)]
+
+        for group in inputGroups:
+            checkNestedVariables(group.variables)
 
         # self._inputs = inputs
         # """
@@ -693,7 +829,12 @@ class PluginBlock:
         """
         for variable in self._variables:
             if variable.id in values.keys():
-                variable.value = values[variable.id]
+                if isinstance(variable, VariableGroup):
+                    variable._updateVariablesInGroup(  # pylint: disable=protected-access
+                        values[variable.id]
+                    )
+                else:
+                    variable.value = values[variable.id]
 
     def _updateInputs(self, values: dict):
         """
@@ -710,7 +851,12 @@ class PluginBlock:
             ) from keye
         for variable in inputs:
             if variable.id in values.keys():
-                variable.value = values[variable.id]
+                if isinstance(variable, VariableGroup):
+                    variable._updateVariablesInGroup(  # pylint: disable=protected-access
+                        values[variable.id]
+                    )
+                else:
+                    variable.value = values[variable.id]
 
     def _getVariables(self):
         """
@@ -718,31 +864,58 @@ class PluginBlock:
         """
         return self._variables
 
+    def _parseVariablesForBlockAccess(
+        self, variable: PluginVariable
+    ) -> typing.Union[typing.Any, dict[str, typing.Any]]:
+        if isinstance(variable, VariableGroup):
+            return {var.id: var.value for var in variable.variables}
+        else:
+            return variable.value
+
     @property
     def variables(self):
+        """
+        The variables assigned to the block.
+
+        :return: A dictionary with the variables of the block with key
+        the variable ID and value the variable value.
+        """
         varsDict: dict[str, typing.Any] = {}
         for variable in self._variables:
-            varsDict[variable.id] = variable.value
+            varsDict[variable.id] = self._parseVariablesForBlockAccess(variable)
         return varsDict
 
     @property
     def inputs(self):
+        """
+        The inputs assigned to the block.
+
+        :return: A dictionary with the inputs of the block with key
+        the input ID and value the input value.
+        """
         varsDict: dict[str, typing.Any] = {}
         try:
             inputs = self._inputGroups[self.selectedInputGroup].variables
         except KeyError as keye:
             raise Exception(
-                f"Input group {self.selectedInputGroup} not found in block inputs. Current block inputs are: {self._inputGroups.keys()}"
+                f"Input group {self.selectedInputGroup} not found in block inputs. "
+                + "Current block inputs are: {self._inputGroups.keys()}"
             ) from keye
         for variable in inputs:
-            varsDict[variable.id] = variable.value
+            varsDict[variable.id] = self._parseVariablesForBlockAccess(variable)
         return varsDict
 
     @property
     def outputs(self):
+        """
+        The outputs assigned to the block.
+
+        :return: A dictionary with the outputs of the block with key
+        the output ID and value the output value.
+        """
         varsDict: dict[str, typing.Any] = {}
         for variable in self._outputs:
-            varsDict[variable.id] = variable.value
+            varsDict[variable.id] = self._parseVariablesForBlockAccess(variable)
         return varsDict
 
     def setOutput(self, id: str, value: typing.Any):
@@ -754,7 +927,10 @@ class PluginBlock:
         """
         for variable in self._outputs:
             if variable.id == id:
-                variable.value = value
+                if isinstance(variable, VariableGroup):
+                    variable._updateVariablesInGroup(value)
+                else:
+                    variable.value = value
                 return
         raise Exception(f"Output {id} not found.")
 
@@ -777,7 +953,7 @@ class PluginBlock:
         configsDict: dict[str, typing.Any] = {}
         for config in self._configs:
             for var in config._getVariables():
-                configsDict[var.id] = var.value
+                configsDict[var.id] = self._parseVariablesForBlockAccess(var)
         return configsDict
 
     def addConfig(self, config: PluginConfig):
@@ -808,7 +984,10 @@ class PluginBlock:
         for config in self._configs:
             for var in config._getVariables():
                 if var.id in configs.keys():
-                    var.value = configs[var.id]
+                    if isinstance(var, VariableGroup):
+                        var._updateVariablesInGroup(configs[var.id])
+                    else:
+                        var.value = configs[var.id]
 
     def _createConfig(self, configPath: str):
         """
@@ -1012,8 +1191,20 @@ class PluginBlock:
         for variable in variablesJSON:
             varID = variable.get("id", None)
             if varID is None:
-                raise Exception("Invalid flow object.")  # pylint: disable=broad-exception-raised
-            variablesJSONParsed[varID] = variable.get("value", None)
+                raise Exception("Invalid flow object.")
+
+            varType = variable.get("type", None)
+            if varType == VariableTypes._GROUP.value:  # pylint: disable=protected-access
+                groupVariables = variable.get("variables", None)
+                variableGroupJSONParsed = {}
+                for var in groupVariables:
+                    subVarID = var.get("id", None)
+                    variableGroupJSONParsed[subVarID] = var.get("value", None)
+
+                variablesJSONParsed[varID] = variableGroupJSONParsed
+
+            else:
+                variablesJSONParsed[varID] = variable.get("value", None)
 
         # Update the variables with the values the user has set
         self.selectedInputGroup = selectedInputGroup
@@ -1068,8 +1259,8 @@ class PluginConfig(PluginBlock):
 
     def __init__(  # pylint: disable=dangerous-default-value
         self,
-        name,
-        description,
+        name: str,
+        description: str,
         action: typing.Optional[typing.Callable] = None,
         variables: typing.List[PluginVariable] = [],
     ):

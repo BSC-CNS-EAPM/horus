@@ -904,7 +904,13 @@ class PluginManager:
 
             valuesToSave = {}
             for variable in config["variables"]:
-                valuesToSave[variable["id"]] = variable["value"]
+                if variable["type"] == "group":
+                    variableGroupValues = {}
+                    for subVariable in variable["variables"]:
+                        variableGroupValues[subVariable["id"]] = subVariable["value"]
+                    valuesToSave[variable["id"]] = variableGroupValues
+                else:
+                    valuesToSave[variable["id"]] = variable["value"]
 
             # Save the config
             block._saveConfig(blockConfigFile, valuesToSave)

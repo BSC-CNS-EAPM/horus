@@ -61,11 +61,15 @@ inputFolder = PluginVariable(
 
 fileInputGroup = VariableGroup(
     id="fileInputGroup",
+    name="File",
+    description="Send a single file to the remote.",
     variables=[inputFile, destination],
 )
 
 folderInputGroup = VariableGroup(
     id="folderInputGroup",
+    name="Folder",
+    description="Send a folder to the remote.",
     variables=[inputFolder, destination],
 )
 

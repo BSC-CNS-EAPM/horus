@@ -10,4 +10,7 @@
   "pylint.args": [
     "--rcfile=${workspaceFolder}/.pylintrc"
   ],
+  "css.customData": [
+    ".vscode/tailwind.json"
+  ]
 }

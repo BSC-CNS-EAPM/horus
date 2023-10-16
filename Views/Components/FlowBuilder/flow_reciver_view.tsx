@@ -436,7 +436,7 @@ function FlowReciver(props: FlowReciverProps) {
         // Remove from the real block the variable connection reference
         realBlock.variableConnectionsReference =
           realBlock.variableConnectionsReference.filter(
-            (v) => v.origin.placedID !== block.placedID
+            (v) => v.destination.placedID !== block.placedID
           );
 
         // Update the placedBlocks array

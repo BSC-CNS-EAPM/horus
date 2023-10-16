@@ -34,7 +34,7 @@ function FlowBuilderView() {
       sensors={flowBuilderState.dndTweaks.sensors}
       measuring={flowBuilderState.dndTweaks.measuring}
     >
-      <div className="m-auto flex flex-row h-100">
+      <div className="m-auto flex flex-row h-100" id="flow-builder-div">
         {/* The block list coming from the server */}
         <BlockListView
           flowBuilderController={flowBuilderState.flowBuilderController}

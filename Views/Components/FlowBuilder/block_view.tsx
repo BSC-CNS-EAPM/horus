@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import RotatingLines from "../RotatingLines/rotatinglines";
 import { HorusModal, HorusPopover } from "../reusable";
 import { Block, PluginVariableTypes } from "./flow_builder_types";
@@ -15,6 +16,7 @@ import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { ArrowBlockConnector } from "./arrow_connector";
 import { useXarrow } from "react-xarrows";
 import { SearchComponent } from "../Toolbar/toolbar";
+import NBDButton from "../nbdbutton";
 
 interface DeleteBlockButtonProps {
   block: Block;
@@ -132,7 +134,8 @@ function InputRunningSpinner(props: { isRunning: boolean }) {
 
 type VariableModalViewProps = {
   block: Block;
-  handleChange: (value: any, id: string) => void;
+  handleChange: (value: any, id: string, groupID?: string) => void;
+  handleClose?: () => void;
 };
 
 function VariableModalView(props: VariableModalViewProps) {
@@ -157,10 +160,16 @@ function VariableModalView(props: VariableModalViewProps) {
   // Variables to shown on the inputs accordingly to the block.selectedInputGroup
   const visibleInputs = block.inputs.find(
     (inputGroup) => inputGroup.id === block.selectedInputGroup
-  ).variables;
+  );
 
   return (
     <div>
+      <div className="flex flex-row w-full justify-between pi-2">
+        <h1>{block.name}</h1>
+        {props.handleClose && (
+          <NBDButton action={props.handleClose}>Save</NBDButton>
+        )}
+      </div>
       {block.variables && block.variables.length > 0 && (
         <div>
           <div className="flex flex-row justify-between">
@@ -192,8 +201,9 @@ function VariableModalView(props: VariableModalViewProps) {
       {block.inputs && (
         <div>
           <h4>Inputs</h4>
+          <hr></hr>
           <div>
-            {visibleInputs.map((variable, index) => (
+            {visibleInputs.variables.map((variable, index) => (
               <InputOutputView
                 key={
                   variable.id +
@@ -213,6 +223,7 @@ function VariableModalView(props: VariableModalViewProps) {
       {block.outputs && block.outputs.length > 0 && (
         <div>
           <h4>Outputs</h4>
+          <hr></hr>
           <div>
             {block.outputs.map((variable, index) => (
               <InputOutputView
@@ -239,11 +250,10 @@ function BlockView(block: Block) {
   // Track hovering on info button to display the description instead of the plugin
   const [isInfoHovering, setIsInfoHovering] = useState(false);
 
-  const handleChange = (value: any, id: string) => {
+  const handleChange = (value: any, id: string, groupID?: string) => {
     var hasChanged = false;
-    // Update the variable value by searching the PluginVariable by id
-    block.variables.map((variable) => {
-      // THIS NEEDS TO BE REFACTORED BECAUSE IDK HOW IS THE STATE BEING UPDATED
+
+    const updateValue = (variable) => {
       if (variable.id === id) {
         if (variable.value !== value) {
           hasChanged = true;
@@ -251,10 +261,18 @@ function BlockView(block: Block) {
         }
       }
       return variable;
-    });
+    };
 
-    // Update the block variables
-    // block.variables = updatedVariables;
+    // Update the variable value by searching the PluginVariable by id
+    if (groupID) {
+      block.variables.map((variable) => {
+        if (variable.id === groupID) {
+          variable.variables.map(updateValue);
+        }
+      });
+    } else {
+      block.variables.map(updateValue);
+    }
 
     // Call the onChange function
     if (hasChanged) {
@@ -288,30 +306,18 @@ function BlockView(block: Block) {
 
   const openVariablesModal = () => {
     // Open the variables modal
-    setVariablesModal(true);
+    setVariablesModal(!variablesModal);
   };
 
-  const closeVariablesModal = () => {
-    // Close the variables modal
-    setVariablesModal(false);
-  };
-
-  const variablesModalView = (
-    <HorusModal
-      show={variablesModal}
-      onHide={closeVariablesModal}
-      header={
-        <div className="text-xl font-bold">{block.name} - properties</div>
-      }
-      body={<VariableModalView block={block} handleChange={handleChange} />}
-      footer={
-        <div className="flex flex-row justify-end">
-          <button className="app-button" onClick={closeVariablesModal}>
-            Save
-          </button>
-        </div>
-      }
-    />
+  const variablesModalView = createPortal(
+    <div className={`variables-modal-container ${variablesModal && "show"}`}>
+      <VariableModalView
+        block={block}
+        handleChange={handleChange}
+        handleClose={openVariablesModal}
+      />
+    </div>,
+    document.getElementById("current-flow-canvas")
   );
 
   const hasPlayButton = () => {
@@ -344,7 +350,7 @@ function BlockView(block: Block) {
       // }
       className={`plugin-block ${block.isPlaced ? "" : "plugin-block-placed"}`}
     >
-      {variablesModalView}
+      {variablesModal && variablesModalView}
       <div className="flex flex-row justify-between ${remoteStyle} gap-2">
         <div style={{ fontWeight: "bold" }}>{block.name}</div>
         <div className="flex flex-row gap-1 items-center">

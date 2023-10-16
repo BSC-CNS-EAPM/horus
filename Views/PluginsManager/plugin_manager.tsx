@@ -97,27 +97,40 @@ function InstalledPlugins(props: InstalledPluginsProps) {
         newConfigBlocks = [...newConfigBlocks, ...plugin.blocks[i].config];
       }
     }
-    const handleModifyConfig = (value: PluginVariableTypes, id: string) => {
+    const handleModifyConfig = (value: any, id: string, groupID?: string) => {
+      const changeID = groupID ? groupID : id;
+
       const updatedChanges = [...tempChanges]; // Create a copy of tempChanges
       const existingChangeIndex = updatedChanges.findIndex(
-        (change) => change.id === id
+        (change) => change.id === changeID
       ); // Check if the change already exists
 
       // Update the value of the variable in the tempChanges array (set to the block)
       if (existingChangeIndex >= 0) {
+        const updateVar = updatedChanges[existingChangeIndex].variables.find(
+          (variable) => variable.id === changeID
+        );
         // If the change already exists, update the value
-        updatedChanges[existingChangeIndex].variables.find(
-          (variable) => variable.id === id
-        ).value = value;
+        if (groupID) {
+          updateVar.variables.find((variable) => variable.id === id).value =
+            value;
+        } else {
+          updateVar.value = value;
+        }
       } else {
         // Find the block that has the variable
         for (let i = 0; i < newConfigBlocks.length; i++) {
           const variable = newConfigBlocks[i].variables.find(
-            (variable) => variable.id === id
+            (variable) => variable.id === changeID
           );
           if (variable) {
             // Update the value of the variable
-            variable.value = value;
+            if (groupID) {
+              variable.variables.find((variable) => variable.id === id).value =
+                value;
+            } else {
+              variable.value = value;
+            }
 
             // If the variable exists, push the block to the tempChanges array
             updatedChanges.push(newConfigBlocks[i]);
@@ -125,7 +138,6 @@ function InstalledPlugins(props: InstalledPluginsProps) {
           }
         }
       }
-
       setTempChanges(updatedChanges);
     };
 
@@ -176,7 +188,7 @@ function InstalledPlugins(props: InstalledPluginsProps) {
         />
       ),
       footer: (
-        <div className="d-flex justify-content-between">
+        <div className="d-flex justify-content-between gap-2">
           <NBDButton
             text="Save"
             action={() => {
@@ -186,7 +198,7 @@ function InstalledPlugins(props: InstalledPluginsProps) {
             }}
           />
           <NBDButton
-            text="Close"
+            text="Cancel"
             action={() => {
               handleClose();
             }}

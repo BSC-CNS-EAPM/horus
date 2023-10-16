@@ -31,6 +31,8 @@ enum PluginVariableTypes {
   CHAIN = "chain",
   SPHERE = "sphere",
   SMILES = "smiles",
+  GROUP = "group",
+  _LIST = "_list",
   // STRING_ARRAY = "string[]",
   // NUMBER_RANGE = "[number, number]"
 }
@@ -44,6 +46,9 @@ type PluginVariable = {
   placedID: number;
   allowedValues: Array<any>;
   defaultValue: any;
+
+  // For GroupVariable
+  variables?: Array<PluginVariable>;
 };
 
 enum BlockTypes {
@@ -56,6 +61,8 @@ enum BlockTypes {
 
 type VariableGroup = {
   id: string;
+  name: string;
+  description: string;
   variables: Array<PluginVariable>;
 };
 

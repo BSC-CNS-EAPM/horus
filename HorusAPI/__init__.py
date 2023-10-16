@@ -10,6 +10,7 @@ from .src import (  # noqa: F401
     PluginPage,  # noqa: F401
     PluginConfig,  # noqa: F401
     PluginEndpoint,  # noqa: F401
+    VariableList,  # noqa: F401
 )
 
 # Export the Molstar API

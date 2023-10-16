@@ -18,6 +18,6 @@ max-line-length=98
 # W0719: Raising too general exception 'Exception'
 # E0401: Unable to import 'foo'. Pylance is who reports missing imports
 # C0415: Import outside toplevel.
-disable=W0718,W0719,E0401,C0415
+disable=W0718,W0719,E0401,C0415,W0622,C0302
 
       

@@ -355,3 +355,49 @@
   gap: 0.5rem;
   margin-top: 0.5rem;
 }
+
+.variables-modal {
+  @apply bg-blue-400 w-max h-max fixed;
+  top: 0;
+  left: 0;
+}
+
+.variables-modal-container {
+  padding: 2rem;
+  margin-top: 2rem;
+  height: 95%;
+  width: 100%;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+  border: 2px solid #e5e5e5;
+  border-radius: 1rem;
+  animation: contract 0.2s ease-in-out forwards;
+  position: absolute;
+}
+
+.variables-modal-container.show {
+  background: white;
+  opacity: 1;
+  visibility: visible;
+  animation: expand 0.2s ease-in-out forwards;
+  overflow-y: scroll;
+}
+
+@keyframes expand {
+  0% {
+    transform: scale(0);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes contract {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(0);
+  }
+}

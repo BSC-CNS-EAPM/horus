@@ -11,12 +11,175 @@ import NBDButton from "../nbdbutton";
 import { SearchComponent } from "../Toolbar/toolbar";
 import { HorusFileExplorer } from "../FileExplorer/file_explorer";
 import Xarrow from "react-xarrows";
+import { SphereRef } from "../Molstar/HorusWrapper/horusmolstar";
+import { Color } from "molstar/lib/mol-util/color";
 
 type PluginVariableViewProps = {
   variable: PluginVariable;
-  onChange: (value: any, id: string) => void;
+  onChange: (value: any, id: string, groupID?: string) => void;
   hideName?: boolean;
+  applyStyle?: boolean;
 };
+
+function VariableListView(props: ListViewProps) {
+  const [values, setValues] = useState(props.variable.value);
+
+  const handleChange = (value: any) => {
+    setValues(value);
+    props.onChange(value);
+  };
+
+  useEffect(() => {
+    handleChange(props.variable.value);
+  }, [props.variable.value]);
+
+  const addRow = () => {
+    let newValues = values ? [...values] : [];
+
+    // Push a new value that contains an array of objects representing each variable and its default value
+    newValues.push(
+      props.variable.variables.reduce((acc, variable) => {
+        if (variable.type === PluginVariableTypes.GROUP) {
+          acc[variable.id] = variable.variables.reduce((acc, variable) => {
+            acc[variable.id] = variable.defaultValue || null;
+            return acc;
+          }, {} as any);
+        } else {
+          acc[variable.id] = variable.defaultValue || null;
+        }
+        return acc;
+      }, {})
+    );
+
+    handleChange(newValues);
+  };
+
+  const removeRow = (index: number) => {
+    if (!values) return;
+    const newValues = [...values];
+    newValues.splice(index, 1);
+    handleChange(newValues);
+  };
+
+  const internalOnChange = (
+    index: number,
+    value: any,
+    id: string,
+    groupID?: string
+  ) => {
+    // Update the corresponding index on the values array
+    const newValues = [...values];
+
+    if (groupID) {
+      newValues[index][groupID][id] = value;
+    } else {
+      newValues[index][id] = value;
+    }
+
+    handleChange(newValues);
+  };
+
+  const variableViewsUpdated = (index, value, variable) => {
+    const updatedVariable = {
+      ...variable,
+      value: value[variable.id],
+    };
+
+    return (
+      <PluginVariableView
+        variable={updatedVariable}
+        onChange={(value: any, id: string, groupID?: string) => {
+          internalOnChange(index, value, id, groupID);
+        }}
+        hideName={true}
+        applyStyle={false}
+      />
+    );
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-row gap-2 justify-center my-2">
+        <NBDButton action={addRow}>Add row</NBDButton>
+        <NBDButton
+          action={() => {
+            handleChange([]);
+          }}
+        >
+          Clear
+        </NBDButton>
+      </div>
+      {values?.length > 0 && (
+        <div
+          className="flex flex-col gap-2 pb-2 overflow-x-auto justify-center items-center"
+          style={{
+            marginTop: "-1rem",
+          }}
+        >
+          {values?.map((value, index) => (
+            <div>
+              <hr
+                style={{
+                  margin: "0.5rem",
+                }}
+              ></hr>
+              <div className="flex flex-row gap-2 items-end px-2 w-full flex-wrap justify-center b-black-500">
+                {props.variable.variables.map((variable) => {
+                  return variableViewsUpdated(index, value, variable);
+                })}
+                <button
+                  onClick={() => removeRow(index)}
+                  style={{
+                    width: "unset",
+                  }}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="red"
+                    className="w-5 h-5"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.52.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GroupVariableView(props: PluginVariableViewProps) {
+  const variables = props.variable.variables;
+
+  const onChange = (value: any, id: string) => {
+    props.onChange(value, id, props.variable.id);
+  };
+
+  return (
+    <div className="plugin-variable">
+      <div className="plugin-variable-name">{props.variable.name}</div>
+      <div className="flex flex-wrap flex-row gap-2 justify-center">
+        {variables.map((variable) => {
+          return (
+            <PluginVariableView
+              variable={variable}
+              onChange={onChange}
+              hideName={props.hideName}
+              applyStyle={false}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 const PluginVariableView = (props: PluginVariableViewProps) => {
   const { variable, onChange, hideName } = props;
@@ -64,8 +227,18 @@ const PluginVariableView = (props: PluginVariableViewProps) => {
     }
   }, []);
 
+  if (variable.type === PluginVariableTypes.GROUP) {
+    return (
+      <GroupVariableView
+        onChange={props.onChange}
+        variable={variable}
+        hideName={hideName}
+      />
+    );
+  }
+
   return (
-    <div className="plugin-variable">
+    <div className={props.applyStyle === false ? null : "plugin-variable"}>
       {!hideName && (
         <div className="plugin-variable-name">{props.variable.name}</div>
       )}
@@ -174,6 +347,11 @@ const PluginVariableView = (props: PluginVariableViewProps) => {
         {/* If its a editable string list, set a table with editable rows */}
         {props.variable.type === PluginVariableTypes.LIST && (
           <ListView variable={props.variable} onChange={handleChange} />
+        )}
+
+        {/* If its the special VariableList, use the specific view */}
+        {props.variable.type === PluginVariableTypes._LIST && (
+          <VariableListView variable={props.variable} onChange={handleChange} />
         )}
 
         {/* If the type is a FILE, set a button which, on the server, 
@@ -698,12 +876,17 @@ function StdResView(props: VariableSubviewProps) {
                 <input
                   style={{ width: "1rem" }}
                   type="checkbox"
-                  checked={value?.name?.includes(stdRes.name)}
+                  checked={
+                    value &&
+                    value.find((val) => val.name === stdRes.name) !== undefined
+                  }
                   onChange={(e) =>
                     props.handleChange(
                       e.target.checked
-                        ? [...value, stdRes]
-                        : value.filter((res) => res.name !== stdRes.name),
+                        ? [...(value || []), stdRes]
+                        : (value || []).filter(
+                            (res) => res.name !== stdRes.name
+                          ),
                       props.variable.id
                     )
                   }
@@ -799,10 +982,11 @@ function SphereVariableView(props: VariableSubviewProps) {
     z: number;
   }>({ x: 0, y: 0, z: 0 });
   const [radius, setRadius] = useState(10);
-  const sphereRef = useRef<string | null>(null);
+  const sphereRef = useRef<SphereRef | null>(null);
 
   const [hasStructure, setHasStructure] = useState(false);
   const [active, setActive] = useState(false);
+  const [activeColor, setActiveColor] = useState("#a5d6a7");
   const mounted = useRef(false);
 
   const handleChange = async (position, radius) => {
@@ -827,6 +1011,8 @@ function SphereVariableView(props: VariableSubviewProps) {
 
     sphereRef.current = ref;
 
+    setActiveColor(Color.toHexStyle(ref.color));
+
     const sphereData = {
       center: {
         x: position.x,
@@ -843,6 +1029,15 @@ function SphereVariableView(props: VariableSubviewProps) {
   useEffect(() => {
     handleChange(position, radius);
   }, [position, radius]);
+
+  // When unmounting, remove the sphere
+  useEffect(() => {
+    return () => {
+      if (window.molstar) {
+        window.molstar.removeSphere(sphereRef.current.ref);
+      }
+    };
+  }, []);
 
   const handleCoordinates = (e: CustomEvent) => {
     if (active) {
@@ -931,7 +1126,7 @@ function SphereVariableView(props: VariableSubviewProps) {
       </div>
       <NBDButton
         style={{
-          backgroundColor: active ? "#a5d6a7" : "",
+          backgroundColor: active ? activeColor : "",
           justifyContent: "center",
           marginTop: "0.5rem",
         }}
@@ -1125,11 +1320,14 @@ function VariableConnectView(props: VariableConnectViewProps) {
     // check the type instead of the allowed values
     if (
       variableType !== PluginVariableTypes.FILE &&
+      variableType !== PluginVariableTypes.GROUP &&
+      variableType !== PluginVariableTypes._LIST &&
       variableType === otherVariableType
     ) {
       return true;
     }
 
+    // For file type and group, check that the allowedValues of variable and other variable match
     if (
       variableType === PluginVariableTypes.FILE &&
       otherVariableType === PluginVariableTypes.FILE

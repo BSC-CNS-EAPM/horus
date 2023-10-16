@@ -92,11 +92,15 @@ visualizePDBfolder = PluginVariable(
 
 visualizePDBfolderGroup = VariableGroup(
     id="folderInputGroup",
+    name="Folder",
+    description="Pass a folder containing PDB files to visualize.",
     variables=[visualizePDBfolder],
 )
 
 visualizePDBfileGroup = VariableGroup(
     id="fileInputGroup",
+    name="File",
+    description="Pass a PDB file to visualize.",
     variables=[visualizePDBinput],
 )
 

@@ -51,15 +51,24 @@ ligandSelectionString = PluginVariable(
 # ==========================#
 
 complexDataStructureGroup = VariableGroup(
-    id="complexDataStructure", variables=[complexDataStruc, ligandSelectionHeteroRes]
+    id="complexDataStructure",
+    name="Complex data",
+    description="The complex data.",
+    variables=[complexDataStruc, ligandSelectionHeteroRes],
 )
 
 complexDataFileGroup = VariableGroup(
-    id="complexDataFile", variables=[compelxDataFile, ligandSelectionString]
+    id="complexDataFile",
+    name="Complex data",
+    description="The complex data.",
+    variables=[compelxDataFile, ligandSelectionString],
 )
 
 complexDataFolderGroup = VariableGroup(
-    id="complexDataFolder", variables=[complexDataFolder, ligandSelectionString]
+    id="complexDataFolder",
+    name="Complex data",
+    description="The complex data.",
+    variables=[complexDataFolder, ligandSelectionString],
 )
 
 # ==========================#

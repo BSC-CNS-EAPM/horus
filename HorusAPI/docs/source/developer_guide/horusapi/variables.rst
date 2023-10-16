@@ -105,7 +105,7 @@ these two different types of inputs:
         ],
     )
 
-The :bdg-secondary-line:`VariableGroup` class has then to be assigned to the inputGroup parameter of a :bdg-secondary-line:`Block`.
+The :bdg-secondary-line:`VariableGroup` class has then to be assigned to the :bdg-secondary-line:`inputGroup` parameter of a :bdg-secondary-line:`Block`.
 
 When running a :bdg-secondary-line:`Block` action, the selected group can be accessed using the :bdg-secondary-line:`selectedInputGroup` property of the :bdg-secondary-line:`Block` class:
 
@@ -114,3 +114,54 @@ When running a :bdg-secondary-line:`Block` action, the selected group can be acc
     def blockAction(block: SlurmBlock):
         
         selectedGroup = block.selectedInputGroup # Either "ligandFileInput" or "ligandSelectionInput" in our example
+
+
+:bdg-secondary-line:`VariableGroup` can also be assigned to a regular :bdg-secondary-line:`Block` variable. In this case, the
+returned value will be a dictionary with the ids of the variables as keys and the values as values. For example:
+
+.. code-block:: python
+
+    myObjectVariable = VariableGroup(
+        id="myObjectVariable",
+        name="My object variable",
+        description="A variable that contains a group of variables",
+        variables=[
+            complex_data_input,
+            complex_ligand_selection_input,
+        ],
+    )
+
+    def blockAction(block: SlurmBlock):
+        
+        value = block.variables["myObjectVariable"] # {"complex_data_input": "complex.pdb", "complex_ligand_selection_input": "LIG"}
+
+On render, the variable groups appear as regular :bdg-secondary-line:`PluginVariable`, but with the inner variables grouped together.
+
+VariableList
+=============
+
+Besides from the simple :bdg-secondary-line:`VariableTypes.LIST` type, there is also the :bdg-secondary-line:`VariableList` class. 
+
+.. autoclass:: src.VariableList
+
+This class offers more flexibility. In the case of :bdg-secondary-line:`VariableTypes.LIST`, only string values, along with an optional dropdown for :bdg-secondary-line:`allowedValues`
+is available. :bdg-secondary-line:`VariableList` allows for the definition of a list of variables of any type. For example:
+
+.. code-block:: python
+
+    myListVariable = VariableList(
+        id="myListVariable",
+        name="My list variable",
+        description="A variable that contains a list of variables",
+        prototypes=[
+            complex_data_input, # VariableTypes.STRUCTURE
+            complex_ligand_selection_input, # VariableTypes.STRING
+        ],
+    )
+
+Notice the :bdg-secondary-line:`prototypes` parameter. This parameter defines the variables that will be used in the list. On render, it will show like this:
+
+.. image:: images/variable_list.png
+    :width: 500px
+    :align: center
+

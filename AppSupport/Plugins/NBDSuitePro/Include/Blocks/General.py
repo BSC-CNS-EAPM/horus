@@ -55,6 +55,8 @@ sequence_data_input = PluginVariable(
 # Define the different input groups
 ligandFileInput = VariableGroup(
     id="ligandFileInput",
+    name="Ligand file input",
+    description="Inputs as files.",
     variables=[
         system_data_input,
         ligand_data_input_file,
@@ -63,6 +65,8 @@ ligandFileInput = VariableGroup(
 
 ligandSelectionInput = VariableGroup(
     id="ligandSelectionInput",
+    name="Ligand selection input",
+    description="Ligand input as complex:ligand selection.",
     variables=[
         complex_data_input,
         complex_ligand_selection_input,
@@ -71,6 +75,8 @@ ligandSelectionInput = VariableGroup(
 
 ligandStructureInput = VariableGroup(
     id="ligandStructureInput",
+    name="Ligand structure input",
+    description="Ligand input as structures.",
     variables=[
         system_data_input,
         ligand_data_structure,
@@ -79,6 +85,8 @@ ligandStructureInput = VariableGroup(
 
 sequenceInput = VariableGroup(
     id="sequenceInput",
+    name="Sequence input",
+    description="Sequence input for AlphaFold calculations.",
     variables=[
         sequence_data_input,
     ],

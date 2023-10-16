@@ -1,4 +1,9 @@
-import { Block, BlockTypes, BlockVarPair } from "./flow_builder_types";
+import {
+  Block,
+  BlockTypes,
+  BlockVarPair,
+  PluginVariableTypes,
+} from "./flow_builder_types";
 import { horusPost } from "../../Utils/utils";
 
 type ExecuteResponse = {
@@ -65,7 +70,17 @@ export default class FlowExecuter {
     // Get the updated block variables
     const variables = block.variables.reduce((acc, variable) => {
       // Return a dictionary with the variable name and value {name: value}
-      acc[variable.id] = variable.value;
+      // If the variable is a variable group, return the group ID and the values
+
+      if (variable.type === PluginVariableTypes.GROUP) {
+        acc[variable.id] = {};
+        variable.variables.forEach((v) => {
+          acc[variable.id][v.id] = v.value;
+        });
+      } else {
+        acc[variable.id] = variable.value;
+      }
+
       return acc;
     }, {});
 

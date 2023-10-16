@@ -100,7 +100,13 @@ class HorusMolstar {
       },
     });
 
-    const renderer = this.plugin.canvas3d!.props.renderer;
+    const renderer = this.plugin?.canvas3d?.props?.renderer;
+
+    if (!renderer) {
+      alert("Failed to load Mol*");
+      return;
+    }
+
     PluginCommands.Canvas3D.SetSettings(this.plugin, {
       settings: {
         renderer: {
@@ -1158,12 +1164,12 @@ class HorusMolstar {
       z: number;
     },
     radius: number,
-    deletePrevius?: string
-  ): Promise<string> {
+    deletePrevius?: SphereRef
+  ): Promise<SphereRef> {
     if (deletePrevius) {
       // Remove the previous sphere
       const builder = this.plugin.state.data.build();
-      builder.delete(deletePrevius);
+      builder.delete(deletePrevius.ref);
       builder.commit();
     }
 
@@ -1175,18 +1181,27 @@ class HorusMolstar {
     const structureRef = structureFirst.cell.transform.ref;
     const structure: any = this.plugin.state.data.cells.get(structureRef);
 
-    const sphere = {
+    let sphere: SphereRef = {
       x: position.x,
       y: position.y,
       z: position.z,
       radius: radius,
-      color: ColorNames.aquamarine,
-      alpha: 0.5,
+      color: deletePrevius?.color || randomColor(),
+      alpha: 0.3,
+      ref: "",
     };
 
     const sphereRef = await addSphereTo(this.plugin, structure, sphere);
 
-    return sphereRef;
+    sphere.ref = sphereRef;
+
+    return sphere;
+  }
+
+  async removeSphere(ref: string) {
+    const builder = this.plugin.state.data.build();
+    builder.delete(ref);
+    builder.commit();
   }
 }
 
@@ -1221,4 +1236,23 @@ const standardResidues = [
   "HIE",
 ];
 
+// Gets a random color from ColorNames enum
+const randomColor = () => {
+  const colors = Object.values(ColorNames);
+  const randomIndex = Math.floor(Math.random() * colors.length);
+  return colors[randomIndex];
+};
+
+type SphereRef = {
+  x: number;
+  y: number;
+  z: number;
+  radius: number;
+  color: Color;
+  alpha: number;
+  ref: string;
+};
+
 export default HorusMolstar;
+
+export { SphereRef };
