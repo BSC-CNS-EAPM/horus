@@ -55,3 +55,23 @@ mv dist/Packages/* dist/
 
 # Remove the Packages directory
 rm -rf dist/Packages
+
+# If arch is x86_64, set osName to "Intel", if arm64, set osName to "AppleSilicon"
+osName="Unknown"
+if [ "$arch" = "x86_64" ]; then
+  osName="Intel"
+elif [ "$arch" = "arm64" ]; then
+  osName="AppleSilicon"
+fi
+
+# Create a new folder called Horus-$version-macOS-$osName
+mkdir -p "dist/Horus-$version-macOS-$osName"
+
+# Move the dmg, the .hp files and the python wheel (.whl) to the new folder
+mv "dist/$name" "dist/Horus-$version-macOS-$osName"
+mv dist/*.hp "dist/Horus-$version-macOS-$osName"
+mv dist/*.whl "dist/Horus-$version-macOS-$osName"
+
+# Create a zip file of the folder
+cd dist && zip -r "Horus-$version-macOS-$osName.zip" "Horus-$version-macOS-$osName"
+
