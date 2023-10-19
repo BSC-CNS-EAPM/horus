@@ -676,9 +676,19 @@ class AppDelegate(metaclass=HorusSingleton):
             webview.OPEN_DIALOG, allow_multiple=allowMultiple, file_types=fileTypes
         )
 
+        if result is None:
+            return None
+
+        if allowMultiple:
+            # Loop over the files and ensure all are str paths
+            result = [str(file) for file in result]
+        else:
+            # Ensure the result is a string
+            result = str(result)
+
         return result
 
-    def openFolderSelectDialog(self) -> typing.Optional[typing.Sequence[str]]:
+    def openFolderSelectDialog(self) -> typing.Optional[str]:
         """
         Opens a folder dialog and returns the path of the selected folder.
         """
@@ -695,13 +705,14 @@ class AppDelegate(metaclass=HorusSingleton):
             # the result is a tuple instead of a string
             result = "".join(result)
 
-        return result
+        # Always return a string
+        return str(result)
 
     def saveFileSelectDialog(
         self,
         fileName: str = "flow",
         fileTypes: typing.Optional[typing.Tuple[str, ...]] = None,
-    ) -> typing.Optional[typing.Sequence[str]]:
+    ) -> typing.Optional[str]:
         """
         Opens a save file dialog and returns the path of the selected file.
 
@@ -733,10 +744,11 @@ class AppDelegate(metaclass=HorusSingleton):
             result = "".join(result)
 
         # On compiled macOS, the result is a pyobjc_unicode object
-        if self.platform == "darwin":
-            result = str(result)
+        # if self.platform == "darwin":
+        #     result = str(result)
 
-        return result
+        # Always return a string
+        return str(result)
 
     @staticmethod
     def tokenize(url: str):
@@ -843,7 +855,7 @@ def launchApp():
                 sys.exit(1)
 
         if debug:
-            print("\n<========Enabling DEBUG========>\n")
+            print("\n<========Enabling DEBUG========kw>\n")
 
     # Check for the --browser (-b) flag
     browser = False
