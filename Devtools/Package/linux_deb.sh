@@ -302,13 +302,8 @@ dpkg-deb --build dist/linux dist/$filename.deb
 # Remove the temporary files
 rm -rf dist/linux
 
-# Zip the Horus folder
-cd dist
-
-# Zip the Horus folder
-zip -rq $filename.zip Horus/
-
 # Remove the Horus folder
+cd dist
 rm -rf Horus/
 
 echo "Finished"

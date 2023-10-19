@@ -13,31 +13,7 @@ if [ ! -f "Devtools/Package/linux.sh" ]
   exit
 fi
 
-# Detect where are we running the script in roder to build a .deb or .rpm
-if [ -f "/etc/debian_version" ]
-  then
-    osName="Ubuntu"
-    sh Devtools/Package/linux_deb.sh
-
-elif [ -f "/etc/redhat-release" ]
-  then
-    osName="Rocky"
-    sh Devtools/Package/linux_rpm.sh
-
-else
-  echo "Unsupported Linux distribution"
-  exit
-fi
-
 version=$(cat dist/Horus/APP_INFO | grep "APP_VERSION" | awk -F' = ' '{print $2}')
-
-# Create a new folder called Horus-$version-Linux-$osName
-mkdir -p "dist/Horus-$version-$osName"
-
-# Move the deb, the .hp files and the python wheel (.whl) to the new folder
-mv "dist/$name" "dist/Horus-$version-$osName"
-mv dist/*.hp "dist/Horus-$version-$osName"
-mv dist/*.whl "dist/Horus-$version-$osName"
 
 # Detect where are we running the script in order to build a .deb or .rpm
 if [ -f "/etc/debian_version" ]
@@ -55,6 +31,25 @@ else
   exit
 fi
 
+# Create a new folder called Horus-$version-Linux-$osName
+mkdir -p "dist/Horus-$version-$osName"
+
+# Move the deb, the .hp files and the python wheel (.whl) to the new folder
+if [ $osName = "Ubuntu" ]
+  then
+    mv dist/*.deb "dist/Horus-$version-$osName"
+elif [ $osName = "Rocky" ]
+  then
+    mv dist/*.zip "dist/Horus-$version-$osName"
+fi
+
+mv dist/*.rpm "dist/Horus-$version-$osName"
+mv dist/*.hp "dist/Horus-$version-$osName"
+mv dist/*.whl "dist/Horus-$version-$osName"
+
 # Create a tar.gz file of the folder
-cd dist && tar -czvf "Horus-$version-$osName.tar.gz" "Horus-$version-$osName"
+cd dist && tar -czvf "Horus-$version-$osName.tar.gz" "Horus-$version-$osName/"
+
+# Remove the folder
+rm -rf "Horus-$version-$osName/"
 

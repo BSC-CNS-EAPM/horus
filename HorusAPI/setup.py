@@ -1,10 +1,43 @@
 import setuptools
 from distutils.extension import Extension
+from distutils.sysconfig import get_config_vars as default_get_config_vars
+import distutils.sysconfig as dsc
 from Cython.Distutils import build_ext  # type: ignore
 
 # Add to the path the HorusAPI package
 import os
 import sys
+
+
+# manipulate get_config_vars:
+# 1. step: wrap functionality and filter
+def remove_pthread(x):
+    if isinstance(x, str):
+        # x.replace(" -pthread ") would be probably enough...
+        # but we want to make sure we make it right for every input
+        if x == "-pthread":
+            return ""
+        if x.startswith("-pthread "):
+            return remove_pthread(x[len("-pthread ") :])  # noqa: E203
+        if x.endswith(" -pthread"):
+            return remove_pthread(x[: -len(" -pthread")])
+        return x.replace(" -pthread ", " ")
+    return x
+
+
+def my_get_config_vars(*args):
+    result = default_get_config_vars(*args)
+    # sometimes result is a list and sometimes a dict:
+    if isinstance(result, list):
+        return [remove_pthread(x) for x in result]
+    elif isinstance(result, dict):
+        return {k: remove_pthread(x) for k, x in result.items()}
+    else:
+        raise Exception("cannot handle type" + str(type(result)))
+
+
+# 2.step: replace
+dsc.get_config_vars = my_get_config_vars
 
 horusAPIPath = os.path.join(os.path.dirname(__file__), "..")
 sys.path.append(horusAPIPath)
@@ -47,6 +80,7 @@ package_data = {
 }
 
 # Copy the src/__init__.py file to a backup
+print("Copying src/__init__.py file to a backup")
 os.system("cp src/__init__.py src/__init__.py.bak")
 
 # Append temporarily inside the src/__init__.py file the version
@@ -79,6 +113,7 @@ setuptools.setup(
 )
 
 # Restore the original src/__init__.py file
+print("Restoring src/__init__.py file")
 os.system("rm src/__init__.py")
 os.system("mv src/__init__.py.bak src/__init__.py")
 
