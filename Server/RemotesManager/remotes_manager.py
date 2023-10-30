@@ -559,9 +559,15 @@ class RemotesAPI:
         jobs = queue.get(flowSavedID, None)
 
         if jobs is None:
-            raise Exception(  # pylint: disable=broad-exception-raised
-                "ERROR: Trying to fetch jobs for a flow that has not sent any. Did any SlurmBlock fail?"
-            )
+            # The slurm block did not send any job to a slurm queue
+            # returning COMPLETED will make the SlurmBlock to execute
+            # its finalAction function.
+            return "COMPLETED"
+
+            # raise Exception(  # pylint: disable=broad-exception-raised
+            #     "ERROR: Trying to fetch jobs for a flow that has not sent any."
+            #     + " Did any SlurmBlock fail?"
+            # )
 
         # Get the jobID
         jobID = None
@@ -680,8 +686,6 @@ class RemotesAPI:
         """
 
         return self.command(f"scancel {jobID}")
-
-
 
 
 class RemotesManager:

@@ -1508,8 +1508,12 @@ class SlurmBlock(PluginBlock):
     @property
     def isWaitingForJob(self):
         """
-        Wether the block is waiting for the job to finish or not.
+        Whether the block is waiting for the job to finish or not.
         """
+
+        if self._status == self.Status.COMPLETED:
+            return False
+
         try:
             # Ensure the remote api has as blockID this block
             self.remote._remote._blockPlacedID = self._placedID
