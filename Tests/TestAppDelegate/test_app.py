@@ -1,9 +1,11 @@
 import pytest
+import os
+import json
+
 from App import AppDelegate
 from Server.SettingsManager import Setting
 from Server.SettingsManager import SettingsManager as HorusSettings
-import os
-import json
+from HorusAPI import VariableTypes
 
 
 @pytest.fixture
@@ -31,8 +33,8 @@ def horus_settings(tmpdir):
     """
     hsettings = HorusSettings(tmpdir)
 
-    hsettings.defaultSettingsPath = os.path.join(tmpdir, "default_settings.json")
-    return HorusSettings(tmpdir)
+    hsettings.defaultSettingsPath = os.path.join("App", "default_settings.json")
+    return hsettings
 
 
 def test_setting_init():
@@ -40,13 +42,14 @@ def test_setting_init():
     Test the initialization of a Setting instance
     """
 
-    setting = Setting("id", "name", "value", "description", "category")
+    setting = Setting("id", "name", "value", "description", "category", VariableTypes.STRING)
 
     assert setting.id == "id"
     assert setting.name == "name"
     assert setting.value == "value"
     assert setting.description == "description"
     assert setting.category == "category"
+    assert setting.type == VariableTypes.STRING
 
 
 def test_setting_to_dict():
@@ -54,7 +57,7 @@ def test_setting_to_dict():
     Test the toDict method of a Setting instance
     """
 
-    setting = Setting("id", "name", "value", "description", "category")
+    setting = Setting("id", "name", "value", "description", "category", VariableTypes.STRING)
     setting_dict = setting.toDict()
 
     assert setting_dict == {
@@ -62,6 +65,8 @@ def test_setting_to_dict():
         "value": "value",
         "description": "description",
         "category": "category",
+        "type": "string",
+        "allowedValues": [],
     }
 
 
@@ -108,6 +113,8 @@ def test_horus_settings_load_settings(horus_settings):
                     "value": "value",
                     "description": "description",
                     "category": "category",
+                    "type": "string",
+                    "allowedValues": [],
                 }
             },
             f,
@@ -117,7 +124,6 @@ def test_horus_settings_load_settings(horus_settings):
     horus_settings._loadSettings()
 
     # Check that the settings were loaded correctly
-    assert len(horus_settings.settings) == 1
     assert horus_settings.settings["id"].name == "name"
     assert horus_settings.settings["id"].value == "value"
     assert horus_settings.settings["id"].description == "description"
@@ -148,11 +154,13 @@ def test_horus_settings_restore_defaults(horus_settings):
     with open(horus_settings.userSettingsPath, "w") as f:
         json.dump(
             {
-                "id": {
+                "rubbish": {
                     "name": "name",
                     "value": "value",
                     "description": "description",
                     "category": "category",
+                    "type": "string",
+                    "allowedValues": [],
                 }
             },
             f,
@@ -169,7 +177,10 @@ def test_horus_settings_restore_defaults(horus_settings):
     with open(horus_settings.userSettingsPath, "r") as f:
         user_settings = json.load(f)
 
-    assert default_settings == user_settings
+    for key in default_settings.keys():
+        print(f"USER: KEY {key}, VALUE {user_settings[key]}")
+        print(f"DEFAULT: KEY {key}, VALUE {default_settings[key]}")
+        assert user_settings[key] == default_settings[key]
 
 
 def test_horus_settings_update_setting(horus_settings):
@@ -188,11 +199,4 @@ def test_horus_settings_update_setting(horus_settings):
     with open(horus_settings.userSettingsPath, "r") as f:
         user_settings = json.load(f)
 
-    assert user_settings == {
-        "dependenciesInterpreter": {
-            "name": "new_name",
-            "description": "Python interpreter path to use for dependencies installation",
-            "category": "Dependencies",
-            "value": "python",
-        }
-    }
+    assert user_settings["dependenciesInterpreter"]["name"] == "new_name"

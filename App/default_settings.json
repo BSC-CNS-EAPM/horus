@@ -4,20 +4,23 @@
     "description": "Python interpreter path to use for dependencies installation",
     "category": "Dependencies",
     "value": "python",
-    "type": "string"
+    "type": "string",
+    "allowedValues": []
   },
   "legacyBlockRunner": {
     "name": "Legacy block runner",
     "description": "Wether to use the new block runner or the legacy one. The old executes individual blocks, and its prone to bugs. The new flow runner generates a block tree and runs the blocks in the correct order.",
     "category": "Flow",
     "value": false,
-    "type": "boolean"
+    "type": "boolean",
+    "allowedValues": []
   },
   "showPlacedID": {
     "name": "Show placedIDs",
     "description": "Wether to show the placedID of placed blocks in the flow builder.",
     "category": "Flow",
     "value": false,
-    "type": "boolean"
+    "type": "boolean",
+    "allowedValues": []
   }
 }
