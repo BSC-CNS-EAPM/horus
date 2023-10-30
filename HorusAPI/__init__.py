@@ -20,7 +20,7 @@ from .src import MolstarAPI  # noqa: F401
 from .src import Extensions
 
 # Export the utility SingletonMeta class
-from .src import HorusSingleton, TempFile  # noqa: F401
+from .src import HorusSingleton, TempFile, ResetRemoteException  # noqa: F401
 
 # Export the HorusAPI version
 from ._version import version as __version__  # noqa: F401

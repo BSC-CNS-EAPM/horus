@@ -1,32 +1,35 @@
 import { useState, useEffect } from "react";
 import { horusGet, horusPost } from "../Utils/utils";
 import NBDButton from "../Components/nbdbutton";
+import { PluginVariableView } from "../Components/FlowBuilder/block_variables";
+import { PluginVariable } from "../Components/FlowBuilder/flow_builder_types";
 
 // Import the css
 import "../Components/FlowBuilder/block.css";
 
-type Settings = {
-  id: string;
+type Settings = PluginVariable & {
   category: string;
-  name: string;
-  description: string;
-  value: any;
 };
 
 function parseSettings(settings: any): Settings[] {
-  return settings.map((setting: any) => {
+  return settings.map((setting: any): Settings => {
     return {
+      placedID: 0,
       id: setting.id,
       category: setting.setting.category,
       name: setting.setting.name,
       description: setting.setting.description,
       value: setting.setting.value,
+      defaultValue: setting.setting.defaultValue,
+      type: setting.setting.type,
+      allowedValues: setting.setting.allowedValues,
     };
   });
 }
 
 function useSettings() {
   const [settings, setSettings] = useState<Settings[]>(null);
+  const [hasChanges, setHasChanges] = useState<boolean>(false);
 
   async function getSettings() {
     const response = await horusGet("/settings");
@@ -59,25 +62,28 @@ function useSettings() {
       alert("Error saving settings");
       return;
     }
+
+    setHasChanges(false);
   }
 
   const onSettingChange = (event) => {
     const setting = settings.find((setting) => setting.id === event.target.id);
-
-    setting.value = event.target.value;
-
-    setSettings([...settings]);
+    if (setting.value !== event.target.value) {
+      setting.value = event.target.value;
+      setSettings([...settings]);
+      setHasChanges(true);
+    }
   };
 
   useEffect(() => {
     getSettings();
   }, []);
 
-  return { settings, saveSettings, onSettingChange };
+  return { settings, hasChanges, saveSettings, onSettingChange };
 }
 
 function SettingsView() {
-  const { settings, saveSettings, onSettingChange } = useSettings();
+  const { settings, hasChanges, saveSettings, onSettingChange } = useSettings();
 
   return (
     <div
@@ -88,23 +94,40 @@ function SettingsView() {
     >
       <div className="flex flex-row justify-between items-center">
         <h1>Settings</h1>
-        <NBDButton action={saveSettings}>Save</NBDButton>
+        <NBDButton
+          className={hasChanges ? "bg-orange-300" : ""}
+          action={saveSettings}
+        >
+          Save
+        </NBDButton>
       </div>
       {settings &&
         settings.map((setting) => (
-          <div key={setting.id} className="plugin-variable">
-            <div className="plugin-variable-name">{setting.name}</div>
-            <div className="plugin-variable-description">
-              {setting.description}
-            </div>
-            <input
-              className="plugin-variable-value ps-2 pe-2 text-center"
-              type="text"
-              value={setting.value}
-              onChange={onSettingChange}
-              id={setting.id}
-            />
-          </div>
+          <PluginVariableView
+            variable={setting}
+            onChange={(value) => {
+              const event = {
+                target: {
+                  id: setting.id,
+                  value: value,
+                },
+              };
+              onSettingChange(event);
+            }}
+          />
+          // <div key={setting.id} className="plugin-variable">
+          //   <div className="plugin-variable-name">{setting.name}</div>
+          //   <div className="plugin-variable-description">
+          //     {setting.description}
+          //   </div>
+          //   <input
+          //     className="plugin-variable-value ps-2 pe-2 text-center"
+          //     type="text"
+          //     value={setting.value}
+          //     onChange={onSettingChange}
+          //     id={setting.id}
+          //   />
+          // </div>
         ))}
       <h1>About Horus</h1>
       <div className="flex flex-row justify-between items-center">

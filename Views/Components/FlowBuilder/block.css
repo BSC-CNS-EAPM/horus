@@ -235,9 +235,11 @@
   background-color: var(--broken-white);
   border-radius: 5px;
   box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.18);
-  width: 10rem;
+  min-width: 10rem;
+  max-width: 30rem;
+  max-height: 30rem;
   text-align: center;
-  z-index: 99;
+  z-index: 99999;
   border: 1px solid black;
   position: absolute;
   left: -5rem;

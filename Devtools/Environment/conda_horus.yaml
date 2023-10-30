@@ -13,6 +13,7 @@ dependencies:
       - flask-cors==3.0.10
       - pyobjc==9.1.1; sys_platform == 'darwin'
       - flask-socketio==5.3.4
+      - flask_session==0.5.0
       - eventlet==0.33.3
       - gevent==22.10.2
       - Cython==3.0.2
@@ -26,3 +27,4 @@ dependencies:
       - sphinx_copybutton==0.5.2
       - mypy==1.5.1
       - biopython==1.81
+      - multiprocess==0.70.15

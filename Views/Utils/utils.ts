@@ -4,6 +4,7 @@ declare global {
     pywebview: {
       token: string;
     };
+    socketiosid: string;
   }
 }
 
@@ -16,6 +17,7 @@ async function horusGet(url, headers?, shemsu?) {
   return await fetch(url, {
     method: "GET",
     headers: {
+      socketiosid: window.socketiosid || null,
       shemsu: shemsu || getShemsuToken(),
       ...headers,
     },
@@ -29,10 +31,18 @@ async function horusPost(url, headers, body, shemsu?) {
    * @param {object} body - The body to send with the request. Remember to stringify it if the header is application/json
    * */
 
+  if (headers === null) {
+    headers = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    };
+  }
+
   return await fetch(url, {
     method: "POST",
     headers: {
       shemsu: shemsu || getShemsuToken(),
+      socketiosid: window.socketiosid || null,
       ...headers,
     },
     body: body,
@@ -105,7 +115,20 @@ const fetchDesktop = async () => {
   }
 };
 
+async function horusGetSettings(settingID: string) {
+  const response = await horusGet(`/settings/${settingID}`);
+
+  const setting = await response.json();
+
+  if (!setting.ok) {
+    alert(`Error fetching settings: ${setting.msg}`);
+  }
+
+  return setting.setting;
+}
+
 export {
+  horusGetSettings,
   horusGet,
   horusPost,
   getVersion,

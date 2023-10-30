@@ -8,6 +8,9 @@ import os
 import sys
 import hashlib
 import logging
+import typing
+
+# import multiprocessing
 
 # Decorators
 from functools import wraps
@@ -18,12 +21,17 @@ import random
 # Socket for checking available ports
 import socket
 
+# Multiprocess module, a fork of multiprocessing with enhancements
+from multiprocess import Process  # type: ignore pylint: disable=no-name-in-module
+import multiprocess.process as mp
+
 # Flask
 import flask
 import jinja2
 from flask import request
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO
 from flask_cors import CORS
+from flask_session import Session
 
 # Requests
 import requests
@@ -143,21 +151,7 @@ class HorusServer:
         self._favicons()
 
         # Setup SocketIO
-        try:
-            self.socketio = SocketIO(
-                self.server,
-                cors_allowed_origins="*" if self.debug else self.baseURL,
-                async_mode="threading" if self.debug else "eventlet",
-            )
-        except ValueError as valerr:
-            print(f"WARNING: Could not start socketio server: {valerr}. Forcing eventlet")
-            self.socketio = SocketIO(
-                self.server,
-                cors_allowed_origins="*" if self.debug else self.baseURL,
-                async_mode="eventlet",
-            )
-
-        self._socketIORoutes()
+        self._setupSocketio()
 
         # Load the plugins pages
         self._pluginPages()
@@ -180,6 +174,9 @@ class HorusServer:
 
         # Setup exception handlers
         self._exceptionHandlers()
+
+        # Setup Flask-Session
+        self._startSession()
 
     def _getToken(self):
         if self.desktop:
@@ -221,7 +218,7 @@ class HorusServer:
         # If the parcel server is running, load the index file from there:
         try:
             requests.get(self.parcelURL, timeout=0.5)
-            print("\n<=======Using parcel development server=======>\n")
+            logging.getLogger("Horus").debug("Using Parcel development server")
             return True
         except requests.exceptions.ConnectionError:
             return False
@@ -268,7 +265,7 @@ class HorusServer:
         )
 
         if self.debug:
-            print("\n<========Enabling CORS========>\n")
+            logging.getLogger("Horus").debug("Enabling CORS")
             CORS(server, resources={r"/*": {"origins": "*"}})
 
         return server
@@ -392,7 +389,14 @@ class HorusServer:
                 savedID = data.get("savedID", None)
                 path = data.get("path", None)
                 if path is not None:
+                    # Load the flow from the path
                     flow = self.flowManager.openFlowFromPath(path)
+
+                    # If the flow was paused, resume it
+                    if flow.status == flow.FlowStatus.PAUSED:
+                        logging.getLogger("Horus").info("Resuming flow %s", flow.name)
+
+                        self.flowManager.runFlow(flow, socket=self.socketio)
                 else:
                     if savedID is None:
                         raise Exception(  # pylint: disable=broad-exception-raised
@@ -508,7 +512,7 @@ class HorusServer:
                     ) from keye
 
                 resetRemote = data.get("resetRemote", False)
-                outputs = self.pluginManager.executeBlock(
+                outputs = self.pluginManager.executeBlockLegacy(
                     blockID,
                     blockPlacedID,
                     variables,
@@ -531,6 +535,53 @@ class HorusServer:
                     "error": errorMSG,
                 }
             return flask.jsonify(success)
+
+        @self.server.route("/plugins/executeflow", methods=["POST"])
+        @verifyToken
+        def executeFlow():
+            # Get the request data
+            data = request.get_json()
+
+            try:
+                # Get the flow data
+                flowPath = data["flowPath"]
+                placedID = data["placedID"]
+                resetRemoteBlock = data.get("resetRemote", False)
+
+                # Open the flow
+                flow = self.flowManager.openFlowFromPath(flowPath)
+
+                # Run the flow
+                self.flowManager.runFlow(flow, placedID, resetRemoteBlock, self.socketio)
+
+                succsess = {
+                    "ok": True,
+                }
+            except Exception as exc:
+                succsess = {
+                    "ok": False,
+                    "message": str(exc),
+                }
+
+            return flask.jsonify(succsess)
+
+        @self.server.route("/plugins/stopFlow", methods=["POST"])
+        @verifyToken
+        def stopFlow():
+            # Get the flowID from the request
+            data = request.get_json()
+
+            flowPath = data.get("flowPath", None)
+
+            if flowPath is None:
+                return flask.jsonify({"ok": False, "msg": "No flowPath provided"})
+
+            try:
+                stoppedFlow = self.flowManager.stopFlow(flowPath)
+                self.socketio.emit("flow", stoppedFlow.encode(minimal=False))
+                return flask.jsonify({"ok": True})
+            except Exception as exc:
+                return flask.jsonify({"ok": False, "msg": str(exc)})
 
         @self.server.route("/plugins/checkRemoteBlock", methods=["POST"])
         @verifyToken
@@ -933,6 +984,15 @@ class HorusServer:
             return flask.jsonify({"ok": True, "settings": settings})
             # return flask.render_template("Settings/index.html")
 
+        @self.server.route("/settings/<settingID>", methods=["GET"])
+        def setting(settingID):
+            try:
+                setting = self.settingsManager.getSetting(settingID)
+            except Exception as exc:  # pylint: disable=broad-exception-raised
+                return flask.jsonify({"ok": False, "msg": str(exc)})
+
+            return flask.jsonify({"ok": True, "setting": setting.toDict()})
+
         @self.server.route("/saveSettings", methods=["POST"])
         def saveSettings():
             data = request.get_json()
@@ -966,7 +1026,7 @@ class HorusServer:
         @self.server.after_request
         def addHeader(response):
             # Disable caching
-            response.headers["Cache-Control"] = "no-store"
+            # response.headers["Cache-Control"] = "no-store"
             return response
 
     def _molstarAPIRoutes(self):
@@ -984,6 +1044,130 @@ class HorusServer:
 
             return flask.jsonify({"ok": True})
 
+    def _setupSocketio(self):
+        """
+        Sets the socketio server instance
+        """
+
+        # Instantiate the SocketIO class with the server and the async_mode
+        try:
+            self.socketio = SocketIO(
+                self.server,
+                cors_allowed_origins="*" if self.debug else self.baseURL,
+                async_mode="threading" if self.debug else "eventlet",
+                manage_session=False,
+            )
+        except ValueError as valerr:
+            print(f"WARNING: Could not start socketio server: {valerr}. Forcing eventlet")
+            self.socketio = SocketIO(
+                self.server,
+                cors_allowed_origins="*" if self.debug else self.baseURL,
+                async_mode="eventlet",
+                manage_session=False,
+            )
+
+        # Replace the .emit function to always include the room as the session id
+        oldEmit = self.socketio.emit
+
+        def newEmit(event, *args, **kwargs):
+            if "room" not in kwargs:
+                # Verify that we have request context
+                sid = None
+                if flask.has_request_context():
+                    if hasattr(request, "sid") and request.sid is not None:  # type: ignore
+                        sid = request.sid  # type: ignore
+                    elif request:
+                        sid = request.headers.get("socketiosid", None)
+                else:
+                    logging.getLogger("Horus").critical("Working outside of request context.")
+
+                if sid is not None:
+                    kwargs["room"] = sid
+                else:
+                    logging.getLogger("Horus").error(
+                        "No session id found for socketio emit. Not sending message."
+                    )
+                    return
+
+                # If we are in a background process, send the message through a new Flask request
+                if mp.current_process().name != "MainProcess":
+                    logging.getLogger("Horus").debug(
+                        "Event from background process %s: %s",
+                        mp.current_process().name,
+                        event,
+                    )
+
+                    # Get the data from the queue
+                    data = {
+                        "event": event,
+                        "args": args,
+                        "kwargs": kwargs,
+                    }
+
+                    # Send the data to the server
+                    try:
+                        requests.post(
+                            f"{self.baseURL}/backgroundSocketio/",
+                            json=data,
+                            timeout=5,
+                        )
+                    except requests.exceptions.RequestException:
+                        logging.getLogger("Horus").error(
+                            "Could not connect to server to emit event %s", event
+                        )
+
+                    return
+
+            logging.getLogger("Horus").debug(
+                "Emitting event %s to room %s", event, kwargs["room"]
+            )
+
+            return oldEmit(event, *args, **kwargs)
+
+        self.socketio.emit = newEmit
+
+        # Log the socketio connections
+        @self.socketio.on("connect")
+        def connect():
+            sid = request.sid  # type: ignore
+            logging.getLogger("Horus").info("SocketIO client connected: %s", sid)
+
+        # Log the socketio disconnections
+        @self.socketio.on("disconnect")
+        def disconnect():
+            sid = request.sid  # type: ignore
+            logging.getLogger("Horus").info("SocketIO client disconnected: %s", sid)
+
+        # Add a new Flask request so that background processes can emit
+        @self.server.route("/backgroundSocketio/", methods=["POST"])
+        def backgroundProcessSocketio():
+            """
+            Route to emit socketio events from background processes
+            """
+
+            # Get the data from the request
+            data = request.get_json()
+
+            if data is None:
+                return "No data provided", 400
+
+            # Get the data from the queue
+            event = data.get("event", None)
+            args = data.get("args", None)
+            kwargs = data.get("kwargs", None)
+
+            if event is None or args is None or kwargs is None:
+                return "Missing data", 400
+
+            # Emit the event
+            self.socketio.emit(event, *args, **kwargs)
+
+            # Return 200 status
+            return "OK"
+
+        # Add the socketio routes
+        self._socketIORoutes()
+
     def _socketIORoutes(self):
         """
         Setup the socket.io routes endpoints
@@ -992,7 +1176,7 @@ class HorusServer:
         @self.socketio.on("message")
         def handleMessage(data):
             print("received message: " + data)
-            emit("printTerm", "Hello from the server!")
+            self.socketio.emit("printTerm", "Hello from the server!")
 
     def _pluginPages(self):
         """
@@ -1121,7 +1305,9 @@ class HorusServer:
         @self.server.errorhandler(Exception)
         def exceptionHandler(error):
             horusLogger = logging.getLogger("Horus")
-            horusLogger.critical(f"{error}. Data: {str(request.data)}. Request: {str(request)}")
+            horusLogger.critical(
+                "%s. Data: %s. Request: %s", error, str(request.data), str(request)
+            )
 
             return flask.render_template("Error/error.html", errormsg=str(error))
 
@@ -1174,6 +1360,28 @@ class HorusServer:
                 mimetype="image/svg+xml",
             )
 
+    def _startSession(self):
+        """
+        Loads Flask-Session on the server
+        """
+
+        # Setup the session
+        self.server.config["SESSION_TYPE"] = "filesystem"
+        self.server.config["SESSION_FILE_DIR"] = os.path.join(self.appSupportDir, "sessions")
+        # self.server.config["SESSION_PERMANENT"] = True
+        # self.server.config["SECRET_KEY"] = "very_secret_key"
+        # self.server.config["SESSION_COOKIE_NAME"] = "horus_session"
+        # self.server.config["SESSION_COOKIE_HTTPONLY"] = True
+        # self.server.config["SESSION_COOKIE_SECURE"] = True
+        # self.server.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+        # #self.server.config["SESSION_COOKIE_DOMAIN"] = self.host
+        # self.server.config["SESSION_COOKIE_PATH"] = "/"
+        # self.server.config["SESSION_COOKIE_MAX_AGE"] = 60 * 60 * 24 * 7 * 2
+        # self.server.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+
+        # Start the session
+        Session(self.server)
+
     def run(self, reloader: bool = False):
         """
         Runs the server using the socketio.run method
@@ -1190,7 +1398,30 @@ class HorusServer:
             port=self.port,
             debug=self.debug,
             use_reloader=reloader,
+            log_output=self.debug,
         )
+
+    def backgroundRun(self, func: typing.Callable):
+        """
+        Runs the given function in a background process. This function requires
+        and active request context.
+
+        :param func: The function to run in the background
+        """
+
+        # Define a function to run the request on
+        def requestRunner(environment):
+            with self.server.request_context(environment):
+                func()
+
+        # Start a new process for the flowRunner function
+        process = Process(  # pylint: disable=not-callable
+            target=requestRunner, args=(request.environ,)
+        )
+        process.start()
+
+        # Return the process object
+        return process
 
 
 class TokenManager:

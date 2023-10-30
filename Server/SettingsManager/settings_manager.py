@@ -7,35 +7,47 @@ import typing
 import json
 import sys
 
+from HorusAPI import VariableTypes
+
 
 class Setting:
     """
     A setting of the App
     """
 
-    id = "unnamed_setting"
+    id: str = "unnamed_setting"
     """
     The ID of the setting
     """
 
-    name = "Unnamed setting"
+    name: str = "Unnamed setting"
     """
     A short name of the setting
     """
 
-    value = None
+    value: typing.Any = None
     """
     The value of the setting
     """
 
-    description = "No description"
+    description: str = "No description"
     """
     The description of the setting
     """
 
-    category = "General"
+    category: str = "General"
     """
     The category of the setting
+    """
+
+    type: VariableTypes = VariableTypes.STRING
+    """
+    The type of the setting as VariableTypes
+    """
+
+    allowedValues: typing.List[typing.Any] = []
+    """
+    The allowed values of the setting
     """
 
     def __init__(
@@ -45,6 +57,8 @@ class Setting:
         value: typing.Any,
         description: str,
         category: str = "General",
+        type: VariableTypes = VariableTypes.STRING,
+        allowedValues: typing.List[typing.Any] = [],
     ):
         """
         Create a Setting instance
@@ -53,12 +67,16 @@ class Setting:
         :param name: A short name of the setting
         :param value: The value of the setting
         :param description: The description of the setting
+        :param category: The category of the setting
+        :param type: The type of the setting as VariableTypes
         """
         self.id = id
         self.name = name
         self.value = value
         self.description = description
         self.category = category
+        self.type = type
+        self.allowedValues = allowedValues
 
     # Define comparison operators
     def __eq__(self, other):
@@ -66,6 +84,18 @@ class Setting:
 
     def __ne__(self, other):
         return self.id != other.id
+
+    def __str__(self):
+        return self.id
+
+    def __repr__(self):
+        return self.id
+
+    def __hash__(self):
+        return hash(self.id)
+
+    def __dict__(self):
+        return self.toDict()
 
     # Define a method to get a JSON serializable dict of the setting
     def toDict(self):
@@ -78,6 +108,8 @@ class Setting:
             "value": self.value,
             "description": self.description,
             "category": self.category,
+            "type": self.type.value,
+            "allowedValues": self.allowedValues,
         }
 
 
@@ -148,6 +180,20 @@ class SettingsManager:
         with open(self.userSettingsPath, "r") as f:
             fileSettings = json.load(f)
 
+        # Load the default settings and add any missing settings
+        with open(self.defaultSettingsPath, "r") as f:
+            defaultSettings = json.load(f)
+
+        newChanges = False
+        for key, value in defaultSettings.items():
+            if key not in fileSettings:
+                fileSettings[key] = value
+                newChanges = True
+
+        if newChanges:
+            with open(self.userSettingsPath, "w") as f:
+                json.dump(fileSettings, f)
+
         # Instantiate the settings
         self.settings = {}
         for key, value in fileSettings.items():
@@ -158,10 +204,25 @@ class SettingsManager:
                     value["value"],
                     value["description"],
                     value["category"],
+                    VariableTypes(value["type"]),
+                    value.get("allowedValues", []),
                 )
-            except KeyError:
-                print("The setting file is corrupted for setting", key)
-                continue
+            except KeyError as keye:
+                print(
+                    f"The setting file is corrupted for setting {key}: {keye}. "
+                    + "Restoring default..."
+                )
+
+                # Load the default settings for the corrupted setting
+                newSetting = Setting(
+                    key,
+                    defaultSettings[key]["name"],
+                    defaultSettings[key]["value"],
+                    defaultSettings[key]["description"],
+                    defaultSettings[key]["category"],
+                    VariableTypes(defaultSettings[key]["type"]),
+                    defaultSettings[key].get("allowedValues", []),
+                )
 
             # If the setting already exists, raise an exception
             if newSetting.id in self.settings:
@@ -172,6 +233,9 @@ class SettingsManager:
 
             # Add the setting to the settings list
             self.settings[newSetting.id] = newSetting
+
+            # Save the settings
+            self._saveSettings()
 
     def getSetting(self, id: str) -> Setting:
         """

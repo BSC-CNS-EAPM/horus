@@ -1,6 +1,6 @@
 import { BlockView, DraggableBlockView } from "./block_view";
 import { useEffect, useRef, useState } from "react";
-import { horusGet, horusPost } from "../../Utils/utils";
+import { horusGet, horusPost, horusGetSettings } from "../../Utils/utils";
 import RotatingLines from "../RotatingLines/rotatinglines";
 import { useDroppable } from "@dnd-kit/core";
 import { Xwrapper } from "react-xarrows";
@@ -9,10 +9,16 @@ import {
   BlockConnectionArrow,
 } from "./arrow_connector";
 import { debounce } from "../reusable";
-import { Block, BlockVarPair, PluginVariableTypes } from "./flow_builder_types";
+import {
+  Block,
+  BlockVarPair,
+  FlowStatus,
+  PluginVariableTypes,
+} from "./flow_builder_types";
 import FlowExecuter from "./flow_executer";
 import { FlowBuilderController } from "./flow_builder_hooks";
 import { ServerFileExplorerModal } from "../FileExplorer/file_explorer";
+import { socket } from "../../Utils/socket";
 
 // Define the selectedRemote on the window object
 declare global {
@@ -49,6 +55,7 @@ type FlowReciverProps = {
 function FlowReciver(props: FlowReciverProps) {
   // Modal state
   const [flowName, setFlowName] = useState("New flow");
+  const [isRunning, setIsRunning] = useState(false);
 
   // Saved flow vars
   const savedID = useRef(props.savedID ? props.savedID : "new_flow");
@@ -222,7 +229,7 @@ function FlowReciver(props: FlowReciverProps) {
     )
   );
 
-  const executeBlock = async (block: Block): Promise<void> => {
+  const legacyRunner = async (block: Block): Promise<void> => {
     setExecutingAll(true);
 
     // Check that the flow is saved
@@ -273,8 +280,89 @@ function FlowReciver(props: FlowReciverProps) {
     await handleSave();
   };
 
+  const loadSocketFlow = async (data) => {
+    const { blocks, savedID: recivedID, status } = data;
+
+    if (recivedID !== savedID.current) {
+      // Its not the currently opened flow
+      return;
+    }
+
+    setIsRunning(status === FlowStatus.RUNNING || status === FlowStatus.PAUSED);
+
+    props.setPlacedBlocks((currentBlocks) => {
+      // Place the newblocks with the current block's position
+      return currentBlocks.map((b) => {
+        // Find the block in the current blocks
+        const newBlock = blocks.find((nb) => nb.placedID === b.placedID);
+
+        newBlock.position = b.position;
+
+        return newBlock;
+      });
+    });
+  };
+
+  const flowRunner = async (
+    block: Block,
+    resetRemote: boolean = true
+  ): Promise<void> => {
+    socket.on("flow", loadSocketFlow);
+
+    const response = await horusPost(
+      "/plugins/executeflow",
+      null,
+      JSON.stringify({
+        flowPath: flowPath.current,
+        placedID: block.placedID,
+        resetRemote: resetRemote,
+      })
+    );
+
+    const result = await response.json();
+
+    if (!result.ok) {
+      alert(result.message);
+    }
+  };
+
+  const legacyRunnerSetting = useRef(false);
+
+  const fetchLegacyRunner = async () => {
+    // Get from the settings if we are using legacy mode
+    const legacyBlockRunner = await horusGetSettings("legacyBlockRunner");
+
+    let settingValue = false;
+    try {
+      const settingValue = legacyBlockRunner.value;
+    } catch (e) {
+      alert("Error getting legacyBlockRunner setting: " + e);
+    }
+
+    legacyRunnerSetting.current = settingValue;
+  };
+
+  const executeBlock = async (block: Block): Promise<void> => {
+    // First save the flow
+    await preHandleSave();
+
+    const settingValue = legacyRunnerSetting.current;
+
+    if (settingValue) {
+      legacyRunner(block);
+    } else {
+      flowRunner(block);
+    }
+  };
+
   const checkRemoteBlock = async (block: Block): Promise<void> => {
-    flowExecuter.current.checkRemoteBlock(block);
+    const settingValue = legacyRunnerSetting.current;
+
+    if (settingValue) {
+      flowExecuter.current.checkRemoteBlock(block);
+    } else {
+      return;
+    }
   };
 
   function toggleSpinner(block: Block, status: boolean = true) {
@@ -300,17 +388,41 @@ function FlowReciver(props: FlowReciverProps) {
   }
 
   const stopExecutingAll = async () => {
-    if (!executingAll) {
-      return;
-    }
+    // if (!executingAll) {
+    //   return;
+    // }
 
     if (!confirm("Are you sure you want to stop executing the flow?")) {
       return;
     }
 
-    setExecutingAll(false);
+    const body = JSON.stringify({
+      flowPath: flowPath.current,
+    });
 
-    flowExecuter.current.stopExecute = true;
+    const response = await horusPost("/plugins/stopFlow", null, body);
+
+    const data = await response.json();
+
+    if (!data.ok) {
+      alert(data.msg);
+    }
+
+    // setExecutingAll(false);
+
+    // props.setPlacedBlocks((currentBlocks) => {
+    //   return currentBlocks.map((b) => {
+    //     if (b.isRunning) {
+    //       b.isRunning = false;
+    //       b.runError = true;
+    //       b.runErrorMessage = "Flow execution stopped";
+    //       b.finishedExecution = true;
+    //     }
+    //     return b;
+    //   });
+    // });
+
+    // flowExecuter.current.stopExecute = true;
   };
 
   const onNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -568,13 +680,10 @@ function FlowReciver(props: FlowReciverProps) {
         : ""
     );
 
-    // If any of the blocks is runnign set executingAll to true
-    for (const block of openedFlow.blocks) {
-      if (block.placedID === openedFlow.currentExecuting) {
-        setExecutingAll(true);
-        break;
-      }
-    }
+    setIsRunning(
+      openedFlow.status === FlowStatus.RUNNING ||
+        openedFlow.status === FlowStatus.PAUSED
+    );
 
     // Parse the blocks
     // const parsedBlocks =
@@ -607,6 +716,8 @@ function FlowReciver(props: FlowReciverProps) {
 
     // console.log("Setting currentsaved to true");
     // currentSaved.current = true;
+
+    savedID.current = openedFlow.savedID;
 
     openingFlow.current = false;
   };
@@ -742,9 +853,27 @@ function FlowReciver(props: FlowReciverProps) {
     }
   };
 
+  const [flowSettings, setFlowSettings] = useState(null);
+
+  const fetchFlowSettings = async () => {
+    const showPlacedID = await horusGetSettings("showPlacedID");
+
+    const loadedFlowSettings = {
+      showPlacedID: showPlacedID?.value || false,
+    };
+
+    setFlowSettings(loadedFlowSettings);
+  };
+
   useEffect(() => {
     // Fetch remotes
     fetchRemotes();
+
+    // Fetch legacy mode
+    fetchLegacyRunner();
+
+    // Fetch flow settings
+    fetchFlowSettings();
   }, []);
 
   const handleOpenFlow = (
@@ -827,52 +956,17 @@ function FlowReciver(props: FlowReciverProps) {
           onChange={onNameChange}
           value={flowName}
         />
-        {/* <button onClick={handleSave} className="flow-button">
-      {currentSaved.current ? (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth={1.5}
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"
-          />
-        </svg>
-      ) : (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="var(--light-orange)"
-          viewBox="0 0 24 24"
-          strokeWidth={1.5}
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3l3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"
-          />
-        </svg>
-      )}
-    </button> */}
         <div className="flex flex-col gap-0 items-center text-center">
           <button
-            onClick={stopExecutingAll}
             className="flow-button"
             style={{
-              cursor: executingAll ? "pointer" : "default",
+              cursor: isRunning ? "pointer" : "default",
             }}
           >
-            {executingAll ? (
-              <RotatingLines
-              // strokeColor="grey"
-              // strokeWidth="5"
-              // animationDuration="0.75"
-              // width="40"
-              />
+            {isRunning ? (
+              <div onClick={stopExecutingAll}>
+                <RotatingLines />
+              </div>
             ) : (
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -954,13 +1048,14 @@ function FlowReciver(props: FlowReciverProps) {
       execute: executeBlock,
       // // index={index}
       deleteBlock: handleDelete,
-      isRunning: block.placedID === currentExecuting,
+      isRunning: block.isRunning,
       checkRemoteStatus: checkRemoteBlock,
     };
 
     return (
       <>
         <DraggableBlockView
+          settings={flowSettings}
           key={`${block.placedID}-${block.id}`}
           block={blockToRender}
           updateBlockSelectedGroup={updateBlockSelectedGroup}

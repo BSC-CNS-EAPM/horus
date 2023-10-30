@@ -63,7 +63,7 @@ function FlowBuilderView() {
                 cursor: "grabbing",
               }}
             >
-              <BlockView {...flowBuilderState.draggingBlock} />
+              <BlockView block={flowBuilderState.draggingBlock} />
             </div>
           )
         }

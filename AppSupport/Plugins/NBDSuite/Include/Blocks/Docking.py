@@ -403,7 +403,7 @@ def finalAction(block: SlurmBlock):  # pylint: disable=missing-function-docstrin
     print(f"Setting output of block to the ligand poses: {ligandPoses}")
 
     # Set the output
-    block.setOutput("output_docking", ligandPoses)
+    block.setOutput("outputDocking", ligandPoses)
 
     print("Done.")
 

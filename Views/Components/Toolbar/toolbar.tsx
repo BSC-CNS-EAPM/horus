@@ -8,6 +8,9 @@ import { FlowBuilderView } from "../FlowBuilder/flow_builder_view";
 import "./toolbar.css";
 import { socket } from "../../Utils/socket";
 import { SettingsView } from "../../Settings/settings";
+import { FlowStatusView } from "../FlowStatus/flow_status";
+import RotatingLines from "../RotatingLines/rotatinglines";
+// import RotatingLines from "../RotatingLines/rotatinglines";
 
 interface ToolBarItemProps {
   name: string;
@@ -771,8 +774,10 @@ function PredefinedFlowsSearch() {
   const [recentFlows, setRecentFlows] = useState([]);
   const [predefinedFilteredFlows, setPredefinedFilteredFlows] = useState([]);
   const [recentFilteredFlows, setRecentFilteredFlows] = useState([]);
+  const [fetchingRecents, setFetchingRecents] = useState(true);
 
   const getFlows = async () => {
+    setFetchingRecents(true);
     const responsePredefined = await horusGet("/plugins/flows");
 
     if (!responsePredefined) {
@@ -813,6 +818,7 @@ function PredefinedFlowsSearch() {
     });
 
     setRecentFlows(flows);
+    setFetchingRecents(false);
   };
 
   const filterFlows = (event) => {
@@ -873,25 +879,27 @@ function PredefinedFlowsSearch() {
   const recentFlowsView = () => {
     return (
       <>
-        {recentFilteredFlows.length > 0 && (
-          <div className="flex flex-col gap-1">
-            <div className="predefined-flow-name">Recent flows</div>
-            {recentFilteredFlows.map((flow) => (
-              <div
-                key={flow.savedID}
-                onClick={() => {
-                  openFlow(flow);
-                }}
-                className="predefined-flow"
-              >
-                <div className="predefined-flow-name">{flow.name}</div>
-                <div className="predefined-flow-plugin">{flow.path}</div>
-              </div>
-            ))}
+        {fetchingRecents ? (
+          <div className="flex flex-col justify-center text-center pt-4">
+            <RotatingLines
+              style={{
+                height: "2rem",
+                width: "2rem",
+              }}
+            />
+            <div>Loading recent flows...</div>
+          </div>
+        ) : recentFilteredFlows.length > 0 ? (
+          <RecentUserFlows
+            recentFilteredFlows={recentFilteredFlows}
+            openFlow={openFlow}
+          />
+        ) : (
+          <div className="flex flex-col justify-center text-center pt-4">
+            <div>No recent flows</div>
           </div>
         )}
-        {predefinedFilteredFlows.length > 0 &&
-          recentFilteredFlows.length > 0 && <hr></hr>}
+        <hr></hr>
         {predefinedFilteredFlows.length > 0 && (
           <div className="flex flex-col gap-1">
             <div className="predefined-flow-name">Predefined flows</div>
@@ -936,6 +944,36 @@ function PredefinedFlowsSearch() {
           )}{" "}
         </div>
       )}
+    </div>
+  );
+}
+
+type RecentUserFlowProps = {
+  recentFilteredFlows: any;
+  openFlow: any;
+};
+
+function RecentUserFlows(props: RecentUserFlowProps) {
+  const { recentFilteredFlows, openFlow } = props;
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="predefined-flow-name">Recent flows</div>
+      {recentFilteredFlows.map((flow) => (
+        <div
+          key={flow.savedID}
+          onClick={() => {
+            openFlow(flow);
+          }}
+          className={"predefined-flow"}
+        >
+          <div className="flex flex-row justify-between">
+            <div className="predefined-flow-name">{flow.name}</div>
+            <FlowStatusView status={flow.status} />
+          </div>
+          <div className="predefined-flow-plugin">{flow.path}</div>
+        </div>
+      ))}
     </div>
   );
 }

@@ -151,3 +151,8 @@ class TempFile:
         import shutil
 
         shutil.rmtree(self.tmpFolder)
+
+class ResetRemoteException(Exception):
+    """
+    Exception raised when the remote server is reset.
+    """

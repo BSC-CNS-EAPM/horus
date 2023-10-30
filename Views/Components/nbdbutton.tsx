@@ -6,14 +6,17 @@ type NBDButtonProps = {
   action: () => void;
   style?: React.CSSProperties;
   children?: React.ReactNode;
+  className?: string;
 };
 
 // Create a component called NBDButton
 function NBDButton(props: NBDButtonProps) {
+  const className = "app-button " + props?.className;
+
   return (
     <div>
       {/* Create a button with the text and the action */}
-      <button className="app-button" onClick={props.action} style={props.style}>
+      <button className={className} onClick={props.action} style={props.style}>
         {props?.text}
         {props?.children}
       </button>

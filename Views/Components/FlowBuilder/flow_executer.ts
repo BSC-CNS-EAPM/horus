@@ -268,6 +268,8 @@ export default class FlowExecuter {
   }
 
   public async checkRemoteBlock(block: Block) {
+    console.warn("Deprecated function checkRemoteBlock");
+
     const header = {
       "Content-Type": "application/json",
       Accept: "application/json",

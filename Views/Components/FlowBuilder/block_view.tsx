@@ -246,7 +246,7 @@ function VariableModalView(props: VariableModalViewProps) {
   );
 }
 
-function BlockView(block: Block) {
+function BlockView({ block, settings }: { block: Block; settings?: any }) {
   // Track hovering on info button to display the description instead of the plugin
   const [isInfoHovering, setIsInfoHovering] = useState(false);
 
@@ -352,14 +352,24 @@ function BlockView(block: Block) {
     >
       {variablesModal && variablesModalView}
       <div className="flex flex-row justify-between ${remoteStyle} gap-2">
-        <div style={{ fontWeight: "bold" }}>{block.name}</div>
+        <div className="flex flex-row gap-2">
+          <div style={{ fontWeight: "bold" }}>{block.name}</div>
+          {block.isPlaced && settings?.showPlacedID && (
+            <div className="text-gray-400">
+              {block.placedID ? block.placedID : block.id}
+            </div>
+          )}
+        </div>
         <div className="flex flex-row gap-1 items-center">
           {/* Play button to execute the block */}
           {/* Delete button to remove the block from the canvas */}
           {block.isPlaced && (
             <>
               {block.finishedExecution && (
-                <FinishedCheck runError={block.runError} />
+                <FinishedCheck
+                  runError={block.runError}
+                  runErrorMessage={block.runErrorMessage}
+                />
               )}
               {hasPlayButton() ? (
                 <PlayBlockButton
@@ -409,16 +419,18 @@ function BlockView(block: Block) {
           (isInfoHovering || block.isPlaced ? "opacity-100" : "opacity-0")
         }
       >
-        {isInfoHovering || (block.isPlaced && block.type !== "input") ? (
-          <div>
-            <div className="plugin-description">{block.description}</div>
-            {block.type === "slurm" && (
-              <div className="remote-block-cloud">
-                <ServerIcon /> Slurm Block
-              </div>
-            )}
-          </div>
-        ) : null}
+        <div className="flex flex-row justify-between">
+          {isInfoHovering || (block.isPlaced && block.type !== "input") ? (
+            <div>
+              <div className="plugin-description">{block.description}</div>
+              {block.type === "slurm" && (
+                <div className="remote-block-cloud">
+                  <ServerIcon /> Slurm Block - {block.status}
+                </div>
+              )}
+            </div>
+          ) : null}
+        </div>
 
         {block.type === "input" && block.isPlaced && (
           <div>
@@ -446,6 +458,7 @@ function BlockView(block: Block) {
 function InputBlock(block: Block) {}
 
 type DraggableBlockViewProps = {
+  settings: any;
   block: Block;
   isConnecting: boolean;
   tryingToConnect: {
@@ -598,7 +611,7 @@ function DraggableBlockView(props: DraggableBlockViewProps) {
       {...attributes}
       className={block.isPlaced ? "absolute" : "relative"}
     >
-      <BlockView {...block} />
+      <BlockView block={block} settings={props.settings} />
       {block.isPlaced && variablesConnectorView()}
     </div>
   );
@@ -606,25 +619,55 @@ function DraggableBlockView(props: DraggableBlockViewProps) {
 
 export { BlockView, DraggableBlockView };
 
-function FinishedCheck(props: { runError: boolean }) {
+function FinishedCheck(props: { runError: boolean; runErrorMessage?: string }) {
+  const [isOpen, setIsOpen] = useState(false);
+
   if (props.runError) {
+    const errorModal = (
+      <HorusModal
+        show={isOpen}
+        header={<div>Error running block</div>}
+        footer={
+          <div>
+            <NBDButton
+              action={() => {
+                setIsOpen(false);
+              }}
+            >
+              Close
+            </NBDButton>
+          </div>
+        }
+      >
+        <div className="overflow-scroll">{props.runErrorMessage}</div>
+      </HorusModal>
+    );
+
     return (
-      <div>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth={2}
-          stroke="red"
-          className="w-5 h-5"
+      <>
+        {errorModal}
+        <div
+          onClick={() => {
+            setIsOpen(true);
+          }}
+          className="cursor-pointer"
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
-          />
-        </svg>
-      </div>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={2}
+            stroke="red"
+            className="w-5 h-5"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
+            />
+          </svg>
+        </div>
+      </>
     );
   }
 

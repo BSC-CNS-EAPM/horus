@@ -2,13 +2,80 @@
 Flow manager
 """
 
+# Basic imports
 import os
 import json
 import typing
 import uuid
 import datetime
+import logging
+import multiprocessing
 
-from HorusAPI import PluginBlock as Block
+# Enum for the flow status
+from enum import Enum
+
+# Socket to send the flow status
+from flask_socketio import SocketIO
+
+# Blocks from Horus
+from HorusAPI import PluginBlock as Block, SlurmBlock
+
+# The plugin manager
+from Server.PluginManager import PrintCapturer, PluginManager
+
+
+class LoopException(Exception):
+    """
+    Custom loop exception
+    """
+
+
+class BlocksException(Exception):
+    """
+    Custom blocks exception
+    """
+
+    block: Block
+    """
+    The block that originated the exception
+    """
+
+    def __init__(self, block: Block, message: str):
+        """
+        An exception that is raised when a block is not valid.
+
+        - block: The block that originated the exception
+        - message: The error message
+        """
+        super().__init__(message)
+        self.block = block
+
+
+class ErrorRunningBlock(BlocksException):
+    """
+    Custom error running block exception
+    """
+
+
+class SlurmBlockException(BlocksException):
+    """
+    Tells the flow runner to stop the execution of the flow to wait for the slurm job to finish
+    """
+
+
+class StoppedFlowException(BlocksException):
+    """
+    Stops the flow from executing
+    """
+
+    message: str = (
+        "The flow was stopped gracefully. "
+        "Once the current block finishes executing, "
+        "the flow will stop."
+    )
+
+    def __init__(self, block: Block):
+        super().__init__(block, self.message)
 
 
 # Define a overwrite exception for the saveFlow method
@@ -61,9 +128,9 @@ class Flow:
     The remote name where the flow is connected
     """
 
-    currentExecuting: typing.Optional[Block]
+    currentExecuting: typing.Optional[int]
     """
-    The current executing block
+    The current executing block (PlacedID)
     """
 
     molstarState: typing.Dict[str, typing.Any]
@@ -79,6 +146,59 @@ class Flow:
     terminalOutput: typing.Optional[typing.List[str]]
     """
     The terminal output produced by the flow
+    """
+
+    class FlowStatus(Enum):
+        """
+        The status of the flow
+        """
+
+        RUNNING = "RUNNING"
+        """
+        The flow is running
+        """
+
+        PAUSED = "PAUSED"
+        """
+        The flow is paused
+        """
+
+        FINISHED = "FINISHED"
+        """
+        The flow finished executing
+        """
+
+        ERROR = "ERROR"
+        """
+        The flow encountered an error
+        """
+
+        IDLE = "IDLE"
+        """
+        The flow is idle
+        """
+
+        STOPPED = "STOPPED"
+        """
+        The flow was stopped
+        """
+
+        def __str__(self):
+            return self.value
+
+        def __repr__(self):
+            return self.value
+
+        def __eq__(self, other):
+            if isinstance(other, str):
+                return self.value == other
+            if isinstance(other, Flow.FlowStatus):
+                return self.value == other.value
+            return False
+
+    status: FlowStatus = FlowStatus.IDLE
+    """
+    The status of the flow
     """
 
     @property
@@ -105,6 +225,10 @@ class Flow:
         self.molstarState = flow.get("molstarState", {})
         self.date = flow.get("date", None)
         self.terminalOutput = flow.get("terminalOutput", None)
+
+        # Set the flow status
+        status = flow.get("status", "IDLE")
+        self.status = self.FlowStatus(status)
 
         # Parse the blocks
         blocksJSON = flow.get("blocks", [])
@@ -222,6 +346,8 @@ class Flow:
         Encodes the flow to a JSON object
         """
 
+        logging.getLogger("Horus").debug("Encoding flow '%s'", self.name)
+
         # Encode the blocks
         blocksJSON = []
         for block in self.blocks:
@@ -241,6 +367,7 @@ class Flow:
             "path": self.path,
             "remote": self.remote,
             "currentExecuting": self.currentExecuting,
+            "status": self.status.value,
             "date": self.date,
             "blocks": blocksJSON,
             "molstarState": self.molstarState,
@@ -249,14 +376,24 @@ class Flow:
 
         return flow
 
-    def write(self):
+    def write(self) -> typing.Dict[str, typing.Any]:
         """
         Writes the flow to the file
+
+        :returns: The encoded flow
         """
+
+        # Encode the flow
+        encodedFlow = self.encode()
+
+        logging.getLogger("Horus").debug("Writing flow '%s'", self.name)
 
         # Save the flow
         with open(self.path, "w", encoding="utf-8") as file:
-            json.dump(self.encode(), file)
+            json.dump(encodedFlow, file)
+
+        # Return the encoded flow in case its needed
+        return encodedFlow
 
     @classmethod
     def read(cls, path: str) -> "Flow":
@@ -280,6 +417,328 @@ class Flow:
 
     def __str__(self):
         return json.dumps(self.encode(minimal=False), indent=4)
+
+    def findBlockByID(self, blockID: str) -> Block:
+        """
+        Finds a block by its ID
+        """
+
+        for block in self.blocks:
+            if block.id == blockID:
+                return block
+
+        raise Exception(  # pylint: disable=broad-exception-raised
+            f"Block with ID '{blockID}' not found."
+        )
+
+    def findBlockByPlacedID(self, placedID: int) -> Block:
+        """
+        Finds a block by its placedID
+        """
+
+        for block in self.blocks:
+            if block._placedID == placedID:
+                return block
+
+        raise Exception(  # pylint: disable=broad-exception-raised
+            f"Block with placedID '{placedID}' not found."
+        )
+
+    _socket: typing.Optional[SocketIO] = None
+    _pluginManager: typing.Optional[PluginManager] = None
+
+    def _runPreviousBlocks(self, placedID: int, resetRemoteBlock: bool = False):
+        """
+        Executes iteratively the blocks of the flow
+        """
+
+        # Check for the plugin manager instance.
+        # If it doesn't exist, we cannot execute the blocks
+        if self._pluginManager is None:
+            raise Exception(  # pylint: disable=broad-exception-raised
+                "The plugin manager is not instantiated."
+            )
+
+        # Find the block to run by its placedID in the flow
+        blockToRun = self.findBlockByPlacedID(placedID)
+
+        # If the flow is stopped, raise an exception
+        if self.status == self.FlowStatus.STOPPED:
+            blockToRun._runError = True
+            blockToRun._runErrorMessage = "The flow was stopped gracefully."
+            blockToRun._isRunning = False
+            blockToRun._finishedExecution = True
+            self.currentExecuting = None
+
+            raise StoppedFlowException(blockToRun)
+
+        # If the block is already executed, return its outputs.
+        # Except for when we are ressetting the flow run
+        if blockToRun._finishedExecution and not resetRemoteBlock:
+            return blockToRun.outputs
+
+        # If the block has input connections, execute first those blocks
+        inputs = {}
+        for connection in blockToRun._variableConnections:
+            # Find the block that is connected to a variable of the block selected to run
+            variableBlock = self.findBlockByPlacedID(connection.origin.blockPlacedID)
+
+            # Get the placedID of the block that provides such variable
+            variablePlacedID = variableBlock._placedID
+
+            # Placed blocks always have a placedID > 0
+            if variablePlacedID is None or variablePlacedID == 0:
+                raise Exception(  # pylint: disable=broad-exception-raised
+                    "The block does not have a valid placedID"
+                )
+
+            # Execute the block that provides the variable by calling recursively this method
+            # This ensures that if the variable is provided by another block that also requires
+            # an input variable, the blocks will be executed in the correct order
+            outputs = self._runPreviousBlocks(variablePlacedID, resetRemoteBlock)
+
+            # If we have connected a variable to an input, the outputs should exist
+            # This is only for the whole outputs dictionary itself, as the inidvidual
+            # variable values can be None
+            if outputs is None:
+                raise Exception(  # pylint: disable=broad-exception-raised
+                    "A connected variable block produced no outputs"
+                )
+
+            # Update the inputs dictionary with the outputs of the block
+            # Setting the correct keys for each block
+            inputs[connection.destination.variableID] = outputs[connection.origin.variableID]
+
+        # With the generated inputs, update the block to run
+        blockToRun._updateInputs(inputs)
+
+        # Set the block and flow state
+        blockToRun._isRunning = True
+        self.currentExecuting = blockToRun._placedID
+
+        # Save the flow
+        self.write()
+
+        # Send the flow to the frontend because the block is going to be run
+        if self._socket is not None:
+            self._socket.emit("flow", self.encode(minimal=False))
+
+        # Execute the block by calling the plugin manager
+        # Calling the PM is a must because it handles
+        # the dependencies for each block
+        try:
+            outputs = self._pluginManager.executeBlock(
+                blockToRun,
+                self.savedID,
+                resetRemoteBlock=resetRemoteBlock,
+            )
+        except Exception as exc:  # pylint: disable=broad-exception-raised
+            # If an error was raised during the execution of the block
+            # update acordingly the block's state
+            blockToRun._runError = True
+            blockToRun._runErrorMessage = str(exc)
+            blockToRun._isRunning = False
+            blockToRun._finishedExecution = True
+            self.currentExecuting = None
+
+            # Raise again a special "ErrorRunningBlock" exception
+            raise ErrorRunningBlock(blockToRun, str(exc)) from exc
+
+        # If a slurm block was run, check if we need to wait for the job to finish
+        # That means that the action executed was the block's firstAction. When the job with
+        # finishes, the block will be executed again with the secondAction. If _waitingForJob
+        # is True, the flow execution wait until the job finishes. If its false, it means
+        # that the finalAction was executed and that the flow can continue executing
+        if isinstance(blockToRun, SlurmBlock):
+            blockToRun._status = SlurmBlock.Status.RUNNING
+
+            # Save the flow
+            self.write()
+
+            # Update the fronted with the block's state
+            if self._socket is not None:
+                self._socket.emit("flow", self.encode(minimal=False))
+
+            # Wait for the job to finish
+            blockToRun.waitTillJobFinished()
+
+            if blockToRun._status != SlurmBlock.Status.COMPLETED:
+                blockToRun._runError = True
+                blockToRun._runErrorMessage = (
+                    f"Slurm job failed. Status: {blockToRun.parseStatus()}"
+                )
+                blockToRun._isRunning = False
+                blockToRun._finishedExecution = True
+                self.currentExecuting = None
+                raise ErrorRunningBlock(
+                    blockToRun, f"Slurm job failed. Status: {blockToRun.parseStatus()}"
+                )
+
+            # Once the block has been executed, call again the execution
+            # of this block to execute the finalAction
+            try:
+                outputs = self._pluginManager.executeBlock(
+                    blockToRun,
+                    self.savedID,
+                    resetRemoteBlock=False,
+                )
+            except Exception as exc:  # pylint: disable=broad-exception-raised
+                # If an error was raised during the execution of the block
+                # update acordingly the block's state
+                blockToRun._runError = True
+                blockToRun._runErrorMessage = str(exc)
+                blockToRun._isRunning = False
+                blockToRun._finishedExecution = True
+                self.currentExecuting = None
+
+                # Raise again a special "ErrorRunningBlock" exception
+                raise ErrorRunningBlock(blockToRun, str(exc)) from exc
+
+        # Block endend executing, thus update the state
+        blockToRun._isRunning = False
+        blockToRun._finishedExecution = True
+        self.currentExecuting = None
+
+        # Save the flow
+        self.write()
+
+        # Send the flow to the frontend if a socket is provided
+        if self._socket is not None:
+            self._socket.emit("flow", self.encode(minimal=False))
+
+        # Return the produced outputs of the block
+        return outputs
+
+    def _runNextBlocks(self, placedID: int, resetRemoteBlock: bool = False):
+        if self._pluginManager is None:
+            raise Exception(  # pylint: disable=broad-exception-raised
+                "The plugin manager is not instantiated."
+            )
+
+        blockToRun = self.findBlockByPlacedID(placedID)
+
+        for nextConnection in blockToRun._variableConnectionsReferences:
+            nextBlock = self.findBlockByPlacedID(nextConnection.destination.blockPlacedID)
+
+            nextPlacedID = nextBlock._placedID
+
+            if nextPlacedID is None or nextPlacedID == 0:
+                raise Exception(  # pylint: disable=broad-exception-raised
+                    "The block does not have a valid placedID"
+                )
+
+            self._runPreviousBlocks(nextPlacedID, resetRemoteBlock)
+            self._runNextBlocks(nextPlacedID, resetRemoteBlock)
+
+    def run(
+        self,
+        placedID: typing.Optional[int] = None,
+        resetRemoteBlock: bool = False,
+        socket: typing.Optional[SocketIO] = None,
+    ):
+        """
+        Run the flow starting from a specific block
+
+        :param placedID: The placedID of the block to start the execution from.
+        If None provided, the flow will be resumed from the latest executed block.
+        :param resetRemoteBlock: If True, the Slurm block will be resetted.
+        :param socket: The socket instance to send the flow to the frontend.
+        If None, no updates will be sent (intended for command line execution)
+        """
+
+        if placedID is None and self.currentExecuting is not None:
+            # If this method was called without a placedID,
+            # resume the flow execution from the latest executed block
+            placedID = self.currentExecuting
+        else:
+            # Set all blocks as not executed because a new run is starting
+            for block in self.blocks:
+                block._cleanRun()
+
+        if placedID is None:
+            raise Exception(  # pylint: disable=broad-exception-raised
+                "No placedID was provided for the run of the flow. "
+                + "The flow cannot be resumed as no current executing block is set for this flow."
+            )
+
+        # Assign the socket instance
+        self._socket = socket
+
+        # Assign the plugin manager instance
+        from App import AppDelegate  # pylint: disable=import-outside-toplevel
+
+        self._pluginManager = AppDelegate().server.pluginManager
+
+        # Update the working dir
+        oldWD = os.getcwd()
+        os.chdir(os.path.dirname(self.path))
+
+        # Set the flow status to running
+        self.status = self.FlowStatus.RUNNING
+
+        # Run the blocks
+        if self._socket is not None:
+            with PrintCapturer(self._socket):
+                try:
+                    self._runPreviousBlocks(placedID, resetRemoteBlock)
+                    self._runNextBlocks(placedID)
+                    self.status = self.FlowStatus.FINISHED
+                except ErrorRunningBlock as errorBlock:
+                    print(f"Error running block {errorBlock.block.name}: {errorBlock}")
+                    self.status = self.FlowStatus.ERROR
+                except StoppedFlowException as stopped:
+                    print(stopped.message)
+                    self.status = self.FlowStatus.STOPPED
+
+                finally:
+                    # Save the flow
+                    self.write()
+
+                    # Send the flow to the frontend
+                    self._socket.emit("flow", self.encode(minimal=False))
+        else:
+            try:
+                self._runPreviousBlocks(placedID, resetRemoteBlock)
+                self._runNextBlocks(placedID)
+                self.status = self.FlowStatus.FINISHED
+            except ErrorRunningBlock as errorBlock:
+                print(f"Error running block {errorBlock.block.name}: {errorBlock}")
+                self.status = self.FlowStatus.ERROR
+            finally:
+                # Save the flow
+                self.write()
+
+        # Restore the working dir
+        os.chdir(oldWD)
+
+    def stop(self):
+        """
+        Stops the flow from executing
+        """
+
+        # If the current executing block is a Slurm block, cancel the job
+        if self.currentExecuting:
+            block = self.findBlockByPlacedID(self.currentExecuting)
+            if isinstance(block, SlurmBlock):
+                try:
+                    block.cancelJob()
+                except Exception as exc:
+                    print(f"Error cancelling job: {exc}")
+
+        # Set the status to stopped
+        self.status = self.FlowStatus.STOPPED
+
+        # Reset the current executing block
+        self.currentExecuting = None
+
+        # Reset the block's statuses
+        for block in self.blocks:
+            if block._isRunning:
+                block._isRunning = False
+                block._finishedExecution = True
+                block._runError = True
+                block._runErrorMessage = "The flow was stopped."
+                block._finishedExecution = True
 
 
 class FlowManager:
@@ -305,6 +764,18 @@ class FlowManager:
 
     Internal use only.
     """
+
+    runningFlows: typing.List[str] = []  # type: ignore
+    """
+    The flows currently running. Contains the paths to the flows.
+    """
+
+    @property
+    def areThereRunningFlows(self):
+        """
+        Whether there are running flows or not
+        """
+        return len(self.runningFlows) > 0
 
     def __init__(
         self,
@@ -360,8 +831,7 @@ class FlowManager:
 
         recentFlowsList = []
         # Parse the flows
-        for flow in recentFlows:
-            path = recentFlows[flow]
+        for _, path in recentFlows.items():
             try:
                 instaceFlow = Flow.read(path)
                 recentFlowsList.append(instaceFlow)
@@ -417,6 +887,7 @@ class FlowManager:
             if loadedFlow.path == flow.path:
                 # Remove the flow
                 self.recentFlows.remove(loadedFlow)
+                print(f"Removing duplicated flow '{loadedFlow.name}'")
                 break
 
         # Update/create the recent flow
@@ -428,6 +899,8 @@ class FlowManager:
             for savedFlow in self.recentFlows:
                 if savedFlow.dateAsInt < oldestFlow.dateAsInt:
                     oldestFlow = savedFlow
+
+            print(f"Removing oldest flow '{oldestFlow.name}'")
             self.recentFlows.remove(oldestFlow)
 
         # Write the recent flows list to the file
@@ -619,3 +1092,135 @@ class FlowManager:
         loadedFLow.path = None  # type: ignore
 
         return loadedFLow
+
+    _flowProcesses: typing.Dict[str, multiprocessing.Process] = {}
+    """
+    The active running flows. The key is the flow path and the value is the process.
+    """
+
+    def runFlow(
+        self,
+        flow: Flow,
+        placedID: typing.Optional[int] = None,
+        resetRemoteBlock: bool = False,
+        socket: typing.Optional[SocketIO] = None,
+    ):
+        """
+        Tells the FlowManager to run a flow
+
+        :param path: The path to the flow to run
+        :param placedID: The placedID of the block to start the execution from.
+        If None provided, the flow will be resumed from the latest executed block.
+        :param resetRemoteBlock: If True, the Slurm block will be resetted.
+        :param socket: The socket instance to send the flow to the frontend.
+        """
+
+        # Check that the flow is not already running
+        for runningFlow in self.runningFlows:
+            if runningFlow == flow and flow.status == Flow.FlowStatus.RUNNING:
+                raise Exception(  # pylint: disable=broad-exception-raised
+                    "The flow is already running."
+                )
+
+        # Set the socket instance
+        flow._socket = socket
+
+        # Run the flow in a separate process
+        def flowRun():
+            # Add the flow to the running flows list
+            self.runningFlows.append(flow.path)
+
+            logging.getLogger("Horus").info("Started flow %s", flow.name)
+
+            # Run the flow
+            flow.run(placedID, resetRemoteBlock, socket)
+
+            # Remove the flow from the running flows list
+            self.runningFlows.remove(flow.path)
+
+            logging.getLogger("Horus").info("Flow %s completed", flow.name)
+
+        # Create a process to run the flow
+        from App import AppDelegate  # pylint: disable=import-outside-toplevel
+
+        process = AppDelegate().server.backgroundRun(flowRun)
+
+        # Save the process
+        self._flowProcesses[flow.path] = process
+
+    def pauseAllFlows(self):
+        """
+        Pauses all running flows
+        """
+
+        for flowPath in self._flowProcesses:
+            flow = None
+            read = False
+            while not read:
+                try:
+                    # Read the latest status of the flow
+                    flow = Flow.read(flowPath)
+                    read = True
+                except Exception:
+                    pass
+
+            if flow is None:
+                logging.getLogger("Horus").critical(
+                    "Flow %s could not be loaded. Not able to pause flow.", flowPath
+                )
+                continue
+
+            # Kill the flow
+            self._killFlow(flowPath)
+
+            # Set the flow status to paused
+            flow.status = Flow.FlowStatus.PAUSED
+            print(f"Pausing flow {flowPath}")
+
+            # Save the flow
+            flow.write()
+
+    def stopFlow(self, flowPath: str) -> Flow:
+        """
+        Stops the flow execution of the given flow.
+
+        Flows are killed. Take into account the collateral
+        effects of killing a subprocess.
+
+        :param flowPath: The path of the flow to stop
+
+        :returns: The stopped flow
+        """
+
+        logging.getLogger("Horus").info("Stopping flow %s", flowPath)
+
+        # Read the latest status of the flow
+        updatedFlowToStop = Flow.read(flowPath)
+
+        # Kill the flow
+        self._killFlow(flowPath)
+
+        # Set the flow status to stopped
+        updatedFlowToStop.stop()
+
+        # Save the flow
+        updatedFlowToStop.write()
+
+        return updatedFlowToStop
+
+    def _killFlow(self, flowPath: str):
+        """
+        Internal function to kill running flows
+        """
+
+        logging.getLogger("Horus").debug("Killing flow %s", flowPath)
+
+        # Kill the process
+        process = self._flowProcesses.get(flowPath, None)
+
+        if process is not None and process.is_alive():
+            logging.getLogger("Horus").debug("Flow PID: %s", process.pid)
+            process.kill()
+            process.join()
+        else:
+            logging.getLogger("Horus").debug("Flow %s is not running", flowPath)

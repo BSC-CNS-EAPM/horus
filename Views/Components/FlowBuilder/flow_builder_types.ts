@@ -87,6 +87,7 @@ type Block = {
   isPlaced: boolean;
   isRunning: boolean;
   runError: boolean;
+  runErrorMessage: string;
   position: { x: number; y: number };
   placedID: number;
   isConnecting: boolean;
@@ -129,6 +130,10 @@ type Block = {
   onChange: (blockPlacedID: number) => void;
   deleteBlock: (block: Block) => void;
   checkRemoteStatus: (block: Block) => Promise<void>;
+
+  // Slurm blocks
+  waitingForJob: boolean;
+  status: string;
 };
 
 type BlockVarPair = {
@@ -141,6 +146,15 @@ type BlockVarPair = {
   variableAllowedValues: Array<string>;
 };
 
+enum FlowStatus {
+  RUNNING = "RUNNING",
+  PAUSED = "PAUSED",
+  FINISHED = "FINISHED",
+  STOPPED = "STOPPED",
+  ERROR = "ERROR",
+  IDLE = "IDLE",
+}
+
 export {
   HorusPlugin,
   PluginVariable,
@@ -148,4 +162,5 @@ export {
   BlockTypes,
   Block,
   BlockVarPair,
+  FlowStatus,
 };

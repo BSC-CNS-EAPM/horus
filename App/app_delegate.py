@@ -1,6 +1,7 @@
 """
 App Delegate
 """
+import multiprocessing
 
 # Basic imports
 import sys
@@ -52,9 +53,12 @@ class HorusLogger:
     The root logger
     """
 
-    def __init__(self, appSupportDir: str) -> None:
+    def __init__(self, appSupportDir: str, debug: bool = False) -> None:
         # Define the logs folder
         self.logDir = os.path.join(appSupportDir, "logs")
+
+        # Define debug
+        self.debug = debug
 
         # Create the logs folder if it doesn't exist
         if not os.path.exists(self.logDir):
@@ -92,15 +96,22 @@ class HorusLogger:
         self.capturer.setLevel(logging.NOTSET)
 
         # Start a new log
-        date = datetime.datetime.now().strftime("%Y-%m-%d %H-%M-%S")
-        logFile = os.path.join(self.logDir, f"{date}.log")
+        logname = "Horus-"
+        if self.debug:
+            logname += "debug"
+        else:
+            date = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+            logname += date
+        logFile = os.path.join(self.logDir, f"{logname}.log")
 
         # Create the file handler
         fh = logging.FileHandler(logFile)  # pylint: disable=invalid-name
         fh.setLevel(logging.NOTSET)
 
         # Create formatter and add it to the file handler
-        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s: %(message)s", "%Y-%m-%d %H:%M:%S"
+        )
         fh.setFormatter(formatter)
 
         # Add the handler to the root logger
@@ -117,7 +128,16 @@ class HorusLogger:
             Fake writer class
             """
 
-            def __init__(self, level: int, capturer: logging.Logger, oldStdOutErr) -> None:
+            def __init__(
+                self, level: int, capturer: logging.Logger, oldStdOutErr, debug: bool = False
+            ) -> None:
+                self.debug = debug
+                """
+                Controls whether to print the logs to the old stdout and stderr
+
+                Needed in debug mode orthewise will be printed twice
+                """
+
                 self.level = level
                 """
                 The level of the fake writer
@@ -139,18 +159,24 @@ class HorusLogger:
                 """
                 for line in message.rstrip().splitlines():
                     self.capturer.log(self.level, line.rstrip())
-                    if self.level < logging.WARNING:
+                    if self.level < logging.WARNING and not self.debug:
                         self.oldStdOutErr.write(f"{line}\n")
 
             def flush(self):
                 """
                 Hook the flush method
                 """
-                pass
 
         # Set as the new stdout and stderr the capturer
-        sys.stdout = FakeWriter(logging.INFO, self.capturer, oldStdout)
-        sys.stderr = FakeWriter(logging.ERROR, self.capturer, oldStderr)
+        sys.stdout = FakeWriter(logging.INFO, self.capturer, oldStdout, debug=self.debug)
+        sys.stderr = FakeWriter(logging.ERROR, self.capturer, oldStderr, debug=self.debug)
+
+        # If we are on debug, print all the loggers to the old stdout and stderr
+        if self.debug:
+            rootDebugHandler = logging.StreamHandler(oldStdout)
+            rootDebugHandler.setLevel(logging.NOTSET)
+            rootDebugHandler.setFormatter(formatter)
+            self.root.addHandler(rootDebugHandler)
 
 
 class WindowOptions:
@@ -304,11 +330,7 @@ class AppDelegate(metaclass=HorusSingleton):
         Starts a logger in production mode
         """
 
-        # We don't need a logger in debug mode, as everything is printed to the console
-        if self.debug:
-            return
-
-        self.logger = HorusLogger(self.appSupportDir)
+        self.logger = HorusLogger(self.appSupportDir, debug=self.debug)
 
         # Log the date and app info
         self.logger.horus.info("Starting Horus %s", self.APP_INFO["APP_VERSION"])
@@ -483,6 +505,9 @@ class AppDelegate(metaclass=HorusSingleton):
         It will create the first window and launch the app
         """
 
+        # Connect automatically to the local remote
+        self.server.remoteManager.connectRemote("local")
+
         if self.browser:
             # Start browser mode
             self._startBrowserMode()
@@ -497,15 +522,23 @@ class AppDelegate(metaclass=HorusSingleton):
         """
         This will be called after the last window is closed.
         """
-        print("Closing Horus...")
 
-        # Stop the logger
-        if not self.debug:
-            self.logger.root.handlers = []
+        # Proceed only if we are in the main thread and not in a subprocess
+        if (
+            threading.current_thread() != threading.main_thread()
+            or multiprocessing.current_process().name != "MainProcess"
+        ):
+            return
 
-        # Stop the server
-        # if self.serverThread is not None:
-        #     self.serverThread.join(timeout=1)  # type: ignore
+        print("\nClosing Horus...")
+
+        # If any flow is running, pause them
+        if self.server.flowManager.areThereRunningFlows:
+            if self.debug:
+                print("There are flows running, but debug mode cannot pause them. Exiting...")
+            else:
+                print("Found running flows. Pausing them...")
+                self.server.flowManager.pauseAllFlows()
 
     def _menus(self):
         def newHorus():
@@ -747,6 +780,9 @@ class AppDelegate(metaclass=HorusSingleton):
         # if self.platform == "darwin":
         #     result = str(result)
 
+        if isinstance(result, typing.Sequence):
+            result = "".join(result)
+
         # Always return a string
         return str(result)
 
@@ -853,9 +889,6 @@ def launchApp():
             except IndexError:
                 print("No debug URL provided. Usage: -d -u <url>")
                 sys.exit(1)
-
-        if debug:
-            print("\n<========Enabling DEBUG========kw>\n")
 
     # Check for the --browser (-b) flag
     browser = False

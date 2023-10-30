@@ -1,7 +1,7 @@
 import os
 import sys
 import typing
-from HorusAPI import Plugin, PluginBlock, PluginPage
+from HorusAPI import Plugin, PluginBlock, PluginPage, SlurmBlock
 import io
 from contextlib import redirect_stdout, redirect_stderr
 import subprocess
@@ -696,7 +696,7 @@ class PluginManager:
             if modulePath.startswith(depsDir) or modulePath.startswith(includeDir):
                 del sys.modules[key]
 
-    def executeBlock(
+    def executeBlockLegacy(
         self,
         blockID: str,
         blockPlacedID: int,
@@ -761,7 +761,7 @@ class PluginManager:
         # Update the block with the remote configuration
         block._setRemote(rAPI)  # pylint: disable=protected-access
 
-        print("Executing block: " + blockID)
+        # print("Executing block: " + blockID)
 
         # Execute the block
         error = False
@@ -774,7 +774,7 @@ class PluginManager:
             error = True
             errorMSG = str(exc)
 
-        print("Block executed: " + blockID)
+        # print("Block executed: " + blockID)
 
         # Restore the working dir
         os.chdir(self.workingDir)
@@ -784,6 +784,71 @@ class PluginManager:
 
         if error:
             raise Exception(errorMSG)
+
+        # Return the output of the block
+        return outputs
+
+    def executeBlock(
+        self,
+        block: PluginBlock,
+        flowID: str,
+        resetRemoteBlock: bool = False,
+    ):
+        """
+        Executes a given block.
+        Should be already prepared with the variables.
+        Method specific for running the block through the Flow class.
+        """
+
+        # Read the config file for the block
+        configPath = self._blockConfigPath(block)
+
+        if os.path.exists(configPath):
+            # Set the config to execute the block
+            block._updateConfigs(configPath)  # pylint: disable=protected-access
+
+        # Find the plugin
+        plugin = self._getPluginByID(block.id.split(".")[0])
+
+        # Add to the python path the dependencies folder of the plugin
+        self._includeDepsPath(plugin._path)  # pylint: disable=protected-access
+
+        # Get the cluster api from the app delegate
+        from App import AppDelegate  # pylint: disable=import-outside-toplevel
+
+        rAPI = AppDelegate().server.remoteManager.remote
+        if rAPI is None:
+            raise Exception("No cluster selected.")  #  pylint: disable=broad-exception-raised
+        rAPI._blockID = block.id  # pylint: disable=protected-access
+        rAPI._blockPlacedID = block._placedID  # pylint: disable=protected-access
+        rAPI._flowSavedID = flowID  # pylint: disable=protected-access
+        rAPI._resetRemoteBlock = resetRemoteBlock  # pylint: disable=protected-access
+
+        # Update the block with the remote configuration
+        block._setRemote(rAPI)  # pylint: disable=protected-access
+
+        # print("Executing block: " + block.id)
+
+        # Execute the block
+        error = False
+        errorMSG = ""
+        outputs = None
+        try:
+            outputs = block()
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            error = True
+            errorMSG = str(exc)
+
+        # print("Block executed: " + block.id)
+
+        # Restore the python path
+        self._removeDepsPath(plugin._path)  # pylint: disable=protected-access
+
+        if error:
+            raise Exception(errorMSG)
+
+        # Set the block as executed
+        # block._finishedExecution = True  # pylint: disable=protected-access
 
         # Return the output of the block
         return outputs

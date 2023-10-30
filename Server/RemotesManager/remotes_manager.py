@@ -12,6 +12,8 @@ import secrets
 import fabric
 import tarfile
 
+from HorusAPI import ResetRemoteException
+
 
 class RemotesAPI:
     """
@@ -175,6 +177,8 @@ class RemotesAPI:
         :param command: The command to run.
         :return: The output of the command.
         """
+
+        logging.getLogger("Horus").debug("Running command: %s on remote %s", command, self.name)
 
         if self.isLocal:
             # Run command locally
@@ -486,6 +490,8 @@ class RemotesAPI:
 
         # Get the directory of the script
         changeDirTo = os.path.dirname(script)
+        if changeDirTo == "":
+            changeDirTo = "."
 
         # Submit the job and get the job ID
         try:
@@ -521,7 +527,7 @@ class RemotesAPI:
         """
 
         if self._resetRemoteBlock:
-            raise Exception(  # pylint: disable=broad-exception-raised
+            raise ResetRemoteException(  # pylint: disable=broad-exception-raised
                 "Remote block was resetted."
             )
 
@@ -533,9 +539,11 @@ class RemotesAPI:
 
         status = self.getRemoteBlockStatus(self._flowSavedID, self._blockPlacedID)
 
-        # If the job is completed, return True
-        # Otherwise, return False
-        return status == "COMPLETED"
+        # If the job is RUNNING or PENNDING, return False
+        if status == "RUNNING" or status == "PENDING":
+            return False
+
+        return True
 
     def getRemoteBlockStatus(self, flowSavedID: str, blockPlacedID: int) -> str:
         """
@@ -577,7 +585,7 @@ class RemotesAPI:
         status = self.getJobStatus(jobID)
 
         # Update the queue storage
-        self.updateQueue(flowSavedID)
+        self.updateQueue(flowSavedID, jobID=jobID, status=status)
 
         return status
 
@@ -590,9 +598,19 @@ class RemotesAPI:
         """
 
         # Get the job status
-        return self.command(f"sacct -j {jobID} -o 'State' --noheader -X")
+        status = self.command(f"sacct -j {jobID} -o 'State' --noheader -X")
 
-    def updateQueue(self, savedFlowID: str) -> t.Dict[str, t.List[t.Dict[str, t.Any]]]:
+        if status == "":
+            status = "PENDING"
+
+        # Remove any + or - from the status
+        status = status.replace("+", "").replace("-", "")
+
+        return status
+
+    def updateQueue(
+        self, savedFlowID: str, jobID: t.Optional[int] = None, status: t.Optional[str] = None
+    ) -> t.Dict[str, t.List[t.Dict[str, t.Any]]]:
         """
         Updates the queue storage with the current status of the jobs
         in the selected remote.
@@ -621,22 +639,30 @@ class RemotesAPI:
                 currently connected to {self.remoteName}"
             )
 
-        # Loop through the jobs
+        # If the job ID is set, filter the jobs
+        # So we update only one job
+        if jobID is not None:
+            jobs = [j for j in jobs if j["jobID"] == jobID]
+
         for job, index in zip(jobs, range(len(jobs))):
+            # If a jobID is provided, skip the other jobs
+            if jobID is not None and job["jobID"] != jobID:
+                continue
+
             # Job ID
-            jobID = job.get("jobID", None)
+            queueJobID = job.get("jobID", None)
 
             # If the job ID is not set, raise an exception
-            if jobID is None:
+            if queueJobID is None:
                 raise Exception(  # pylint: disable=broad-exception-raised
                     "Corrupted queue storage: job ID not set."
                 )
 
             # Get the job status
-            status = self.getJobStatus(jobID)
+            newStatus = self.getJobStatus(queueJobID) if status is None else status
 
             # Update the job status
-            job["status"] = status
+            job["status"] = newStatus
 
             # Update the queue storage
             queue[savedFlowID][index] = job
@@ -647,6 +673,15 @@ class RemotesAPI:
 
         # Return the queue storage
         return queue
+
+    def cancelJob(self, jobID: int):
+        """
+        Cancels a SLURM job by its ID.
+        """
+
+        return self.command(f"scancel {jobID}")
+
+
 
 
 class RemotesManager:

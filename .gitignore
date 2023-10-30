@@ -218,3 +218,6 @@ AppSupport/remotes.json
 
 # Queues
 AppSupport/queue.json
+
+# Flask sessions
+AppSupport/sessions/

@@ -2,9 +2,12 @@ from __future__ import annotations
 import typing
 import json
 import os
+import time
 from enum import Enum
 from copy import deepcopy
 import logging
+
+from .utils import ResetRemoteException
 
 
 class PluginRemote:
@@ -676,16 +679,64 @@ class PluginBlock:
 
     # Internal variables, used when saving the flow and in the frontend
     _position: typing.List[float] = [0, 0]
+    """
+    The position of the block in the flow builder [x, y]
+    """
+
     _isPlaced: bool = False
+    """
+    Whether the block is placed in the flow builder or not.
+    """
+
     _isRunning: bool = False
+    """
+    Whether the block is running or not.
+    """
+
     _runError: bool = False
+    """
+    Whether the block has an error or not.
+    """
+
+    _runErrorMessage: str = ""
+    """
+    The error message of the block.
+    """
+
     _placedID: typing.Optional[int] = 0
+    """
+    The ID of the block in the flow builder.
+    """
+
     _finishedExecution: bool = False
+    """
+    Whether the block has finished its execution or not.
+    """
+
     _storedOutputs: dict[str, typing.Any] = {}
+    """
+    The outputs of the block after it has finished its execution.
+    """
+
     _variableConnections: typing.List[BlockConnection] = []
+    """
+    To which variables the block is connected to run after.
+    """
+
     _variableConnectionsReferences: typing.List[BlockConnection] = []
+    """
+    Other variables that connect to this block.
+    """
+
     _connectedTo: typing.List[int] = []
+    """
+    The IDs of the blocks that this block is connected to.
+    """
+
     _connectedToReferences: typing.List[int] = []
+    """
+    The IDs of the blocks that connect to this block.
+    """
 
     selectedInputGroup: str = "default"
     """
@@ -819,6 +870,9 @@ class PluginBlock:
 
         # Get the updated output as dictionary
         return self.outputs
+
+    def __eq__(self, other):
+        return self.id == other.id and self._placedID == other._placedID
 
     def _updateVariables(self, values: dict):
         """
@@ -1057,6 +1111,7 @@ class PluginBlock:
             "isPlaced": self._isPlaced,
             "isRunning": self._isRunning,
             "runError": self._runError,
+            "runErrorMessage": self._runErrorMessage,
             "placedID": self._placedID,
             "finishedExecution": self._finishedExecution,
             "storedOutputs": self._storedOutputs,
@@ -1089,6 +1144,13 @@ class PluginBlock:
         for c in self._getConfigs():
             configList.append(c._toDict())
         return configList
+
+    def _cleanRun(self):
+        # Clean internal variables related to the execution
+        self._finishedExecution = False
+        self._runError = False
+        self._runErrorMessage = ""
+        self._isRunning = False
 
     _isOriginal = True
     """
@@ -1132,6 +1194,7 @@ class PluginBlock:
         isPlaced: bool = blockJSON.get("isPlaced", False)
         isRunning: bool = blockJSON.get("isRunning", False)
         runError: bool = blockJSON.get("runError", False)
+        runErrorMessage: str = blockJSON.get("runErrorMessage", "")
         placedID: int = blockJSON.get("placedID", 0)
         finishedExecution: bool = blockJSON.get("finishedExecution", True)
         selectedInputGroup: str = blockJSON.get("selectedInputGroup", "default")
@@ -1214,6 +1277,7 @@ class PluginBlock:
         self._isPlaced = isPlaced
         self._isRunning = isRunning
         self._runError = runError
+        self._runErrorMessage = runErrorMessage
         self._position = [xPos, yPos]
         self._placedID = placedID
         self._finishedExecution = finishedExecution
@@ -1234,6 +1298,7 @@ class PluginBlock:
             "position": {"x": self._position[0], "y": self._position[1]},
             "isRunning": self._isRunning,
             "runError": self._runError,
+            "runErrorMessage": self._runErrorMessage,
             "placedID": self._placedID,
             "finishedExecution": self._finishedExecution,
             "storedOutputs": self._storedOutputs,
@@ -1336,6 +1401,42 @@ class SlurmBlock(PluginBlock):
     one before the job is submitted and one after the job is completed.
     """
 
+    _jobID: typing.Optional[int] = None
+    """
+    The Job ID of the job.
+    """
+
+    # Define an enum for the statuses
+    class Status(Enum):
+        """
+        The status of the block.
+        """
+
+        IDLE = "IDLE"
+        RUNNING = "RUNNING"
+        PENDING = "PENDING"
+        COMPLETED = "COMPLETED"
+        FAILED = "FAILED"
+        CANCELLED = "CANCELLED"
+        CANCELLING = "CANCELLING"
+        UNKNOWN = "UNKNOWN"
+
+        # Wehn the enum is instantiated with some value,
+        # e.g. Status("IDLE"), if the value is not in the enum,
+        # return the UNKNOWN status
+        @classmethod
+        def _missing_(cls, value):
+            return cls.UNKNOWN
+
+        # Make the enum serializable
+        def __str__(self):
+            return str(self.value)
+
+    _status: Status = Status.IDLE
+    """
+    The status of the block.
+    """
+
     def __init__(  # pylint: disable=dangerous-default-value
         self,
         name: str,
@@ -1370,20 +1471,86 @@ class SlurmBlock(PluginBlock):
         self.initalAction = initialAction
         self.finalAction = finalAction
 
+    # Override the __call__ method to accomodate the two actions
     def __call__(self, *args, **kwargs):
         # If the block has not submitted the job, run the first action
         # If the job has been submitted, han has ended, run the second action
-        try:
-            if self.remote._remote.didRemoteBlockFinish():
-                self.action = self.finalAction
-            else:
-                return
-        except Exception:
-            # If the JobID is not found (maybe cleared because a re-run is
-            # required by the user) set the action to the initial action
+        if self._status == self.Status.COMPLETED:
+            self.action = self.finalAction
+            outputs = super().__call__(*args, **kwargs)
+        else:
             self.action = self.initalAction
+            outputs = super().__call__(*args, **kwargs)
+            # Set the reesetRemoteblock flag to False
+            self.remote._remote._resetRemoteBlock = False  # pylint: disable=protected-access
 
-        return super().__call__(*args, **kwargs)
+        return outputs
+
+    def parseStatus(self):
+        """
+        The status of the block as a parsed string.
+        """
+        try:
+            savedID = self.remote._remote._flowSavedID
+            self.remote._remote._blockPlacedID = self._placedID
+            status = self.remote._remote.getRemoteBlockStatus(savedID, self._placedID)
+        except AttributeError:
+            status = ""
+
+        if status == "":
+            self._status = self.Status.IDLE
+        else:
+            self._status = self.Status(status)
+
+        # Set the parced status with only the first letter as capital
+        return self._status.value.capitalize()
+
+    @property
+    def isWaitingForJob(self):
+        """
+        Wether the block is waiting for the job to finish or not.
+        """
+        try:
+            # Ensure the remote api has as blockID this block
+            self.remote._remote._blockPlacedID = self._placedID
+            return not self.remote._remote.didRemoteBlockFinish()
+        except AttributeError:
+            return False
+        except ResetRemoteException:
+            return True
+        except Exception as e:
+            logging.getLogger("Horus").error(
+                "An error occurred while checking if the job is finished for block %s", self.name
+            )
+            raise Exception("An error occurred while checking if the job is finished.") from e
+
+    def waitTillJobFinished(self, interval: int = 10):
+        """
+        Waits until the job is finished.
+
+        :param interval: The interval in seconds to check if the job is finished.
+        """
+        while self.isWaitingForJob:
+            time.sleep(interval)
+
+        # Set the status
+        self.parseStatus()
+
+    def cancelJob(self):
+        """
+        Cancels the job in the slurm queue.
+        """
+
+        # Ensure the remote api has as blockID this block
+        self.remote._remote.cancelJob(self._jobID)
+
+    # Re-define the toDict method to include the status and waitingForJob
+    def _toDict(self):
+        blockDict = super()._toDict()
+        blockDict["status"] = str(self._status)
+        blockDict["waitingForJob"] = self.isWaitingForJob
+        blockDict["jobID"] = self._jobID
+        return blockDict
 
 
 class Plugin:

@@ -21,7 +21,7 @@ from .extensions import Extensions
 
 # Export the utility SingletonMeta class
 from .utils import SingletonMeta as HorusSingleton
-from .utils import TempFile
+from .utils import TempFile, ResetRemoteException
 
 # Set the exported modules
 __all__ = [
@@ -40,6 +40,7 @@ __all__ = [
     "Extensions",
     "HorusSingleton",
     "TempFile",
+    "ResetRemoteException",
 ]
 
 # Set the module name
