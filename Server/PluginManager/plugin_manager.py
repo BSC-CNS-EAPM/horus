@@ -1,18 +1,30 @@
+"""
+The PluginManager module contains the PluginManager class. This class
+manages the installation, loading and uninstallation of plugins. Most
+importantly, it manages the execution of the individual blocks of the plugins.
+"""
+
+# Standard imports
 import os
 import sys
 import typing
-from HorusAPI import Plugin, PluginBlock, PluginPage, SlurmBlock
 import io
-from contextlib import redirect_stdout, redirect_stderr
 import subprocess
-from copy import deepcopy
 import logging
-
-# from eventlet.green import subprocess
-import importlib.util
-import shutil
-from flask_socketio import SocketIO
 import json
+import shutil
+
+# Importing the plugin classes directly from the plugin file
+import importlib.util
+
+# For the PrintCapturer class
+from contextlib import redirect_stdout, redirect_stderr
+
+# For the SocketIO type completion
+from flask_socketio import SocketIO
+
+# More types from the HorusAPI
+from HorusAPI import Plugin, PluginBlock, PluginPage
 
 
 class PluginManager:
@@ -46,12 +58,11 @@ class PluginManager:
         # Defines the default plugins directory, which should be in the same
         # directory as the executable bundle
         try:
-            bundle_dir = sys._MEIPASS  # type: ignore
-            self.defaultPluginsDir = os.path.abspath(os.path.join(bundle_dir, "DefaultPlugins"))
+            bundleDir = sys._MEIPASS  # type: ignore
+            self.defaultPluginsDir = os.path.abspath(os.path.join(bundleDir, "DefaultPlugins"))
         except AttributeError:
             # We are not in a bundle, use the AppSupport/DefaultPlugins directory
             self.defaultPluginsDir = os.path.join(appSupportDir, "DefaultPlugins")
-            pass
 
         # Defines the plugins directory, which should be in the AppSupport directory
         self.pluginsDir = os.path.join(appSupportDir, "Plugins")
@@ -120,8 +131,8 @@ class PluginManager:
             # Unzip the plugin
             import zipfile
 
-            with zipfile.ZipFile(newPlugin, "r") as zip_ref:
-                zip_ref.extractall(newPluginDir)
+            with zipfile.ZipFile(newPlugin, "r") as zipRef:
+                zipRef.extractall(newPluginDir)
 
             # Remove the .hp file
             os.remove(newPlugin)
@@ -190,7 +201,7 @@ class PluginManager:
                 )
         except Exception as e:
             shutil.rmtree(newPluginDir)
-            raise Exception(e)
+            raise Exception(e) from e
 
     def _getPlugin(self, byName: str) -> Plugin:
         """
@@ -219,7 +230,6 @@ class PluginManager:
         """
         Uninstalls a plugin with the given name.
         """
-        import shutil
 
         plugin = self._getPlugin(pluginName)
 
@@ -303,16 +313,17 @@ class PluginManager:
 
         try:
             plugin = self._checkPlugin(pluginPath)
-            logging.getLogger("Horus").info(f"Loaded plugin {plugin.info['name']}")
+            logging.getLogger("Horus").info("Loaded plugin %s", plugin.info["name"])
         except Exception as e:
-            logging.getLogger("Horus").error(f"Error loading plugin: {e}")
-            raise Exception(f"Error loading plugin: {e}")
+            logging.getLogger("Horus").error("Error loading plugin: %s", str(e))
+            raise Exception(f"Error loading plugin: {e}") from e
 
         # Check that the plugin is not already loaded
         for p in self.loadedPlugins:
             if p == plugin:
                 raise Exception(
-                    f"Plugin {plugin.info['name']} already installed. In order to update it, uninstall it first."
+                    f"Plugin {plugin.info['name']} already installed. "
+                    + "In order to update it, uninstall it first."
                 )
 
         # Create the config folder
@@ -343,7 +354,7 @@ class PluginManager:
             raise Exception("The plugin does not contain a plugin.meta file.")
 
         # Load the plugin.meta
-        with open(pluginMeta, "r") as f:
+        with open(pluginMeta, "r", encoding="utf-8") as f:
             pluginMeta = json.load(f)
 
         # Dependencies for the plugin
@@ -352,12 +363,6 @@ class PluginManager:
         # Create the deps folder
         if not os.path.exists(depsDir):
             os.mkdir(depsDir)
-
-        # Set the python path to the dependencies folder
-        self._includeDepsPath(pluginDir)
-
-        # Install dependencies
-        self._installDependencies(pluginMeta, depsDir)
 
         # Get the entry point from meta
         entryPoint = pluginMeta.get("pluginFile", None)
@@ -372,12 +377,20 @@ class PluginManager:
             raise Exception(f"Failed to create module spec for {entryPoint}")
         pluginModule = importlib.util.module_from_spec(spec)
         try:
+            # Set the python path to the dependencies folder
+            self._includeDepsPath(pluginDir)
+
+            # Install dependencies
+            self._installDependencies(pluginMeta, depsDir)
+
+            # Load the entry point
             spec.loader.exec_module(pluginModule)  # type: ignore
         except Exception as e:
-            raise Exception(f"Failed to load plugin {entryPoint}: {e}")
+            raise Exception(f"Failed to load plugin {entryPoint}: {e}") from e
         finally:
             # Pop the appended deps dir from the sys.path
             self._removeDepsPath(pluginDir)
+
         # Check that the plugin variable exists
         if not hasattr(pluginModule, "plugin"):
             raise Exception("The plugin has not declared a plugin variable.")
@@ -654,14 +667,14 @@ class PluginManager:
         # Find the plugin
         try:
             plugin = self._getPluginByID(pluginID)
-        except Exception:
-            raise Exception(f"PluginID {pluginID} not found")
+        except Exception as exc:
+            raise Exception(f"PluginID {pluginID} not found") from exc
 
         # Get the block
         try:
             block = plugin.getBlock(fromBlockID)
-        except Exception:
-            raise Exception(f"Block {fromBlockID} not found")
+        except Exception as exc:
+            raise Exception(f"Block {fromBlockID} not found") from exc
 
         return block
 
@@ -1020,24 +1033,62 @@ class PluginManager:
 
 
 class PrintCapturer:
+    """
+    Captures any print statement and sends it to the client besides printing it to the terminal.
+    """
+
+    oldStdout: typing.Any
+    """
+    The old stdout where to print the message besides the socketio event.
+    """
+
+    oldStderr: typing.Any
+    """
+    The old stderr where to print the message besides the socketio event.
+    """
+
     def __init__(self, socketio: SocketIO, printTo: str = "printTerm"):
+        """
+        Initializes the PrintCapturer.
+
+        :param socketio: The socketio instance.
+        :param printTo: The name of the socketio event to print to (default: "printTerm")
+        """
+
         self.socketio = socketio
         self.printTo = printTo
 
     def write(self, message):
+        """
+        Writes the message to the socketio event and to the terminal.
+        """
+
         self.socketio.emit(self.printTo, message)
-        self.old_stdout.write(message)
+        self.oldStdout.write(message)
         self.socketio.sleep(0)
 
     def flush(self):
-        self.old_stdout.flush()
+        """
+        Default implementation of flush.
+        """
+
+        self.oldStdout.flush()
 
     def __enter__(self):
-        self.old_stdout = sys.stdout
-        self.old_stderr = sys.stderr
+        """
+        Used to redirect the stdout and stderr to the PrintCapturer
+        upon entering a with statement.
+        """
+        self.oldStdout = sys.stdout
+        self.oldStderr = sys.stderr
         sys.stdout = self
         sys.stderr = self
 
-    def __exit__(self, exc_type, exc_value, traceback):
-        sys.stdout = self.old_stdout
-        sys.stderr = self.old_stderr
+    def __exit__(
+        self, exc_type, exc_value, traceback
+    ):  # pylint: disable=unused-argument,invalid-name
+        """
+        Used to restore the stdout and stderr upon exiting a with statement.
+        """
+        sys.stdout = self.oldStdout
+        sys.stderr = self.oldStderr
