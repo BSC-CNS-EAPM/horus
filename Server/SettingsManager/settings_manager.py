@@ -325,9 +325,11 @@ class SettingsManager:
         # with open(self.userSettingsPath, "r", encoding="utf-8") as file:
         #     settings = json.load(file)
 
+        from App import AppDelegate
+
         settingsList = []
         for settingID, setting in self.settings.items():
-            if setting.desktopOnly:
+            if setting.desktopOnly and AppDelegate().serverMode:
                 continue
             parsedSetting = {
                 "id": settingID,
