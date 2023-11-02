@@ -239,7 +239,7 @@ def dockingJob(block: SlurmBlock):  # pylint: disable=missing-function-docstring
     systemDataValue = block.inputs.get("system", None)
 
     if systemData is None:
-        raise Exception("No protein structure provided for IFD.")
+        raise Exception("No protein structure provided.")
 
     systemDataValue = os.path.basename(systemDataValue)
 
@@ -260,19 +260,24 @@ def dockingJob(block: SlurmBlock):  # pylint: disable=missing-function-docstring
 
     name = block.variables.get("simulation_name", "ifd")
 
+    # Sanitize the name (no spaces, no special characters...)
+    name = "".join([c for c in name if c.isalpha() or c.isdigit() or c == "_"]).rstrip()
+
+    block._updateVariables({"simulation_name": name})
+
     cpus = int(block.variables.get("cpus", 2))
 
     if cpus < 2:
         raise Exception("CPUs must be greater than 1.")
 
-    print("Generating NBDSuite input files...")
+    print(f"Generating NBDSuite input files for {name}")
 
     from Utils import GeneralInput
 
     generalInput = GeneralInput()
     generalInput.systemDataInput = systemDataValue
     generalInput.ligandDataInput = ligandDataValue
-    generalInput.nameInput = block.variables.get("simulation_name", "docking")
+    generalInput.nameInput = name
     generalInput.staticNameInput = block.variables.get("static_name", False)
     generalInput.cpusInput = cpus
     generalInput.verbosityInput = block.variables.get("verbosity", "INFO")

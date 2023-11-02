@@ -23,6 +23,9 @@ from HorusAPI import PluginBlock as Block, SlurmBlock
 # The plugin manager
 from Server.PluginManager import PrintCapturer, PluginManager
 
+# The remote manager
+from Server.RemotesManager import RemotesManager
+
 
 class LoopException(Exception):
     """
@@ -696,6 +699,7 @@ class Flow:
 
                     # Send the flow to the frontend
                     self._socket.emit("flow", self.encode(minimal=False))
+
         else:
             try:
                 self._runPreviousBlocks(placedID, resetRemoteBlock)
@@ -721,7 +725,21 @@ class Flow:
             block = self.findBlockByPlacedID(self.currentExecuting)
             if isinstance(block, SlurmBlock):
                 try:
-                    block.cancelJob()
+                    # Get the cluster api from the app delegate
+                    from App import AppDelegate  # pylint: disable=import-outside-toplevel
+
+                    remoteManager = RemotesManager(AppDelegate().appSupportDir)
+
+                    remoteManager.connectRemote(block.selectedRemote)
+
+                    rAPI = remoteManager.remote
+
+                    if rAPI is None:
+                        raise Exception(
+                            "No cluster selected."
+                        )  #  pylint: disable=broad-exception-raised
+
+                    rAPI.cancelJobs(self.savedID)
                 except Exception as exc:
                     print(f"Error cancelling job: {exc}")
 
@@ -900,7 +918,7 @@ class FlowManager:
                 if savedFlow.dateAsInt < oldestFlow.dateAsInt:
                     oldestFlow = savedFlow
 
-            print(f"Removing oldest flow '{oldestFlow.name}'")
+            logging.getLogger("Horus").debug("Removing oldest flow '%s'", oldestFlow.name)
             self.recentFlows.remove(oldestFlow)
 
         # Write the recent flows list to the file

@@ -56,6 +56,7 @@ function FlowReciver(props: FlowReciverProps) {
   // Modal state
   const [flowName, setFlowName] = useState("New flow");
   const [isRunning, setIsRunning] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   // Saved flow vars
   const savedID = useRef(props.savedID ? props.savedID : "new_flow");
@@ -290,6 +291,10 @@ function FlowReciver(props: FlowReciverProps) {
 
     setIsRunning(status === FlowStatus.RUNNING || status === FlowStatus.PAUSED);
 
+    if (status === FlowStatus.STOPPED) {
+      setIsCancelling(false);
+    }
+
     props.setPlacedBlocks((currentBlocks) => {
       // Place the newblocks with the current block's position
       return currentBlocks.map((b) => {
@@ -396,6 +401,8 @@ function FlowReciver(props: FlowReciverProps) {
       return;
     }
 
+    setIsCancelling(true);
+
     const body = JSON.stringify({
       flowPath: flowPath.current,
     });
@@ -407,7 +414,6 @@ function FlowReciver(props: FlowReciverProps) {
     if (!data.ok) {
       alert(data.msg);
     }
-
     // setExecutingAll(false);
 
     // props.setPlacedBlocks((currentBlocks) => {
@@ -670,6 +676,8 @@ function FlowReciver(props: FlowReciverProps) {
     flowExecuter.current.updatePlacedBlocks(openedFlow.blocks);
     flowExecuter.current.updateFlowPath(flowPath.current);
 
+    setIsCancelling(false);
+
     // Set the terminal output
     window.horusTerm.storedMessages = openedFlow.terminalOutput;
 
@@ -857,10 +865,16 @@ function FlowReciver(props: FlowReciverProps) {
 
   const fetchFlowSettings = async () => {
     const showPlacedID = await horusGetSettings("showPlacedID");
+    const allowRemotesOnNonSlurm = await horusGetSettings(
+      "allowRemotesOnNonSlurm"
+    );
 
     const loadedFlowSettings = {
-      showPlacedID: showPlacedID?.value || false,
+      showPlacedID: showPlacedID?.value,
+      allowRemotesOnNonSlurm: allowRemotesOnNonSlurm?.value,
     };
+
+    console.log("Loaded flow settings: ", loadedFlowSettings);
 
     setFlowSettings(loadedFlowSettings);
   };
@@ -896,6 +910,7 @@ function FlowReciver(props: FlowReciverProps) {
       (flowPath.current === "" || flowPath.current === null)
     ) {
       // Open the file picker
+      alert("Please save first the flow");
       setServerFolderPickerOpen(true);
       return;
     }
@@ -956,7 +971,12 @@ function FlowReciver(props: FlowReciverProps) {
           onChange={onNameChange}
           value={flowName}
         />
-        <div className="flex flex-col gap-0 items-center text-center">
+        <div
+          className="flex flex-col gap-0 items-center text-center"
+          style={{
+            minWidth: "4rem",
+          }}
+        >
           <button
             className="flow-button"
             style={{
@@ -964,7 +984,15 @@ function FlowReciver(props: FlowReciverProps) {
             }}
           >
             {isRunning ? (
-              <div onClick={stopExecutingAll}>
+              <div
+                onClick={
+                  isCancelling
+                    ? () => {
+                        // Do nothing
+                      }
+                    : stopExecutingAll
+                }
+              >
                 <RotatingLines />
               </div>
             ) : (
@@ -997,18 +1025,7 @@ function FlowReciver(props: FlowReciverProps) {
               </svg>
             )}
           </button>
-          <div
-            style={{
-              fontSize: "small",
-              cursor: "context-menu",
-            }}
-            onClick={(e) => {
-              fetchRemotes();
-              setShowRemotes(!showRemotes);
-            }}
-          >
-            {selectedRemote}
-          </div>
+          {isCancelling && <div className="text-xs">Stopping</div>}
         </div>
         {
           <ContextMenuRemotes
@@ -1042,7 +1059,18 @@ function FlowReciver(props: FlowReciverProps) {
       });
     });
 
-    const blockToRender = {
+    const selectRemote = (selectedRemote: string) => {
+      props.setPlacedBlocks((prevBlocks) => {
+        const newBlocks = [...prevBlocks];
+        const blockIndex = newBlocks.findIndex(
+          (blockToFind) => blockToFind.placedID === block.placedID
+        );
+        newBlocks[blockIndex].selectedRemote = selectedRemote;
+        return newBlocks;
+      });
+    };
+
+    const blockToRender: Block = {
       ...block,
       onChange: onBlockChange,
       execute: executeBlock,
@@ -1050,6 +1078,7 @@ function FlowReciver(props: FlowReciverProps) {
       deleteBlock: handleDelete,
       isRunning: block.isRunning,
       checkRemoteStatus: checkRemoteBlock,
+      setRemoteConnection: selectRemote,
     };
 
     return (

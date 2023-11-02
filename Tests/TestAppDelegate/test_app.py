@@ -42,11 +42,14 @@ def test_setting_init():
     Test the initialization of a Setting instance
     """
 
-    setting = Setting("id", "name", "value", "description", "category", VariableTypes.STRING)
+    setting = Setting(
+        "id", "name", "value", "defaultValue", "description", "category", VariableTypes.STRING
+    )
 
     assert setting.id == "id"
     assert setting.name == "name"
     assert setting.value == "value"
+    assert setting.defaultValue == "defaultValue"
     assert setting.description == "description"
     assert setting.category == "category"
     assert setting.type == VariableTypes.STRING
@@ -57,16 +60,20 @@ def test_setting_to_dict():
     Test the toDict method of a Setting instance
     """
 
-    setting = Setting("id", "name", "value", "description", "category", VariableTypes.STRING)
+    setting = Setting(
+        "id", "name", "value", "defaultValue", "description", "category", VariableTypes.STRING
+    )
     setting_dict = setting.toDict()
 
     assert setting_dict == {
         "name": "name",
         "value": "value",
+        "defaultValue": "defaultValue",
         "description": "description",
         "category": "category",
         "type": "string",
         "allowedValues": [],
+        "desktopOnly": False,
     }
 
 
@@ -178,9 +185,7 @@ def test_horus_settings_restore_defaults(horus_settings):
         user_settings = json.load(f)
 
     for key in default_settings.keys():
-        print(f"USER: KEY {key}, VALUE {user_settings[key]}")
-        print(f"DEFAULT: KEY {key}, VALUE {default_settings[key]}")
-        assert user_settings[key] == default_settings[key]
+        assert user_settings[key]["value"] == default_settings[key]["value"]
 
 
 def test_horus_settings_update_setting(horus_settings):

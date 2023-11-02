@@ -26,6 +26,9 @@ from flask_socketio import SocketIO
 # More types from the HorusAPI
 from HorusAPI import Plugin, PluginBlock, PluginPage
 
+# Import the RemoteManager for the block's remote
+from Server.RemotesManager import RemotesManager
+
 
 class PluginManager:
     """
@@ -766,6 +769,7 @@ class PluginManager:
         rAPI = AppDelegate().server.remoteManager.remote
         if rAPI is None:
             raise Exception("No cluster selected.")  #  pylint: disable=broad-exception-raised
+
         rAPI._blockID = blockID  # pylint: disable=protected-access
         rAPI._blockPlacedID = blockPlacedID  # pylint: disable=protected-access
         rAPI._flowSavedID = flowSavedID  # pylint: disable=protected-access
@@ -829,9 +833,15 @@ class PluginManager:
         # Get the cluster api from the app delegate
         from App import AppDelegate  # pylint: disable=import-outside-toplevel
 
-        rAPI = AppDelegate().server.remoteManager.remote
+        remoteManager = RemotesManager(AppDelegate().appSupportDir)
+
+        remoteManager.connectRemote(block.selectedRemote)
+
+        rAPI = remoteManager.remote
+
         if rAPI is None:
             raise Exception("No cluster selected.")  #  pylint: disable=broad-exception-raised
+
         rAPI._blockID = block.id  # pylint: disable=protected-access
         rAPI._blockPlacedID = block._placedID  # pylint: disable=protected-access
         rAPI._flowSavedID = flowID  # pylint: disable=protected-access

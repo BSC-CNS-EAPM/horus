@@ -65,7 +65,7 @@ class HorusServer:
     between the frontend and the python backed.
     """
 
-    parcelURL = "http://127.0.0.1:1234"
+    parcelURL = "http://127.0.0.1:3001"
     browser = False
 
     def __init__(self, debug=False, desktop=False, appSupportDir=None, host=None, port=None):
@@ -221,6 +221,10 @@ class HorusServer:
             logging.getLogger("Horus").debug("Using Parcel development server")
             return True
         except requests.exceptions.ConnectionError:
+            return False
+        except requests.exceptions.ReadTimeout as rete:
+            logging.getLogger("Horus").debug("Could not verify parcel address %s", self.parcelURL)
+            logging.getLogger("Horus").debug("Error: %s", str(rete))
             return False
 
     def _guiDir(self):
@@ -845,13 +849,9 @@ class HorusServer:
         @verifyToken
         def listRemoteNames():
             try:
-                remotes = self.remoteManager.listRemotes()
+                remotes = self.remoteManager.listRemotes(includeLocal=True)
 
                 remotes = [r["name"] for r in remotes]
-
-                # Append the local machine if there are remotes
-                if len(remotes) > 0:
-                    remotes.append("Local")
 
                 success = {
                     "ok": True,
@@ -983,6 +983,12 @@ class HorusServer:
 
             return flask.jsonify({"ok": True, "settings": settings})
             # return flask.render_template("Settings/index.html")
+
+        @self.server.route("/restoreSettings", methods=["GET"])
+        def settingsDefaults():
+            self.settingsManager.restoreDefaults()
+
+            return flask.jsonify({"ok": True})
 
         @self.server.route("/settings/<settingID>", methods=["GET"])
         def setting(settingID):

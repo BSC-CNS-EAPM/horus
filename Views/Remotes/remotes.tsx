@@ -301,7 +301,7 @@ function NewRemote(props: NewRemoteProps) {
                     onChange={(event) => filterNullValue(event, setKeyPath)}
                   />
                   <HorusFileExplorer
-                    onFileConfirm={(path) => filterNullValue(path, setKeyPath)}
+                    onFileConfirm={(path) => setKeyPath(path)}
                     onFileSelect={() => {}}
                   >
                     Pick file...

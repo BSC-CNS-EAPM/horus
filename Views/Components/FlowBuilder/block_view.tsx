@@ -17,6 +17,7 @@ import { ArrowBlockConnector } from "./arrow_connector";
 import { useXarrow } from "react-xarrows";
 import { SearchComponent } from "../Toolbar/toolbar";
 import NBDButton from "../nbdbutton";
+import { BlockRemotes } from "./Remotes/block_remotes";
 
 interface DeleteBlockButtonProps {
   block: Block;
@@ -420,14 +421,22 @@ function BlockView({ block, settings }: { block: Block; settings?: any }) {
         }
       >
         <div className="flex flex-row justify-between">
-          {isInfoHovering || (block.isPlaced && block.type !== "input") ? (
-            <div>
+          {isInfoHovering || block.isPlaced ? (
+            <div className="w-full">
               <div className="plugin-description">{block.description}</div>
               {block.type === "slurm" && (
                 <div className="remote-block-cloud">
                   <ServerIcon /> Slurm Block - {block.status}
                 </div>
               )}
+              {(block.type === "slurm" || settings?.allowRemotesOnNonSlurm) &&
+                block.isPlaced && (
+                  <div>
+                    <hr className="m-0 mt-2" />
+                    <BlockRemotes block={block} />
+                    {block.type === "input" && <hr className="m-0 mb-2" />}
+                  </div>
+                )}
             </div>
           ) : null}
         </div>

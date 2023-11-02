@@ -158,8 +158,11 @@ class RemotesAPI:
             # with the fabric library
             self.workDir = self.workDir.replace("~", self.userHome)
 
-        # Create the .horus folder in the remote home directory
-        self.command(f"mkdir -p {self.workDir}")
+        # Create the .horus folder in the remote home directory if it does not exist
+        try:
+            self.command(f"test -d {self.workDir}")
+        except Exception as exc:
+            self.command(f"mkdir -p {self.workDir}")
 
     @property
     def userHome(self):
@@ -215,12 +218,26 @@ class RemotesAPI:
         # Return the stdout and stderr as a string
         return out.stdout.strip()
 
+    def _internalTransferFrom(self, source: str, destination: str):
+        try:
+            self.conn.get(source, destination)
+        except Exception as exc:
+            logging.getLogger("Horus").error(
+                "Error getting data from %s to %s: %s", source, destination, str(exc)
+            )
+            raise Exception(  # pylint: disable=broad-exception-raised
+                f"Error transferring data from {self.remoteName}: {exc}"
+            ) from exc
+
     def _internalTransferTo(self, source: str, destination: str):
         try:
             self.conn.put(source, destination)
         except BaseException as exc:
+            logging.getLogger("Horus").error(
+                "Error transferring data from %s to %s: %s", source, destination, str(exc)
+            )
             raise Exception(  # pylint: disable=broad-exception-raised
-                f"Error transferring data to {self.remoteName}: {exc}."
+                f"Error transferring data to {self.remoteName}: {exc}"
             ) from exc
 
     def transferTo(self, source: str, destination: str):
@@ -230,7 +247,9 @@ class RemotesAPI:
         :param source: The path to the file on the local machine.
         :param destination: The path to the file on the remote.
         """
-        print("Transferring data...")
+
+        logging.getLogger("Horus").info("Transferring data from %s to %s", source, destination)
+
         if destination is None or destination == "":
             destination = self.workDir
 
@@ -241,7 +260,9 @@ class RemotesAPI:
         # Check if the source is a folder
         if os.path.isdir(source):
             # Then zip the folder
-            print("Zipping folder...")
+
+            logging.getLogger("Horus").info("Zipping local folder %s", source)
+
             with tarfile.open(f"{source}.tar.gz", "w:gz") as tar:
                 tar.add(source, arcname=os.path.basename(source))
 
@@ -288,13 +309,13 @@ class RemotesAPI:
             os.system(f"cp -r {source} {destination}")
             return
 
-        print(f"Transferring data from {source} to {destination}...")
+        logging.getLogger("Horus").info("Transferring data from %s to %s", source, destination)
 
         # Check if the source is a folder
         try:
             self.command(f"test -d {source}")
 
-            print("Source is a folder.")
+            logging.getLogger("Horus").info("Source %s is a folder.", source)
 
             # Then zip the folder
             folderName = os.path.basename(source)
@@ -304,29 +325,30 @@ class RemotesAPI:
             zipPath = f"{folderName}-{unique_id}.tar.gz"
             container = os.path.dirname(source)
 
-            print(f"Zipping remote folder into {zipPath}")
+            logging.getLogger("Horus").info("Zipping remote folder %s into %s", source, zipPath)
 
             self.command(f"cd {container} && tar -czvf {zipPath} {sourceZip}")
 
             source = os.path.join(container, zipPath)
 
-            print("Transferring...")
-
             container_local = os.path.dirname(destination)  # pylint: disable=invalid-name
             destination = os.path.join(container_local, zipPath)
 
-            print(f"Getting {source} to {destination}")
+            logging.getLogger("Horus").info(
+                "Transferring remote folder %s into %s", source, destination
+            )
 
-            self.conn.get(source, destination)
+            self._internalTransferFrom(source, destination)
 
             # Remove the zip file
 
-            print("Removing the generated zip file...")
+            logging.getLogger("Horus").info("Removing the generated zip file %s", source)
+
             self.command(f"rm {source}")
 
             prevLocalDir = os.getcwd()
 
-            print("Unzipping local file...")
+            logging.getLogger("Horus").info("Unzipping local folder %s", destination)
 
             # Unzip the local file
             with tarfile.open(zipPath, "r:gz") as tar:
@@ -338,8 +360,6 @@ class RemotesAPI:
 
             # Change local dir back
             os.system(f"cd {prevLocalDir}")
-
-            print("Done.")
 
             return
         except Exception:  # pylint: disable=broad-exception-caught
@@ -355,7 +375,10 @@ class RemotesAPI:
             if not self.isLocal and self.conn.is_connected:
                 self.conn.close()
         except Exception as exc:  # pylint: disable=broad-exception-caught
-            print(f"Could not disconnect remote {self.name}. {exc}")
+            logging.getLogger("Horus").critical(
+                "Could not disconnect remote %s: %s", self.name, str(exc)
+            )
+            raise exc
 
     def __del__(self):
         """
@@ -376,7 +399,9 @@ class RemotesAPI:
         try:
             return self.conn.is_connected
         except Exception as exc:  # pylint: disable=broad-exception-caught
-            print(f"Could not check if remote {self.name} is connected. {exc}")
+            logging.getLogger("Horus").error(
+                "Could not check if remote %s is connected: %s", self.name, str(exc)
+            )
             return False
 
     # Slurm management
@@ -415,8 +440,7 @@ class RemotesAPI:
         Create the queue storage if it does not exist.
         """
         if not os.path.exists(self.queueStoragePath):
-            with open(self.queueStoragePath, "w", encoding="utf-8") as file:
-                file.write("{}")
+            self.writeQueue({})
 
     def readQueue(self) -> t.Dict[str, t.List[t.Dict[str, t.Any]]]:
         """
@@ -468,8 +492,7 @@ class RemotesAPI:
         )
 
         # Save the queue storage
-        with open(self.queueStoragePath, "w", encoding="utf-8") as file:
-            json.dump(queue, file)
+        self.writeQueue(queue)
 
     def submitJob(self, script: str) -> int:
         # Function exposed to HorusAPI
@@ -498,7 +521,7 @@ class RemotesAPI:
             out = self.command(f"cd {changeDirTo} && sbatch {script}")
             jobID = int(out.split(" ")[-1].strip())
         except Exception as exc:
-            logging.getLogger("Horus").error(f"Error submitting job: {exc}.")
+            logging.getLogger("Horus").error("Error submitting job: %s.", str(exc))
             raise Exception(  # pylint: disable=broad-exception-raised
                 "Error submitting job. Could not get job ID."
             ) from exc
@@ -507,7 +530,7 @@ class RemotesAPI:
         try:
             self.saveJob(jobID)
         except Exception as exc:
-            logging.getLogger("Horus").error(f"Error saving job with ID {jobID}: {exc}.")
+            logging.getLogger("Horus").error("Error saving job with ID %s: %s.", jobID, str(exc))
             raise Exception(  # pylint: disable=broad-exception-raised
                 f"Error saving job with ID {jobID} to the queue storage."
             ) from exc
@@ -673,19 +696,73 @@ class RemotesAPI:
             # Update the queue storage
             queue[savedFlowID][index] = job
 
+        returnQueue = queue
+        # If all the jobs on the queue are completed, remove the flow from the queue
+        if all([j["status"] == "COMPLETED" for j in queue[savedFlowID]]):
+            queue.pop(savedFlowID)
+
         # Save the queue storage
+        self.writeQueue(queue)
+
+        # Return the queue storage
+        return returnQueue
+
+    def cancelJobs(self, flowID: str):
+        """
+        Cancels SLURM jobs for a flow.
+        """
+
+        # Get the queue
+        queue = self.readQueue()
+
+        # Get the jobs for the flow
+        jobs = queue.get(flowID, [])
+
+        for job in jobs:
+            # Get the job ID
+            jobID = job.get("jobID", None)
+
+            # If the job ID is not set, raise an exception
+            if jobID is None:
+                raise Exception(  # pylint: disable=broad-exception-raised
+                    "Corrupted queue storage: job ID not set."
+                )
+
+            # Cancel the job if its running or queued
+            status = job.get("status", None)
+            if status.lower() == "running" or status.lower() == "pending":
+                self.command(f"scancel {jobID}")
+
+        # Remove the flow from the queue storage
+        queue.pop(flowID)
+
+        # Save the queue storage
+        self.writeQueue(queue)
+
+    def writeQueue(self, queue: t.Dict[str, t.List[t.Dict[str, t.Any]]]):
+        """
+        Write the queue storage.
+
+        :param queue: The queue storage.
+        """
         with open(self.queueStoragePath, "w", encoding="utf-8") as file:
             json.dump(queue, file)
 
-        # Return the queue storage
-        return queue
-
-    def cancelJob(self, jobID: int):
+    def deleteFlowFromQueue(self, flowID: str):
         """
-        Cancels a SLURM job by its ID.
+        Delete a flow from the queue storage.
+
+        :param flowID: The ID of the flow.
         """
 
-        return self.command(f"scancel {jobID}")
+        # Read the queue
+        queue = self.readQueue()
+
+        # Delete the flow from the queue storage
+        queue.pop(flowID)
+
+        # Save the queue storage
+        self.writeQueue(queue)
 
 
 class RemotesManager:
@@ -780,7 +857,7 @@ class RemotesManager:
         with open(remotesPath, "w", encoding="utf-8") as file:
             json.dump(remotesConfig, file)
 
-    def listRemotes(self):
+    def listRemotes(self, includeLocal: bool = False):
         """
         Loads the ssh configuration file and returns the list of remotes
         """
@@ -788,15 +865,19 @@ class RemotesManager:
         remotesFile = os.path.join(self.appSupportDir, "remotes.json")
 
         if not os.path.exists(remotesFile):
-            return []
-
-        with open(remotesFile, "r", encoding="utf-8") as file:
-            remotesConfig: t.Dict[str, str] = json.load(file)
+            remotesConfig = {}
+        else:
+            with open(remotesFile, "r", encoding="utf-8") as file:
+                remotesConfig: t.Dict[str, str] = json.load(file)
 
         # Convert the remotes configuration to a list
         remotes = []
         for name, config in remotesConfig.items():  # pylint: disable=unused-variable
             remotes.append(config)
+
+        # Add the local machine
+        if includeLocal:
+            remotes.append({"name": "Local"})
 
         return remotes
 

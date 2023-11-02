@@ -134,6 +134,10 @@ type Block = {
   // Slurm blocks
   waitingForJob: boolean;
   status: string;
+
+  // Remote connection
+  selectedRemote: string;
+  setRemoteConnection: (remote: string) => void;
 };
 
 type BlockVarPair = {

@@ -5,7 +5,8 @@
     "category": "Dependencies",
     "value": "python",
     "type": "string",
-    "allowedValues": []
+    "allowedValues": [],
+    "desktopOnly": true
   },
   "legacyBlockRunner": {
     "name": "Legacy block runner",
@@ -22,5 +23,14 @@
     "value": false,
     "type": "boolean",
     "allowedValues": []
+  },
+  "allowRemotesOnNonSlurm": {
+    "name": "Non-slurm remotes",
+    "description": "Enable or disable remotes on non-slurm clusters. Sometimes regular blocks might need to access a remote cluster. Enable this setting to allow for regular blocks to access remotes.",
+    "category": "Flow",
+    "value": true,
+    "type": "boolean",
+    "allowedValues": [],
+    "desktopOnly": true
   }
 }

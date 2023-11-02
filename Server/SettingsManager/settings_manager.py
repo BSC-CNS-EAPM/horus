@@ -30,6 +30,11 @@ class Setting:
     The value of the setting
     """
 
+    defaultValue: typing.Any = None
+    """
+    The default value of the setting
+    """
+
     description: str = "No description"
     """
     The description of the setting
@@ -50,15 +55,23 @@ class Setting:
     The allowed values of the setting
     """
 
+    desktopOnly: bool = False
+    """
+    If the setting is only available on desktop. If not,
+    the setting will always return the default value
+    """
+
     def __init__(
         self,
         id: str,
         name: str,
         value: typing.Any,
+        defaultValue: typing.Any,
         description: str,
         category: str = "General",
         type: VariableTypes = VariableTypes.STRING,
         allowedValues: typing.List[typing.Any] = [],
+        desktopOnly: bool = False,
     ):
         """
         Create a Setting instance
@@ -69,14 +82,18 @@ class Setting:
         :param description: The description of the setting
         :param category: The category of the setting
         :param type: The type of the setting as VariableTypes
+        :param allowedValues: The allowed values of the setting
+        :param desktopOnly: If the setting is only available on desktop.
         """
         self.id = id
         self.name = name
         self.value = value
+        self.defaultValue = defaultValue
         self.description = description
         self.category = category
         self.type = type
         self.allowedValues = allowedValues
+        self.desktopOnly = desktopOnly
 
     # Define comparison operators
     def __eq__(self, other):
@@ -105,11 +122,13 @@ class Setting:
 
         return {
             "name": self.name,
-            "value": self.value,
+            "value": self.value if not self.desktopOnly else self.defaultValue,
+            "defaultValue": self.defaultValue,
             "description": self.description,
             "category": self.category,
             "type": self.type.value,
             "allowedValues": self.allowedValues,
+            "desktopOnly": self.desktopOnly,
         }
 
 
@@ -202,10 +221,12 @@ class SettingsManager:
                     key,
                     value["name"],
                     value["value"],
+                    value.get("defaultValue", value["value"]),
                     value["description"],
                     value["category"],
                     VariableTypes(value["type"]),
                     value.get("allowedValues", []),
+                    value.get("desktopOnly", False),
                 )
             except KeyError as keye:
                 print(
@@ -218,10 +239,12 @@ class SettingsManager:
                     key,
                     defaultSettings[key]["name"],
                     defaultSettings[key]["value"],
+                    defaultSettings[key].get("defaultValue", value["value"]),
                     defaultSettings[key]["description"],
                     defaultSettings[key]["category"],
                     VariableTypes(defaultSettings[key]["type"]),
                     defaultSettings[key].get("allowedValues", []),
+                    defaultSettings[key].get("desktopOnly", True),
                 )
 
             # If the setting already exists, raise an exception
@@ -299,14 +322,16 @@ class SettingsManager:
         Returns the list of settings as a JSON object
         """
 
-        with open(self.userSettingsPath, "r", encoding="utf-8") as file:
-            settings = json.load(file)
+        # with open(self.userSettingsPath, "r", encoding="utf-8") as file:
+        #     settings = json.load(file)
 
         settingsList = []
-        for settingID, setting in settings.items():
+        for settingID, setting in self.settings.items():
+            if setting.desktopOnly:
+                continue
             parsedSetting = {
                 "id": settingID,
-                "setting": setting,
+                "setting": setting.toDict(),
             }
             settingsList.append(parsedSetting)
 

@@ -1,3 +1,4 @@
+import os
 from HorusAPI import PluginVariable, VariableTypes, InputBlock, TempFile
 
 structureVariable = PluginVariable(
@@ -37,19 +38,7 @@ def CIFtoPDB(cifFile: str, pdbFile: str):
     io.save(pdbfile)
 
 
-def saveStructure(block: InputBlock):
-    """
-    Saves a Mol* structure to a PDB file
-    """
-
-    try:
-        structure = block.variables.get("structure", None)
-    except Exception:
-        raise Exception("No structure provided.")
-
-    if structure is None or structure == "" or hasattr(structure, "get") is False:
-        raise Exception("No structure provided.")
-
+def convertStructureToPDB(structure):
     isCif = structure.get("type", None) == "cif"
     dataStructure = structure.get("structure", None)
     name = structure.get("name", None)
@@ -81,6 +70,30 @@ def saveStructure(block: InputBlock):
         f.write(pdbtmp.read())
 
     print(f"Saved {name} to {filename}")
+
+    return filename
+
+
+def saveStructure(block: InputBlock):
+    """
+    Saves a Mol* structure to a PDB file
+    """
+
+    try:
+        structure = block.variables.get("structure", None)
+    except Exception:
+        raise Exception("No structure provided.")
+
+    if structure is None or structure == "" or hasattr(structure, "get") is False:
+        if os.path.exists(structure):
+            print(f"Found existing {structure} file")
+            filename = structure
+        else:
+            raise Exception(
+                f"The provided {structure} does not exist. Please provide a new structure."
+            )
+    else:
+        filename = convertStructureToPDB(structure)
 
     block.setOutput("structure", filename)
 

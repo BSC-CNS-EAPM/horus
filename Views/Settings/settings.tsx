@@ -44,6 +44,23 @@ function useSettings() {
     setSettings(parseSettings(data.settings));
   }
 
+  async function restoreSettings() {
+    if (!confirm("Are you sure you want to restore the default settings?")) {
+      return;
+    }
+
+    const response = await horusGet("/restoreSettings");
+
+    const data = await response.json();
+
+    if (!data.ok) {
+      alert("Error restoring settings");
+      return;
+    }
+
+    getSettings();
+  }
+
   async function saveSettings() {
     const header = {
       "Content-Type": "application/json",
@@ -79,11 +96,23 @@ function useSettings() {
     getSettings();
   }, []);
 
-  return { settings, hasChanges, saveSettings, onSettingChange };
+  return {
+    settings,
+    hasChanges,
+    saveSettings,
+    onSettingChange,
+    restoreSettings,
+  };
 }
 
 function SettingsView() {
-  const { settings, hasChanges, saveSettings, onSettingChange } = useSettings();
+  const {
+    settings,
+    hasChanges,
+    saveSettings,
+    onSettingChange,
+    restoreSettings,
+  } = useSettings();
 
   return (
     <div
@@ -94,12 +123,20 @@ function SettingsView() {
     >
       <div className="flex flex-row justify-between items-center">
         <h1>Settings</h1>
-        <NBDButton
-          className={hasChanges ? "bg-orange-300" : ""}
-          action={saveSettings}
-        >
-          Save
-        </NBDButton>
+        <div className="flex flex-row gap-2">
+          <NBDButton
+            className={hasChanges ? "bg-orange-300" : ""}
+            action={saveSettings}
+          >
+            Save
+          </NBDButton>
+          <NBDButton
+            className={hasChanges ? "bg-orange-300" : ""}
+            action={restoreSettings}
+          >
+            Restore defaults
+          </NBDButton>
+        </div>
       </div>
       {settings &&
         settings.map((setting) => (

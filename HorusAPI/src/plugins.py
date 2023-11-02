@@ -62,7 +62,7 @@ class PluginRemote:
         return self._remote.submitJob(script)
 
     @property
-    def userHome(self):
+    def userHome(self) -> str:
         """
         Returns the expanded user home directory.
         """
@@ -70,7 +70,7 @@ class PluginRemote:
         return self._remote.userHome
 
     @property
-    def workDir(self):
+    def workDir(self) -> str:
         """
         Returns the Horus directory on the remote.
         If on local, returns the flow directory.
@@ -79,7 +79,7 @@ class PluginRemote:
         return self._remote.workDir
 
     @property
-    def name(self):
+    def name(self) -> str:
         """
         Returns the name of the remote.
         """
@@ -87,7 +87,7 @@ class PluginRemote:
         return self._remote.name
 
     @property
-    def host(self):
+    def host(self) -> str:
         """
         Returns the host adress of the remote.
         """
@@ -744,6 +744,11 @@ class PluginBlock:
     selects a different input group in the frontend.
     """
 
+    selectedRemote: str = "Local"
+    """
+    The name of the selected remote.
+    """
+
     def __init__(  # pylint: disable=dangerous-default-value
         self,
         name: str,
@@ -1120,6 +1125,7 @@ class PluginBlock:
             "connectedTo": self._connectedTo,
             "connectedToReference": self._connectedToReferences,
             "selectedInputGroup": self.selectedInputGroup,
+            "selectedRemote": self.selectedRemote,
         }
 
         return blockDict
@@ -1198,6 +1204,7 @@ class PluginBlock:
         placedID: int = blockJSON.get("placedID", 0)
         finishedExecution: bool = blockJSON.get("finishedExecution", True)
         selectedInputGroup: str = blockJSON.get("selectedInputGroup", "default")
+        selectedRemote: str = blockJSON.get("selectedRemote", "Local")
 
         position: typing.Dict[str, float] = blockJSON.get("position", [None, None])
         xPos: float = position.get("x", 0)
@@ -1271,6 +1278,7 @@ class PluginBlock:
 
         # Update the variables with the values the user has set
         self.selectedInputGroup = selectedInputGroup
+        self.selectedRemote = selectedRemote
         self._updateVariables(variablesJSONParsed)
 
         # Update the internal variables
@@ -1308,6 +1316,7 @@ class PluginBlock:
             "connectedTo": self._connectedTo,
             "connectedToReference": self._connectedToReferences,
             "selectedInputGroup": self.selectedInputGroup,
+            "selectedRemote": self.selectedRemote,
         }
 
         return blockDict
@@ -1540,13 +1549,13 @@ class SlurmBlock(PluginBlock):
         # Set the status
         self.parseStatus()
 
-    def cancelJob(self):
-        """
-        Cancels the job in the slurm queue.
-        """
+    # def cancelJob(self):
+    #     """
+    #     Cancels the jobs in the slurm queue.
+    #     """
 
-        # Ensure the remote api has as blockID this block
-        self.remote._remote.cancelJob(self._jobID)
+    #     # Ensure the remote api has as blockID this block
+    #     self.remote._remote.cancelJob(savedID, self._placedID)
 
     # Re-define the toDict method to include the status and waitingForJob
     def _toDict(self):
