@@ -2,10 +2,10 @@
   "name": "NBDSuite",
   "description": "The NBDSuite plugin for Horus",
   "author": "Nostrum Biodiscovery",
-  "version": "0.0.2",
+  "version": "0.0.1",
   "pluginFile": "NBDSuite.py",
   "dependencies": [
-    "AdaptivePELE",
+    "numpy",
     "pandas",
     "biopython",
     "pydantic==1.10.11",
@@ -14,6 +14,7 @@
     "scipy",
     "pyyaml",
     "peleffy",
-    "mdtraj"
+    "mdtraj",
+    "AdaptivePELE"
   ]
 }
