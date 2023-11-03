@@ -545,6 +545,25 @@ class PluginManager:
                 exceptionMsg += f" (Currently detected python v{version})"
                 raise Exception(exceptionMsg)
 
+        # Get the PATH environment variable
+        path = os.environ.get("PATH", None)
+
+        # Check that the PATH environment variable exists, if not
+        # some dependencies may not be installed correctly. For example, Biopython
+        # requires the PATH environment variable to be set in order to build its wheel
+        if path is None:
+            logging.getLogger("Horus").error(
+                "Could not get the PATH environment variable. "
+                + "Some dependencies may not be installed correctly."
+            )
+
+        # Define the environment variables to correctly run the external python interpreter
+        env = {
+            "PYTHONPATH": depsDir,
+            "PATH": path,
+        }
+
+        # Execute the pip command with the selected interpreter
         with subprocess.Popen(
             [
                 interpreter,
@@ -560,6 +579,7 @@ class PluginManager:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             stdin=subprocess.PIPE,
+            env=env,
         ) as p:
             # Print the output
 
