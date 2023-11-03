@@ -130,12 +130,7 @@ function SettingsView() {
           >
             Save
           </NBDButton>
-          <NBDButton
-            className={hasChanges ? "bg-orange-300" : ""}
-            action={restoreSettings}
-          >
-            Restore defaults
-          </NBDButton>
+          <NBDButton action={restoreSettings}>Restore defaults</NBDButton>
         </div>
       </div>
       {settings &&
