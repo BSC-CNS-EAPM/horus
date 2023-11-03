@@ -195,10 +195,10 @@ class HorusServer:
 
     def _getFreePort(self):
         # Generate a random port number
-        port = random.randint(5001, 9000)
+        port = random.randint(3000, 9000)
 
         if self.debug:
-            return 5001
+            return 3000
 
         if not self.desktop:
             return 8080
@@ -210,7 +210,7 @@ class HorusServer:
                 sock.bind((self.host, port))
                 break
             except OSError:
-                port = random.randint(5001, 9000)
+                port = random.randint(3000, 9000)
 
         return port
 

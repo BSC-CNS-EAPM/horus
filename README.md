@@ -149,7 +149,7 @@ The app can also be run on "Browser mode" which is useful for systems that do no
 python Horus.py --browser
 ```
 
-In debug mode, the app is accessible in the following url: [http://127.0.0.1:5001](http://127.0.0.1:5001)
+In debug mode, the app is accessible in the following url: [http://127.0.0.1:3000](http://127.0.0.1:3000)
 
 # Building
 
