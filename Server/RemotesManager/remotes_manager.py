@@ -145,9 +145,10 @@ class RemotesAPI:
                     )
                     self.conn.open()
                 except Exception as exc:
-                    raise Exception(  # pylint: disable=broad-exception-raised
-                        f"Error connecting to {self.remoteName}: {exc}"
-                    ) from exc
+                    logging.getLogger("Horus").critical(
+                        "Could not connect to the remote %s: %s", self.host, str(exc)
+                    )
+                    raise exc
             else:
                 raise Exception(  # pylint: disable=broad-exception-raised
                     "No connection method provided."
@@ -161,7 +162,7 @@ class RemotesAPI:
         # Create the .horus folder in the remote home directory if it does not exist
         try:
             self.command(f"test -d {self.workDir}")
-        except Exception as exc:
+        except Exception:
             self.command(f"mkdir -p {self.workDir}")
 
     @property
@@ -181,7 +182,7 @@ class RemotesAPI:
         :return: The output of the command.
         """
 
-        logging.getLogger("Horus").debug("Running command: %s on remote %s", command, self.name)
+        logging.getLogger("Horus").info("Running command: %s on remote %s", command, self.name)
 
         if self.isLocal:
             # Run command locally
@@ -209,7 +210,18 @@ class RemotesAPI:
             else:
                 return f"Command {command} executed successfully."
 
-        out = self.conn.run(command, hide=True)
+        # Run command on remote
+        # Hide is needed to avoid the output to be printed on the console
+        # in_stream is needed to avoid fabric raising OSError (fabric
+        # tries to acces sys.stdin which is not available because is mocked
+        # with PrintCapturer)
+        try:
+            out = self.conn.run(command, hide=True, in_stream=False)
+        except Exception as exc:
+            logging.getLogger("Horus").critical(
+                "Error running command %s on remote %s: %s", command, self.name, str(exc)
+            )
+            raise exc
 
         # If the command failed, raise an exception
         if out.failed:
@@ -453,7 +465,7 @@ class RemotesAPI:
                 return json.load(file)
         except Exception as exc:  # pylint: disable=broad-exception-caught
             logging.getLogger("Horus").error(
-                f"Could not read queue storage: {exc}. Returning empty queue."
+                "Could not read queue storage: %s. Returning empty queue.", str(exc)
             )
             return {}
 
@@ -733,8 +745,9 @@ class RemotesAPI:
             if status.lower() == "running" or status.lower() == "pending":
                 self.command(f"scancel {jobID}")
 
-        # Remove the flow from the queue storage
-        queue.pop(flowID)
+        # Remove the flow from the queue storag if it exists
+        if flowID in queue:
+            queue.pop(flowID)
 
         # Save the queue storage
         self.writeQueue(queue)

@@ -70,41 +70,6 @@ function FlowReciver(props: FlowReciverProps) {
   // Selected cluster
   const [remotesOptions, setRemotesOptions] = useState<string[]>([]);
   const [selectedRemote, setSelectedRemote] = useState<string | null>(null);
-  const [remoteConnected, setRemoteConnected] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-
-  const connectRemote = async () => {
-    setIsConnecting(true);
-    setRemoteConnected(false);
-    const header = {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    };
-
-    const body = JSON.stringify({
-      remote: selectedRemote,
-    });
-
-    const response = await horusPost("/remotes/connect", header, body);
-    const data = await response.json();
-
-    if (!data.ok) {
-      alert(data.msg);
-      setRemoteConnected(false);
-    } else {
-      setRemoteConnected(true);
-    }
-
-    setIsConnecting(false);
-  };
-
-  useEffect(() => {
-    if (selectedRemote) {
-      connectRemote();
-      // Set the selected remote to the global window variable
-      window.selectedRemote = selectedRemote;
-    }
-  }, [selectedRemote]);
 
   const { setNodeRef } = useDroppable({
     id: "flow-reciver",
@@ -594,9 +559,6 @@ function FlowReciver(props: FlowReciverProps) {
   };
 
   const openingFlow = useRef(false);
-
-  const [testSavedInternal, setTestSavedInternal] = useState(false);
-
   const [serverFilePickerOpen, setServerFilePickerOpen] = useState(false);
   const [serverFolderPickerOpen, setServerFolderPickerOpen] = useState(false);
 
@@ -998,19 +960,10 @@ function FlowReciver(props: FlowReciverProps) {
             ) : (
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                fill={
-                  isConnecting
-                    ? "var(--light-orange)"
-                    : remoteConnected
-                    ? "var(--light-green)"
-                    : "var(--light-red)"
-                }
                 viewBox="0 0 24 24"
                 strokeWidth={1.5}
                 stroke="currentColor"
-                onClick={() => {
-                  !remoteConnected && connectRemote();
-                }}
+                fill="none"
               >
                 <path
                   strokeLinecap="round"
@@ -1027,14 +980,6 @@ function FlowReciver(props: FlowReciverProps) {
           </button>
           {isCancelling && <div className="text-xs">Stopping</div>}
         </div>
-        {
-          <ContextMenuRemotes
-            remotes={remotesOptions}
-            setSelectedRemote={setSelectedRemote}
-            show={showRemotes}
-            setShow={setShowRemotes}
-          />
-        }
       </div>
     );
   };

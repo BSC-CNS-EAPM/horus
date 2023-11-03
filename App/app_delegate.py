@@ -508,9 +508,6 @@ class AppDelegate(metaclass=HorusSingleton):
         It will create the first window and launch the app
         """
 
-        # Connect automatically to the local remote
-        self.server.remoteManager.connectRemote("local")
-
         if self.browser:
             # Start browser mode
             self._startBrowserMode()

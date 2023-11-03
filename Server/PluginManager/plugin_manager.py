@@ -837,6 +837,8 @@ class PluginManager:
         Method specific for running the block through the Flow class.
         """
 
+        logging.getLogger("Horus").info("Executing block %s", block.id)
+
         # Read the config file for the block
         configPath = self._blockConfigPath(block)
 
@@ -855,8 +857,10 @@ class PluginManager:
 
         remoteManager = RemotesManager(AppDelegate().appSupportDir)
 
-        remoteManager.connectRemote(block.selectedRemote)
+        if block.selectedRemote != "Local":
+            logging.getLogger("Horus").info("Connecting to remote %s", block.selectedRemote)
 
+        remoteManager.connectRemote(block.selectedRemote)
         rAPI = remoteManager.remote
 
         if rAPI is None:
@@ -870,8 +874,6 @@ class PluginManager:
         # Update the block with the remote configuration
         block._setRemote(rAPI)  # pylint: disable=protected-access
 
-        # print("Executing block: " + block.id)
-
         # Execute the block
         error = False
         errorMSG = ""
@@ -882,16 +884,11 @@ class PluginManager:
             error = True
             errorMSG = str(exc)
 
-        # print("Block executed: " + block.id)
-
         # Restore the python path
         self._removeDepsPath(plugin._path)  # pylint: disable=protected-access
 
         if error:
             raise Exception(errorMSG)
-
-        # Set the block as executed
-        # block._finishedExecution = True  # pylint: disable=protected-access
 
         # Return the output of the block
         return outputs
