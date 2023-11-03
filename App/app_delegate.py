@@ -177,6 +177,9 @@ class HorusLogger:
             rootDebugHandler.setLevel(logging.NOTSET)
             rootDebugHandler.setFormatter(formatter)
             self.root.addHandler(rootDebugHandler)
+        else:
+            # Set the level of the root logger to INFO
+            self.root.setLevel(logging.INFO)
 
 
 class WindowOptions:
@@ -717,6 +720,9 @@ class AppDelegate(metaclass=HorusSingleton):
             result = [str(file) for file in result]
         else:
             # Ensure the result is a string
+            if isinstance(result, typing.Sequence):
+                result = "".join(result)
+
             result = str(result)
 
         return result
