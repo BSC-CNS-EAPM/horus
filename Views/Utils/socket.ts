@@ -15,3 +15,9 @@ export const socket = io({
 socket.on("connect", () => {
   window.socketiosid = socket.id;
 });
+
+// When disconnected, remove the sid from the window
+socket.on("disconnect", () => {
+  delete window.socketiosid;
+});
+

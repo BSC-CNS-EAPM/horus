@@ -1074,7 +1074,9 @@ class PrintCapturer:
     The old stderr where to print the message besides the socketio event.
     """
 
-    def __init__(self, socketio: SocketIO, printTo: str = "printTerm"):
+    def __init__(
+        self, socketio: SocketIO, event: str = "printTerm", room: typing.Optional[str] = None
+    ):
         """
         Initializes the PrintCapturer.
 
@@ -1083,14 +1085,15 @@ class PrintCapturer:
         """
 
         self.socketio = socketio
-        self.printTo = printTo
+        self.event = event
+        self.room = room
 
     def write(self, message):
         """
         Writes the message to the socketio event and to the terminal.
         """
 
-        self.socketio.emit(self.printTo, message)
+        self.socketio.emit(self.event, message, to=self.room)
         self.oldStdout.write(message)
         self.socketio.sleep(0)
 

@@ -164,9 +164,16 @@ function FlowReciver(props: FlowReciverProps) {
       }
     }
     setSaved(true);
+
+    // Leave the socket flow room
+    socket.emit("leaveFlow", savedID.current);
+
     // setFlowName(savedFlow.name);
     savedID.current = savedFlow.savedID;
     flowPath.current = savedFlow.path;
+
+    // Join the room with the new savedID
+    socket.emit("joinFlow", savedID.current);
   };
 
   const updateBlockSelectedGroup = (
@@ -254,31 +261,40 @@ function FlowReciver(props: FlowReciverProps) {
       return;
     }
 
-    setIsRunning(status === FlowStatus.RUNNING || status === FlowStatus.PAUSED);
+    const isRunning =
+      status === FlowStatus.RUNNING || status === FlowStatus.PAUSED;
+
+    setIsRunning(isRunning);
 
     if (status === FlowStatus.STOPPED) {
       setIsCancelling(false);
     }
 
-    props.setPlacedBlocks((currentBlocks) => {
-      // Place the newblocks with the current block's position
-      return currentBlocks.map((b) => {
-        // Find the block in the current blocks
-        const newBlock = blocks.find((nb) => nb.placedID === b.placedID);
+    if (isRunning) {
+      props.setPlacedBlocks((currentBlocks) => {
+        // Place the newblocks with the current block's position to avoid moving
+        // the blocks when they are being executed
+        return currentBlocks.map((b) => {
+          // Find the block in the current blocks
+          const newBlock = blocks.find((nb) => nb.placedID === b.placedID);
 
-        newBlock.position = b.position;
+          newBlock.position = b.position;
 
-        return newBlock;
+          return newBlock;
+        });
       });
-    });
+    } else {
+      // Update the placedBlocks array
+      props.setPlacedBlocks(blocks);
+    }
   };
+
+  socket.on("flow", loadSocketFlow);
 
   const flowRunner = async (
     block: Block,
     resetRemote: boolean = true
   ): Promise<void> => {
-    socket.on("flow", loadSocketFlow);
-
     const response = await horusPost(
       "/plugins/executeflow",
       null,
@@ -314,8 +330,10 @@ function FlowReciver(props: FlowReciverProps) {
 
   const executeBlock = async (block: Block): Promise<void> => {
     // First save the flow
-    await preHandleSave();
-
+    const saved = await preHandleSave({ comesFromExecuteBlock: true });
+    if (!saved) {
+      return;
+    }
     const settingValue = legacyRunnerSetting.current;
 
     if (settingValue) {
@@ -625,6 +643,9 @@ function FlowReciver(props: FlowReciverProps) {
       return;
     }
 
+    // Exit the socket flow room
+    socket.emit("leaveFlow", savedID.current);
+
     // Set the molstar state at the beggining in case blocks need structures
     if (window.molstar && openedFlow.molstarState) {
       await window.molstar.snapshot.set(openedFlow.molstarState);
@@ -690,6 +711,9 @@ function FlowReciver(props: FlowReciverProps) {
     savedID.current = openedFlow.savedID;
 
     openingFlow.current = false;
+
+    // Connect to a socketio room with the flowID
+    socket.emit("joinFlow", savedID.current);
   };
 
   const handlingNew = useRef(false);
@@ -850,6 +874,23 @@ function FlowReciver(props: FlowReciverProps) {
 
     // Fetch flow settings
     fetchFlowSettings();
+
+    // When the socket.io connects, we need to join the flow room
+    // In case the server was lost, socket.io will try to reconnect
+    // therefore we need to join the room again so that the flow is always
+    // updated
+    socket.on("connect", () => {
+      if (savedID.current !== "new_flow") {
+        socket.emit("joinFlow", savedID.current);
+      }
+    });
+
+    // When the socket.io disconnects, we need to leave the flow room
+    socket.on("disconnect", () => {
+      if (savedID.current !== "new_flow") {
+        socket.emit("leaveFlow", savedID.current);
+      }
+    });
   }, []);
 
   const handleOpenFlow = (
@@ -866,18 +907,30 @@ function FlowReciver(props: FlowReciverProps) {
 
   // For the server mode, we need to open first the file picker in folder mode
   // to select the saving folder
-  const preHandleSave = async () => {
+  const preHandleSave = async ({
+    comesFromExecuteBlock = false,
+  }: {
+    comesFromExecuteBlock?: boolean;
+  } = {}) => {
     if (
       !window.isDesktop &&
       (flowPath.current === "" || flowPath.current === null)
     ) {
+      if (comesFromExecuteBlock === true) {
+        // Alert the user that the flow needs to be saved first
+        alert(
+          "The flow needs to be saved first. Please select a folder to save the flow"
+        );
+      }
+
       // Open the file picker
-      alert("Please save first the flow");
       setServerFolderPickerOpen(true);
-      return;
+      return false;
     }
 
     await handleSave();
+
+    return true;
   };
 
   const debounceHandleSave = debounce(preHandleSave, 1000);

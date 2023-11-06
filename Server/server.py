@@ -29,7 +29,7 @@ import multiprocess.process as mp
 import flask
 import jinja2
 from flask import request
-from flask_socketio import SocketIO
+from flask_socketio import SocketIO, join_room, leave_room
 from flask_cors import CORS
 from flask_session import Session
 
@@ -314,6 +314,12 @@ class HorusServer:
             flowData = request.get_json()
             try:
                 flow = self.flowManager.saveFlow(flowData)
+
+                # Emit the saved flow to connected rooms
+                self.socketio.emit(
+                    "flow", flow.encode(minimal=False), to=flow.savedID
+                )
+
                 success = {
                     "ok": True,
                     "name": flow.name,
@@ -582,7 +588,9 @@ class HorusServer:
 
             try:
                 stoppedFlow = self.flowManager.stopFlow(flowPath)
-                self.socketio.emit("flow", stoppedFlow.encode(minimal=False))
+                self.socketio.emit(
+                    "flow", stoppedFlow.encode(minimal=False), room=stoppedFlow.savedID
+                )
                 return flask.jsonify({"ok": True})
             except Exception as exc:
                 return flask.jsonify({"ok": False, "msg": str(exc)})
@@ -997,6 +1005,12 @@ class HorusServer:
         oldEmit = self.socketio.emit
 
         def newEmit(event, *args, **kwargs):
+            if "to" in kwargs:
+                toValue = kwargs["to"]
+                if toValue is not None:
+                    kwargs["room"] = kwargs["to"]
+                    kwargs.pop("to")
+
             if "room" not in kwargs:
                 # Verify that we have request context
                 sid = None
@@ -1016,34 +1030,34 @@ class HorusServer:
                     )
                     return
 
-                # If we are in a background process, send the message through a new Flask request
-                if mp.current_process().name != "MainProcess":
-                    logging.getLogger("Horus").debug(
-                        "Event from background process %s: %s",
-                        mp.current_process().name,
-                        event,
+            # If we are in a background process, send the message through a new Flask request
+            if mp.current_process().name != "MainProcess":
+                logging.getLogger("Horus").debug(
+                    "Event from background process %s: %s",
+                    mp.current_process().name,
+                    event,
+                )
+
+                # Get the data from the queue
+                data = {
+                    "event": event,
+                    "args": args,
+                    "kwargs": kwargs,
+                }
+
+                # Send the data to the server
+                try:
+                    requests.post(
+                        f"{self.baseURL}/backgroundSocketio/",
+                        json=data,
+                        timeout=5,
+                    )
+                except requests.exceptions.RequestException:
+                    logging.getLogger("Horus").error(
+                        "Could not connect to server to emit event %s", event
                     )
 
-                    # Get the data from the queue
-                    data = {
-                        "event": event,
-                        "args": args,
-                        "kwargs": kwargs,
-                    }
-
-                    # Send the data to the server
-                    try:
-                        requests.post(
-                            f"{self.baseURL}/backgroundSocketio/",
-                            json=data,
-                            timeout=5,
-                        )
-                    except requests.exceptions.RequestException:
-                        logging.getLogger("Horus").error(
-                            "Could not connect to server to emit event %s", event
-                        )
-
-                    return
+                return
 
             logging.getLogger("Horus").debug(
                 "Emitting event %s to room %s", event, kwargs["room"]
@@ -1052,6 +1066,19 @@ class HorusServer:
             return oldEmit(event, *args, **kwargs)
 
         self.socketio.emit = newEmit
+
+        # Setup per-flow rooms (based on flowID)
+        @self.socketio.on("joinFlow")
+        def joinFlow(flowID):
+            logging.getLogger("Horus").info("Joined room for flowID %s", flowID)
+            # Join the flow room
+            join_room(flowID)
+
+        @self.socketio.on("leaveFlow")
+        def leaveFlow(flowID):
+            logging.getLogger("Horus").debug("Left room for flowID %s", flowID)
+            # Leave the flow room
+            leave_room(flowID)
 
         # Log the socketio connections
         @self.socketio.on("connect")
@@ -1082,9 +1109,6 @@ class HorusServer:
             event = data.get("event", None)
             args = data.get("args", None)
             kwargs = data.get("kwargs", None)
-
-            if event is None or args is None or kwargs is None:
-                return "Missing data", 400
 
             # Emit the event
             self.socketio.emit(event, *args, **kwargs)

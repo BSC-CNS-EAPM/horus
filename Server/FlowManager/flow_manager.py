@@ -524,7 +524,7 @@ class Flow:
 
         # Send the flow to the frontend because the block is going to be run
         if self._socket is not None:
-            self._socket.emit("flow", self.encode(minimal=False))
+            self._socket.emit("flow", self.encode(minimal=False), to=self.savedID)
 
         # Execute the block by calling the plugin manager
         # Calling the PM is a must because it handles
@@ -560,7 +560,7 @@ class Flow:
 
             # Update the fronted with the block's state
             if self._socket is not None:
-                self._socket.emit("flow", self.encode(minimal=False))
+                self._socket.emit("flow", self.encode(minimal=False), to=self.savedID)
 
             # Wait for the job to finish
             blockToRun.waitTillJobFinished()
@@ -607,7 +607,7 @@ class Flow:
 
         # Send the flow to the frontend if a socket is provided
         if self._socket is not None:
-            self._socket.emit("flow", self.encode(minimal=False))
+            self._socket.emit("flow", self.encode(minimal=False), to=self.savedID)
 
         # Return the produced outputs of the block
         return outputs
@@ -681,7 +681,7 @@ class Flow:
 
         # Run the blocks
         if self._socket is not None:
-            with PrintCapturer(self._socket):
+            with PrintCapturer(self._socket, room=self.savedID):
                 try:
                     self._runPreviousBlocks(placedID, resetRemoteBlock)
                     self._runNextBlocks(placedID)
@@ -698,7 +698,7 @@ class Flow:
                     self.write()
 
                     # Send the flow to the frontend
-                    self._socket.emit("flow", self.encode(minimal=False))
+                    self._socket.emit("flow", self.encode(minimal=False), to=self.savedID)
 
         else:
             try:
