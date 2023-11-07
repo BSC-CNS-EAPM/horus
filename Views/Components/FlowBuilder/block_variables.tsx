@@ -1034,7 +1034,7 @@ function SphereVariableView(props: VariableSubviewProps) {
   useEffect(() => {
     return () => {
       if (window.molstar) {
-        window.molstar.removeSphere(sphereRef.current.ref);
+        window.molstar.removeSphere(sphereRef?.current?.ref);
       }
     };
   }, []);

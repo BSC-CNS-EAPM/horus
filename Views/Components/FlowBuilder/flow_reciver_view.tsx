@@ -860,8 +860,6 @@ function FlowReciver(props: FlowReciverProps) {
       allowRemotesOnNonSlurm: allowRemotesOnNonSlurm?.value,
     };
 
-    console.log("Loaded flow settings: ", loadedFlowSettings);
-
     setFlowSettings(loadedFlowSettings);
   };
 
