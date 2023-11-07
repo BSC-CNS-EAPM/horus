@@ -14,6 +14,9 @@ import logging
 import json
 import shutil
 
+# Type for modules in PluginDeps context manager
+from types import ModuleType
+
 # Importing the plugin classes directly from the plugin file
 import importlib.util
 
@@ -137,6 +140,8 @@ class PluginManager:
             with zipfile.ZipFile(newPlugin, "r") as zipRef:
                 zipRef.extractall(newPluginDir)
 
+                logging.getLogger("Horus").info("Zip contents: %s", zipRef.namelist())
+
             # Remove the .hp file
             os.remove(newPlugin)
 
@@ -205,6 +210,8 @@ class PluginManager:
         except Exception as e:
             shutil.rmtree(newPluginDir)
             raise Exception(e) from e
+        
+        print("Plugin installed. It is safe to close this window.")
 
     def _getPlugin(self, byName: str) -> Plugin:
         """
@@ -381,18 +388,18 @@ class PluginManager:
         pluginModule = importlib.util.module_from_spec(spec)
         try:
             # Set the python path to the dependencies folder
-            self._includeDepsPath(pluginDir)
+            # self._includeDepsPath(pluginDir)
+            with PluginDeps(pluginDir):
+                # Install dependencies
+                self._installDependencies(pluginMeta, depsDir)
 
-            # Install dependencies
-            self._installDependencies(pluginMeta, depsDir)
-
-            # Load the entry point
-            spec.loader.exec_module(pluginModule)  # type: ignore
+                # Load the entry point
+                spec.loader.exec_module(pluginModule)  # type: ignore
         except Exception as e:
             raise Exception(f"Failed to load plugin {entryPoint}: {e}") from e
-        finally:
-            # Pop the appended deps dir from the sys.path
-            self._removeDepsPath(pluginDir)
+        # finally:
+        #     # Pop the appended deps dir from the sys.path
+        #     self._removeDepsPath(pluginDir)
 
         # Check that the plugin variable exists
         if not hasattr(pluginModule, "plugin"):
@@ -701,37 +708,6 @@ class PluginManager:
 
         return block
 
-    def _includeDepsPath(self, pluginDir: str):
-        """
-        Adds the deps folder of the plugin to the python path.
-        """
-        depsDir = os.path.join(pluginDir, "deps")
-        includeDir = os.path.join(pluginDir, "Include")
-        sys.path.append(depsDir)
-        sys.path.append(includeDir)
-
-    def _removeDepsPath(self, pluginDir: str):
-        """
-        Removes the deps folder of the plugin from the python path.
-        """
-        depsDir = os.path.join(pluginDir, "deps")
-        includeDir = os.path.join(pluginDir, "Include")
-        sys.path.remove(depsDir)
-        sys.path.remove(includeDir)
-
-        # Remove them also from the sys.modules
-        for key, module in list(sys.modules.items()):
-            # Get the module path
-            modulePath = module.__file__ if hasattr(module, "__file__") else None
-
-            # If the module is not a file, skip it
-            if modulePath is None:
-                continue
-
-            # If the module is in the deps folder, remove it
-            if modulePath.startswith(depsDir) or modulePath.startswith(includeDir):
-                del sys.modules[key]
-
     def executeBlockLegacy(
         self,
         blockID: str,
@@ -781,7 +757,7 @@ class PluginManager:
         plugin = self._getPluginByID(blockID.split(".")[0])
 
         # Add to the python path the dependencies folder of the plugin
-        self._includeDepsPath(plugin._path)  # pylint: disable=protected-access
+        # self._includeDepsPath(plugin._path)  # pylint: disable=protected-access
 
         # Get the cluster api from the app delegate
         from App import AppDelegate  # pylint: disable=import-outside-toplevel
@@ -805,8 +781,9 @@ class PluginManager:
         errorMSG = ""
         outputs = None
         try:
-            with PrintCapturer(socketio):
-                outputs = block()
+            with PluginDeps(plugin._path):
+                with PrintCapturer(socketio):
+                    outputs = block()
         except Exception as exc:  # pylint: disable=broad-exception-caught
             error = True
             errorMSG = str(exc)
@@ -817,7 +794,7 @@ class PluginManager:
         os.chdir(self.workingDir)
 
         # Restore the python path
-        self._removeDepsPath(plugin._path)  # pylint: disable=protected-access
+        # self._removeDepsPath(plugin._path)  # pylint: disable=protected-access
 
         if error:
             raise Exception(errorMSG)
@@ -850,7 +827,7 @@ class PluginManager:
         plugin = self._getPluginByID(block.id.split(".")[0])
 
         # Add to the python path the dependencies folder of the plugin
-        self._includeDepsPath(plugin._path)  # pylint: disable=protected-access
+        # self._includeDepsPath(plugin._path)  # pylint: disable=protected-access
 
         # Get the cluster api from the app delegate
         from App import AppDelegate  # pylint: disable=import-outside-toplevel
@@ -879,13 +856,14 @@ class PluginManager:
         errorMSG = ""
         outputs = None
         try:
-            outputs = block()
+            with PluginDeps(plugin._path):
+                outputs = block()
         except Exception as exc:  # pylint: disable=broad-exception-caught
             error = True
             errorMSG = str(exc)
 
         # Restore the python path
-        self._removeDepsPath(plugin._path)  # pylint: disable=protected-access
+        # self._removeDepsPath(plugin._path)  # pylint: disable=protected-access
 
         if error:
             raise Exception(errorMSG)
@@ -1122,3 +1100,73 @@ class PrintCapturer:
         """
         sys.stdout = self.oldStdout
         sys.stderr = self.oldStderr
+
+
+class PluginDeps:
+    """
+    Enters a context where the dependencies of a plugin are added to the PYTHONPATH.
+    """
+
+    intialPath: str
+    """
+    The initial python path before entering the context.
+    """
+
+    intialModules: dict[str, ModuleType]
+    """
+    The initial modules before entering the context.
+    """
+
+    def __init__(self, pluginDir: str):
+        self.initialPath = sys.path.copy()
+        self.intialModules = sys.modules.copy()
+        self.pluginDir = pluginDir
+
+    def __enter__(self):
+        self._includeDepsPath()
+
+    def __exit__(
+        self, exc_type, exc_value, traceback
+    ):  # pylint: disable=unused-argument,invalid-name
+        self._removeDepsPath()
+
+    def _includeDepsPath(self):
+        """
+        Adds the deps folder of the plugin to the python path.
+        """
+        depsDir = os.path.join(self.pluginDir, "deps")
+        includeDir = os.path.join(self.pluginDir, "Include")
+        sys.path.insert(0, depsDir)
+        sys.path.insert(0, includeDir)
+
+    def _removeDepsPath(self):
+        """
+        Removes the deps folder of the plugin from the python path.
+        """
+        depsDir = os.path.join(self.pluginDir, "deps")
+        includeDir = os.path.join(self.pluginDir, "Include")
+
+        # Remove them also from the sys.modules
+        for key, module in list(sys.modules.items()):
+            # Get the module path
+            modulePath = module.__file__ if hasattr(module, "__file__") else None
+
+            # If the module is not a file, skip it
+            if modulePath is None:
+                continue
+
+            # If the module is in the deps folder, remove it
+            if modulePath.startswith(includeDir) or modulePath.startswith(depsDir):
+                if key in self.intialModules:
+                    logging.getLogger("Horus").warning(
+                        "Module %s used by plugin %s is in the App default modules. "
+                        + "The App version was used instead of the Plugin version.",
+                        key,
+                        self.pluginDir,
+                    )
+                else:
+                    # Unload the module
+                    del sys.modules[key]
+
+        # Restore the initial python path
+        sys.path = self.initialPath

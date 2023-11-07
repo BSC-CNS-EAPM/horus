@@ -316,9 +316,7 @@ class HorusServer:
                 flow = self.flowManager.saveFlow(flowData)
 
                 # Emit the saved flow to connected rooms
-                self.socketio.emit(
-                    "flow", flow.encode(minimal=False), to=flow.savedID
-                )
+                self.socketio.emit("flow", flow.encode(minimal=False), to=flow.savedID)
 
                 success = {
                     "ok": True,
@@ -589,7 +587,7 @@ class HorusServer:
             try:
                 stoppedFlow = self.flowManager.stopFlow(flowPath)
                 self.socketio.emit(
-                    "flow", stoppedFlow.encode(minimal=False), room=stoppedFlow.savedID
+                    "flow", stoppedFlow.encode(minimal=False), to=stoppedFlow.savedID
                 )
                 return flask.jsonify({"ok": True})
             except Exception as exc:
@@ -1134,18 +1132,21 @@ class HorusServer:
         Setup the plugin pages
         """
 
+        from Server.PluginManager import PluginDeps
+
         # Create a wrapper function to add to
         # python path the plugin deps folder
         def viewFunctionWrapper(func, page, endPoint):
             @wraps(func)
             def wrapper(*args, **kwargs):
-                self.pluginManager._includeDepsPath(  # pylint: disable=protected-access
-                    page._pageInfo["pluginDir"]  # pylint: disable=protected-access
-                )
-                result = endPoint.function(*args, **kwargs)
-                self.pluginManager._removeDepsPath(  # pylint: disable=protected-access
-                    page._pageInfo["pluginDir"]  # pylint: disable=protected-access
-                )
+                # self.pluginManager._includeDepsPath(  # pylint: disable=protected-access
+                #     page._pageInfo["pluginDir"]  # pylint: disable=protected-access
+                # )
+                with PluginDeps(page._pageInfo["pluginDir"]):
+                    result = endPoint.function(*args, **kwargs)
+                # self.pluginManager._removeDepsPath(  # pylint: disable=protected-access
+                #     page._pageInfo["pluginDir"]  # pylint: disable=protected-access
+                # )
                 return result
 
             return wrapper

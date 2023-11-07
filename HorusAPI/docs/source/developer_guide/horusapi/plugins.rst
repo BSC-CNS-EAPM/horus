@@ -37,8 +37,8 @@ This is a JSON object that represents a plugin for the Horus app. The object con
 Dependencies of plugins
 -----------------------
 
-As you may know, Horus runs a python backend, which allows plugins to execute python code. This means that you can
-Python is known for its large number of libraries. Some plugins may need specific libraries. To include libraries in
+As you may know, Horus runs a python backend, which allows plugins to execute arbitrary python code. You can
+include any Python library that is required for your Plugin to work. To include libraries in
 your plugin, you must add them to the :bdg-secondary-line:`dependencies` array of the plugin metadata file. For example, if you want
 to include pandas and matplotlib, your :bdg-secondary-line:`plugin.meta` file should look like this:
 
@@ -59,9 +59,16 @@ Horus will skip the installation. In order for the dependencies to be installed,
 Horus is running must have a valid :bdg-secondary-line:`python` interpreter installed. 
 
 Deps folder: Some libraries are either not available in :bdg-secondary-line:`pip` or they are private. In this case, you can
-embeed the library pre-installed with the plugin by adding the library to the :bdg-secondary-line:`deps` folder of the plugin.
+embeed the library pre-installed with the plugin by adding the library to the :bdg-secondary-line:`deps` folder of the plugin. You can
+also provide the packaged library and setting in the dependencies array the path to the library.
 The :bdg-secondary-line:`deps` folder is located in the root of the plugin folder and is appended to the :bdg-secondary-line:`PYTHONPATH` variable
 when the plugin is loaded.
+
+.. warning::
+
+    When importing a library in your python Plugin code, make sure to always import inside scoped functions. Libraries
+    imported at top level may not work as the plugin gets automatically unloaded when not in use. This may result in
+    the library being unloaded and the plugin not working as expected.
 
 Code organization
 -----------------

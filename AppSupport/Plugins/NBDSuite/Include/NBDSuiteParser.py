@@ -1,13 +1,8 @@
 import os
 import yaml
-import pandas as pd
 from HorusAPI import TempFile
 import typing as t
 import re
-
-myVariable = 1
-my_var = 1
-
 
 class NBDSuiteParser:
     path: str
@@ -42,10 +37,12 @@ class NBDSuiteParser:
     }
 
     def __init__(self, inputPath: str):
+
         # Get the path to the simulation folder (remove the file from the path)
         self.path = os.path.dirname(inputPath)
         self.inputPath = inputPath
         self._parse(inputPath)
+
 
     def _parse(self, inputPath):
         """
@@ -112,6 +109,8 @@ class NBDSuiteParser:
             Name of the complex folder retrived by the listComplexes function.
         """
 
+        import pandas as pd
+
         # Get the path to the top selection file
         topSelFile = os.path.join(self.latestSimPath, complex, "results", "top_selections.csv")
 
@@ -133,6 +132,8 @@ class NBDSuiteParser:
             The selected top selection to plot retrieved by the
             listTopSelections function.
         """
+
+        import pandas as pd
 
         # Get the important paths
         complexPath = os.path.join(self.latestSimPath, complex)
@@ -289,6 +290,8 @@ class NBDSuiteParser:
         """
         Reads and sends the untruncated PDB file to the frontend.
         """
+
+        import pandas as pd
 
         # Get the complex ID
         complexID = selectedComplex.split("_")[-1]
