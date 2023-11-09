@@ -528,6 +528,15 @@ class VariableList(PluginVariable):
         prototypes: typing.List[PluginVariable],
         allowedValues: typing.Optional[typing.List[typing.Any]] = None,
     ):
+        """
+        :param id: The ID of the variable.
+        :param name: The name of the variable.
+        :param description: A description of the variable.
+        :param prototypes: The list of variables in each row of the list.
+        :param allowedValues: Matching allowedValues in other variables will \
+        indicate in the GUI which variables can be connected.
+        """
+
         super().__init__(
             id=id,
             name=name,
