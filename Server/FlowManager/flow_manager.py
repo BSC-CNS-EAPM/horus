@@ -574,7 +574,7 @@ class Flow:
                 blockToRun._finishedExecution = True
                 self.currentExecuting = None
                 raise ErrorRunningBlock(
-                    blockToRun, f"Slurm job failed. Status: {blockToRun.parseStatus()}"
+                    blockToRun, blockToRun._runErrorMessage
                 )
 
             # Once the block has been executed, call again the execution
