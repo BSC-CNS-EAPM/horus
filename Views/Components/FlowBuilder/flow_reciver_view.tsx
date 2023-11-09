@@ -749,6 +749,8 @@ function FlowReciver(props: FlowReciverProps) {
       window.horusTerm.ref.current.clearStdout();
     }
     window.horusTerm.storedMessages = [];
+
+    setIsRunning(false);
   };
 
   const handleTerminalCommand = (e: CustomEvent) => {
