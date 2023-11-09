@@ -29,8 +29,12 @@ codesign --remove-signature dist/Packages/Horus.app
 # Get the Apple Development signing identity (Code number)
 identity=$(security find-identity -v -p codesigning | grep "Apple" | awk -F' "' '{print $1}' | awk -F') ' '{print $2}')
 
-# Codesign the .app bundle
-codesign --deep -s "$identity" "dist/Packages/Horus.app"
+# Codesign the .app bundle if a signing identity is found
+if [[ -n "$identity" ]] && [[ "$identity" != "" ]]; then
+  codesign --force --deep --sign "$identity" dist/Packages/Horus.app
+else
+  echo "WARNING: No signing identity found, skipping codesigning. This may cause issues with macOS Gatekeeper."
+fi
 
 # Define the name
 name="Horus-$version-$arch.dmg"
@@ -46,7 +50,7 @@ create-dmg \
   --hide-extension "Horus.app" \
   --app-drop-link 600 185 \
   --background "Resources/nostrum_color.png" \
-  --codesign "$identity" \
+  $(if [[ -n "$identity" ]] && [[ "$identity" != "" ]]; then echo "--codesign \"$identity\""; fi) \
   "dist/$name" \
   "dist/Packages"
 
