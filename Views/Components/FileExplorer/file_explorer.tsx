@@ -171,7 +171,7 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
           onFileAction={handleFileAction}
         >
           <FileNavbar />
-          {/* <FileToolbar /> */}
+          <FileToolbar />
           <FileList />
         </FileBrowser>
       </div>
