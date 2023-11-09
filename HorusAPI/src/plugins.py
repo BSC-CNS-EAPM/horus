@@ -421,14 +421,14 @@ class PluginVariable:
             varDict = {
                 "id": self.id,
                 "value": self.value if self.value else self.defaultValue,
-                "type": self.type,
+                "type": str(self.type),
             }
         else:
             varDict = {
                 "name": self.name,
                 "id": self.id,
                 "description": self.description,
-                "type": self.type,
+                "type": str(self.type),
                 "value": self.value if self.value else self.defaultValue,
                 "allowedValues": self.allowedValues,
             }
@@ -1206,7 +1206,7 @@ class PluginBlock:
         selectedInputGroup: str = blockJSON.get("selectedInputGroup", "default")
         selectedRemote: str = blockJSON.get("selectedRemote", "Local")
 
-        position: typing.Dict[str, float] = blockJSON.get("position", [None, None])
+        position: typing.Dict[str, float] = blockJSON.get("position", {})
         xPos: float = position.get("x", 0)
         yPos: float = position.get("y", 0)
 

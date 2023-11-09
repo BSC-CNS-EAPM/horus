@@ -6,6 +6,7 @@ from App import AppDelegate
 from Server.SettingsManager import Setting
 from Server.SettingsManager import SettingsManager as HorusSettings
 from HorusAPI import VariableTypes
+import pytest
 
 
 @pytest.fixture
@@ -13,6 +14,8 @@ def appDelegate_default():
     return AppDelegate()
 
 
+
+@pytest.mark.filterwarnings("ignore::DeprecationWarning")
 def test_AppDelegate_startup(appDelegate_default: AppDelegate):
     # Check basic props
     assert appDelegate_default.debug is False

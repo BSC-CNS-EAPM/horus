@@ -880,8 +880,8 @@ def launchApp():
     if ("--debug" in sys.argv or "-d" in sys.argv) and debugReachable:
         debug = True
 
-        # Check for the -f --force-production flag
-        if "--force-production" in sys.argv or "-f" in sys.argv:
+        # Check for the --force-production flag
+        if "--force-production" in sys.argv:
             debug = False
 
         # Check for the --url (-u) flag
@@ -931,6 +931,46 @@ def launchApp():
 
     # Prepare the app delegate
     app = AppDelegate(debug, serverMode, browser, debugURL, host, port)
+
+    # Check for the --flow (-f) flag to run a flow instead of the app
+    # The -f flag should be followed by the path to the flow and the
+    # intex of the block to run -i <index>
+    if "--flow" in sys.argv or "-f" in sys.argv:
+        index = sys.argv.index("--flow") if "--flow" in sys.argv else sys.argv.index("-f")
+        try:
+            flowPath = sys.argv[index + 1]
+        except IndexError:
+            print("No flow path provided. Usage: -f <flow path>")
+            sys.exit(1)
+
+        if not os.path.exists(flowPath):
+            print(f"Flow path {flowPath} does not exist")
+            sys.exit(1)
+
+        # Get the index of the block to run
+        blockIndex = None
+        if "-i" in sys.argv:
+            index = sys.argv.index("-i")
+            try:
+                blockIndex = int(sys.argv[index + 1])
+            except IndexError:
+                print("No block index provided. Usage: -i <block index>")
+                sys.exit(1)
+            except ValueError:
+                print("Invalid block index provided. Usage: -i <block index>")
+                sys.exit(1)
+
+        # Open the flow
+        flow = app.server.flowManager.openFlowFromPath(flowPath)
+
+        # Run the flow
+        try:
+            flow.run(placedID=blockIndex, resetRemoteBlock=True)
+        except Exception as error:
+            print(f"Error running flow: {error}")
+
+        # Exit
+        sys.exit(0)
 
     # Start the app. This is a blocking process.
     app.applicationDidFinishLaunching()
