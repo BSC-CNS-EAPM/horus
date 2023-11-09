@@ -39,6 +39,7 @@ function useServerExplorer(
     const body = JSON.stringify({
       path: currentPath.current,
       extensions: extensions,
+      openFolder: openFolder,
     });
 
     const response = await horusPost("/filepicker", header, body);

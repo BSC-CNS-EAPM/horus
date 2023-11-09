@@ -25,7 +25,11 @@ class FileExplorer:
 
         return os.path.exists(self.currentPath)
 
-    def listDirectory(self, allowedExtensions: typing.Optional[typing.List[str]] = None):
+    def listDirectory(
+        self,
+        allowedExtensions: typing.Optional[typing.List[str]] = None,
+        openFolder: bool = False,
+    ):
         """
         Lists the directory in the current path.
 
@@ -42,6 +46,10 @@ class FileExplorer:
         for file in os.listdir(self.currentPath):
             # Get the path of the file
             path = os.path.join(self.currentPath, file)
+
+            # If we are on openFolder mode, check if the file is a folder
+            if openFolder and not os.path.isdir(path):
+                continue
 
             # Check if the file is selectable by its extension
             extension = file.split(".")

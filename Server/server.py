@@ -735,6 +735,7 @@ class HorusServer:
         def filePicker():
             path = request.get_json().get("path", os.getcwd())
             extensions = request.get_json().get("extensions", None)
+            openFolder = request.get_json().get("openFolder", False)
 
             if extensions is not None and extensions == ["*"]:
                 extensions = None
@@ -754,7 +755,7 @@ class HorusServer:
                 }
             else:
                 fileExplorer = FileExplorer(path)
-                directoryContents = fileExplorer.listDirectory(extensions)
+                directoryContents = fileExplorer.listDirectory(extensions, openFolder)
                 folderChain = fileExplorer.folderChain()
                 success = {
                     "ok": True,
