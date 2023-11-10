@@ -65,22 +65,6 @@ async function getVersion() {
   return data;
 }
 
-async function getForceFields() {
-  // Fetch the data from /api/data
-  const result = await horusGet("/api/nbdsuite/forcefields", {});
-
-  // Check any error status code
-  if (!result.ok) {
-    throw new Error(`Error fetching data: ${result.status}`);
-  }
-
-  // Parse the result as JSON
-  const data = await result.json();
-
-  // Return the data
-  return data;
-}
-
 async function openWindow(name, url) {
   const header = {
     "Content-Type": "application/json",
