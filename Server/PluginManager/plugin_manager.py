@@ -210,7 +210,7 @@ class PluginManager:
         except Exception as e:
             shutil.rmtree(newPluginDir)
             raise Exception(e) from e
-        
+
         print("Plugin installed. It is safe to close this window.")
 
     def _getPlugin(self, byName: str) -> Plugin:
@@ -448,8 +448,33 @@ class PluginManager:
         for idep in listedDeps:
             if ".dist-info" not in idep:
                 continue
-            name = idep.split("-")[0].lower()
+
+            # If the dependency was downloaded from a git repo, the name
+            # then is the url of the repo. Found inside direct_url.json
+            directUrlPath = os.path.join(depsDir, idep, "direct_url.json")
+            if os.path.exists(directUrlPath):
+                with open(directUrlPath, "r", encoding="utf-8") as f:
+                    directUrl = json.load(f)
+                    name = directUrl.get("url", None)
+
+                    # The file could be damaged, skip it and reinstall the dependency
+                    if name is None:
+                        continue
+
+                    # If it was obtained by git, add +git to the url
+                    vcsInfo = directUrl.get("vcs_info", {}).get("vcs", None)
+                    if vcsInfo is not None:
+                        name = vcsInfo + "+" + name
+            else:
+                # Otherwise, the name is the first part of the .dist folder
+                name = idep.split("-")[0].lower()
+
             version = idep.split("-")[1].split(".dist")[0]
+
+            # Lowercase the name
+            name = name.lower()
+
+            # Add the dependency to the installed dependencies
             installedDeps[name] = version
 
         # Iterate through the required dependencies

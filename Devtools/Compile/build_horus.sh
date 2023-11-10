@@ -9,9 +9,6 @@ python Devtools/Compile/compile.py build_ext
 # Bundle the app
 pyinstaller Devtools/Compile/build.spec --noconfirm
 
-# Build the NBDsuite plugin
-npm run build-nbdsuite-plugin
-
 # Build the horus API
 npm run build-horusapi
 
