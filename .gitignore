@@ -160,20 +160,6 @@ flows/
 # Non-default plugins
 AppSupport/Plugins/*
 
-# Include NBDSuite plugin except the config and Pages folder
-!AppSupport/Plugins/nbdsuite/
-!AppSupport/Plugins/nbdsuite/flows
-AppSupport/Plugins/nbdsuite/config/
-AppSupport/Plugins/nbdsuite/Pages/
-AppSupport/Plugins/nbdsuite/deps/
-
-# Include NBDSuite Pro plugin except the config and Pages folder
-!AppSupport/Plugins/NBDSuitePro/
-!AppSupport/Plugins/NBDSuitePro/flows
-AppSupport/Plugins/NBDSuitePro/config/
-AppSupport/Plugins/NBDSuitePro/Pages/
-AppSupport/Plugins/NBDSuitePro/deps/
-
 # Plugin dependencies
 AppSupport/DefaultPlugins/*/deps/
 
