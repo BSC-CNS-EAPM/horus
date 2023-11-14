@@ -80,7 +80,7 @@ class HorusServer:
 
         # Basic Flask setup
         self.debug = debug
-        self.host = host if host else "127.0.0.1"
+        self.host = host if host else "0.0.0.0"
         self.port = port if port else self._getFreePort()
         self.baseURL = f"http://{self.host}:{self.port}"
 
@@ -199,9 +199,6 @@ class HorusServer:
 
         if self.debug:
             return 3000
-
-        if not self.desktop:
-            return 8080
 
         # Check that the port is not in use
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

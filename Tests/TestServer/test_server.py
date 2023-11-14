@@ -14,7 +14,7 @@ def server():
 
 def test_desktop_server_init(desktopServer):
     assert desktopServer.debug is False
-    assert desktopServer.host == "127.0.0.1"
+    assert desktopServer.host == "0.0.0.0"
     assert 3000 <= desktopServer.port <= 9000
     assert desktopServer.pluginManager is not None
 
