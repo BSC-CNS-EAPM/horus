@@ -1018,6 +1018,9 @@ class PluginBlock:
 
     @property
     def configs(self):
+        """
+        A dictionary with the configs of the block
+        """
         configsDict: dict[str, typing.Any] = {}
         for config in self._configs:
             for var in config._getVariables():
@@ -1045,7 +1048,7 @@ class PluginBlock:
         """
 
         # Read the config file
-        with open(configPath, "r") as configFile:
+        with open(configPath, "r", encoding="utf-8") as configFile:
             configs = json.load(configFile)
 
         # Update the values of the configs
@@ -1065,8 +1068,10 @@ class PluginBlock:
 
         if len(self._configs) > 0:
             # Create the config file
-            print("Creating config file for block", self.name, "at", configPath)
-            with open(configPath, "w") as configFile:
+            logging.getLogger("Horus").debug(
+                "Creating config file for block %s at %s", self.name, configPath
+            )
+            with open(configPath, "w", encoding="utf-8") as configFile:
                 configs = {}
                 for config in self._configs:
                     configs[config.id] = config.variables
@@ -1079,7 +1084,7 @@ class PluginBlock:
         # Save the config file only if the block has configs
         if len(self._configs) > 0:
             # Read the existing config file
-            with open(configPath, "r") as configFile:
+            with open(configPath, "r", encoding="utf-8") as configFile:
                 configs = json.load(configFile)
 
             # Update the values to save
@@ -1087,7 +1092,7 @@ class PluginBlock:
                 configs[key] = value
 
             # Write the updated config file
-            with open(configPath, "w") as configFile:
+            with open(configPath, "w", encoding="utf-8") as configFile:
                 json.dump(configs, configFile, indent=4)
 
         # Update the values of the configs

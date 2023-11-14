@@ -339,8 +339,17 @@ class PluginManager:
         # Create the config folder
         configDir = os.path.join(pluginPath, "config")
 
+        # Create it only if the plugin needs configs
         if not os.path.exists(configDir):
-            os.mkdir(configDir)
+            try:
+                os.mkdir(configDir)
+            # Except a read-only filesystem
+            except OSError:
+                logging.getLogger("Horus").warning(
+                    "Could not create config folder for plugin %s. "
+                    + "The filesystem is read-only.",
+                    plugin.info["name"],
+                )
 
         # Add the plugin to the loaded plugins
         self.loadedPlugins.append(plugin)
@@ -372,7 +381,18 @@ class PluginManager:
 
         # Create the deps folder
         if not os.path.exists(depsDir):
-            os.mkdir(depsDir)
+            try:
+                os.mkdir(depsDir)
+            # Except a read-only filesystem
+            except OSError:
+                logging.getLogger("Horus").warning(
+                    "Could not create dependencies folder for plugin %s. "
+                    + "The filesystem is read-only.",
+                    pluginMeta["name"],
+                )
+
+                # Set the deps dir to None
+                depsDir = None
 
         # Get the entry point from meta
         entryPoint = pluginMeta.get("pluginFile", None)
@@ -390,8 +410,9 @@ class PluginManager:
             # Set the python path to the dependencies folder
             # self._includeDepsPath(pluginDir)
             with PluginDeps(pluginDir):
-                # Install dependencies
-                self._installDependencies(pluginMeta, depsDir)
+                # Install dependencies if the deps dir exists
+                if depsDir is not None:
+                    self._installDependencies(pluginMeta, depsDir)
 
                 # Load the entry point
                 spec.loader.exec_module(pluginModule)  # type: ignore
