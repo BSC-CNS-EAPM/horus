@@ -403,3 +403,9 @@
     transform: scale(0);
   }
 }
+
+.plugin-variable-value input[type="checkbox"] {
+  text-align: center;
+  margin: auto;
+  width: 1rem;
+}
