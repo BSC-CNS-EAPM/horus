@@ -1209,6 +1209,10 @@ class HorusServer:
                         methods=addEndPoint.methods,
                     )
 
+                    logging.getLogger("Horus").debug(
+                        "Added endpoint %s to page %s", epURL, page._pageInfo["id"]
+                    )
+
                 return newBluePrint
 
             # Call the function with the current htmlPath
@@ -1217,6 +1221,12 @@ class HorusServer:
             # Register the blueprint
             try:
                 self.server.register_blueprint(parsedBluePrint)
+
+                logging.getLogger("Horus").debug(
+                    "Registered page %s for plugin %s",
+                    page._pageInfo["id"],  # pylint: disable=protected-access
+                    page._pageInfo["pluginDir"],  # pylint: disable=protected-access
+                )
             except Exception as exc:  # pylint: disable=broad-exception-caught
                 errorMSG = (
                     "\033[91mError registering page for plugin "
