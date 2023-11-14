@@ -32,7 +32,7 @@ function useSettings() {
   const [hasChanges, setHasChanges] = useState<boolean>(false);
 
   async function getSettings() {
-    const response = await horusGet("/settings");
+    const response = await horusGet("/api/settings");
 
     const data = await response.json();
 
@@ -49,7 +49,7 @@ function useSettings() {
       return;
     }
 
-    const response = await horusGet("/restoreSettings");
+    const response = await horusGet("/api/restoreSettings");
 
     const data = await response.json();
 
@@ -71,7 +71,7 @@ function useSettings() {
       settings: settings,
     });
 
-    const response = await horusPost("/saveSettings", header, body);
+    const response = await horusPost("/api/saveSettings", header, body);
 
     const data = await response.json();
 
@@ -83,10 +83,10 @@ function useSettings() {
     setHasChanges(false);
   }
 
-  const onSettingChange = (event) => {
-    const setting = settings.find((setting) => setting.id === event.target.id);
-    if (setting.value !== event.target.value) {
-      setting.value = event.target.value;
+  const onSettingChange = (value, settingID) => {
+    const setting = settings.find((setting) => setting.id === settingID);
+    if (setting.value !== value) {
+      setting.value = value;
       setSettings([...settings]);
       setHasChanges(true);
     }
@@ -96,8 +96,21 @@ function useSettings() {
     getSettings();
   }, []);
 
+  // Group settings by .category
+
+  let groupedSettings = {};
+  if (settings !== null) {
+    groupedSettings = settings.reduce((acc, setting) => {
+      if (!acc[setting.category]) {
+        acc[setting.category] = [];
+      }
+      acc[setting.category].push(setting);
+      return acc;
+    }, {} as Record<string, Settings[]>);
+  }
+
   return {
-    settings,
+    groupedSettings,
     hasChanges,
     saveSettings,
     onSettingChange,
@@ -107,12 +120,29 @@ function useSettings() {
 
 function SettingsView() {
   const {
-    settings,
+    groupedSettings,
     hasChanges,
     saveSettings,
     onSettingChange,
     restoreSettings,
   } = useSettings();
+
+  const SettingsView = Object.keys(groupedSettings).map((category) => {
+    return (
+      <div className="flex flex-col gap-2 align-center text-center">
+        <h2>{category}</h2>
+        {groupedSettings[category].map((setting) => {
+          return (
+            <PluginVariableView
+              key={setting.id}
+              variable={setting}
+              onChange={onSettingChange}
+            />
+          );
+        })}
+      </div>
+    );
+  });
 
   return (
     <div
@@ -133,34 +163,7 @@ function SettingsView() {
           <NBDButton action={restoreSettings}>Restore defaults</NBDButton>
         </div>
       </div>
-      {settings &&
-        settings.map((setting) => (
-          <PluginVariableView
-            variable={setting}
-            onChange={(value) => {
-              const event = {
-                target: {
-                  id: setting.id,
-                  value: value,
-                },
-              };
-              onSettingChange(event);
-            }}
-          />
-          // <div key={setting.id} className="plugin-variable">
-          //   <div className="plugin-variable-name">{setting.name}</div>
-          //   <div className="plugin-variable-description">
-          //     {setting.description}
-          //   </div>
-          //   <input
-          //     className="plugin-variable-value ps-2 pe-2 text-center"
-          //     type="text"
-          //     value={setting.value}
-          //     onChange={onSettingChange}
-          //     id={setting.id}
-          //   />
-          // </div>
-        ))}
+      {SettingsView.length > 0 ? SettingsView : <div>No settings found</div>}
       <h1>About Horus</h1>
       <div className="flex flex-row justify-between items-center">
         <iframe src="/about" style={{ width: "100%" }}></iframe>

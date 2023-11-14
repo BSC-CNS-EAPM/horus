@@ -6,6 +6,7 @@ import os
 import typing
 import json
 import sys
+import logging
 
 from HorusAPI import VariableTypes
 
@@ -70,7 +71,7 @@ class Setting:
         description: str,
         category: str = "General",
         type: VariableTypes = VariableTypes.STRING,
-        allowedValues: typing.List[typing.Any] = [],
+        allowedValues: typing.Optional[typing.List[typing.Any]] = None,
         desktopOnly: bool = False,
     ):
         """
@@ -92,7 +93,11 @@ class Setting:
         self.description = description
         self.category = category
         self.type = type
+
+        if allowedValues is None:
+            allowedValues = []
         self.allowedValues = allowedValues
+
         self.desktopOnly = desktopOnly
 
     # Define comparison operators
@@ -122,7 +127,7 @@ class Setting:
 
         return {
             "name": self.name,
-            "value": self.value if not self.desktopOnly else self.defaultValue,
+            "value": self.value,
             "defaultValue": self.defaultValue,
             "description": self.description,
             "category": self.category,
@@ -155,9 +160,9 @@ class SettingsManager:
 
         # Define the default settings path based on if the app is frozen
         try:
-            bundle_dir = sys._MEIPASS  # type: ignore
+            bundleDir = sys._MEIPASS  # type: ignore
             self.defaultSettingsPath = os.path.abspath(
-                os.path.join(bundle_dir, "default_settings.json")
+                os.path.join(bundleDir, "default_settings.json")
             )
         except AttributeError:
             self.defaultSettingsPath = os.path.join("App", "default_settings.json")
@@ -178,11 +183,11 @@ class SettingsManager:
             raise Exception("The default settings file does not exist")
 
         # Load the default settings
-        with open(self.defaultSettingsPath, "r") as f:
+        with open(self.defaultSettingsPath, "r", encoding="utf-8") as f:
             defaultSettings = json.load(f)
 
         # Write the default settings to the user settings file
-        with open(self.userSettingsPath, "w") as f:
+        with open(self.userSettingsPath, "w", encoding="utf-8") as f:
             json.dump(defaultSettings, f)
 
     def _loadSettings(self):
@@ -196,21 +201,49 @@ class SettingsManager:
             self._createSettings()
 
         # Load the settings
-        with open(self.userSettingsPath, "r") as f:
+        with open(self.userSettingsPath, "r", encoding="utf-8") as f:
             fileSettings = json.load(f)
 
         # Load the default settings and add any missing settings
-        with open(self.defaultSettingsPath, "r") as f:
+        with open(self.defaultSettingsPath, "r", encoding="utf-8") as f:
             defaultSettings = json.load(f)
 
         newChanges = False
         for key, value in defaultSettings.items():
+            # If a new setting is found, add it to the settings file
             if key not in fileSettings:
                 fileSettings[key] = value
                 newChanges = True
+                logging.getLogger("Horus").info("Added setting %s to the settings file", key)
+
+            # If the description, name or category of a setting has changed, update it
+            if (
+                fileSettings[key]["description"] != value["description"]
+                or fileSettings[key]["name"] != value["name"]
+                or fileSettings[key]["category"] != value["category"]
+            ):
+                fileSettings[key]["description"] = value["description"]
+                fileSettings[key]["name"] = value["name"]
+                fileSettings[key]["category"] = value["category"]
+                newChanges = True
+
+                logging.getLogger("Horus").info(
+                    "Updated setting description, category or name for %s in the settings file",
+                    key,
+                )
+
+            # If the type of a setting has changed, update it along the value
+            if fileSettings[key]["type"] != value["type"]:
+                fileSettings[key]["type"] = value["type"]
+                fileSettings[key]["value"] = value["value"]
+                newChanges = True
+
+                logging.getLogger("Horus").info(
+                    "Updated setting value for %s in the settings file", key
+                )
 
         if newChanges:
-            with open(self.userSettingsPath, "w") as f:
+            with open(self.userSettingsPath, "w", encoding="utf-8") as f:
                 json.dump(fileSettings, f)
 
         # Instantiate the settings
@@ -281,11 +314,11 @@ class SettingsManager:
         """
 
         # Load the default settings
-        with open(self.defaultSettingsPath, "r") as f:
+        with open(self.defaultSettingsPath, "r", encoding="utf-8") as f:
             defaultSettings = json.load(f)
 
         # Write the default settings to the user settings file
-        with open(self.userSettingsPath, "w") as f:
+        with open(self.userSettingsPath, "w", encoding="utf-8") as f:
             json.dump(defaultSettings, f)
 
         # Reload the settings
@@ -329,7 +362,7 @@ class SettingsManager:
 
         settingsList = []
         for settingID, setting in self.settings.items():
-            if setting.desktopOnly and AppDelegate().serverMode:
+            if setting.desktopOnly and AppDelegate().serverMode and not AppDelegate().debug:
                 continue
             parsedSetting = {
                 "id": settingID,

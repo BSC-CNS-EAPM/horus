@@ -100,7 +100,7 @@ const fetchDesktop = async () => {
 };
 
 async function horusGetSettings(settingID: string) {
-  const response = await horusGet(`/settings/${settingID}`);
+  const response = await horusGet(`/api/settings/${settingID}`);
 
   const setting = await response.json();
 

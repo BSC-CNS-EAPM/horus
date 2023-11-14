@@ -32,5 +32,14 @@
     "type": "boolean",
     "allowedValues": [],
     "desktopOnly": true
+  },
+  "developmentMode": {
+    "name": "Development mode",
+    "description": "Development mode enables the developer tools in the application, such as plugin reloading. This setting requires the app to be reloaded.",
+    "category": "Development",
+    "value": false,
+    "type": "boolean",
+    "allowedValues": [],
+    "desktopOnly": true
   }
 }

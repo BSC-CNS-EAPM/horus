@@ -1,6 +1,11 @@
 // Create the main window view
 import { useState, useEffect } from "react";
-import { fetchDesktop, horusGet, horusPost } from "../Utils/utils";
+import {
+  fetchDesktop,
+  horusGet,
+  horusGetSettings,
+  horusPost,
+} from "../Utils/utils";
 import NBDButton from "../Components/nbdbutton";
 import "./plugin_manager.css";
 import { SearchComponent } from "../Components/Toolbar/toolbar";
@@ -420,13 +425,21 @@ export function PluginManager() {
   const [pluginList, setPluginList] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filteredPluginList, setFilteredPluginList] = useState(pluginList);
+  const [developmentMode, setDevelopmentMode] = useState(false);
 
   const fetchData = async () => {
+    setLoading(true);
     try {
       const response = await horusGet("/plugins/list");
       const data = await response.json();
       setPluginList(data);
       setFilteredPluginList(data);
+
+      // Set the development mode
+      const devMode = await horusGetSettings("developmentMode");
+
+      setDevelopmentMode(devMode?.value || false);
+
       setLoading(false);
     } catch (error) {
       setPluginList(["Error loading plugins"]);
@@ -508,6 +521,11 @@ export function PluginManager() {
     await horusGet("/desktop/appsupportdir");
   };
 
+  const reloadPlugins = async () => {
+    await horusGet("/api/plugins/reload");
+    fetchData();
+  };
+
   useEffect(() => {
     // If we are on an iFrame (plugin manager server)
     // get the isDesktop variable from the parent window
@@ -567,7 +585,10 @@ export function PluginManager() {
             >
               Install plugin
             </HorusFileExplorer>
-            <NBDButton text="Open plugins folder" action={openPluginsFolder} />
+            {developmentMode && (
+              <NBDButton text="Reload plugins" action={reloadPlugins} />
+            )}
+            <NBDButton text="Open Horus folder" action={openPluginsFolder} />
             <SearchComponent
               placeholder="Search plugins..."
               onChange={filterPlugins}

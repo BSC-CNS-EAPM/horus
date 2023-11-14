@@ -901,24 +901,25 @@ class HorusServer:
             except Exception as exc:  # pylint: disable=broad-exception-caught
                 return flask.jsonify({"ok": False, "msg": str(exc)})
 
+        # SETTINGS
         @self.server.route("/settingsView")
         def settingsView():
             return flask.render_template("Settings/index.html")
 
-        @self.server.route("/settings", methods=["GET"])
+        @self.server.route("/api/settings", methods=["GET"])
         def settings():
             settings = self.settingsManager.listSettings()
 
             return flask.jsonify({"ok": True, "settings": settings})
             # return flask.render_template("Settings/index.html")
 
-        @self.server.route("/restoreSettings", methods=["GET"])
+        @self.server.route("/api/restoreSettings", methods=["GET"])
         def settingsDefaults():
             self.settingsManager.restoreDefaults()
 
             return flask.jsonify({"ok": True})
 
-        @self.server.route("/settings/<settingID>", methods=["GET"])
+        @self.server.route("/api/settings/<settingID>", methods=["GET"])
         def setting(settingID):
             try:
                 setting = self.settingsManager.getSetting(settingID)
@@ -927,7 +928,7 @@ class HorusServer:
 
             return flask.jsonify({"ok": True, "setting": setting.toDict()})
 
-        @self.server.route("/saveSettings", methods=["POST"])
+        @self.server.route("/api/saveSettings", methods=["POST"])
         def saveSettings():
             data = request.get_json()
 
@@ -945,6 +946,23 @@ class HorusServer:
             except Exception as exc:
                 return flask.jsonify({"ok": False, "msg": str(exc)})
 
+        # Development
+        if self.settingsManager.getSetting("developmentMode").value:
+
+            @self.server.route("/api/plugins/reload", methods=["GET"])
+            def reloadPlugins():
+                # Reload the plugin manager
+                self.pluginManager.reloadPlugins()
+
+                # Reload the plugin pages
+                self._pluginPages()
+
+                # Emit plugin changes
+                self.socketio.emit("pluginChanges")
+
+                return flask.jsonify({"ok": True})
+
+        # MAIN
         @self.server.route("/")
         def index():
             # Get the query string
@@ -1214,15 +1232,7 @@ class HorusServer:
                 self.socketio.emit("printTerm", errorMSG)
 
     def _debugRoutes(self):
-        @self.server.route("/reloadplugins", methods=["GET"])
-        def realoadPlugins():
-            # Reload the plugin manager
-            self.pluginManager.reloadPlugins()
-
-            # Reload the plugin pages
-            self._pluginPages()
-
-            return "Reloaded"
+        pass
 
     def _exceptionHandlers(self):
         @self.server.errorhandler(jinja2.exceptions.TemplateNotFound)
