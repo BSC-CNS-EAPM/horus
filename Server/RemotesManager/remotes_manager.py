@@ -640,9 +640,11 @@ class RemotesAPI:
 
         # Get the job status
         status = self.command(f"sacct -j {jobID} -o 'State' --noheader -X")
-
+        
         if status == "":
             status = "PENDING"
+        elif "RUNNING" in status:
+            status = "RUNNING"
 
         # Remove any + or - from the status
         status = status.replace("+", "").replace("-", "")
