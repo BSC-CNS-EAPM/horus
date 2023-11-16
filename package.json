@@ -5,7 +5,7 @@
   "source": "Views/Main/index.html",
   "scripts": {
     "test": "python -m pytest Tests/ -vv",
-    "develop": "python Horus.py -s -d -h 0.0.0.0 -p 8083",
+    "develop": "python Horus.py -s -d",
     "buildparcel": "parcel build Views/**/*.html --dist-dir GUI --no-scope-hoist && cp -r Views/Favicon/ GUI/Favicon",
     "devparcel": "parcel Views/**/*.html --port 3001",
     "build": "sh Devtools/Compile/build_horus.sh",
