@@ -73,6 +73,7 @@ class FileExplorer:
                     "name": file,
                     "isDir": isDir,
                     "fullpath": path,
+                    "isHidden": file.startswith("."),  # Hidden files
                 }
             )
 
