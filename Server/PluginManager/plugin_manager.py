@@ -1213,6 +1213,7 @@ class PluginDeps:
                 else:
                     # Unload the module
                     del sys.modules[key]
+                    logging.getLogger("Horus").debug("Unloaded module %s", key)
 
         # Restore the initial python path
         sys.path = self.initialPath
