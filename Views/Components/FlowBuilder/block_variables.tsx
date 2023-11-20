@@ -712,6 +712,7 @@ function AtomView(props: VariableSubviewProps) {
     if (!atomInfo) return;
 
     setAtom(atomInfo);
+    props.handleChange(atomInfo, props.variable.id);
   };
 
   useEffect(() => {
