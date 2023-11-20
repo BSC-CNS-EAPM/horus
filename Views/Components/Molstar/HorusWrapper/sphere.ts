@@ -35,12 +35,12 @@ import { ParamDefinition as PD } from "molstar/lib/mol-util/param-definition";
 
 import "molstar/lib/mol-plugin-ui/skin/light.scss";
 
-declare global {
-  interface Window {
-    sphereRef?: any;
-    molStructures?: any;
-  }
-}
+// declare global {
+//   interface Window {
+//     sphereRef?: any;
+//     molStructures?: any;
+//   }
+// }
 
 const DockingSphereVisuals = {
   "docking-sphere": (

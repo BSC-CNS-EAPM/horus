@@ -51,6 +51,7 @@ import { Script } from "molstar/lib/mol-script/script";
 import { StructureSelection } from "molstar/lib/mol-model/structure/query";
 import {
   Structure,
+  StructureElement,
   StructureProperties,
   to_mmCIF,
 } from "molstar/lib/mol-model/structure";
@@ -132,14 +133,37 @@ class HorusMolstar {
         const y = e.position[1].toFixed(1);
         const z = e.position[2].toFixed(1);
 
+        const detail = {
+          x: Number(x),
+          y: Number(y),
+          z: Number(z),
+        };
+
+        if (StructureElement.Loci.is(e.current.loci)) {
+          const loc = StructureElement.Location.create();
+          StructureElement.Loci.getFirstLocation(e.current.loci, loc);
+          // auth_seq_id  : UniProt coordinate space
+          // label_seq_id : PDB coordinate space
+          const sequencePosition =
+            StructureProperties.residue.label_seq_id(loc);
+          const chain = StructureProperties.chain.auth_asym_id(loc);
+          const auth_comp_id = StructureProperties.atom.auth_comp_id(loc);
+          const atom_label = StructureProperties.atom.label_atom_id(loc);
+
+          const atomInfo = {
+            sequence_position: sequencePosition,
+            chain: chain,
+            auth_comp_id: auth_comp_id,
+            atom_label: atom_label,
+          };
+          detail["atom"] = atomInfo;
+        }
+
         // Send the values through a custom event "molstar-coordinates"
         const event = new CustomEvent("molstar-coordinates", {
-          detail: {
-            x: Number(x),
-            y: Number(y),
-            z: Number(z),
-          },
+          detail: detail,
         });
+
         window.dispatchEvent(event);
       }
       e = undefined;
@@ -1202,6 +1226,75 @@ class HorusMolstar {
     const builder = this.plugin.state.data.build();
     builder.delete(ref);
     builder.commit();
+  }
+
+  // Create a new internal variable to store added representations
+  private addedReprs: Array<any> = [];
+
+  /*
+   * Adds representations to already present structures, if null, adds to all structures
+   * @param {Structure} structure - The structure to add the representation to
+   * @param {String} representation - The representation to apply:
+   *  - "cartoon"
+   * - "ball-and-stick"
+   */
+  async addStructureRepresentation(
+    structure: Structure | null,
+    representation: "cartoon" | "ball-and-stick"
+  ) {
+    let structures = null;
+    if (!structure) {
+      // Get the structures
+      structures = this.structures();
+    } else {
+      structures = [structure];
+    }
+
+    if (!structures) return;
+
+    // Get the builder
+    const builder = this.plugin.builders.structure.representation;
+    const update = this.plugin.build();
+
+    const reprTag = `internal-representation`;
+
+    const snapshot = await this.plugin.canvas3d.camera.getSnapshot();
+
+    // Loop over the structures
+    for (const structure of structures) {
+      // Update the representation
+      const newRepr = builder.buildRepresentation(
+        update,
+        structure.cell,
+        {
+          type: representation,
+        },
+        {
+          tag: reprTag,
+        }
+      );
+      this.addedReprs.push(newRepr);
+    }
+    // await build.commit();
+    await update.commit();
+
+    // Restore the camera
+    this.plugin.canvas3d.requestCameraReset({ snapshot, durationMs: 0 });
+  }
+
+  /*
+   * Removes representations from already present structures, if null, removes from all structures
+   * @param {Structure} structure - The structure to remove the representation from
+   */
+  async deleteStructureRepresentations() {
+    const builder = await this.plugin.state.data.build();
+
+    // Loop over the added reps
+    for (const repr of this.addedReprs) {
+      // Delete the representation if the structure has "-internal-representation"
+      builder.delete(repr);
+    }
+    await builder.commit();
   }
 }
 

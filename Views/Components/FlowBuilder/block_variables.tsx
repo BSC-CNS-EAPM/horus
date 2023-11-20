@@ -703,43 +703,63 @@ function SmilesVariableView(props: VariableSubviewProps) {
 function AtomView(props: VariableSubviewProps) {
   const value = props.variable.value;
 
-  const [atoms, setAtoms] = useState<any[]>([]);
+  const [atom, setAtom] = useState<any>(null);
+  const [active, setActive] = useState(false);
 
-  const loadMolstarAtoms = async () => {
-    const molstar = window.molstar;
-    const atoms = molstar?.getSelectedStructures();
+  const handleAtomClick = (e: CustomEvent) => {
+    const atomInfo = e?.detail?.atom;
 
-    if (!atoms) setAtoms([]);
+    if (!atomInfo) return;
 
-    setAtoms(atoms);
-
-    props.handleChange(atoms, props.variable.id);
+    setAtom(atomInfo);
   };
 
   useEffect(() => {
-    loadMolstarAtoms();
+    if (window.molstar) {
+      window.molstar.plugin.selectionMode = active;
+      // Set the granularity to element
+      window.molstar.plugin.managers.interactivity.setProps({
+        granularity: "element",
+      });
+      // Unselect selected residues
+      window.molstar.plugin.managers.interactivity.lociSelects.deselectAll();
+      if (active) {
+        // Show structures in ball and stick
+        window.molstar.addStructureRepresentation(null, "ball-and-stick");
+      } else {
+        // Show structures in default
+        window.molstar.deleteStructureRepresentations();
+      }
+    }
 
-    // Listen for the molstar-coordinates event
-    window.addEventListener("molstar-coordinates", loadMolstarAtoms);
+    if (active) {
+      window.addEventListener("molstar-coordinates", handleAtomClick);
+    }
 
     return () => {
-      window.removeEventListener("molstar-coordinates", loadMolstarAtoms);
+      window.removeEventListener("molstar-coordinates", handleAtomClick);
     };
-  }, []);
+  }, [active]);
+
+  useEffect(() => {
+    if (value) {
+      setAtom(value);
+    }
+  }, [value]);
 
   return (
     <div
-      onMouseDown={loadMolstarAtoms}
-      className="w-full max-h-28 overflow-auto"
+      onClick={() => setActive(!active)}
+      className={`w-full max-h-28 overflow-auto ${
+        active ? "bg-green-200" : ""
+      }`}
     >
-      {atoms.length === 0 ? (
-        <div className="text-center">No atoms selected</div>
+      {!atom ? (
+        <div className="text-center">Click to select atom</div>
       ) : (
-        atoms.map((atom) => (
-          <div className="text-center">
-            {atom.auth_atom_id} - {atom.sourceIndex} - {atom.structure.name}
-          </div>
-        ))
+        <div className="text-center">
+          {atom.atom_label} - {atom.sequence_position}
+        </div>
       )}
     </div>
   );
