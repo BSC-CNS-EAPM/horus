@@ -343,8 +343,9 @@ class RemotesAPI:
 
             source = os.path.join(container, zipPath)
 
-            container_local = os.path.dirname(destination)  # pylint: disable=invalid-name
-            destination = os.path.join(container_local, zipPath)
+            # container_local = os.path.dirname(destination)  # pylint: disable=invalid-name
+            container_local = destination  # pylint: disable=invalid-name
+            destination = os.path.join(destination, zipPath)
 
             logging.getLogger("Horus").info(
                 "Transferring remote folder %s into %s", source, destination
@@ -363,12 +364,13 @@ class RemotesAPI:
             logging.getLogger("Horus").info("Unzipping local folder %s", destination)
 
             # Unzip the local file
-            with tarfile.open(zipPath, "r:gz") as tar:
+            with tarfile.open(destination, "r:gz") as tar:
+                logging.getLogger("Horus").debug("Extracting to %s", container_local)
                 tar.extractall(path=container_local)
             # os.system(f"cd {container_local} && tar -xzvf {zipPath}")
 
             # Remove the zip file
-            os.system(f"cd {container_local} && rm {zipPath}")
+            os.system(f"cd {container_local} && rm {destination}")
 
             # Change local dir back
             os.system(f"cd {prevLocalDir}")
@@ -640,7 +642,7 @@ class RemotesAPI:
 
         # Get the job status
         status = self.command(f"sacct -j {jobID} -o 'State' --noheader -X")
-        
+
         if status == "":
             status = "PENDING"
         elif "RUNNING" in status:
