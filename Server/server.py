@@ -1369,6 +1369,7 @@ class HorusServer:
             debug=self.debug,
             use_reloader=reloader,
             log_output=self.debug,
+            allow_unsafe_werkzeug=self.debug,
         )
 
     def backgroundRun(self, func: typing.Callable):
