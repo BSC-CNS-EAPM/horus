@@ -1,5 +1,6 @@
 import os
 from HorusAPI import PluginVariable, VariableTypes, InputBlock, TempFile
+from pathvalidate import sanitize_filepath
 
 structureVariable = PluginVariable(
     name="Structure",
@@ -16,6 +17,23 @@ savenameVariable = PluginVariable(
     type=VariableTypes.STRING,
     defaultValue="structure",
 )
+
+
+def sanitizePath(path: str):
+    """
+    Replaces any invalid character in a path
+    """
+
+    path = (
+        path.replace(" ", "_")
+        .replace(":", "_")
+        .replace("/", "_")
+        .replace("\\", "_")
+        .replace("(", "")
+        .replace(")", "")
+    )
+
+    return sanitize_filepath(path, platform="universal", normalize=True)
 
 
 def CIFtoPDB(cifFile: str, pdbFile: str):
@@ -65,6 +83,9 @@ def convertStructureToPDB(structure):
         pdbtmp = TempFile("pdbt.pdb")
         pdbtmp.write(dataStructure)
 
+    # Sanitize the filename
+    filename = sanitizePath(filename)
+
     # Save the data into the file
     with open(filename, "w") as f:
         f.write(pdbtmp.read())
@@ -85,6 +106,7 @@ def saveStructure(block: InputBlock):
         raise Exception("No structure provided.")
 
     if structure is None or structure == "" or hasattr(structure, "get") is False:
+        structure = sanitizePath(structure)
         if os.path.exists(structure):
             print(f"Found existing {structure} file")
             filename = structure

@@ -28,3 +28,4 @@ dependencies:
       - mypy==1.5.1
       - biopython==1.81
       - multiprocess==0.70.15
+      - pathvalidate==3.2.0
