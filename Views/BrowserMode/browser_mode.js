@@ -46,7 +46,7 @@ function BrowserMode() {
   }
 
   const openBrowser = () => {
-    horusGet("/openbmode");
+    horusGet("/api/openbmode");
   };
 
   return (

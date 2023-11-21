@@ -676,12 +676,10 @@ class AppDelegate(metaclass=HorusSingleton):
         # Start the app
         self._startAppMode()
 
-    def openBrowserMode(self):
+    def openURL(self, url: str):
         """
         Opens a browser window to the server link.
         """
-        url = self.tokenize(self.server.baseURL)
-
         # Opens a browser window to the server link
         webbrowser.open(url)
 
