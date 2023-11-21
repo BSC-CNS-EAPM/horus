@@ -206,7 +206,9 @@ class RemotesAPI:
 
             # Return the stdout and stderr as a string
             if process.stdout is not None:
-                return process.stdout.read().decode("utf-8").strip()
+                out = process.stdout.read().decode("utf-8").strip()
+                logging.getLogger("Horus").debug("Local command output: %s", out)
+                return out
             else:
                 return f"Command {command} executed successfully."
 
@@ -226,9 +228,13 @@ class RemotesAPI:
         # If the command failed, raise an exception
         if out.failed:
             raise Exception(out.stderr.strip())  # pylint: disable=broad-exception-raised
+        
+        out = out.stdout.strip()
+        
+        logging.getLogger("Horus").debug("Remote command output: %s", out)
 
         # Return the stdout and stderr as a string
-        return out.stdout.strip()
+        return out
 
     def _internalTransferFrom(self, source: str, destination: str):
         try:
