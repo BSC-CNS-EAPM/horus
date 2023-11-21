@@ -695,14 +695,30 @@ class HorusServer:
         def getBrowserURL():
             return flask.jsonify({"url": self.baseURL})
 
-        @self.server.route("/openbmode", methods=["GET"])
+        @self.server.route("/api/openbmode", methods=["GET"])
         @desktopOnly
         @verifyToken
         def openBrowserMode():
             from App import AppDelegate  # pylint: disable=import-outside-toplevel
 
-            AppDelegate().openBrowserMode()
+            # Tokenize the url
+            url = AppDelegate().tokenize(self.baseURL)
+            AppDelegate().openURL(url)
             return "OK"
+
+        @self.server.route("/api/openURL", methods=["POST"])
+        @desktopOnly
+        @verifyToken
+        def openURL():
+            from App import AppDelegate
+
+            url = request.get_json().get("url", None)
+            if url is None:
+                return flask.jsonify({"ok": False, "msg": "No url provided"})
+
+            AppDelegate().openURL(url)
+
+            return flask.jsonify({"ok": True})
 
         @self.server.route("/about", methods=["GET"])
         @verifyToken
