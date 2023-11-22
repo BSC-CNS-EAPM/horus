@@ -42,7 +42,7 @@ function useServerExplorer(
       openFolder: openFolder,
     });
 
-    const response = await horusPost("/filepicker", header, body);
+    const response = await horusPost("/api/filepicker", header, body);
 
     const data = await response.json();
 
@@ -217,7 +217,7 @@ function useDesktopExplorer(
       extensions: allowedExtensions,
     });
 
-    const postTo = openFolder ? "/openfolder" : "/openfile";
+    const postTo = openFolder ? "/api/openfolder" : "/api/openfile";
 
     const request = await horusPost(postTo, header, body);
 

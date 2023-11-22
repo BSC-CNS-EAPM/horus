@@ -79,7 +79,7 @@ class FlowBuilderController {
    * @returns A promise that resolves to an array of Block objects.
    */
   public async fetchBlocks(): Promise<Array<Block>> {
-    const response = await horusGet("/plugins/list");
+    const response = await horusGet("/api/plugins/list");
 
     const data = await response.json();
 

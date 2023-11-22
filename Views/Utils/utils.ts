@@ -73,7 +73,7 @@ async function openWindow(name, url) {
   const window = JSON.stringify({ name: name, url: url });
 
   // Send a post request to the server to open a window
-  const result = await horusPost("/desktop/openWindow", header, window);
+  const result = await horusPost("/api/desktop/openwindow", header, window);
 
   // Check any error status code
   if (!result.ok) {
@@ -89,7 +89,7 @@ async function openWindow(name, url) {
 
 const fetchDesktop = async () => {
   try {
-    const response = await horusGet("/isDesktop");
+    const response = await horusGet("/api/isdesktop");
     window.isDesktop = await response.json();
   } catch (err) {
     alert(
@@ -116,7 +116,6 @@ export {
   horusGet,
   horusPost,
   getVersion,
-  getForceFields,
   openWindow,
   fetchDesktop,
 };

@@ -556,7 +556,7 @@ class AppDelegate(metaclass=HorusSingleton):
             self.openWindow("About Horus", url=aboutURL)
 
         def settings():
-            settingsURL = self.server.baseURL + "/settingsView"
+            settingsURL = self.server.baseURL + "/settingsview"
             settingsURL = self.tokenize(settingsURL)
             self.openWindow("Settings", url=settingsURL)
 

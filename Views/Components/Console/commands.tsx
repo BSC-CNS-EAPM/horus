@@ -54,7 +54,7 @@ export default function getCommands() {
         };
         const body = JSON.stringify({ command: args.join(" ") });
         try {
-          const response = await horusPost("/desktop/command", header, body);
+          const response = await horusPost("/api/desktop/command", header, body);
           const data = await response.json();
 
           if (data.ok) {

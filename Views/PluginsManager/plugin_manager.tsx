@@ -169,7 +169,7 @@ function InstalledPlugins(props: InstalledPluginsProps) {
         newConfig: newConfig,
       });
 
-      await horusPost("/plugins/config", header, body);
+      await horusPost("/api/plugins/config", header, body);
     };
 
     const handleClose = () => {
@@ -318,7 +318,7 @@ function PluginCard(props: PluginCardProps) {
       Accept: "application/json",
     };
 
-    const response = await horusPost("/plugins/uninstall", headers, body);
+    const response = await horusPost("/api/plugins/uninstall", headers, body);
 
     const data = await response.json();
 
@@ -430,7 +430,7 @@ export function PluginManager() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await horusGet("/plugins/list");
+      const response = await horusGet("/api/plugins/list");
       const data = await response.json();
       setPluginList(data);
       setFilteredPluginList(data);
@@ -500,7 +500,7 @@ export function PluginManager() {
       file: file,
     });
 
-    const response = await horusPost("/plugins/install", header, body);
+    const response = await horusPost("/api/plugins/install", header, body);
     const data = await response.json();
 
     if (!data.ok) {
@@ -518,7 +518,7 @@ export function PluginManager() {
 
   // Open plugins folder
   const openPluginsFolder = async () => {
-    await horusGet("/desktop/appsupportdir");
+    await horusGet("/api/desktop/appsupportdir");
   };
 
   const reloadPlugins = async () => {

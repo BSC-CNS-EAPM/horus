@@ -10,7 +10,7 @@ function About() {
   const [version, setVersion] = useState("0.0.0");
 
   const getVersion = async () => {
-    const response = await horusGet("/about/version");
+    const response = await horusGet("/api/version");
     if (!response.ok) {
       console.log("Error getting version");
       return;

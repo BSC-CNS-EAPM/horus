@@ -245,7 +245,7 @@ const cleanRecents = async () => {
   }
 
   // Emit a save event
-  const response = await horusGet("/cleanRecents");
+  const response = await horusGet("/api/cleanrecents");
 
   if (!response) {
     alert("Error cleaning recents");
@@ -275,7 +275,7 @@ export default function HorusToolbar() {
   const [pluginPages, setPluginPages] = useState([]);
 
   const getPluginPages = async () => {
-    const response = await horusGet("/plugins/listpages");
+    const response = await horusGet("/api/plugins/listpages");
 
     if (!response) {
       return;
@@ -778,7 +778,7 @@ function PredefinedFlowsSearch() {
 
   const getFlows = async () => {
     setFetchingRecents(true);
-    const responsePredefined = await horusGet("/plugins/flows");
+    const responsePredefined = await horusGet("/api/plugins/flows");
 
     if (!responsePredefined) {
       return;
@@ -793,7 +793,7 @@ function PredefinedFlowsSearch() {
 
     setPredefinedFlows(data.flows);
 
-    const recentFlowsResponse = await horusGet("/recentFlows");
+    const recentFlowsResponse = await horusGet("/api/recentflows");
 
     if (!recentFlowsResponse) {
       alert("Error getting recent flows");

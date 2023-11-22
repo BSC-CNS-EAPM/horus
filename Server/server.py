@@ -305,7 +305,9 @@ class HorusServer:
             # ====DISABLE IT FOR NOW ====
             return func
 
-        @self.server.route("/saveflow", methods=["POST"])
+        # API routes
+
+        @self.server.route("/api/saveflow", methods=["POST"])
         @verifyToken
         def createFlow():
             flowData = request.get_json()
@@ -337,7 +339,7 @@ class HorusServer:
                 }
             return flask.jsonify(success)
 
-        @self.server.route("/openflow", methods=["GET"])
+        @self.server.route("/api/openflow", methods=["GET"])
         @verifyToken
         def openFlow():
             try:
@@ -355,7 +357,7 @@ class HorusServer:
                 }
             return flask.jsonify(success)
 
-        @self.server.route("/recentFlows", methods=["GET"])
+        @self.server.route("/api/recentflows", methods=["GET"])
         @verifyToken
         def recentFlows():
             try:
@@ -371,7 +373,7 @@ class HorusServer:
                 }
             return flask.jsonify(success)
 
-        @self.server.route("/cleanRecents", methods=["GET"])
+        @self.server.route("/api/cleanrecents", methods=["GET"])
         @verifyToken
         def cleanRecents():
             try:
@@ -384,7 +386,7 @@ class HorusServer:
                 }
             return flask.jsonify(success)
 
-        @self.server.route("/openRecentFlow", methods=["POST"])
+        @self.server.route("/api/openrecentflow", methods=["POST"])
         @verifyToken
         def openRecentflow():
             try:
@@ -419,16 +421,11 @@ class HorusServer:
                 }
             return flask.jsonify(success)
 
-        @self.server.route("/isDesktop", methods=["GET"])
+        @self.server.route("/api/isdesktop", methods=["GET"])
         def isDesktop():
             return flask.jsonify(self.desktop)
 
-        @self.server.route("/plugins/", methods=["GET"])
-        @desktopOnly
-        def pluginsManager():
-            return flask.render_template("PluginsManager/index.html", shemsu=self.token)
-
-        @self.server.route("/plugins/install", methods=["POST"])
+        @self.server.route("/api/plugins/install", methods=["POST"])
         @desktopOnly
         def installPlugin():
             data = request.get_json()
@@ -448,7 +445,7 @@ class HorusServer:
                 }
             return flask.jsonify(success)
 
-        @self.server.route("/plugins/uninstall", methods=["POST"])
+        @self.server.route("/api/plugins/uninstall", methods=["POST"])
         @desktopOnly
         def uninstallPlugin():
             data = request.get_json()
@@ -471,7 +468,7 @@ class HorusServer:
                 }
             return success
 
-        @self.server.route("/desktop/appsupportdir", methods=["GET"])
+        @self.server.route("/api/desktop/appsupportdir", methods=["GET"])
         @desktopOnly
         def openPluginsFolder():
             from App import AppDelegate  # pylint: disable=import-outside-toplevel
@@ -479,25 +476,25 @@ class HorusServer:
             AppDelegate().openAppSupportDir()
             return "OK"
 
-        @self.server.route("/plugins/list", methods=["GET"])
+        @self.server.route("/api/plugins/list", methods=["GET"])
         @verifyToken
         def listPlugins():
             plugins = self.pluginManager.getPlugins()
             return flask.jsonify(plugins)
 
-        @self.server.route("/plugins/listblocks", methods=["GET"])
+        @self.server.route("/api/plugins/listblocks", methods=["GET"])
         @verifyToken
         def listblocks():
             plugins = self.pluginManager.getBlocks()
             return flask.jsonify(plugins)
 
-        @self.server.route("/plugins/listpages", methods=["GET"])
+        @self.server.route("/api/plugins/listpages", methods=["GET"])
         @verifyToken
         def listpages():
             pages = self.pluginManager.getPages()
             return flask.jsonify(pages)
 
-        @self.server.route("/plugins/executeblock", methods=["POST"])
+        @self.server.route("/api/plugins/executeblock", methods=["POST"])
         @verifyToken
         def executeBlock():
             data = request.get_json()
@@ -541,7 +538,7 @@ class HorusServer:
                 }
             return flask.jsonify(success)
 
-        @self.server.route("/plugins/executeflow", methods=["POST"])
+        @self.server.route("/api/plugins/executeflow", methods=["POST"])
         @verifyToken
         def executeFlow():
             # Get the request data
@@ -570,7 +567,7 @@ class HorusServer:
 
             return flask.jsonify(succsess)
 
-        @self.server.route("/plugins/stopFlow", methods=["POST"])
+        @self.server.route("/api/plugins/stopflow", methods=["POST"])
         @verifyToken
         def stopFlow():
             # Get the flowID from the request
@@ -590,7 +587,7 @@ class HorusServer:
             except Exception as exc:
                 return flask.jsonify({"ok": False, "msg": str(exc)})
 
-        @self.server.route("/plugins/checkRemoteBlock", methods=["POST"])
+        @self.server.route("/api/plugins/checkremoteblock", methods=["POST"])
         @verifyToken
         def checkRemoteBlock():
             # Check if the remote block is still running
@@ -620,7 +617,7 @@ class HorusServer:
 
             return flask.jsonify(success)
 
-        @self.server.route("/plugins/config", methods=["POST"])
+        @self.server.route("/api/plugins/config", methods=["POST"])
         @verifyToken
         def pluginConfig():
             data = request.get_json()
@@ -639,7 +636,7 @@ class HorusServer:
                 }
                 return flask.jsonify(error)
 
-        @self.server.route("/plugins/flows", methods=["GET"])
+        @self.server.route("/api/plugins/flows", methods=["GET"])
         @verifyToken
         def listFlows():
             try:
@@ -658,7 +655,7 @@ class HorusServer:
                 }
             return flask.jsonify(success)
 
-        @self.server.route("/desktop/command", methods=["POST", "GET"])
+        @self.server.route("/api/desktop/command", methods=["POST", "GET"])
         @desktopOnly
         def executeCommand():
             data = request.get_json()
@@ -673,7 +670,7 @@ class HorusServer:
                     "error": str(exc),
                 }
 
-        @self.server.route("/desktop/openWindow", methods=["POST"])
+        @self.server.route("/api/desktop/openwindow", methods=["POST"])
         @desktopOnly
         def openWindow():
             name = request.get_json()["name"]
@@ -684,12 +681,7 @@ class HorusServer:
             AppDelegate().openWindow(name, fullURL)
             return "OK"
 
-        @self.server.route("/bmode", methods=["GET"])
-        @desktopOnly
-        def bmode():
-            return flask.render_template("BrowserMode/index.html")
-
-        @self.server.route("/getbrowserurl", methods=["GET"])
+        @self.server.route("/api/getbrowserurl", methods=["GET"])
         @desktopOnly
         @verifyToken
         def getBrowserURL():
@@ -720,12 +712,7 @@ class HorusServer:
 
             return flask.jsonify({"ok": True})
 
-        @self.server.route("/about", methods=["GET"])
-        @verifyToken
-        def about():
-            return flask.render_template("About/index.html", shemsu=self.token)
-
-        @self.server.route("/about/version", methods=["GET"])
+        @self.server.route("/api/version", methods=["GET"])
         @verifyToken
         def version():
             try:
@@ -743,7 +730,7 @@ class HorusServer:
                 }
             return flask.jsonify(success)
 
-        @self.server.route("/filepicker", methods=["POST"])
+        @self.server.route("/api/filepicker", methods=["POST"])
         @verifyToken
         def filePicker():
             path = request.get_json().get("path", os.getcwd())
@@ -778,7 +765,7 @@ class HorusServer:
 
             return flask.jsonify(success)
 
-        @self.server.route("/openfolder", methods=["GET", "POST"])
+        @self.server.route("/api/openfolder", methods=["GET", "POST"])
         @verifyToken
         def openFolder():
             if self.desktop:
@@ -791,7 +778,7 @@ class HorusServer:
 
             return flask.jsonify({"path": selFolder})
 
-        @self.server.route("/openfile", methods=["GET", "POST"])
+        @self.server.route("/api/openfile", methods=["GET", "POST"])
         @verifyToken
         def openFile():
             extensions = ("All Files (*.*)",)
@@ -817,7 +804,7 @@ class HorusServer:
 
             return flask.jsonify({"path": selFile})
 
-        @self.server.route("/savecontents", methods=["POST"])
+        @self.server.route("/api/savecontents", methods=["POST"])
         @verifyToken
         def saveFile():
             # Get from the request the data to save
@@ -855,17 +842,12 @@ class HorusServer:
                     mimetype="application/octet-stream",
                 )
 
-        @self.server.route("/remotes", methods=["GET"])
-        @desktopOnly
-        def remotes():
-            return flask.render_template("Remotes/index.html")
-
-        @self.server.route("/remotes/list", methods=["GET"])
+        @self.server.route("/api/remotes/list", methods=["GET"])
         @desktopOnly
         def listRemotes():
             return flask.jsonify(self.remoteManager.listRemotes())
 
-        @self.server.route("/remotes/names", methods=["GET"])
+        @self.server.route("/api/remotes/names", methods=["GET"])
         @verifyToken
         def listRemoteNames():
             try:
@@ -884,7 +866,7 @@ class HorusServer:
                 }
             return flask.jsonify(success)
 
-        @self.server.route("/remotes/configure", methods=["POST"])
+        @self.server.route("/api/remotes/configure", methods=["POST"])
         @desktopOnly
         def configureRemote():
             data = request.get_json()
@@ -898,7 +880,7 @@ class HorusServer:
             except Exception as exc:  # pylint: disable=broad-exception-caught
                 return flask.jsonify({"ok": False, "msg": str(exc)})
 
-        @self.server.route("/remotes/delete", methods=["POST"])
+        @self.server.route("/api/remotes/delete", methods=["POST"])
         @desktopOnly
         def deleteRemote():
             data = request.get_json()
@@ -913,11 +895,6 @@ class HorusServer:
                 return flask.jsonify({"ok": True})
             except Exception as exc:  # pylint: disable=broad-exception-caught
                 return flask.jsonify({"ok": False, "msg": str(exc)})
-
-        # SETTINGS
-        @self.server.route("/settingsView")
-        def settingsView():
-            return flask.render_template("Settings/index.html")
 
         @self.server.route("/api/settings", methods=["GET"])
         def settings():
@@ -975,7 +952,7 @@ class HorusServer:
 
                 return flask.jsonify({"ok": True})
 
-        # MAIN
+        # View routes
         @self.server.route("/")
         def index():
             # Get the query string
@@ -987,6 +964,30 @@ class HorusServer:
                     return flask.render_template("Main/index.html", shemsu=shemsu)
 
             return flask.render_template("Main/index.html")
+
+        @self.server.route("/plugins/", methods=["GET"])
+        @desktopOnly
+        def pluginsManager():
+            return flask.render_template("PluginsManager/index.html", shemsu=self.token)
+
+        @self.server.route("/bmode", methods=["GET"])
+        @desktopOnly
+        def bmode():
+            return flask.render_template("BrowserMode/index.html")
+
+        @self.server.route("/about", methods=["GET"])
+        @verifyToken
+        def about():
+            return flask.render_template("About/index.html", shemsu=self.token)
+        
+        @self.server.route("/remotes", methods=["GET"])
+        @desktopOnly
+        def remotes():
+            return flask.render_template("Remotes/index.html")
+        
+        @self.server.route("/settingsview")
+        def settingsView():
+            return flask.render_template("Settings/index.html")
 
         @self.server.after_request
         def addHeader(response):

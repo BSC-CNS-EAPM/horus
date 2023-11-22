@@ -117,7 +117,7 @@ function FlowReciver(props: FlowReciverProps) {
       Accept: "application/json",
     };
 
-    const response = await horusPost("/saveflow", headers, body);
+    const response = await horusPost("/api/saveflow", headers, body);
     var savedFlow = await response.json();
 
     currentSaving.current = false;
@@ -152,7 +152,7 @@ function FlowReciver(props: FlowReciverProps) {
       const overwriteBody = JSON.stringify(overwriteContents);
 
       const overwriteResponse = await horusPost(
-        "/saveflow",
+        "/api/saveflow",
         headers,
         overwriteBody
       );
@@ -296,7 +296,7 @@ function FlowReciver(props: FlowReciverProps) {
     resetRemote: boolean = true
   ): Promise<void> => {
     const response = await horusPost(
-      "/plugins/executeflow",
+      "/api/plugins/executeflow",
       null,
       JSON.stringify({
         flowPath: flowPath.current,
@@ -390,7 +390,7 @@ function FlowReciver(props: FlowReciverProps) {
       flowPath: flowPath.current,
     });
 
-    const response = await horusPost("/plugins/stopFlow", null, body);
+    const response = await horusPost("/api/plugins/stopflow", null, body);
 
     const data = await response.json();
 
@@ -622,11 +622,11 @@ function FlowReciver(props: FlowReciverProps) {
         savedID: openRecent.savedID,
         path: openRecent.path,
       });
-      const response = await horusPost("/openRecentFlow", header, body);
+      const response = await horusPost("/openrecentflow", header, body);
 
       data = await response.json();
     } else {
-      const response = await horusGet("/openflow");
+      const response = await horusGet("/api/openflow");
       data = await response.json();
     }
 
@@ -834,7 +834,7 @@ function FlowReciver(props: FlowReciverProps) {
   };
 
   const fetchRemotes = async () => {
-    const response = await horusGet("/remotes/names");
+    const response = await horusGet("/api/remotes/names");
     const data = await response.json();
 
     if (!data.ok) {

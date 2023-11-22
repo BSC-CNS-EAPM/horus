@@ -207,3 +207,6 @@ AppSupport/queue.json
 
 # Flask sessions
 AppSupport/sessions/
+
+# Bun
+bun.lockb

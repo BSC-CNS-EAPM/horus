@@ -15,7 +15,7 @@ function BrowserMode() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const response = await horusGet("getbrowserurl");
+        const response = await horusGet("/api/getbrowserurl");
         if (!response.ok) {
           setError(true);
           return;

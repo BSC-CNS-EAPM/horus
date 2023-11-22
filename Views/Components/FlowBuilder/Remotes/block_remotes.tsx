@@ -12,7 +12,7 @@ export function BlockRemotes(props: BlockRemotesProps) {
 
   const fetchRemotes = async () => {
     setIsFetchingRemotes(true);
-    const response = await horusGet("/remotes/names");
+    const response = await horusGet("/api/remotes/names");
     const data = await response.json();
 
     if (!data.ok) {

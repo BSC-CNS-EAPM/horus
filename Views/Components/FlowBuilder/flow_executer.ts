@@ -120,7 +120,7 @@ export default class FlowExecuter {
       Accept: "application/json",
     };
 
-    const response = await horusPost("/plugins/executeblock", headers, body);
+    const response = await horusPost("/api/plugins/executeblock", headers, body);
 
     const data: ExecuteResponse = await response.json();
 
@@ -280,7 +280,7 @@ export default class FlowExecuter {
       blockPlacedID: block.placedID,
     });
 
-    const response = await horusPost("/plugins/checkRemoteBlock", header, body);
+    const response = await horusPost("/api/plugins/checkremoteblock", header, body);
 
     const data = await response.json();
 

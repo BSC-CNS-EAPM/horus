@@ -11,7 +11,7 @@ export default function ConfigRemotes() {
   const [remotes, setRemotes] = useState([]);
 
   const getRemotes = async () => {
-    const response = await horusGet("/remotes/list");
+    const response = await horusGet("/api/remotes/list");
 
     const data = await response.json();
 
@@ -110,7 +110,7 @@ function RemoteView(props: RemoteViewProps) {
 
     const body = JSON.stringify(data);
 
-    const response = await horusPost("/remotes/delete", header, body);
+    const response = await horusPost("/api/remotes/delete", header, body);
 
     if (response.ok) {
       alert("Remote deleted successfully");
@@ -198,7 +198,7 @@ function NewRemote(props: NewRemoteProps) {
 
     const body = JSON.stringify(newConfig);
 
-    const response = await horusPost("/remotes/configure", header, body);
+    const response = await horusPost("/api/remotes/configure", header, body);
 
     const data = await response.json();
 
@@ -212,7 +212,7 @@ function NewRemote(props: NewRemoteProps) {
   };
 
   const openFilePicker = async () => {
-    const result = await horusGet("/openfile");
+    const result = await horusGet("/api/openfile");
 
     const data = await result.json();
 
