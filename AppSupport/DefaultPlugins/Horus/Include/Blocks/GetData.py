@@ -1,23 +1,26 @@
-from HorusAPI import PluginVariable, PluginBlock, VariableTypes
+"""
+Get data block
+"""
+
 import os
+from HorusAPI import PluginVariable, PluginBlock, VariableTypes
 
 
 # Create a block that adds a given pdb to Mol*
 def getData(block: PluginBlock):
+    """
+    Retrieve data from the remote to the local machine.
+    """
     inputPathValue = block.inputs.get("path", None)
     destinationPathValue = block.variables.get("destinationPath", os.getcwd())
 
-    if destinationPathValue == "":
+    if destinationPathValue == "" or destinationPathValue is None:
         destinationPathValue = os.getcwd()
 
     if inputPathValue is None:
         raise Exception("No path provided.")
 
     print(f"Getting data from {inputPathValue} to {destinationPathValue}")
-
-    folderName = os.path.basename(inputPathValue)
-
-    finalPath = os.path.join(destinationPathValue, folderName)
 
     if not os.path.exists(destinationPathValue):
         os.makedirs(destinationPathValue)
@@ -38,7 +41,7 @@ inputPath = PluginVariable(
 destinationPath = PluginVariable(
     name="Destination path",
     id="destinationPath",
-    description="The path in the local machine to save the data to. (Default to current directory)",
+    description="The path to save the data to. (Default to current directory)",
     type=VariableTypes.STRING,
 )
 

@@ -622,7 +622,7 @@ function FlowReciver(props: FlowReciverProps) {
         savedID: openRecent.savedID,
         path: openRecent.path,
       });
-      const response = await horusPost("/openrecentflow", header, body);
+      const response = await horusPost("/api/openrecentflow", header, body);
 
       data = await response.json();
     } else {
