@@ -12,16 +12,11 @@ type HorusPlugin = {
 enum PluginVariableTypes {
   ANY = "any",
   STRING = "string",
-  INTEGER = "integer",
-  FLOAT = "float",
+  NUMBER = "number",
   BOOLEAN = "boolean",
   STRING_LIST = "string[]",
-  INTEGER_LIST = "integer[]",
-  FLOAT_LIST = "float[]",
-  BOOLEAN_LIST = "boolean[]",
-  LIST = "list",
-  INT_RANGE = "[integer, integer]",
-  FLOAT_RANGE = "[float, float]",
+  NUMBER_LIST = "number[]",
+  NUMBER_RANGE = "[number, number, number]",
   FILE = "file",
   FOLDER = "folder",
   STRUCTURE = "structure",
@@ -32,9 +27,8 @@ enum PluginVariableTypes {
   SPHERE = "sphere",
   SMILES = "smiles",
   GROUP = "group",
+  LIST = "list",
   _LIST = "_list",
-  // STRING_ARRAY = "string[]",
-  // NUMBER_RANGE = "[number, number]"
 }
 
 type PluginVariable = {

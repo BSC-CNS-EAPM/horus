@@ -14,6 +14,10 @@ import Xarrow from "react-xarrows";
 import { SphereRef } from "../Molstar/HorusWrapper/horusmolstar";
 import { Color } from "molstar/lib/mol-util/color";
 
+// Components
+import Slider from "rc-slider";
+import "rc-slider/assets/index.css";
+
 type PluginVariableViewProps = {
   variable: PluginVariable;
   onChange: (value: any, id: string, groupID?: string) => void;
@@ -258,15 +262,7 @@ const PluginVariableView = (props: PluginVariableViewProps) => {
           />
         )}
 
-        {props.variable.type === PluginVariableTypes.INTEGER && (
-          <input
-            type="number"
-            value={value as number}
-            onChange={(e) => handleChange(e.target.value as any)}
-          />
-        )}
-
-        {props.variable.type === PluginVariableTypes.FLOAT && (
+        {props.variable.type === PluginVariableTypes.NUMBER && (
           <input
             type="number"
             value={value as number}
@@ -299,7 +295,7 @@ const PluginVariableView = (props: PluginVariableViewProps) => {
         )}
 
         {/* If its a list of integers, set a dropdown */}
-        {props.variable.type === PluginVariableTypes.INTEGER_LIST && (
+        {props.variable.type === PluginVariableTypes.NUMBER_LIST && (
           <select
             value={value as number}
             onChange={(e) => handleChange(e.target.value as any)}
@@ -312,36 +308,12 @@ const PluginVariableView = (props: PluginVariableViewProps) => {
           </select>
         )}
 
-        {/* If its a list of floats, set a dropdown */}
-        {props.variable.type === PluginVariableTypes.FLOAT_LIST && (
-          <select
-            value={value as number}
-            onChange={(e) => handleChange(e.target.value as any)}
-          >
-            {(props.variable.allowedValues as number[])?.map((value, index) => (
-              <option key={index} value={value}>
-                {value}
-              </option>
-            ))}
-          </select>
-        )}
-
-        {/* If its a list of booleans, set radio items*/}
-        {props.variable.type === PluginVariableTypes.BOOLEAN_LIST && (
-          <div className="flex flex-row">
-            {(props.variable.allowedValues as boolean[])?.map(
-              (value, index) => (
-                <div key={index} className="flex flex-row items-center">
-                  <input
-                    type="radio"
-                    checked={value === (value as boolean)}
-                    onChange={(e) => handleChange(value as any)}
-                  />
-                  <div className="ml-2">{value}</div>
-                </div>
-              )
-            )}
-          </div>
+        {/* If its a NUMBER_RANGE, set a slider */}
+        {props.variable.type === PluginVariableTypes.NUMBER_RANGE && (
+          <SliderVariableView
+            variable={props.variable}
+            onChange={handleChange}
+          />
         )}
 
         {/* If its a editable string list, set a table with editable rows */}
@@ -448,6 +420,46 @@ const PluginVariableView = (props: PluginVariableViewProps) => {
     </div>
   );
 };
+
+type VariableViewProps = {
+  variable: PluginVariable;
+  onChange: (value: any) => void;
+};
+
+function SliderVariableView(props: VariableViewProps) {
+  const { variable, onChange } = props;
+
+  const min = variable.allowedValues[0] ?? 0;
+  const max = variable.allowedValues[1] ?? 10;
+  const step = variable.allowedValues[2] ?? 1;
+
+  let value = variable.value;
+
+  if (value === null || value === undefined) {
+    value = min;
+    onChange(value);
+  }
+
+  if (value < min) {
+    value = min;
+  } else if (value > max) {
+    value = max;
+  }
+
+  return (
+    <div className="flex flex-row gap-2 p-2" data-testid="slider-container">
+      <Slider
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={onChange}
+        dots
+      />
+      {variable.value}
+    </div>
+  );
+}
 
 type FilePickerViewProps = {
   variable?: PluginVariable;

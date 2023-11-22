@@ -55,6 +55,9 @@ function isInteractiveElement(element: Element | null) {
     "rect",
   ];
 
+  console.log("element is", element);
+  console.log("element tag name is", element?.tagName);
+
   if (
     element?.tagName &&
     interactiveElements.includes(element.tagName.toLowerCase())

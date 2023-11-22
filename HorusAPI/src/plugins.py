@@ -164,18 +164,11 @@ class VariableTypes(str, Enum):
     Will render as a text input.
     """
 
-    INTEGER = "integer"
+    NUMBER = "number"
     """
-    A regular integer like 1, 2, 3...
+    A number like 1, 2.5, 3.1415...
 
-    Will render as a text input.
-    """
-
-    FLOAT = "float"
-    """
-    A regular float like 1.0, 2.0, 3.0...
-
-    Will render as a text input.
+    Will render as a number input with increment/decrement buttons.
     """
 
     BOOLEAN = "boolean"
@@ -192,39 +185,22 @@ class VariableTypes(str, Enum):
     Will render as a dropdown.
     """
 
-    INTEGER_LIST = "integer[]"
+    NUMBER_LIST = "number[]"
     """
-    A list of integers like [1, 2, 3].
+    A list of numbers like [1, 2.4, 3.1415].
 
     Will render as a dropdown.
     """
 
-    FLOAT_LIST = "float[]"
+    NUMBER_RANGE = "[number, number, number]"
     """
-    A list of floats like [1.0, 2.0, 3.0].
-
-    Will render as a dropdown.
-    """
-
-    BOOLEAN_LIST = "boolean[]"
-    """
-    A list of booleans like [True, False].
-
-    Will render as a radio items buttons.
-    """
-
-    INT_RANGE = "[integer, integer]"
-    """
-    A range of integers like 1-10.
+    A range of numbers like 1-10.
 
     Will render as a slider.
-    """
-
-    FLOAT_RANGE = "[float, float]"
-    """
-    A range of floats like 1.0-10.0.
-
-    Will render as a slider.
+    Use allowedValues to define: [min, max, step].
+    - The first number in the list is the minimum value.
+    - The second number in the list is the maximum value.
+    - The third number in the list is the step.
     """
 
     FILE = "file"
