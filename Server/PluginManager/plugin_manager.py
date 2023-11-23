@@ -672,6 +672,7 @@ class PluginManager:
             info["views"] = str(len(p.views))
             info["id"] = p.id
             info["blocks"] = self._getBlocksFromList(p, p.blocks)
+            info["config"] = p._configToDict()  # pylint: disable=protected-access
             listedPlugins.append(info)
         for ep in self.errorPlugins:
             info = ep.info
@@ -789,12 +790,18 @@ class PluginManager:
         # Set the inputs
         block._updateInputs(inputs)  # pylint: disable=protected-access
 
+        # Get the plugin
+        plugin = self._getPluginByID(blockID.split(".")[0])
+
         # Read the config file for the block
-        configPath = self._blockConfigPath(block)
+        configPath = self._pluginConfigPath(plugin)
 
         if os.path.exists(configPath):
-            # Set the config to execute the block
-            block._updateConfigs(configPath)  # pylint: disable=protected-access
+            # Set the plugin config to execute the block
+            plugin._updateConfigs(configPath)  # pylint: disable=protected-access
+
+            # Set the block config to execute the block
+            block.config = plugin.config
 
         # Set the working dir to run python from
         os.chdir(os.path.dirname(workingDir))
@@ -862,15 +869,18 @@ class PluginManager:
 
         logging.getLogger("Horus").info("Executing block %s", block.id)
 
-        # Read the config file for the block
-        configPath = self._blockConfigPath(block)
-
-        if os.path.exists(configPath):
-            # Set the config to execute the block
-            block._updateConfigs(configPath)  # pylint: disable=protected-access
-
         # Find the plugin
         plugin = self._getPluginByID(block.id.split(".")[0])
+
+        # Read the config file for the block
+        configPath = self._pluginConfigPath(plugin)
+
+        if os.path.exists(configPath):
+            # Set the plugin config to execute the block
+            plugin._updateConfigs(configPath)  # pylint: disable=protected-access
+
+            # Set the block config to execute the block
+            block.config = plugin.config
 
         # Add to the python path the dependencies folder of the plugin
         # self._includeDepsPath(plugin._path)  # pylint: disable=protected-access
@@ -963,47 +973,33 @@ class PluginManager:
 
     def _initConfig(self, plugin: Plugin):
         """
-        Initializes the config file for the blocks of the plugin.
+        Initializes the config file for the plugins.
         """
 
-        # allBlocks = self._blocksPlusSubBlocks(plugin)
-        def initBlockConfig(block: PluginBlock):
-            """
-            Initializes the config file for a block.
-            """
-            # Get the path of the config file
-            configPath = self._blockConfigPath(block)
+        configPath = self._pluginConfigPath(plugin)
 
-            # If the config file does not exist, create it
-            if not os.path.exists(configPath):
-                block._createConfig(configPath)
-            else:
-                # If the config file exists, read it
-                block._updateConfigs(configPath)
+        # If the config file does not exist, create it
+        if not os.path.exists(configPath):
+            plugin._createConfig(configPath)
+        else:
+            # If the config file exists, read it
+            plugin._updateConfigs(configPath)
 
-        # Loop through all the blocks
-        for block in plugin.blocks:
-            initBlockConfig(block)
-
-            # # Loop through the subblocks
-            # for subBlock in block.getSubBlocks():
-            #     initBlockConfig(subBlock)
-
-    def _blockConfigPath(self, block: PluginBlock):
+    def _pluginConfigPath(self, plugin: Plugin):
         """
-        Returns the path of the config file for a block.
+        Returns the path of the config file for a plugin.
         """
 
-        # Find the plugin folder
-        pluginID = block.id.split(".")[0]
-        plugin = self._getPluginByID(pluginID)
+        # # Find the plugin folder
+        # pluginID = block.id.split(".")[0]
+        # plugin = self._getPluginByID(pluginID)
 
         configDir = os.path.join(plugin._path, "config")
 
         # Find the block config file
-        blockConfigFile = os.path.join(configDir, f"{block.id}.json")
+        pluginConfigFile = os.path.join(configDir, f"{plugin.id}.json")
 
-        return blockConfigFile
+        return pluginConfigFile
 
     def saveConfig(self, config: typing.Dict[str, typing.Any]):
         """
@@ -1020,16 +1016,13 @@ class PluginManager:
             # Get the plugin and the block
             pluginID = configId.split(".")[0]
             plugin = self._getPluginByID(pluginID)
-            blockID = ".".join(configId.split(".")[:-2])
-            if "config" in blockID.split("."):
-                blockID = ".".join(blockID.split(".")[:-1])
-            block = plugin.getBlock(blockID)
+            # blockID = ".".join(configId.split(".")[:-2])
+            # if "config" in blockID.split("."):
+            # blockID = ".".join(blockID.split(".")[:-1])
+            # block = plugin.getBlock(blockID)
 
             # Get the path of the config file
-            configDir = os.path.join(plugin._path, "config")
-
-            # Find the block config file
-            blockConfigFile = os.path.join(configDir, f"{block.id}.json")
+            configDir = self._pluginConfigPath(plugin)
 
             valuesToSave = {}
             for variable in config["variables"]:
@@ -1042,11 +1035,11 @@ class PluginManager:
                     valuesToSave[variable["id"]] = variable["value"]
 
             # Save the config
-            block._saveConfig(blockConfigFile, valuesToSave)
+            plugin._saveConfig(configDir, valuesToSave)
 
             # Execute the config block
-            pluginConfigID = blockID + ".config." + configId.split(".")[-1]
-            configBlock = block._getConfig(pluginConfigID)
+            pluginConfigID = plugin.id + ".config." + configId.split(".")[-1]
+            configBlock = plugin._getConfig(pluginConfigID)
 
             with io.StringIO() as buf, redirect_stdout(buf), redirect_stderr(buf):  # type: ignore
                 # Execute the config block

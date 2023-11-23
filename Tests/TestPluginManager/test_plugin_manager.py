@@ -277,3 +277,107 @@ def test_install_dep_internal_frozen_app(mocker):
 
     # Verify that subprocess.Popen was called exactly twice
     assert subprocess.Popen.call_count == 2  # type: ignore
+
+
+# Create a mock plugin file
+pluginDir = "Tests/TestPluginManager/Plugins/"
+
+
+# Test the PluginConfigs
+def test_myplugin_load(pluginManager):
+    plugin = pluginManager._checkPlugin(pluginDir)
+
+    # Check that the plugin is valid
+    assert plugin is not None
+    assert isinstance(plugin, Plugin)
+    assert plugin.info["name"] == "Plugin TEST"
+    assert plugin.info["version"] == "0.0.1"
+    assert plugin.info["author"] == "Test"
+    assert plugin.info["description"] == "This is a test plugin"
+    assert plugin.info["dependencies"] == []
+
+    # Check that the comparison operators work
+    assert plugin == plugin
+
+    # Check the blocks of the plugin
+    assert len(plugin.blocks) == 1
+
+    # Check the variables of the block
+    for block in plugin.blocks:
+        assert len(block.variables) == 1
+        assert block._variables[0].id == "myVariable"
+        assert block._variables[0].name == "My Variable"
+        assert block._variables[0].description == "My variable description."
+        assert block._variables[0].type.value == "string"
+        assert block._variables[0].defaultValue == "DEFAULTVALUE"
+
+        assert block.variables["myVariable"] == "DEFAULTVALUE"
+
+
+def test_myplugin_config_init(pluginManager):
+    plugin = pluginManager._checkPlugin(pluginDir)
+
+    # Check the configs of the plugin
+    assert len(plugin.config) == 1
+    assert "myVariable" in plugin.config
+
+    # Check the variables of the config
+    assert plugin.config["myVariable"] == "DEFAULTVALUE"
+
+def test_myplugin_config_assign_to_block(pluginManager):
+    plugin = pluginManager._checkPlugin(pluginDir)
+
+    # Assign the config to the block
+    block = plugin.blocks[0]
+
+    block.config = plugin.config
+
+    assert block.config["myVariable"] == "DEFAULTVALUE"
+
+
+def test_myplugin_config_update(pluginManager):
+    plugin = pluginManager._checkPlugin(pluginDir)
+
+    configPath = pluginManager._pluginConfigPath(plugin)
+
+    plugin._updateConfigs(configPath)
+
+
+def test_myplugin_saveconfig(pluginManager):
+    # Load the test plugin
+    pluginManager._loadPlugin(pluginDir)
+
+    configBlock = pluginManager._getPluginByID("myplugin")._getConfig(
+        "myplugin.config.configblock"
+    )
+
+    configBlock._updateVariables({"myVariable": "newConfig"})
+
+    newConfig = {"newConfig": [configBlock._toDict()]}
+
+    pluginManager.saveConfig(newConfig)
+
+    # Reload the plugin
+    pluginManager._loadPlugin(pluginDir)
+
+    configBlock = pluginManager._getPluginByID("myplugin")._getConfig(
+        "myplugin.config.configblock"
+    )
+
+    assert configBlock.variables["myVariable"] == "newConfig"
+
+    # Reset the config
+    configBlock._updateVariables({"myVariable": "DEFAULTVALUE"})
+
+    newConfig = {"newConfig": [configBlock._toDict()]}
+
+    pluginManager.saveConfig(newConfig)
+
+    # Reload the plugin
+    pluginManager._loadPlugin(pluginDir)
+
+    configBlock = pluginManager._getPluginByID("myplugin")._getConfig(
+        "myplugin.config.configblock"
+    )
+
+    assert configBlock.variables["myVariable"] == "DEFAULTVALUE"

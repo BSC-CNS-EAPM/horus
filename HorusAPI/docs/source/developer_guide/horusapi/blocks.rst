@@ -52,7 +52,7 @@ different kind of variables: :bdg-secondary-line:`Variables`, :bdg-secondary-lin
         inputFilePath = block.inputs["fileID"]
 
         # Accessing config value
-        configValue = block.configs["configID"]
+        configValue = block.config["configID"]
 
         print(inputStringValue)
 
@@ -254,7 +254,7 @@ Then, the config can be accessed like the variables in the :bdg-secondary-line:`
 
 .. code-block:: python
 
-    myConfigValue = block.configs["myConfigID"]
+    myConfigValue = block.config["myConfigID"]
 
 Adding Blocks to a Plugin
 =========================

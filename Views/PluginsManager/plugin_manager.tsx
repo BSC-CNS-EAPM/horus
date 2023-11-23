@@ -97,10 +97,8 @@ function InstalledPlugins(props: InstalledPluginsProps) {
     let newConfigBlocks: Block[] = [];
 
     // Loop through the blocks and subBlocks and store the ones that have config
-    for (let i = 0; i < plugin.blocks.length; i++) {
-      if (plugin.blocks[i].config.length > 0) {
-        newConfigBlocks = [...newConfigBlocks, ...plugin.blocks[i].config];
-      }
+    for (let i = 0; i < plugin.config.length; i++) {
+      newConfigBlocks = [...newConfigBlocks, plugin.config[i]];
     }
     const handleModifyConfig = (value: any, id: string, groupID?: string) => {
       const changeID = groupID ? groupID : id;
@@ -211,7 +209,7 @@ function InstalledPlugins(props: InstalledPluginsProps) {
         </div>
       ),
       show: true,
-      size: "sm",
+      size: "xl",
     });
   };
 

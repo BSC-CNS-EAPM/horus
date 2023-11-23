@@ -1,4 +1,4 @@
-from HorusAPI import Plugin, PluginBlock, PluginVariable, VariableTypes, PluginPage
+from HorusAPI import Plugin, PluginBlock, PluginVariable, VariableTypes, PluginPage, PluginConfig
 
 
 plugin = Plugin(id="myplugin")
@@ -20,7 +20,7 @@ myVariable = PluginVariable(
     name="My Variable",
     description="My variable description.",
     type=VariableTypes.STRING,
-    defaultValue="",
+    defaultValue="DEFAULTVALUE",
 )
 
 myBlock = PluginBlock(
@@ -33,9 +33,18 @@ myBlock = PluginBlock(
 plugin.addBlock(myBlock)
 
 myPage = PluginPage(
+    id="myPage",
     name="My Page",
     description="My page description.",
     html="index.html",
 )
-
 plugin.addPage(myPage)
+
+configBlock = PluginConfig(
+    name="configblock",
+    description="My config block description.",
+    variables=[myVariable],
+)
+
+plugin.addConfig(configBlock)
+

@@ -833,13 +833,6 @@ class PluginBlock:
         for ig in inputGroups:
             self._inputGroups[ig.id] = ig
 
-        self._configs: typing.List[PluginConfig] = []
-        """
-        Configs that can be used to configure the block.
-
-        Allowed type: PluginConfig
-        """
-
         if blockType not in (PluginBlockTypes):
             raise Exception(  # pylint: disable=broad-exception-raised
                 f"Invalid block type {blockType}. Allowed types: {PluginBlockTypes}"
@@ -908,8 +901,9 @@ class PluginBlock:
         """
         return self._variables
 
+    @classmethod
     def _parseVariablesForBlockAccess(
-        self, variable: PluginVariable
+        cls, variable: PluginVariable
     ) -> typing.Union[typing.Any, dict[str, typing.Any]]:
         if isinstance(variable, VariableGroup):
             return {var.id: var.value for var in variable.variables}
@@ -978,102 +972,6 @@ class PluginBlock:
                 return
         raise Exception(f"Output {id} not found.")
 
-    def _getConfig(self, id: str):
-        """
-        Returns a config by its ID.
-
-        :param id: The ID of the config.
-        """
-        for config in self._configs:
-            if config.id == id:
-                return config
-        raise Exception(f"Config {id} not found.")
-
-    def _getConfigs(self):
-        return self._configs
-
-    @property
-    def configs(self):
-        """
-        A dictionary with the configs of the block
-        """
-        configsDict: dict[str, typing.Any] = {}
-        for config in self._configs:
-            for var in config._getVariables():
-                configsDict[var.id] = self._parseVariablesForBlockAccess(var)
-        return configsDict
-
-    def addConfig(self, config: PluginConfig):
-        """
-        Adds a PluginConfig to the plugin.
-        """
-
-        # If the attribute is a PluginConfig, add it to the list
-        # Only add the config if it is not already in the list
-        if isinstance(config, PluginConfig):
-            config.id = f"{self.id}.{config.name}".replace(" ", "_").lower()
-            try:
-                self._getConfig(config.id)
-            except Exception:
-                self._configs.append(config)
-
-    def _updateConfigs(self, configPath: str):
-        """
-        Updates the values of the configs of the block.
-        From the config JSON file.
-        """
-
-        # Read the config file
-        with open(configPath, "r", encoding="utf-8") as configFile:
-            configs = json.load(configFile)
-
-        # Update the values of the configs
-        for config in self._configs:
-            for var in config._getVariables():
-                if var.id in configs.keys():
-                    if isinstance(var, VariableGroup):
-                        var._updateVariablesInGroup(configs[var.id])
-                    else:
-                        var.value = configs[var.id]
-
-    def _createConfig(self, configPath: str):
-        """
-        Creates the config file for the block.
-        """
-        # Create the config file only if the block has configs
-
-        if len(self._configs) > 0:
-            # Create the config file
-            logging.getLogger("Horus").debug(
-                "Creating config file for block %s at %s", self.name, configPath
-            )
-            with open(configPath, "w", encoding="utf-8") as configFile:
-                configs = {}
-                for config in self._configs:
-                    configs[config.id] = config.variables
-                json.dump(self.configs, configFile, indent=4)
-
-    def _saveConfig(self, configPath: str, valuesToSave: dict[str, str]):
-        """
-        Saves the config file for the block with new values.
-        """
-        # Save the config file only if the block has configs
-        if len(self._configs) > 0:
-            # Read the existing config file
-            with open(configPath, "r", encoding="utf-8") as configFile:
-                configs = json.load(configFile)
-
-            # Update the values to save
-            for key, value in valuesToSave.items():
-                configs[key] = value
-
-            # Write the updated config file
-            with open(configPath, "w", encoding="utf-8") as configFile:
-                json.dump(configs, configFile, indent=4)
-
-        # Update the values of the configs
-        self._updateConfigs(configPath)
-
     def _connectionsToDict(self, references: bool = False):
         """
         Converts the connections of the block to a dictionary.
@@ -1100,7 +998,7 @@ class PluginBlock:
             "variables": self._variablesToDict(self._variables),
             "inputs": self._inputGroupsToDict(self._inputGroups),
             "outputs": self._variablesToDict(self._outputs),
-            "config": self._configToDict(),
+            # "config": self._configToDict(),
             "type": str(self.TYPE),
             "position": {"x": self._position[0], "y": self._position[1]},
             "isPlaced": self._isPlaced,
@@ -1134,12 +1032,6 @@ class PluginBlock:
         for k, v in inputGroups.items():
             inputGroupsList.append(v.toDict())
         return inputGroupsList
-
-    def _configToDict(self):
-        configList: list[dict[str, typing.Any]] = []
-        for c in self._getConfigs():
-            configList.append(c._toDict())
-        return configList
 
     def _cleanRun(self):
         # Clean internal variables related to the execution
@@ -1311,6 +1203,11 @@ class PluginBlock:
 
         return blockDict
 
+    config: typing.Optional[dict] = None
+    """
+    The configuration of the plugin that hosts this block.
+    """
+
 
 class PluginConfig(PluginBlock):
     """
@@ -1318,7 +1215,7 @@ class PluginConfig(PluginBlock):
     the plugin. It is not meant to be used in the pipeline. It works as a regular
     PluginBlock but it is shown only in the configuration page of the plugin.
     Its variables will be stored once set, and can be accessed by the Block actions
-    using the block.configs["variable_id"] syntax.
+    using the block.config["variable_id"] syntax.
     """
 
     def __init__(  # pylint: disable=dangerous-default-value
@@ -1612,6 +1509,13 @@ class Plugin:
         Allowed type: PluginPage
         """
 
+        self._configs: typing.List[PluginConfig] = []
+        """
+        Configs that can be used to configure the block.
+
+        Allowed type: PluginConfig
+        """
+
         # Set the id of the plugin
         self.id = id.lower().replace(" ", "_")
 
@@ -1682,12 +1586,10 @@ class Plugin:
         if isinstance(block, PluginBlock) and not isinstance(block, PluginConfig):
             block.id = f"{self.id}.{block.name}".replace(" ", "_").lower()
             try:
+                # If the block does not exist, an exception will be raised
                 self.getBlock(block.id)
             except Exception:
-                # Assign to the configs in the block the ID
-                for config in block._getConfigs():
-                    config.id = f"{block.id}.config.{config.name}".replace(" ", "_").lower()
-
+                # Add the block to the list of blocks if it is not found
                 self._blocks.append(block)
 
     def _addBlocks(self):
@@ -1791,3 +1693,109 @@ class Plugin:
                 flows.append(flowInfo)
 
         return flows
+
+    def _getConfig(self, id: str):
+        """
+        Returns a config by its ID.
+
+        :param id: The ID of the config.
+        """
+        for config in self._configs:
+            if config.id == id:
+                return config
+        raise Exception(f"Config {id} not found.")
+
+    def _getConfigs(self):
+        return self._configs
+
+    @property
+    def config(self):
+        """
+        A dictionary with the configs of the block
+        """
+        configsDict: dict[str, typing.Any] = {}
+        for config in self._configs:
+            for var in config._getVariables():
+                configsDict[var.id] = PluginBlock._parseVariablesForBlockAccess(var)
+        return configsDict
+
+    def addConfig(self, config: PluginConfig):
+        """
+        Adds a PluginConfig to the plugin.
+        """
+
+        # If the attribute is a PluginConfig, add it to the list
+        # Only add the config if it is not already in the list
+        if isinstance(config, PluginConfig):
+            config.id = f"{self.id}.config.{config.name}".replace(" ", "_").lower()
+            try:
+                self._getConfig(config.id)
+            except Exception:
+                self._configs.append(config)
+
+                # Assign to the configs in the block the ID
+                # for config in block._getConfigs():
+                #     config.id = f"{block.id}.config.{config.name}".replace(" ", "_").lower()
+
+    def _updateConfigs(self, configPath: str):
+        """
+        Updates the values of the configs of the block.
+        From the config JSON file.
+        """
+
+        # Read the config file
+        with open(configPath, "r", encoding="utf-8") as configFile:
+            configs = json.load(configFile)
+
+        # Update the values of the configs
+        for config in self._configs:
+            for var in config._getVariables():
+                if var.id in configs.keys():
+                    if isinstance(var, VariableGroup):
+                        var._updateVariablesInGroup(configs[var.id])
+                    else:
+                        var.value = configs[var.id]
+
+    def _createConfig(self, configPath: str):
+        """
+        Creates the config file for the block.
+        """
+        # Create the config file only if the block has configs
+
+        if len(self._configs) > 0:
+            # Create the config file
+            logging.getLogger("Horus").debug(
+                "Creating config file for plugin %s at %s", self.id, configPath
+            )
+            with open(configPath, "w", encoding="utf-8") as configFile:
+                configs = {}
+                for config in self._configs:
+                    configs[config.id] = config.variables
+                json.dump(self.config, configFile, indent=4)
+
+    def _saveConfig(self, configPath: str, valuesToSave: dict[str, str]):
+        """
+        Saves the config file for the block with new values.
+        """
+        # Save the config file only if the block has configs
+        if len(self._configs) > 0:
+            # Read the existing config file
+            with open(configPath, "r", encoding="utf-8") as configFile:
+                configs = json.load(configFile)
+
+            # Update the values to save
+            for key, value in valuesToSave.items():
+                configs[key] = value
+
+            # Write the updated config file
+            with open(configPath, "w", encoding="utf-8") as configFile:
+                json.dump(configs, configFile, indent=4)
+
+        # Update the values of the configs
+        self._updateConfigs(configPath)
+
+    def _configToDict(self):
+        configList: list[dict[str, typing.Any]] = []
+        for c in self._getConfigs():
+            configList.append(c._toDict())
+        return configList

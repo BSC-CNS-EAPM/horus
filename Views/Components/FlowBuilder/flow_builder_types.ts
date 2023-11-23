@@ -6,6 +6,7 @@ type HorusPlugin = {
   author: string;
   dependencies: Array<string>;
   blocks: Array<Block>;
+  config: Array<Block>;
   default: boolean;
 };
 
@@ -74,8 +75,9 @@ type Block = {
   outputs: Array<PluginVariable>;
   selectedInputGroup: string;
 
+  // DEPRECATED AND CHANGED FOR PLUGIN CONFIG
   // Block config
-  config: Array<Block>;
+  // config: Array<Block>;
 
   // Block state
   isPlaced: boolean;

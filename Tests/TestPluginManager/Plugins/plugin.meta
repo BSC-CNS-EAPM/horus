@@ -1,0 +1,8 @@
+{
+  "name": "Plugin TEST",
+  "description": "This is a test plugin",
+  "version": "0.0.1",
+  "author": "Test",
+  "pluginFile": "test_plugin.py",
+  "dependencies": []
+}
