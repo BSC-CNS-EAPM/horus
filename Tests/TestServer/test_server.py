@@ -1,5 +1,9 @@
 import pytest
 from Server import HorusServer
+from multiprocess import Process  # type: ignore pylint: disable=no-name-in-module
+import requests
+import time
+import sys
 
 
 @pytest.fixture
@@ -200,3 +204,91 @@ def test_checkToken():
     # Test token verification for an invalid token
     invalid_token = "invalid_token"
     assert server.tokenManager.checkToken(invalid_token, test_string) is False
+
+
+def test_run_server_mode_production():
+    server = HorusServer(desktop=False, debug=False)
+
+    # Define a function to run the test
+    def run_test():
+        # Call the run method with reloader set to False
+        server.run(reloader=False)
+
+    # Create a new thread and start it
+    process = Process(target=run_test)
+    process.start()
+
+    # Wait for the server to start
+    time.sleep(1)
+
+    # Check that the server is running
+    requests.get(server.baseURL, timeout=1)
+
+    # Wait for the process to finish
+    process.kill()
+
+
+def test_run_server_mode_debug():
+    server = HorusServer(desktop=False, debug=True)
+
+    # Define a function to run the test
+    def run_test():
+        # Call the run method with reloader set to False
+        server.run(reloader=False)
+
+    # Create a new thread and start it
+    process = Process(target=run_test)
+    process.start()
+
+    # Wait for the server to start
+    time.sleep(1)
+
+    # Check that the server is running
+    requests.get(server.baseURL, timeout=1)
+
+    # Wait for the process to finish
+    process.kill()
+
+
+def test_run_app_mode_debug():
+    server = HorusServer(desktop=True, debug=True)
+
+    # Define a function to run the test
+    def run_test():
+        # Call the run method with reloader set to False
+        server.run(reloader=False)
+
+    # Create a new thread and start it
+    process = Process(target=run_test)
+    process.start()
+
+    # Wait for the server to start
+    time.sleep(1)
+
+    # Check that the server is running
+    requests.get(server.baseURL, timeout=1)
+
+    # Wait for the process to finish
+    process.kill()
+
+
+def test_run_app_mode_production():
+    server = HorusServer(desktop=True, debug=False)
+
+    # Define a function to run the test
+    def run_test():
+        # Call the run method with reloader set to False
+        server.run(reloader=False)
+
+    # Create a new thread and start it
+    process = Process(target=run_test)
+    process.start()
+
+    # Wait for the server to start
+    time.sleep(1)
+
+    # Check that the server is running
+    requests.get(server.baseURL, timeout=1)
+
+    # Wait for the process to finish
+    process.kill()

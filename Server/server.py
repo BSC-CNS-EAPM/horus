@@ -1378,17 +1378,21 @@ class HorusServer:
         if not self.desktop:
             print("Running server mode at: " + self.baseURL)
 
-        # Start the server
-        self.socketio.run(
-            self.server,
-            host=self.host,
-            port=self.port,
-            debug=self.debug,
-            use_reloader=reloader,
-            log_output=self.debug,
-            allow_unsafe_werkzeug=self.debug,
-        )
+        # Define the arguments for socketio.run
+        runArgs = {
+            "host": self.host,
+            "port": self.port,
+            "debug": self.debug,
+            "use_reloader": reloader,
+            "log_output": self.debug,
+        }
 
+        # Add allow_unsafe_werkzeug argument if in debug mode
+        if self.debug:
+            runArgs["allow_unsafe_werkzeug"] = self.debug
+
+        # Start the server
+        self.socketio.run(self.server, **runArgs)
     def backgroundRun(self, func: typing.Callable):
         """
         Runs the given function in a background process. This function requires
