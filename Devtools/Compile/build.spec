@@ -88,7 +88,15 @@ datas = [
 ]
 
 # Required modules
-imports = ["webview", "flask", "requests", "fabric", "flask_session", "multiprocess"]
+imports = [
+    "webview",
+    "flask",
+    "requests",
+    "fabric",
+    "flask_session",
+    "multiprocess",
+    "pathvalidate",
+]
 
 # Add all the submodules required by flask_socketio
 imports += [
