@@ -647,7 +647,8 @@ class AppDelegate(metaclass=HorusSingleton):
             windowOptions.height = 800
 
         if self.debugURL is not None:
-            homeURL = f"{self.server.baseURL}/{self.debugURL}"
+            # homeURL = f"{self.server.baseURL}/{self.debugURL}"
+            homeURL = self.debugURL
 
         homeURL = self.tokenize(homeURL)
 

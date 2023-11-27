@@ -241,6 +241,8 @@ const PluginVariableView = (props: PluginVariableViewProps) => {
     );
   }
 
+  const isSafari = /^((?!chrome|android).)*applewebkit/i.test(navigator.userAgent) && !/chrome/i.test(navigator.userAgent);
+
   return (
     <div className={props.applyStyle === false ? null : "plugin-variable"}>
       {!hideName && (
@@ -283,11 +285,7 @@ const PluginVariableView = (props: PluginVariableViewProps) => {
         {props.variable.type === PluginVariableTypes.BOOLEAN && (
           <input
             // If its safari, set a margin for the checkbox of 50%
-            className={
-              /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
-                ? "plugin-variable-safari"
-                : ""
-            }
+            className={isSafari ? "plugin-variable-safari" : ""}
             type="checkbox"
             checked={value as boolean}
             onChange={(e) => handleChange(e.target.checked as any)}
