@@ -13,8 +13,13 @@ import { SearchComponent } from "../Toolbar/toolbar";
 // Socket.io to fetch new blocks
 import { socket } from "../../Utils/socket";
 
+// Horus settings
+import { horusGetSettings } from "../../Utils/utils";
+import { horusGet } from "../../Utils/utils";
+
 // CSS
 import "./block.css";
+import NBDButton from "../nbdbutton";
 
 type BlockListViewProps = {
   flowBuilderController: FlowBuilderController;
@@ -30,6 +35,7 @@ function BlockListView({ flowBuilderController }: BlockListViewProps) {
   const blockList = useRef<Array<Block>>([]);
   const [filteredBlocks, setFilteredBlocks] = useState<Array<Block>>([]);
   const [loadingBlocks, setLoadingBlocks] = useState<boolean>(true);
+  const [developmentMode, setDevelopmentMode] = useState<boolean>(false);
 
   // Fetch the blocks from the server api
   const fetchBlocks = async () => {
@@ -39,6 +45,11 @@ function BlockListView({ flowBuilderController }: BlockListViewProps) {
 
     blockList.current = fetchedBlocks;
     setFilteredBlocks(fetchedBlocks);
+
+    // Set the development mode
+    const devMode = await horusGetSettings("developmentMode");
+
+    setDevelopmentMode(devMode?.value || false);
 
     setLoadingBlocks(false);
   };
@@ -100,7 +111,19 @@ function BlockListView({ flowBuilderController }: BlockListViewProps) {
   // Render
   return (
     <div className="block-sidebar">
-      <div className="flow-title">Blocks</div>
+      <div className="flex flex-row items-center justify-between">
+        <div className="flow-title">Blocks</div>
+        {developmentMode && (
+          <NBDButton
+            action={async () => {
+              await horusGet("/api/plugins/reload");
+              fetchBlocks();
+            }}
+          >
+            Reload
+          </NBDButton>
+        )}
+      </div>
       <SearchComponent
         placeholder="Search blocks..."
         onChange={(event) => filterBlocks(event.target.value)}

@@ -262,11 +262,20 @@ const PluginVariableView = (props: PluginVariableViewProps) => {
           />
         )}
 
-        {props.variable.type === PluginVariableTypes.NUMBER && (
+        {/* {props.variable.type === PluginVariableTypes.NUMBER && (
           <input
             type="number"
             value={value as number}
             onChange={(e) => handleChange(e.target.value as any)}
+          />
+        )} */}
+
+        {(props.variable.type === PluginVariableTypes.INTEGER ||
+          props.variable.type === PluginVariableTypes.FLOAT ||
+          props.variable.type === PluginVariableTypes.NUMBER) && (
+          <IntegerFloatVariableView
+            variable={props.variable}
+            onChange={handleChange}
           />
         )}
 
@@ -425,6 +434,70 @@ type VariableViewProps = {
   variable: PluginVariable;
   onChange: (value: any) => void;
 };
+
+function IntegerFloatVariableView(props: VariableViewProps) {
+  const { variable, onChange } = props;
+
+  const [numberMessage, setNumberMessage] = useState<string | null>(null);
+
+  const parseNum = (value: string) => {
+    if (value === "") {
+      setNumberMessage(null);
+      return value;
+    }
+
+    const parsedValue = Number(value);
+
+    if (isNaN(parsedValue)) {
+      setNumberMessage(`The value must be a number`);
+    } else {
+      setNumberMessage(null);
+    }
+
+    if (variable.type === PluginVariableTypes.INTEGER) {
+      const rounded = Math.round(parsedValue);
+      if (isNaN(rounded)) {
+        setNumberMessage(`The value must be an integer`);
+        return value;
+      } else {
+        return rounded;
+      }
+    } else {
+      return value;
+    }
+  };
+
+  const parseInsideAllowedValues = (value: any) => {
+    // If the allowedValues contains the value, return it
+    if (variable.allowedValues?.includes(value)) {
+      setNumberMessage(null);
+    } else {
+      // If the value is not in the allowedValues, return the allowedValues
+      if (variable.allowedValues) {
+        setNumberMessage(
+          `The value must be one of the following: ${variable.allowedValues.join(
+            ", "
+          )}`
+        );
+      }
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-2 p-2 justify-center text-center items-center">
+      {numberMessage && <div className="text-red-500">{numberMessage}</div>}
+      <input
+        className="plugin-variable-value"
+        value={variable.value}
+        onChange={(e) => {
+          const value = parseNum(e.target.value);
+          parseInsideAllowedValues(value);
+          onChange(value);
+        }}
+      />
+    </div>
+  );
+}
 
 function SliderVariableView(props: VariableViewProps) {
   const { variable, onChange } = props;

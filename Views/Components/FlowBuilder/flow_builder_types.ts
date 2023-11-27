@@ -14,6 +14,8 @@ enum PluginVariableTypes {
   ANY = "any",
   STRING = "string",
   NUMBER = "number",
+  INTEGER = "integer",
+  FLOAT = "float",
   BOOLEAN = "boolean",
   STRING_LIST = "string[]",
   NUMBER_LIST = "number[]",

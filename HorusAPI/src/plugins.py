@@ -171,6 +171,20 @@ class VariableTypes(str, Enum):
     Will render as a number input with increment/decrement buttons.
     """
 
+    INTEGER = "integer"
+    """
+    An integer number like 1, 2, 3...
+
+    Will render as a number input with increment/decrement buttons. Accepts only integers.
+    """
+    
+    FLOAT = "float"
+    """
+    A floating point number like 1.0, 2.5, 3.1415...
+
+    Will render as a number input with increment/decrement buttons. Accepts only floats.
+    """
+
     BOOLEAN = "boolean"
     """
     A boolean value. True or False.
@@ -195,6 +209,8 @@ class VariableTypes(str, Enum):
     NUMBER_RANGE = "[number, number, number]"
     """
     A range of numbers like 1-10.
+
+    Can be made an Integer range or a Float range depending on the step.
 
     Will render as a slider.
     Use allowedValues to define: [min, max, step].
