@@ -235,27 +235,6 @@ and downloads the result after the job is finished:
         outputs=[outputFile],
     )
 
-Configurations
-==============
-
-You can add permanent variables to :bdg-secondary-line:`Block`. These variables are available for
-modification under the Plugin's configuration button. The :bdg-secondary-line:`PluginConfig` class 
-is just a subclass of :bdg-secondary-line:`PluginBlock`, so you can define also an action to be performed
-when the configuration is modified.
-
-Instantiate your PluginConfig as a regular :bdg-secondary-line:`PluginBlock` and then add it to the :bdg-secondary-line:`Block` using the
-.addConfig() method.
-
-.. code-block:: python
-
-    myBlockThatNeedsConfig.addConfig(myConfig)
-
-Then, the config can be accessed like the variables in the :bdg-secondary-line:`Block`'s action:
-
-.. code-block:: python
-
-    myConfigValue = block.config["myConfigID"]
-
 Adding Blocks to a Plugin
 =========================
 
@@ -265,4 +244,28 @@ Once you have defined several :bdg-secondary-line:`Block`, you can add them to y
 .. code-block:: python
 
     plugin.addBlock(myBlock)
+
+Configurations
+==============
+
+You can add permanent variables to :bdg-secondary-line:`Block`. These variables are available for
+modification under the Plugin configuration button and once defined, will have the same value on every run. 
+
+The :bdg-secondary-line:`PluginConfig` class 
+is just a subclass of :bdg-secondary-line:`PluginBlock`, so you can define also an action which
+will be executed every time the configuration is modified. This can be used for configuration validation.
+
+Instantiate the :bdg-secondary-line:`PluginConfig` and then add it to the :bdg-secondary-line:`Plugin` instance using the
+.addConfig() method.
+
+.. code-block:: python
+
+    plugin.addConfig(myConfig)
+
+Then, the config can be accessed like the variables in the :bdg-secondary-line:`Block`'s action:
+
+.. code-block:: python
+
+    myConfigValue = block.config["myConfigID"]
+
 
