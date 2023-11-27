@@ -404,8 +404,6 @@
   }
 }
 
-.plugin-variable-value input[type="checkbox"] {
-  text-align: center;
-  margin: auto;
-  width: 1rem;
+.plugin-variable-safari {
+  margin-left: 50%;
 }
