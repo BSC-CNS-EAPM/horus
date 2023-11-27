@@ -133,6 +133,80 @@ function InputRunningSpinner(props: { isRunning: boolean }) {
   }
 }
 
+type GroupedVariablesViewProps = {
+  block: Block;
+  handleChange: (value: any, id: string, groupID?: string) => void;
+  category: string;
+  filteredVariables: Array<any>;
+};
+
+function GroupedVariablesView(props: GroupedVariablesViewProps) {
+  const { block, handleChange, category, filteredVariables } = props;
+
+  const [showVariables, setShowVariables] = useState(false);
+
+  const variablesOnCategory = filteredVariables.filter((variable) => {
+    return variable.category === category;
+  });
+
+  const chevron = (
+    <div
+      className={`cursor-pointer transition-all transform ${
+        showVariables ? null : "rotate-180"
+      }`}
+      onClick={() => {
+        setShowVariables(!showVariables);
+      }}
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        strokeWidth={1.5}
+        stroke="currentColor"
+        className="w-6 h-6"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M19.5 8.25l-7.5 7.5-7.5-7.5"
+        />
+      </svg>
+    </div>
+  );
+
+  return (
+    <div>
+      <div className="flex flex-row justify-between p-2 border-2 rounded-2xl bg-gray-100 mb-2">
+        {category}
+        {chevron}
+      </div>
+      {showVariables && (
+        <div
+          className="p-2 border-2 rounded-2xl bg-gray-100 transition-opacity transform mb-2"
+          style={{ opacity: showVariables ? 1 : 0 }}
+        >
+          {variablesOnCategory.map((variable, index) => (
+            <PluginVariableView
+              key={
+                variable.id +
+                "-" +
+                index +
+                "-" +
+                block.id +
+                "-" +
+                block.placedID
+              }
+              variable={variable}
+              onChange={handleChange}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 type VariableModalViewProps = {
   block: Block;
   handleChange: (value: any, id: string, groupID?: string) => void;
@@ -163,6 +237,26 @@ function VariableModalView(props: VariableModalViewProps) {
     (inputGroup) => inputGroup.id === block.selectedInputGroup
   );
 
+  const uniqueCategories = () => {
+    const categories = filteredVariables.map((variable) => variable.category);
+    return categories.filter(
+      (category, index) => categories.indexOf(category) === index
+    );
+  };
+
+  const variablesView = () => {
+    return uniqueCategories().map((category) => {
+      return (
+        <GroupedVariablesView
+          category={category}
+          block={block}
+          handleChange={handleChange}
+          filteredVariables={filteredVariables}
+        />
+      );
+    });
+  };
+
   return (
     <div>
       <div className="flex flex-row w-full justify-between pi-2">
@@ -171,6 +265,8 @@ function VariableModalView(props: VariableModalViewProps) {
           <NBDButton action={props.handleClose}>Save</NBDButton>
         )}
       </div>
+      <hr></hr>
+
       {block.variables && block.variables.length > 0 && (
         <div>
           <div className="flex flex-row justify-between">
@@ -180,26 +276,10 @@ function VariableModalView(props: VariableModalViewProps) {
               onChange={filterVariables}
             />
           </div>
-          <div>
-            {filteredVariables.map((variable, index) => (
-              <PluginVariableView
-                key={
-                  variable.id +
-                  "-" +
-                  index +
-                  "-" +
-                  block.id +
-                  "-" +
-                  block.placedID
-                }
-                variable={variable}
-                onChange={handleChange}
-              />
-            ))}
-          </div>
+          <div>{variablesView()}</div>
         </div>
       )}
-      {block.inputs && (
+      {block.inputs && block.inputs.length > 0 && (
         <div>
           <h4>Inputs</h4>
           <hr></hr>
@@ -621,7 +701,10 @@ function DraggableBlockView(props: DraggableBlockViewProps) {
       className={block.isPlaced ? "absolute" : "relative"}
     >
       <BlockView block={block} settings={props.settings} />
-      {block.isPlaced && variablesConnectorView()}
+      {block.isPlaced &&
+        block.inputs &&
+        block.inputs.length > 0 &&
+        variablesConnectorView()}
     </div>
   );
 }

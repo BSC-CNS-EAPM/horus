@@ -43,6 +43,7 @@ type PluginVariable = {
   placedID: number;
   allowedValues: Array<any>;
   defaultValue: any;
+  category: string;
 
   // For GroupVariable
   variables?: Array<PluginVariable>;

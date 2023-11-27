@@ -177,7 +177,7 @@ class VariableTypes(str, Enum):
 
     Will render as a number input with increment/decrement buttons. Accepts only integers.
     """
-    
+
     FLOAT = "float"
     """
     A floating point number like 1.0, 2.5, 3.1415...
@@ -376,6 +376,7 @@ class PluginVariable:
         type: VariableTypes,
         defaultValue: typing.Optional[typing.Any] = None,
         allowedValues: typing.Optional[typing.List[typing.Any]] = None,
+        category: typing.Optional[str] = None,
     ):
         """
         :param name: The name of the variable.
@@ -399,6 +400,8 @@ class PluginVariable:
                 + f"(While loading variable ID: {id}, name: {name}, description: {description})"
             )
 
+        # Assign a default category if none is provided
+        self.category = category if category else "General"
         self.defaultValue = defaultValue
         self.value = defaultValue
         self.id = id
@@ -419,6 +422,7 @@ class PluginVariable:
             varDict = {
                 "name": self.name,
                 "id": self.id,
+                "category": self.category,
                 "description": self.description,
                 "type": str(self.type),
                 "value": self.value if self.value else self.defaultValue,
@@ -448,6 +452,7 @@ class VariableGroup(PluginVariable):
         description: str,
         variables: typing.List[PluginVariable],
         allowedValues: typing.Optional[typing.List[typing.Any]] = None,
+        category: typing.Optional[str] = None,
     ) -> None:
         """
         Initialize a VariableGroup
@@ -472,6 +477,7 @@ class VariableGroup(PluginVariable):
             type=VariableTypes._GROUP,
             defaultValue=None,
             allowedValues=allowedValues,
+            category=category,
         )
 
     def toDict(self, minimal: bool = False):
@@ -483,16 +489,17 @@ class VariableGroup(PluginVariable):
             groupDict = {
                 "id": self.id,
                 "variables": [var.toDict(minimal) for var in self.variables],
-                "type": self.type,
+                "type": str(self.type),
             }
         else:
             groupDict = {
                 "id": self.id,
                 "name": self.name,
-                "type": self.type,
+                "type": str(self.type),
                 "description": self.description,
                 "variables": [var.toDict(minimal) for var in self.variables],
                 "allowedValues": self.allowedValues,
+                "category": self.category,
             }
 
         return groupDict
@@ -519,6 +526,7 @@ class VariableList(PluginVariable):
         description: str,
         prototypes: typing.List[PluginVariable],
         allowedValues: typing.Optional[typing.List[typing.Any]] = None,
+        category: typing.Optional[str] = None,
     ):
         """
         :param id: The ID of the variable.
@@ -536,6 +544,7 @@ class VariableList(PluginVariable):
             type=VariableTypes._LIST,
             defaultValue=None,
             allowedValues=allowedValues,
+            category=category,
         )
 
         # prototypes cannot be VariableGroups
@@ -561,17 +570,18 @@ class VariableList(PluginVariable):
                 "id": self.id,
                 "variables": [var.toDict(minimal) for var in self.prototypes],
                 "value": self.value if self.value else None,
-                "type": self.type,
+                "type": str(self.type),
             }
         else:
             listDict = {
                 "id": self.id,
                 "name": self.name,
-                "type": self.type,
+                "type": str(self.type),
                 "value": self.value if self.value else None,
                 "description": self.description,
                 "variables": [var.toDict(minimal) for var in self.prototypes],
                 "allowedValues": self.allowedValues,
+                "category": self.category,
             }
 
         return listDict
@@ -820,7 +830,7 @@ class PluginBlock:
                 "A block can only have inputs or input groups, not both."
             )
 
-        if len(inputs) >= 0 and len(inputGroups) == 0:
+        if len(inputs) > 0 and len(inputGroups) == 0:
             inputGroups = [VariableGroup("default", "Default", "The default input group", inputs)]
 
         for group in inputGroups:
