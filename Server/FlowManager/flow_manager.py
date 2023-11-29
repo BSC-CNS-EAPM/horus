@@ -17,6 +17,9 @@ from enum import Enum
 # Socket to send the flow status
 from flask_socketio import SocketIO
 
+# Development import only
+import cython
+
 # Blocks from Horus
 from HorusAPI import PluginBlock as Block, SlurmBlock
 
@@ -25,6 +28,10 @@ from Server.PluginManager import PrintCapturer, PluginManager
 
 # The remote manager
 from Server.RemotesManager import RemotesManager
+
+# Internal, development types
+if not cython.compiled:
+    from HorusAPI.src.plugins import BlockConnection  # pylint: disable=ungrouped-imports
 
 
 class LoopException(Exception):
@@ -450,7 +457,9 @@ class Flow:
     _socket: typing.Optional[SocketIO] = None
     _pluginManager: typing.Optional[PluginManager] = None
 
-    def _runPreviousBlocks(self, placedID: int, resetRemoteBlock: bool = False):
+    def _runPreviousBlocks(
+        self, placedID: int, resetRemoteBlock: bool = False, comesFromCyclic: bool = False
+    ):
         """
         Executes iteratively the blocks of the flow
         """
@@ -477,12 +486,21 @@ class Flow:
 
         # If the block is already executed, return its outputs.
         # Except for when we are ressetting the flow run
-        if blockToRun._finishedExecution and not resetRemoteBlock:
+        if blockToRun._finishedExecution and not resetRemoteBlock:  # and not comesFromCyclic
             return blockToRun.outputs
+
+        # Execute the regular inputs before the cyclic ones
+        # This is to avoid cyclic connections to be executed before the regular ones
+        runOrder: typing.List[BlockConnection] = []
+        for previousConnection in blockToRun._variableConnections:
+            if previousConnection.isCyclic:
+                runOrder.append(previousConnection)
+            else:
+                runOrder.insert(0, previousConnection)
 
         # If the block has input connections, execute first those blocks
         inputs = {}
-        for connection in blockToRun._variableConnections:
+        for connection in runOrder:
             # Find the block that is connected to a variable of the block selected to run
             variableBlock = self.findBlockByPlacedID(connection.origin.blockPlacedID)
 
@@ -495,10 +513,35 @@ class Flow:
                     "The block does not have a valid placedID"
                 )
 
+            # If its a cyclic connection, verify that the non-cyclic block has been executed
+            if connection.isCyclic and comesFromCyclic:
+                # Increment the current cycle of the connection
+                connection.currentCycle += 1
+
+                if connection.currentCycle > connection.cycles:
+                    raise BlocksException(
+                        blockToRun, "Exceded the maximum number of cycles for this connection."
+                    )
+
+                # blockToRun._runError = True
+                # blockToRun._runErrorMessage = "Cyclic connection detected"
+                # blockToRun._isRunning = False
+                # blockToRun._finishedExecution = True
+                # self.currentExecuting = None
+                # raise Exception(  # pylint: disable=broad-exception-raised
+                #     "Cyclic connection detected"
+                # )
+
+            if connection.isCyclic and not comesFromCyclic:
+                continue
+
+            if not connection.isCyclic and comesFromCyclic:
+                continue
+
             # Execute the block that provides the variable by calling recursively this method
             # This ensures that if the variable is provided by another block that also requires
             # an input variable, the blocks will be executed in the correct order
-            outputs = self._runPreviousBlocks(variablePlacedID, resetRemoteBlock)
+            outputs = self._runPreviousBlocks(variablePlacedID, resetRemoteBlock, comesFromCyclic)
 
             # If we have connected a variable to an input, the outputs should exist
             # This is only for the whole outputs dictionary itself, as the inidvidual
@@ -573,9 +616,7 @@ class Flow:
                 blockToRun._isRunning = False
                 blockToRun._finishedExecution = True
                 self.currentExecuting = None
-                raise ErrorRunningBlock(
-                    blockToRun, blockToRun._runErrorMessage
-                )
+                raise ErrorRunningBlock(blockToRun, blockToRun._runErrorMessage)
 
             # Once the block has been executed, call again the execution
             # of this block to execute the finalAction
@@ -620,7 +661,32 @@ class Flow:
 
         blockToRun = self.findBlockByPlacedID(placedID)
 
+        # Find first the cyclic connections to run them first
+        runOrder: typing.List[BlockConnection] = []
         for nextConnection in blockToRun._variableConnectionsReferences:
+            # Find the variableConnection that matches the reference
+            destinationBlock = self.findBlockByPlacedID(nextConnection.destination.blockPlacedID)
+
+            # Find the variableConnection that matches the reference
+            realConnection: typing.Optional[BlockConnection] = None
+            for destConn in destinationBlock._variableConnections:
+                if (
+                    destConn.destination.variableID == nextConnection.destination.variableID
+                    and destConn.origin.blockPlacedID == placedID
+                ):
+                    realConnection = destConn
+                    break
+
+            if realConnection is None:
+                raise BlocksException(blockToRun, "The reference of a variable is not valid.")
+
+            if realConnection.isCyclic:
+                runOrder.insert(0, realConnection)
+            else:
+                runOrder.append(realConnection)
+
+        _currentCycle = 0
+        for nextConnection in runOrder:
             nextBlock = self.findBlockByPlacedID(nextConnection.destination.blockPlacedID)
 
             nextPlacedID = nextBlock._placedID
@@ -630,7 +696,37 @@ class Flow:
                     "The block does not have a valid placedID"
                 )
 
-            self._runPreviousBlocks(nextPlacedID, resetRemoteBlock)
+            # If the connection is cyclic, run the cyclic blocks
+            if nextConnection.isCyclic:
+                # If the cycles are completed, exit the function
+                if nextConnection.currentCycle >= nextConnection.cycles:
+                    return
+
+                # Because we are going to run the next block,
+                # we need to reset it to re-compute the outputs
+                # instead of using the cached ones
+                nextBlock._cleanRun(cleanCycles=False)
+
+                # Store the current cycle outside the for loop to keep track when
+                # to run the next blocks
+                _currentCycle = nextConnection.currentCycle
+
+                # Run the previous blocks of the block and the block itself to which the variable is connected)
+                self._runPreviousBlocks(nextPlacedID, resetRemoteBlock, comesFromCyclic=True)
+            else:
+                # Check if the current block has any cyclic connections
+                # If it has, make sure that the cyclic connections have been executed
+                # before starting to execute the next blocks. This is to avoid
+                # executing the following multiple times the next blocks each time a
+                # cycle is done
+                for conn in runOrder:
+                    if conn.isCyclic and _currentCycle != 0:
+                        return
+                    
+                nextBlock._cleanRun(cleanCycles=False)
+
+                self._runPreviousBlocks(nextPlacedID, resetRemoteBlock)
+
             self._runNextBlocks(nextPlacedID, resetRemoteBlock)
 
     def run(
@@ -692,7 +788,9 @@ class Flow:
                 except StoppedFlowException as stopped:
                     print(stopped.message)
                     self.status = self.FlowStatus.STOPPED
-
+                except Exception as exc:  # pylint: disable=broad-exception-raised
+                    print(f"Error running flow: {exc}")
+                    self.status = self.FlowStatus.ERROR
                 finally:
                     # Save the flow
                     self.write()

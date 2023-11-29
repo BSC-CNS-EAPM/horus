@@ -658,12 +658,14 @@ class BlockConnection:
         origin: BlockVarPair,
         destination: BlockVarPair,
         isCyclic: bool,
-        cycles: int = 0,
+        cycles: int = 1,
+        currentCycle: int = 0,
     ):
         self.origin = origin
         self.destination = destination
         self.isCyclic = isCyclic
         self.cycles = cycles
+        self.currentCycle = currentCycle
 
     def _toDict(self):
         """
@@ -675,6 +677,7 @@ class BlockConnection:
             "destination": (self.destination._toDict()),  # pylint: disable=protected-access
             "isCyclic": self.isCyclic,
             "cycles": self.cycles,
+            "currentCycle": self.currentCycle,
         }
 
         return connectionDict
@@ -1059,12 +1062,17 @@ class PluginBlock:
             inputGroupsList.append(v.toDict())
         return inputGroupsList
 
-    def _cleanRun(self):
+    def _cleanRun(self, cleanCycles: bool = True):
         # Clean internal variables related to the execution
         self._finishedExecution = False
         self._runError = False
         self._runErrorMessage = ""
         self._isRunning = False
+
+        # Reset the cycles count on the connections
+        if cleanCycles:
+            for connection in self._variableConnections:
+                connection.currentCycle = 0
 
     _isOriginal = True
     """
@@ -1134,7 +1142,8 @@ class PluginBlock:
             origin = connection.get("origin", None)
             destination = connection.get("destination", None)
             isCyclic = connection.get("isCyclic", False)
-            cycles = connection.get("cycles", 0)
+            cycles = connection.get("cycles", 1)
+            currentCycle = connection.get("currentCycle", 0)
 
             if origin is None or destination is None:
                 raise Exception("Invalid flow object.")  # pylint: disable=broad-exception-raised
@@ -1151,7 +1160,7 @@ class PluginBlock:
                 destinationPlacedID, destinationBlockID, destinationVariableID
             )
 
-            return BlockConnection(originPair, destinationPair, isCyclic, cycles)
+            return BlockConnection(originPair, destinationPair, isCyclic, cycles, currentCycle)
 
         # Parse the variableConnections
         parsedVariableConnections: typing.List[BlockConnection] = []

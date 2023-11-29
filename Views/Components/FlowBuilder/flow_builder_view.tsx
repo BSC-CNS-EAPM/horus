@@ -52,6 +52,7 @@ function FlowBuilderView() {
           unconnectVariables={flowBuilderState.unconnectVariables}
           isConnecting={flowBuilderState.isConnecting}
           tryingToConnect={flowBuilderState.tryingToConnect}
+          updateCyclesCount={flowBuilderState.updateCyclesCount}
         />
       </div>
       <DragOverlay dropAnimation={null}>

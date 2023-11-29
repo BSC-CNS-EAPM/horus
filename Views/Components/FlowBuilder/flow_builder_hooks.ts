@@ -414,6 +414,50 @@ const useFlowBuilder = () => {
     setSaved(false);
   };
 
+  const updateCyclesCount = (destination: BlockVarPair, cycles: number) => {
+    // Get the destination block
+    const destinationBlock = placedBlocks.find((b) => {
+      return b.placedID === destination.placedID;
+    });
+
+    // Get the connection that is cyclic
+    const connection = destinationBlock.variableConnections.find((vc) => {
+      return (
+        vc.destination.variableID === destination.variableID && vc.isCyclic
+      );
+    });
+
+    // Update the cycles
+    const newConnection = {
+      ...connection,
+      cycles: cycles,
+      currentCycle: 0,
+    };
+
+    // Update the state
+    setPlacedBlocks((blocks: Array<Block>) => {
+      return blocks.map((b: Block) => {
+        if (b.placedID === destinationBlock.placedID) {
+          return {
+            ...b,
+            variableConnections: b.variableConnections.map((vc) => {
+              if (
+                vc.destination.variableID === destination.variableID &&
+                vc.isCyclic
+              ) {
+                return newConnection;
+              }
+              return vc;
+            }),
+          };
+        }
+        return b;
+      });
+    });
+
+    setSaved(false);
+  };
+
   const unconnectVariables = (connection: {
     origin: BlockVarPair;
     destination: BlockVarPair;
@@ -541,6 +585,48 @@ const useFlowBuilder = () => {
     });
   }
 
+  function checkCyclicFlow(origin: Block, destination: Block) {
+    // Loop over the destination block connections
+    // if the origin block is found, there is a cycle
+
+    // If one of the connections is already cyclic, exit early to
+    // prevent infinite loops
+    if (
+      destination.variableConnections.find((vc) => {
+        return vc.isCyclic;
+      })
+    ) {
+      return false;
+    }
+
+    // Check that the destination block has connections
+    if (!destination.variableConnectionsReference) {
+      return false;
+    }
+
+    const nextBlocks = destination.variableConnectionsReference.map((vc) => {
+      return vc.destination.placedID;
+    });
+
+    if (nextBlocks.includes(origin.placedID)) {
+      return true;
+    }
+
+    // Check the next blocks
+    for (const nextBlock of nextBlocks) {
+      if (
+        checkCyclicFlow(
+          origin,
+          placedBlocks.find((b) => b.placedID === nextBlock)
+        )
+      ) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   function connectVars(origin: BlockVarPair, destination: BlockVarPair) {
     // Prevent connecting to the same block
     if (origin.placedID === destination.placedID) {
@@ -567,9 +653,24 @@ const useFlowBuilder = () => {
     }
 
     // Check if its the second connection to the same variable
-    const cyclic = !!destinationBlock.variableConnections.find((vc) => {
-      return vc.destination.variableID === destination.variableID;
-    });
+    // const cyclic = !!destinationBlock.variableConnections.find((vc) => {
+    //   return vc.destination.variableID === destination.variableID;
+    // });
+
+    const cyclic = checkCyclicFlow(originBlock, destinationBlock);
+
+    // If its not cyclic, and the destination variable is already connected
+    // to another variable, we don't allow the connection
+    if (
+      !cyclic &&
+      destinationBlock.variableConnections.find((vc) => {
+        return (
+          vc.destination.variableID === destination.variableID && !vc.isCyclic
+        );
+      })
+    ) {
+      return;
+    }
 
     // Set the variableConnections to the overBlock
     // Create a new block with the new connection
@@ -581,7 +682,8 @@ const useFlowBuilder = () => {
           origin: origin,
           destination: destination,
           isCyclic: cyclic,
-          cycles: 0,
+          cycles: 1,
+          currentCycle: 0,
         },
       ],
     };
@@ -594,6 +696,9 @@ const useFlowBuilder = () => {
         {
           origin: origin,
           destination: destination,
+          isCyclic: cyclic,
+          cycles: 1,
+          currentCycle: 0,
         },
       ],
     };
@@ -654,6 +759,7 @@ const useFlowBuilder = () => {
     dndTweaks,
     unconnectBlocks,
     unconnectVariables,
+    updateCyclesCount,
     isConnecting,
     tryingToConnect,
     // handleBlockDragOver,

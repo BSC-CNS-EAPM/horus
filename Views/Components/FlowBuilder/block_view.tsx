@@ -698,7 +698,7 @@ function DraggableBlockView(props: DraggableBlockViewProps) {
       style={style}
       {...listeners}
       {...attributes}
-      className={block.isPlaced ? "absolute" : "relative"}
+      className={block.isPlaced ? "absolute z-1" : "relative"}
     >
       <BlockView block={block} settings={props.settings} />
       {block.isPlaced &&

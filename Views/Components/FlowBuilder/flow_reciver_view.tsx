@@ -50,6 +50,7 @@ type FlowReciverProps = {
     variableType: PluginVariableTypes;
     variableAllowedValues: Array<string>;
   };
+  updateCyclesCount: (destination: BlockVarPair, value: number) => void;
 };
 
 function FlowReciver(props: FlowReciverProps) {
@@ -1039,12 +1040,16 @@ function FlowReciver(props: FlowReciverProps) {
 
   const renderBlock = (block: Block, index: number) => {
     const connectedVars = block.variableConnections?.map((connection) => {
-      return VariableConnectionArrow({
-        connection: connection,
-        unconnectVariables: props.unconnectVariables,
-        isSecond: connection.isCyclic,
-        cycleNumber: connection.cycles,
-      });
+      return (
+        <VariableConnectionArrow
+          connection={connection}
+          unconnectVariables={props.unconnectVariables}
+          isCyclic={connection.isCyclic}
+          cycleNumber={connection.cycles}
+          updateCyclesCount={props.updateCyclesCount}
+          currentCycle={connection.currentCycle}
+        />
+      );
     });
 
     const connectedBlocks = block.connectedTo?.map((connection) => {

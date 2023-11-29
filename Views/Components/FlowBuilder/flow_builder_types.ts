@@ -64,6 +64,14 @@ type VariableGroup = {
   variables: Array<PluginVariable>;
 };
 
+type VariableConnection = {
+  origin: BlockVarPair;
+  destination: BlockVarPair;
+  isCyclic: boolean;
+  cycles: number;
+  currentCycle: number;
+};
+
 type Block = {
   // Basic info about the block
   id: string;
@@ -99,20 +107,12 @@ type Block = {
   };
 
   // Variable connections
-  variableConnections: Array<{
-    origin: BlockVarPair;
-    destination: BlockVarPair;
-    isCyclic: boolean;
-    cycles: number;
-  }>;
+  variableConnections: Array<VariableConnection>;
 
   // Variable connections reference
   // The block connected should know to what is connected
   // in order for arrow deletion to work
-  variableConnectionsReference: Array<{
-    origin: BlockVarPair;
-    destination: BlockVarPair;
-  }>;
+  variableConnectionsReference: Array<VariableConnection>;
 
   // Blocks that should run after this block,
   // without passing any variable

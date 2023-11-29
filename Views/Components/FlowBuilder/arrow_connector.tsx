@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Xarrow from "react-xarrows";
 import { Block, PluginVariable } from "./flow_builder_types";
 import { useDraggable } from "@dnd-kit/core";
@@ -81,6 +81,58 @@ function ArrowBlockConnector(props: ArrowConnectorProps) {
   );
 }
 
+function CyclesView(props: {
+  currentCycle: number;
+  cycleNumber: number;
+  destination: BlockVarPair;
+  setCycles: (destination: BlockVarPair, cycleNumber: number) => void;
+}) {
+  const { destination, cycleNumber, setCycles, currentCycle } = props;
+
+  const [inputValue, setInputValue] = useState(cycleNumber);
+
+  const updateCycleNumber = (e: any) => {
+    const value = parseInt(e.target.value);
+    if (value > 0) {
+      setCycles(destination, value);
+      setInputValue(cycleNumber);
+    }
+  };
+
+  const handleOnChangeEvent = (e: any) => {
+    const value = parseInt(e.target.value);
+    if (value > 0) {
+      setInputValue(value);
+    }
+  };
+
+  const handleBlur = (e) => {
+    updateCycleNumber(e);
+  };
+
+  useEffect(() => {
+    setInputValue(cycleNumber);
+  }, [cycleNumber]);
+
+  return (
+    <div className="cycles-box flex flex-row gap-1 w-48 justify-around bg-white">
+      Cycles:
+      <div className="text-center flex flex-row gap-2">
+        <div>{currentCycle}</div>
+        <div>/</div>
+        <div className="w-12">
+          <input
+            type="number"
+            value={inputValue}
+            onChange={handleOnChangeEvent}
+            onBlur={handleBlur}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 type VariableConnectionArrowProps = {
   connection: {
     origin: BlockVarPair;
@@ -90,35 +142,60 @@ type VariableConnectionArrowProps = {
     origin: BlockVarPair;
     destination: BlockVarPair;
   }) => void;
-  isSecond: boolean;
+  currentCycle: number;
+  isCyclic: boolean;
   cycleNumber: number;
+  updateCyclesCount: (destination: BlockVarPair, cycleNumber: number) => void;
 };
 
 function VariableConnectionArrow(props: VariableConnectionArrowProps) {
   const { origin, destination } = props.connection;
-  const { unconnectVariables, isSecond, cycleNumber } = props;
+  const {
+    unconnectVariables,
+    isCyclic,
+    currentCycle,
+    cycleNumber,
+    updateCyclesCount,
+  } = props;
 
   const start = `output-drag-${origin.variableID}-${origin.placedID}-connector`;
   const end = `connect-${destination.variableID}-${destination.placedID}`;
 
+  const key = `variable-connection-arrow-${start}-${end}-${isCyclic}-${cycleNumber}`;
+
   return (
     <div
-      key={"div-variable" + start + end}
-      onClick={(e) => {
-        unconnectVariables(props.connection);
+      key={key}
+      id="variable-connection-arrow"
+      onClick={(e: any) => {
+        const isPath = e.target.tagName.toLowerCase() === "path";
+        if (isPath) {
+          unconnectVariables(props.connection);
+        }
       }}
+      className="absolute"
     >
       <Xarrow
         start={start}
         end={end}
         key={start + end}
-        endAnchor={["left"]}
-        startAnchor={["right"]}
-        color={isSecond ? "#f57f17" : "#0d47a1"}
+        endAnchor={["left", "bottom", "top"]}
+        startAnchor={["right", "top", "bottom"]}
+        color={isCyclic ? "#f57f17" : "#0d47a1"}
+        curveness={0.8}
         labels={
-          isSecond && {
-            start: <div>Cycles: {cycleNumber}</div>,
-          }
+          isCyclic
+            ? {
+                middle: (
+                  <CyclesView
+                    cycleNumber={cycleNumber}
+                    setCycles={updateCyclesCount}
+                    destination={destination}
+                    currentCycle={currentCycle}
+                  />
+                ),
+              }
+            : null
         }
       />
     </div>

@@ -173,3 +173,46 @@ def test_flow_run():
     read_flow = Flow.read(path).encode()
 
     assert read_flow == encoded_flow
+
+
+def test_double_circular_flow_run(capfd):
+    path = os.path.join(os.path.dirname(__file__), "test_flow_double_circular.flow")
+
+    flow = Flow.read(path)
+
+    flow.run(placedID=6)
+
+    # Check that the flow has been updated
+    assert flow.status == Flow.FlowStatus.FINISHED
+
+    # Verify that all blocks are marked as finished
+    for block in flow.blocks:
+        assert block._finishedExecution
+
+    # Verify that the print function was called 5 times
+    out, err = capfd.readouterr()
+
+    # Split the output by line and remove the last empty line
+    splitted_out = out.split("\n")[:-1]
+
+    assert len(splitted_out) == 5
+
+    # Verify that the output is correct
+    assert splitted_out[0] == "Received variable: 13"
+    assert splitted_out[1] == "Received variable: 17"
+    assert splitted_out[2] == "Received variable: 13"
+    assert splitted_out[3] == "Received variable: 12"
+    assert splitted_out[4] == "Received variable: 33"
+
+    # Verify that all the cycles count are equal to the cycles
+    for block in flow.blocks:
+        for conn in block._variableConnections:
+            if conn.isCyclic:
+                assert conn.currentCycle == conn.cycles
+
+    # Re-read the flow and check everything is saved
+    encoded_flow = flow.encode()
+
+    read_flow = Flow.read(path).encode()
+
+    assert read_flow == encoded_flow

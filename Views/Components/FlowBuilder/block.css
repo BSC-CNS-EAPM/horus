@@ -136,6 +136,7 @@
   padding: 1rem;
   width: calc(100% - 15rem);
   overflow: hidden;
+  z-index: 0;
 }
 
 .placed-id {
@@ -366,6 +367,7 @@
 
 .variables-modal-container {
   padding: 2rem;
+  z-index: 1;
   margin-top: 2rem;
   height: 95%;
   width: 100%;
@@ -406,4 +408,13 @@
 
 .plugin-variable-safari {
   margin-left: 50%;
+}
+
+.cycles-box {
+  background-color: var(--broken-white);
+  text-align: center;
+  z-index: 99;
+  border: 1px solid #000;
+  border-radius: 5px;
+  box-shadow: 4px 4px 8px #0000002e;
 }
