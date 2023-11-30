@@ -872,11 +872,10 @@ function PredefinedFlowsSearch() {
     window.dispatchEvent(event);
   };
 
-  const hasFlows = () => {
-    return recentFilteredFlows.length > 0 || predefinedFilteredFlows.length > 0;
-  };
+  const hasFlows =
+    recentFilteredFlows.length > 0 || predefinedFilteredFlows.length > 0;
 
-  const recentFlowsView = () => {
+  function RecentFlowsView() {
     return (
       <>
         {fetchingRecents ? (
@@ -921,7 +920,7 @@ function PredefinedFlowsSearch() {
         )}
       </>
     );
-  };
+  }
 
   return (
     <div
@@ -937,8 +936,8 @@ function PredefinedFlowsSearch() {
       <SearchComponent placeholder="Flows..." onChange={filterFlows} />
       {isOnFocus && (
         <div className="absolute flex flex-col gap-1 predefined-flow-box">
-          {hasFlows() ? (
-            recentFlowsView()
+          {hasFlows ? (
+            <RecentFlowsView />
           ) : (
             <div className="predefined-flow-name">No recent flows found</div>
           )}{" "}

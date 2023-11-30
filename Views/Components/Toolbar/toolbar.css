@@ -47,6 +47,7 @@
   transition: box-shadow 0.2s ease-in-out;
   padding-right: 0.5rem;
   overflow: hidden;
+  z-index: 100;
 }
 
 .predefined-flow:hover {
