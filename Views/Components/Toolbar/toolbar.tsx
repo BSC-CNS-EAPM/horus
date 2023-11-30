@@ -763,18 +763,24 @@ export default function HorusToolbar() {
         ))}
       </div>
       <div className="mr-1">
-        <PredefinedFlowsSearch />
+        <HorusSearch pages={pluginPages} loadPage={loadPage} />
       </div>
     </div>
   );
 }
 
-function PredefinedFlowsSearch() {
+type HorusSearchProps = {
+  pages: any;
+  loadPage: any;
+};
+
+function HorusSearch(props: HorusSearchProps) {
   const [predefinedFlows, setPredefinedFlows] = useState([]);
   const [recentFlows, setRecentFlows] = useState([]);
   const [predefinedFilteredFlows, setPredefinedFilteredFlows] = useState([]);
   const [recentFilteredFlows, setRecentFilteredFlows] = useState([]);
   const [fetchingRecents, setFetchingRecents] = useState(true);
+  const [filteredPages, setFilteredPages] = useState(props.pages);
 
   const getFlows = async () => {
     setFetchingRecents(true);
@@ -821,12 +827,13 @@ function PredefinedFlowsSearch() {
     setFetchingRecents(false);
   };
 
-  const filterFlows = (event) => {
+  const filterSearch = (event) => {
     const value = event.target.value;
 
     if (value === "" || value === undefined) {
       setPredefinedFilteredFlows(predefinedFlows);
       setRecentFilteredFlows(recentFlows);
+      setFilteredPages(props.pages);
       return;
     }
 
@@ -847,6 +854,16 @@ function PredefinedFlowsSearch() {
     });
 
     setRecentFilteredFlows(filteredRecentFlows);
+
+    const filteredPages = props.pages.filter((page) => {
+      return (
+        page.name.toLowerCase().includes(value.toLowerCase()) ||
+        page.description.toLowerCase().includes(value.toLowerCase()) ||
+        page.plugin.toLowerCase().includes(value.toLowerCase())
+      );
+    });
+
+    setFilteredPages(filteredPages);
   };
 
   useEffect(() => {
@@ -856,6 +873,10 @@ function PredefinedFlowsSearch() {
   useEffect(() => {
     setRecentFilteredFlows(recentFlows);
   }, [recentFlows]);
+
+  useEffect(() => {
+    setFilteredPages(props.pages);
+  }, [props.pages]);
 
   const [isOnFocus, setIsOnFocus] = useState(false);
 
@@ -888,20 +909,19 @@ function PredefinedFlowsSearch() {
             />
             <div>Loading recent flows...</div>
           </div>
-        ) : recentFilteredFlows.length > 0 ? (
-          <RecentUserFlows
-            recentFilteredFlows={recentFilteredFlows}
-            openFlow={openFlow}
-          />
         ) : (
-          <div className="flex flex-col justify-center text-center pt-4">
-            <div>No recent flows</div>
-          </div>
+          recentFilteredFlows.length > 0 && (
+            <RecentUserFlows
+              recentFilteredFlows={recentFilteredFlows}
+              openFlow={openFlow}
+            />
+          )
         )}
-        <hr></hr>
         {predefinedFilteredFlows.length > 0 && (
           <div className="flex flex-col gap-1">
-            <div className="predefined-flow-name">Predefined flows</div>
+            <div className="predefined-flow-name font-bold">
+              Predefined flows
+            </div>
             {predefinedFilteredFlows?.map((flow) => (
               <div
                 key={flow.savedID}
@@ -922,6 +942,9 @@ function PredefinedFlowsSearch() {
     );
   }
 
+  console.log("filteredPages", filteredPages);
+  console.log("prop.pages", props.pages);
+
   return (
     <div
       onFocus={() => {
@@ -933,16 +956,52 @@ function PredefinedFlowsSearch() {
         }, 100);
       }}
     >
-      <SearchComponent placeholder="Flows..." onChange={filterFlows} />
-      {isOnFocus && (
+      <SearchComponent placeholder="Search Horus..." onChange={filterSearch} />
+      {isOnFocus && (hasFlows || filteredPages.length > 0) && (
         <div className="absolute flex flex-col gap-1 predefined-flow-box">
-          {hasFlows ? (
-            <RecentFlowsView />
-          ) : (
-            <div className="predefined-flow-name">No recent flows found</div>
-          )}{" "}
+          {hasFlows && <RecentFlowsView />}
+          {filteredPages && (
+            <PluginPagesView pages={filteredPages} loadPage={props.loadPage} />
+          )}
         </div>
       )}
+    </div>
+  );
+}
+
+type PluginPageViewProps = {
+  pages: Array<{
+    name: string;
+    description: string;
+    plugin: string;
+    url: string;
+    id: string;
+  }>;
+  loadPage: any;
+};
+
+function PluginPagesView(props: PluginPageViewProps) {
+  const { pages, loadPage } = props;
+
+  if (pages.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="predefined-flow-name font-bold">Extensions</div>
+      {pages?.map((page) => (
+        <div
+          key={page.id}
+          onClick={() => {
+            loadPage(page.url, page.name);
+          }}
+          className="predefined-flow"
+        >
+          <div className="predefined-flow-name">{page.name}</div>
+          <div className="predefined-flow-plugin">{page.description}</div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -957,7 +1016,7 @@ function RecentUserFlows(props: RecentUserFlowProps) {
 
   return (
     <div className="flex flex-col gap-1">
-      <div className="predefined-flow-name">Recent flows</div>
+      <div className="predefined-flow-name font-bold">Recent flows</div>
       {recentFilteredFlows.map((flow) => (
         <div
           key={flow.savedID}
