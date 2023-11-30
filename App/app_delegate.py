@@ -292,6 +292,11 @@ class AppDelegate(metaclass=HorusSingleton):
     The Horus logger
     """
 
+    server: HorusServer
+    """
+    The server
+    """
+
     def __init__(
         self,
         debug: bool = False,
@@ -309,6 +314,8 @@ class AppDelegate(metaclass=HorusSingleton):
         self.serverMode = serverMode
         self.browser = browser
         self.debugURL = debugURL
+        self.host = host
+        self.port = port
 
         # Load the app info from the APP_INFO file
         self._loadAppInfo()
@@ -319,13 +326,28 @@ class AppDelegate(metaclass=HorusSingleton):
         # Start the logger if needed
         self._loadLogger()
 
+        # Initialize the server here if we are on development
+        # Otherwise, initialize it when the app is launched
+        if not cython.compiled:
+            self.initializeServer()
+
+    def initializeServer(self):
+        """
+        Initializes the server, the PluginManager, the FlowManager
+        the Settings and the RemoteManager
+        """
+
+        # Initialize only if not previously initialized
+        if hasattr(self, "server"):
+            return
+
         # Prepare the server
-        self.server: HorusServer = HorusServer(
+        self.server = HorusServer(
             debug=self.debug,
-            desktop=not serverMode,
+            desktop=not self.serverMode,
             appSupportDir=self.appSupportDir,
-            host=host,
-            port=port,
+            host=self.host,
+            port=self.port,
         )
 
     def _loadLogger(self):
@@ -930,6 +952,9 @@ def launchApp():
 
     # Prepare the app delegate
     app = AppDelegate(debug, serverMode, browser, debugURL, host, port)
+
+    # Initialize the server
+    app.initializeServer()
 
     # Check for the --flow (-f) flag to run a flow instead of the app
     # The -f flag should be followed by the path to the flow and the

@@ -1,6 +1,10 @@
 import pytest
 import os
 import json
+import time
+import requests
+import sys
+from multiprocess import Process  # type: ignore pylint: disable=no-name-in-module
 
 from App import AppDelegate
 from Server.SettingsManager import Setting
@@ -8,11 +12,94 @@ from Server.SettingsManager import SettingsManager as HorusSettings
 from HorusAPI import VariableTypes
 import pytest
 
+from unittest.mock import patch
+
+
+def test_launch_app_not_compiled():
+    from Horus import launchApp
+
+    def launchHorusProcess():
+        # Clean the sys.argv
+        sys.argv = sys.argv[:1]
+
+        # Add arguments to simulate the command line
+        sys.argv.append("--server")
+        sys.argv.append("--host")
+        sys.argv.append("localhost")
+        sys.argv.append("--port")
+        sys.argv.append("3000")
+
+        launchApp()
+
+    # Create a new thread and start it
+    process = Process(target=launchHorusProcess)
+    process.start()
+
+    # Wait for the server to start
+    time.sleep(1)
+
+    baseURL = "http://localhost:3000"
+
+    # Check that the server is running
+    try:
+        requests.get(baseURL, timeout=10)
+    except requests.exceptions.ConnectionError:
+        pytest.fail("Connection error")
+    finally:
+        # Kill the process
+        process.kill()
+
+        # Wait for the process to finish
+        process.join()
+
+        time.sleep(1)
+
+
+def test_launch_app_compiled():
+    # mock the cython.compiled variable to return true
+    with patch("cython.compiled", True):
+        from Horus import launchApp
+
+        def launchHorusProcess():
+            # Clean the sys.argv
+            sys.argv = sys.argv[:1]
+
+            # Add arguments to simulate the command line
+            sys.argv.append("--server")
+            sys.argv.append("--host")
+            sys.argv.append("localhost")
+            sys.argv.append("--port")
+            sys.argv.append("3000")
+
+            launchApp()
+
+        # Create a new thread and start it
+        process = Process(target=launchHorusProcess)
+        process.start()
+
+        # Wait for the server to start
+        time.sleep(1)
+
+        baseURL = "http://localhost:3000"
+
+        # Check that the server is running
+        try:
+            requests.get(baseURL, timeout=10)
+        except requests.exceptions.ConnectionError:
+            pytest.fail("Connection error")
+        finally:
+            # Kill the process
+            process.kill()
+
+            # Wait for the process to finish
+            process.join()
+
+            time.sleep(1)
+
 
 @pytest.fixture
 def appDelegate_default():
     return AppDelegate()
-
 
 
 @pytest.mark.filterwarnings("ignore::DeprecationWarning")
