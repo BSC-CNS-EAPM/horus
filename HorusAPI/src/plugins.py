@@ -915,11 +915,16 @@ class PluginBlock:
         :param values: A dictionary with the values to update
         (JSON coming from frontend).
         """
+        # If the block has no inputs, return
+        if len(self._inputGroups) == 0:
+            return
+
         try:
             inputs = self._inputGroups[self.selectedInputGroup].variables
         except KeyError as keye:
             raise Exception(
-                f"Input group {self.selectedInputGroup} not found in block inputs. Current block inputs are: {self._inputGroups.keys()}"
+                f"Input group '{self.selectedInputGroup}' not found in block inputs. "
+                + f"Current block inputs are: {self._inputGroups.keys()}"
             ) from keye
         for variable in inputs:
             if variable.id in values.keys():
@@ -966,13 +971,17 @@ class PluginBlock:
         :return: A dictionary with the inputs of the block with key
         the input ID and value the input value.
         """
+
+        if len(self._inputGroups) == 0:
+            return {}
+
         varsDict: dict[str, typing.Any] = {}
         try:
             inputs = self._inputGroups[self.selectedInputGroup].variables
         except KeyError as keye:
             raise Exception(
-                f"Input group {self.selectedInputGroup} not found in block inputs. "
-                + "Current block inputs are: {self._inputGroups.keys()}"
+                f"Input group '{self.selectedInputGroup}' not found in block inputs. "
+                + f"Current block inputs are: {self._inputGroups.keys()}"
             ) from keye
         for variable in inputs:
             varsDict[variable.id] = self._parseVariablesForBlockAccess(variable)

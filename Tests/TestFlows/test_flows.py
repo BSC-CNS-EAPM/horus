@@ -282,3 +282,18 @@ def test_extensions_on_blocks():
     assert extension1["data"] is not None
     assert extension1["pageURL"] is not None
     assert extension1["title"] == "Results"
+
+
+def test_no_inputs_block():
+    path = os.path.join(os.path.dirname(__file__), "no_inputs_test.flow")
+
+    flow = Flow.read(path)
+
+    flow.run(placedID=2)
+
+    # Check that the flow has been updated
+    assert flow.status == Flow.FlowStatus.FINISHED
+
+    # Verify that all blocks are marked as finished
+    for block in flow.blocks:
+        assert block._finishedExecution

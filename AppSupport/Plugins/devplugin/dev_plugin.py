@@ -107,3 +107,19 @@ openExtensionBlock = PluginBlock(
 )
 
 plugin.addBlock(openExtensionBlock)
+
+
+def noInputBlockAction(block: PluginBlock):
+    print("this block has no inputs: ", block.inputs)
+    print("This block has no input groups: ", block.selectedInputGroup, block._inputGroups)
+    print("This block has no variables: ", block.variables)
+    print("This block has no outputs: ", block.outputs)
+
+
+noInputBlock = PluginBlock(
+    name="No input block",
+    description="This block has no inputs",
+    action=noInputBlockAction,
+)
+
+plugin.addBlock(noInputBlock)
