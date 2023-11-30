@@ -87,7 +87,6 @@ os.system("cp src/__init__.py src/__init__.py.bak")
 with open("src/__init__.py", "a") as f:
     f.write(f'\n__version__ = "{version}"\n')
 
-
 # Create the HorusAPI package
 setuptools.setup(
     name="HorusAPI",
@@ -110,6 +109,7 @@ setuptools.setup(
     package_data=package_data,
     include_package_data=True,
     zip_safe=False,
+    entry_points={"console_scripts": ["create-horus-plugin=HorusAPI.utils:initPlugin"]},
 )
 
 # Restore the original src/__init__.py file

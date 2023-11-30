@@ -5,10 +5,21 @@ Plugins
 Plugins are the way to extend Horus functionality. They are loaded when the app launches
 and can be used to add new blocks, extensions or predefined flows to the app.
 
-Creating a plugin
-=================
+Automatic plugin creation
+=========================
+The easiest way to create a plugin is to use the :bdg-secondary-line:`create-horus-plugin` command provided
+by the HorusAPI. This command will create a plugin folder with the basic structure, along with a build script
+to create the plugin package. To create a plugin, activate the python environment where the HorusAPI is installed
+and run the following command:
 
-To create a plugin, first create a folder with the name of the plugin and inside
+.. code-block:: bash
+
+    create-horus-plugin
+
+Manually creating a plugin
+==========================
+
+To manually create a plugin, first create a folder with the name of the plugin and inside
 it, add a file called :bdg-secondary-line:`plugin.meta`. This file contains
 the metadata of the plugin in JSON format and it's used by Horus to load the plugin. Here's an
 example of a plugin metadata file:

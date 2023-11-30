@@ -32,6 +32,10 @@ application:
 
     .. code-block:: bash
 
-        pip install <path to horusapi-x.x.x.tar.gz>
+        pip install <path to horusapi-x.x.x.whl>
+
+.. warning::
+
+    The HorusAPI is not available yet for public use. Please wait for the first release.
 
 .. |Product| replace:: HorusAPI

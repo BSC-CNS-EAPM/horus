@@ -152,7 +152,68 @@ class TempFile:
 
         shutil.rmtree(self.tmpFolder)
 
+
 class ResetRemoteException(Exception):
     """
     Exception raised when the remote server is reset.
     """
+
+
+def initPlugin():
+    """
+    This function will create the basic folder structure for building
+    a Horus plugin.
+    """
+
+    pluginName = input("Plugin name: ")
+    description = input("Plugin description: ")
+    pluginAuthor = input("Plugin author: ")
+    version = "0.0.1"
+
+    pluginFolder = pluginName.replace(" ", "_")
+    pluginFolder = pluginFolder.lower()
+
+    # Create the plugin folder
+    os.mkdir(pluginFolder)
+
+    pluginMeta = {
+        "name": pluginName,
+        "description": description,
+        "author": pluginAuthor,
+        "version": version,
+        "pluginFile": "plugin.py",
+        "dependencies": [],
+    }
+
+    # Inside the plugin folder, create the meta file
+    with open(os.path.join(pluginFolder, "plugin.meta"), "w", encoding="utf-8") as f:
+        # Dump the JSON meta file
+        import json
+
+        json.dump(pluginMeta, f, indent=4)
+
+    # Inside the plugin folder, create the plugin file
+    with open(os.path.join(pluginFolder, "plugin.py"), "w", encoding="utf-8") as f:
+        # Write the plugin file
+        f.write("from HorusAPI import Plugin\n")
+        f.write("\n")
+        f.write("\n")
+        f.write(f"plugin = Plugin(id='{pluginFolder}')\n")
+
+    # Create the Include folder inside the plugin folder
+    os.mkdir(os.path.join(pluginFolder, "Include"))
+
+    # Create the pages folder inside the plugin folder
+    os.mkdir(os.path.join(pluginFolder, "Pages"))
+
+    # Create a simple bash script to zip the plugin
+    with open(os.path.join("build_plugin.sh"), "w", encoding="utf-8") as f:
+        f.write("#!/bin/bash\n")
+        f.write("\n")
+        f.write('echo "Building plugin..."\n')
+        f.write("\n")
+        f.write(f"rm {pluginFolder}.hp\n")
+        f.write("\n")
+        f.write(f"zip -r {pluginFolder}.hp {pluginFolder}\n")
+
+    print(f"Plugin {pluginName} created successfully!")

@@ -22,6 +22,9 @@ from .src import Extensions
 # Export the utility SingletonMeta class
 from .src import HorusSingleton, TempFile, ResetRemoteException  # noqa: F401
 
+# Export the initPlugin function
+from .src import initPlugin  # noqa: F401
+
 # Export the HorusAPI version
 from ._version import version as __version__  # noqa: F401
 
