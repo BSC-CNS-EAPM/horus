@@ -1,0 +1,8 @@
+{
+  "name": "Dev plugin",
+  "description": "Development plugin for testing purposes",
+  "author": "Horus",
+  "version": "0.0.1",
+  "pluginFile": "dev_plugin.py",
+  "dependencies": []
+}

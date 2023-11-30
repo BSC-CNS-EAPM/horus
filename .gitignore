@@ -184,7 +184,7 @@ AppSupport/settings.json
 # Add .hypothesis (pytest)
 .hypothesis/
 
-# Include the .env of the App (doe snot include sensitive data)
+# Include the .env of the App (does not include sensitive data)
 !App/.env
 
 # Singularity images
@@ -210,3 +210,6 @@ AppSupport/sessions/
 
 # Bun
 bun.lockb
+
+# Development plugin fors tests
+!AppSupport/Plugins/devplugin/
