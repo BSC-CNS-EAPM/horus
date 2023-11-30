@@ -645,6 +645,11 @@ class HorusMolstar {
   }
 
   private async loadSession(session) {
+    // If the session object is empty, return
+    if (Object.keys(session).length === 0) {
+      return;
+    }
+
     const assets = session["assets.json"];
     const assetData = Object.create(null);
 
@@ -1295,6 +1300,16 @@ class HorusMolstar {
       builder.delete(repr);
     }
     await builder.commit();
+  }
+
+  async applyAction(action: any) {
+    const { type, data } = action;
+
+    if (type === "addPDB") {
+      const label = data.label ? data.label : "PDB";
+      const pdb = data.pdb;
+      await this.loadPDBString(pdb, label);
+    }
   }
 }
 

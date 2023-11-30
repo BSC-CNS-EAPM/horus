@@ -216,3 +216,69 @@ def test_double_circular_flow_run(capfd):
     read_flow = Flow.read(path).encode()
 
     assert read_flow == encoded_flow
+
+
+def test_flow_terminal_output_storage():
+    path = os.path.join(os.path.dirname(__file__), "test_flow.flow")
+
+    flow = Flow.read(path)
+
+    flow.run(placedID=1)
+
+    # Check that the terminal output is correct
+    assert flow.terminalOutput is not None
+
+    # Prints to the terminal 2 times, but between it adds a new line "\n"
+    assert len(flow.terminalOutput) == 4
+
+    assert flow.terminalOutput[0] == "Received variable: test"
+    assert flow.terminalOutput[1] == "\n"
+    assert flow.terminalOutput[2] == "Received variable: test"
+    assert flow.terminalOutput[3] == "\n"
+
+
+def test_background_molstar_api():
+    path = os.path.join(os.path.dirname(__file__), "molstarapi_background.flow")
+
+    flow = Flow.read(path)
+
+    flow.run(placedID=1)
+
+    # Check that the flow has been updated
+    assert flow.status == Flow.FlowStatus.FINISHED
+
+    # Verify that it has pending actions
+    assert flow.pendingActions is not None
+    assert len(flow.pendingActions) == 1
+
+    # Verify that the pending action is "addPDB"
+    action = flow.pendingActions[0]
+
+    assert action["type"] == "addPDB"
+
+
+def test_extensions_on_blocks():
+    path = os.path.join(os.path.dirname(__file__), "open_extension_test.flow")
+
+    flow = Flow.read(path)
+
+    flow.run(placedID=1)
+
+    # Check that the flow has been updated
+    assert flow.status == Flow.FlowStatus.FINISHED
+
+    # Verify that all blocks are marked as finished
+    for block in flow.blocks:
+        assert block._finishedExecution
+
+    # Check that the block has extensions to be opened
+    extOpen = flow.blocks[0]._extensionsToOpen
+
+    # This test block adds 2 extensions to be opened
+    assert len(extOpen) == 2
+
+    extension1 = extOpen[0]
+
+    assert extension1["data"] is not None
+    assert extension1["pageURL"] is not None
+    assert extension1["title"] == "Results"

@@ -97,7 +97,7 @@ export function App() {
       // Create a new fake event object
       newEvent = {
         detail: {
-          pagename: "CalledFromBlockAction",
+          pagename: event.title,
           url: event.pageURL,
           data: event?.data,
         },
@@ -111,6 +111,7 @@ export function App() {
       setShowIFrame(false);
       return;
     }
+
     const key = newEvent.detail.url + "-" + newEvent.detail.pagename;
     const iframe = <IFrameLoader key={key} {...newEvent.detail} />;
     setIframeView(iframe);

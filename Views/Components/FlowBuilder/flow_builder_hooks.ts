@@ -4,6 +4,7 @@ import {
   BlockVarPair,
   HorusPlugin,
   PluginVariableTypes,
+  VariableConnection,
 } from "./flow_builder_types";
 import {
   DragEndEvent,
@@ -458,10 +459,7 @@ const useFlowBuilder = () => {
     setSaved(false);
   };
 
-  const unconnectVariables = (connection: {
-    origin: BlockVarPair;
-    destination: BlockVarPair;
-  }) => {
+  const unconnectVariables = (connection: VariableConnection) => {
     // First find the real blocks from the placedBlocks array
 
     const originBlock = placedBlocks.find((b) => {
@@ -471,6 +469,14 @@ const useFlowBuilder = () => {
     const destinationBlock = placedBlocks.find((b) => {
       return b.placedID === connection.destination.placedID;
     });
+
+    // Check if at any point the connection is cyclic
+    const cyclic = checkCyclicFlow(originBlock, destinationBlock);
+
+    if (cyclic && !connection.isCyclic) {
+      alert("Remove the cyclic connection first");
+      return;
+    }
 
     // Remove the connection from the "destination" block
     const newDestinationBlock: Block = {
@@ -596,7 +602,7 @@ const useFlowBuilder = () => {
         return vc.isCyclic;
       })
     ) {
-      return false;
+      return true;
     }
 
     // Check that the destination block has connections

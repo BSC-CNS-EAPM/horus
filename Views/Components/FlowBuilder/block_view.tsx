@@ -700,6 +700,11 @@ function DraggableBlockView(props: DraggableBlockViewProps) {
       {...attributes}
       className={block.isPlaced ? "absolute z-1" : "relative"}
     >
+      {block.isPlaced &&
+        block.extensionsToOpen &&
+        block.extensionsToOpen.length > 0 && (
+          <BlockExtensionsView block={block} />
+        )}
       <BlockView block={block} settings={props.settings} />
       {block.isPlaced &&
         block.inputs &&
@@ -710,6 +715,82 @@ function DraggableBlockView(props: DraggableBlockViewProps) {
 }
 
 export { BlockView, DraggableBlockView };
+
+function BlockExtensionsView(props: { block: Block }) {
+  const block = props.block;
+
+  const [shown, setShown] = useState(false);
+
+  const openExtension = (extension) => {
+    // Emit an extension event to the iFrame
+    const { pageURL: url, title: pagename, data } = extension;
+
+    const event = new CustomEvent("mainViewURL", {
+      detail: { url, pagename, data },
+    });
+
+    window.dispatchEvent(event);
+  };
+
+  const chevron = (
+    <div
+      className={`cursor-pointer transition-all transform ${
+        shown ? null : "rotate-180"
+      }`}
+      onClick={() => {
+        setShown(!shown);
+      }}
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        strokeWidth={1.5}
+        stroke="currentColor"
+        className="w-6 h-6"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M19.5 8.25l-7.5 7.5-7.5-7.5"
+        />
+      </svg>
+    </div>
+  );
+
+  return (
+    <div>
+      {block.extensionsToOpen.map((extension, index) => {
+        return (
+          <div
+            className="w-full mb-2 extensions-box cursor-pointer"
+            style={{
+              top: shown ? `-${(index + 2) * 2}rem` : "-2rem",
+              opacity: shown ? 1 : 0,
+              transition: "opacity 0.2s ease-in-out, top 0.2s ease-in-out",
+            }}
+            onClick={() => {
+              if (shown) {
+                openExtension(extension);
+              }
+            }}
+          >
+            {extension.title ?? "Open results"}
+          </div>
+        );
+      })}
+      <div
+        className="w-full flex flex-row justify-between extensions-box mb-2 px-2"
+        style={{
+          top: "-2rem",
+        }}
+      >
+        Extensions
+        {chevron}
+      </div>
+    </div>
+  );
+}
 
 function FinishedCheck(props: { runError: boolean; runErrorMessage?: string }) {
   const [isOpen, setIsOpen] = useState(false);

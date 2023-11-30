@@ -92,6 +92,27 @@ function FlowReciver(props: FlowReciverProps) {
 
   const currentSaving = useRef(false);
 
+  const updateMolstarState = async () => {
+    
+    const molstarState = await window.molstar?.snapshot.get();
+    const body = JSON.stringify({
+      flowPath: flowPath.current,
+      molstarState: molstarState,
+    });
+
+    const headers = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    };
+
+    const response = await horusPost("/api/updatemolstate", headers, body);
+    const data = await response.json();
+
+    if (!data.ok) {
+      alert(data.error);
+    }
+  };
+
   const handleSave = async () => {
     if (currentSaving.current) {
       return;
@@ -167,7 +188,9 @@ function FlowReciver(props: FlowReciverProps) {
     setSaved(true);
 
     // Leave the socket flow room
-    socket.emit("leaveFlow", savedID.current);
+    if (savedID.current !== "new_flow") {
+      socket.emit("leaveFlow", savedID.current);
+    }
 
     // setFlowName(savedFlow.name);
     savedID.current = savedFlow.savedID;
@@ -271,31 +294,49 @@ function FlowReciver(props: FlowReciverProps) {
       setIsCancelling(false);
     }
 
-    if (isRunning) {
-      props.setPlacedBlocks((currentBlocks) => {
-        // Place the newblocks with the current block's position to avoid moving
-        // the blocks when they are being executed
-        return currentBlocks.map((b) => {
-          // Find the block in the current blocks
-          const newBlock = blocks.find((nb) => nb.placedID === b.placedID);
-
-          newBlock.position = b.position;
-
-          return newBlock;
-        });
-      });
-    } else {
-      // Update the placedBlocks array
-      props.setPlacedBlocks(blocks);
+    // If the flow has stopped running (is not RUNNING or PAUSED)
+    // save the flow to apply any molstar* actions that run live
+    // and that are not saved in the flow
+    if (
+      status !== FlowStatus.RUNNING &&
+      status !== FlowStatus.PAUSED &&
+      status !== FlowStatus.IDLE
+    ) {
+      await updateMolstarState();
     }
-  };
 
-  socket.on("flow", loadSocketFlow);
+    // // Update the terminal output
+    // // Set the terminal output
+    // window.horusTerm.storedMessages = data.terminalOutput;
+
+    // // Print all stored messages if the terminal is mounted
+    // window.horusTerm.ref?.current?.pushToStdout(
+    //   window.horusTerm.storedMessages
+    //     ? window.horusTerm.storedMessages.join("\n")
+    //     : ""
+    // );
+
+    props.setPlacedBlocks((currentBlocks) => {
+      // Place the newblocks with the current block's position to avoid moving
+      // the blocks when they are being executed
+      return currentBlocks.map((b) => {
+        // Find the block in the current blocks
+        const newBlock = blocks.find((nb) => nb.placedID === b.placedID);
+
+        newBlock.position = b.position;
+
+        return newBlock;
+      });
+    });
+  };
 
   const flowRunner = async (
     block: Block,
     resetRemote: boolean = true
   ): Promise<void> => {
+    // Clean the terminal if present
+    window.horusTerm.ref?.current?.clearStdout();
+
     const response = await horusPost(
       "/api/plugins/executeflow",
       null,
@@ -580,6 +621,19 @@ function FlowReciver(props: FlowReciverProps) {
   const openingFlow = useRef(false);
   const [serverFilePickerOpen, setServerFilePickerOpen] = useState(false);
   const [serverFolderPickerOpen, setServerFolderPickerOpen] = useState(false);
+  const [terminalOutput, setTerminalOutput] = useState<string[]>([]);
+  const [hasPendingActions, setHasPendingActions] = useState(false);
+
+  useEffect(() => {
+    window.horusTerm.storedMessages = terminalOutput;
+
+    // Print all stored messages if the terminal is mounted
+    window.horusTerm.ref?.current?.pushToStdout(
+      window.horusTerm.storedMessages
+        ? window.horusTerm.storedMessages.join("\n")
+        : ""
+    );
+  }, [terminalOutput]);
 
   const loadFlow = async (
     openRecent: {
@@ -645,7 +699,9 @@ function FlowReciver(props: FlowReciverProps) {
     }
 
     // Exit the socket flow room
-    socket.emit("leaveFlow", savedID.current);
+    if (savedID.current !== "new_flow") {
+      socket.emit("leaveFlow", savedID.current);
+    }
 
     // Set the molstar state at the beggining in case blocks need structures
     if (window.molstar && openedFlow.molstarState) {
@@ -663,14 +719,7 @@ function FlowReciver(props: FlowReciverProps) {
     setIsCancelling(false);
 
     // Set the terminal output
-    window.horusTerm.storedMessages = openedFlow.terminalOutput;
-
-    // Print all stored messages if the terminal is mounted
-    window.horusTerm.ref?.current?.pushToStdout(
-      window.horusTerm.storedMessages
-        ? window.horusTerm.storedMessages.join("\n")
-        : ""
-    );
+    setTerminalOutput(openedFlow.terminalOutput);
 
     setIsRunning(
       openedFlow.status === FlowStatus.RUNNING ||
@@ -715,11 +764,28 @@ function FlowReciver(props: FlowReciverProps) {
 
     // Connect to a socketio room with the flowID
     socket.emit("joinFlow", savedID.current);
+
+    // Clean the terminal if present
+    window.horusTerm.ref?.current?.clearStdout();
+
+    // Apply any pending MolstarAPI actions if present
+    if (openedFlow?.pendingActions && openedFlow.pendingActions.length > 0) {
+      setHasPendingActions(true);
+      setIsRunning(true);
+      for (const action of openedFlow.pendingActions) {
+        await window.molstar?.applyAction(action);
+      }
+      setIsRunning(false);
+      setHasPendingActions(false);
+
+      // Save the mol* state after applying the actions
+      await updateMolstarState();
+    }
   };
 
   const handlingNew = useRef(false);
 
-  const handleNew = (bypass: boolean = false) => {
+  const handleNewInternal = async (bypass: boolean = false) => {
     if (handlingNew.current) {
       return;
     }
@@ -736,6 +802,12 @@ function FlowReciver(props: FlowReciverProps) {
         return;
       }
     }
+
+    // Leave the socket flow room
+    if (savedID.current !== "new_flow") {
+      socket.emit("leaveFlow", savedID.current);
+    }
+
     setFlowName("New Flow");
     savedID.current = "new_flow";
     flowPath.current = "";
@@ -752,6 +824,11 @@ function FlowReciver(props: FlowReciverProps) {
     window.horusTerm.storedMessages = [];
 
     setIsRunning(false);
+  };
+
+  const handleNew = (bypass: boolean = false) => {
+    // Add debouncing to execute the function only once
+    debounce(handleNewInternal, 500)(bypass);
   };
 
   const handleTerminalCommand = (e: CustomEvent) => {
@@ -866,6 +943,8 @@ function FlowReciver(props: FlowReciverProps) {
     setFlowSettings(loadedFlowSettings);
   };
 
+  const [socketConnected, setSocketConnected] = useState(true);
+
   useEffect(() => {
     // Fetch remotes
     fetchRemotes();
@@ -881,17 +960,39 @@ function FlowReciver(props: FlowReciverProps) {
     // therefore we need to join the room again so that the flow is always
     // updated
     socket.on("connect", () => {
+      setSocketConnected(true);
       if (savedID.current !== "new_flow") {
         socket.emit("joinFlow", savedID.current);
       }
     });
 
     // When the socket.io disconnects, we need to leave the flow room
+    // socket.on("disconnect", () => {
+    //   if (savedID.current !== "new_flow") {
+    //     socket.emit("leaveFlow", savedID.current);
+    //   }
+    // });
+
+    // Display a message when socket.io disconnects
     socket.on("disconnect", () => {
-      if (savedID.current !== "new_flow") {
-        socket.emit("leaveFlow", savedID.current);
-      }
+      setSocketConnected(false);
     });
+
+    // If we do not have connection at the beggining, set the state to false
+    if (!socket.connected) {
+      setSocketConnected(false);
+    }
+
+    // When a flow is updated from the backend, we need to update the flow on the canvas
+    socket.on("flow", loadSocketFlow);
+
+    return () => {
+      socket.off("flow", loadSocketFlow);
+      socket.off("connect");
+      socket.off("disconnect");
+      socket.off("leaveFlow");
+      socket.off("joinFlow");
+    };
   }, []);
 
   const handleOpenFlow = (
@@ -970,9 +1071,7 @@ function FlowReciver(props: FlowReciverProps) {
     };
   }, [props.placedBlocks, flowName, selectedRemote, currentExecuting]);
 
-  const [showRemotes, setShowRemotes] = useState(false);
-
-  const topBarTitle = () => {
+  function TopBarTitle() {
     return (
       <div className="flex flex-row top-bar-flow-reciver flow-title">
         <input
@@ -990,7 +1089,7 @@ function FlowReciver(props: FlowReciverProps) {
         <div
           className="flex flex-col gap-0 items-center text-center"
           style={{
-            minWidth: "4rem",
+            minWidth: "8rem",
           }}
         >
           <button
@@ -1033,10 +1132,16 @@ function FlowReciver(props: FlowReciverProps) {
             )}
           </button>
           {isCancelling && <div className="text-xs">Stopping</div>}
+          {!socketConnected && (
+            <div className="text-xs text-red-500">Disconnected</div>
+          )}
+          {hasPendingActions && (
+            <div className="text-xs text-green-500">Applying actions</div>
+          )}
         </div>
       </div>
     );
-  };
+  }
 
   const renderBlock = (block: Block, index: number) => {
     const connectedVars = block.variableConnections?.map((connection) => {
@@ -1192,7 +1297,7 @@ function FlowReciver(props: FlowReciverProps) {
 
   return (
     <div className="current-flow">
-      {topBarTitle()}
+      {TopBarTitle()}
       <div
         className="current-flow-canvas"
         ref={setNodeRef}

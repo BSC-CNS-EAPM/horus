@@ -64,13 +64,19 @@ type VariableGroup = {
   variables: Array<PluginVariable>;
 };
 
-type VariableConnection = {
+export type VariableConnection = {
   origin: BlockVarPair;
   destination: BlockVarPair;
   isCyclic: boolean;
   cycles: number;
   currentCycle: number;
 };
+
+type ExtensionsToOpen = {
+  title: string;
+  url: string;
+  data: any;
+}
 
 type Block = {
   // Basic info about the block
@@ -100,6 +106,7 @@ type Block = {
   isConnecting: boolean;
   tryingToConnect: PluginVariable | null;
   finishedExecution: boolean;
+  extensionsToOpen: Array<ExtensionsToOpen>;
 
   // Server execution
   storedOutputs: {

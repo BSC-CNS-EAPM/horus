@@ -28,7 +28,7 @@ import multiprocess.process as mp
 # Flask
 import flask
 import jinja2
-from flask import request
+from flask import Flask, request
 from flask_socketio import SocketIO, join_room, leave_room
 from flask_cors import CORS
 from flask_session import Session
@@ -169,8 +169,6 @@ class HorusServer:
         from HorusAPI import Extensions
 
         self.extensionsAPI = Extensions(self.socketio)
-
-        self._molstarAPIRoutes()
 
         # Setup exception handlers
         self._exceptionHandlers()
@@ -419,6 +417,39 @@ class HorusServer:
                     "ok": False,
                     "error": str(exc),
                 }
+            return flask.jsonify(success)
+
+        @self.server.route("/api/updatemolstate", methods=["POST"])
+        def updateMolState():
+            data = request.get_json()
+
+            if data is None:
+                success = {
+                    "ok": False,
+                    "error": "No data provided",
+                }
+
+            try:
+                flowPath = data.get("flowPath", None)
+                molstarState = data.get("molstarState", None)
+
+                if flowPath is None or molstarState is None:
+                    raise Exception("No flowPath or molstarState provided")
+
+                flow = self.flowManager.openFlowFromPath(flowPath)
+                flow.molstarState = molstarState
+                flow.write()
+
+                success = {
+                    "ok": True,
+                }
+
+            except Exception as exc:
+                success = {
+                    "ok": False,
+                    "error": str(exc),
+                }
+
             return flask.jsonify(success)
 
         @self.server.route("/api/isdesktop", methods=["GET"])
@@ -979,12 +1010,12 @@ class HorusServer:
         @verifyToken
         def about():
             return flask.render_template("About/index.html", shemsu=self.token)
-        
+
         @self.server.route("/remotes", methods=["GET"])
         @desktopOnly
         def remotes():
             return flask.render_template("Remotes/index.html")
-        
+
         @self.server.route("/settingsview")
         def settingsView():
             return flask.render_template("Settings/index.html")
@@ -995,21 +1026,6 @@ class HorusServer:
             # response.headers["Cache-Control"] = "no-store"
             return response
 
-    def _molstarAPIRoutes(self):
-        @self.server.route("/loadPDB", methods=["POST"])
-        def loadPDB():
-            # Loads the pdb file into mol*, this is a bridge for MolstarAPI
-            data = request.get_json()
-
-            pdb = data.get("pdb", None)
-
-            if pdb is None:
-                return flask.jsonify({"ok": False, "msg": "No data to load"})
-
-            self.socketio.emit("loadPDB", data)
-
-            return flask.jsonify({"ok": True})
-
     def _setupSocketio(self):
         """
         Sets the socketio server instance
@@ -1017,114 +1033,25 @@ class HorusServer:
 
         # Instantiate the SocketIO class with the server and the async_mode
         try:
-            self.socketio = SocketIO(
+            self.socketio = HorusSocket(
                 self.server,
+                self.baseURL,
                 cors_allowed_origins="*" if self.debug else self.baseURL,
                 async_mode="threading" if self.debug else "eventlet",
                 manage_session=False,
             )
         except ValueError as valerr:
             print(f"WARNING: Could not start socketio server: {valerr}. Forcing eventlet")
-            self.socketio = SocketIO(
+            self.socketio = HorusSocket(
                 self.server,
+                self.baseURL,
                 cors_allowed_origins="*" if self.debug else self.baseURL,
                 async_mode="eventlet",
                 manage_session=False,
             )
 
-        # Replace the .emit function to always include the room as the session id
-        oldEmit = self.socketio.emit
-
-        def newEmit(event, *args, **kwargs):
-            if "to" in kwargs:
-                toValue = kwargs["to"]
-                if toValue is not None:
-                    kwargs["room"] = kwargs["to"]
-                    kwargs.pop("to")
-
-            if "room" not in kwargs:
-                # Verify that we have request context
-                sid = None
-                if flask.has_request_context():
-                    if hasattr(request, "sid") and request.sid is not None:  # type: ignore
-                        sid = request.sid  # type: ignore
-                    elif request:
-                        sid = request.headers.get("socketiosid", None)
-                else:
-                    logging.getLogger("Horus").critical("Working outside of request context.")
-
-                if sid is not None:
-                    kwargs["room"] = sid
-                else:
-                    logging.getLogger("Horus").error(
-                        "No session id found for socketio emit. Not sending message."
-                    )
-                    return
-
-            # If we are in a background process, send the message through a new Flask request
-            if mp.current_process().name != "MainProcess":
-                logging.getLogger("Horus").debug(
-                    "Event from background process %s: %s",
-                    mp.current_process().name,
-                    event,
-                )
-
-                # Get the data from the queue
-                data = {
-                    "event": event,
-                    "args": args,
-                    "kwargs": kwargs,
-                }
-
-                # Send the data to the server
-                try:
-                    requests.post(
-                        f"{self.baseURL}/backgroundSocketio/",
-                        json=data,
-                        timeout=5,
-                    )
-                except requests.exceptions.RequestException:
-                    logging.getLogger("Horus").error(
-                        "Could not connect to server to emit event %s", event
-                    )
-
-                return
-
-            logging.getLogger("Horus").debug(
-                "Emitting event %s to room %s", event, kwargs["room"]
-            )
-
-            return oldEmit(event, *args, **kwargs)
-
-        self.socketio.emit = newEmit
-
-        # Setup per-flow rooms (based on flowID)
-        @self.socketio.on("joinFlow")
-        def joinFlow(flowID):
-            logging.getLogger("Horus").info("Joined room for flowID %s", flowID)
-            # Join the flow room
-            join_room(flowID)
-
-        @self.socketio.on("leaveFlow")
-        def leaveFlow(flowID):
-            logging.getLogger("Horus").debug("Left room for flowID %s", flowID)
-            # Leave the flow room
-            leave_room(flowID)
-
-        # Log the socketio connections
-        @self.socketio.on("connect")
-        def connect():
-            sid = request.sid  # type: ignore
-            logging.getLogger("Horus").info("SocketIO client connected: %s", sid)
-
-        # Log the socketio disconnections
-        @self.socketio.on("disconnect")
-        def disconnect():
-            sid = request.sid  # type: ignore
-            logging.getLogger("Horus").info("SocketIO client disconnected: %s", sid)
-
         # Add a new Flask request so that background processes can emit
-        @self.server.route("/backgroundSocketio/", methods=["POST"])
+        @self.server.route("/internal/backgroundsocketio/", methods=["POST"])
         def backgroundProcessSocketio():
             """
             Route to emit socketio events from background processes
@@ -1147,18 +1074,28 @@ class HorusServer:
             # Return 200 status
             return "OK"
 
-        # Add the socketio routes
-        self._socketIORoutes()
+        # Add a new Flask request so that the HorusSocket can check wether the
+        # client has currently vieweing the flow
+        @self.server.route("/internal/checkjoinedflow/", methods=["POST"])
+        def checkJoinedFlow():
+            """
+            Route to check if the client has joined a flow
+            """
 
-    def _socketIORoutes(self):
-        """
-        Setup the socket.io routes endpoints
-        """
+            # Get the data from the request
+            data = request.get_json()
 
-        @self.socketio.on("message")
-        def handleMessage(data):
-            print("received message: " + data)
-            self.socketio.emit("printTerm", "Hello from the server!")
+            if data is None:
+                return "No data provided", 400
+
+            # Get the data from the queue
+            flowSavedID = data.get("flowSavedID", None)
+
+            # Check if the client has joined the flow
+            if self.socketio.isClientJoinedFlow(flowSavedID):
+                return "OK"
+            else:
+                return "Not joined", 400
 
     def _pluginPages(self):
         """
@@ -1256,7 +1193,17 @@ class HorusServer:
                 self.socketio.emit("printTerm", errorMSG)
 
     def _debugRoutes(self):
-        pass
+        @self.server.route("/stop", methods=["GET"])
+        def stop():
+            # Get the current process
+            currentProcess = os.getpid()
+
+            logging.getLogger("Horus").debug("Stopping server with PID %s", currentProcess)
+
+            # Kill the process
+            os.kill(currentProcess, 1)
+
+            return "OK"
 
     def _exceptionHandlers(self):
         @self.server.errorhandler(jinja2.exceptions.TemplateNotFound)
@@ -1393,6 +1340,7 @@ class HorusServer:
 
         # Start the server
         self.socketio.run(self.server, **runArgs)
+
     def backgroundRun(self, func: typing.Callable):
         """
         Runs the given function in a background process. This function requires
@@ -1453,3 +1401,201 @@ class TokenManager:
         Verifies if a given token corresponds with the given string
         """
         return token == self.tokenize(string)
+
+
+class HorusSocket(SocketIO):
+    """
+    Subclass of SocketIO to add some new functionalities
+    """
+
+    # Joined rooms
+    joinedRooms: typing.Dict[str, typing.List[str]] = {}
+    """
+    A dictionary with the rooms joined by each client
+    """
+
+    def __init__(
+        self,
+        server: Flask,
+        baseURL: str,
+        *,
+        manage_session: bool = True,
+        channel: str = "flask-socketio",
+        path: str = "socket.io",
+        resource: str = "socket.io",
+        **kwargs,
+    ) -> None:
+        super().__init__(
+            server,
+            manage_session=manage_session,
+            channel=channel,
+            path=path,
+            resource=resource,
+            **kwargs,
+        )
+
+        self.baseURL = baseURL
+
+        # Replace the emit function
+        self._replaceEmit()
+
+        # Add the socketio routes
+        self._socketIORoutes()
+
+    def _replaceEmit(self):
+        """
+        Replace the .emit function to always include the room as the session id
+        """
+
+        oldEmit = self.emit
+
+        def newEmit(event, *args, **kwargs):
+            if "to" in kwargs:
+                toValue = kwargs["to"]
+                if toValue is not None:
+                    kwargs["room"] = kwargs["to"]
+                    kwargs.pop("to")
+
+            if "room" not in kwargs:
+                # Verify that we have request context
+                sid = None
+                if flask.has_request_context():
+                    if hasattr(request, "sid") and request.sid is not None:  # type: ignore
+                        sid = request.sid  # type: ignore
+                    elif request:
+                        sid = request.headers.get("socketiosid", None)
+                else:
+                    logging.getLogger("Horus").critical("Working outside of request context.")
+
+                if sid is not None:
+                    kwargs["room"] = sid
+                else:
+                    logging.getLogger("Horus").error(
+                        "No session id found for socketio emit. Not sending message."
+                    )
+                    return
+
+            # If we are in a background process, send the message through a new Flask request
+            if mp.current_process().name != "MainProcess":
+                logging.getLogger("Horus").debug(
+                    "Event from background process %s: %s",
+                    mp.current_process().name,
+                    event,
+                )
+
+                # Get the data from the queue
+                data = {
+                    "event": event,
+                    "args": args,
+                    "kwargs": kwargs,
+                }
+
+                # Send the data to the server
+                try:
+                    requests.post(
+                        f"{self.baseURL}/internal/backgroundsocketio/",
+                        json=data,
+                        timeout=5,
+                    )
+                except requests.exceptions.RequestException:
+                    logging.getLogger("Horus").error(
+                        "Could not connect to server to emit event %s", event
+                    )
+
+                return
+
+            logging.getLogger("Horus").debug(
+                "Emitting event %s to room %s", event, kwargs["room"]
+            )
+
+            return oldEmit(event, *args, **kwargs)
+
+        self.emit = newEmit
+
+    def _socketIORoutes(self):
+        """
+        Setup the socket.io routes endpoints
+        """
+
+        # Setup per-flow rooms (based on flowID)
+        @self.on("joinFlow")
+        def joinFlow(flowID):
+            sid = request.sid  # type: ignore
+            logging.getLogger("Horus").info("Joined room for flowID %s", flowID)
+
+            # Join the flow room
+            join_room(flowID)
+
+            if sid not in self.joinedRooms:
+                self.joinedRooms[sid] = []
+
+            self.joinedRooms[sid].append(flowID)
+
+        @self.on("leaveFlow")
+        def leaveFlow(flowID):
+            sid = request.sid  # type: ignore
+            logging.getLogger("Horus").debug("Left room for flowID %s", flowID)
+
+            # Leave the flow room
+            leave_room(flowID)
+
+            if sid in self.joinedRooms:
+                if flowID in self.joinedRooms[sid]:
+                    self.joinedRooms[sid].remove(flowID)
+
+        # Log the socketio connections
+        @self.on("connect")
+        def connect():
+            sid = request.sid  # type: ignore
+            logging.getLogger("Horus").info("SocketIO client connected: %s", sid)
+
+        # Log the socketio disconnections
+        @self.on("disconnect")
+        def disconnect():
+            sid = request.sid  # type: ignore
+            logging.getLogger("Horus").info("SocketIO client disconnected: %s", sid)
+
+            self.joinedRooms.pop(sid, None)
+
+        @self.on("message")
+        def handleMessage(data):
+            print("received message: " + data)
+            self.emit("printTerm", "Hello from the server!")
+
+    def isClientJoinedFlow(self, flowID: str) -> bool:
+        """
+        Check if the client has joined the flow
+        """
+
+        # If we are in a background process,
+        # send a request to the server to check
+        # if the client has joined the flow
+        if mp.current_process().name != "MainProcess":
+            # Get the data from the queue
+            data = {
+                "flowSavedID": flowID,
+            }
+
+            # Send the data to the server
+            try:
+                response = requests.post(
+                    f"{self.baseURL}/internal/checkjoinedflow/",
+                    json=data,
+                    timeout=5,
+                )
+            except requests.exceptions.RequestException:
+                logging.getLogger("Horus").error(
+                    "Could not connect to server to check if client has joined the flow"
+                )
+                return False
+
+            if response.status_code == 200:
+                return True
+            else:
+                return False
+        else:
+            for sid, joinedRooms in self.joinedRooms.items():
+                if flowID in joinedRooms:
+                    return True
+
+            return False

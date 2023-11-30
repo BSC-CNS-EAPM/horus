@@ -24,22 +24,22 @@ export default function Molstar() {
     window.molstar = molstar;
   };
 
+  const applyAction = (data) => {
+    const molstar = window.molstar;
+    if (molstar) {
+      molstar.applyAction(data);
+    }
+  };
+
   useEffect(() => {
     if (!window.molstar) {
       loadMolstar();
     }
 
-    socket.on("loadPDB", (data) => {
-      const molstar = window.molstar;
-      if (molstar) {
-        const label = data.label ? data.label : "PDB";
-        const pdb = data.pdb;
-        molstar.loadPDBString(pdb, label);
-      }
-    });
+    socket.on("molstarAction", applyAction);
 
     return () => {
-      socket.off("loadPDB");
+      socket.off("molstarAction");
     };
   }, []);
 

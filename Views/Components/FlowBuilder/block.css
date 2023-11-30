@@ -418,3 +418,13 @@
   border-radius: 5px;
   box-shadow: 4px 4px 8px #0000002e;
 }
+
+.extensions-box {
+  background-color: var(--broken-white);
+  text-align: center;
+  z-index: 99;
+  border: 1px solid #000;
+  border-radius: 5px;
+  box-shadow: 4px 4px 8px #0000002e;
+  position: absolute;
+}

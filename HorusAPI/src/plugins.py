@@ -763,6 +763,12 @@ class PluginBlock:
     The name of the selected remote.
     """
 
+    _extensionsToOpen: typing.List[typing.Dict[str, typing.Any]] = []
+    """
+    If the flow called an extension to visualize results, it will be
+    stored here to be easily opened when the flow is opened again
+    """
+
     def __init__(  # pylint: disable=dangerous-default-value
         self,
         name: str,
@@ -1043,6 +1049,7 @@ class PluginBlock:
             "connectedToReference": self._connectedToReferences,
             "selectedInputGroup": self.selectedInputGroup,
             "selectedRemote": self.selectedRemote,
+            "extensionsToOpen": self._extensionsToOpen,
         }
 
         return blockDict
@@ -1068,6 +1075,7 @@ class PluginBlock:
         self._runError = False
         self._runErrorMessage = ""
         self._isRunning = False
+        self._extensionsToOpen = []
 
         # Reset the cycles count on the connections
         if cleanCycles:
@@ -1121,6 +1129,9 @@ class PluginBlock:
         finishedExecution: bool = blockJSON.get("finishedExecution", True)
         selectedInputGroup: str = blockJSON.get("selectedInputGroup", "default")
         selectedRemote: str = blockJSON.get("selectedRemote", "Local")
+        extensionsToOpen: typing.List[typing.Dict[str, typing.Any]] = blockJSON.get(
+            "extensionsToOpen", []
+        )
 
         position: typing.Dict[str, float] = blockJSON.get("position", {})
         xPos: float = position.get("x", 0)
@@ -1211,6 +1222,7 @@ class PluginBlock:
         self._variableConnectionsReferences = parsedVariableConnectionsReference
         self._connectedTo = connectedTo
         self._connectedToReferences = connectedToReference
+        self._extensionsToOpen = extensionsToOpen
 
     def _minimalEncode(self):
         """
@@ -1234,6 +1246,7 @@ class PluginBlock:
             "connectedToReference": self._connectedToReferences,
             "selectedInputGroup": self.selectedInputGroup,
             "selectedRemote": self.selectedRemote,
+            "extensionsToOpen": self._extensionsToOpen,
         }
 
         return blockDict

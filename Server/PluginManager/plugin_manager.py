@@ -105,7 +105,7 @@ class PluginManager:
             return
 
         for f in files:  # pylint: disable=invalid-name
-            with PrintCapturer(socketio, "installPluginDep"):
+            with PrintSocketCapturer(socketio, "installPluginDep"):
                 print("Installing plugin: " + f)
                 self._installPlugin(f)
 
@@ -835,7 +835,7 @@ class PluginManager:
         outputs = None
         try:
             with PluginDeps(plugin._path):
-                with PrintCapturer(socketio):
+                with PrintSocketCapturer(socketio):
                     outputs = block()
         except Exception as exc:  # pylint: disable=broad-exception-caught
             error = True
@@ -1078,7 +1078,7 @@ class PluginManager:
 
 class PrintCapturer:
     """
-    Captures any print statement and sends it to the client besides printing it to the terminal.
+    Captures any print statement.
     """
 
     oldStdout: typing.Any
@@ -1091,16 +1091,57 @@ class PrintCapturer:
     The old stderr where to print the message besides the socketio event.
     """
 
+    def __init__(self):
+        self.oldStdout = sys.stdout
+        self.oldStderr = sys.stderr
+
+    def write(self, message):
+        """
+        Writes the message to the terminal.
+        """
+        self.oldStdout.write(message)
+
+    def flush(self):
+        """
+        Default implementation of flush.
+        """
+        self.oldStdout.flush()
+
+    def __enter__(self):
+        """
+        Used to redirect the stdout and stderr to the PrintCapturer
+        upon entering a with statement.
+        """
+        sys.stdout = self
+        sys.stderr = self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        """
+        Used to restore the stdout and stderr upon exiting a with statement.
+        """
+        sys.stdout = self.oldStdout
+        sys.stderr = self.oldStderr
+
+
+class PrintSocketCapturer(PrintCapturer):
+    """
+    Captures any print statement and sends it to the client besides printing it to the terminal.
+    """
+
+    socketio: SocketIO
+    event: str
+    room: typing.Optional[str]
+
     def __init__(
         self, socketio: SocketIO, event: str = "printTerm", room: typing.Optional[str] = None
     ):
         """
-        Initializes the PrintCapturer.
+        Initializes the PrintSocketCapturer.
 
         :param socketio: The socketio instance.
         :param printTo: The name of the socketio event to print to (default: "printTerm")
         """
-
+        super().__init__()
         self.socketio = socketio
         self.event = event
         self.room = room
@@ -1109,36 +1150,9 @@ class PrintCapturer:
         """
         Writes the message to the socketio event and to the terminal.
         """
-
         self.socketio.emit(self.event, message, to=self.room)
-        self.oldStdout.write(message)
+        super().write(message)
         self.socketio.sleep(0)
-
-    def flush(self):
-        """
-        Default implementation of flush.
-        """
-
-        self.oldStdout.flush()
-
-    def __enter__(self):
-        """
-        Used to redirect the stdout and stderr to the PrintCapturer
-        upon entering a with statement.
-        """
-        self.oldStdout = sys.stdout
-        self.oldStderr = sys.stderr
-        sys.stdout = self
-        sys.stderr = self
-
-    def __exit__(
-        self, exc_type, exc_value, traceback
-    ):  # pylint: disable=unused-argument,invalid-name
-        """
-        Used to restore the stdout and stderr upon exiting a with statement.
-        """
-        sys.stdout = self.oldStdout
-        sys.stderr = self.oldStderr
 
 
 class PluginDeps:

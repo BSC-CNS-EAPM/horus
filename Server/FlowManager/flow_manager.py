@@ -24,13 +24,13 @@ import cython
 from HorusAPI import PluginBlock as Block, SlurmBlock
 
 # The plugin manager
-from Server.PluginManager import PrintCapturer, PluginManager
+from Server.PluginManager import PrintCapturer, PluginManager, PrintSocketCapturer
 
 # The remote manager
 from Server.RemotesManager import RemotesManager
 
 # Internal, development types
-if not cython.compiled:
+if typing.TYPE_CHECKING:
     from HorusAPI.src.plugins import BlockConnection  # pylint: disable=ungrouped-imports
 
 
@@ -158,6 +158,13 @@ class Flow:
     The terminal output produced by the flow
     """
 
+    pendingActions: typing.List[typing.Dict[str, typing.Any]] = []
+    """
+    A list of pending actions to be sent to the frontend when the flow is opened
+
+    For example, any MolstarAPI action that needs to be executed on JS side
+    """
+
     class FlowStatus(Enum):
         """
         The status of the flow
@@ -235,6 +242,7 @@ class Flow:
         self.molstarState = flow.get("molstarState", {})
         self.date = flow.get("date", None)
         self.terminalOutput = flow.get("terminalOutput", None)
+        self.pendingActions = flow.get("pendingActions", [])
 
         # Set the flow status
         status = flow.get("status", "IDLE")
@@ -382,6 +390,7 @@ class Flow:
             "blocks": blocksJSON,
             "molstarState": self.molstarState,
             "terminalOutput": self.terminalOutput,
+            "pendingActions": self.pendingActions,
         }
 
         return flow
@@ -491,7 +500,7 @@ class Flow:
 
         # Execute the regular inputs before the cyclic ones
         # This is to avoid cyclic connections to be executed before the regular ones
-        runOrder: typing.List[BlockConnection] = []
+        runOrder: typing.List["BlockConnection"] = []
         for previousConnection in blockToRun._variableConnections:
             if previousConnection.isCyclic:
                 runOrder.append(previousConnection)
@@ -662,13 +671,13 @@ class Flow:
         blockToRun = self.findBlockByPlacedID(placedID)
 
         # Find first the cyclic connections to run them first
-        runOrder: typing.List[BlockConnection] = []
+        runOrder: typing.List["BlockConnection"] = []
         for nextConnection in blockToRun._variableConnectionsReferences:
             # Find the variableConnection that matches the reference
             destinationBlock = self.findBlockByPlacedID(nextConnection.destination.blockPlacedID)
 
             # Find the variableConnection that matches the reference
-            realConnection: typing.Optional[BlockConnection] = None
+            realConnection: typing.Optional["BlockConnection"] = None
             for destConn in destinationBlock._variableConnections:
                 if (
                     destConn.destination.variableID == nextConnection.destination.variableID
@@ -722,7 +731,7 @@ class Flow:
                 for conn in runOrder:
                     if conn.isCyclic and _currentCycle != 0:
                         return
-                    
+
                 nextBlock._cleanRun(cleanCycles=False)
 
                 self._runPreviousBlocks(nextPlacedID, resetRemoteBlock)
@@ -754,6 +763,12 @@ class Flow:
             for block in self.blocks:
                 block._cleanRun()
 
+            # Clear the terminal output
+            self.terminalOutput = []
+
+            # Clean the pending actions
+            self.pendingActions = []
+
         if placedID is None:
             raise Exception(  # pylint: disable=broad-exception-raised
                 "No placedID was provided for the run of the flow. "
@@ -775,30 +790,27 @@ class Flow:
         # Set the flow status to running
         self.status = self.FlowStatus.RUNNING
 
+        # Initialize the terminal output
+        self.terminalOutput = []
+
+        # Update the MolstarAPI with the current flow
+        # Because the flows are running in separate processes,
+        # the main instance of the MolstarAPI is not affected
+        from HorusAPI import MolstarAPI
+
+        molAPI = MolstarAPI()
+
+        molAPI._flow = self
+
+        # Update the ExtensionsAPI with the current flow
+        from HorusAPI import Extensions
+
+        extAPI = Extensions()
+
+        extAPI._flow = self
+
         # Run the blocks
-        if self._socket is not None:
-            with PrintCapturer(self._socket, room=self.savedID):
-                try:
-                    self._runPreviousBlocks(placedID, resetRemoteBlock)
-                    self._runNextBlocks(placedID)
-                    self.status = self.FlowStatus.FINISHED
-                except ErrorRunningBlock as errorBlock:
-                    print(f"Error running block {errorBlock.block.name}: {errorBlock}")
-                    self.status = self.FlowStatus.ERROR
-                except StoppedFlowException as stopped:
-                    print(stopped.message)
-                    self.status = self.FlowStatus.STOPPED
-                except Exception as exc:  # pylint: disable=broad-exception-raised
-                    print(f"Error running flow: {exc}")
-                    self.status = self.FlowStatus.ERROR
-                finally:
-                    # Save the flow
-                    self.write()
-
-                    # Send the flow to the frontend
-                    self._socket.emit("flow", self.encode(minimal=False), to=self.savedID)
-
-        else:
+        with self.TerminalOutputUpdater(self.terminalOutput, self.savedID, socket):
             try:
                 self._runPreviousBlocks(placedID, resetRemoteBlock)
                 self._runNextBlocks(placedID)
@@ -806,9 +818,31 @@ class Flow:
             except ErrorRunningBlock as errorBlock:
                 print(f"Error running block {errorBlock.block.name}: {errorBlock}")
                 self.status = self.FlowStatus.ERROR
+            except StoppedFlowException as stopped:
+                print(stopped.message)
+                self.status = self.FlowStatus.STOPPED
+            except Exception as exc:  # pylint: disable=broad-exception-raised
+                print(f"Error running flow: {exc}")
+                self.status = self.FlowStatus.ERROR
             finally:
                 # Save the flow
                 self.write()
+
+        # Send the flow to the frontend if a socket is provided
+        if self._socket is not None:
+            self._socket.emit("flow", self.encode(minimal=False), to=self.savedID)
+
+        # else:
+        #     try:
+        #         self._runPreviousBlocks(placedID, resetRemoteBlock)
+        #         self._runNextBlocks(placedID)
+        #         self.status = self.FlowStatus.FINISHED
+        #     except ErrorRunningBlock as errorBlock:
+        #         print(f"Error running block {errorBlock.block.name}: {errorBlock}")
+        #         self.status = self.FlowStatus.ERROR
+        #     finally:
+        #         # Save the flow
+        #         self.write()
 
         # Restore the working dir
         os.chdir(oldWD)
@@ -855,6 +889,52 @@ class Flow:
                 block._runError = True
                 block._runErrorMessage = "The flow was stopped."
                 block._finishedExecution = True
+
+    class TerminalOutputUpdater(PrintCapturer):
+        """
+        Subclasses the PrintCapturer class to update the terminal output of the flow
+
+        When no socket is provided to the run method, this class is used to update the terminal
+        output of the flow.
+        """
+
+        terminalOutput: typing.List[str]
+        """
+        The terminal output of the flow
+        """
+
+        socket: typing.Optional[SocketIO]
+        """
+        If provided, the socket to send the text to
+        """
+
+        savedID: str
+        """
+        The savedID of the flow
+        """
+
+        def __init__(
+            self,
+            terminalOutput: typing.List[str],
+            savedID: str,
+            socket: typing.Optional[SocketIO] = None,
+        ):
+            super().__init__()
+
+            self.terminalOutput = terminalOutput
+            self.savedID = savedID
+            self.socket = socket
+
+        def write(self, text: str):
+            """
+            Writes the text to the terminal output
+            """
+
+            if self.socket is not None:
+                self.socket.emit("printTerm", text, to=self.savedID)
+
+            self.terminalOutput.append(text)
+            super().write(text)
 
 
 class FlowManager:
