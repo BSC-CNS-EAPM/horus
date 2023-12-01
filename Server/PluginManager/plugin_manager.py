@@ -164,7 +164,7 @@ class PluginManager:
             # which contains some metadata. If this is the case, ignore it
             if "__MACOSX" in os.listdir(tmpInstallDir):
                 shutil.rmtree(os.path.join(tmpInstallDir, "__MACOSX"))
-            
+
             # Get the contents of the extracted folder
             contents = os.listdir(tmpInstallDir)
 
@@ -1052,6 +1052,37 @@ class PluginManager:
             "pluginDir": p._path,
         }
 
+    def _getDevelopmentPage(self):
+        """
+        If on development mode, returns the "Development" page
+        """
+
+        # Check for the "developmentExtensuonURL setting"
+        from App import AppDelegate
+
+        # If we are on development mode, add the "Develop extension" page
+        if AppDelegate().server.settingsManager.getSetting("developmentMode"):
+            extensionURL: str = (
+                AppDelegate().server.settingsManager.getSetting("extensionDevelopmentURL").value
+            )
+
+            # Parse the URL if it does not have http://
+            if not extensionURL.startswith("http://"):
+                extensionURL = "http://" + extensionURL
+
+            return {
+                "id": "development",
+                "plugin": "Horus",
+                "name": "Development",
+                "description": "Develop extensions directly from the development server.",
+                "html": "No HTML",
+                "url": extensionURL,
+                "deps": "No deps",
+                "pluginDir": "No plugin dir",
+            }
+        else:
+            return None
+
     def getPagesObject(self):
         """
         Returns a list of all the pages of all the plugins as Pages instances.
@@ -1073,6 +1104,13 @@ class PluginManager:
         for p in self.loadedPlugins:
             for pg in p.pages:
                 pages.append(self._getPageInfo(pg, p))
+
+        # Check for the development page
+        developmentPage = self._getDevelopmentPage()
+
+        if developmentPage is not None:
+            pages.append(developmentPage)
+
         return pages
 
     # def _blocksPlusSubBlocks(self, plugin: Plugin):

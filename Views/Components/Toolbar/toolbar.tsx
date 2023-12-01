@@ -942,9 +942,6 @@ function HorusSearch(props: HorusSearchProps) {
     );
   }
 
-  console.log("filteredPages", filteredPages);
-  console.log("prop.pages", props.pages);
-
   return (
     <div
       onFocus={() => {

@@ -41,5 +41,14 @@
     "type": "boolean",
     "allowedValues": [],
     "desktopOnly": true
+  },
+  "extensionDevelopmentURL": {
+    "name": "Extension URL",
+    "description": "When opening the extension 'Development', the URL to use in the iframe. Remember to disable CORS in your browser.",
+    "category": "Development",
+    "value": "localhost:1234",
+    "type": "string",
+    "allowedValues": [],
+    "desktopOnly": true
   }
 }
