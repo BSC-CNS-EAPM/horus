@@ -1,14 +1,7 @@
 from HorusAPI import Plugin, PluginBlock, PluginVariable, VariableTypes, PluginPage, PluginConfig
 
 
-plugin = Plugin(id="myplugin")
-
-plugin.info = {
-    "name": "My Plugin",
-    "description": "My plugin description.",
-    "author": "me",
-    "version": "0.0.1",
-}
+plugin = Plugin(id="test_plugin")
 
 
 def myaction(block):
@@ -47,4 +40,3 @@ configBlock = PluginConfig(
 )
 
 plugin.addConfig(configBlock)
-

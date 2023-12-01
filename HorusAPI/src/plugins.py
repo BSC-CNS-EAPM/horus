@@ -1522,6 +1522,18 @@ class Plugin:
         "description": "None",
         "dependencies": ["None"],
     }
+    """
+    A dictionary with the information about the plugin.
+
+    This mirrors the plugin.meta file.
+
+    Keys:
+    - name: The name of the plugin
+    - version: The version of the plugin
+    - author: The author of the plugin
+    - description: A description of the plugin
+    - dependencies: A list of dependencies of the plugin
+    """
 
     def __init__(self, id: str):
         """

@@ -284,7 +284,7 @@ pluginDir = "Tests/TestPluginManager/Plugins/"
 
 
 # Test the PluginConfigs
-def test_myplugin_load(pluginManager):
+def test_test_plugin_load(pluginManager):
     plugin = pluginManager._checkPlugin(pluginDir)
 
     # Check that the plugin is valid
@@ -314,7 +314,7 @@ def test_myplugin_load(pluginManager):
         assert block.variables["myVariable"] == "DEFAULTVALUE"
 
 
-def test_myplugin_config_init(pluginManager):
+def test_test_plugin_config_init(pluginManager):
     plugin = pluginManager._checkPlugin(pluginDir)
 
     # Check the configs of the plugin
@@ -324,7 +324,8 @@ def test_myplugin_config_init(pluginManager):
     # Check the variables of the config
     assert plugin.config["myVariable"] == "DEFAULTVALUE"
 
-def test_myplugin_config_assign_to_block(pluginManager):
+
+def test_test_plugin_config_assign_to_block(pluginManager):
     plugin = pluginManager._checkPlugin(pluginDir)
 
     # Assign the config to the block
@@ -335,7 +336,7 @@ def test_myplugin_config_assign_to_block(pluginManager):
     assert block.config["myVariable"] == "DEFAULTVALUE"
 
 
-def test_myplugin_config_update(pluginManager):
+def test_test_plugin_config_update(pluginManager):
     plugin = pluginManager._checkPlugin(pluginDir)
 
     configPath = pluginManager._pluginConfigPath(plugin)
@@ -343,12 +344,12 @@ def test_myplugin_config_update(pluginManager):
     plugin._updateConfigs(configPath)
 
 
-def test_myplugin_saveconfig(pluginManager):
+def test_test_plugin_saveconfig(pluginManager):
     # Load the test plugin
     pluginManager._loadPlugin(pluginDir)
 
-    configBlock = pluginManager._getPluginByID("myplugin")._getConfig(
-        "myplugin.config.configblock"
+    configBlock = pluginManager._getPluginByID("test_plugin")._getConfig(
+        "test_plugin.config.configblock"
     )
 
     configBlock._updateVariables({"myVariable": "newConfig"})
@@ -360,8 +361,8 @@ def test_myplugin_saveconfig(pluginManager):
     # Reload the plugin
     pluginManager._loadPlugin(pluginDir)
 
-    configBlock = pluginManager._getPluginByID("myplugin")._getConfig(
-        "myplugin.config.configblock"
+    configBlock = pluginManager._getPluginByID("test_plugin")._getConfig(
+        "test_plugin.config.configblock"
     )
 
     assert configBlock.variables["myVariable"] == "newConfig"
@@ -376,8 +377,140 @@ def test_myplugin_saveconfig(pluginManager):
     # Reload the plugin
     pluginManager._loadPlugin(pluginDir)
 
-    configBlock = pluginManager._getPluginByID("myplugin")._getConfig(
-        "myplugin.config.configblock"
+    configBlock = pluginManager._getPluginByID("test_plugin")._getConfig(
+        "test_plugin.config.configblock"
     )
 
     assert configBlock.variables["myVariable"] == "DEFAULTVALUE"
+
+
+import shutil
+import os
+import json
+
+
+def test_plugin_upgrade(pluginManager):
+    # Backup the plugin.meta
+    shutil.copyfile(
+        os.path.join(pluginDir, "plugin.meta"),
+        os.path.join(pluginDir, "plugin.meta.bak"),
+    )
+
+    plugin_test_path = None
+
+    try:
+        # First load the unmodified plugin
+        pluginManager._loadPlugin(pluginDir)
+
+        # Modify the plugin.meta to upgrade the version
+        # Read as JSON
+        with open(os.path.join(pluginDir, "plugin.meta"), "r") as f:
+            pluginMeta = json.load(f)
+
+        # Modify the version
+        pluginMeta["version"] = "0.0.2"
+
+        # Write back to file
+        with open(os.path.join(pluginDir, "plugin.meta"), "w") as f:
+            json.dump(pluginMeta, f)
+
+        plugin_test_path = "Tests/TestPluginManager/Plugins/test_plugin.hp"
+
+        # Zip the new plugin into .hp format
+        shutil.make_archive(
+            plugin_test_path,
+            "zip",
+            pluginDir,
+        )
+
+        # Remove from the file the .zip extension
+        os.rename(plugin_test_path + ".zip", plugin_test_path)
+
+        # Try to upgrade the plugin
+        pluginManager._installPlugin(plugin_test_path)
+
+        # Check that the plugin was upgraded
+        plugin = pluginManager._getPluginByID("test_plugin")
+
+        assert plugin.info["version"] == "0.0.2"
+    finally:
+        # Reset the plugin.meta file
+        shutil.copyfile(
+            os.path.join(pluginDir, "plugin.meta.bak"),
+            os.path.join(pluginDir, "plugin.meta"),
+        )
+        os.remove(os.path.join(pluginDir, "plugin.meta.bak"))
+
+        # Remove the .hp file
+        if plugin_test_path is not None and os.path.exists(plugin_test_path):
+            os.remove(plugin_test_path)
+
+        # Remove the installed plugin in the AppSupport directory
+        installedPath = os.path.join(pluginManager.pluginsDir, "test_plugin")
+        if os.path.exists(installedPath):
+            shutil.rmtree(installedPath)
+
+
+def test_plugin_downgrade(pluginManager):
+    # Backup the plugin.meta
+    shutil.copyfile(
+        os.path.join(pluginDir, "plugin.meta"),
+        os.path.join(pluginDir, "plugin.meta.bak"),
+    )
+
+    plugin_test_path = None
+
+    try:
+        # First load the unmodified plugin
+        pluginManager._loadPlugin(pluginDir)
+
+        # Modify the plugin.meta to upgrade the version
+        # Read as JSON
+        with open(os.path.join(pluginDir, "plugin.meta"), "r") as f:
+            pluginMeta = json.load(f)
+
+        # Modify the version
+        pluginMeta["version"] = "0.0.0"
+
+        # Write back to file
+        with open(os.path.join(pluginDir, "plugin.meta"), "w") as f:
+            json.dump(pluginMeta, f)
+
+        plugin_test_path = "Tests/TestPluginManager/Plugins/test_plugin.hp"
+
+        # Zip the new plugin into .hp format
+        shutil.make_archive(
+            plugin_test_path,
+            "zip",
+            pluginDir,
+        )
+
+        # Remove from the file the .zip extension
+        os.rename(plugin_test_path + ".zip", plugin_test_path)
+
+        # Try to downgrade the plugin
+        with pytest.raises(Exception) as e:
+            pluginManager._installPlugin(plugin_test_path)
+
+        assert "you are trying to install an older version." in str(e.value)
+
+        # Check that the plugin was NOT downgrade
+        plugin = pluginManager._getPluginByID("test_plugin")
+
+        assert plugin.info["version"] == "0.0.1"
+    finally:
+        # Reset the plugin.meta file
+        shutil.copyfile(
+            os.path.join(pluginDir, "plugin.meta.bak"),
+            os.path.join(pluginDir, "plugin.meta"),
+        )
+        os.remove(os.path.join(pluginDir, "plugin.meta.bak"))
+
+        # Remove the .hp file
+        if plugin_test_path is not None and os.path.exists(plugin_test_path):
+            os.remove(plugin_test_path)
+
+        # Remove the installed plugin in the AppSupport directory
+        installedPath = os.path.join(pluginManager.pluginsDir, "test_plugin")
+        if os.path.exists(installedPath):
+            shutil.rmtree(installedPath)

@@ -109,7 +109,7 @@ class PluginManager:
                 print("Installing plugin: " + f)
                 self._installPlugin(f)
 
-        self.pluginChanges = True
+        self.reloadPlugins()
 
     def _installPlugin(self, path):
         # Get the name of the plugin
@@ -119,16 +119,26 @@ class PluginManager:
         pluginName = os.path.splitext(pluginName)[0]
 
         # Create a folder with the same name as the plugin
-        newPluginDir = os.path.join(self.pluginsDir, "tmpInstall")
+        tmpInstallDir = os.path.join(self.pluginsDir, "tmpInstall")
 
-        if os.path.exists(newPluginDir):
-            raise Exception(f"Plugin with name {os.path.basename(path)} already installed.")
+        if os.path.exists(tmpInstallDir):
+            print("Removing previous temporary folder...")
 
-        os.mkdir(newPluginDir)
+            # Remove any previous tmpInstall folder
+            shutil.rmtree(tmpInstallDir)
 
-        print("Copying plugin to tmp folder...")
+            import time
 
-        newPlugin = shutil.copy(path, newPluginDir)
+            startTime = time.time()
+            while os.path.exists(tmpInstallDir):
+                if time.time() - startTime > 10:
+                    raise Exception("Stuck deleting temporary folder. Try restarting the app.")
+
+        os.mkdir(tmpInstallDir)
+
+        print("Copying plugin to temporary folder...")
+
+        newPlugin = shutil.copy(path, tmpInstallDir)
 
         # If the plugin is provided in .hp format, unzip it
         if newPlugin.endswith(".hp"):
@@ -138,7 +148,7 @@ class PluginManager:
             import zipfile
 
             with zipfile.ZipFile(newPlugin, "r") as zipRef:
-                zipRef.extractall(newPluginDir)
+                zipRef.extractall(tmpInstallDir)
 
                 logging.getLogger("Horus").info("Zip contents: %s", zipRef.namelist())
 
@@ -150,12 +160,21 @@ class PluginManager:
             # was packed packing the container folder instead, we need to move
             # the files to the root of the extracted contents.
 
+            # On macos, sometimes the zip files are extracted with a __MACOSX folder
+            # which contains some metadata. If this is the case, ignore it
+            if "__MACOSX" in os.listdir(tmpInstallDir):
+                shutil.rmtree(os.path.join(tmpInstallDir, "__MACOSX"))
+            
             # Get the contents of the extracted folder
-            contents = os.listdir(newPluginDir)
+            contents = os.listdir(tmpInstallDir)
 
             # If the resulting extraction is a single folder, move the files
             # to the root of the extracted contents
-            if len(contents) == 1 and os.path.isdir(os.path.join(newPluginDir, contents[0])):
+            isSingleFolder = len(contents) == 1 and os.path.isdir(
+                os.path.join(tmpInstallDir, contents[0])
+            )
+
+            if isSingleFolder:
                 print("Moving plugin files to the root of the extracted contents...")
 
                 # Get the folder name
@@ -164,8 +183,8 @@ class PluginManager:
                 # Rename it to some hash in order to prevent clashes
                 newFolderName = "tmp_" + str(hash(folderName))
 
-                oldFolderPath = os.path.join(newPluginDir, folderName)
-                newFolderPath = os.path.join(newPluginDir, newFolderName)
+                oldFolderPath = os.path.join(tmpInstallDir, folderName)
+                newFolderPath = os.path.join(tmpInstallDir, newFolderName)
 
                 # Rename the folder
                 os.rename(
@@ -178,37 +197,123 @@ class PluginManager:
 
                 # Move the files to the root of the extracted contents
                 for f in folderContents:
-                    shutil.move(os.path.join(newFolderPath, f), newPluginDir)
+                    shutil.move(os.path.join(newFolderPath, f), tmpInstallDir)
 
                 # Remove the folder
                 print("Removing temporary plugin folder...")
                 shutil.rmtree(newFolderPath)
 
         else:
-            raise Exception("Invalid plugin format. (.hp expected)")
+            raise Exception("Invalid plugin format (.hp expected)")
 
         # Get the .py file
         # newPlugin = os.path.join(newPluginDir, pluginName + ".py")
 
         try:
             print("Checking plugin...")
-            loadedPlugin = self._loadPlugin(newPluginDir)
+            loadedPlugin = self._loadPlugin(tmpInstallDir, appendToLoaded=False)
 
             if loadedPlugin is None:
-                raise Exception(f"Error installing '{path}'. PluginLoader returned None.")
+                raise Exception(
+                    f"Error installing '{path}'. PluginLoader could not load the plugin."
+                )
 
             # If everything went correct, move the plugin to its folder
             pluginFinalPath = os.path.join(self.pluginsDir, loadedPlugin.id)
-            if not os.path.exists(pluginFinalPath):
-                print("Saving plugin to its folder...")
-                shutil.move(newPluginDir, pluginFinalPath)
+
+            # If a plugin with the same name already exists, check if it is the same plugin
+            # in order to upgrade it
+            if not os.path.exists(pluginFinalPath) and not loadedPlugin in self.loadedPlugins:
+                print("Saving new plugin to its folder...")
+                shutil.move(tmpInstallDir, pluginFinalPath)
+
+                self.loadedPlugins.append(loadedPlugin)
             else:
-                raise Exception(
-                    f"Plugin {loadedPlugin.id} already exists.\
-                    Uninstall it first to install the new version."
-                )
+                # If we are installing the same plugin, upgrade it only if the version is higher
+                newPluginVersion = loadedPlugin.info["version"]
+                currentInstalledPluginVersion = self._getPluginByID(loadedPlugin.id).info[
+                    "version"
+                ]
+
+                # Parse the version strings
+                from packaging import version
+
+                newPluginVersion = version.parse(newPluginVersion)
+                currentInstalledPluginVersion = version.parse(currentInstalledPluginVersion)
+
+                # Compare the versions
+                newVersionIsHigher = newPluginVersion > currentInstalledPluginVersion
+
+                if newVersionIsHigher:
+                    print(f"Upgrading plugin {loadedPlugin.info['name']}...")
+
+                    # Backup the plugin configuration to the new plugin folder
+                    currentConfigPath = self._pluginConfigPath(
+                        self._getPluginByID(loadedPlugin.id)
+                    )
+                    newConfigPath = self._pluginConfigPath(loadedPlugin)
+
+                    # Read the current config if it exists, and update the new plugin config
+                    if os.path.exists(currentConfigPath):
+                        print("Backing up plugin configuration...")
+                        with open(currentConfigPath, "r", encoding="utf-8") as f:
+                            currentConfig = json.load(f)
+
+                        # Update the new plugin config
+                        loadedPlugin._saveConfig(newConfigPath, currentConfig)
+
+                    # Remove the old plugin
+                    self.loadedPlugins.remove(self._getPluginByID(loadedPlugin.id))
+
+                    print("Deleting old plugin version...")
+                    # Remove the old plugin folder
+                    if os.path.exists(pluginFinalPath):
+                        shutil.rmtree(pluginFinalPath)
+
+                    # Wait for the folder to be deleted
+                    while os.path.exists(pluginFinalPath):
+                        pass
+
+                    # Move the new plugin to the final path
+                    shutil.move(tmpInstallDir, pluginFinalPath)
+
+                    # Add the new plugin
+                    self.loadedPlugins.append(loadedPlugin)
+
+                    print("Plugin upgraded to version " + f"{loadedPlugin.info['version']}")
+
+                    # Emit the plugin changes
+                    self.reloadPlugins()
+                else:
+                    message = (
+                        "You are trying to install "
+                        + f"{loadedPlugin.info['name']} version "
+                        + f"{loadedPlugin.info['version']}, but you already have version "
+                        + f"{currentInstalledPluginVersion}."
+                    )
+
+                    if currentInstalledPluginVersion == newPluginVersion:
+                        message += (
+                            " If you are trying to reinstall the plugin, " + "uninstall it first."
+                        )
+
+                    if currentInstalledPluginVersion > newPluginVersion:
+                        message += (
+                            " Which means that you are trying to install an older version. "
+                        )
+
+                    logging.getLogger("Horus").error(message)
+
+                    raise Exception(message)
+
+                # raise Exception(
+                #     f"Plugin {loadedPlugin.id} already exists.\
+                #     Uninstall it first to install the new version."
+                # )
+
         except Exception as e:
-            shutil.rmtree(newPluginDir)
+            if os.path.exists(tmpInstallDir):
+                shutil.rmtree(tmpInstallDir)
             raise Exception(e) from e
 
         print("Plugin installed. It is safe to close this window.")
@@ -251,8 +356,7 @@ class PluginManager:
         except Exception as exc:
             raise Exception(f"{exc}. Try restarting the app") from exc
 
-        self.pluginChanges = True
-        self._initializePlugins()
+        self.reloadPlugins()
 
     def _listPluginsPaths(self):
         """
@@ -311,7 +415,9 @@ class PluginManager:
 
         self.pluginChanges = False
 
-    def _loadPlugin(self, pluginPath: str) -> typing.Optional[Plugin]:
+    def _loadPlugin(
+        self, pluginPath: str, appendToLoaded: bool = True
+    ) -> typing.Optional[Plugin]:
         """
         Loads a plugin from the given path.
 
@@ -331,10 +437,15 @@ class PluginManager:
         # Check that the plugin is not already loaded
         for p in self.loadedPlugins:
             if p == plugin:
-                raise Exception(
-                    f"Plugin {plugin.info['name']} already installed. "
-                    + "In order to update it, uninstall it first."
+                logging.getLogger("Horus").warning(
+                    "Plugin %s already loaded. If you are upgrading the plugin, "
+                    + "ignore this warning. Otherwise, uninstall it first.",
+                    plugin.info["name"],
                 )
+                # raise Exception(
+                #     f"Plugin {plugin.info['name']} already installed. "
+                #     + "In order to update it, uninstall it first."
+                # )
 
         # Create the config folder
         configDir = os.path.join(pluginPath, "config")
@@ -352,7 +463,8 @@ class PluginManager:
                 )
 
         # Add the plugin to the loaded plugins
-        self.loadedPlugins.append(plugin)
+        if appendToLoaded:
+            self.loadedPlugins.append(plugin)
 
         # Init the plugin config
         self._initConfig(plugin)
@@ -369,6 +481,7 @@ class PluginManager:
 
         # Load the plugin.meta
         pluginMeta = os.path.join(pluginDir, "plugin.meta")
+        logging.getLogger("Horus").info("Loading plugin meta: %s", pluginMeta)
         if not os.path.exists(pluginMeta):
             raise Exception("The plugin does not contain a plugin.meta file.")
 
@@ -1049,8 +1162,7 @@ class PluginManager:
                 output += buf.getvalue()
 
         # Reload the plugins
-        self.pluginChanges = True
-        self._initializePlugins()
+        self.reloadPlugins()
 
         # Return the output to print in horusterm
         return output
