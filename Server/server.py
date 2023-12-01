@@ -265,7 +265,7 @@ class HorusServer:
 
         if self.debug:
             logging.getLogger("Horus").debug("Enabling CORS")
-            CORS(server, resources={r"/*": {"origins": "*"}})
+            CORS(server, resources={r"/*": {"origins": "*"}}, origins="*")
 
         return server
 
