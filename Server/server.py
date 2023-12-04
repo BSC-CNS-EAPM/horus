@@ -10,7 +10,8 @@ import hashlib
 import logging
 import typing
 
-# import multiprocessing
+# Ctyhon
+import cython
 
 # Decorators
 from functools import wraps
@@ -1335,7 +1336,7 @@ class HorusServer:
         }
 
         # Add allow_unsafe_werkzeug argument if in debug mode
-        if self.debug:
+        if self.debug and not cython.compiled:
             runArgs["allow_unsafe_werkzeug"] = self.debug
 
         # Start the server
