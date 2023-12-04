@@ -432,7 +432,7 @@ class PluginManager:
             logging.getLogger("Horus").info("Loaded plugin %s", plugin.info["name"])
         except Exception as e:
             logging.getLogger("Horus").error("Error loading plugin: %s", str(e))
-            raise Exception(f"Error loading plugin: {e}") from e
+            raise e
 
         # Check that the plugin is not already loaded
         for p in self.loadedPlugins:
@@ -518,22 +518,17 @@ class PluginManager:
         spec = importlib.util.spec_from_file_location("pluginFile", pluginPath)
         if spec is None:
             raise Exception(f"Failed to create module spec for {entryPoint}")
-        pluginModule = importlib.util.module_from_spec(spec)
-        try:
-            # Set the python path to the dependencies folder
-            # self._includeDepsPath(pluginDir)
-            with PluginDeps(pluginDir):
-                # Install dependencies if the deps dir exists
-                if depsDir is not None:
-                    self._installDependencies(pluginMeta, depsDir)
 
-                # Load the entry point
-                spec.loader.exec_module(pluginModule)  # type: ignore
-        except Exception as e:
-            raise Exception(f"Failed to load plugin {entryPoint}: {e}") from e
-        # finally:
-        #     # Pop the appended deps dir from the sys.path
-        #     self._removeDepsPath(pluginDir)
+        # Read and load the python file
+        pluginModule = importlib.util.module_from_spec(spec)
+
+        with PluginDeps(pluginDir):
+            # Install dependencies if the deps dir exists
+            if depsDir is not None:
+                self._installDependencies(pluginMeta, depsDir)
+
+            # Load the entry point
+            spec.loader.exec_module(pluginModule)  # type: ignore
 
         # Check that the plugin variable exists
         if not hasattr(pluginModule, "plugin"):
@@ -656,60 +651,59 @@ class PluginManager:
             msg += "\nDefaulting to system python interpreter."
             print(msg)
 
-        # Check if the app is frozen
-        if getattr(sys, "frozen", False):
-            # Check if the python interpreter is valid
+        # Check if the python interpreter is valid
+        try:
             p = subprocess.Popen(
                 [interpreter, "--version"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 stdin=subprocess.PIPE,
             )
+        except Exception as e:
+            raise Exception(f"Could not execute '{interpreter}' command. {e}") from e
 
-            # Wait for the process to finish
-            p.wait()
+        # Wait for the process to finish
+        p.wait()
 
-            # Get the result
-            if p.stdout is None:
-                raise Exception("Could not get the intalled python interpreter version.")
+        # Get the result
+        if p.stdout is None:
+            raise Exception("Could not get the intalled python interpreter version.")
 
-            version = p.stdout.read().decode("utf-8").strip().split(" ")[-1]
+        version = p.stdout.read().decode("utf-8").strip().split(" ")[-1]
 
-            try:
-                appPythonVersion = AppDelegate().APP_INFO["PYTHON_VERSION"]
-            except Exception as exc:
-                raise Exception(
-                    f"Could not get the python version from the app info: {exc}"
-                ) from exc
+        try:
+            appPythonVersion = AppDelegate().APP_INFO["PYTHON_VERSION"]
+        except Exception as exc:
+            raise Exception(f"Could not get the python version from the app info: {exc}") from exc
 
-            exceptionMsg = (
-                "In order to install additional dependencies, "
-                "you need to have a valid python interpreter "
-                f"installed on your system with python v{appPythonVersion}. "
-                "You can select a specific interpreter in the settings."
-            )
+        exceptionMsg = (
+            "In order to install additional dependencies, "
+            "you need to have a valid python interpreter "
+            f"installed on your system with python v{appPythonVersion}. "
+            "You can select a specific interpreter in the settings."
+        )
 
-            # Check the return code
-            if p.returncode != 0 and p.returncode is not None:
-                raise Exception(exceptionMsg)
+        # Check the return code
+        if p.returncode != 0 and p.returncode is not None:
+            raise Exception(exceptionMsg)
 
-            # Check that the major and minor version of python matches
-            major = version.split(".")[0]
-            minor = version.split(".")[1]
+        # Check that the major and minor version of python matches
+        major = version.split(".")[0]
+        minor = version.split(".")[1]
 
-            appVersionMajor = appPythonVersion.split(".")[0]
-            appVersionMinor = appPythonVersion.split(".")[1]
+        appVersionMajor = appPythonVersion.split(".")[0]
+        appVersionMinor = appPythonVersion.split(".")[1]
 
-            majorMatches = major == appVersionMajor
-            minorMatches = minor == appVersionMinor
+        majorMatches = major == appVersionMajor
+        minorMatches = minor == appVersionMinor
 
-            # Both major and minor versions must match (eg. 3.9.12 == 3.9.15)
-            # Patch versions are ignored
-            bothMatch = majorMatches and minorMatches
+        # Both major and minor versions must match (eg. 3.9.12 == 3.9.15)
+        # Patch versions are ignored
+        bothMatch = majorMatches and minorMatches
 
-            if not bothMatch:
-                exceptionMsg += f" (Currently detected python v{version})"
-                raise Exception(exceptionMsg)
+        if not bothMatch:
+            exceptionMsg += f" (Currently detected python v{version})"
+            raise Exception(exceptionMsg)
 
         # Get the PATH environment variable
         path = os.environ.get("PATH", None)

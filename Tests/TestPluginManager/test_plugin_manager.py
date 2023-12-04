@@ -210,8 +210,8 @@ def test_install_dep_internal_success(mocker):
     assert last_call_kwargs["stderr"] == subprocess.STDOUT
     assert last_call_kwargs["stdin"] == subprocess.PIPE
 
-    # Verify that subprocess.Popen was called once
-    assert subprocess.Popen.call_count == 1  # type: ignore
+    # Verify that subprocess.Popen was called twice
+    assert subprocess.Popen.call_count == 2  # type: ignore
 
 
 def test_install_dep_internal_failure_pyversion(mocker):
