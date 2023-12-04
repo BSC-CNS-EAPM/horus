@@ -481,7 +481,7 @@ class PluginManager:
 
         # Load the plugin.meta
         pluginMeta = os.path.join(pluginDir, "plugin.meta")
-        logging.getLogger("Horus").info("Loading plugin meta: %s", pluginMeta)
+        logging.getLogger("Horus").debug("Loading plugin meta: %s", pluginMeta)
         if not os.path.exists(pluginMeta):
             raise Exception("The plugin does not contain a plugin.meta file.")
 
@@ -660,7 +660,10 @@ class PluginManager:
                 stdin=subprocess.PIPE,
             )
         except Exception as e:
-            raise Exception(f"Could not execute '{interpreter}' command. {e}") from e
+            raise Exception(
+                f"Could not execute '{interpreter}' command. {e}."
+                + " Make sure you have selected a valid interpreter in the settings."
+            ) from e
 
         # Wait for the process to finish
         p.wait()
@@ -1055,7 +1058,7 @@ class PluginManager:
         from App import AppDelegate
 
         # If we are on development mode, add the "Develop extension" page
-        if AppDelegate().server.settingsManager.getSetting("developmentMode"):
+        if AppDelegate().server.settingsManager.getSetting("developmentMode").value:
             extensionURL: str = (
                 AppDelegate().server.settingsManager.getSetting("extensionDevelopmentURL").value
             )
