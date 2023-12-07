@@ -59,6 +59,7 @@ import { Loci } from "molstar/lib/mol-model/structure/structure/element/loci";
 import { UUID } from "molstar/lib/mol-util";
 import { addSphereTo } from "./sphere";
 import { DockingSphereRepresentationProvider } from "./sphere";
+
 // Style
 require("molstar/lib/mol-plugin-ui/skin/light.scss");
 
@@ -623,28 +624,29 @@ class HorusMolstar {
   };
 
   private async getSession() {
-    const sessionSnapshot =
-      await this.plugin.managers.snapshot.getStateSnapshot();
+    // Erase previous session snapshots
+    this.plugin.managers.snapshot.clear();
 
-    let sessionObject = {
-      session: sessionSnapshot,
-    };
+    const molxSession = await this.plugin.managers.snapshot.serialize({
+      type: "molx",
+      params: {
+        data: true,
+        componentManager: true,
+        canvas3d: true,
+        interactivity: true,
+        camera: true,
+      },
+    });
 
-    const assets: [UUID, Asset][] = [];
+    // The molx format is basically a zip file
+    // but for storing the molstar state in the flow, we need to convert it to a string
+    // Therefore we will read the bytes of the zip file and convert it to a hex string
+    const textSession = await blobToHex(molxSession);
 
-    for (const { asset, file } of this.plugin.managers.asset.assets) {
-      assets.push([asset.id, asset]);
-      sessionObject[`assets/${asset.id}`] = await file.text();
-    }
-
-    if (assets.length > 0) {
-      sessionObject["assets.json"] = assets;
-    }
-
-    return sessionObject;
+    return textSession;
   }
 
-  private async loadSession(session) {
+  private async legacySession(session) {
     // If the session object is empty, return
     if (Object.keys(session).length === 0) {
       return;
@@ -670,6 +672,25 @@ class HorusMolstar {
 
     const snapshot = session.session;
     await this.plugin.managers.snapshot.setStateSnapshot(snapshot);
+  }
+
+  private async loadSession(session) {
+    // If the session is an object instead of a string, load it as a legacy session
+    if (typeof session !== "string") {
+      this.legacySession(session);
+      return;
+    }
+
+    // Convert the session string to a binary zip file
+    // Create a new file
+    const blob = hexToBlob(session);
+
+    const file = new File([blob], "session.molx", {
+      type: "application/zip",
+    });
+
+    // Load the session
+    await PluginCommands.State.Snapshots.OpenFile(this.plugin, { file: file });
   }
 
   snapshot = {
@@ -1364,3 +1385,36 @@ type SphereRef = {
 export default HorusMolstar;
 
 export { SphereRef };
+
+async function blobToHex(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onloadend = () => {
+      if (reader.readyState === FileReader.DONE) {
+        const arrayBuffer = reader.result;
+        const byteArray = new Uint8Array(arrayBuffer as ArrayBuffer);
+
+        // Convert byteArray to hex string
+        const hexArray = Array.from(byteArray, (byte) =>
+          byte.toString(16).padStart(2, "0")
+        );
+        const hexString = hexArray.join("");
+
+        resolve(hexString);
+      }
+    };
+
+    reader.onerror = reject;
+
+    // Read the Blob as an ArrayBuffer
+    reader.readAsArrayBuffer(blob);
+  });
+}
+
+function hexToBlob(hexString) {
+  const bytePairs = hexString.match(/.{1,2}/g) || [];
+  const byteArray = bytePairs.map((byte) => parseInt(byte, 16));
+
+  return new Blob([new Uint8Array(byteArray)]);
+}

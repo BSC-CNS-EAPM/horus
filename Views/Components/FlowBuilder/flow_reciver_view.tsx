@@ -93,7 +93,6 @@ function FlowReciver(props: FlowReciverProps) {
   const currentSaving = useRef(false);
 
   const updateMolstarState = async () => {
-    
     const molstarState = await window.molstar?.snapshot.get();
     const body = JSON.stringify({
       flowPath: flowPath.current,
@@ -121,6 +120,7 @@ function FlowReciver(props: FlowReciverProps) {
     currentSaving.current = true;
 
     const molstarState = await window.molstar?.snapshot.get();
+
     const saveContents = {
       name: flowName,
       blocks: props.placedBlocks,
@@ -1147,6 +1147,7 @@ function FlowReciver(props: FlowReciverProps) {
     const connectedVars = block.variableConnections?.map((connection) => {
       return (
         <VariableConnectionArrow
+          key={`${block.placedID}-${connection.origin.placedID}-${connection.destination.placedID}`}
           connection={connection}
           unconnectVariables={props.unconnectVariables}
           isCyclic={connection.isCyclic}
@@ -1158,13 +1159,16 @@ function FlowReciver(props: FlowReciverProps) {
     });
 
     const connectedBlocks = block.connectedTo?.map((connection) => {
-      return BlockConnectionArrow({
-        currentBlock: block,
-        connectedBlock: props.placedBlocks.find(
-          (b) => b.placedID === connection
-        ),
-        unconnectBlocks: props.unconnectBlocks,
-      });
+      return (
+        <BlockConnectionArrow
+          key={`${block.placedID}-${connection}`}
+          currentBlock={block}
+          connectedBlock={props.placedBlocks.find(
+            (b) => b.placedID === connection
+          )}
+          unconnectBlocks={props.unconnectBlocks}
+        />
+      );
     });
 
     const selectRemote = (selectedRemote: string) => {
@@ -1190,7 +1194,7 @@ function FlowReciver(props: FlowReciverProps) {
     };
 
     return (
-      <>
+      <div key={block.placedID}>
         <DraggableBlockView
           settings={flowSettings}
           key={`${block.placedID}-${block.id}`}
@@ -1201,7 +1205,7 @@ function FlowReciver(props: FlowReciverProps) {
         />
         {connectedVars}
         {connectedBlocks}
-      </>
+      </div>
     );
   };
 

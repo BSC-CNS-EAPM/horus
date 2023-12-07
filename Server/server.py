@@ -450,6 +450,7 @@ class HorusServer:
 
                 flow = self.flowManager.openFlowFromPath(flowPath)
                 flow.molstarState = molstarState
+                flow.pendingActions = []
                 flow.write()
 
                 success = {
