@@ -33,6 +33,12 @@ from HorusAPI import Plugin, PluginBlock, PluginPage
 from Server.RemotesManager import RemotesManager
 
 
+class DefaultPluginConfigException(Exception):
+    """
+    Exception raised when a default plugin stores configuration in the AppSupport directory.
+    """
+
+
 class PluginManager:
     """
     This class manages the installation, loading and uninstallation of plugins.
@@ -364,7 +370,7 @@ class PluginManager:
         """
 
         # List the directories present in the plugins directory
-        plugins = [
+        installedPlugins = [
             os.path.join(self.pluginsDir, p)
             for p in os.listdir(self.pluginsDir)
             if not p.startswith(".")
@@ -376,7 +382,8 @@ class PluginManager:
             for p in os.listdir(self.defaultPluginsDir)
             if not p.startswith(".")
         ]
-        plugins += defaultPlugins
+
+        plugins = defaultPlugins + installedPlugins
 
         return plugins
 
@@ -430,6 +437,8 @@ class PluginManager:
         try:
             plugin = self._checkPlugin(pluginPath)
             logging.getLogger("Horus").info("Loaded plugin %s", plugin.info["name"])
+        except DefaultPluginConfigException:
+            return None
         except Exception as e:
             logging.getLogger("Horus").error("Error loading plugin: %s", str(e))
             raise e
@@ -448,19 +457,25 @@ class PluginManager:
                 # )
 
         # Create the config folder
-        configDir = os.path.join(pluginPath, "config")
+        # configDir = os.path.join(pluginPath, "config")
+        configDir = os.path.dirname(self._pluginConfigPath(plugin))
 
         # Create it only if the plugin needs configs
         if not os.path.exists(configDir):
             try:
-                os.mkdir(configDir)
+                os.makedirs(configDir)
             # Except a read-only filesystem
-            except OSError:
+            except OSError as ose:
                 logging.getLogger("Horus").warning(
                     "Could not create config folder for plugin %s. "
                     + "The filesystem is read-only.",
                     plugin.info["name"],
                 )
+
+                raise Exception(
+                    f"Could not create config folder for plugin {plugin.info['name']}. "
+                    + "The filesystem is read-only."
+                ) from ose
 
         # Add the plugin to the loaded plugins
         if appendToLoaded:
@@ -482,8 +497,19 @@ class PluginManager:
         # Load the plugin.meta
         pluginMeta = os.path.join(pluginDir, "plugin.meta")
         logging.getLogger("Horus").debug("Loading plugin meta: %s", pluginMeta)
+
         if not os.path.exists(pluginMeta):
-            raise Exception("The plugin does not contain a plugin.meta file.")
+            # If the plugin.meta does not exist, but the plugin is in the default plugins
+            # then we can assume that this folder is just the config folder of the plugin
+
+            pluginID = os.path.basename(pluginDir)
+            try:
+                self._getPluginByID(pluginID)
+            except Exception as e:
+                raise Exception("The plugin does not contain a plugin.meta file.") from e
+            
+            raise DefaultPluginConfigException
+
 
         # Load the plugin.meta
         with open(pluginMeta, "r", encoding="utf-8") as f:
@@ -1143,6 +1169,11 @@ class PluginManager:
         # plugin = self._getPluginByID(pluginID)
 
         configDir = os.path.join(plugin._path, "config")
+
+        # If the config folder is inside a default plugin (read-only)
+        # move it to the user's app support dir
+        if plugin.info["default"]:
+            configDir = os.path.join(self.pluginsDir, plugin.id, "config")
 
         # Find the block config file
         pluginConfigFile = os.path.join(configDir, f"{plugin.id}.json")
