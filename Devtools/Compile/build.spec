@@ -53,7 +53,8 @@ sys.path.append(currentDir)
 import HorusAPI  # pylint: disable=wrong-import-position
 
 version = HorusAPI.__version__
-
+# If long_version does not contain "release"
+# use the branch name as the version (with commit hash)
 if "release" not in version:
     real_version = version.split("-")[0]
     branch = "-".join(version.split("-")[1:])
@@ -62,6 +63,9 @@ if "release" not in version:
 else:
     # Remove the "release" word from the version
     version = version.split("-")[0]
+
+# Replace any underscores with hyphens
+version = version.replace("_", "-")
 
 APP_INFO["APP_VERSION"] = version
 
@@ -86,6 +90,23 @@ datas = [
     (app_info_file, "."),
     (default_settings, "."),
 ]
+
+# Include the HorusAPI built folder. If no files are found, exit with error
+builtAPIpath = os.path.join(currentDir, "HorusAPI", "build")
+
+# Search for a folder that starts with "lib."
+builtAPIfolder = None
+for folder in os.listdir(builtAPIpath):
+    if folder.startswith("lib."):
+        builtAPIfolder = os.path.join(builtAPIpath, folder, "HorusAPI")
+        break
+
+if builtAPIfolder is None or not os.path.exists(builtAPIfolder):
+    print("Error: No built HorusAPI found. Cannot compile.")
+    sys.exit(1)
+
+# Include the built HorusAPI folder
+datas.append((builtAPIfolder, "HorusAPI"))
 
 # Required modules
 imports = [

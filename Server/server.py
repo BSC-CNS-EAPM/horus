@@ -1114,21 +1114,16 @@ class HorusServer:
         Setup the plugin pages
         """
 
-        from Server.PluginManager import PluginDeps
+        from Server.PluginManager import PluginDeps, PrintSocketCapturer
 
         # Create a wrapper function to add to
         # python path the plugin deps folder
         def viewFunctionWrapper(func, page, endPoint):
             @wraps(func)
             def wrapper(*args, **kwargs):
-                # self.pluginManager._includeDepsPath(  # pylint: disable=protected-access
-                #     page._pageInfo["pluginDir"]  # pylint: disable=protected-access
-                # )
-                with PluginDeps(page._pageInfo["pluginDir"]):
-                    result = endPoint.function(*args, **kwargs)
-                # self.pluginManager._removeDepsPath(  # pylint: disable=protected-access
-                #     page._pageInfo["pluginDir"]  # pylint: disable=protected-access
-                # )
+                with PrintSocketCapturer(self.socketio):
+                    with PluginDeps(page._pageInfo["pluginDir"]):
+                        result = endPoint.function(*args, **kwargs)
                 return result
 
             return wrapper
@@ -1479,7 +1474,7 @@ class HorusSocket(SocketIO):
                 else:
                     logging.getLogger("Horus").critical("Working outside of request context.")
 
-                if sid is not None:
+                if sid is not None or sid != "" or sid != "null":
                     kwargs["room"] = sid
                 else:
                     logging.getLogger("Horus").error(

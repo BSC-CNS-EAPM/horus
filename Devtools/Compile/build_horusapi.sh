@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Create the dist directory
+mkdir -p dist/
+
 # Go to the HorusAPI directory
 cd HorusAPI
 

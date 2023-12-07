@@ -7,7 +7,7 @@ def get_git_version():
         version = subprocess.check_output(
             ["git", "describe", "--tags", "--abbrev=0"], stderr=subprocess.DEVNULL, text=True
         ).strip()
-    except subprocess.CalledProcessError:
+    except Exception:
         version = "0.0.1"
 
     # Check the branch name (whether it's a release or not)
@@ -19,7 +19,7 @@ def get_git_version():
             ["git", "rev-parse", "--short", "HEAD"], text=True
         ).strip()
         branch = f"{branch}-{commit_hash}"
-    except subprocess.CalledProcessError:
+    except Exception:
         branch = "release"
 
     return branch, version

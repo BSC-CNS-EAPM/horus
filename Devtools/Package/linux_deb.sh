@@ -20,7 +20,7 @@ version="$version"
 arch=$(dpkg --print-architecture)
 
 # Get the system name (el8, ubuntu, etc)
-system=$(lsb_release -is)
+system=$(cat /etc/lsb-release | grep "DISTRIB_ID" | awk -F'=' '{print $2}')
 
 # Set a filename variable
 filename=Horus-$version-$arch-$system

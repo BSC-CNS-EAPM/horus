@@ -18,8 +18,26 @@ version=$(cat dist/Horus/APP_INFO | grep "APP_VERSION" | awk -F' = ' '{print $2}
 # Detect where are we running the script in order to build a .deb or .rpm
 if [ -f "/etc/debian_version" ]
   then
-    osName="Ubuntu"
-    sh Devtools/Package/linux_deb.sh
+    
+    # If we are on ubuntu 22, we can build a .deb
+    if [ -f "/etc/lsb-release" ]
+      then
+        osName=$(cat /etc/lsb-release | grep "DISTRIB_CODENAME" | awk -F'=' '{print $2}')
+        if [ $osName = "jammy" ]
+          then
+          osName="Ubuntu22"
+            sh Devtools/Package/linux_deb.sh
+        elif [ $osName = "trusty" ]
+          then
+          osName="Linux-Universal"
+        else
+          echo "Unsupported Ubuntu version"
+          exit
+        fi
+    else
+      echo "Unsupported Ubuntu version"
+      exit
+    fi
 
 elif [ -f "/etc/redhat-release" ]
   then
@@ -35,16 +53,13 @@ fi
 mkdir -p "dist/Horus-$version-$osName"
 
 # Move the deb, the .hp files and the python wheel (.whl) to the new folder
-if [ $osName = "Ubuntu" ]
+if [ $osName = "Ubuntu22" ]
   then
     mv dist/*.deb "dist/Horus-$version-$osName"
-elif [ $osName = "Rocky" ]
-  then
-    mv dist/*.zip "dist/Horus-$version-$osName"
+else [ $osName = "Linux-Universal" ]
+    mv dist/Horus "dist/Horus-$version-$osName"
 fi
 
-mv dist/*.rpm "dist/Horus-$version-$osName"
-mv dist/*.hp "dist/Horus-$version-$osName"
 mv dist/*.whl "dist/Horus-$version-$osName"
 
 # Create a tar.gz file of the folder

@@ -17,7 +17,7 @@ async function horusGet(url, headers?, shemsu?) {
   return await fetch(url, {
     method: "GET",
     headers: {
-      socketiosid: window.socketiosid || null,
+      socketiosid: window.socketiosid || parent.socketiosid || null,
       shemsu: shemsu || getShemsuToken(),
       ...headers,
     },
@@ -42,7 +42,7 @@ async function horusPost(url, headers, body, shemsu?) {
     method: "POST",
     headers: {
       shemsu: shemsu || getShemsuToken(),
-      socketiosid: window.socketiosid || null,
+      socketiosid: window.socketiosid || parent.socketiosid || null,
       ...headers,
     },
     body: body,

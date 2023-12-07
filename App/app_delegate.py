@@ -421,6 +421,16 @@ class AppDelegate(metaclass=HorusSingleton):
             # Set the value
             appInfo[key] = value
 
+        # Set the key "APP_VERSION" to the version of the HorusAPI
+        try:
+            import HorusAPI
+
+            appInfo["APP_VERSION"] = HorusAPI.__version__
+        except Exception:
+            self.logger.horus.critical(
+                "Error loading HorusAPI version. Horus may not work properly"
+            )
+
         self.APP_INFO = appInfo  # pylint: disable=invalid-name
 
     def _appSupportDir(self):

@@ -92,11 +92,11 @@ echo "Removing libstdc++.so.6 from the bundle (issue #68)"
 
 rm -rf Horus/libstdc++.so.6
 
-# Zip the Horus folder
-zip -rq $filename.zip Horus
+# # Zip the Horus folder
+# zip -rq $filename.zip Horus
 
-# Remove the Horus folder
-rm -rf Horus/
+# # Remove the Horus folder
+# rm -rf Horus/
 
 echo "Finished"
 

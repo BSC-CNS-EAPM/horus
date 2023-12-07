@@ -13,7 +13,7 @@
     "devparcel:pluginsmanager": "parcel Views/PluginsManager/index.html --port 3001 --host 0.0.0.0",
     "devparcel:remoteserver": "parcel Views/Remotes/index.html --port 3001 --host 0.0.0.0",
     "devparcel:settings": "parcel Views/Settings/index.html --port 3001 --host 0.0.0.0",
-    "build": "sh Devtools/Compile/build_horus.sh",
+    "build": "npm run buildparcel && sh Devtools/Compile/build_horus.sh",
     "distribute": "run-script-os",
     "distribute:linux": "./Devtools/Package/linux.sh",
     "distribute:darwin": "./Devtools/Package/macos.sh",
