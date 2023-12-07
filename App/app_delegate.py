@@ -292,10 +292,30 @@ class AppDelegate(metaclass=HorusSingleton):
     The Horus logger
     """
 
-    server: HorusServer
+    _server: HorusServer
     """
-    The server
+    The Horus server instance
     """
+
+    @property
+    def server(self):
+        """
+        Returns the Horus server if it exists. Otherwise, initializes it.
+        """
+
+        if not hasattr(self, "_server"):
+            msg = "Server not initialized. "
+            if cython.compiled:
+                msg += "Please report this issue to the developers."
+            else:
+                msg += "Ignore this warning if you are running tests."
+            
+            print(msg)
+            logging.warning(msg)
+            
+            self.initializeServer()
+
+        return self._server
 
     def __init__(
         self,
@@ -305,6 +325,7 @@ class AppDelegate(metaclass=HorusSingleton):
         debugURL: typing.Optional[str] = None,
         host: typing.Optional[str] = None,
         port: typing.Optional[int] = None,
+        safeMode: bool = False,
     ):
         """
         Initialize the AppDelegate.
@@ -316,6 +337,7 @@ class AppDelegate(metaclass=HorusSingleton):
         self.debugURL = debugURL
         self.host = host
         self.port = port
+        self.safeMode = safeMode
 
         # Load the app info from the APP_INFO file
         self._loadAppInfo()
@@ -326,11 +348,6 @@ class AppDelegate(metaclass=HorusSingleton):
         # Start the logger if needed
         self._loadLogger()
 
-        # Initialize the server here if we are on development
-        # Otherwise, initialize it when the app is launched
-        if not cython.compiled:
-            self.initializeServer()
-
     def initializeServer(self):
         """
         Initializes the server, the PluginManager, the FlowManager
@@ -338,16 +355,17 @@ class AppDelegate(metaclass=HorusSingleton):
         """
 
         # Initialize only if not previously initialized
-        if hasattr(self, "server"):
+        if hasattr(self, "_server"):
             return
 
         # Prepare the server
-        self.server = HorusServer(
+        self._server = HorusServer(
             debug=self.debug,
             desktop=not self.serverMode,
             appSupportDir=self.appSupportDir,
             host=self.host,
             port=self.port,
+            safeMode=self.safeMode,
         )
 
     def _loadLogger(self):
@@ -363,6 +381,7 @@ class AppDelegate(metaclass=HorusSingleton):
         self.logger.horus.info("Debug: %s", self.debug)
         self.logger.horus.info("Server Mode: %s", self.serverMode)
         self.logger.horus.info("Browser Mode: %s", self.browser)
+        self.logger.horus.info("Safe Mode: %s", self.safeMode)
         self.logger.horus.info("Debug URL: %s", self.debugURL)
         self.logger.horus.info("AppSupport Dir: %s", self.appSupportDir)
 
@@ -529,6 +548,9 @@ class AppDelegate(metaclass=HorusSingleton):
         This will be called when the app is launched.
         It will create the first window and launch the app
         """
+
+        # Initialize the server
+        self.initializeServer()
 
         if self.browser:
             # Start browser mode
@@ -950,8 +972,15 @@ def launchApp():
             print("No host provided. Usage: -h <host>")
             sys.exit(1)
 
+    # Check for the --secure flag to force safeMode. This mode is intended for
+    # running Horus as a public server
+    safeMode = False
+    if "--safe" in sys.argv:
+        safeMode = True
+        print("Running Horus in safe mode")
+
     # Prepare the app delegate
-    app = AppDelegate(debug, serverMode, browser, debugURL, host, port)
+    app = AppDelegate(debug, serverMode, browser, debugURL, host, port, safeMode)
 
     # Initialize the server
     app.initializeServer()

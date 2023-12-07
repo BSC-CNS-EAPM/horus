@@ -26,7 +26,7 @@ class Setting:
     A short name of the setting
     """
 
-    value: typing.Any = None
+    _value: typing.Any = None
     """
     The value of the setting
     """
@@ -62,6 +62,23 @@ class Setting:
     the setting will always return the default value
     """
 
+    @property
+    def value(self):
+        """
+        Returns the value of the setting if its safe
+        """
+
+        from App import AppDelegate
+
+        if self.desktopOnly and AppDelegate().safeMode and not AppDelegate().debug:
+            logging.getLogger("Horus").warning(
+                "The setting %s is only available on desktop. Returning the default value",
+                self.id,
+            )
+            return self.defaultValue
+
+        return self._value
+
     def __init__(
         self,
         id: str,
@@ -84,11 +101,11 @@ class Setting:
         :param category: The category of the setting
         :param type: The type of the setting as VariableTypes
         :param allowedValues: The allowed values of the setting
-        :param desktopOnly: If the setting is only available on desktop.
+        :param desktopOnly: If the setting is only available on unsafe mode (Not public server).
         """
         self.id = id
         self.name = name
-        self.value = value
+        self._value = value
         self.defaultValue = defaultValue
         self.description = description
         self.category = category
@@ -362,7 +379,7 @@ class SettingsManager:
 
         settingsList = []
         for settingID, setting in self.settings.items():
-            if setting.desktopOnly and AppDelegate().serverMode and not AppDelegate().debug:
+            if setting.desktopOnly and AppDelegate().safeMode and not AppDelegate().debug:
                 continue
             parsedSetting = {
                 "id": settingID,
@@ -379,13 +396,22 @@ class SettingsManager:
         :param newSettings: The new settings to save
         """
 
+        from App import AppDelegate
+
         # Loop over the new settings
         for newSetting in newSettings:
             # Get the setting
             setting = self.getSetting(newSetting["id"])
 
-            # Update the setting
-            setting.value = newSetting["value"]
+            # Update the setting only if it is not desktop only or if the app is not in safe mode
+            if setting.desktopOnly and AppDelegate().safeMode and not AppDelegate().debug:
+                logging.getLogger("Horus").warning(
+                    "Trying to update an unsfe setting '%s' in secure mode. Skipping...",
+                    setting.id,
+                )
+                continue
+
+            setting._value = newSetting["value"]
 
             # Update the setting
             self._updateSetting(setting)

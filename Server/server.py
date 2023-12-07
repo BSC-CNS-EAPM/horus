@@ -69,7 +69,15 @@ class HorusServer:
     parcelURL = "http://127.0.0.1:3001"
     browser = False
 
-    def __init__(self, debug=False, desktop=False, appSupportDir=None, host=None, port=None):
+    def __init__(
+        self,
+        debug=False,
+        desktop=False,
+        appSupportDir=None,
+        host=None,
+        port=None,
+        safeMode=False,
+    ):
         # App support directory
         if appSupportDir is None:
             self.appSupportDir = os.path.abspath(os.path.join("AppSupport"))
@@ -78,6 +86,9 @@ class HorusServer:
 
         # Desktop mode
         self.desktop = desktop
+
+        # Secure mode
+        self.safeMode = safeMode
 
         # Basic Flask setup
         self.debug = debug
@@ -290,7 +301,7 @@ class HorusServer:
         def desktopOnly(func):
             # @wraps(func)
             # def wrapper(*args, **kwargs):
-            #     if not self.desktop and not self.debug:
+            #     if self.safeMode and not self.debug:
             #         error = {
             #             "ok": False,
             #             "message": "This function is only available on desktop mode.",
