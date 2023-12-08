@@ -332,10 +332,13 @@ function FlowReciver(props: FlowReciverProps) {
 
   const flowRunner = async (
     block: Block,
-    resetRemote: boolean = true
+    resetRemote: boolean = false,
+    resetFlow: boolean = true
   ): Promise<void> => {
-    // Clean the terminal if present
-    window.horusTerm.ref?.current?.clearStdout();
+    if (resetFlow) {
+      // Clean the terminal if present
+      window.horusTerm.ref?.current?.clearStdout();
+    }
 
     const response = await horusPost(
       "/api/plugins/executeflow",
@@ -344,6 +347,7 @@ function FlowReciver(props: FlowReciverProps) {
         flowPath: flowPath.current,
         placedID: block.placedID,
         resetRemote: resetRemote,
+        resetFlow: resetFlow,
       })
     );
 
@@ -370,7 +374,10 @@ function FlowReciver(props: FlowReciverProps) {
     legacyRunnerSetting.current = settingValue;
   };
 
-  const executeBlock = async (block: Block): Promise<void> => {
+  const executeBlock = async (
+    block: Block,
+    resetFlow: boolean = true
+  ): Promise<void> => {
     // First save the flow
     const saved = await preHandleSave({ comesFromExecuteBlock: true });
     if (!saved) {
@@ -381,7 +388,7 @@ function FlowReciver(props: FlowReciverProps) {
     if (settingValue) {
       legacyRunner(block);
     } else {
-      flowRunner(block);
+      flowRunner(block, false, resetFlow);
     }
   };
 

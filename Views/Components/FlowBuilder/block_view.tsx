@@ -27,7 +27,7 @@ interface DeleteBlockButtonProps {
 interface PlayBlockButtonProps {
   isRunning: boolean;
   runError: boolean;
-  onClick: () => Promise<void>;
+  onClick: (resetFlow: boolean) => Promise<void>;
 }
 
 function BlockVariablesButton({ onClick }) {
@@ -89,6 +89,39 @@ function PlayBlockButton({
   runError,
   onClick,
 }: PlayBlockButtonProps) {
+  const [executeDescription, setExecuteDescription] = useState("Execute block");
+  const isCtrlPressed = useRef(false);
+
+  const handleClick = () => {
+    onClick(isCtrlPressed.current);
+  };
+
+  // If the user presses the "Ctrl" key, change the description to
+  // "Reset flow and execute block"
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Control") {
+        setExecuteDescription("Reset flow and execute block");
+        isCtrlPressed.current = true;
+      }
+    };
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (event.key === "Control") {
+        setExecuteDescription("Execute block");
+        isCtrlPressed.current = false;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, []);
+
   return (
     <HorusPopover
       trigger={
@@ -99,7 +132,7 @@ function PlayBlockButton({
             }}
           />
         ) : (
-          <button onClick={onClick}>
+          <button onClick={handleClick}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 20 20"
@@ -116,7 +149,7 @@ function PlayBlockButton({
         )
       }
     >
-      <div className="hover-description">Execute block</div>
+      <div className="hover-description">{executeDescription}</div>
     </HorusPopover>
   );
 }
@@ -361,9 +394,9 @@ function BlockView({ block, settings }: { block: Block; settings?: any }) {
     }
   };
 
-  const handleExecute = async () => {
+  const handleExecute = async (resetFlow: boolean) => {
     // Call the execute function
-    await block?.execute(block);
+    await block?.execute(block, resetFlow);
   };
 
   const checkRemoteStatus = async (block: Block) => {

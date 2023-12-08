@@ -132,7 +132,7 @@ type Block = {
   connectedToReference: Array<number>;
 
   // Block functions
-  execute: (block: Block) => Promise<void>;
+  execute: (block: Block, resetFlow: boolean) => Promise<void>;
   onChange: (blockPlacedID: number) => void;
   deleteBlock: (block: Block) => void;
   checkRemoteStatus: (block: Block) => Promise<void>;

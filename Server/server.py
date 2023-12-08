@@ -593,12 +593,15 @@ class HorusServer:
                 flowPath = data["flowPath"]
                 placedID = data["placedID"]
                 resetRemoteBlock = data.get("resetRemote", False)
+                resetFlow = data.get("resetFlow", True)
 
                 # Open the flow
                 flow = self.flowManager.openFlowFromPath(flowPath)
 
                 # Run the flow
-                self.flowManager.runFlow(flow, placedID, resetRemoteBlock, self.socketio)
+                self.flowManager.runFlow(
+                    flow, placedID, resetRemoteBlock, self.socketio, resetFlow
+                )
 
                 succsess = {
                     "ok": True,

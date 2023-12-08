@@ -496,7 +496,7 @@ class Flow:
         # If the block is already executed, return its outputs.
         # Except for when we are ressetting the flow run
         if blockToRun._finishedExecution and not resetRemoteBlock:  # and not comesFromCyclic
-            return blockToRun.outputs
+            return blockToRun._storedOutputs
 
         # Execute the regular inputs before the cyclic ones
         # This is to avoid cyclic connections to be executed before the regular ones
@@ -743,6 +743,7 @@ class Flow:
         placedID: typing.Optional[int] = None,
         resetRemoteBlock: bool = False,
         socket: typing.Optional[SocketIO] = None,
+        resetFlow: bool = True,
     ):
         """
         Run the flow starting from a specific block
@@ -758,7 +759,7 @@ class Flow:
             # If this method was called without a placedID,
             # resume the flow execution from the latest executed block
             placedID = self.currentExecuting
-        else:
+        elif resetFlow:
             # Set all blocks as not executed because a new run is starting
             for block in self.blocks:
                 block._cleanRun()
@@ -775,6 +776,9 @@ class Flow:
                 + "The flow cannot be resumed as no current executing block is set for this flow."
             )
 
+        # Reset just the block that is going to be executed
+        self.findBlockByPlacedID(placedID)._cleanRun()
+
         # Assign the socket instance
         self._socket = socket
 
@@ -790,8 +794,9 @@ class Flow:
         # Set the flow status to running
         self.status = self.FlowStatus.RUNNING
 
-        # Initialize the terminal output
-        self.terminalOutput = []
+        # Initialize the terminal output if its none
+        if self.terminalOutput is None:
+            self.terminalOutput = []
 
         # Update the MolstarAPI with the current flow
         # Because the flows are running in separate processes,
@@ -1300,6 +1305,7 @@ class FlowManager:
         placedID: typing.Optional[int] = None,
         resetRemoteBlock: bool = False,
         socket: typing.Optional[SocketIO] = None,
+        resetFlow: bool = True,
     ):
         """
         Tells the FlowManager to run a flow
@@ -1329,7 +1335,7 @@ class FlowManager:
             logging.getLogger("Horus").info("Started flow %s", flow.name)
 
             # Run the flow
-            flow.run(placedID, resetRemoteBlock, socket)
+            flow.run(placedID, resetRemoteBlock, socket, resetFlow)
 
             # Remove the flow from the running flows list
             self.runningFlows.remove(flow.path)

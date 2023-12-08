@@ -1013,6 +1013,10 @@ class PluginBlock:
                     variable._updateVariablesInGroup(value)
                 else:
                     variable.value = value
+
+                # Update the stored outputs
+                self._storedOutputs[id] = value
+
                 return
         raise Exception(f"Output {id} not found.")
 
@@ -1085,6 +1089,7 @@ class PluginBlock:
         self._runErrorMessage = ""
         self._isRunning = False
         self._extensionsToOpen = []
+        self._storedOutputs = {}
 
         # Reset the cycles count on the connections
         if cleanCycles:
@@ -1343,6 +1348,9 @@ class InputBlock(PluginBlock):
 
         # If the block does not have an action, return the value of the variable
         self._outputs[0].value = self._variables[0].value
+
+        # Update the stored outputs
+        self._storedOutputs[self._outputs[0].id] = self._outputs[0].value
 
         return self.outputs
 
