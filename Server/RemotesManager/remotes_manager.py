@@ -638,9 +638,9 @@ class RemotesAPI:
 
         return status
 
-    def getJobStatus(self, jobID: int) -> str:
+    def _getSlurmStatus(self, jobID: int) -> str:
         """
-        Get the status of a job.
+        Get the status of a slurm job.
 
         :param jobID: The ID of the job.
         :return: The status of the job (running, queued, failed, completed)
@@ -649,13 +649,34 @@ class RemotesAPI:
         # Get the job status
         status = self.command(f"sacct -j {jobID} -o 'State' --noheader -X")
 
-        if status == "":
+        if status == "" or "PENDING" in status:
             status = "PENDING"
+        elif "FAILED" in status:
+            status = "FAILED"
+        elif "TIMEOUT" in status:
+            status = "TIMEOUT"
+        elif "CANCELLED" in status:
+            status = "CANCELLED"
         elif "RUNNING" in status:
             status = "RUNNING"
+        elif "COMPLETED" in status:
+            status = "COMPLETED"
 
         # Remove any + or - from the status
         status = status.replace("+", "").replace("-", "")
+
+        return status
+    
+    def getJobStatus(self, jobID: int) -> str:
+        """
+        Get the status of a job.
+
+        :param jobID: The ID of the job.
+        :return: The status of the job (running, queued, failed, completed)
+        """
+
+        # Get the job status for slurm
+        status = self._getSlurmStatus(jobID)
 
         return status
 
