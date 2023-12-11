@@ -49,6 +49,7 @@ function FlowBuilderView() {
           placedIDCounter={flowBuilderState.placedIDCounter}
           flowBuilderController={flowBuilderState.flowBuilderController}
           unconnectBlocks={flowBuilderState.unconnectBlocks}
+          handleDelete={flowBuilderState.handleDelete}
           unconnectVariables={flowBuilderState.unconnectVariables}
           isConnecting={flowBuilderState.isConnecting}
           tryingToConnect={flowBuilderState.tryingToConnect}

@@ -415,6 +415,179 @@ const useFlowBuilder = () => {
     setSaved(false);
   };
 
+  const handleDelete = (block: Block) => {
+    let updatedPlacedBlocks = placedBlocks;
+
+    // Check first if the block to delete is connected to a variable wich also
+    // has a cyclic connection
+    for (const variableConnection of block.variableConnections) {
+      if (variableConnection.isCyclic) {
+        alert("Remove the cyclic connection first");
+        return;
+      }
+    }
+
+    for (const variableReference of block.variableConnectionsReference) {
+      const connectedBlock = updatedPlacedBlocks.find(
+        (b) => b.placedID === variableReference.destination.placedID
+      );
+
+      // for (const variableConnection of connectedBlock.variableConnections) {
+      //   if (variableConnection.isCyclic) {
+      //     console.log("2");
+      //     alert("Remove the cyclic connection first");
+      //     return;
+      //   }
+      // }
+
+      const cyclic = checkCyclicFlow(block, connectedBlock);
+
+      if (cyclic) {
+        alert("Remove the cyclic connection first");
+        return;
+      }
+    }
+
+    // Delete the connections to this block in
+    // the connected blocks REFERENCE of the block to delete
+    if (block.connectedToReference && block.connectedToReference.length > 0) {
+      for (const connected of block.connectedToReference) {
+        // Find in the placedBlocks the connected block
+        const realConnected = updatedPlacedBlocks.find(
+          (b) => b.placedID === connected
+        );
+
+        // Remove the reference to the block to delete
+        realConnected.connectedTo = realConnected.connectedTo.filter(
+          (b) => b !== block.placedID
+        );
+
+        // Update the placedBlocks array
+        updatedPlacedBlocks = updatedPlacedBlocks.map((b) => {
+          if (b.placedID === realConnected.placedID) {
+            b.connectedTo = realConnected.connectedTo;
+          }
+          return b;
+        });
+      }
+    }
+
+    // Delete the connection REFERENCE in the connected
+    // blocks of the block to delete
+    if (block.connectedTo && block.connectedTo.length > 0) {
+      for (const connected of block.connectedTo) {
+        // Find in the placedBlocks the connected block
+        const realConnected = updatedPlacedBlocks.find(
+          (b) => b.placedID === connected
+        );
+
+        // Remove the reference to the block to delete
+        realConnected.connectedToReference =
+          realConnected.connectedToReference.filter(
+            (b) => b !== block.placedID
+          );
+
+        // Update the placedBlocks array
+        updatedPlacedBlocks = updatedPlacedBlocks.map((b) => {
+          if (b.placedID === realConnected.placedID) {
+            b.connectedToReference = realConnected.connectedToReference;
+          }
+          return b;
+        });
+
+        // Update the placedBlocks array
+        updatedPlacedBlocks = updatedPlacedBlocks.map((b) => {
+          if (b.placedID === realConnected.placedID) {
+            b.connectedToReference = realConnected.connectedToReference;
+          }
+          return b;
+        });
+      }
+    }
+
+    // Delete the variable connections
+    // going out from this block to
+    // the connected blocks. For example,
+    // this is an input block connected to an action
+    // block. The action block is who stores the connection,
+    // Therefore if we delete the input block, the connection
+    // needs to be removed from the action block. Luckily,
+    // when connecting variables, a reference to the connection
+    // is istored in the input block. Therefore, we can use that
+    // reference to find the real block and remove the connections
+    // that depend on this block
+    if (
+      block.variableConnectionsReference &&
+      block.variableConnectionsReference.length > 0
+    ) {
+      for (const varConnected of block.variableConnectionsReference) {
+        // Find the real block from where the variable goes to
+        const realBlock = updatedPlacedBlocks.find(
+          (b) => b.placedID === varConnected.destination.placedID
+        );
+
+        if (!realBlock) {
+          // console.log(
+          //   "Error deleting variables: realBlock not found. Searched for ID: ",
+          //   varConnected.destination.placedID
+          // );
+          continue;
+        }
+
+        // Remove from the real block the variable connection
+        realBlock.variableConnections = realBlock.variableConnections.filter(
+          (v) => v.origin.placedID !== block.placedID
+        );
+
+        // Update the placedBlocks array
+        updatedPlacedBlocks = updatedPlacedBlocks.map((b) => {
+          if (b.placedID === realBlock.placedID) {
+            b.variableConnections = realBlock.variableConnections;
+          }
+          return b;
+        });
+      }
+    }
+
+    // If the block to be deleted is the action block for example,
+    // the reference of the connection stored in the input block
+    // needs to be removed. Therefore we need to read the block connections
+    // and remove the reference to this connection in the input block
+    if (block.variableConnections && block.variableConnections.length > 0) {
+      for (const varConnected of block.variableConnections) {
+        // Find the real block from where the variable comes from
+        const realBlock = updatedPlacedBlocks.find(
+          (b) => b.placedID === varConnected.origin.placedID
+        );
+
+        // Remove from the real block the variable connection reference
+        realBlock.variableConnectionsReference =
+          realBlock.variableConnectionsReference.filter(
+            (v) => v.destination.placedID !== block.placedID
+          );
+
+        // Update the placedBlocks array
+        updatedPlacedBlocks = updatedPlacedBlocks.map((b) => {
+          if (b.placedID === realBlock.placedID) {
+            b.variableConnectionsReference =
+              realBlock.variableConnectionsReference;
+          }
+          return b;
+        });
+      }
+    }
+
+    // Delete the block
+    updatedPlacedBlocks = placedBlocks.filter(
+      (b) => b.placedID !== block.placedID
+    );
+
+    // Update the placedBlocks array
+    setPlacedBlocks(updatedPlacedBlocks);
+
+    setSaved(false);
+  };
+
   const updateCyclesCount = (destination: BlockVarPair, cycles: number) => {
     // Get the destination block
     const destinationBlock = placedBlocks.find((b) => {
@@ -597,11 +770,19 @@ const useFlowBuilder = () => {
 
     // If one of the connections is already cyclic, exit early to
     // prevent infinite loops
-    if (
-      destination.variableConnections.find((vc) => {
-        return vc.isCyclic;
-      })
-    ) {
+    let existingCyclic = destination.variableConnections.find((vc) => {
+      return vc.isCyclic;
+    });
+
+    if (existingCyclic) {
+      return existingCyclic.origin.placedID === origin.placedID;
+    }
+
+    existingCyclic = destination.variableConnectionsReference.find((vc) => {
+      return vc.isCyclic;
+    });
+
+    if (existingCyclic) {
       return true;
     }
 
@@ -764,6 +945,7 @@ const useFlowBuilder = () => {
     placedIDCounter,
     dndTweaks,
     unconnectBlocks,
+    handleDelete,
     unconnectVariables,
     updateCyclesCount,
     isConnecting,
