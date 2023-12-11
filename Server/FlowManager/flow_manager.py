@@ -1015,14 +1015,14 @@ class FlowManager:
             if os.path.exists(path):
                 updatedRecentFlows[flow] = recentFlows[flow]
             else:
-                print(f"Removing non-existing flow '{os.path.basename(path)}'")
+                logging.getLogger("Horus").info("Removing non-existing flow '%s'", path)
 
         with open(self._recentFlowsPath, "w", encoding="utf-8") as file:
             json.dump(updatedRecentFlows, file)
 
         return updatedRecentFlows
 
-    def _recentsReader(self):
+    def readRecentsFlows(self):
         """
         Reads the recent flows from the file
         """
@@ -1036,8 +1036,10 @@ class FlowManager:
             try:
                 instaceFlow = Flow.read(path)
                 recentFlowsList.append(instaceFlow)
-            except Exception as exc:  # pylint: disable=broad-exception-caught
-                print(f"Error reading recent flow {path}", exc)
+            except Exception as exc:
+                logging.getLogger("Horus").error(
+                    "Error reading recent flow '%s': %s", path, str(exc)
+                )
 
         self.recentFlows = recentFlowsList
 
@@ -1058,7 +1060,7 @@ class FlowManager:
         """
 
         # Read the recent flows file
-        self._recentsReader()
+        self.readRecentsFlows()
 
         return self.recentFlows
 
@@ -1088,7 +1090,6 @@ class FlowManager:
             if loadedFlow.path == flow.path:
                 # Remove the flow
                 self.recentFlows.remove(loadedFlow)
-                print(f"Removing duplicated flow '{loadedFlow.name}'")
                 break
 
         # Update/create the recent flow

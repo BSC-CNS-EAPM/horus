@@ -298,7 +298,7 @@ class AppDelegate(metaclass=HorusSingleton):
     """
 
     @property
-    def server(self):
+    def server(self) -> HorusServer:
         """
         Returns the Horus server if it exists. Otherwise, initializes it.
         """
@@ -367,6 +367,9 @@ class AppDelegate(metaclass=HorusSingleton):
             port=self.port,
             safeMode=self.safeMode,
         )
+
+        # Read the recent flows after the server is initialized
+        self.server.flowManager.readRecentsFlows()
 
     def _loadLogger(self):
         """
