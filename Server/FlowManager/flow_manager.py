@@ -1235,6 +1235,9 @@ class FlowManager:
         Opens a flow from a file.
         """
 
+        # Always use the absolute path
+        flowPath = os.path.abspath(flowPath)
+
         # Check that the file exists
         if not os.path.exists(flowPath):
             raise Exception(  # pylint: disable=broad-exception-raised

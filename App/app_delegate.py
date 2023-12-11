@@ -309,10 +309,10 @@ class AppDelegate(metaclass=HorusSingleton):
                 msg += "Please report this issue to the developers."
             else:
                 msg += "Ignore this warning if you are running tests."
-            
+
             print(msg)
             logging.warning(msg)
-            
+
             self.initializeServer()
 
         return self._server
@@ -904,16 +904,16 @@ class AppDelegate(metaclass=HorusSingleton):
             thread.start()
 
 
-def launchApp():
+def parseArgs() -> typing.Dict[str, typing.Any]:
     """
-    Launches the app.
+    Parse the arguments to the AppDelegate
     """
 
     debugReachable = not cython.compiled
 
     # If the password was provided along with the debug flag,
     # enter debug mode in production
-    debugPassword = "nbdweb_123"
+    debugPassword = "horus_debug"
     if "--password" in sys.argv and not debugReachable:
         index = sys.argv.index("--password")
         try:
@@ -961,6 +961,7 @@ def launchApp():
 
     # Check for the --port (-p) flag to force a port on the app
     port = None
+    envPort = os.getenv("HORUS_PORT")
     if "--port" in sys.argv or "-p" in sys.argv:
         index = sys.argv.index("--port") if "--port" in sys.argv else sys.argv.index("-p")
         try:
@@ -969,11 +970,18 @@ def launchApp():
             print("No port provided. Usage: -p <port>")
             sys.exit(1)
         except ValueError:
-            print("Invalid port provided. Usage: -p <port>")
+            print("Invalid port provided. Usage: -p <integer>")
+            sys.exit(1)
+    elif envPort is not None:
+        try:
+            port = int(envPort)
+        except ValueError:
+            print("Invalid port provided. Usage: -p <integer>")
             sys.exit(1)
 
     # Check for the --host (-h) flag to force a host on the app
     host = None
+    envHost = os.getenv("HORUS_HOST")
     if "--host" in sys.argv or "-h" in sys.argv:
         index = sys.argv.index("--host") if "--host" in sys.argv else sys.argv.index("-h")
         try:
@@ -981,6 +989,8 @@ def launchApp():
         except IndexError:
             print("No host provided. Usage: -h <host>")
             sys.exit(1)
+    elif envHost is not None:
+        host = envHost
 
     # Check for the --secure flag to force safeMode. This mode is intended for
     # running Horus as a public server
@@ -989,11 +999,23 @@ def launchApp():
         safeMode = True
         print("Running Horus in safe mode")
 
-    # Prepare the app delegate
-    app = AppDelegate(debug, serverMode, browser, debugURL, host, port, safeMode)
+    args = {
+        "debug": debug,
+        "serverMode": serverMode,
+        "browser": browser,
+        "debugURL": debugURL,
+        "host": host,
+        "port": port,
+        "safeMode": safeMode,
+    }
 
-    # Initialize the server
-    app.initializeServer()
+    return args
+
+
+def runFlowInsteadOfLaunch(app: AppDelegate):
+    """
+    If a flow was provided as an argument, it will run the flow instead of launching the app.
+    """
 
     # Check for the --flow (-f) flag to run a flow instead of the app
     # The -f flag should be followed by the path to the flow and the
@@ -1034,6 +1056,23 @@ def launchApp():
 
         # Exit
         sys.exit(0)
+
+
+def launchApp():
+    """
+    Launches the app.
+    """
+
+    args = parseArgs()
+
+    # Prepare the app delegate
+    app = AppDelegate(**args)
+
+    # Initialize the server
+    app.initializeServer()
+
+    # If a flow was provided as an argument, it will run the flow instead of launching the app.
+    runFlowInsteadOfLaunch(app)
 
     # Start the app. This is a blocking process.
     app.applicationDidFinishLaunching()

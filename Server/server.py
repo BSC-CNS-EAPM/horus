@@ -92,7 +92,7 @@ class HorusServer:
 
         # Basic Flask setup
         self.debug = debug
-        self.host = host if host else "0.0.0.0"
+        self.host = host if host else "localhost"
         self.port = port if port else self._getFreePort()
         self.baseURL = f"http://{self.host}:{self.port}"
 
