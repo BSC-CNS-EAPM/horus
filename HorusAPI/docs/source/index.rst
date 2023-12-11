@@ -8,6 +8,12 @@ Welcome to HorusAPI's documentation!
 
 .. toctree::
    :maxdepth: 3
+   :caption: Running flows
+
+   running_flows/index
+
+.. toctree::
+   :maxdepth: 3
    :caption: Building Horus plugins
 
    developer_guide/index

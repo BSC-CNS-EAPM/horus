@@ -123,3 +123,48 @@ noInputBlock = PluginBlock(
 )
 
 plugin.addBlock(noInputBlock)
+
+
+multipleOutput1 = PluginVariable(
+    id="multipleOutput1",
+    name="multipleOutput1",
+    description="Multiple output 1",
+    type=VariableTypes.NUMBER,
+)
+
+multipleOutput2 = PluginVariable(
+    id="multipleOutput2",
+    name="multipleOutput2",
+    description="Multiple output 2",
+    type=VariableTypes.NUMBER,
+)
+
+multipleInput1 = PluginVariable(
+    id="multipleInput1",
+    name="multipleInput1",
+    description="Multiple input 1",
+    type=VariableTypes.NUMBER,
+)
+
+multipleInput2 = PluginVariable(
+    id="multipleInput2",
+    name="multipleInput2",
+    description="Multiple input 2",
+    type=VariableTypes.NUMBER,
+)
+
+
+def multipleInputOutputAction(block: PluginBlock):
+    block.setOutput("multipleOutput1", 1)
+    block.setOutput("multipleOutput2", 2)
+
+
+multipleInputOutputBlock = PluginBlock(
+    name="Multiple input output",
+    description="This block has multiple outputs",
+    action=multipleInputOutputAction,
+    inputs=[multipleInput1, multipleInput2],
+    outputs=[multipleOutput1, multipleOutput2],
+)
+
+plugin.addBlock(multipleInputOutputBlock)
