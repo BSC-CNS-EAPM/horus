@@ -141,7 +141,7 @@ export function App() {
 
   const mainViewPanel = (
     <>
-      <Panel minSize={30} order={3} collapsible={true}>
+      <Panel order={3} collapsible={true}>
         {mainView}
       </Panel>
     </>
@@ -150,7 +150,7 @@ export function App() {
   const molstarPanel = (
     <>
       <ResizeHandle horizontal={true} molstar={true} />
-      <Panel minSize={30} order={5} collapsible={true} defaultSize={0}>
+      <Panel order={5} collapsible={true} defaultSize={0}>
         <Molstar />
       </Panel>
     </>
@@ -163,7 +163,7 @@ export function App() {
   const consolePanel = (
     <>
       <ResizeHandle />
-      <Panel minSize={8} maxSize={50} order={2} defaultSize={20}>
+      <Panel maxSize={50} order={2} defaultSize={20}>
         {term.current}
       </Panel>
     </>
@@ -176,7 +176,6 @@ export function App() {
       <ResizeHandle horizontal={true} />
       <Panel
         ref={iFrameRef}
-        minSize={30}
         order={4}
         collapsible={true}
         defaultSize={50}
