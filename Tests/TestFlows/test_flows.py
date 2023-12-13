@@ -18,7 +18,7 @@ def plugin_manager():
     """
     Initiate a dummy plugin manager
     """
-    return PluginManager("AppSupport", False)
+    return PluginManager("AppSupport")
 
 
 @pytest.fixture
@@ -60,7 +60,7 @@ def flow_data():
 
 
 @pytest.fixture
-def flow(flow_data):
+def flow(flow_data, plugin_manager):
     return Flow(flow_data)
 
 

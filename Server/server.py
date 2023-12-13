@@ -10,9 +10,6 @@ import hashlib
 import logging
 import typing
 
-# Ctyhon
-import cython
-
 # Decorators
 from functools import wraps
 
@@ -21,6 +18,9 @@ import random
 
 # Socket for checking available ports
 import socket
+
+# Ctyhon
+import cython
 
 # Multiprocess module, a fork of multiprocessing with enhancements
 from multiprocess import Process  # type: ignore pylint: disable=no-name-in-module
@@ -120,8 +120,14 @@ class HorusServer:
         logging.getLogger("Horus").info("Port: %s", self.port)
         logging.getLogger("Horus").info("BaseURL: %s", self.baseURL)
 
+        # Initialize the settings manager
+        self.settingsManager = SettingsManager(self.appSupportDir)
+        """
+        Settings manager class. Handle the app settings.
+        """
+
         # Initialize the plugin manager
-        self.pluginManager = PluginManager(self.appSupportDir, self.desktop)
+        self.pluginManager = PluginManager(self.appSupportDir)
         """
         The plugin manager class. Handle plugin installation, loading and block execution.
         """
@@ -130,12 +136,6 @@ class HorusServer:
         self.remoteManager = RemotesManager(self.appSupportDir)
         """
         Remote manager class. Handle remote connections, configurations and commands.
-        """
-
-        # Initialize the settings manager
-        self.settingsManager = SettingsManager(self.appSupportDir)
-        """
-        Settings manager class. Handle the app settings.
         """
 
         # Initialize the flow manager
@@ -1605,7 +1605,7 @@ class HorusSocket(SocketIO):
             else:
                 return False
         else:
-            for sid, joinedRooms in self.joinedRooms.items():
+            for _, joinedRooms in self.joinedRooms.items():
                 if flowID in joinedRooms:
                     return True
 

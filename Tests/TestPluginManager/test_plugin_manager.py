@@ -9,12 +9,10 @@ import subprocess
 from unittest.mock import patch
 
 
-@pytest.fixture
-def pluginManager():
-    return PluginManager("AppSupport", False)
+def test_checkPlugin():
+    pluginManager = PluginManager("AppSupport")
+    pluginManager.appSupportDir = "AppSupport"
 
-
-def test_checkPlugin(pluginManager):
     # Create a mock plugin file
     entryPath = "Tests/TestServer/test_plugin.py"
     with open(entryPath, "w") as f:
@@ -60,7 +58,9 @@ def test_checkPlugin(pluginManager):
 
 def test_plugins_deps_dir_creation(mocker):
     # Create an instance of PluginManager
-    pluginManager = PluginManager("AppSupport", False)
+    app_support_dir = "/path/to/app_support"
+    pluginManager = PluginManager(app_support_dir)
+    pluginManager.appSupportDir = app_support_dir
 
     # Mock os.path and sys._MEIPASS
     mocker.patch("os.path.join", side_effect=lambda *args: "/".join(args))
@@ -68,8 +68,7 @@ def test_plugins_deps_dir_creation(mocker):
     mocker.patch("os.mkdir")  # Mock the os.mkdir function
 
     # Call the _pluginsDepsDir method
-    app_support_dir = "/path/to/app_support"
-    pluginManager._pluginsDepsDir(app_support_dir)
+    pluginManager._pluginsDepsDir()
 
     # Assert that the directories are created correctly and paths are set
     assert pluginManager.defaultPluginsDir == "/path/to/app_support/DefaultPlugins"
@@ -81,10 +80,13 @@ def test_plugins_deps_dir_creation(mocker):
         ]
     )
 
+    del pluginManager
+
 
 def test_install_plugin_success(mocker):
     # Create an instance of PluginManager
-    pluginManager = PluginManager("AppSupport", False)
+    pluginManager = PluginManager()
+    pluginManager.appSupportDir = "AppSupport"
 
     # Mock os.path and os.mkdir
     mocker.patch("os.path.basename", return_value="my_plugin.hp")
@@ -129,10 +131,15 @@ def test_install_plugin_success(mocker):
     # Assert that the .hp file is removed
     os.remove.assert_called_once_with("/path/to/new_plugin.hp")
 
+    # Remove the /path/to/plugins directory from the singleton
+    pluginManager.appSupportDir = "AppSupport"
+    pluginManager._pluginsDepsDir()
+
 
 def test_install_plugin_load_failure(mocker):
     # Create an instance of PluginManager
-    pluginManager = PluginManager("AppSupport", False)
+    pluginManager = PluginManager("AppSupport")
+    pluginManager.appSupportDir = "AppSupport"
 
     # Create a mock plugin file and metadata file
     pluginPath = "Tests/TestPluginManager/test_plugin.py"
@@ -170,10 +177,22 @@ def test_install_plugin_load_failure(mocker):
         os.remove(pluginPath)
         os.remove(metaPath)
 
+    del pluginManager
+
 
 def test_install_dep_internal_success(mocker):
     # Create an instance of MyClass
-    pluginManager = PluginManager("AppSupport", False)
+    pluginManager = PluginManager("AppSupport")
+    pluginManager.appSupportDir = "AppSupport"
+    # Init the settings manager
+    from Server.SettingsManager import SettingsManager
+
+    settingsManager = SettingsManager("AppSupport")
+
+    from App import AppDelegate
+
+    # Set the app delegate to be on "Server mode"
+    AppDelegate().serverMode = True
 
     # Mock the subprocess.Popen context manager
     mock_popen = mocker.Mock()
@@ -213,10 +232,13 @@ def test_install_dep_internal_success(mocker):
     # Verify that subprocess.Popen was called twice
     assert subprocess.Popen.call_count == 2  # type: ignore
 
+    del pluginManager
+
 
 def test_install_dep_internal_failure_pyversion(mocker):
     # Create an instance of MyClass
-    pluginManager = PluginManager("AppSupport", False)
+    pluginManager = PluginManager("AppSupport")
+    pluginManager.appSupportDir = "AppSupport"
     # Mock the subprocess.Popen context manager
     mock_popen = mocker.Mock()
     mock_popen.returncode = 0
@@ -233,10 +255,25 @@ def test_install_dep_internal_failure_pyversion(mocker):
         with patch.object(sys, "frozen", True, create=True):
             pluginManager._installDepInternal(dep_to_install, deps_dir)
 
+    del pluginManager
+
 
 def test_install_dep_internal_frozen_app(mocker):
     # Create an instance of MyClass
-    pluginManager = PluginManager("AppSupport", False)
+    pluginManager = PluginManager("AppSupport")
+    pluginManager.appSupportDir = "AppSupport"
+
+    # Init the settings manager
+    from Server.SettingsManager import SettingsManager
+
+    settingsManager = SettingsManager("AppSupport")
+
+    from App import AppDelegate
+
+    # Set the app delegate to be on "Server mode"
+    AppDelegate().serverMode = True
+
+
 
     # Mock the sys.frozen attribute to simulate a frozen app
     with patch.object(sys, "frozen", True, create=True):
@@ -278,13 +315,17 @@ def test_install_dep_internal_frozen_app(mocker):
     # Verify that subprocess.Popen was called exactly twice
     assert subprocess.Popen.call_count == 2  # type: ignore
 
+    del pluginManager
+
 
 # Create a mock plugin file
 pluginDir = "Tests/TestPluginManager/Plugins/"
 
 
 # Test the PluginConfigs
-def test_test_plugin_load(pluginManager):
+def test_test_plugin_load():
+    pluginManager = PluginManager("AppSupport")
+    pluginManager.appSupportDir = "AppSupport"
     plugin = pluginManager._checkPlugin(pluginDir)
 
     # Check that the plugin is valid
@@ -314,7 +355,10 @@ def test_test_plugin_load(pluginManager):
         assert block.variables["myVariable"] == "DEFAULTVALUE"
 
 
-def test_test_plugin_config_init(pluginManager):
+def test_test_plugin_config_init():
+    pluginManager = PluginManager("AppSupport")
+    pluginManager.appSupportDir = "AppSupport"
+
     plugin = pluginManager._checkPlugin(pluginDir)
 
     # Check the configs of the plugin
@@ -325,7 +369,9 @@ def test_test_plugin_config_init(pluginManager):
     assert plugin.config["myVariable"] == "DEFAULTVALUE"
 
 
-def test_test_plugin_config_assign_to_block(pluginManager):
+def test_test_plugin_config_assign_to_block():
+    pluginManager = PluginManager("AppSupport")
+    pluginManager.appSupportDir = "AppSupport"
     plugin = pluginManager._checkPlugin(pluginDir)
 
     # Assign the config to the block
@@ -336,7 +382,10 @@ def test_test_plugin_config_assign_to_block(pluginManager):
     assert block.config["myVariable"] == "DEFAULTVALUE"
 
 
-def test_test_plugin_config_update(pluginManager):
+def test_test_plugin_config_update():
+    pluginManager = PluginManager("AppSupport")
+    pluginManager.appSupportDir = "AppSupport"
+
     plugin = pluginManager._checkPlugin(pluginDir)
 
     configPath = pluginManager._pluginConfigPath(plugin)
@@ -344,7 +393,10 @@ def test_test_plugin_config_update(pluginManager):
     plugin._updateConfigs(configPath)
 
 
-def test_test_plugin_saveconfig(pluginManager):
+def test_test_plugin_saveconfig():
+    pluginManager = PluginManager("AppSupport")
+    pluginManager.appSupportDir = "AppSupport"
+
     # Load the test plugin
     pluginManager._loadPlugin(pluginDir)
 
@@ -389,7 +441,10 @@ import os
 import json
 
 
-def test_plugin_upgrade(pluginManager):
+def test_plugin_upgrade():
+    pluginManager = PluginManager("AppSupport")
+    pluginManager.appSupportDir = "AppSupport"
+
     # Backup the plugin.meta
     shutil.copyfile(
         os.path.join(pluginDir, "plugin.meta"),
@@ -451,7 +506,17 @@ def test_plugin_upgrade(pluginManager):
             shutil.rmtree(installedPath)
 
 
-def test_plugin_downgrade(pluginManager):
+def test_plugin_downgrade():
+    if PluginManager._instances != {}:
+        for pluginManager in PluginManager._instances.values():
+            del pluginManager
+        PluginManager._instances = {}
+
+    pluginManager = PluginManager("AppSupport")
+    pluginManager.appSupportDir = "AppSupport"
+
+    # Unload any plugins from the singleton
+
     # Backup the plugin.meta
     shutil.copyfile(
         os.path.join(pluginDir, "plugin.meta"),

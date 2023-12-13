@@ -297,6 +297,11 @@ class AppDelegate(metaclass=HorusSingleton):
     The Horus server instance
     """
 
+    _triedToStartServer: int = 0
+    """
+    The number of trials to start the server
+    """
+
     @property
     def server(self) -> HorusServer:
         """
@@ -304,6 +309,14 @@ class AppDelegate(metaclass=HorusSingleton):
         """
 
         if not hasattr(self, "_server"):
+            # If we tried to start the server more than 2 times, exit
+            if self._triedToStartServer > 1:
+                print("Error starting server. Exiting...")
+                sys.exit(1)
+
+            # Try to start the server
+            self._triedToStartServer += 1
+
             msg = "Server not initialized. "
             if cython.compiled:
                 msg += "Please report this issue to the developers."
@@ -367,9 +380,6 @@ class AppDelegate(metaclass=HorusSingleton):
             port=self.port,
             safeMode=self.safeMode,
         )
-
-        # Read the recent flows after the server is initialized
-        self.server.flowManager.readRecentsFlows()
 
     def _loadLogger(self):
         """

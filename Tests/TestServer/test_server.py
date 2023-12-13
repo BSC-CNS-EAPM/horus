@@ -5,6 +5,11 @@ import requests
 import time
 import sys
 
+from Server.PluginManager import PluginManager
+
+# Re init the PluginManager
+PluginManager("AppSupport").appSupportDir = "AppSupport"
+
 
 @pytest.fixture
 def desktopServer():

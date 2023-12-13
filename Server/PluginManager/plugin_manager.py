@@ -27,10 +27,13 @@ from contextlib import redirect_stdout, redirect_stderr
 from flask_socketio import SocketIO
 
 # More types from the HorusAPI
-from HorusAPI import Plugin, PluginBlock, PluginPage
+from HorusAPI import Plugin, PluginBlock, PluginPage, HorusSingleton
 
 # Import the RemoteManager for the block's remote
 from Server.RemotesManager import RemotesManager
+
+# Import the settings manager
+from Server.SettingsManager import SettingsManager
 
 
 class DefaultPluginConfigException(Exception):
@@ -39,7 +42,7 @@ class DefaultPluginConfigException(Exception):
     """
 
 
-class PluginManager:
+class PluginManager(metaclass=HorusSingleton):
     """
     This class manages the installation, loading and uninstallation of plugins.
     It creates the AppSupport/Plugins directory if it doesn't exist.
@@ -48,12 +51,14 @@ class PluginManager:
     # Track if the plugins need to be reloaded
     pluginChanges = True
 
-    def __init__(self, appSupportDir: str, desktop: bool):
-        # Get the plugins and dependencies directory
-        self._pluginsDepsDir(appSupportDir)
+    def __init__(self, appSupportDir: typing.Optional[str] = None):
+        if appSupportDir is None:
+            raise Exception("AppSupport directory not provided in PluginManager init call.")
 
-        # Assign desktop mode (opening of files, folders...)
-        self.desktop = desktop
+        self.appSupportDir = appSupportDir
+
+        # Get the plugins and dependencies directory
+        self._pluginsDepsDir()
 
         # Save the current working dir
         self.workingDir = os.getcwd()
@@ -61,7 +66,7 @@ class PluginManager:
         # Initialize the plugins
         self._initializePlugins()
 
-    def _pluginsDepsDir(self, appSupportDir):
+    def _pluginsDepsDir(self):
         """
         Creates the plugins and dependencies directory if they doesn't exist.
         - appSupportDir: The path to the AppSupport directory
@@ -74,10 +79,10 @@ class PluginManager:
             self.defaultPluginsDir = os.path.abspath(os.path.join(bundleDir, "DefaultPlugins"))
         except AttributeError:
             # We are not in a bundle, use the AppSupport/DefaultPlugins directory
-            self.defaultPluginsDir = os.path.join(appSupportDir, "DefaultPlugins")
+            self.defaultPluginsDir = os.path.join(self.appSupportDir, "DefaultPlugins")
 
         # Defines the plugins directory, which should be in the AppSupport directory
-        self.pluginsDir = os.path.join(appSupportDir, "Plugins")
+        self.pluginsDir = os.path.join(self.appSupportDir, "Plugins")
         if not os.path.exists(self.pluginsDir):
             os.mkdir(self.pluginsDir)
 
@@ -507,9 +512,8 @@ class PluginManager:
                 self._getPluginByID(pluginID)
             except Exception as e:
                 raise Exception("The plugin does not contain a plugin.meta file.") from e
-            
-            raise DefaultPluginConfigException
 
+            raise DefaultPluginConfigException
 
         # Load the plugin.meta
         with open(pluginMeta, "r", encoding="utf-8") as f:
@@ -637,16 +641,23 @@ class PluginManager:
             name = dep.split("==")[0].lower()
             version = dep.split("==")[1] if "==" in dep else None
 
+            # Condense the if statements to have better readability
             exists = installedDeps.get(name, None)
+            doNotExist = exists is None
+            hasToUpgrade = exists != version and version is not None
+            hasToInstall = doNotExist or hasToUpgrade
 
-            if exists is None:
-                print(f"Installing dependency {dep} for plugin {pluginName}...")
-                self._installDepInternal(dep, depsDir)
-                continue
+            if hasToInstall:
+                if doNotExist:
+                    print(f"Installing dependency {dep} for plugin {pluginName}...")
+                elif hasToUpgrade:
+                    print(f"Upgrading dependency {dep} for plugin {pluginName}...")
 
-            if exists != version and version is not None:
-                print(f"Upgrading dependency {dep} for plugin {pluginName}...")
-                self._installDepInternal(dep, depsDir)
+                try:
+                    self._installDepInternal(dep, depsDir)
+                except Exception as e:
+                    print(e)
+                    raise e
 
     def _installDepInternal(self, dep: str, depsDir: str):
         """
@@ -659,6 +670,31 @@ class PluginManager:
         # Get the interpreter and python version from the user settings
         from App import AppDelegate
 
+        # If we are on "App mode (i.e there is a GUI),
+        # we will raise an exception to tell the user
+        # that in order to install dependencies, the app
+        # must be in "Server mode" or "Browser mode"
+        # (i.e the user has an opened terminal window
+        # where to visualize the pip output)
+        # This is to prevent the app taking too long to
+        # start without any feedback to the user
+        if (
+            not AppDelegate().serverMode
+            and not AppDelegate().browser
+            and not hasattr(AppDelegate(), "_server")
+        ):
+            msg = (
+                "A dependency installation was requested during the startup of the app. "
+                + "In order to correctly install dependencies, please install the plugin"
+                + " using the 'Install plugin' button in the 'Plugin Manager' window. \n"
+                + "You can override this behaviour and install the dependencies at startup "
+                + "by starting the app with the '--server' flag in the terminal."
+            )
+
+            logging.getLogger("Horus").error(msg)
+
+            raise Exception(msg)
+
         # First check that the user has a valid
         # python interpreter when the app is frozen
         # Unfortunately, PyInstaller does not include
@@ -669,9 +705,7 @@ class PluginManager:
         # and we need to raise an exception.
         interpreter: str = "python"
         try:
-            interpreter = str(
-                AppDelegate().server.settingsManager.getSetting("dependenciesInterpreter").value
-            )
+            interpreter = str(SettingsManager().getSetting("dependenciesInterpreter").value)
         except Exception as e:
             msg = f"Could not get the python interpreter from the user settings: {e}"
             msg += "\nDefaulting to system python interpreter."
@@ -1021,10 +1055,7 @@ class PluginManager:
         # Add to the python path the dependencies folder of the plugin
         # self._includeDepsPath(plugin._path)  # pylint: disable=protected-access
 
-        # Get the cluster api from the app delegate
-        from App import AppDelegate  # pylint: disable=import-outside-toplevel
-
-        remoteManager = RemotesManager(AppDelegate().appSupportDir)
+        remoteManager = RemotesManager(self.appSupportDir)
 
         if block.selectedRemote != "Local":
             logging.getLogger("Horus").info("Connecting to remote %s", block.selectedRemote)
@@ -1081,13 +1112,9 @@ class PluginManager:
         """
 
         # Check for the "developmentExtensuonURL setting"
-        from App import AppDelegate
-
         # If we are on development mode, add the "Develop extension" page
-        if AppDelegate().server.settingsManager.getSetting("developmentMode").value:
-            extensionURL: str = (
-                AppDelegate().server.settingsManager.getSetting("extensionDevelopmentURL").value
-            )
+        if SettingsManager().getSetting("developmentMode").value:
+            extensionURL: str = SettingsManager().getSetting("extensionDevelopmentURL").value
 
             # Parse the URL if it does not have http://
             if not extensionURL.startswith("http://"):

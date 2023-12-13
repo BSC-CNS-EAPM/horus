@@ -8,7 +8,7 @@ import json
 import sys
 import logging
 
-from HorusAPI import VariableTypes
+from HorusAPI import VariableTypes, HorusSingleton
 
 
 class Setting:
@@ -154,7 +154,7 @@ class Setting:
         }
 
 
-class SettingsManager:
+class SettingsManager(metaclass=HorusSingleton):
     """
     Manage the Horus app settings
     """
@@ -168,12 +168,17 @@ class SettingsManager:
     - value: The setting instance
     """
 
-    def __init__(self, appSupportDir: str) -> None:
+    def __init__(self, appSupportDir: typing.Optional[str] = None) -> None:
         """
         Manage and load the settings of the app
 
         :param appSupportDir: The path to the app support directory
         """
+
+        if appSupportDir is None:
+            raise Exception(
+                "The app support directory is not defined in the SettingsManager init call"
+            )
 
         # Define the default settings path based on if the app is frozen
         try:

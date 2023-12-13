@@ -17,14 +17,11 @@ from enum import Enum
 # Socket to send the flow status
 from flask_socketio import SocketIO
 
-# Development import only
-import cython
-
 # Blocks from Horus
 from HorusAPI import PluginBlock as Block, SlurmBlock
 
 # The plugin manager
-from Server.PluginManager import PrintCapturer, PluginManager, PrintSocketCapturer
+from Server.PluginManager import PluginManager, PrintCapturer
 
 # The remote manager
 from Server.RemotesManager import RemotesManager
@@ -273,9 +270,7 @@ class Flow:
                 )
 
             # Get the block class
-            from App import AppDelegate  # pylint: disable=import-outside-toplevel
-
-            blockClass = AppDelegate().server.pluginManager.findBlock(blockID)
+            blockClass = PluginManager().findBlock(blockID)
 
             # Create a copy of the block, so we don't modify the original
             newCopyBlockClass = blockClass.copy()
@@ -720,7 +715,8 @@ class Flow:
                 # to run the next blocks
                 _currentCycle = nextConnection.currentCycle
 
-                # Run the previous blocks of the block and the block itself to which the variable is connected)
+                # Run the previous blocks of the block and the
+                # block itself to which the variable is connected
                 self._runPreviousBlocks(nextPlacedID, resetRemoteBlock, comesFromCyclic=True)
             else:
                 # Check if the current block has any cyclic connections
@@ -783,9 +779,7 @@ class Flow:
         self._socket = socket
 
         # Assign the plugin manager instance
-        from App import AppDelegate  # pylint: disable=import-outside-toplevel
-
-        self._pluginManager = AppDelegate().server.pluginManager
+        self._pluginManager = PluginManager()
 
         # Update the working dir
         oldWD = os.getcwd()
@@ -930,16 +924,16 @@ class Flow:
             self.savedID = savedID
             self.socket = socket
 
-        def write(self, text: str):
+        def write(self, message: str):
             """
             Writes the text to the terminal output
             """
 
             if self.socket is not None:
-                self.socket.emit("printTerm", text, to=self.savedID)
+                self.socket.emit("printTerm", message, to=self.savedID)
 
-            self.terminalOutput.append(text)
-            super().write(text)
+            self.terminalOutput.append(message)
+            super().write(message)
 
 
 class FlowManager:
@@ -982,8 +976,12 @@ class FlowManager:
         self,
         appSupportDir: str,
     ) -> None:
+        # Assign the app support dir and the recent flows path
         self.appSupportDir = appSupportDir
         self._recentFlowsPath = os.path.join(appSupportDir, "recent_flows.json")
+
+        # Read the recent flows file
+        self.readRecentsFlows()
 
     def _recentsWriter(self):
         """
@@ -1280,9 +1278,8 @@ class FlowManager:
         """
         Returns a predefined flow with the given savedID.
         """
-        from App import AppDelegate  # pylint: disable=import-outside-toplevel
 
-        pluginFlows = AppDelegate().server.pluginManager.listFlows()
+        pluginFlows = PluginManager().listFlows()
         loadedFLow = None
         for pFlow in pluginFlows:
             if pFlow["savedID"] == savedID:
