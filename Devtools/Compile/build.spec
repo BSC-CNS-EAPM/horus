@@ -150,6 +150,11 @@ imports += [
     "cmath",  # Needed for NBDSuite
     "syscolors",  # Needed for NBDSuite
     "xdrlib",  # Needed for AdaptivePELE (NBDSuite)
+    "fileinput",  # Needed for BSC Plugins
+    "logging.config",  # Needed for BSC Plugins
+    "colorsys",  # Needed for BSC Plugins
+    "cProfile",  # Needed for BSC Plugins
+    "timeit",  # Needed for BSC Plugins
 ]
 
 # Check that all the modules are installed in the environment
