@@ -25,10 +25,12 @@ class PluginRemote:
 
         return output
 
-    def sendData(self, source: str, destination: str):
+    def sendData(self, source: str, destination: str) -> str:
         """
         Sends a file to the remote.
         :param file: The path to the file to send.
+
+        :return: The final absolute path to the uploaded file.
         """
 
         # Fix the ~ in the remote path (https://github.com/fabric/fabric/issues/2228)
@@ -36,19 +38,21 @@ class PluginRemote:
         if "~" in destination:
             destination = destination.replace("~", self.userHome)
 
-        self._remote.transferTo(source, destination)
+        return self._remote.transferTo(source, destination)
 
-    def getData(self, source: str, destination: str):
+    def getData(self, source: str, destination: str) -> str:
         """
         Gets a file from the remote.
         :param file: The path to the file to get.
+
+        :return: The final absolute path to the downloaded file.
         """
 
         # Fix the ~ in the remote path
         if "~" in source:
             source = source.replace("~", self.userHome)
 
-        self._remote.transferFrom(source, destination)
+        return self._remote.transferFrom(source, destination)
 
     def submitJob(self, script: str) -> int:
         """

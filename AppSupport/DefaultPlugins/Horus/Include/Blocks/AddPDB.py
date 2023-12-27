@@ -3,7 +3,10 @@ Visualize PDB block
 """
 
 import os
+import shutil
 from HorusAPI import PluginVariable, PluginBlock, VariableTypes, MolstarAPI, VariableGroup
+
+from typing import Union
 
 
 class NoPDBFileException(Exception):
@@ -46,32 +49,58 @@ def addPDB(block: PluginBlock):
         path = block.inputs.get("file", None)
 
         if path is not None:
-            addToMolstar(path)
+            if block.remote.name != "Local":
+                # Download the file
+                print("Downloading file from remote...")
+                remoteTmpPDB = "temp_remote.pdb"
+                block.remote.getData(path, remoteTmpPDB)
+
+                addToMolstar(remoteTmpPDB)
+
+                # Delete the file
+                os.remove(remoteTmpPDB)
+            else:
+                addToMolstar(path)
+
             return
 
-    if block.selectedInputGroup == "folderInputGroup":
-        # Get the folder
-        path = block.inputs.get("folder", None)
+    downloadedPath: Union[str, None] = None
+    try:
+        if block.selectedInputGroup == "folderInputGroup":
+            # Get the folder
+            path = block.inputs.get("folder", None)
 
-        if path is not None:
-            if not os.path.isdir(path):
-                raise Exception("Input is not a folder.")
+            if path is not None:
+                if block.remote.name != "Local":
+                    # Download the folder
+                    print("Downloading folder from remote...")
+                    remoteTmpPDB = "temp_remote_pdb_folder"
+                    downloadedPath = os.path.join(os.getcwd(), remoteTmpPDB)
+                    finalPath = block.remote.getData(path, downloadedPath)
+                    path = finalPath
 
-            filelist = os.listdir(path)
-            pdbFound = False
+                if not os.path.isdir(path):
+                    raise Exception("Input is not a folder.")
 
-            for f in filelist:
-                try:
-                    pdbFullPath = os.path.join(path, f)
-                    addToMolstar(pdbFullPath)
-                    pdbFound = True
-                except NoPDBFileException:
-                    pass
+                filelist = os.listdir(path)
+                pdbFound = False
 
-            if not pdbFound:
-                raise Exception("No PDB found in the folder.")
-            else:
-                return
+                for f in filelist:
+                    try:
+                        pdbFullPath = os.path.join(path, f)
+                        addToMolstar(pdbFullPath)
+                        pdbFound = True
+                    except NoPDBFileException:
+                        pass
+
+                if not pdbFound:
+                    raise Exception("No PDB found in the folder.")
+                else:
+                    return
+    finally:
+        if downloadedPath is not None:
+            # Delete the folder
+            shutil.rmtree(downloadedPath)
 
     raise Exception("No input provided.")
 

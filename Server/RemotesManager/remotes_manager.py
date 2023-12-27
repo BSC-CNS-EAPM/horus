@@ -228,9 +228,9 @@ class RemotesAPI:
         # If the command failed, raise an exception
         if out.failed:
             raise Exception(out.stderr.strip())  # pylint: disable=broad-exception-raised
-        
+
         out = out.stdout.strip()
-        
+
         logging.getLogger("Horus").debug("Remote command output: %s", out)
 
         # Return the stdout and stderr as a string
@@ -258,12 +258,14 @@ class RemotesAPI:
                 f"Error transferring data to {self.remoteName}: {exc}"
             ) from exc
 
-    def transferTo(self, source: str, destination: str):
+    def transferTo(self, source: str, destination: str) -> str:
         """
         Transfer a file from the local machine to the remote.
 
         :param source: The path to the file on the local machine.
         :param destination: The path to the file on the remote.
+
+        :return: The final path to the file.
         """
 
         logging.getLogger("Horus").info("Transferring data from %s to %s", source, destination)
@@ -273,13 +275,16 @@ class RemotesAPI:
 
         if self.isLocal:
             os.system(f"cp -r {source} {destination}")
-            return
+            return destination
 
         # Check if the source is a folder
         if os.path.isdir(source):
             # Then zip the folder
 
             logging.getLogger("Horus").info("Zipping local folder %s", source)
+
+            # Get the folder name
+            folderName = os.path.basename(source)
 
             with tarfile.open(f"{source}.tar.gz", "w:gz") as tar:
                 tar.add(source, arcname=os.path.basename(source))
@@ -305,16 +310,22 @@ class RemotesAPI:
             # Change dir back
             self.command(f"cd {prevRemoteDir}")
 
-            return
+            finalPath = os.path.join(destination, folderName)
+
+            return finalPath
 
         self._internalTransferTo(source, destination)
 
-    def transferFrom(self, source: str, destination: str):
+        return destination
+
+    def transferFrom(self, source: str, destination: str) -> str:
         """
         Transfer a file from the remote to the local machine.
 
         :param source: The path to the file on the remote.
         :param destination: The path to the file on the local machine.
+
+        :return: The final path to the file.
         """
 
         if source is None or source == "":
@@ -325,7 +336,7 @@ class RemotesAPI:
 
         if self.isLocal:
             os.system(f"cp -r {source} {destination}")
-            return
+            return destination
 
         logging.getLogger("Horus").info("Transferring data from %s to %s", source, destination)
 
@@ -381,11 +392,13 @@ class RemotesAPI:
             # Change local dir back
             os.system(f"cd {prevLocalDir}")
 
-            return
+            return os.path.join(container_local, folderName)
         except Exception:  # pylint: disable=broad-exception-caught
             pass
 
         self.conn.get(source, destination)
+
+        return destination
 
     def disconnect(self):
         """
@@ -666,7 +679,7 @@ class RemotesAPI:
         status = status.replace("+", "").replace("-", "")
 
         return status
-    
+
     def getJobStatus(self, jobID: int) -> str:
         """
         Get the status of a job.
