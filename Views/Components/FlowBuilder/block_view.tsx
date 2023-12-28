@@ -90,26 +90,26 @@ function PlayBlockButton({
   onClick,
 }: PlayBlockButtonProps) {
   const [executeDescription, setExecuteDescription] = useState("Execute block");
-  const isCtrlPressed = useRef(false);
+  const isAltPressed = useRef(false);
 
   const handleClick = () => {
-    onClick(isCtrlPressed.current);
+    onClick(isAltPressed.current);
   };
 
-  // If the user presses the "Ctrl" key, change the description to
+  // If the user presses the "Alt / option" key, change the description to
   // "Reset flow and execute block"
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Control") {
+      if (event.key === "Alt") {
         setExecuteDescription("Reset flow and execute block");
-        isCtrlPressed.current = true;
+        isAltPressed.current = true;
       }
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
-      if (event.key === "Control") {
+      if (event.key === "Alt") {
         setExecuteDescription("Execute block");
-        isCtrlPressed.current = false;
+        isAltPressed.current = false;
       }
     };
 

@@ -50,5 +50,13 @@
     "type": "string",
     "allowedValues": [],
     "desktopOnly": true
+  },
+  "molstarHidden": {
+    "name": "Mol* hidden",
+    "description": "Wether to start the app with the Mol* panel visible or not.",
+    "category": "Molstar",
+    "value": true,
+    "type": "boolean",
+    "allowedValues": []
   }
 }

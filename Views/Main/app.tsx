@@ -3,7 +3,12 @@ import HorusToolbar from "../Components/Toolbar/toolbar";
 import HorusTerm from "../Components/Console/console";
 import { useEffect, useRef, useState } from "react";
 import { Route, Routes } from "react-router";
-import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+import {
+  Panel,
+  PanelGroup,
+  PanelResizeHandle,
+  ImperativePanelHandle,
+} from "react-resizable-panels";
 import { FlowBuilderView } from "../Components/FlowBuilder/flow_builder_view";
 import IFrameLoader from "../Components/IframeLoader/iframeloader";
 import { socket } from "../Utils/socket";
@@ -12,6 +17,7 @@ import { fetchDesktop, horusGet } from "../Utils/utils";
 declare global {
   interface Window {
     isDesktop: boolean;
+    horusSettings: any;
   }
 }
 
@@ -78,10 +84,14 @@ export default function ResizeHandle({
 }
 
 export function App() {
+  // States
   const [mainView, setMainView] = useState(<FlowBuilderView />);
   const [iframeView, setIframeView] = useState(null);
   const [showIFrame, setShowIFrame] = useState(false);
   const [showConsole, setShowConsole] = useState(false);
+
+  // Panels ref
+  const molstarPanelRef = useRef<ImperativePanelHandle | null>(null);
 
   const handleMainView = (event) => {
     const mainView = event.detail;
@@ -122,6 +132,36 @@ export function App() {
     setShowConsole((currentShowConsole) => !currentShowConsole);
   };
 
+  const handlePanelSettings = () => {
+    // Get the "molstarHidden" setting
+    const molstarHidden = window.horusSettings.find(
+      (setting) => setting.id === "molstarHidden"
+    ).setting.value;
+
+    if (molstarHidden === true) {
+      // Hide the molstar panel
+      molstarPanelRef.current?.collapse();
+    }
+  };
+
+  const getHorusSettings = async () => {
+    const data = await horusGet("/api/settings").then((response) =>
+      response.json()
+    );
+
+    if (!data.ok) {
+      alert("Error getting settings");
+      return;
+    }
+
+    const settings = data.settings;
+    // Store the settings in the window object
+    window.horusSettings = settings;
+
+    // Handle the panel settings as are needed when mounting this view
+    handlePanelSettings();
+  };
+
   useEffect(() => {
     window.addEventListener("mainView", handleMainView);
     window.addEventListener("mainViewURL", handleIFrame);
@@ -130,6 +170,9 @@ export function App() {
 
     // Set the global isDesktop variable
     fetchDesktop();
+
+    // Get the horus settings
+    getHorusSettings();
 
     return () => {
       window.removeEventListener("mainView", handleMainView);
@@ -150,7 +193,12 @@ export function App() {
   const molstarPanel = (
     <>
       <ResizeHandle horizontal={true} molstar={true} />
-      <Panel order={5} collapsible={true} defaultSize={0}>
+      <Panel
+        order={5}
+        collapsible={true}
+        defaultSize={50}
+        ref={molstarPanelRef}
+      >
         <Molstar />
       </Panel>
     </>

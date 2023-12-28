@@ -1116,7 +1116,7 @@ function SphereVariableView(props: VariableSubviewProps) {
       return;
     }
 
-    const ref = await molstar.addSphere(position, radius, sphereRef.current);
+    const ref = await molstar.addSphere(position, radius, 0.3, null, sphereRef.current);
 
     sphereRef.current = ref;
 

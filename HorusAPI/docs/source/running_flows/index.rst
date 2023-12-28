@@ -24,7 +24,7 @@ Then, it will run the next blocks wich are connected to the output variables of 
 Reset flow and execute block
 ----------------------------
 
-When pressing the :bdg-secondary-line:`ctrl` key, the play block button will change to a "Reset flow and execute block" button.
+When pressing the :bdg-secondary-line:`alt` (:bdg-secondary-line:`⌥`) key, the play block button will change to a "Reset flow and execute block" button.
 This will reset the flow (clear outputs of blocks) an run the selected block. Consequently, the flow will run all the blocks that are connected to the selected block.
 
 .. image:: images/execute-block-button.gif

@@ -31,12 +31,16 @@ export default function getCommands() {
         return molstar ? molstar.reset() : "Molstar is not defined.";
       },
     },
-    sel: {
+    focus: {
       description: "Focus a residue.",
-      usage: "sel <residueID>",
+      usage: "focus <residueID> <structure label> <chain> <radius>",
       fn: (...args) => {
-        const [selection, surroundRadius] = args;
-        const options = { surroundRadius: parseInt(surroundRadius) };
+        const [selection, structureLabel, chain, surroundRadius] = args;
+        const options = {
+          surroundRadius: parseInt(surroundRadius),
+          structureLabel: structureLabel,
+          chain: chain,
+        };
         const numberSel = parseInt(selection);
         const molstar = window.molstar;
         return molstar
@@ -54,7 +58,11 @@ export default function getCommands() {
         };
         const body = JSON.stringify({ command: args.join(" ") });
         try {
-          const response = await horusPost("/api/desktop/command", header, body);
+          const response = await horusPost(
+            "/api/desktop/command",
+            header,
+            body
+          );
           const data = await response.json();
 
           if (data.ok) {

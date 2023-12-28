@@ -172,11 +172,6 @@ class HorusServer:
         if self.debug:
             self._debugRoutes()
 
-        # Init MolstarAPI
-        from HorusAPI import MolstarAPI
-
-        self.molapi = MolstarAPI(self.socketio)
-
         # Init ExtensionsAPI
         from HorusAPI import Extensions
 

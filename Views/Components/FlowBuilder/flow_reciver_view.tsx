@@ -189,7 +189,10 @@ function FlowReciver(props: FlowReciverProps) {
     setSaved(true);
 
     // Leave the socket flow room
-    if (savedID.current !== "new_flow") {
+    if (
+      savedID.current !== "new_flow" &&
+      savedID.current !== savedFlow.savedID
+    ) {
       socket.emit("leaveFlow", savedID.current);
     }
 
@@ -303,7 +306,9 @@ function FlowReciver(props: FlowReciverProps) {
       status !== FlowStatus.PAUSED &&
       status !== FlowStatus.IDLE
     ) {
-      await updateMolstarState();
+      if (window.molstar && data.pendingActions) {
+        await applyPendingActions(data.pendingActions);
+      }
     }
 
     // // Update the terminal output
@@ -635,17 +640,22 @@ function FlowReciver(props: FlowReciverProps) {
 
     // Apply any pending MolstarAPI actions if present
     if (openedFlow?.pendingActions && openedFlow.pendingActions.length > 0) {
-      setHasPendingActions(true);
-      setIsRunning(true);
-      for (const action of openedFlow.pendingActions) {
-        await window.molstar?.applyAction(action);
-      }
-      setIsRunning(false);
-      setHasPendingActions(false);
-
-      // Save the mol* state after applying the actions
-      await updateMolstarState();
+      await applyPendingActions(openedFlow.pendingActions);
     }
+  };
+
+  const applyPendingActions = async (pendingActions) => {
+    setHasPendingActions(true);
+    setIsRunning(true);
+    for (const action of pendingActions) {
+      await window.molstar?.applyAction(action);
+    }
+
+    // Save the mol* state after applying the actions
+    await updateMolstarState();
+
+    setIsRunning(false);
+    setHasPendingActions(false);
   };
 
   const handlingNew = useRef(false);

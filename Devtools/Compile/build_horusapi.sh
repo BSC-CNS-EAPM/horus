@@ -7,7 +7,7 @@ mkdir -p dist/
 cd HorusAPI
 
 # Generate stubs
-stubgen src/ --output stubs/
+stubgen src/ --output stubs/ --include-docstrings
 
 # Move the stubs to the src directory
 mv stubs/HorusAPI/src/*.pyi src/

@@ -43,7 +43,7 @@ import "molstar/lib/mol-plugin-ui/skin/light.scss";
 // }
 
 const DockingSphereVisuals = {
-  "docking-sphere": (
+  sphere: (
     ctx: RepresentationContext,
     getParams: RepresentationParamsGetter<Structure, DockingSphereParams>
   ) =>
@@ -112,7 +112,7 @@ function DockingSphereVisual(
 
         // return DataLoci(
         //     // Identifying tag
-        //     'docking-sphere-data-loci',
+        //     'sphere-data-loci',
 
         //     // Data attached to the Loci
         //     void 0,
@@ -139,10 +139,7 @@ function DockingSphereVisual(
         structureGroup: StructureGroup,
         apply: (interval: Interval) => boolean
       ) => {
-        if (
-          loci.kind === "data-loci" &&
-          loci.tag === "docking-sphere-data-loci"
-        ) {
+        if (loci.kind === "data-loci" && loci.tag === "sphere-data-loci") {
           // This is a nasty hack that will highlight all spheres just to demonstrate what happens
           return apply(Interval.ofBounds(0, 1));
         }
@@ -188,9 +185,9 @@ export function ConfalPyramidsRepresentation(
 
 export const DockingSphereRepresentationProvider =
   StructureRepresentationProvider({
-    name: "docking-sphere",
-    label: "Docking sphere",
-    description: "Displays an docking sphere at given coordinates",
+    name: "sphere",
+    label: "Sphere",
+    description: "Displays a sphere at given coordinates",
     factory: ConfalPyramidsRepresentation,
     getParams: (ctx: ThemeRegistryContext, structure: Structure) =>
       PD.clone(DockingSphereParams),
@@ -237,11 +234,11 @@ async function addSphereTo(
     alpha: number;
   }
 ) {
-  // Create the sphere visuals
+
   const struc = await ms.builders.structure.representation.addRepresentation(
     structure,
     {
-      type: "docking-sphere" as any, // Coerce TypeScript into accepting the representation name
+      type: "sphere" as any, // Coerce TypeScript into accepting the representation name
       typeParams: sphere,
       colorParams: sphere.color ? { value: sphere.color } : void 0,
     }

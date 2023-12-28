@@ -21,6 +21,9 @@ interface ToolBarItemProps {
   children?: React.ReactNode;
 }
 
+const modifierKey: string = navigator.userAgent.includes("Mac") ? "⌥ " : "Alt ";
+const shiftKey: string = "⇧ ";
+
 function ToolBarItem(props: ToolBarItemProps) {
   const navigate = useNavigate();
 
@@ -192,19 +195,19 @@ function SearchComponent(props: SearchProps) {
 }
 
 const handleKeyDown = (event: KeyboardEvent) => {
-  if (event.key === "t" && event.ctrlKey) {
+  if (event.code === "KeyT" && event.altKey) {
     toggleConsole();
   }
-  if (event.code === "KeyZ" && event.ctrlKey && event.shiftKey) {
+  if (event.code === "KeyZ" && event.altKey && event.shiftKey) {
     redoEvent();
   }
-  if (event.code === "KeyZ" && event.ctrlKey && !event.shiftKey) {
+  if (event.code === "KeyZ" && event.altKey && !event.shiftKey) {
     undoEvent();
   }
-  if (event.code === "KeyS" && event.ctrlKey && event.shiftKey) {
+  if (event.code === "KeyS" && event.altKey && event.shiftKey) {
     saveAsEvent();
   }
-  if (event.code === "KeyS" && event.ctrlKey) {
+  if (event.code === "KeyS" && event.altKey) {
     saveEvent();
   }
 };
@@ -422,6 +425,7 @@ export default function HorusToolbar() {
         },
         {
           name: "Save",
+          keyShortcut: `${modifierKey}S`,
           svgPath: (
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -444,6 +448,7 @@ export default function HorusToolbar() {
         },
         {
           name: "Save as...",
+          keyShortcut: `${modifierKey}${shiftKey}S`,
           svgPath: (
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -515,7 +520,7 @@ export default function HorusToolbar() {
             // and will undo the last action
             undoEvent();
           },
-          keyShortcut: "ctrl z",
+          keyShortcut: `${modifierKey}Z`,
           svgPath: (
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -538,7 +543,7 @@ export default function HorusToolbar() {
           onClick: () => {
             redoEvent();
           },
-          keyShortcut: "ctrl shift z",
+          keyShortcut: `${modifierKey}${shiftKey}Z`,
           svgPath: (
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -604,7 +609,7 @@ export default function HorusToolbar() {
             </svg>
           ),
           // Set a keyShortcut to enable keyboard navigation.
-          keyShortcut: "ctrl T",
+          keyShortcut: `${modifierKey}T`,
         },
         {
           name: "Center view",

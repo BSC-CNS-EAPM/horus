@@ -117,6 +117,7 @@ imports = [
     "flask_session",
     "multiprocess",
     "pathvalidate",
+    "molviewspec",
 ]
 
 # Add all the submodules required by flask_socketio

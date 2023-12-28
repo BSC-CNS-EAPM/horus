@@ -297,3 +297,21 @@ def test_no_inputs_block():
     # Verify that all blocks are marked as finished
     for block in flow.blocks:
         assert block._finishedExecution
+
+
+def test_molview_flow():
+    path = os.path.join(os.path.dirname(__file__), "molview.flow")
+
+    flow = Flow.read(path)
+
+    flow.run(placedID=1)
+
+    # Check that the flow has been updated
+    assert flow.status == Flow.FlowStatus.FINISHED
+
+    # Verify that all blocks are marked as finished
+    for block in flow.blocks:
+        assert block._finishedExecution
+
+    # Check that it has 6 molstar pending actions (is the ones present in the dev_plugin molviewSpecBlock)
+    assert len(flow.pendingActions) == 6

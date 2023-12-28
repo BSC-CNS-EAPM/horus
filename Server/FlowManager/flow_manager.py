@@ -792,6 +792,10 @@ class Flow:
         if self.terminalOutput is None:
             self.terminalOutput = []
 
+        # Send the flow to the frontend if a socket is provided
+        if self._socket is not None:
+            self._socket.emit("flow", self.encode(minimal=False), to=self.savedID)
+
         # Update the MolstarAPI with the current flow
         # Because the flows are running in separate processes,
         # the main instance of the MolstarAPI is not affected

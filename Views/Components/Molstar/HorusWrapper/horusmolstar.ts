@@ -56,9 +56,15 @@ import {
   to_mmCIF,
 } from "molstar/lib/mol-model/structure";
 import { Loci } from "molstar/lib/mol-model/structure/structure/element/loci";
-import { UUID } from "molstar/lib/mol-util";
 import { addSphereTo } from "./sphere";
 import { DockingSphereRepresentationProvider } from "./sphere";
+
+// Import the molviewspec library
+import { loadMVS } from "molstar/lib/extensions/mvs/load";
+import { MVSData } from "molstar/lib/extensions/mvs/mvs-data";
+import { MolViewSpec } from "molstar/lib/extensions/mvs/behavior";
+import { ObjectKeys } from "molstar/lib/mol-util/type-helpers";
+import { PluginSpec } from "molstar/lib/mol-plugin/spec";
 
 // Style
 require("molstar/lib/mol-plugin-ui/skin/light.scss");
@@ -83,8 +89,16 @@ class HorusMolstar {
   }
 
   private async initPlugin() {
+    const ExtensionMap = {
+      mvs: PluginSpec.Behavior(MolViewSpec),
+    };
+
     this.plugin = await createPluginUI(this.target, {
       ...DefaultPluginUISpec(),
+      behaviors: [
+        ...DefaultPluginUISpec().behaviors,
+        ...ObjectKeys(ExtensionMap).map((k) => ExtensionMap[k]),
+      ],
       animations: [AnimateModelIndex],
       config: [
         [PluginConfig.Viewport.ShowExpand, false],
@@ -175,7 +189,7 @@ class HorusMolstar {
 
   // Reset molstar to a new state
   async reset() {
-    this.initPlugin();
+    await this.initPlugin();
   }
 
   // Method to unload the 3D canvas
@@ -463,18 +477,18 @@ class HorusMolstar {
     });
   }
 
-  setBackground(color: number) {
+  async setBackground(color: number) {
     if (!this.plugin.canvas3d) return;
     const renderer = this.plugin.canvas3d.props.renderer;
-    PluginCommands.Canvas3D.SetSettings(this.plugin, {
+    await PluginCommands.Canvas3D.SetSettings(this.plugin, {
       settings: { renderer: { ...renderer, backgroundColor: Color(color) } },
     });
   }
 
-  toggleSpin() {
+  async toggleSpin() {
     if (!this.plugin.canvas3d) return;
     const trackball = this.plugin.canvas3d.props.trackball;
-    PluginCommands.Canvas3D.SetSettings(this.plugin, {
+    await PluginCommands.Canvas3D.SetSettings(this.plugin, {
       settings: {
         trackball: {
           ...trackball,
@@ -702,20 +716,45 @@ class HorusMolstar {
     },
   };
 
-  async focusFirst(compId: number, options?: { surroundRadius?: number }) {
+  async focusFirst(
+    compId: number,
+    options?: {
+      surroundRadius?: number;
+      structureLabel?: string;
+      chain?: string;
+    }
+  ) {
     // Find the first cell to have a "Structure" property cell.obj.type.name
     const cellsArray = Array.from(this.state.cells.entries());
     let structureKey = null;
     cellsArray.some((cell) => {
       const [key, value] = cell;
       if (value.obj.type.name === "Structure") {
+        if (options?.structureLabel) {
+          if (value.obj.data.label !== options.structureLabel) {
+            return false;
+          } else {
+            structureKey = key;
+            return true;
+          }
+        }
         structureKey = key;
         return true;
       }
     });
 
     if (structureKey === null) {
-      return "No valid structure found.";
+      const availableStructures = this.listStructures().map(
+        (structure) => structure.name
+      );
+
+      let message = "No structure found.";
+
+      if (availableStructures.length > 0) {
+        message += " Available structures: " + availableStructures.join(", ");
+      }
+
+      return message;
     }
 
     await PluginCommands.Camera.Reset(this.plugin, {});
@@ -726,17 +765,26 @@ class HorusMolstar {
 
     const labelID = String(compId);
 
+    const filterGroups = {
+      "residue-test": MS.core.rel.eq([
+        MS.struct.atomProperty.macromolecular.auth_seq_id(),
+        compId,
+      ]),
+      "group-by": MS.core.str.concat([
+        MS.struct.atomProperty.core.operatorName(),
+        MS.struct.atomProperty.macromolecular.residueKey(),
+      ]),
+    };
+
+    if (options.chain) {
+      filterGroups["chain-test"] = MS.core.rel.eq([
+        MS.struct.atomProperty.macromolecular.auth_asym_id(),
+        options?.chain || "A",
+      ]);
+    }
+
     const core = MS.struct.filter.first([
-      MS.struct.generator.atomGroups({
-        "residue-test": MS.core.rel.eq([
-          MS.struct.atomProperty.macromolecular.auth_seq_id(),
-          compId,
-        ]),
-        "group-by": MS.core.str.concat([
-          MS.struct.atomProperty.core.operatorName(),
-          MS.struct.atomProperty.macromolecular.residueKey(),
-        ]),
-      }),
+      MS.struct.generator.atomGroups(filterGroups),
     ]);
 
     const group = update
@@ -1203,6 +1251,29 @@ class HorusMolstar {
     return filteredPDB;
   }
 
+  private async createEmptyNode(nodeName: string) {
+    const fakeData = {
+      data: "HETATM 1  H   H   A   1       0.000   0.000   0.000  1.00  0.00           H",
+      label: nodeName,
+    };
+
+    // We will create an empty node
+    const data = await this.plugin.builders.data.rawData(fakeData);
+
+    const trajectory = await this.plugin.builders.structure.parseTrajectory(
+      data,
+      "pdb"
+    );
+
+    const model = await this.plugin.builders.structure.createModel(trajectory);
+
+    const structure = await this.plugin.builders.structure.createStructure(
+      model
+    );
+
+    return structure;
+  }
+
   /*
    * Add a sphere to the current structure
    * @returns {String} - The ref of the sphere
@@ -1214,30 +1285,41 @@ class HorusMolstar {
       z: number;
     },
     radius: number,
-    deletePrevius?: SphereRef
+    opacity?: number,
+    color?: Color,
+    deletePrevious?: SphereRef
   ): Promise<SphereRef> {
-    if (deletePrevius) {
+    if (deletePrevious) {
       // Remove the previous sphere
       const builder = this.plugin.state.data.build();
-      builder.delete(deletePrevius.ref);
+      builder.delete(deletePrevious.ref);
       builder.commit();
     }
 
-    const structureFirst = this.structures()[0];
+    let structureFirst = this.structures()[0];
+    let structure: any = null;
     if (!structureFirst) {
-      alert("To visualize an sphere, at least one structure must be loaded.");
-      return;
+      structure = await this.createEmptyNode("Sphere");
+    } else {
+      const structureRef = structureFirst.cell.transform.ref;
+      structure = this.plugin.state.data.cells.get(structureRef);
     }
-    const structureRef = structureFirst.cell.transform.ref;
-    const structure: any = this.plugin.state.data.cells.get(structureRef);
+
+    if (!structure) {
+      alert(
+        "Failed to get a valid structure from Mol*. Could not add the sphere"
+      );
+    }
+
+    const colorToUse = deletePrevious?.color || color || randomColor();
 
     let sphere: SphereRef = {
       x: position.x,
       y: position.y,
       z: position.z,
       radius: radius,
-      color: deletePrevius?.color || randomColor(),
-      alpha: 0.3,
+      color: colorToUse,
+      alpha: opacity || 0.3,
       ref: "",
     };
 
@@ -1323,14 +1405,101 @@ class HorusMolstar {
     await builder.commit();
   }
 
+  actionsQueue = [];
   async applyAction(action: any) {
     const { type, data } = action;
 
-    if (type === "addPDB") {
-      const label = data.label ? data.label : "PDB";
-      const pdb = data.pdb;
-      await this.loadPDBString(pdb, label);
+    // Assing an ID to the action
+    action.id = Math.random().toString(36);
+
+    this.actionsQueue.push(action);
+
+    // Wait till the action is the first in the queue
+    while (this.actionsQueue[0].id !== action.id) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
+
+    try {
+      switch (type) {
+        case "addPDB":
+          const label = data.label ? data.label : "PDB";
+          const pdb = data.pdb;
+
+          // If the PDB data is empty, throw an error
+          if (!pdb || pdb === "") {
+            throw "The PDB data is empty";
+          }
+
+          await this.loadPDBString(pdb, label);
+          break;
+        case "loadMVJS":
+          const session = data.session;
+          const replaceExisting = data.replaceExisting;
+          await this.loadMolViewSpecSession(session, replaceExisting);
+          break;
+        case "focus":
+          const residue = data.residue;
+          const structureLabel = data.structureLabel;
+          const chain = data.chain;
+          const nearRadius = data.nearRadius;
+          await this.focusFirst(residue, {
+            surroundRadius: nearRadius,
+            structureLabel: structureLabel,
+            chain: chain,
+          });
+          break;
+        case "addSphere":
+          const position = data.position;
+          const radius = data.radius;
+          const opacity = data.opacity;
+
+          let sphereColor = data.color;
+          if (!sphereColor) {
+            sphereColor = "#ff0000";
+          }
+          // Convert the hex string color to a Color object
+          const parsedSphereColor = Color(Color.fromHexStyle(sphereColor));
+
+          await this.addSphere(position, radius, opacity, parsedSphereColor);
+          break;
+        case "setBackgroundColor":
+          const color = data.color;
+
+          // Convert the hex string color to a Color object
+          const parsedColor = Color(Color.fromHexStyle(color));
+
+          await this.setBackground(parsedColor);
+          break;
+        case "toggleSpin":
+          await this.toggleSpin();
+          break;
+        case "reset":
+          await this.reset();
+          break;
+      }
+    } catch (error) {
+      alert(
+        "There was an error applying the following Mol* action: " +
+          type +
+          "\n\n" +
+          error
+      );
+    } finally {
+      // Once the action has been applied, remove it from the pending actions
+      this.actionsQueue.shift();
+    }
+  }
+
+  async loadMolViewSpecSession(
+    session: string,
+    replaceExisting: boolean = false
+  ) {
+    const parsedData = MVSData.fromMVSJ(session);
+
+    // Loads the session
+    await loadMVS(this.plugin, parsedData, {
+      replaceExisting: replaceExisting,
+    });
   }
 }
 

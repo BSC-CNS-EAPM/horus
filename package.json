@@ -60,7 +60,7 @@
     "immutability-helper": "^3.1.1",
     "jsme-editor": "^2023.7.31",
     "jsme-react": "^0.0.9",
-    "molstar": "^3.34.0",
+    "molstar": "3.43.1",
     "plotly.js": "^2.24.3",
     "rc-slider": "^10.4.0",
     "react": "^18.2.0",
@@ -70,6 +70,7 @@
     "react-dnd-html5-backend": "^16.0.1",
     "react-dom": "^18.2.0",
     "react-i18next": "^12.2.2",
+    "react-markdown": "^9.0.1",
     "react-plotly.js": "^2.6.0",
     "react-rc": "^0.1.0",
     "react-resizable-panels": "^0.0.51",
@@ -78,8 +79,7 @@
     "react-xarrows": "^2.0.2",
     "socket.io": "^4.6.1",
     "socket.io-client": "^4.6.1",
-    "styled-components": "^5.3.10",
-    "yarn": "^1.22.19"
+    "styled-components": "^5.3.10"
   },
   "devDependencies": {
     "@parcel/packager-raw-url": "^2.10.3",
@@ -101,5 +101,8 @@
     "run-script-os": "^1.1.6",
     "tailwindcss": "^3.3.2",
     "typescript": "^5.1.6"
+  },
+  "@parcel/resolver-default": {
+    "packageExports": true
   }
 }

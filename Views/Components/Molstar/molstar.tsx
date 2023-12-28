@@ -24,23 +24,10 @@ export default function Molstar() {
     window.molstar = molstar;
   };
 
-  const applyAction = (data) => {
-    const molstar = window.molstar;
-    if (molstar) {
-      molstar.applyAction(data);
-    }
-  };
-
   useEffect(() => {
     if (!window.molstar) {
       loadMolstar();
     }
-
-    socket.on("molstarAction", applyAction);
-
-    return () => {
-      socket.off("molstarAction");
-    };
   }, []);
 
   return (
