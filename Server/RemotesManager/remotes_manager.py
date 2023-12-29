@@ -265,7 +265,7 @@ class RemotesAPI:
         :param source: The path to the file on the local machine.
         :param destination: The path to the file on the remote.
 
-        :return: The final path to the file.
+        :return: The final path to the file/folder.
         """
 
         logging.getLogger("Horus").info("Transferring data from %s to %s", source, destination)
@@ -275,7 +275,8 @@ class RemotesAPI:
 
         if self.isLocal:
             os.system(f"cp -r {source} {destination}")
-            return destination
+
+            return os.path.join(destination, os.path.basename(source))
 
         # Check if the source is a folder
         if os.path.isdir(source):
@@ -316,7 +317,7 @@ class RemotesAPI:
 
         self._internalTransferTo(source, destination)
 
-        return destination
+        return os.path.join(destination, os.path.basename(source))
 
     def transferFrom(self, source: str, destination: str) -> str:
         """
@@ -325,7 +326,7 @@ class RemotesAPI:
         :param source: The path to the file on the remote.
         :param destination: The path to the file on the local machine.
 
-        :return: The final path to the file.
+        :return: The final path to the file/folder.
         """
 
         if source is None or source == "":
@@ -336,7 +337,8 @@ class RemotesAPI:
 
         if self.isLocal:
             os.system(f"cp -r {source} {destination}")
-            return destination
+
+            return os.path.join(destination, os.path.basename(source))
 
         logging.getLogger("Horus").info("Transferring data from %s to %s", source, destination)
 
@@ -393,12 +395,13 @@ class RemotesAPI:
             os.system(f"cd {prevLocalDir}")
 
             return os.path.join(container_local, folderName)
+
         except Exception:  # pylint: disable=broad-exception-caught
             pass
 
         self.conn.get(source, destination)
 
-        return destination
+        return os.path.join(destination, os.path.basename(source))
 
     def disconnect(self):
         """
