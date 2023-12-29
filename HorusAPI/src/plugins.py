@@ -773,6 +773,11 @@ class PluginBlock:
     stored here to be easily opened when the flow is opened again
     """
 
+    time: float = 0
+    """
+    The time that the block took to run.
+    """
+
     def __init__(  # pylint: disable=dangerous-default-value
         self,
         name: str,
@@ -1067,6 +1072,7 @@ class PluginBlock:
             "selectedInputGroup": self.selectedInputGroup,
             "selectedRemote": self.selectedRemote,
             "extensionsToOpen": self._extensionsToOpen,
+            "time": self.time,
         }
 
         return blockDict
@@ -1082,7 +1088,7 @@ class PluginBlock:
 
     def _inputGroupsToDict(self, inputGroups: typing.Dict[str, VariableGroup]):
         inputGroupsList: list[dict[str, typing.Any]] = []
-        for k, v in inputGroups.items():
+        for _, v in inputGroups.items():
             inputGroupsList.append(v.toDict())
         return inputGroupsList
 
@@ -1094,6 +1100,7 @@ class PluginBlock:
         self._isRunning = False
         self._extensionsToOpen = []
         self._storedOutputs = {}
+        self.time = 0
 
         # Reset the cycles count on the connections
         if cleanCycles:
@@ -1150,6 +1157,7 @@ class PluginBlock:
         extensionsToOpen: typing.List[typing.Dict[str, typing.Any]] = blockJSON.get(
             "extensionsToOpen", []
         )
+        blockTime = blockJSON.get("time", 0)
 
         position: typing.Dict[str, float] = blockJSON.get("position", {})
         xPos: float = position.get("x", 0)
@@ -1241,6 +1249,7 @@ class PluginBlock:
         self._connectedTo = connectedTo
         self._connectedToReferences = connectedToReference
         self._extensionsToOpen = extensionsToOpen
+        self.time = blockTime
 
     def _minimalEncode(self):
         """
@@ -1265,6 +1274,7 @@ class PluginBlock:
             "selectedInputGroup": self.selectedInputGroup,
             "selectedRemote": self.selectedRemote,
             "extensionsToOpen": self._extensionsToOpen,
+            "time": self.time,
         }
 
         return blockDict

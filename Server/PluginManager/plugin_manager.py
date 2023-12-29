@@ -13,6 +13,7 @@ import subprocess
 import logging
 import json
 import shutil
+import datetime
 
 # Type for modules in PluginDeps context manager
 from types import ModuleType
@@ -1078,12 +1079,33 @@ class PluginManager(metaclass=HorusSingleton):
         error = False
         errorMSG = ""
         outputs = None
+
+        # Calcultate the time the block takes
+        startTime = datetime.datetime.now()
         try:
             with PluginDeps(plugin._path):
+                # Execute the block
                 outputs = block()
         except Exception as exc:  # pylint: disable=broad-exception-caught
             error = True
             errorMSG = str(exc)
+        finally:
+            # Calculate the time the block took
+            endTime = datetime.datetime.now()
+
+            totalTime = endTime - startTime
+
+            # Convert the timedelta to seconds
+            block.time = totalTime.total_seconds()
+
+            # Get formatted time in hh:mm:ss
+            hours = int(totalTime.total_seconds() // 3600)
+            minutes = int((totalTime.total_seconds() % 3600) // 60)
+            seconds = int(totalTime.total_seconds() % 60)
+
+            formattedTime = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+            logging.getLogger("Horus").info("Block %s executed in %s", block.id, formattedTime)
 
         # Restore the python path
         # self._removeDepsPath(plugin._path)  # pylint: disable=protected-access

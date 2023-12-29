@@ -76,7 +76,7 @@ type ExtensionsToOpen = {
   title: string;
   url: string;
   data: any;
-}
+};
 
 type Block = {
   // Basic info about the block
@@ -107,6 +107,7 @@ type Block = {
   tryingToConnect: PluginVariable | null;
   finishedExecution: boolean;
   extensionsToOpen: Array<ExtensionsToOpen>;
+  time: number;
 
   // Server execution
   storedOutputs: {
