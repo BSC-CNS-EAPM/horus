@@ -241,7 +241,9 @@ const PluginVariableView = (props: PluginVariableViewProps) => {
     );
   }
 
-  const isSafari = /^((?!chrome|android).)*applewebkit/i.test(navigator.userAgent) && !/chrome/i.test(navigator.userAgent);
+  const isSafari =
+    /^((?!chrome|android).)*applewebkit/i.test(navigator.userAgent) &&
+    !/chrome/i.test(navigator.userAgent);
 
   return (
     <div className={props.applyStyle === false ? null : "plugin-variable"}>
@@ -546,15 +548,29 @@ type FilePickerViewProps = {
 function FilePickerView(props: FilePickerViewProps) {
   const { variable, onChange } = props;
 
+  const updateTextInput = (value: any) => {
+    console.log(value);
+    onChange(value);
+  };
+
   return (
-    <HorusFileExplorer
-      onFileConfirm={onChange}
-      onFileSelect={onChange}
-      openFolder={props.openFolder}
-      allowedExtensions={variable?.allowedValues}
-    >
-      {variable.value || "Open file explorer..."}
-    </HorusFileExplorer>
+    <div className="flex flex-row gap-2 w-full h-10 p-1 justify-center items-center">
+      <div>
+        <input
+          className="overflow-x-auto break-keep-all rounded-xl h-6"
+          value={variable.value}
+          onChange={(e) => updateTextInput(e.target.value)}
+        />
+      </div>
+      <HorusFileExplorer
+        onFileConfirm={onChange}
+        onFileSelect={onChange}
+        openFolder={props.openFolder}
+        allowedExtensions={variable?.allowedValues}
+      >
+        Open
+      </HorusFileExplorer>
+    </div>
   );
 }
 
@@ -1116,7 +1132,13 @@ function SphereVariableView(props: VariableSubviewProps) {
       return;
     }
 
-    const ref = await molstar.addSphere(position, radius, 0.3, null, sphereRef.current);
+    const ref = await molstar.addSphere(
+      position,
+      radius,
+      0.3,
+      null,
+      sphereRef.current
+    );
 
     sphereRef.current = ref;
 

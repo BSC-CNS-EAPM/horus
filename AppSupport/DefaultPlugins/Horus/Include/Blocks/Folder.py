@@ -15,11 +15,13 @@ def checkPathIsFolder(block: InputBlock):
     if folderVariableValue is None:
         raise Exception("No folder provided.")
 
-    if not os.path.exists(folderVariableValue):
-        raise Exception("Provided path does not exist.")
-
-    if not os.path.isdir(folderVariableValue):
-        raise Exception("Provided path is not a folder.")
+    if block.remote.name != "Local":
+        try:
+            block.remote.remoteCommand("test -d " + folderVariableValue)
+        except Exception:
+            raise Exception("Provided path is not a folder on the remote server.") from None
+    elif not os.path.exists(folderVariableValue) and not os.path.isdir(folderVariableValue):
+        raise Exception("Provided path is not a folder on the local machine.")
 
     block.setOutput("folder", folderVariableValue)
 

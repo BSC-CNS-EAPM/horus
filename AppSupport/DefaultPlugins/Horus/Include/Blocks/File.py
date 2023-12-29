@@ -16,11 +16,13 @@ def checkPathIsFile(block: InputBlock):
     if fileVariableValue is None:
         raise Exception("No file provided.")
 
-    if not os.path.exists(fileVariableValue):
-        raise Exception("Provided path does not exist.")
-
-    if not os.path.isfile(fileVariableValue):
-        raise Exception("Provided path is not a file.")
+    if block.remote.name != "Local":
+        try:
+            block.remote.remoteCommand("test -f " + fileVariableValue)
+        except Exception:
+            raise Exception("Provided path is not a file on the remote server.") from None
+    elif not os.path.exists(fileVariableValue) and not os.path.isfile(fileVariableValue):
+        raise Exception("Provided path is not a file on the local machine.")
 
     block.setOutput("file", fileVariableValue)
 
