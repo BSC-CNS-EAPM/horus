@@ -739,7 +739,7 @@ function FlowReciver(props: FlowReciverProps) {
         if (!block) {
           return "Block not found";
         }
-        handleDelete(block);
+        props.handleDelete(block);
       }
       return "Block deleted";
     }
@@ -1033,18 +1033,18 @@ function FlowReciver(props: FlowReciverProps) {
       );
     });
 
-    const connectedBlocks = block.connectedTo?.map((connection) => {
-      return (
-        <BlockConnectionArrow
-          key={`${block.placedID}-${connection}`}
-          currentBlock={block}
-          connectedBlock={props.placedBlocks.find(
-            (b) => b.placedID === connection
-          )}
-          unconnectBlocks={props.unconnectBlocks}
-        />
-      );
-    });
+    // const connectedBlocks = block.connectedTo?.map((connection) => {
+    //   return (
+    //     <BlockConnectionArrow
+    //       key={`${block.placedID}-${connection}`}
+    //       currentBlock={block}
+    //       connectedBlock={props.placedBlocks.find(
+    //         (b) => b.placedID === connection
+    //       )}
+    //       unconnectBlocks={props.unconnectBlocks}
+    //     />
+    //   );
+    // });
 
     const selectRemote = (selectedRemote: string) => {
       props.setPlacedBlocks((prevBlocks) => {
@@ -1079,7 +1079,7 @@ function FlowReciver(props: FlowReciverProps) {
           tryingToConnect={props.tryingToConnect}
         />
         {connectedVars}
-        {connectedBlocks}
+        {/* {connectedBlocks} */}
       </div>
     );
   };

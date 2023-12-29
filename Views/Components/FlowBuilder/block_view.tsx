@@ -638,16 +638,16 @@ function DraggableBlockView(props: DraggableBlockViewProps) {
     setNodeRef(ref.current);
   }, [ref]);
 
-  const outputConnectors = () => {
-    return block.outputs.length === 0 ? (
-      <ArrowBlockConnector from={ref} block={block} />
-    ) : (
-      <OutputConnectView
-        key={"output-connectors-" + block.id + "-" + block.placedID}
-        block={block}
-      />
-    );
-  };
+  // const outputConnectors = () => {
+  //   return block.outputs.length === 0 ? (
+  //     <ArrowBlockConnector from={ref} block={block} />
+  //   ) : (
+  //     <OutputConnectView
+  //       key={"output-connectors-" + block.id + "-" + block.placedID}
+  //       block={block}
+  //     />
+  //   );
+  // };
 
   const handleSelectedInputGroupChange = (direction: "up" | "down") => {
     if (block.inputs.length === 1) {
@@ -697,7 +697,12 @@ function DraggableBlockView(props: DraggableBlockViewProps) {
 
   const variablesConnectorView = () => {
     if (block.type === "input") {
-      return <>{outputConnectors()}</>;
+      return (
+        <OutputConnectView
+          key={"output-connectors-" + block.id + "-" + block.placedID}
+          block={block}
+        />
+      );
     }
 
     return (
@@ -713,7 +718,10 @@ function DraggableBlockView(props: DraggableBlockViewProps) {
             handleSelectedInputGroupChange={handleSelectedInputGroupChange}
             // updateXarrow={updateXarrow}
           />
-          {outputConnectors()}
+          <OutputConnectView
+            key={"output-connectors-" + block.id + "-" + block.placedID}
+            block={block}
+          />
           {/* {block.outputs && (
             <OutputConnectView
               key={"output-connectors-" + block.id + "-" + block.placedID}
