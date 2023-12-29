@@ -70,6 +70,12 @@ rules, which are easily explained with the following flow as an example:
     :align: center
     :alt: Branched flow
 
+.. warning::
+    
+        When a single output is connected to multiple inputs, the first block to be executed will be the one that was first
+        connected to the output. In order to change the order of execution, the user must disconnect the blocks and connect
+        them again in the desired order.
+
 Running from an early block
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
