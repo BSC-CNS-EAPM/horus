@@ -662,8 +662,13 @@ class RemotesAPI:
         :return: The status of the job (running, queued, failed, completed)
         """
 
-        # Get the job status
-        status = self.command(f"sacct -j {jobID} -o 'State' --noheader -X")
+        # If the remote has sacct, use it
+        try:
+            # Get the job status
+            status = self.command(f"sacct -j {jobID} -o 'State' --noheader -X")
+        except Exception:  # pylint: disable=broad-exception-caught
+            # If sacct is not available, use the squeue (less reliable)
+            status = self.command(f"squeue -j {jobID} -h -o '%T'")
 
         if status == "" or "PENDING" in status:
             status = "PENDING"

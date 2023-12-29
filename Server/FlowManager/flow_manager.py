@@ -610,7 +610,17 @@ class Flow:
                 self._socket.emit("flow", self.encode(minimal=False), to=self.savedID)
 
             # Wait for the job to finish
-            blockToRun.waitTillJobFinished()
+            try:
+                blockToRun.waitTillJobFinished()
+            except Exception as exc:  # pylint: disable=broad-exception-raised
+                blockToRun._runError = True
+                blockToRun._runErrorMessage = str(exc)
+                blockToRun._isRunning = False
+                blockToRun._finishedExecution = True
+                self.currentExecuting = None
+
+                # Raise again a special "ErrorRunningBlock" exception
+                raise ErrorRunningBlock(blockToRun, str(exc)) from exc
 
             if blockToRun._status != SlurmBlock.Status.COMPLETED:
                 blockToRun._runError = True

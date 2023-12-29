@@ -1497,7 +1497,9 @@ class SlurmBlock(PluginBlock):
             return True
         except Exception as e:
             logging.getLogger("Horus").error(
-                "An error occurred while checking if the job is finished for block %s", self.name
+                "An error occurred while checking if the job is finished for block %s: %s",
+                self.name,
+                e,
             )
             raise Exception("An error occurred while checking if the job is finished.") from e
 
