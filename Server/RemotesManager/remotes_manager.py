@@ -666,9 +666,19 @@ class RemotesAPI:
         try:
             # Get the job status
             status = self.command(f"sacct -j {jobID} -o 'State' --noheader -X")
+
         except Exception:  # pylint: disable=broad-exception-caught
             # If sacct is not available, use the squeue (less reliable)
+            logging.getLogger("Horus").warning(
+                "sacct is not available. Using squeue instead. Please configure sacct in your remote for better performance."
+            )
+
             status = self.command(f"squeue -j {jobID} -h -o '%T'")
+
+            # When using squeue, if the job is not found, the output is empty
+            # Set as "COMPLETED" if the output is empty
+            if status == "":
+                status = "COMPLETED"
 
         if status == "" or "PENDING" in status:
             status = "PENDING"
