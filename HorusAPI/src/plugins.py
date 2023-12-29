@@ -277,18 +277,16 @@ class VariableTypes(str, Enum):
     This last variable contains the properties of the STRUCTURE variable.
     """
 
+    RESIDUE = "residue"
+    """
+    A residue to be selected from a loaded structure. Either a standard or non-standard residue.
+    """
+
     ATOM = "atom"
     """
     An atom to be selected from a loaded structure.
 
-    Will render as a dropdown with the list of atoms as an interactive atom selector.
-    The type of the variable will be a dictionary with the following keys:
-    - index: The index of the atom in the structure.
-    - name: The name of the atom.
-    - element: The element of the atom.
-    - residue: The residue of the atom.
-    - structure: The structure object variable where the atom is located.
-    This last variable contains the properties of the STRUCTURE variable.
+    Will enable ball-and-stick visualization in Mol* to select the atom.
     """
 
     CHAIN = "chain"

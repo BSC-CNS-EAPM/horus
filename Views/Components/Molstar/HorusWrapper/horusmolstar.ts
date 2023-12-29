@@ -159,17 +159,36 @@ class HorusMolstar {
           StructureElement.Loci.getFirstLocation(e.current.loci, loc);
           // auth_seq_id  : UniProt coordinate space
           // label_seq_id : PDB coordinate space
-          const sequencePosition =
-            StructureProperties.residue.label_seq_id(loc);
-          const chain = StructureProperties.chain.auth_asym_id(loc);
+          const resID = StructureProperties.residue.label_seq_id(loc);
+          const sourceIndex = StructureProperties.atom.sourceIndex(loc);
           const auth_comp_id = StructureProperties.atom.auth_comp_id(loc);
-          const atom_label = StructureProperties.atom.label_atom_id(loc);
+          const auth_atom_id = StructureProperties.atom.auth_atom_id(loc);
+          const chainID = StructureProperties.chain.label_asym_id(loc);
+          const type = StructureProperties.atom.type_symbol(loc);
+          const x = StructureProperties.atom.x(loc);
+          const y = StructureProperties.atom.y(loc);
+          const z = StructureProperties.atom.z(loc);
+
+          let molInfo = this.extractFromLoci(e.current.loci);
+
+          molInfo = {
+            ...molInfo,
+            structure: molInfo.name,
+          };
 
           const atomInfo = {
-            sequence_position: sequencePosition,
-            chain: chain,
+            name: `${auth_comp_id}:${resID} - ${molInfo.name}`,
+            residue: resID,
+            chainID: chainID,
+            atom_index: sourceIndex,
             auth_comp_id: auth_comp_id,
-            atom_label: atom_label,
+            auth_atom_id: auth_atom_id,
+            type: type,
+            x: x,
+            y: y,
+            z: z,
+            strucutre_label: molInfo.name,
+            structure: molInfo,
           };
           detail["atom"] = atomInfo;
         }
@@ -1099,13 +1118,14 @@ class HorusMolstar {
           name: `${auth_comp_id}:${resID} - ${molInfo.name}`,
           residue: resID,
           chainID: chainID,
-          sourceIndex: sourceIndex,
+          atom_index: sourceIndex,
           auth_comp_id: auth_comp_id,
           auth_atom_id: auth_atom_id,
           type: type,
           x: x,
           y: y,
           z: z,
+          strucutre_label: molInfo.name,
           structure: molInfo,
         };
 
@@ -1199,20 +1219,24 @@ class HorusMolstar {
           const sourceIndex = StructureProperties.atom.sourceIndex(loc);
           const auth_comp_id = StructureProperties.atom.auth_comp_id(loc);
           const auth_atom_id = StructureProperties.atom.auth_atom_id(loc);
+          const chainID = StructureProperties.chain.label_asym_id(loc);
           const type = StructureProperties.atom.type_symbol(loc);
           const x = StructureProperties.atom.x(loc);
           const y = StructureProperties.atom.y(loc);
           const z = StructureProperties.atom.z(loc);
 
           const atomInfo = {
+            name: `${auth_comp_id}:${resID} - ${molInfo.name}`,
             residue: resID,
-            sourceIndex: sourceIndex,
+            chainID: chainID,
+            atom_index: sourceIndex,
             auth_comp_id: auth_comp_id,
             auth_atom_id: auth_atom_id,
             type: type,
             x: x,
             y: y,
             z: z,
+            strucutre_label: molInfo.name,
             structure: molInfo,
           };
 

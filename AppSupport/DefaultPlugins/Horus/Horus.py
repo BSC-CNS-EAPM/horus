@@ -39,6 +39,11 @@ def createPlugin():
     # Add the stdRes block to the plugin
     plugin.addBlock(stdResBlock)
 
+    from Blocks.Residue import residueBlock  # type: ignore
+
+    # Add the residue block to the plugin
+    plugin.addBlock(residueBlock)
+
     from Blocks.Atom import atomBlock  # type: ignore
 
     # Add the atom block to the plugin

@@ -25,6 +25,7 @@ enum PluginVariableTypes {
   STRUCTURE = "structure",
   HETERORES = "heterores",
   STDRES = "stdres",
+  RESIDUE = "residue",
   ATOM = "atom",
   CHAIN = "chain",
   SPHERE = "sphere",

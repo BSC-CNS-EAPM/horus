@@ -9,7 +9,7 @@ sphereVariable = PluginVariable(
 
 # Create the block "Hetero atom"
 sphereBlock = InputBlock(
-    "Sphere coordinates",
+    "Sphere",
     description="Select coordinates and radius of a sphere in a structure",
     action=None,
     variable=sphereVariable,

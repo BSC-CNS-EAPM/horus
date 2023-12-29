@@ -409,6 +409,11 @@ const PluginVariableView = (props: PluginVariableViewProps) => {
           <ChainView handleChange={handleChange} variable={props.variable} />
         )}
 
+        {/* If the type is a RESIDUE, set a selection of the Mol* residues */}
+        {props.variable.type === PluginVariableTypes.RESIDUE && (
+          <ResidueView handleChange={handleChange} variable={props.variable} />
+        )}
+
         {/* If the type is a ATOM, set a dropdown with the Mol* atoms */}
         {props.variable.type === PluginVariableTypes.ATOM && (
           <AtomView handleChange={handleChange} variable={props.variable} />
@@ -804,6 +809,72 @@ function SmilesVariableView(props: VariableSubviewProps) {
   );
 }
 
+function ResidueView(props: VariableSubviewProps) {
+  const value = props.variable.value;
+
+  const [atom, setAtom] = useState<any>(null);
+  const [active, setActive] = useState(false);
+
+  const handleResidueClick = (e: CustomEvent) => {
+    const atomInfo = e?.detail?.atom;
+
+    if (!atomInfo) return;
+
+    setAtom(atomInfo);
+    props.handleChange(atomInfo, props.variable.id);
+
+    window.molstar.plugin.managers.interactivity.lociSelects.deselectAll();
+  };
+
+  useEffect(() => {
+    if (window.molstar) {
+      window.molstar.plugin.selectionMode = active;
+      // Set the granularity to element
+      window.molstar.plugin.managers.interactivity.setProps({
+        granularity: "residue",
+      });
+      // Unselect selected residues
+      window.molstar.plugin.managers.interactivity.lociSelects.deselectAll();
+      if (active) {
+        // Show structures in cartoon
+        window.molstar.addStructureRepresentation(null, "cartoon");
+      } else {
+        // Show structures in default
+        window.molstar.deleteStructureRepresentations();
+      }
+    }
+
+    if (active) {
+      window.addEventListener("molstar-coordinates", handleResidueClick);
+    }
+
+    return () => {
+      window.removeEventListener("molstar-coordinates", handleResidueClick);
+    };
+  }, [active]);
+
+  useEffect(() => {
+    if (value) {
+      setAtom(value);
+    }
+  }, [value]);
+
+  return (
+    <div
+      onClick={() => setActive(!active)}
+      className={`w-full max-h-28 overflow-auto ${
+        active ? "bg-green-200" : ""
+      }`}
+    >
+      {!atom ? (
+        <div className="text-center">Click to select residue</div>
+      ) : (
+        <div className="text-center">{atom.name}</div>
+      )}
+    </div>
+  );
+}
+
 function AtomView(props: VariableSubviewProps) {
   const value = props.variable.value;
 
@@ -817,6 +888,8 @@ function AtomView(props: VariableSubviewProps) {
 
     setAtom(atomInfo);
     props.handleChange(atomInfo, props.variable.id);
+
+    window.molstar.plugin.managers.interactivity.lociSelects.deselectAll();
   };
 
   useEffect(() => {
@@ -862,8 +935,8 @@ function AtomView(props: VariableSubviewProps) {
       {!atom ? (
         <div className="text-center">Click to select atom</div>
       ) : (
-        <div className="text-center">
-          {atom.atom_label} - {atom.sequence_position}
+        <div className="text-center p-1">
+          {atom.auth_atom_id} - {atom.atom_index} - {atom.name}
         </div>
       )}
     </div>
@@ -990,7 +1063,12 @@ function StdResView(props: VariableSubviewProps) {
           {filteredStdRes.length > 0 ? (
             filteredStdRes.map((stdRes) => (
               <div
-                key={stdRes.name}
+                key={
+                  stdRes.name +
+                  stdRes.residue +
+                  stdRes.chainID +
+                  stdRes.structure.id
+                }
                 className="flex flex-row items-center justify-between"
                 style={{
                   gap: "1rem",
@@ -1155,6 +1233,8 @@ function SphereVariableView(props: VariableSubviewProps) {
     };
 
     props.handleChange(sphereData, props.variable.id);
+
+    window.molstar.plugin.managers.interactivity.lociSelects.deselectAll();
   };
 
   useEffect(() => {
