@@ -1201,6 +1201,18 @@ function SphereVariableView(props: VariableSubviewProps) {
 
     if (structures.length === 0) {
       setHasStructure(false);
+
+      const sphereData = {
+        center: {
+          x: position.x,
+          y: position.y,
+          z: position.z,
+        },
+        radius: radius,
+        ref: null,
+      };
+
+      props.handleChange(sphereData, props.variable.id);
       return;
     } else {
       setHasStructure(true);
@@ -1295,7 +1307,7 @@ function SphereVariableView(props: VariableSubviewProps) {
     mounted.current = true;
   }, []);
 
-  return hasStructure ? (
+  return (
     <div className="flex flex-col p-2 gap-2">
       <div className="flex flex-row gap-2">
         Radius:
@@ -1345,17 +1357,8 @@ function SphereVariableView(props: VariableSubviewProps) {
           setActive(!active);
         }}
       >
-        {active ? "Active" : "Inactive"}
+        {active ? "Click on Mol*" : "Click here to select a point"}
       </NBDButton>
-    </div>
-  ) : (
-    <div
-      onClick={() => {
-        handleChange({ x: 0, y: 0, z: 0 }, 10);
-      }}
-      className="text-center cursror-pointer"
-    >
-      No structure loaded
     </div>
   );
 }
