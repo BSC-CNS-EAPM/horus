@@ -613,6 +613,7 @@ class Flow:
                 self._socket.emit("flow", self.encode(minimal=False), to=self.savedID)
 
             # Wait for the job to finish
+            waitTime = datetime.datetime.now()
             try:
                 blockToRun.waitTillJobFinished()
             except Exception as exc:  # pylint: disable=broad-exception-raised
@@ -624,6 +625,11 @@ class Flow:
 
                 # Raise again a special "ErrorRunningBlock" exception
                 raise ErrorRunningBlock(blockToRun, str(exc)) from exc
+            finally:
+                # Update the total block time
+                waitedTime = datetime.datetime.now() - waitTime
+
+                blockToRun.time += waitedTime.total_seconds()
 
             if blockToRun._status != SlurmBlock.Status.COMPLETED:
                 blockToRun._runError = True
@@ -637,6 +643,7 @@ class Flow:
 
             # Once the block has been executed, call again the execution
             # of this block to execute the finalAction
+            prevBlockTime = blockToRun.time
             try:
                 outputs = self._pluginManager.executeBlock(
                     blockToRun,
@@ -654,6 +661,9 @@ class Flow:
 
                 # Raise again a special "ErrorRunningBlock" exception
                 raise ErrorRunningBlock(blockToRun, str(exc)) from exc
+            finally:
+                # Update the total block time
+                blockToRun.time = prevBlockTime + blockToRun.time
 
         # Block endend executing, thus update the state
         blockToRun._isRunning = False

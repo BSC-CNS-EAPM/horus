@@ -468,8 +468,8 @@ function BlockView({ block, settings }: { block: Block; settings?: any }) {
       className={`plugin-block ${block.isPlaced ? "" : "plugin-block-placed"}`}
     >
       {variablesModal && variablesModalView}
-      <div className="flex flex-row justify-between ${remoteStyle} gap-2">
-        <div className="flex flex-row gap-2">
+      <div className={`flex flex-row justify-between gap-2`}>
+        <div className="flex flex-row gap-2 items-center">
           <div style={{ fontWeight: "bold" }}>{block.name}</div>
           {block.isPlaced && settings?.showPlacedID && (
             <div className="text-gray-400">
