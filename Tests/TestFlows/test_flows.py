@@ -11,10 +11,19 @@ import datetime
 from Server.FlowManager.flow_manager import Flow, FlowManager
 from HorusAPI import PluginBlock as Block, SlurmBlock
 from Server.PluginManager.plugin_manager import PluginManager
+from App import AppDelegate
 
 
 @pytest.fixture
-def plugin_manager():
+def flow_appDelegate():
+    """
+    Initiate a dummy AppDelegate
+    """
+    return AppDelegate()
+
+
+@pytest.fixture
+def plugin_manager(flow_appDelegate):
     """
     Initiate a dummy plugin manager
     """
@@ -22,7 +31,7 @@ def plugin_manager():
 
 
 @pytest.fixture
-def flow_manager(plugin_manager):
+def flow_manager(flow_appDelegate, plugin_manager):
     """
     Initiate a dummy flow manager
     """
@@ -157,161 +166,253 @@ def test_flow_find_block_by_placed_id(flow: Flow):
         flow.findBlockByPlacedID(2)
 
 
-def test_flow_run():
+def test_flow_run(flow_appDelegate):
     path = os.path.join(os.path.dirname(__file__), "test_flow.flow")
 
-    flow = Flow.read(path)
+    copy_flow = Flow.read(path)
 
-    flow.run(placedID=1)
+    try:
+        flow = Flow.read(path)
 
-    # Check that the flow has been updated
-    assert flow.status == Flow.FlowStatus.FINISHED
+        flow.run(placedID=1)
 
-    # Re-read the flow and check everything is saved
-    encoded_flow = flow.encode()
+        # Check that the flow has been updated
+        assert flow.status == Flow.FlowStatus.FINISHED
 
-    read_flow = Flow.read(path).encode()
+        # Re-read the flow and check everything is saved
+        encoded_flow = flow.encode()
 
-    assert read_flow == encoded_flow
+        read_flow = Flow.read(path).encode()
+
+        assert read_flow == encoded_flow
+    finally:
+        copy_flow.write()
 
 
-def test_double_circular_flow_run(capfd):
+def test_double_circular_flow_run(flow_appDelegate, capfd):
     path = os.path.join(os.path.dirname(__file__), "test_flow_double_circular.flow")
 
-    flow = Flow.read(path)
+    copy_flow = Flow.read(path)
 
-    flow.run(placedID=6)
+    try:
+        flow = Flow.read(path)
 
-    # Check that the flow has been updated
-    assert flow.status == Flow.FlowStatus.FINISHED
+        flow.run(placedID=6)
 
-    # Verify that all blocks are marked as finished
-    for block in flow.blocks:
-        assert block._finishedExecution
+        # Check that the flow has been updated
+        assert flow.status == Flow.FlowStatus.FINISHED
 
-    # Verify that the print function was called 5 times
-    out, err = capfd.readouterr()
+        # Verify that all blocks are marked as finished
+        for block in flow.blocks:
+            assert block._finishedExecution
 
-    # Split the output by line and remove the last empty line
-    splitted_out = out.split("\n")[:-1]
+        # Verify that the print function was called 5 times
+        out, err = capfd.readouterr()
 
-    assert len(splitted_out) == 5
+        # Split the output by line and remove the last empty line
+        splitted_out = out.split("\n")[:-1]
 
-    # Verify that the output is correct
-    assert splitted_out[0] == "Received variable: 13"
-    assert splitted_out[1] == "Received variable: 17"
-    assert splitted_out[2] == "Received variable: 13"
-    assert splitted_out[3] == "Received variable: 12"
-    assert splitted_out[4] == "Received variable: 33"
+        assert len(splitted_out) == 5
 
-    # Verify that all the cycles count are equal to the cycles
-    for block in flow.blocks:
-        for conn in block._variableConnections:
-            if conn.isCyclic:
-                assert conn.currentCycle == conn.cycles
+        # Verify that the output is correct
+        assert splitted_out[0] == "Received variable: 13"
+        assert splitted_out[1] == "Received variable: 17"
+        assert splitted_out[2] == "Received variable: 13"
+        assert splitted_out[3] == "Received variable: 12"
+        assert splitted_out[4] == "Received variable: 33"
 
-    # Re-read the flow and check everything is saved
-    encoded_flow = flow.encode()
+        # Verify that all the cycles count are equal to the cycles
+        for block in flow.blocks:
+            for conn in block._variableConnections:
+                if conn.isCyclic:
+                    assert conn.currentCycle == conn.cycles
 
-    read_flow = Flow.read(path).encode()
+        # Re-read the flow and check everything is saved
+        encoded_flow = flow.encode()
 
-    assert read_flow == encoded_flow
+        read_flow = Flow.read(path).encode()
+
+        assert read_flow == encoded_flow
+    finally:
+        copy_flow.write()
 
 
-def test_flow_terminal_output_storage():
+def test_flow_terminal_output_storage(flow_appDelegate):
     path = os.path.join(os.path.dirname(__file__), "test_flow.flow")
 
-    flow = Flow.read(path)
+    copy_flow = Flow.read(path)
 
-    flow.run(placedID=1)
+    try:
+        flow = Flow.read(path)
 
-    # Check that the terminal output is correct
-    assert flow.terminalOutput is not None
+        flow.run(placedID=1)
 
-    # Prints to the terminal 2 times, but between it adds a new line "\n"
-    assert len(flow.terminalOutput) == 4
+        # Check that the terminal output is correct
+        assert flow.terminalOutput is not None
 
-    assert flow.terminalOutput[0] == "Received variable: test"
-    assert flow.terminalOutput[1] == "\n"
-    assert flow.terminalOutput[2] == "Received variable: test"
-    assert flow.terminalOutput[3] == "\n"
+        # Prints to the terminal 2 times, but between it adds a new line "\n"
+        assert len(flow.terminalOutput) == 4
+
+        assert flow.terminalOutput[0] == "Received variable: test"
+        assert flow.terminalOutput[1] == "\n"
+        assert flow.terminalOutput[2] == "Received variable: test"
+        assert flow.terminalOutput[3] == "\n"
+    finally:
+        copy_flow.write()
 
 
-def test_background_molstar_api():
+def test_background_molstar_api(flow_appDelegate):
     path = os.path.join(os.path.dirname(__file__), "molstarapi_background.flow")
 
-    flow = Flow.read(path)
+    copy_flow = Flow.read(path)
 
-    flow.run(placedID=1)
+    try:
+        flow = Flow.read(path)
 
-    # Check that the flow has been updated
-    assert flow.status == Flow.FlowStatus.FINISHED
+        flow.run(placedID=1)
 
-    # Verify that it has pending actions
-    assert flow.pendingActions is not None
-    assert len(flow.pendingActions) == 1
+        # Check that the flow has been updated
+        assert flow.status == Flow.FlowStatus.FINISHED
 
-    # Verify that the pending action is "addPDB"
-    action = flow.pendingActions[0]
+        # Verify that it has pending actions
+        assert flow.pendingActions is not None
+        assert len(flow.pendingActions) == 1
 
-    assert action["type"] == "addPDB"
+        # Verify that the pending action is "addPDB"
+        action = flow.pendingActions[0]
+
+        assert action["type"] == "addPDB"
+    finally:
+        copy_flow.write()
 
 
-def test_extensions_on_blocks():
+def test_extensions_on_blocks(flow_appDelegate):
     path = os.path.join(os.path.dirname(__file__), "open_extension_test.flow")
 
-    flow = Flow.read(path)
+    copy_flow = Flow.read(path)
 
-    flow.run(placedID=1)
+    try:
+        flow = Flow.read(path)
 
-    # Check that the flow has been updated
-    assert flow.status == Flow.FlowStatus.FINISHED
+        flow.run(placedID=1)
 
-    # Verify that all blocks are marked as finished
-    for block in flow.blocks:
-        assert block._finishedExecution
+        # Check that the flow has been updated
+        assert flow.status == Flow.FlowStatus.FINISHED
 
-    # Check that the block has extensions to be opened
-    extOpen = flow.blocks[0]._extensionsToOpen
+        # Verify that all blocks are marked as finished
+        for block in flow.blocks:
+            assert block._finishedExecution
 
-    # This test block adds 2 extensions to be opened
-    assert len(extOpen) == 2
+        # Check that the block has extensions to be opened
+        extOpen = flow.blocks[0]._extensionsToOpen
 
-    extension1 = extOpen[0]
+        # This test block adds 2 extensions to be opened
+        assert len(extOpen) == 2
 
-    assert extension1["data"] is not None
-    assert extension1["pageURL"] is not None
-    assert extension1["title"] == "Results"
+        extension1 = extOpen[0]
+
+        assert extension1["data"] is not None
+        assert extension1["pageURL"] is not None
+        assert extension1["title"] == "Results"
+    finally:
+        copy_flow.write()
 
 
-def test_no_inputs_block():
+def test_no_inputs_block(flow_appDelegate):
     path = os.path.join(os.path.dirname(__file__), "no_inputs_test.flow")
 
+    copy_flow = Flow.read(path)
+
     flow = Flow.read(path)
 
-    flow.run(placedID=2)
+    try:
+        flow.run(placedID=2)
 
-    # Check that the flow has been updated
-    assert flow.status == Flow.FlowStatus.FINISHED
+        # Check that the flow has been updated
+        assert flow.status == Flow.FlowStatus.FINISHED
 
-    # Verify that all blocks are marked as finished
-    for block in flow.blocks:
-        assert block._finishedExecution
+        # Verify that all blocks are marked as finished
+        for block in flow.blocks:
+            assert block._finishedExecution
+    finally:
+        copy_flow.write()
 
 
-def test_molview_flow():
+def test_molview_flow(flow_appDelegate):
     path = os.path.join(os.path.dirname(__file__), "molview.flow")
 
+    copy_flow = Flow.read(path)
+
     flow = Flow.read(path)
 
-    flow.run(placedID=1)
+    try:
+        flow.run(placedID=1)
 
-    # Check that the flow has been updated
-    assert flow.status == Flow.FlowStatus.FINISHED
+        # Check that the flow has been updated
+        assert flow.status == Flow.FlowStatus.FINISHED
 
-    # Verify that all blocks are marked as finished
-    for block in flow.blocks:
-        assert block._finishedExecution
+        # Verify that all blocks are marked as finished
+        for block in flow.blocks:
+            assert block._finishedExecution
 
-    # Check that it has 6 molstar pending actions (is the ones present in the dev_plugin molviewSpecBlock)
-    assert len(flow.pendingActions) == 6
+        # Check that it has 6 molstar pending actions (is the ones present in the dev_plugin molviewSpecBlock)
+        assert len(flow.pendingActions) == 6
+    finally:
+        copy_flow.write()
+
+
+def test_extra_data_block(flow_appDelegate):
+    path = os.path.join(os.path.dirname(__file__), "extra_data_test.flow")
+
+    # Save a backup of the clean flow
+    copy_flow = Flow.read(path)
+
+    try:
+        flow = Flow.read(path)
+
+        flow.run(placedID=1)
+
+        # Check that the flow has been updated
+        assert flow.status == Flow.FlowStatus.FINISHED
+
+        # Verify that all blocks are marked as finished
+        for block in flow.blocks:
+            assert block._finishedExecution
+
+        assert flow.terminalOutput is not None
+
+        # The first run, it should print (Runs: 1)
+        assert flow.terminalOutput[0] == "Runs: 1"
+
+        flow.run(placedID=1, resetFlow=False)
+
+        # The second run, it should print (Runs: 2)
+        assert flow.terminalOutput[2] == "Runs: 2"
+    finally:
+        copy_flow.write()
+
+
+def test_flow_inside_block(flow_appDelegate):
+    path = os.path.join(os.path.dirname(__file__), "Flow_inside_block.flow")
+
+    # Save a backup of the clean flow
+    copy_flow = Flow.read(path)
+
+    try:
+        flow = Flow.read(path)
+
+        flow.run(placedID=1)
+
+        # Check that the flow has been updated
+        assert flow.status == Flow.FlowStatus.FINISHED
+
+        # Verify that all blocks are marked as finished
+        for block in flow.blocks:
+            assert block._finishedExecution
+
+        assert flow.terminalOutput is not None
+
+        # The first run, it should print the savedID of the flow
+        assert flow.terminalOutput[0] == flow.savedID
+    finally:
+        copy_flow.write()

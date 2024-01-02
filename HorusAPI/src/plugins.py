@@ -9,6 +9,9 @@ import logging
 
 from .utils import ResetRemoteException
 
+if typing.TYPE_CHECKING:
+    from Server.FlowManager import Flow
+
 
 class PluginRemote:
     def __init__(self, remote) -> None:
@@ -776,6 +779,28 @@ class PluginBlock:
     The time that the block took to run.
     """
 
+    extraData: typing.Dict[str, typing.Any] = {}
+    """
+    Extra data that the block can store.
+
+    This data can be used to store any extra information that the block
+    may need to store. For example, the folder of a remote job to be
+    downloaded in the finalAction of a SlurmBlock.
+    """
+
+    flow: "Flow"
+    """
+    The current flow where the block is placed and being executed.
+
+    This value is only defined withing the execution of action function of the block.
+
+    Some properties of the flow are:
+    - name: The name of the flow.
+    - path: The path to the flow.
+    - savedID: The unique ID of the flow.
+    - blocks: The list of blocks in the flow.
+    """
+
     def __init__(  # pylint: disable=dangerous-default-value
         self,
         name: str,
@@ -1071,6 +1096,7 @@ class PluginBlock:
             "selectedRemote": self.selectedRemote,
             "extensionsToOpen": self._extensionsToOpen,
             "time": self.time,
+            "extraData": self.extraData,
         }
 
         return blockDict
@@ -1156,6 +1182,7 @@ class PluginBlock:
             "extensionsToOpen", []
         )
         blockTime = blockJSON.get("time", 0)
+        extraData = blockJSON.get("extraData", {})
 
         position: typing.Dict[str, float] = blockJSON.get("position", {})
         xPos: float = position.get("x", 0)
@@ -1248,6 +1275,7 @@ class PluginBlock:
         self._connectedToReferences = connectedToReference
         self._extensionsToOpen = extensionsToOpen
         self.time = blockTime
+        self.extraData = extraData
 
     def _minimalEncode(self):
         """
@@ -1273,6 +1301,7 @@ class PluginBlock:
             "selectedRemote": self.selectedRemote,
             "extensionsToOpen": self._extensionsToOpen,
             "time": self.time,
+            "extraData": self.extraData,
         }
 
         return blockDict

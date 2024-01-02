@@ -478,6 +478,9 @@ class Flow:
         # Find the block to run by its placedID in the flow
         blockToRun = self.findBlockByPlacedID(placedID)
 
+        # Add the flow to the block
+        blockToRun.flow = self
+
         # If the flow is stopped, raise an exception
         if self.status == self.FlowStatus.STOPPED:
             blockToRun._runError = True

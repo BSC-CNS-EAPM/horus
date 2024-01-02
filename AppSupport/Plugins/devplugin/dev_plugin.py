@@ -226,3 +226,35 @@ molviewSpecBlock = PluginBlock(
 )
 
 plugin.addBlock(molviewSpecBlock)
+
+
+def storeBlockVariable(block: PluginBlock):
+    runs = block.extraData.get("runs", 0)
+
+    runs += 1
+
+    print(f"Runs: {runs}")
+
+    block.extraData["runs"] = runs
+
+
+extraDataBlock = PluginBlock(
+    name="Extra data test",
+    description="Stores extra data",
+    action=storeBlockVariable,
+)
+
+plugin.addBlock(extraDataBlock)
+
+
+def flowInsideBlock(block: PluginBlock):
+    print(block.flow.savedID)
+
+
+flowInsideBlockBlock = PluginBlock(
+    name="Flow inside block",
+    description="Flow inside block",
+    action=flowInsideBlock,
+)
+
+plugin.addBlock(flowInsideBlockBlock)

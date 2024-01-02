@@ -268,4 +268,26 @@ Then, the config can be accessed like the variables in the :bdg-secondary-line:`
 
     myConfigValue = block.config["myConfigID"]
 
+Storing data on blocks
+======================
+
+Sometimes it is useful to store persistent data on a block. For example, one could store the times
+the block has run, or a variable that is needed in the :bdg-secondary-line:`finalAction` of a :bdg-secondary-line:`SlurmBlock`, which is defined in the :bdg-secondary-line:`initialAction`.
+:bdg-secondary-line:`extraData` is a property of Blocks (a dictionary where to store key:value pairs) that allows developers to store variables across runs of the same block. 
+
+.. warning::
+
+    The :bdg-secondary-line:`extraData` property of a given block never gets automatically resetted, 
+    it is up to the developer of the block when to remove/overwrite the stored variables. 
+
+.. code-block:: python
+
+    block.extraData["value_to_store"] = "myValue"
+
+Accessing the flow inside the block
+===================================
+
+The bl:bdg-secondary-line:`Block` has access to the instance of the :bdg-secondary-line:`Flow` it is being executed in.
+This can be useful to access the list of blocks in the flow, the flow name, the flow ID or other
+properties. The flow instance can be obtained using the :bdg-secondary-line:`block.flow` property.
 
