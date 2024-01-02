@@ -333,6 +333,9 @@ export default function HorusToolbar() {
       ),
       onClick: () => {
         // Set the secondary view to null
+        hideExtensions();
+
+        // Show the flow builder in the main view
         const event = new CustomEvent("mainView", {
           detail: <FlowBuilderView />,
         });
