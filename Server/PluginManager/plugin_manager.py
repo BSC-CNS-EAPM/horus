@@ -14,6 +14,7 @@ import logging
 import json
 import shutil
 import datetime
+import pkg_resources
 
 # Type for modules in PluginDeps context manager
 from types import ModuleType
@@ -1419,6 +1420,18 @@ class PluginDeps:
         sys.path.insert(0, depsDir)
         sys.path.insert(0, includeDir)
 
+        # Once pyinstaller is compiled, distributions inside the deps
+        # directory are not correctly detected by pkg_resources.
+        # To fix this, we need to add the deps directory to the
+        # pkg_resources working set
+
+        # Add the deps directory to the working set
+        pkg_resources.working_set.add_entry(depsDir)
+
+        # Add the include directory to the working set
+        pkg_resources.working_set.add_entry(includeDir)
+
+
     def _removeDepsPath(self):
         """
         Removes the deps folder of the plugin from the python path.
@@ -1447,7 +1460,12 @@ class PluginDeps:
                 else:
                     # Unload the module
                     del sys.modules[key]
-                    logging.getLogger("Horus").debug("Unloaded module %s", key)
 
         # Restore the initial python path
         sys.path = self.initialPath
+
+        # Remove the deps directory from the working set
+        pkg_resources.working_set.entries.remove(depsDir)
+
+        # Remove the include directory from the working set
+        pkg_resources.working_set.entries.remove(includeDir)
