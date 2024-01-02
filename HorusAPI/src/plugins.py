@@ -161,7 +161,8 @@ class VariableTypes(str, Enum):
     """
     Any type of variable.
 
-    Will render as a text input.
+    This type of variable will not render anything, as it is meant to be used
+    as a connection between blocks.
     """
 
     STRING = "string"
@@ -337,6 +338,16 @@ class VariableTypes(str, Enum):
     VariableList will be automatically converted to a list of variables.
 
     Will render as a table with an input field and an add button. 
+    """
+
+    CUSTOM = "custom"
+    """
+    A custom variable. It can contain any type of data but allows connections
+    only from other custom variables that contain the same strings inside
+    the allowedValues list. Just like ANY, it will not render any input field.
+
+    For example, a custom variable with allowedValues = ["A", "B", "C"]
+    can be connected to another custom variable with allowedValues = ["B"]
     """
 
     @staticmethod

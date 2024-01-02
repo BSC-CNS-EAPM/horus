@@ -33,6 +33,7 @@ enum PluginVariableTypes {
   GROUP = "group",
   LIST = "list",
   _LIST = "_list",
+  CUSTOM = "custom",
 }
 
 type PluginVariable = {

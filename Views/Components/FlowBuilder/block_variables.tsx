@@ -257,8 +257,7 @@ const PluginVariableView = (props: PluginVariableViewProps) => {
         {/* Define an input based on the type */}
 
         {/* If its a string, int or float, set a basic input */}
-        {(props.variable.type === PluginVariableTypes.STRING ||
-          props.variable.type === PluginVariableTypes.ANY) && (
+        {props.variable.type === PluginVariableTypes.STRING && (
           <input
             type="text"
             value={value as string}
@@ -1548,6 +1547,22 @@ function VariableConnectView(props: VariableConnectViewProps) {
     ) {
       if (allowedValues.includes("*") || tryingToConnect.includes("*")) {
         return true;
+      }
+    }
+
+    // If its of type CUSTOM, check that at least one of the allowed values in either variable matches
+    if (
+      variableType === PluginVariableTypes.CUSTOM &&
+      otherVariableType === PluginVariableTypes.CUSTOM
+    ) {
+      if (allowedValues.includes("*") || tryingToConnect.includes("*")) {
+        return true;
+      }
+
+      for (let i = 0; i < allowedValues.length; i++) {
+        if (tryingToConnect.includes(allowedValues[i])) {
+          return true;
+        }
       }
     }
 
