@@ -273,6 +273,13 @@ class RemotesAPI:
         if destination is None or destination == "":
             destination = self.workDir
 
+        # If there are spaces in the path, cancel the transfer
+        if " " in source:
+            raise Exception(f"The source path cannot contain spaces: {source}")
+
+        if " " in destination:
+            raise Exception(f"The destination path cannot contain spaces: {destination}")
+
         if self.isLocal:
             os.system(f"cp -r {source} {destination}")
 
@@ -334,6 +341,13 @@ class RemotesAPI:
 
         if destination is None or destination == "":
             destination = os.getcwd()
+
+        # If there are spaces in the path, cancel the transfer
+        if " " in source:
+            raise Exception(f"The source path cannot contain spaces: {source}")
+
+        if " " in destination:
+            raise Exception(f"The destination path cannot contain spaces: {destination}")
 
         if self.isLocal:
             os.system(f"cp -r {source} {destination}")
