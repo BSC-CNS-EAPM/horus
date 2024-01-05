@@ -22,6 +22,7 @@ type PluginVariableViewProps = {
   variable: PluginVariable;
   onChange: (value: any, id: string, groupID?: string) => void;
   hideName?: boolean;
+  hiddeDescription?: boolean;
   applyStyle?: boolean;
 };
 
@@ -95,7 +96,7 @@ function VariableListView(props: ListViewProps) {
         onChange={(value: any, id: string, groupID?: string) => {
           internalOnChange(index, value, id, groupID);
         }}
-        hideName={true}
+        hiddeDescription={true}
         applyStyle={false}
       />
     );
@@ -176,6 +177,7 @@ function GroupVariableView(props: PluginVariableViewProps) {
               variable={variable}
               onChange={onChange}
               hideName={props.hideName}
+              hiddeDescription={props.hiddeDescription}
               applyStyle={false}
             />
           );
@@ -237,6 +239,7 @@ const PluginVariableView = (props: PluginVariableViewProps) => {
         onChange={props.onChange}
         variable={variable}
         hideName={hideName}
+        hiddeDescription={props.hiddeDescription}
       />
     );
   }
@@ -248,11 +251,21 @@ const PluginVariableView = (props: PluginVariableViewProps) => {
   return (
     <div className={props.applyStyle === false ? null : "plugin-variable"}>
       {!hideName && (
-        <div className="plugin-variable-name">{props.variable.name}</div>
+        <div
+          className={
+            props.hiddeDescription
+              ? "plugin-variable-description"
+              : "plugin-variable-name"
+          }
+        >
+          {props.variable.name}
+        </div>
       )}
-      <div className="plugin-variable-description">
-        {props.variable.description}
-      </div>
+      {!props.hiddeDescription && (
+        <div className="plugin-variable-description">
+          {props.variable.description}
+        </div>
+      )}
       <div className="plugin-variable-value">
         {/* Define an input based on the type */}
 
@@ -932,9 +945,9 @@ function AtomView(props: VariableSubviewProps) {
       }`}
     >
       {!atom ? (
-        <div className="text-center">Click to select atom</div>
+        <div className="text-center px-1">Click to select atom</div>
       ) : (
-        <div className="text-center p-1">
+        <div className="text-center px-1">
           {atom.auth_atom_id} - {atom.atom_index} - {atom.name}
         </div>
       )}
