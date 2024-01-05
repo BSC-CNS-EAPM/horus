@@ -364,7 +364,7 @@ class RemotesAPI:
 
             # Then zip the folder
             folderName = os.path.basename(source)
-            sourceZip = os.path.join(folderName, "*")
+            sourceZip = os.path.join(folderName, ".")
 
             unique_id = secrets.token_hex(6)  # pylint: disable=invalid-name
             zipPath = f"{folderName}-{unique_id}.tar.gz"
