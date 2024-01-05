@@ -82,16 +82,16 @@ def addPDB(block: PluginBlock):
                 if not os.path.isdir(path):
                     raise Exception("Input is not a folder.")
 
-                filelist = os.listdir(path)
                 pdbFound = False
 
-                for f in filelist:
-                    try:
-                        pdbFullPath = os.path.join(path, f)
-                        addToMolstar(pdbFullPath)
-                        pdbFound = True
-                    except NoPDBFileException:
-                        pass
+                for root, dirs, files in os.walk(path):
+                    for f in files:
+                        try:
+                            pdbFullPath = os.path.join(root, f)
+                            addToMolstar(pdbFullPath)
+                            pdbFound = True
+                        except NoPDBFileException:
+                            pass
 
                 if not pdbFound:
                     raise Exception("No PDB found in the folder.")
