@@ -22,7 +22,7 @@ Welcome to HorusAPI's documentation!
    :maxdepth: 2
    :caption: The Horus plugin
 
-   default_blocks/index
+   default/index
 
 .. toctree::
    :maxdepth: 1

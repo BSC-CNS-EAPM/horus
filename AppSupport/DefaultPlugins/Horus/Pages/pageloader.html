@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>HTML Loader</title>
+    <style>
+        .no-loaded-html {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: xx-large;
+            border: 5px solid #ccc;
+            border-radius: 1rem;
+            padding: 1rem;
+            box-shadow: 0 0 1rem #ccc;
+        }
+    </style>
+    </style>
+
+    <div id="dynamicContentContainer"></div>
+
+    <script>
+
+        let htmlToLoad = '<div class="no-loaded-html"><p>To know how to use this extension, <a href="https://nbdsoftware.github.io/horus/default/index.html" target="_blank">check the HorusAPI documentation</a>.</p></div>';
+
+        // Check if the extensionData object is available
+        if (window.parent.extensionData) {
+            htmlToLoad = window.parent.extensionData.html;
+        } else {
+            // Apply the body and html styles to the document to the unloaded HTML
+            document.documentElement.style.height = '100%';
+            document.body.style.height = '100%';
+            document.body.style.display = 'flex';
+            document.body.style.justifyContent = 'center';
+            document.body.style.alignItems = 'center';
+        }
+
+        // Get the container element where you want to render the HTML
+        var container = document.getElementById('dynamicContentContainer');
+
+        // Set the innerHTML property to the received HTML content
+        container.innerHTML = htmlToLoad;
+    </script>
+    </body>
+
+</html>

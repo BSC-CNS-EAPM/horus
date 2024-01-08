@@ -11,7 +11,7 @@ The most fundamental element of Horus are :bdg-secondary-line:`Plugins`, which a
 arbitrary python code, thus allowing the user to create custom tasks. Examples of :bdg-secondary-line:`Blocks`
 include PDB preparation, folder structure creation, submission of jobs to a cluster, unzipping files, etc.
 An index of all the :bdg-secondary-line:`Blocks` that Horus implements by default can be found in the section
-:ref:`default-blocks` section.
+:ref:`default` section.
 
 :bdg-secondary-line:`Blocks` can be connected to each other throught :bdg-secondary-line:`Variables` and are meant to be run in a :bdg-secondary-line:`Flow`. 
 Any block can be run as a standalone task, but the real power of Horus comes from the ability to chain blocks together in a :bdg-secondary-line:`Flow`.
