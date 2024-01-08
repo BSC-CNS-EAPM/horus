@@ -593,6 +593,16 @@ class HorusServer:
                 # Open the flow
                 flow = self.flowManager.openFlowFromPath(flowPath)
 
+                # If resetFlow is True, reset the remote too
+                if resetFlow:
+                    resetRemoteBlock = True
+
+                    # Instantiate a local rAPI
+                    from Server.RemotesManager import RemotesAPI
+
+                    rAPI = RemotesAPI()
+                    rAPI.deleteFlowFromQueue(flow.savedID)
+
                 # Run the flow
                 self.flowManager.runFlow(
                     flow, placedID, resetRemoteBlock, self.socketio, resetFlow

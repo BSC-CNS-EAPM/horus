@@ -1431,7 +1431,6 @@ class PluginDeps:
         # Add the include directory to the working set
         pkg_resources.working_set.add_entry(includeDir)
 
-
     def _removeDepsPath(self):
         """
         Removes the deps folder of the plugin from the python path.

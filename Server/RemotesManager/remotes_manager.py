@@ -75,7 +75,9 @@ class RemotesAPI:
     The selected remote name.
     """
 
-    def __init__(self, selectedRemote: t.Optional[t.Dict[str, t.Any]], local: bool = False):
+    def __init__(
+        self, selectedRemote: t.Optional[t.Dict[str, t.Any]] = None, local: bool = False
+    ):
         """
         Create a new ClusterAPI object.
 
@@ -148,7 +150,9 @@ class RemotesAPI:
                     logging.getLogger("Horus").critical(
                         "Could not connect to the remote %s: %s", self.host, str(exc)
                     )
-                    raise exc
+                    raise Exception(
+                        f"Could not connect to the remote {self.host}: {exc}"
+                    ) from exc
             else:
                 raise Exception(  # pylint: disable=broad-exception-raised
                     "No connection method provided."
@@ -739,23 +743,6 @@ class RemotesAPI:
         # Get the list of jobs for the flow
         jobs = queue.get(savedFlowID, [])
 
-        remote = jobs[0].get("remote", None)
-
-        # If the remote is not set, raise an exception
-        if remote is None:
-            raise Exception(  # pylint: disable=broad-exception-raised
-                "Corrupted queue storage: remote not set."
-            )
-
-        # If the connected remote is not the same as
-        # the remote the jobs are running on, raise an exception
-        if remote != self.remoteName:
-            raise Exception(  # pylint: disable=broad-exception-raised
-                f"Remote mismatch. Did you change the remote connection?. \
-                Originally, the job was running on {remote} but you are \
-                currently connected to {self.remoteName}"
-            )
-
         # If the job ID is set, filter the jobs
         # So we update only one job
         if jobID is not None:
@@ -774,6 +761,29 @@ class RemotesAPI:
                 raise Exception(  # pylint: disable=broad-exception-raised
                     "Corrupted queue storage: job ID not set."
                 )
+
+            remote = job.get("remote", None)
+
+            # If the remote is not set, raise an exception
+            if remote is None:
+                raise Exception(  # pylint: disable=broad-exception-raised
+                    "Corrupted queue storage: remote not set."
+                )
+
+            # If the connected remote is not the same as
+            # the remote the jobs are running on, raise an exception
+            if remote != self.remoteName:
+                logging.getLogger("Horus").warning(
+                    f"Remote mismatch. Did you change the remote connection?. \
+                    Originally, the job was running on {remote} but you are \
+                    currently connected to {self.remoteName}. This job will be \
+                    removed from the queue storage."
+                )
+
+                # Remove the job from the queue storage
+                queue[savedFlowID].pop(index)
+
+                continue
 
             # Get the job status
             newStatus = self.getJobStatus(queueJobID) if status is None else status
