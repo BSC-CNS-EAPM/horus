@@ -1375,12 +1375,19 @@ class FlowManager:
         """
 
         # Check that the flow is not already running
-        for runningFlowPath in self._flowProcesses:
+        for runningFlowPath in list(self._flowProcesses.keys()):
             # Load the running flow
             if runningFlowPath == flow.path:
-                raise Exception(  # pylint: disable=broad-exception-raised
-                    "The flow is already running."
-                )
+                # Check if the process is alive
+                process = self._flowProcesses[runningFlowPath]
+
+                if process.is_alive():
+                    raise Exception(  # pylint: disable=broad-exception-raised
+                        "The flow is already running."
+                    )
+                else:
+                    # Remove the flow from the running flows list
+                    self._flowProcesses.pop(runningFlowPath)
 
         # Set the socket instance
         flow._socket = socket

@@ -3,8 +3,8 @@
   "savedID": "069e909c-b32d-46c0-8873-a8ac76265750",
   "path": "/Users/cdominguez/Developer/Horus/Tests/TestFlows/Slurm_test.flow",
   "remote": "Local",
-  "currentExecuting": 1,
-  "status": "PAUSED",
+  "currentExecuting": null,
+  "status": "FAILED",
   "date": "2024-01-09 10:43:48",
   "blocks": [
     {
@@ -14,7 +14,7 @@
         "x": 727,
         "y": 309.56
       },
-      "isRunning": true,
+      "isRunning": false,
       "runError": false,
       "runErrorMessage": "",
       "placedID": 1,
