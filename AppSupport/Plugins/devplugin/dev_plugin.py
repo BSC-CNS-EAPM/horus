@@ -1,4 +1,12 @@
-from HorusAPI import Plugin, VariableTypes, PluginBlock, PluginVariable, Extensions, MolstarAPI
+from HorusAPI import (
+    SlurmBlock,
+    Plugin,
+    VariableTypes,
+    PluginBlock,
+    PluginVariable,
+    Extensions,
+    MolstarAPI,
+)
 
 import time
 
@@ -63,6 +71,16 @@ waiterOutput = PluginVariable(
 
 def wait(block: PluginBlock):
     sleepTime = int(block.variables.get("timeToWaitVar", 0))
+
+    runs = block.extraData.get("runs", 0)
+
+    if runs == 0:
+        print("First run")
+    else:
+        print(f"Run {runs}")
+
+    runs += 1
+    block.extraData["runs"] = runs
 
     time.sleep(sleepTime)
     block.setOutput("timeToWaitOutput", block.inputs["timeToWaitInput"])
@@ -258,3 +276,57 @@ flowInsideBlockBlock = PluginBlock(
 )
 
 plugin.addBlock(flowInsideBlockBlock)
+
+
+def testSlurmBlockAction(block: SlurmBlock):
+    print("Test slurm block action")
+
+    timeToWait = int(block.inputs.get("timeToWait", 0))
+
+    # Submit test job to the current remote
+    script = f"""#!/bin/bash
+#SBATCH --qos="short"
+#SBATCH --partition="short"
+#SBATCH --job-name="tunnel"
+#SBATCH --time=2:00:00     # walltime
+#SBATCH --ntasks=8  # number of cores
+#SBATCH --mem-per-cpu=1GB
+
+echo "Hello world"
+
+# Wait
+sleep {timeToWait}
+    
+"""
+
+    with open("test.sh", "w") as f:
+        f.write(script)
+
+    # Upload the script to the remote
+    finalPath = block.remote.sendData("test.sh", block.remote.workDir)
+
+    jobID = block.remote.submitJob(finalPath)
+
+    print("Job ID: ", jobID)
+
+
+def finalTestSlurmBlockAction(block: SlurmBlock):
+    print("Test slurm block final action")
+
+
+slurmBlockTest = SlurmBlock(
+    name="Slurm block test",
+    description="Slurm block test",
+    initialAction=testSlurmBlockAction,
+    finalAction=finalTestSlurmBlockAction,
+    inputs=[
+        PluginVariable(
+            id="timeToWait",
+            name="Time to wait",
+            description="Time to wait",
+            type=VariableTypes.NUMBER,
+        )
+    ],
+)
+
+plugin.addBlock(slurmBlockTest)

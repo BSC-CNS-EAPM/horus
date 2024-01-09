@@ -1,0 +1,107 @@
+{
+  "name": "Slurm test",
+  "savedID": "069e909c-b32d-46c0-8873-a8ac76265750",
+  "path": "/Users/cdominguez/Developer/Horus/Tests/TestFlows/Slurm_test.flow",
+  "remote": "Local",
+  "currentExecuting": 1,
+  "status": "PAUSED",
+  "date": "2024-01-09 10:43:48",
+  "blocks": [
+    {
+      "id": "devplugin.slurm_block_test",
+      "isPlaced": true,
+      "position": {
+        "x": 727,
+        "y": 309.56
+      },
+      "isRunning": true,
+      "runError": false,
+      "runErrorMessage": "",
+      "placedID": 1,
+      "finishedExecution": false,
+      "storedOutputs": {},
+      "variables": [],
+      "variableConnections": [
+        {
+          "origin": {
+            "placedID": 2,
+            "blockID": "horus.string",
+            "variableID": "string"
+          },
+          "destination": {
+            "placedID": 1,
+            "blockID": "devplugin.slurm_block_test",
+            "variableID": "timeToWait"
+          },
+          "isCyclic": false,
+          "cycles": 1,
+          "currentCycle": 0
+        }
+      ],
+      "variableConnectionsReference": [],
+      "connectedTo": [],
+      "connectedToReference": [],
+      "selectedInputGroup": "default",
+      "selectedRemote": "Local",
+      "extensionsToOpen": [],
+      "time": 15.405857,
+      "extraData": {},
+      "status": "COMPLETED",
+      "jobID": 6923
+    },
+    {
+      "id": "horus.string",
+      "isPlaced": true,
+      "position": {
+        "x": 256,
+        "y": 323.56
+      },
+      "isRunning": false,
+      "runError": false,
+      "runErrorMessage": "",
+      "placedID": 2,
+      "finishedExecution": true,
+      "storedOutputs": {
+        "string": "10"
+      },
+      "variables": [
+        {
+          "id": "string",
+          "value": "5",
+          "type": "string"
+        }
+      ],
+      "variableConnections": [],
+      "variableConnectionsReference": [
+        {
+          "origin": {
+            "placedID": 2,
+            "blockID": "horus.string",
+            "variableID": "string"
+          },
+          "destination": {
+            "placedID": 1,
+            "blockID": "devplugin.slurm_block_test",
+            "variableID": "timeToWait"
+          },
+          "isCyclic": false,
+          "cycles": 1,
+          "currentCycle": 0
+        }
+      ],
+      "connectedTo": [],
+      "connectedToReference": [],
+      "selectedInputGroup": "default",
+      "selectedRemote": "Local",
+      "extensionsToOpen": [],
+      "time": 0.003829,
+      "extraData": {}
+    }
+  ],
+  "molstarState": "504b030414000000080000000000298d0b94060b0000084c00000a00000073746174652e6a736f6eed5c6d6fdb3812febebfc230eec31d7036ecd8b19303f643da3477bd4d2ed9f8ae6d7a2816b444dbdcd0a24049b6d3a2ff7d67a87791929c44f2a6db0dd00291469ce13cf34672982f3f743a5d9fada9e793b5dbfd4767381d8ca7a7a3f1d1c96432f83bbedd50e931e1c0bbeea83f1ef5875df5d80aa4a48e8f8ff9eedde5667bf2deb3c66272bfbab3fef5e6176b1b92b99c3ccc89750f74c80b9e30ef069e3167098f16847b14e9e0b94377fecc21aeb712fe390592b7ce9587121d0f0640f1550d071c25a3f8f8ffeaab70ccf2391cab39280a2f1a3b912494c6ae99414467139fe4be449e92d2c233f59438de42c8752a65fa93a755f42e89f5d8fb510ae1ffd8cbf0d547a51249e701e3768f397dfcc2440fa31225c117a5b8c25b4917750c33b0fba7afdef91fe7b7ef76ce7bf7e2df176f4ffef94e9c750bdf7ccdfdfe29f35bfa26234b97386c4dfc90454ead00a36fd06b3aa302e3ac29a25e7cd44b383aedad854d393cb0e92e2f70412da938b3883dc8215c97dad9cf721f65f89a447d4778a02c55931765323c471f206bc59a0be156a3aabd431b65925a9146bb602b5b2273d29b70d21481e304d2044c41c605db81721e2f6434f85b670624c7f5e255a296d84a96cc6c6f16c82d351f2ec53002a9eb821fb8a8d60d2d4c1654bc018a417f7a723c3a3d194e46a3d3e9787c322a90b9c263913a8be120894ea50f8618fbd29f4f85b1038c77b5a30e35369583fa442e29aae4f1e2560f2c89cd02b48c417f5090297a774576e6d70b81f962785c786c71e65e100c89be0ca24c9242c89cff50f5b2f819bc09bfcaca9b776e1570156e33ff812b5388624ace0c3274e78965abbc75749c0e9eb7436743bc11e69d9c25ba52b8bad798cd764f0b05a215e5f0deecc964678c4f392f07b3d55dbccec9716ceeae50ea41ff58b3be7866820bf901519d4c87c3c989664c59ba3ba01b1d4d272755441f95da0b60a7b1c2220ac7417f5470d184840b2b8e7cddb9f07db1ee71ba3025d81cf9f562e1511fa75236873c254ea68c5248b664ce6b9c0e509d8c8fa0fe1997d0863e334be6359896ce7d25b65076390a70dd555258914631ff804256b3cf10a3e6f725beab2746712fc99c7214375324ea7a4522547cf7432948488293e9de5592a054dd8f9524e15c6ba54f69eb7598d2d66b45d15ebbc462fe03ba4d15596a14477a8ed5b3ec3e6581e7534945755120168b9a6ab4964d9855c79a2577d7c40908bfa5e040b15554d60661e4bc5089430b9e15f1ad2ab67599e3538cf70a80a266ab6b95509ed790b1dc70f5a309b528c964b9d4a9eb254d737bf057fa8b53559ca88a5595451d7aab385e10cb5791a8989055de0bd72eaf607db794227030a719bcb56bbb82f96fc17c1453c5b340b16174eb0aa9d76119a8c2c4590557b5fea10ef321c95ad4f34af42f2c8b07d1aaa7cac84d39b1a6ecf56069ca55f41d15e61ea318709fc55e5b9254abbdacc6d3f0c7b016ccda96317b74e70cb48e91c4987bbb731ec89fa87420e6b0cf285eb1484bd69c9ee0812aa8a2591a035898c90ba5d9de216a456cb16d3d4489c0e7cca959c335c087383e231cd46fb6d70c336f4dc8e38d92da4bfadf1500b3121c7d77d03743b226bb1944186b35f3a9aa518793a781235dead4cea501c5e18e5312910cac364432506e6df15be267955ef6b805ec9ac8fb9268441d32e7b0c42ec9082bb65c71f8e7bf0114e37a71381a0e4f8f4ff5e4e9510e4b842ce9f1703ad44291328952ffccf39cc1fe97b3f45746ca945f25d9720541b94005f5b946c71c874aa44bf351bf3adb85f15445ddaac5934fd7907708d7d34a18b12fe986723d61a978660716bde0ccba570b2c04a9522298a00d159469319631d804c9c9743a856a504f77c0102ce60c175879e7d569b15a914cc873b0b2d8f3aae814f30b4e90ce6874394234a2c16070a42fcac2207e855c4b2b9ac49632331e4d4f0d855f684b31d9683c984ec6ba29d96c5dabbb84678db9851c6b88806196c250afe2f46f505d25057b7727c94368d59c63b031d1d01d142e81343ba49a8c61a7c6b4d3ace0830d13275ee2c252c318ddc867b60ed4a44647668a384797295a2b9507fdfa8c51d82d4241d67306f5652dac11dddb1cc371a53342f96addcf41edc68a53cc2c29d43b73312e70db71e652159d75793e0bb18edf4e0df5aa13bfd4015d8b4d3230ec2cea63cf0544cc2ba04a22a14eb3e00f57617c33ae9d938dacb6d330eece320b840d238f5197f6033064d639445ba04a2605eb56d342e79cc1988e85029a1688bbcc7bdd74bb4b3822024f52f9ad6c61138ef37e452987532875e8031b2bba3073385300814b9689b624cb5b65256535069c632d97b07367745efc31af019073001b536a1555b20310a637b660e1f06503a9928cc1ee56e5164bb49bb70f9525e0744ea0d7d451aea952acbe864f7f4ccb17f3532d6e8422272721110e462a9b7a96646e4c7a0eb0756005e82c3b7ff91223f4d5708662708c1472dcc979f99897ef023e09f29ae17e07c43b4415549dcf3db2635ee7af18d1ff761033b821e61d84864cc0b881f0c7767bf3a0df72887c49fe82f67a08bff80875d13e8e5127ef5ec2ee2fd685b0d4f6576b0e5b7268f5fb1be18bcad3210c87b043c5695f637c2ae825a7387f82ae83de2198a6118fb6d18781a00af813fa9700bd42611fc0c3c5f8f3206f3dc6378679c375f98b821c0f3f0f0bf90b2c39ee29eccec0fe4dd4a0d7b84d5ad1d6f64ff4e1bd2ed153a143913b7153e13ecab881ad69eff1d845dac133e55655336b5835aac9b97dbd5c623b529b7ad1fa7a9fa997d2fea966f5721b6d84b7a798f38615033281c4ed6be67fd822da9e5a6e1b560b74b4b6af9373b16d618726a3958b86b5025d0dfb2dd19fae975b4899ad47979f9bd30bca7b88e8827cda8f2e6f1a56cc21a2cb0df3ad551be1e5dbaf984b170331e467528a2de8aeb93d3c04a3fde8a9d8b4133ebf17d495f61ac6fd00f9e18e6cdb490fdf0bee4a7b8de10e701c22fb019b9692dff7027ba8be46716f3db9274d26edd53c33c4b5599778855277b083a64ddd846d993742b5c25d8a36b629befda3c95ad798c13516da1cf46f14281db86780a874e0ba55739b3185278636edc01767f6af01b80c73e00663a609a9e15b04990ea8b453ca38cf0ce50db1b1530948cd7d7a99b6a9b429aa64d49414a60a74477b74e9e77e2ff6e129bc121cf5365db2bb501de723bd9bcb855bec549ec125bd1bb88accd3698e2a39da741e18fbadd5ad9757d83202c3ccdc15f4ea965e3f830b2b1e038b9b3de61b31ff15ba4af7a5664ea8e812faca39aee040cddcf75cfae6599d7f796132bf99af6227a06fc266cd7deec12ee1be51c0a16f5f7d81b749981de42288999707d1ccc2aebfe404c8f8f6b5803e70079a48af8843201214a5122a6418e45a3dd8522ca1ef54dd10869ed102146028706bed67f817498ed1a248c4968e90f4322ab44c57a8b05f13ee2cf0f832b2ee29109539dcef34df11834ea8e52a7aab373cce036cbe8cbeadbe43060738d7ca8c8d7fd920bd57016deae0937a577de803e191cbbe81c1c80acc64c3a09fbeec9e9e7098d5cefd0e936bb01e38abeacb6feb42b51dc75d7543fe586fe28f15ac6e188754258d62d0ffbbe4f49c6e42aa911ec38d17440df30e2f35f75c7698594ff699f39327b3221c1db937178edddabdf8fc84ca6efa2a809e8d4e1c9a0e39a351a961e201190882bc2a2ea013cb3acb59a77e1f24e62b9c3d2961ccebc0bf5ea80bf0ea9bf083d3b23bf830b4f183520e5b8cced53576d70bf8229049f9140ed81f3e19dd2d25f7bd4742dc54bc536cdd95981f30c6aa04d7b38490500d95ff7d9ae62dbaa1ebf3b8be827c5692aff03ee9f5628615009a485a883fb3d44affdc4ef68f69a5f4f8ffa71fbefe06504b0102000014000000080000000000298d0b94060b0000084c00000a000000000000000000000000000000000073746174652e6a736f6e504b05060000000001000100380000002e0b00000000",
+  "terminalOutput": [
+    "Test slurm block final action",
+    "\n"
+  ],
+  "pendingActions": []
+}

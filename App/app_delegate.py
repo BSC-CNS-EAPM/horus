@@ -590,22 +590,17 @@ class AppDelegate(metaclass=HorusSingleton):
         This will be called after the last window is closed.
         """
 
+        # If any flow is running, pause them
+        if self.server.flowManager.areThereRunningFlows:
+            print("Found running flows. Pausing them...")
+            self.server.flowManager.pauseAllFlows()
+
         # Proceed only if we are in the main thread and not in a subprocess
         if (
             threading.current_thread() != threading.main_thread()
             or multiprocessing.current_process().name != "MainProcess"
         ):
             return
-
-        print("\nClosing Horus...")
-
-        # If any flow is running, pause them
-        if self.server.flowManager.areThereRunningFlows:
-            if self.debug:
-                print("There are flows running, but debug mode cannot pause them. Exiting...")
-            else:
-                print("Found running flows. Pausing them...")
-                self.server.flowManager.pauseAllFlows()
 
     def _menus(self):
         def newHorus():

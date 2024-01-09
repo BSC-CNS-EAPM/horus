@@ -6,6 +6,7 @@ import time
 from enum import Enum
 from copy import deepcopy
 import logging
+from typing import Any, Dict
 
 from .utils import ResetRemoteException
 
@@ -415,6 +416,9 @@ class PluginVariable:
                 + "Use VariableGroup class instead. "
                 + f"(While loading variable ID: {id}, name: {name}, description: {description})"
             )
+
+        if isinstance(allowedValues, list) and len(allowedValues) == 0:
+            allowedValues = None
 
         # Assign a default category if none is provided
         self.category = category if category else "General"
@@ -1077,41 +1081,6 @@ class PluginBlock:
 
         return connections
 
-    def _toDict(self):
-        """
-        Converts the block to a dictionary.
-        """
-
-        blockDict = {
-            "id": self.id,
-            "name": self.name,
-            "description": self.description,
-            "variables": self._variablesToDict(self._variables),
-            "inputs": self._inputGroupsToDict(self._inputGroups),
-            "outputs": self._variablesToDict(self._outputs),
-            # "config": self._configToDict(),
-            "type": str(self.TYPE),
-            "position": {"x": self._position[0], "y": self._position[1]},
-            "isPlaced": self._isPlaced,
-            "isRunning": self._isRunning,
-            "runError": self._runError,
-            "runErrorMessage": self._runErrorMessage,
-            "placedID": self._placedID,
-            "finishedExecution": self._finishedExecution,
-            "storedOutputs": self._storedOutputs,
-            "variableConnections": self._connectionsToDict(),
-            "variableConnectionsReference": self._connectionsToDict(references=True),
-            "connectedTo": self._connectedTo,
-            "connectedToReference": self._connectedToReferences,
-            "selectedInputGroup": self.selectedInputGroup,
-            "selectedRemote": self.selectedRemote,
-            "extensionsToOpen": self._extensionsToOpen,
-            "time": self.time,
-            "extraData": self.extraData,
-        }
-
-        return blockDict
-
     def __str__(self):
         return json.dumps(self._toDict(), indent=4)
 
@@ -1293,7 +1262,7 @@ class PluginBlock:
         Encode only the blockID and the internal variables.
         """
 
-        blockDict = {
+        return {
             "id": self.id,
             "isPlaced": self._isPlaced,
             "position": {"x": self._position[0], "y": self._position[1]},
@@ -1315,7 +1284,20 @@ class PluginBlock:
             "extraData": self.extraData,
         }
 
-        return blockDict
+    def _toDict(self):
+        """
+        Converts the block to a dictionary.
+        """
+
+        fullBlock = self._minimalEncode()
+        fullBlock["variables"] = self._variablesToDict(self._variables, minimal=False)
+        fullBlock["name"] = self.name
+        fullBlock["description"] = self.description
+        fullBlock["inputs"] = self._inputGroupsToDict(self._inputGroups)
+        fullBlock["outputs"] = self._variablesToDict(self._outputs)
+        fullBlock["type"] = str(self.TYPE)
+
+        return fullBlock
 
     config: typing.Optional[dict] = None
     """
@@ -1432,6 +1414,8 @@ class SlurmBlock(PluginBlock):
         FAILED = "FAILED"
         CANCELLED = "CANCELLED"
         CANCELLING = "CANCELLING"
+        TIMEOUT = "TIMEOUT"
+        OUT_OF_ME = "OUT_OF_ME"
         UNKNOWN = "UNKNOWN"
 
         # Wehn the enum is instantiated with some value,
@@ -1507,13 +1491,10 @@ class SlurmBlock(PluginBlock):
             savedID = self.remote._remote._flowSavedID
             self.remote._remote._blockPlacedID = self._placedID
             status = self.remote._remote.getRemoteBlockStatus(savedID, self._placedID)
-        except AttributeError:
-            status = ""
-
-        if status == "":
-            self._status = self.Status.IDLE
-        else:
+            self.time += self.remote._remote.getRemoteBlockTime(savedID, self._placedID)
             self._status = self.Status(status)
+        except AttributeError:
+            self._status = self.Status.IDLE
 
         # Set the parced status with only the first letter as capital
         return self._status.value.capitalize()
@@ -1524,17 +1505,25 @@ class SlurmBlock(PluginBlock):
         Whether the block is waiting for the job to finish or not.
         """
 
-        if self._status == self.Status.COMPLETED:
+        if self._status == self.Status.COMPLETED or self._status == self.Status.IDLE:
             return False
 
         try:
             # Ensure the remote api has as blockID this block
             self.remote._remote._blockPlacedID = self._placedID
-            return not self.remote._remote.didRemoteBlockFinish()
+
+            # Parse the status
+            self.parseStatus()
+
+            # If the job is RUNNING or PENNDING, return False
+            if self._status == self.Status.RUNNING or self._status == self.Status.PENDING:
+                return True
+            else:
+                return False
         except AttributeError:
             return False
         except ResetRemoteException:
-            return True
+            return False
         except Exception as e:
             logging.getLogger("Horus").error(
                 "An error occurred while checking if the job is finished for block %s: %s",
@@ -1563,13 +1552,28 @@ class SlurmBlock(PluginBlock):
     #     # Ensure the remote api has as blockID this block
     #     self.remote._remote.cancelJob(savedID, self._placedID)
 
-    # Re-define the toDict method to include the status and waitingForJob
-    def _toDict(self):
-        blockDict = super()._toDict()
-        blockDict["status"] = str(self._status)
-        blockDict["waitingForJob"] = self.isWaitingForJob
-        blockDict["jobID"] = self._jobID
-        return blockDict
+    # Re-define the minimal method to include the status and jobID
+    def _minimalEncode(self):
+        minimalBlock = super()._minimalEncode()
+        minimalBlock["status"] = str(self._status)
+        minimalBlock["jobID"] = self._jobID
+        return minimalBlock
+
+    # Re-define the parseInternalVariables method to include the status and jobID
+    def _parseInternalVariables(self, blockJSON: Dict[str, Any]):
+        super()._parseInternalVariables(blockJSON)
+
+        status = blockJSON.get("status", self.Status.IDLE)
+        jobID = blockJSON.get("jobID", None)
+
+        self._status = self.Status(status)
+        self._jobID = jobID
+
+    # Override the clean run to reset the status
+    def _cleanRun(self, cleanCycles: bool = True):
+        super()._cleanRun(cleanCycles)
+        self._status = self.Status.IDLE
+        self._jobID = None
 
 
 class Plugin:

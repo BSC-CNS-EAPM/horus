@@ -162,7 +162,7 @@ def test_setting_to_dict():
         "description": "description",
         "category": "category",
         "type": "string",
-        "allowedValues": [],
+        "allowedValues": None,
         "desktopOnly": False,
     }
 

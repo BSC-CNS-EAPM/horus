@@ -4,18 +4,17 @@ Flow manager
 
 # Basic imports
 import os
+import sys
 import json
 import typing
 import uuid
 import datetime
 import logging
 import multiprocessing
+import time
 
 # Enum for the flow status
 from enum import Enum
-
-# Socket to send the flow status
-from flask_socketio import SocketIO
 
 # Blocks from Horus
 from HorusAPI import PluginBlock as Block, SlurmBlock
@@ -26,9 +25,13 @@ from Server.PluginManager import PluginManager, PrintCapturer
 # The remote manager
 from Server.RemotesManager import RemotesManager
 
+# Import the settings manager
+from Server.SettingsManager import SettingsManager
+
 # Internal, development types
 if typing.TYPE_CHECKING:
     from HorusAPI.src.plugins import BlockConnection  # pylint: disable=ungrouped-imports
+    from Server.server import HorusSocket
 
 
 class LoopException(Exception):
@@ -404,7 +407,7 @@ class Flow:
 
         # Save the flow
         with open(self.path, "w", encoding="utf-8") as file:
-            json.dump(encodedFlow, file)
+            json.dump(encodedFlow, file, indent=4)
 
         # Return the encoded flow in case its needed
         return encodedFlow
@@ -458,7 +461,7 @@ class Flow:
             f"Block with placedID '{placedID}' not found."
         )
 
-    _socket: typing.Optional[SocketIO] = None
+    _socket: typing.Optional["HorusSocket"] = None
     _pluginManager: typing.Optional[PluginManager] = None
 
     def _runPreviousBlocks(
@@ -597,15 +600,22 @@ class Flow:
             # Raise again a special "ErrorRunningBlock" exception
             raise ErrorRunningBlock(blockToRun, str(exc)) from exc
 
+        # Save the flow
+        self.write()
+
+        # Send the flow to the frontend if a socket is provided
+        if self._socket is not None:
+            self._socket.emit("flow", self.encode(minimal=False), to=self.savedID)
+
         # If a slurm block was run, check if we need to wait for the job to finish
         # That means that the action executed was the block's firstAction. When the job with
         # finishes, the block will be executed again with the secondAction. If _waitingForJob
         # is True, the flow execution wait until the job finishes. If its false, it means
         # that the finalAction was executed and that the flow can continue executing
         if isinstance(blockToRun, SlurmBlock):
-            blockToRun._status = SlurmBlock.Status.RUNNING
+            # Call the parsestatus method to update the block's status
+            blockToRun.parseStatus()
 
-            # Save the flow
             self.write()
 
             # Update the fronted with the block's state
@@ -613,9 +623,21 @@ class Flow:
                 self._socket.emit("flow", self.encode(minimal=False), to=self.savedID)
 
             # Wait for the job to finish
-            waitTime = datetime.datetime.now()
             try:
-                blockToRun.waitTillJobFinished()
+                currentStatus = blockToRun._status
+                while blockToRun.isWaitingForJob:
+                    waitTime = int(SettingsManager().getSetting("queueWaitTime").value)
+                    time.sleep(waitTime)
+
+                    # If the block's status changed, store the flow
+                    if blockToRun._status != currentStatus:
+                        currentStatus = blockToRun._status
+                        self.write()
+
+                    # Update the fronted with the block's state
+                    if self._socket is not None:
+                        self._socket.emit("flow", self.encode(minimal=False), to=self.savedID)
+
             except Exception as exc:  # pylint: disable=broad-exception-raised
                 blockToRun._runError = True
                 blockToRun._runErrorMessage = str(exc)
@@ -625,16 +647,11 @@ class Flow:
 
                 # Raise again a special "ErrorRunningBlock" exception
                 raise ErrorRunningBlock(blockToRun, str(exc)) from exc
-            finally:
-                # Update the total block time
-                waitedTime = datetime.datetime.now() - waitTime
-
-                blockToRun.time += waitedTime.total_seconds()
 
             if blockToRun._status != SlurmBlock.Status.COMPLETED:
                 blockToRun._runError = True
                 blockToRun._runErrorMessage = (
-                    f"Slurm job failed. Status: {blockToRun.parseStatus()}"
+                    f"Slurm job failed. Status: {blockToRun._status.value}"
                 )
                 blockToRun._isRunning = False
                 blockToRun._finishedExecution = True
@@ -643,12 +660,9 @@ class Flow:
 
             # Once the block has been executed, call again the execution
             # of this block to execute the finalAction
-            prevBlockTime = blockToRun.time
             try:
                 outputs = self._pluginManager.executeBlock(
-                    blockToRun,
-                    self.savedID,
-                    resetRemoteBlock=False,
+                    blockToRun, self.savedID, resetRemoteBlock=False, isFirstSlurm=False
                 )
             except Exception as exc:  # pylint: disable=broad-exception-raised
                 # If an error was raised during the execution of the block
@@ -661,9 +675,6 @@ class Flow:
 
                 # Raise again a special "ErrorRunningBlock" exception
                 raise ErrorRunningBlock(blockToRun, str(exc)) from exc
-            finally:
-                # Update the total block time
-                blockToRun.time = prevBlockTime + blockToRun.time
 
         # Block endend executing, thus update the state
         blockToRun._isRunning = False
@@ -676,6 +687,9 @@ class Flow:
         # Send the flow to the frontend if a socket is provided
         if self._socket is not None:
             self._socket.emit("flow", self.encode(minimal=False), to=self.savedID)
+
+        # Store the time the block finished executing
+        blockToRun.finalTime = datetime.datetime.now().timestamp()
 
         # Return the produced outputs of the block
         return outputs
@@ -761,7 +775,7 @@ class Flow:
         self,
         placedID: typing.Optional[int] = None,
         resetRemoteBlock: bool = False,
-        socket: typing.Optional[SocketIO] = None,
+        socket: typing.Optional["HorusSocket"] = None,
         resetFlow: bool = True,
     ):
         """
@@ -795,8 +809,12 @@ class Flow:
                 + "The flow cannot be resumed as no current executing block is set for this flow."
             )
 
-        # Reset just the block that is going to be executed
-        self.findBlockByPlacedID(placedID)._cleanRun()
+        # Reset just the block that is going to be executed only if the self.currentExecuting is None
+        # When the flow is being resumed, the currentExecuting is not None, so we don't want to reset
+        # the block. For example, a paused SlurmBlock should not be resetted, as the status of the job
+        # would be lost
+        if self.currentExecuting is None:
+            self.findBlockByPlacedID(placedID)._cleanRun()
 
         # Assign the socket instance
         self._socket = socket
@@ -873,7 +891,7 @@ class Flow:
         # Restore the working dir
         os.chdir(oldWD)
 
-    def stop(self):
+    def stop(self, message: str = "The flow was stopped.", fail: bool = False):
         """
         Stops the flow from executing
         """
@@ -902,7 +920,7 @@ class Flow:
                     print(f"Error cancelling job: {exc}")
 
         # Set the status to stopped
-        self.status = self.FlowStatus.STOPPED
+        self.status = self.FlowStatus.ERROR if fail else self.FlowStatus.STOPPED
 
         # Reset the current executing block
         self.currentExecuting = None
@@ -913,7 +931,7 @@ class Flow:
                 block._isRunning = False
                 block._finishedExecution = True
                 block._runError = True
-                block._runErrorMessage = "The flow was stopped."
+                block._runErrorMessage = message
                 block._finishedExecution = True
 
     class TerminalOutputUpdater(PrintCapturer):
@@ -929,7 +947,7 @@ class Flow:
         The terminal output of the flow
         """
 
-        socket: typing.Optional[SocketIO]
+        socket: typing.Optional["HorusSocket"]
         """
         If provided, the socket to send the text to
         """
@@ -943,7 +961,7 @@ class Flow:
             self,
             terminalOutput: typing.List[str],
             savedID: str,
-            socket: typing.Optional[SocketIO] = None,
+            socket: typing.Optional["HorusSocket"] = None,
         ):
             super().__init__()
 
@@ -987,17 +1005,12 @@ class FlowManager:
     Internal use only.
     """
 
-    runningFlows: typing.List[str] = []  # type: ignore
-    """
-    The flows currently running. Contains the paths to the flows.
-    """
-
     @property
     def areThereRunningFlows(self):
         """
         Whether there are running flows or not
         """
-        return len(self.runningFlows) > 0
+        return len(self._flowProcesses) > 0
 
     def __init__(
         self,
@@ -1256,7 +1269,9 @@ class FlowManager:
 
         return self._saveFlowInternal(flowInstance, overwrite)
 
-    def openFlowFromPath(self, flowPath: str) -> Flow:
+    def openFlowFromPath(
+        self, flowPath: str, socket: typing.Optional["HorusSocket"] = None
+    ) -> Flow:
         """
         Opens a flow from a file.
         """
@@ -1276,10 +1291,24 @@ class FlowManager:
         # Add the flow to the recent flows list
         self._addToRecentFlows(flow)
 
+        # If the flow was paused, resume it
+        if flow.status == flow.FlowStatus.PAUSED:
+            logging.getLogger("Horus").info("Resuming flow %s", flow.name)
+
+            self.runFlow(flow, socket=socket)
+
+        # If the flow is marked as running but its not present
+        # in the running flows list, set the status to FAILED
+        if flow.status == flow.FlowStatus.RUNNING and flow.path not in self._flowProcesses:
+            flow.stop(message="The flow failed due an internal error.", fail=True)
+
+            # Save the flow
+            flow.write()
+
         # Return the flow
         return flow
 
-    def openFlow(self) -> Flow:
+    def openFlow(self, socket: typing.Optional["HorusSocket"] = None) -> Flow:
         """
         Opens the file select dialog to open a flow.
         """
@@ -1293,7 +1322,7 @@ class FlowManager:
             if flowPath:
                 if isinstance(flowPath, tuple):
                     flowPath = flowPath[0]
-                return self.openFlowFromPath(str(flowPath))
+                return self.openFlowFromPath(str(flowPath), socket=socket)
             raise Exception("No path selected.")  # pylint: disable=broad-exception-raised
         else:
             # WIP implement server user folders
@@ -1332,7 +1361,7 @@ class FlowManager:
         flow: Flow,
         placedID: typing.Optional[int] = None,
         resetRemoteBlock: bool = False,
-        socket: typing.Optional[SocketIO] = None,
+        socket: typing.Optional["HorusSocket"] = None,
         resetFlow: bool = True,
     ):
         """
@@ -1346,8 +1375,9 @@ class FlowManager:
         """
 
         # Check that the flow is not already running
-        for runningFlow in self.runningFlows:
-            if runningFlow == flow and flow.status == Flow.FlowStatus.RUNNING:
+        for runningFlowPath in self._flowProcesses:
+            # Load the running flow
+            if runningFlowPath == flow.path:
                 raise Exception(  # pylint: disable=broad-exception-raised
                     "The flow is already running."
                 )
@@ -1357,18 +1387,22 @@ class FlowManager:
 
         # Run the flow in a separate process
         def flowRun():
-            # Add the flow to the running flows list
-            self.runningFlows.append(flow.path)
+            try:
+                logging.getLogger("Horus").info("Started flow %s", flow.name)
 
-            logging.getLogger("Horus").info("Started flow %s", flow.name)
+                # Run the flow
+                flow.run(placedID, resetRemoteBlock, socket, resetFlow)
 
-            # Run the flow
-            flow.run(placedID, resetRemoteBlock, socket, resetFlow)
+                # Send a request to the main server to remove the flow from the running flows list
+                if socket is not None:
+                    socket.removeFinishedFlowFromRunningFlows(flow.path)
 
-            # Remove the flow from the running flows list
-            self.runningFlows.remove(flow.path)
+                logging.getLogger("Horus").info("Flow %s completed", flow.name)
+            except KeyboardInterrupt:
+                print("Keyboard interrupt detected. Pausing flow.")
 
-            logging.getLogger("Horus").info("Flow %s completed", flow.name)
+                # Exit the process
+                sys.exit(0)
 
         # Create a process to run the flow
         from App import AppDelegate  # pylint: disable=import-outside-toplevel
@@ -1378,12 +1412,25 @@ class FlowManager:
         # Save the process
         self._flowProcesses[flow.path] = process
 
+    def removeRunningFlow(self, flowPath: str):
+        """
+        Removes a flow from the running flows list
+
+        :param flowPath: The path of the flow to remove
+        """
+
+        # Remove the process
+        self._flowProcesses.pop(flowPath)
+
     def pauseAllFlows(self):
         """
         Pauses all running flows
         """
 
-        for flowPath in self._flowProcesses:
+        # Iterate through the running flows dict
+        # In order to not modify the dict while iterating,
+        # we copy the keys to a list
+        for flowPath in list(self._flowProcesses.keys()):
             flow = None
             read = False
             while not read:
@@ -1452,5 +1499,8 @@ class FlowManager:
             logging.getLogger("Horus").debug("Flow PID: %s", process.pid)
             process.kill()
             process.join()
+
+            # Remove the flow from the running flows list
+            self._flowProcesses.pop(flowPath)
         else:
             logging.getLogger("Horus").debug("Flow %s is not running", flowPath)

@@ -29,7 +29,7 @@ from contextlib import redirect_stdout, redirect_stderr
 from flask_socketio import SocketIO
 
 # More types from the HorusAPI
-from HorusAPI import Plugin, PluginBlock, PluginPage, HorusSingleton
+from HorusAPI import Plugin, PluginBlock, PluginPage, HorusSingleton, SlurmBlock
 
 # Import the RemoteManager for the block's remote
 from Server.RemotesManager import RemotesManager
@@ -1032,6 +1032,7 @@ class PluginManager(metaclass=HorusSingleton):
         block: PluginBlock,
         flowID: str,
         resetRemoteBlock: bool = False,
+        isFirstSlurm: bool = True,
     ):
         """
         Executes a given block.
@@ -1076,13 +1077,20 @@ class PluginManager(metaclass=HorusSingleton):
         # Update the block with the remote configuration
         block._setRemote(rAPI)  # pylint: disable=protected-access
 
+        # If its a slurm block, check if the job has finished
+        if isinstance(block, SlurmBlock):
+            # If we are unpausing a flow that sent a slurm calculation,
+            # we need to skip the first execution of the block
+            if block._status != block.Status.IDLE and isFirstSlurm:
+                return
+
         # Execute the block
         error = False
         errorMSG = ""
         outputs = None
 
         # Calcultate the time the block takes
-        startTime = datetime.datetime.now()
+        startTime = datetime.datetime.now().timestamp()
         try:
             with PluginDeps(plugin._path):
                 # Execute the block
@@ -1091,25 +1099,23 @@ class PluginManager(metaclass=HorusSingleton):
             error = True
             errorMSG = str(exc)
         finally:
-            # Calculate the time the block took
-            endTime = datetime.datetime.now()
+            # Calculate the final time
+            finalTime = datetime.datetime.now().timestamp()
 
-            totalTime = endTime - startTime
+            # Calculate the total time
+            totalTime = datetime.timedelta(seconds=finalTime - startTime).total_seconds()
 
-            # Convert the timedelta to seconds
-            block.time = totalTime.total_seconds()
+            # Store the block time
+            block.time += totalTime
 
             # Get formatted time in hh:mm:ss
-            hours = int(totalTime.total_seconds() // 3600)
-            minutes = int((totalTime.total_seconds() % 3600) // 60)
-            seconds = int(totalTime.total_seconds() % 60)
+            hours = int(totalTime // 3600)
+            minutes = int((totalTime % 3600) // 60)
+            seconds = int(totalTime % 60)
 
             formattedTime = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
             logging.getLogger("Horus").info("Block %s executed in %s", block.id, formattedTime)
-
-        # Restore the python path
-        # self._removeDepsPath(plugin._path)  # pylint: disable=protected-access
 
         if error:
             raise Exception(errorMSG)

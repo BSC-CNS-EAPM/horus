@@ -149,7 +149,7 @@ class Setting:
             "description": self.description,
             "category": self.category,
             "type": self.type.value,
-            "allowedValues": self.allowedValues,
+            "allowedValues": self.allowedValues if len(self.allowedValues) > 0 else None,
             "desktopOnly": self.desktopOnly,
         }
 
@@ -326,7 +326,7 @@ class SettingsManager(metaclass=HorusSingleton):
         setting = self.settings.get(id, None)
 
         if setting is None:
-            raise Exception("The setting does not exist")
+            raise Exception(f"The setting '{id}' does not exist")
 
         return setting
 

@@ -349,7 +349,7 @@ class HorusServer:
         def openFlow():
             try:
                 if self.desktop:
-                    flow = self.flowManager.openFlow()
+                    flow = self.flowManager.openFlow(socket=self.socketio)
                 else:
                     raise Exception(  # pylint: disable=broad-exception-raised
                         "This function is only available on desktop mode."
@@ -402,13 +402,7 @@ class HorusServer:
                 path = data.get("path", None)
                 if path is not None:
                     # Load the flow from the path
-                    flow = self.flowManager.openFlowFromPath(path)
-
-                    # If the flow was paused, resume it
-                    if flow.status == flow.FlowStatus.PAUSED:
-                        logging.getLogger("Horus").info("Resuming flow %s", flow.name)
-
-                        self.flowManager.runFlow(flow, socket=self.socketio)
+                    flow = self.flowManager.openFlowFromPath(path, socket=self.socketio)
                 else:
                     if savedID is None:
                         raise Exception(  # pylint: disable=broad-exception-raised
@@ -668,6 +662,19 @@ class HorusServer:
                 }
 
             return flask.jsonify(success)
+
+        @self.server.route("/internal/removefinishedflow", methods=["POST"])
+        def removeFlowFromQueue():
+            flowPath = request.get_json().get("flowPath", None)
+
+            if flowPath is None:
+                return "No flowPath provided", 400
+
+            try:
+                self.flowManager.removeRunningFlow(flowPath)
+                return "OK"
+            except Exception as exc:
+                return str(exc), 400
 
         @self.server.route("/api/plugins/config", methods=["POST"])
         @verifyToken
@@ -1615,3 +1622,36 @@ class HorusSocket(SocketIO):
                     return True
 
             return False
+
+    def removeFinishedFlowFromRunningFlows(self, flowPath: str):
+        """
+        Removes from the current running flows list the provided flow
+        """
+
+        if mp.current_process().name != "MainProcess":
+            # Get the data from the queue
+            data = {
+                "flowPath": flowPath,
+            }
+
+            # Send the data to the server
+            try:
+                response = requests.post(
+                    f"{self.baseURL}/internal/removefinishedflow",
+                    json=data,
+                    timeout=5,
+                )
+            except requests.exceptions.RequestException:
+                logging.getLogger("Horus").error(
+                    "Could not connect to server to remove finished flow"
+                )
+                return False
+
+            if response.status_code == 200:
+                return True
+            else:
+                return False
+        else:
+            raise Exception(
+                "removeFinishedFlowFromRunningFlows can only be called from a background process"
+            )

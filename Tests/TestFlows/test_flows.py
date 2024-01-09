@@ -416,3 +416,42 @@ def test_flow_inside_block(flow_appDelegate):
         assert flow.terminalOutput[0] == flow.savedID
     finally:
         copy_flow.write()
+
+
+def test_slurm_flow_second_action(flow_appDelegate):
+    path = os.path.join(os.path.dirname(__file__), "Slurm_test.flow")
+
+    dir_flow = os.path.dirname(path)
+
+    # Save a backup of the clean flow
+    copy_flow = Flow.read(path)
+
+    try:
+        flow = Flow.read(path)
+
+        flow.terminalOutput = []
+
+        flow.run(resetFlow=False)
+
+        # Verify that all blocks are marked as finished
+        for block in flow.blocks:
+            assert block._finishedExecution
+
+        assert flow.terminalOutput is not None
+
+        print(flow.terminalOutput)
+
+        # The first run, it should print the savedID of the flow
+        assert flow.terminalOutput[0] == "Test slurm block final action"
+
+        # Check that the flow has been updated
+        assert flow.status == Flow.FlowStatus.FINISHED
+
+    finally:
+        # Remove the test.sh file
+        try:
+            os.remove(os.path.join(dir_flow, "test.sh"))
+        except:
+            pass
+
+        copy_flow.write()

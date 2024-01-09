@@ -9,10 +9,11 @@ import logging
 import subprocess
 import json
 import secrets
-import fabric
 import tarfile
+import datetime
+import fabric
 
-from HorusAPI import ResetRemoteException
+from HorusAPI import ResetRemoteException, SlurmBlock
 
 
 class RemotesAPI:
@@ -163,7 +164,7 @@ class RemotesAPI:
             # with the fabric library
             self.workDir = self.workDir.replace("~", self.userHome)
 
-        # Create the .horus folder in the remote home directory if it does not exist
+        # Create the horus folder in the remote home directory if it does not exist
         try:
             self.command(f"test -d {self.workDir}")
         except Exception:
@@ -537,11 +538,12 @@ class RemotesAPI:
             {
                 "remote": self.remoteName,  # The remote the job is running on
                 "jobID": jobID,  # The ID of the job
-                "status": "RUNNING",
+                "status": "PENDING",
                 # The status of the job (running, queued, failed, completed)
                 "blockID": self._blockID,
                 # The ID of the block the job is running on
                 "blockPlacedID": self._blockPlacedID,
+                "submitDate": datetime.datetime.now().timestamp(),
             }
         )
 
@@ -549,7 +551,6 @@ class RemotesAPI:
         self.writeQueue(queue)
 
     def submitJob(self, script: str) -> int:
-        # Function exposed to HorusAPI
         """
         Submit a slurm job to the queue system of the cluster (SLURM)
 
@@ -646,31 +647,87 @@ class RemotesAPI:
             #     + " Did any SlurmBlock fail?"
             # )
 
-        # Get the jobID
-        jobID = None
+        statuses = []
+        for job in jobs:
+            # Get the jobID
+            jobID = None
+            if job["blockPlacedID"] == blockPlacedID:
+                jobID = job["jobID"]
 
-        # Reverse the jobs. This is done because the remote
-        # block can be 'resetted' and the jobID can change,
-        # even though the blockID/placedID will remain the same.
-        # Therefore, we get the last job with the same blockID/placedID
-        reversedJobs = list(reversed(jobs))
-        for j in reversedJobs:
-            if j["blockPlacedID"] == blockPlacedID:
-                jobID = j["jobID"]
-                break
+            if jobID is None:
+                raise Exception(  # pylint: disable=broad-exception-raised
+                    "Corrupted queue storage: block not found."
+                )
 
-        if jobID is None:
-            raise Exception(  # pylint: disable=broad-exception-raised
-                "Corrupted queue storage: block not found."
-            )
+            # Get the job status
+            status = self.getJobStatus(jobID)
 
-        # Get the job status
-        status = self.getJobStatus(jobID)
+            # Update the queue storage
+            self.updateQueue(flowSavedID, jobID=jobID, status=status)
 
-        # Update the queue storage
-        self.updateQueue(flowSavedID, jobID=jobID, status=status)
+            # Append the status
+            statuses.append(status)
 
-        return status
+        # If any of the jobs is out of memory, return OUT_OF_ME
+        if any([s == "OUT_OF_ME" for s in statuses]):
+            return "OUT_OF_ME"
+
+        # If any of the jobs is failed, return FAILED
+        if any([s == "FAILED" for s in statuses]):
+            return "FAILED"
+
+        # If any of the jobs is timeout, return TIMEOUT
+        if any([s == "TIMEOUT" for s in statuses]):
+            return "TIMEOUT"
+
+        # If any of the jobs is cancelled, return CANCELLED
+        if any([s == "CANCELLED" for s in statuses]):
+            return "CANCELLED"
+
+        # If any of the jobs is pending, return PENDING
+        if any([s == "PENDING" for s in statuses]):
+            return "PENDING"
+
+        # If any of the jobs is running, return RUNNING
+        if any([s == "RUNNING" for s in statuses]):
+            return "RUNNING"
+
+        # If all the jobs are completed, return COMPLETED
+        if all([s == "COMPLETED" for s in statuses]):
+            return "COMPLETED"
+
+        return SlurmBlock.Status.UNKNOWN.value
+
+    def getRemoteBlockTime(self, flowSavedID: str, blockPlacedID: int) -> float:
+        """
+        Returns the time a remote block has been running
+        """
+
+        queue = self.readQueue()
+
+        jobs = queue.get(flowSavedID, None)
+
+        if jobs is None:
+            return 0
+
+        time = 0
+        for job in jobs:
+            if job["blockPlacedID"] == blockPlacedID:
+                # If any of the jobs does not have an end date, return 0
+                if "endDate" not in job or job["endDate"] is None:
+                    return 0
+
+                if "submitDate" not in job or job["submitDate"] is None:
+                    return 0
+
+                # If the job has the "elapsed" key, use it
+                if "elapsed" in job:
+                    time += job["elapsed"]
+                else:
+                    # Add the time the job has been running
+                    time += job["endDate"] - job["submitDate"]
+
+        return time
 
     def _getSlurmStatus(self, jobID: int) -> str:
         """
@@ -688,7 +745,8 @@ class RemotesAPI:
         except Exception:  # pylint: disable=broad-exception-caught
             # If sacct is not available, use the squeue (less reliable)
             logging.getLogger("Horus").warning(
-                "sacct is not available. Using squeue instead. Please configure sacct in your remote for better performance."
+                "sacct is not available. Using squeue instead. "
+                + "Please configure sacct in your remote for better performance."
             )
 
             status = self.command(f"squeue -j {jobID} -h -o '%T'")
@@ -696,20 +754,27 @@ class RemotesAPI:
             # When using squeue, if the job is not found, the output is empty
             # Set as "COMPLETED" if the output is empty
             if status == "":
-                status = "COMPLETED"
+                status = SlurmBlock.Status.COMPLETED.value
 
-        if status == "" or "PENDING" in status:
-            status = "PENDING"
-        elif "FAILED" in status:
-            status = "FAILED"
-        elif "TIMEOUT" in status:
-            status = "TIMEOUT"
-        elif "CANCELLED" in status:
-            status = "CANCELLED"
-        elif "RUNNING" in status:
-            status = "RUNNING"
-        elif "COMPLETED" in status:
-            status = "COMPLETED"
+        if SlurmBlock.Status.OUT_OF_ME.value in status:
+            status = SlurmBlock.Status.OUT_OF_ME.value
+        elif SlurmBlock.Status.FAILED.value in status:
+            status = SlurmBlock.Status.FAILED.value
+            self.command(f"scancel {jobID}")
+        elif SlurmBlock.Status.TIMEOUT.value in status:
+            status = SlurmBlock.Status.TIMEOUT.value
+            self.command(f"scancel {jobID}")
+        elif SlurmBlock.Status.CANCELLED.value in status:
+            status = SlurmBlock.Status.CANCELLED.value
+            self.command(f"scancel {jobID}")
+        elif status == "" or SlurmBlock.Status.PENDING.value in status:
+            status = SlurmBlock.Status.PENDING.value
+        elif SlurmBlock.Status.RUNNING.value in status:
+            status = SlurmBlock.Status.RUNNING.value
+        elif SlurmBlock.Status.COMPLETED.value in status:
+            status = SlurmBlock.Status.COMPLETED.value
+        else:
+            status = SlurmBlock.Status.UNKNOWN.value
 
         # Remove any + or - from the status
         status = status.replace("+", "").replace("-", "")
@@ -774,10 +839,12 @@ class RemotesAPI:
             # the remote the jobs are running on, raise an exception
             if remote != self.remoteName:
                 logging.getLogger("Horus").warning(
-                    f"Remote mismatch. Did you change the remote connection?. \
-                    Originally, the job was running on {remote} but you are \
-                    currently connected to {self.remoteName}. This job will be \
-                    removed from the queue storage."
+                    "Remote mismatch. Did you change the remote connection?. \
+                    Originally, the job was running on %s but you are \
+                    currently connected to %s. This job will be \
+                    removed from the queue storage.",
+                    remote,
+                    self.remoteName,
                 )
 
                 # Remove the job from the queue storage
@@ -791,19 +858,43 @@ class RemotesAPI:
             # Update the job status
             job["status"] = newStatus
 
+            # If the status is different from RUNNING/PENDING, store the end date
+            if "RUNNING" not in newStatus and "PENDING" not in newStatus:
+                job["endDate"] = datetime.datetime.now().timestamp()
+
+                # Try to get the total time from the slurm job
+                try:
+                    elapsed = self.getJobTime(queueJobID)
+                    job["elapsed"] = elapsed
+                except Exception:
+                    pass
+
             # Update the queue storage
             queue[savedFlowID][index] = job
 
         returnQueue = queue
         # If all the jobs on the queue are completed, remove the flow from the queue
-        if all([j["status"] == "COMPLETED" for j in queue[savedFlowID]]):
-            queue.pop(savedFlowID)
+        # if all([j["status"] == "COMPLETED" for j in queue[savedFlowID]]):
+        #     queue.pop(savedFlowID)
 
         # Save the queue storage
         self.writeQueue(queue)
 
         # Return the queue storage
         return returnQueue
+
+    def getJobTime(self, jobID: int):
+        """
+        Executes a command to get the total time of a job.
+        """
+
+        elapsed = self.command(f"sacct -j {jobID} -o 'Elapsed' --noheader -X")
+
+        # Convert the elapsed time (hh:mm:ss) to seconds
+        elapsed = elapsed.split(":")
+        elapsed = int(elapsed[0]) * 3600 + int(elapsed[1]) * 60 + int(elapsed[2])
+
+        return elapsed
 
     def cancelJobs(self, flowID: str):
         """
@@ -858,7 +949,10 @@ class RemotesAPI:
         queue = self.readQueue()
 
         # Delete the flow from the queue storage
-        queue.pop(flowID)
+        try:
+            queue.pop(flowID)
+        except KeyError:
+            pass
 
         # Save the queue storage
         self.writeQueue(queue)
