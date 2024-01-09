@@ -12,6 +12,7 @@ import secrets
 import tarfile
 import datetime
 import fabric
+import contextlib
 
 from HorusAPI import ResetRemoteException, SlurmBlock
 
@@ -240,6 +241,35 @@ class RemotesAPI:
 
         # Return the stdout and stderr as a string
         return out
+
+    @contextlib.contextmanager
+    def cd(self, path: str):
+        """
+        Context manager to change directory on the remote.
+
+        Works with the remoteCommand, submitJob and send/get data functions.
+        """
+
+        # Save the old command
+        oldCommand = self.command
+
+        def remoteCommandHook(command: str):
+            """
+            Hook for the remoteCommand function.
+            """
+
+            newCommand = f"cd {path} && {command}"
+
+            return oldCommand(newCommand)
+        
+        # Hook the command function
+        self.command = remoteCommandHook
+
+        try:
+            yield
+        finally:
+            # Restore the old command
+            self.command = oldCommand
 
     def _internalTransferFrom(self, source: str, destination: str):
         try:
@@ -550,11 +580,14 @@ class RemotesAPI:
         # Save the queue storage
         self.writeQueue(queue)
 
-    def submitJob(self, script: str) -> int:
+    def submitJob(self, script: str, changeDir: bool = True) -> int:
         """
         Submit a slurm job to the queue system of the cluster (SLURM)
 
         :param script: The path to the script to submit.
+        :param: changeDir: automatically cd to the container folder of the script. \
+        Disable this if using the cd context manager or for specific cases.
+
         :return: The job ID.
         """
 
@@ -566,14 +599,19 @@ class RemotesAPI:
                 f"Script {script} does not exist."
             ) from exc
 
+        command = f"sbatch {script}"
+
         # Get the directory of the script
-        changeDirTo = os.path.dirname(script)
-        if changeDirTo == "":
-            changeDirTo = "."
+        if changeDir:
+            changeDirTo = os.path.dirname(script)
+            if changeDirTo == "":
+                changeDirTo = "."
+
+            command = f"cd {changeDirTo} && {command}"
 
         # Submit the job and get the job ID
         try:
-            out = self.command(f"cd {changeDirTo} && sbatch {script}")
+            out = self.command(command)
             jobID = int(out.split(" ")[-1].strip())
         except Exception as exc:
             logging.getLogger("Horus").error("Error submitting job: %s.", str(exc))

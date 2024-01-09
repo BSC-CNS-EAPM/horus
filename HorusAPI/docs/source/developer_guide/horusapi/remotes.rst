@@ -11,9 +11,26 @@ you can access it under 'block.remote'.
     def mySlurmBlockInitialAction(block: SlurmBlock):
         
         # Access the remote using block.remote
+        remoteName = block.remote.name
+        remoteHost = block.remote.host
+        remoteWorkDir = block.remote.workDir
+
+        # Execute commands in the remote using the remoteCommand method
         block.remote.remoteCommand('ls -l')
 
-        block.remote.sendData('myFile.txt', 'my/Destination/path/in/remote.txt')
+        # Send files to the remote using the sendData method
+        remoteUploadedPath = block.remote.sendData('myFile.txt', 'my/Destination/path/in/remote.txt')
+
+        # Transfer back the files using the getData method
+        finalDownloadedPath = block.remote.getData('my/Destination/path/in/remote.txt', 'myFile.txt')
+
+        # Change the remote working directory using the cd context manager
+        with block.remote.cd('my/remote/path'):
+            output = block.remote.remoteCommand('ls -l')
+            print ("Output of ls -l in my/remote/path: ", output)
+
+        # Submit Slurm jobs using the submitJob method
+        jobID = block.remote.submitJob('path/to/slurm/script.sh')
 
 
 The :bdg-secondary-line:`RemoteAPI` methods can be found in the :ref:`api-reference` section.

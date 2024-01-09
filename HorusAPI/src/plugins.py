@@ -5,6 +5,7 @@ import os
 import time
 from enum import Enum
 from copy import deepcopy
+import contextlib
 import logging
 from typing import Any, Dict
 
@@ -17,6 +18,7 @@ if typing.TYPE_CHECKING:
 class PluginRemote:
     def __init__(self, remote) -> None:
         self._remote = remote
+        self.cd = self._remote.cd
 
     def remoteCommand(self, command: str):
         """
@@ -58,16 +60,28 @@ class PluginRemote:
 
         return self._remote.transferFrom(source, destination)
 
-    def submitJob(self, script: str) -> int:
+    def submitJob(self, script: str, changeDir: bool = True) -> int:
         """
         Submit a slurm job to the queue system of the cluster (SLURM)
 
         :param script: The  absolute path to the script to submit.
+        :param: changeDir: automatically cd to the container folder of the script. \
+        Disable this if using the cd context manager or for specific cases.
 
         :return: The job ID.
         """
 
-        return self._remote.submitJob(script)
+        return self._remote.submitJob(script, changeDir)
+
+    @contextlib.contextmanager
+    def cd(self, path: str):
+        """
+        Context manager to change directory on the remote.
+
+        Works with the remoteCommand, submitJob and send/get data functions.
+        """
+
+        return self._remote.cd(path)
 
     @property
     def userHome(self) -> str:
