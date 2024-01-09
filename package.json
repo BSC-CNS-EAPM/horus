@@ -60,7 +60,7 @@
     "immutability-helper": "^3.1.1",
     "jsme-editor": "^2023.7.31",
     "jsme-react": "^0.0.9",
-    "molstar": "3.43.1",
+    "molstar": "^3.44.0",
     "plotly.js": "^2.24.3",
     "rc-slider": "^10.4.0",
     "react": "^18.2.0",
