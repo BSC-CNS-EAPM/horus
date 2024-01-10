@@ -261,7 +261,7 @@ class RemotesAPI:
             newCommand = f"cd {path} && {command}"
 
             return oldCommand(newCommand)
-        
+
         # Hook the command function
         self.command = remoteCommandHook
 
@@ -888,6 +888,10 @@ class RemotesAPI:
                 # Remove the job from the queue storage
                 queue[savedFlowID].pop(index)
 
+                continue
+
+            # Update the job status only if its pending or running
+            if "RUNNING" not in job["status"] and "PENDING" not in job["status"]:
                 continue
 
             # Get the job status
