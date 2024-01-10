@@ -330,3 +330,42 @@ slurmBlockTest = SlurmBlock(
 )
 
 plugin.addBlock(slurmBlockTest)
+
+
+def testExtensionsShortcuts(block: PluginBlock):
+    text = "Hello this is some text"
+
+    Extensions().loadText(text, title="Some text")
+
+    # Generate a random html
+    html = """
+    <html>
+        <body>
+            <h1>Test</h1>
+            <p>This is a test</p>
+        </body>
+    </html>
+    """
+
+    Extensions().loadHTML(html, title="Some HTML")
+
+    # Download an image from the internet
+    image = "https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png"
+
+    import requests
+
+    downloadedImage = requests.get(image)
+
+    with open("google.png", "wb") as f:
+        f.write(downloadedImage.content)
+
+    Extensions().loadImage("google.png", title="Goolge image")
+
+
+testExtensionsShortcutsBlock = PluginBlock(
+    name="Test extensions shortcuts",
+    description="Tests extensions shortcuts",
+    action=testExtensionsShortcuts,
+)
+
+plugin.addBlock(testExtensionsShortcutsBlock)
