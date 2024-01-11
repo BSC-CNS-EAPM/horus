@@ -65,6 +65,7 @@ import { MVSData } from "molstar/lib/extensions/mvs/mvs-data";
 import { MolViewSpec } from "molstar/lib/extensions/mvs/behavior";
 import { ObjectKeys } from "molstar/lib/mol-util/type-helpers";
 import { PluginSpec } from "molstar/lib/mol-plugin/spec";
+import { StructureRef } from "molstar/lib/mol-plugin-state/manager/structure/hierarchy-state";
 
 // Style
 require("molstar/lib/mol-plugin-ui/skin/light.scss");
@@ -735,59 +736,146 @@ class HorusMolstar {
     },
   };
 
-  async focusFirst(
-    compId: number,
-    options?: {
-      surroundRadius?: number;
-      structureLabel?: string;
-      chain?: string;
-    }
-  ) {
-    // Find the first cell to have a "Structure" property cell.obj.type.name
-    const cellsArray = Array.from(this.state.cells.entries());
+  getStructureKeyFromLabel(structureLabel: string): string {
+    const structures = this.listStructures();
     let structureKey = null;
-    cellsArray.some((cell) => {
-      const [key, value] = cell;
-      if (value.obj.type.name === "Structure") {
-        if (options?.structureLabel) {
-          if (value.obj.data.label !== options.structureLabel) {
-            return false;
-          } else {
-            structureKey = key;
-            return true;
-          }
-        }
-        structureKey = key;
+    structures.some((structure) => {
+      if (structure.name === structureLabel) {
+        structureKey = structure.id;
         return true;
       }
     });
 
-    if (structureKey === null) {
-      const availableStructures = this.listStructures().map(
-        (structure) => structure.name
-      );
+    return structureKey;
+  }
 
-      let message = "No structure found.";
-
-      if (availableStructures.length > 0) {
-        message += " Available structures: " + availableStructures.join(", ");
+  // Find the first cell to have a "Structure" property cell.obj.type.name
+  findFirstCellKeyWithStructureProp(parentKey: string): string | null {
+    // From all the cells of the state, get the ones that have a "Structure" property
+    const cellsArray = Array.from(this.state.cells.entries());
+    let structureKey: null | string = null;
+    cellsArray.some((cell) => {
+      const [key, value] = cell;
+      if (value.obj.type.name === "Structure") {
+        if (value.sourceRef !== parentKey) {
+          return false;
+        } else {
+          structureKey = key;
+          return true;
+        }
       }
+    });
 
-      return message;
+    return structureKey;
+  }
+
+  getStructureObjectFromLabel(structureLabel: string): StructureRef {
+    const structureKey = this.getStructureKeyFromLabel(structureLabel);
+    const structure = this.structures().filter(
+      (structure) => structure.cell.sourceRef === structureKey
+    )[0];
+
+    return structure;
+  }
+
+  async focus(
+    structureLabel?: string,
+    residueNumber?: number,
+    chain?: string,
+    surroundRadius: number = 0
+  ) {
+    let message = "";
+
+    // If no structure label is specified, focus the first structure
+    const structures = this.listStructures();
+    if (!structureLabel) {
+      if (structures.length === 0) {
+        return "No structures loaded";
+      }
+      structureLabel = structures[0].name;
+      message = "No structure specified, focusing " + structureLabel + ".";
+    } else {
+      // Verify that the structure exists
+      const structureKey = this.getStructureKeyFromLabel(structureLabel);
+      if (structureKey === null) {
+        message = "No structure with label " + structureLabel + " found.";
+        const structureList = structures.map((structure) => structure.name);
+        message += " Available structures: " + structureList.join(", ");
+        return message;
+      }
     }
 
-    await PluginCommands.Camera.Reset(this.plugin, {});
+    // Get the structure object from the structure label
+    const structureObject = this.getStructureObjectFromLabel(structureLabel);
 
+    // If no residue number is specified, just focus the structure
+    if (!residueNumber) {
+      message += " No residue specified, focusing whole structure";
+      const sphere = structureObject.cell.obj.data.boundary.sphere;
+      const radius = Math.max(sphere.radius, 5);
+      const snapshot = this.plugin.canvas3d!.camera.getFocus(
+        sphere.center,
+        radius
+      );
+      PluginCommands.Camera.SetSnapshot(this.plugin, {
+        snapshot,
+        durationMs: 250,
+      });
+    } else {
+      // Focus the residue
+      // If no chain was provided, use the first chain of the provided structure
+      const chains = this.listChains(structureLabel);
+      if (!chain) {
+        if (chains.length === 0) {
+          message += " No chains found in " + structureLabel;
+          return message;
+        }
+
+        chain = chains[0].chainID;
+        message += " Chain not specified, using '" + chain + "'.";
+      } else {
+        // Check if the chain exists
+        if (!chains.some((c) => c.chainID === chain)) {
+          message += " Chain " + chain + " not found in " + structureLabel;
+          message +=
+            " Available chains: " +
+            chains.map((chain) => `'${chain}'`).join(", ");
+          return message;
+        }
+      }
+
+      message += await this.focusSpecificResidue(
+        residueNumber,
+        structureObject,
+        chain,
+        surroundRadius
+      );
+    }
+
+    return message;
+  }
+
+  private async focusSpecificResidue(
+    residueID: number,
+    structureObject: StructureRef,
+    chain: string,
+    surroundRadius: number = 0
+  ) {
+    // Get the 'Update' object from Mol*. This is used to update the state of the visualizer
     const update = this.state.build();
 
+    // Delete any previous selections
     update.delete(StateElements.Selection);
 
-    const labelID = String(compId);
+    // Define a label for the new selection, this will appear on the Mol* state tree
+    const focusLabel = `Focus - ${residueID}`;
 
+    // Get the residue from the provided resdiue number
+    // We define a filter group. This will tell Mol* to filter the structure and only keep the residues that match the filter
     const filterGroups = {
       "residue-test": MS.core.rel.eq([
         MS.struct.atomProperty.macromolecular.auth_seq_id(),
-        compId,
+        residueID,
       ]),
       "group-by": MS.core.str.concat([
         MS.struct.atomProperty.core.operatorName(),
@@ -795,45 +883,70 @@ class HorusMolstar {
       ]),
     };
 
-    if (options.chain) {
+    // If a chain is specified, add the chain filter to the filter group
+    if (chain) {
       filterGroups["chain-test"] = MS.core.rel.eq([
         MS.struct.atomProperty.macromolecular.auth_asym_id(),
-        options?.chain || "A",
+        chain || "A",
       ]);
     }
 
-    const core = MS.struct.filter.first([
+    // We call the filter function to filter the structure and obtain the first residue that matches the filter
+    const filteredResidue = MS.struct.filter.first([
       MS.struct.generator.atomGroups(filterGroups),
     ]);
 
+    // Select the model where we will place the new focus group
+    const modelKey = this.findFirstCellKeyWithStructureProp(
+      structureObject.cell.sourceRef
+    );
+
+    if (!modelKey) {
+      return " Internal error: No suitable model found";
+    }
+
+    const model = this.state.select(modelKey)[0]
+      .obj as PluginStateObject.Molecule.Structure;
+
+    // Now we will add, under the desired structure tree, a new model for the selection
+    // We use the update object to add a new model to the structure tree. We assign to this
+    // model the label we defined earlier and a reference to the selection object, so later
+    // we can use it to create a representation or to delete it
     const group = update
-      .to(structureKey)
+      .to(modelKey)
       .group(
         StateTransforms.Misc.CreateGroup,
-        { label: "Focus" },
+        { label: focusLabel },
         { ref: StateElements.Selection }
       );
-    const asm = this.state.select(structureKey)[0]
-      .obj as PluginStateObject.Molecule.Structure;
-    const coreSel = group.apply(
+
+    // Inside the new group named 'Focus' we create the actual residue selection
+    // We assign to it the SelectionGroup too
+    const filteredResidueInner = group.apply(
       StateTransforms.Model.StructureSelectionFromExpression,
-      { label: "Residue " + labelID, expression: core },
+      { label: "Residue " + residueID, expression: filteredResidue },
       { ref: StateElements.SelectionGroup }
     );
 
-    coreSel.apply(
+    // To our new selection, we add a representation based on the data of the structure
+    // We assing the ball-and-stick representation to the selection, so we can see the residue's atoms
+    filteredResidueInner.apply(
       StateTransforms.Representation.StructureRepresentation3D,
-      createStructureRepresentationParams(this.plugin, asm.data, {
+      createStructureRepresentationParams(this.plugin, model.data, {
         type: "ball-and-stick",
       })
     );
 
-    if (options?.surroundRadius) {
+    // If the user specified a radius for the surroundings, we will create a new selection
+    if (surroundRadius > 0) {
+      // We will apply a modifier to the selection, to include the surroundings of the residue
       const surroundings = MS.struct.modifier.includeSurroundings({
-        0: core,
-        radius: options.surroundRadius,
+        0: filteredResidue,
+        radius: surroundRadius,
         "as-whole-residues": true,
       });
+
+      // Then, to the existing group, we will add a new selection which represents the surroundings
       group
         .apply(StateTransforms.Model.StructureSelectionFromExpression, {
           label: "Surroundings",
@@ -841,36 +954,67 @@ class HorusMolstar {
         })
         .apply(
           StateTransforms.Representation.StructureRepresentation3D,
-          createStructureRepresentationParams(this.plugin, asm.data, {
+          createStructureRepresentationParams(this.plugin, model.data, {
             type: "ball-and-stick",
           })
         );
     }
 
-    await PluginCommands.State.Update(this.plugin, {
-      state: this.state,
-      tree: update,
-    });
+    // From the new selection, we will get the bounding sphere
+    let boundingSphere;
+    try {
+      // Now we will update the Mol* state to apply the changes we made
+      // This will add to the state tree the new selection and the new representation
+      // (basically everithing inside the 'update' object)
+      await PluginCommands.State.Update(this.plugin, {
+        state: this.state,
+        tree: update,
+      });
 
-    const focus = (
-      this.state.select(StateElements.SelectionGroup)[0]
-        .obj as PluginStateObject.Molecule.Structure
-    ).data;
-
-    if (focus === undefined) {
-      return "No residue with id " + labelID + " found";
+      // Get the bounding sphere of the selection, this will be useful to center the camera
+      boundingSphere = (
+        this.state.select(StateElements.SelectionGroup)[0]
+          .obj as PluginStateObject.Molecule.Structure
+      ).data.boundary.sphere;
+    } catch {
+      boundingSphere = undefined;
     }
 
-    const sphere = focus.boundary.sphere;
-    const radius = Math.max(sphere.radius, 5);
+    let message = "";
+    // If the focus failed, return an error message
+    if (boundingSphere === undefined) {
+      boundingSphere = model.data.boundary.sphere;
+
+      // Remove the focus group†
+      const newUpdate = this.state.build();
+      newUpdate.delete(StateElements.Selection);
+
+      // Update the state
+      await PluginCommands.State.Update(this.plugin, {
+        state: this.state,
+        tree: newUpdate,
+      });
+
+      message = " No residues to focus found. Focusing whole structure.";
+    } else {
+      message = " Focusing residue " + residueID + ".";
+    }
+
+    // Now we will change the camera perspective to focus the bounding sphere, which happens to be
+    // centered around the desired residue
+    const radius = Math.max(boundingSphere.radius, 5);
     const snapshot = this.plugin.canvas3d!.camera.getFocus(
-      sphere.center,
+      boundingSphere.center,
       radius
     );
+
+    // Finally, we will animate the camera to the new position
     PluginCommands.Camera.SetSnapshot(this.plugin, {
       snapshot,
       durationMs: 250,
     });
+
+    return message;
   }
 
   // Loaded PDBfiles in the form of a string
@@ -975,16 +1119,22 @@ class HorusMolstar {
     return to_mmCIF(name, structure);
   }
 
-  private extractFromLoci(loci: Loci) {
-    let label = loci.structure.label;
-
-    if (label === "") {
+  private extractFromLoci(loci: Loci): MolInfo {
+    // Define the default label
+    // This is the label that apears on top of the state tree,
+    // which the one that the user can modify
+    let label = "Unknown";
+    try {
+      label = loci.structure.units[0].model.sourceData.name;
+    } catch {
       label = loci.structure.model.label;
     }
 
-    label = label.split("|")[0];
+    // Internal label
+    // This label is inherent of the structure data that was
+    // used to load the molecule on Mol*
+    const internalLabel = loci.structure.model.label;
 
-    const id = loci.structure.model.id;
     let sourceData;
     let type;
     try {
@@ -996,11 +1146,12 @@ class HorusMolstar {
       type = "cif";
     }
 
-    const structureInfo = {
+    const structureInfo: MolInfo = {
       name: label,
-      id: id,
+      internalLabel: internalLabel,
       structure: sourceData,
       type: type,
+      id: loci.structure.model.id,
     };
 
     return structureInfo;
@@ -1028,7 +1179,7 @@ class HorusMolstar {
    * List all the structures in the current hierarchy
    * @returns {Array} - List of structures
    */
-  listStructures() {
+  listStructures(): MolInfo[] {
     const structures = this.structures();
     if (!structures) return;
 
@@ -1037,6 +1188,7 @@ class HorusMolstar {
       const data = structure.cell.obj.data;
       const loci = this.getLociForStructure(data);
       const molInfo = this.extractFromLoci(loci);
+      molInfo["id"] = structure.cell.sourceRef;
       molList.push(molInfo);
     }
 
@@ -1047,7 +1199,7 @@ class HorusMolstar {
     structure: Structure,
     get?: "all" | "hetero" | "standard" | "chain",
     unique: boolean = true
-  ) {
+  ): AtomInfo[] {
     const loci = this.getLociForStructure(structure);
     let molInfo = this.extractFromLoci(loci);
 
@@ -1114,7 +1266,7 @@ class HorusMolstar {
           auth_comp_id = " " + auth_comp_id;
         }
 
-        const atomInfo = {
+        const atomInfo: AtomInfo = {
           name: `${auth_comp_id}:${resID} - ${molInfo.name}`,
           residue: resID,
           chainID: chainID,
@@ -1178,12 +1330,17 @@ class HorusMolstar {
    * List the chains in the current loaded structures
    * @returns {Array} - List of chains
    */
-  listChains() {
-    const structures = this.structures();
+  listChains(structureLabel?: string): AtomInfo[] {
+    let structures = [];
+    if (structureLabel) {
+      structures.push(this.getStructureObjectFromLabel(structureLabel));
+    } else {
+      structures = this.structures();
+    }
 
     if (!structures) return;
 
-    const chainList = [];
+    const chainList: AtomInfo[] = [];
     for (const structure of structures) {
       const data = structure.cell.obj.data;
       const chains = this.getResiduesFromStructure(data, "chain");
@@ -1466,11 +1623,7 @@ class HorusMolstar {
           const structureLabel = data.structureLabel;
           const chain = data.chain;
           const nearRadius = data.nearRadius;
-          await this.focusFirst(residue, {
-            surroundRadius: nearRadius,
-            structureLabel: structureLabel,
-            chain: chain,
-          });
+          await this.focus(structureLabel, residue, chain, nearRadius);
           break;
         case "addSphere":
           const position = data.position;
@@ -1611,3 +1764,26 @@ function hexToBlob(hexString) {
 
   return new Blob([new Uint8Array(byteArray)]);
 }
+
+export type MolInfo = {
+  id: string;
+  name: string;
+  internalLabel: string;
+  structure: string;
+  type: string;
+};
+
+export type AtomInfo = {
+  name: string;
+  residue: number;
+  chainID: string;
+  atom_index: number;
+  auth_comp_id: string;
+  auth_atom_id: string;
+  type: string;
+  x: number;
+  y: number;
+  z: number;
+  strucutre_label: string;
+  structure: MolInfo;
+};

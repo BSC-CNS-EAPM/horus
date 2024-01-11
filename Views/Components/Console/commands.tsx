@@ -33,18 +33,53 @@ export default function getCommands() {
     },
     focus: {
       description: "Focus a residue.",
-      usage: "focus <residueID> <structure label> <chain> <radius>",
+      usage:
+        "focus <structure label> -r <residueID> -c <chain> -s <surround radius>",
       fn: (...args) => {
-        const [selection, structureLabel, chain, surroundRadius] = args;
-        const options = {
-          surroundRadius: parseInt(surroundRadius),
-          structureLabel: structureLabel,
-          chain: chain,
-        };
-        const numberSel = parseInt(selection);
+        // The residue ID is the first argument (if provided)
+        // The user can just type focus -r <residueID> and the residue ID will be the first argument
+        let structureLabel = args[0];
+
+        // Check that the structure label is not -r, -c or -s
+        if (
+          structureLabel === "-r" ||
+          structureLabel === "-c" ||
+          structureLabel === "-s"
+        ) {
+          // Then the user did not provide a structure label, and the first structure will be focused
+          structureLabel = undefined;
+        }
+
+        // Parse the optional arguments
+        const options = args.reduce((acc, arg, index) => {
+          if (arg === "-r") {
+            // The residue ID must be an integer
+            try {
+              acc.resID = parseInt(args[index + 1]);
+            } catch (e) {
+              return "The residue ID must be an integer.";
+            }
+          } else if (arg === "-c") {
+            acc.chain = args[index + 1];
+          } else if (arg === "-s") {
+            // The surround radius must be an integer
+            try {
+              acc.surroundRadius = parseInt(args[index + 1]);
+            } catch (e) {
+              return "The surround radius must be an integer.";
+            }
+          }
+          return acc;
+        }, {});
+
         const molstar = window.molstar;
         return molstar
-          ? molstar.focusFirst(numberSel, options)
+          ? molstar.focus(
+              structureLabel,
+              options.resID,
+              options.chain,
+              options.surroundRadius
+            )
           : "Molstar is not defined.";
       },
     },

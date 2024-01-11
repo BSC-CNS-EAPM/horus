@@ -8,7 +8,7 @@ import {
   VariableConnectionArrow,
   BlockConnectionArrow,
 } from "./arrow_connector";
-import { debounce } from "../reusable";
+import { HorusModal, debounce } from "../reusable";
 import {
   Block,
   BlockVarPair,
@@ -64,6 +64,7 @@ function FlowReciver(props: FlowReciverProps) {
   const savedID = useRef(props.savedID ? props.savedID : "new_flow");
   const flowPath = useRef(props.flowPath || "");
   const { currentSaved, setSaved } = props;
+  const [isSavingFlow, setIsSavingFlow] = useState(false);
 
   // Executing state
   const [executingAll, setExecutingAll] = useState(false);
@@ -94,6 +95,8 @@ function FlowReciver(props: FlowReciverProps) {
   const currentSaving = useRef(false);
 
   const updateMolstarState = async () => {
+    setIsSavingFlow(true);
+
     const molstarState = await window.molstar?.snapshot.get();
     const body = JSON.stringify({
       flowPath: flowPath.current,
@@ -111,6 +114,8 @@ function FlowReciver(props: FlowReciverProps) {
     if (!data.ok) {
       alert(data.error);
     }
+
+    setIsSavingFlow(true);
   };
 
   const handleSave = async () => {
@@ -118,6 +123,7 @@ function FlowReciver(props: FlowReciverProps) {
       return;
     }
 
+    setIsSavingFlow(true);
     currentSaving.current = true;
 
     const molstarState = await window.molstar?.snapshot.get();
@@ -133,20 +139,26 @@ function FlowReciver(props: FlowReciverProps) {
       terminalOutput: window.horusTerm.storedMessages,
     };
 
-    const body = JSON.stringify(saveContents);
-
     const headers = {
       "Content-Type": "application/json",
       Accept: "application/json",
     };
 
-    const response = await horusPost("/api/saveflow", headers, body);
-    var savedFlow = await response.json();
+    try {
+      const body = JSON.stringify(saveContents);
 
-    currentSaving.current = false;
+      const response = await horusPost("/api/saveflow", headers, body);
+      var savedFlow = await response.json();
+    } catch (e) {
+      setIsSavingFlow(false);
+      alert("Error saving flow. Try again");
+      currentSaving.current = false;
+      return;
+    }
 
     if (!savedFlow.ok) {
       alert(savedFlow.error);
+      currentSaving.current = false;
       return;
     }
 
@@ -162,6 +174,8 @@ function FlowReciver(props: FlowReciverProps) {
         "Flow with the same name already exists. Are you sure you want to overwrite the flow?"
       )
     ) {
+      setIsSavingFlow(false);
+      currentSaving.current = false;
       return;
     }
 
@@ -182,6 +196,8 @@ function FlowReciver(props: FlowReciverProps) {
       savedFlow = await overwriteResponse.json();
 
       if (!savedFlow.ok) {
+        setIsSavingFlow(false);
+        currentSaving.current = false;
         alert(savedFlow.error);
         return;
       }
@@ -202,6 +218,9 @@ function FlowReciver(props: FlowReciverProps) {
 
     // Join the room with the new savedID
     socket.emit("joinFlow", savedID.current);
+
+    setIsSavingFlow(false);
+    currentSaving.current = false;
   };
 
   const updateBlockSelectedGroup = (
@@ -306,7 +325,11 @@ function FlowReciver(props: FlowReciverProps) {
       status !== FlowStatus.PAUSED &&
       status !== FlowStatus.IDLE
     ) {
-      if (window.molstar && data.pendingActions) {
+      if (
+        window.molstar &&
+        data.pendingActions &&
+        data.pendingActions.length > 0
+      ) {
         await applyPendingActions(data.pendingActions);
       }
     }
@@ -1176,6 +1199,13 @@ function FlowReciver(props: FlowReciverProps) {
 
   return (
     <div className="current-flow">
+      <HorusModal
+        header="Saving flow"
+        footer="Please wait while the flow is being saved."
+        body={<RotatingLines />}
+        size="sm"
+        show={isSavingFlow}
+      />
       {TopBarTitle()}
       <div
         className="current-flow-canvas"

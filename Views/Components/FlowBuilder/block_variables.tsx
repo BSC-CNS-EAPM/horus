@@ -11,7 +11,7 @@ import NBDButton from "../nbdbutton";
 import { SearchComponent } from "../Toolbar/toolbar";
 import { HorusFileExplorer } from "../FileExplorer/file_explorer";
 import Xarrow from "react-xarrows";
-import { SphereRef } from "../Molstar/HorusWrapper/horusmolstar";
+import { AtomInfo, SphereRef } from "../Molstar/HorusWrapper/horusmolstar";
 import { Color } from "molstar/lib/mol-util/color";
 
 // Components
@@ -566,7 +566,6 @@ function FilePickerView(props: FilePickerViewProps) {
   const { variable, onChange } = props;
 
   const updateTextInput = (value: any) => {
-    console.log(value);
     onChange(value);
   };
 
@@ -958,7 +957,7 @@ function AtomView(props: VariableSubviewProps) {
 function ChainView(props: VariableSubviewProps) {
   const value = props.variable.value;
 
-  const [chains, setChains] = useState<any[]>([]);
+  const [chains, setChains] = useState<AtomInfo[]>([]);
 
   const loadMolstarChains = async () => {
     const molstar = window.molstar;
@@ -976,7 +975,7 @@ function ChainView(props: VariableSubviewProps) {
   return (
     <div onMouseDown={loadMolstarChains}>
       {chains.length === 0 ? (
-        <div className="text-center">No hetero atoms found</div>
+        <div className="text-center">No chains found</div>
       ) : (
         <>
           {chains.map((chain, index) => (
@@ -990,16 +989,18 @@ function ChainView(props: VariableSubviewProps) {
               <input
                 style={{ width: "1rem" }}
                 type="checkbox"
+                value={`${chain.chainID} - ${chain.strucutre_label}`}
                 checked={
                   value &&
-                  value.find((val) => val.name === chain.name) !== undefined
+                  value.find((val) => {
+                    return (
+                      val.chainID === chain.chainID &&
+                      val.strucutre_label === chain.strucutre_label
+                    );
+                  }) !== undefined
                 }
                 onChange={(e) => {
                   const newValue = chain;
-                  const structure = chain.structure?.name;
-                  if (structure) {
-                    newValue.structure = structure;
-                  }
 
                   if (!value) {
                     props.handleChange([newValue], props.variable.id);
@@ -1019,7 +1020,9 @@ function ChainView(props: VariableSubviewProps) {
                   props.handleChange(updatedValues, props.variable.id);
                 }}
               />
-              <div className="ml-2">{chain.chainID}</div>
+              <div className="ml-2">
+                {chain.chainID} - {chain.strucutre_label}
+              </div>
             </div>
           ))}
         </>
