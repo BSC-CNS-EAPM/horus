@@ -56,12 +56,11 @@ From: ubuntu:14.04
     # Install requirements
     # npm run requirements
 
-    conda env create -f Devtools/Environment/conda_horus.yaml -n horus
-
-
 %runscript
     # Source conda
     . /opt/conda/etc/profile.d/conda.sh
+
+    conda env create -f Devtools/Environment/conda_horus.yaml -n horus
 
     # Activate conda environment
     conda activate horus

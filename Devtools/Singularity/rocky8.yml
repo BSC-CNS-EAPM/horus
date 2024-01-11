@@ -60,13 +60,20 @@ From: rockylinux:8.6
     # bash /tmp/nodesource_setup.sh
     # dnf install -y nodejs
 
-    yum install https://rpm.nodesource.com/pub_18.x/nodistro/repo/nodesource-release-nodistro-1.noarch.rpm -y
-    yum install nodejs -y --setopt=nodesource-nodejs.module_hotfixes=1
+    dnf module install -y nodejs:18
+
+
+%runscript
+    # Source conda
+    . /opt/conda/etc/profile.d/conda.sh
+
+    # Set the bun path ~/.bun/bin/bun
+    export PATH=~/.bun/bin:${PATH}
 
     # Install requirements
     npm run requirements
 
-    # Fix parcel with yarn
+    # Use yarn to fix parcel
     npm install --legacy-peer-deps yarn
     npx yarn
 
@@ -74,11 +81,6 @@ From: rockylinux:8.6
     # we need to install pywebview with the QT backend
     conda activate horus
     python -m pip install pywebview[qt]==4.2.2
-
-
-%runscript
-    # Source conda
-    . /opt/conda/etc/profile.d/conda.sh
 
     # Activate conda environment
     conda activate horus

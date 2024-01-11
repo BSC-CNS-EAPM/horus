@@ -75,9 +75,15 @@ Unfortunately, a Windows version cannot be provided at the moment. However, you 
    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && bash ~/miniconda.sh
    ```
 
-3. Install Nodejs
+3. Install Bun (recommended) or NodeJS 18
 
-   3.1. Debian based
+   3.3. Bun
+
+   ```
+   curl -fsSL https://bun.sh/install | bash
+   ```
+
+   3.2. Debian based
 
    ```
    curl -sL https://deb.nodesource.com/setup_18.x -o /tmp/nodesource_setup.sh
@@ -87,7 +93,7 @@ Unfortunately, a Windows version cannot be provided at the moment. However, you 
    sudo apt install nodejs
    ```
 
-   3.2. RedHat based
+   3.3. RedHat based
 
    ```
    curl -sL https://rpm.nodesource.com/setup_18.x -o /tmp/nodesource_setup.sh

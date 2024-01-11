@@ -58,26 +58,30 @@ From: ubuntu:22.04
     apt-get update
     apt-get install nodejs -y
 
+
+%runscript
+    # Source conda
+    . /opt/conda/etc/profile.d/conda.sh
+
+    # Set the bun path ~/.bun/bin/bun
+    export PATH=~/.bun/bin:${PATH}
+
     # Install requirements
     npm run requirements
-
-    # Update conda environment with Ubuntu-specific packages
-    conda activate horus
-    python -m pip install pygobject pycairo
 
     # Fix parcel with yarn
     npm install --legacy-peer-deps yarn
     npx yarn
 
-%runscript
-    # Source conda
-    . /opt/conda/etc/profile.d/conda.sh
+    # Update conda environment with Ubuntu-specific packages
+    conda activate horus
+    python -m pip install pygobject pycairo
 
     # Activate conda environment
     conda activate horus
 
     # Build horus
     npm run build
-    
+
     # Create the packages
     npm run distribute
