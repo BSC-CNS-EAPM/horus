@@ -65,6 +65,7 @@ function FlowReciver(props: FlowReciverProps) {
   const flowPath = useRef(props.flowPath || "");
   const { currentSaved, setSaved } = props;
   const [isSavingFlow, setIsSavingFlow] = useState(false);
+  const [isLoadingFlow, setIsLoadingFlow] = useState(false);
 
   // Executing state
   const [executingAll, setExecutingAll] = useState(false);
@@ -98,25 +99,31 @@ function FlowReciver(props: FlowReciverProps) {
   const updateMolstarState = async () => {
     setIsSavingFlow(true);
 
-    const molstarState = await window.molstar?.snapshot.get();
-    const body = JSON.stringify({
-      flowPath: flowPath.current,
-      molstarState: molstarState,
-    });
+    try {
+      const molstarState = await window.molstar?.snapshot.get();
+      const formData = new FormData();
+      formData.append("flowPath", flowPath.current);
+      formData.append("molstarState", molstarState, "molstarState.molx");
+      const headers = {
+        Accept: "application/json",
+      };
+      const response = await horusPost(
+        "/api/updatemolstate",
+        headers,
+        formData,
+        null,
+        10
+      );
+      const data = await response.json();
 
-    const headers = {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    };
-
-    const response = await horusPost("/api/updatemolstate", headers, body);
-    const data = await response.json();
-
-    if (!data.ok) {
-      alert(data.error);
+      if (!data.ok) {
+        alert(data.error);
+      }
+    } catch (e) {
+      alert("Error updating mol* state: " + e);
     }
 
-    setIsSavingFlow(true);
+    setIsSavingFlow(false);
   };
 
   const handleSave = async () => {
@@ -127,7 +134,7 @@ function FlowReciver(props: FlowReciverProps) {
     setIsSavingFlow(true);
     currentSaving.current = true;
 
-    const molstarState = await window.molstar?.snapshot.get();
+    const body = new FormData();
 
     const saveContents = {
       name: flowName,
@@ -136,19 +143,27 @@ function FlowReciver(props: FlowReciverProps) {
       path: flowPath.current,
       remote: selectedRemote,
       currentExecuting: flowExecuter.current.currentExecuting,
-      molstarState: molstarState,
       terminalOutput: window.horusTerm.storedMessages,
     };
 
+    body.append("flowData", JSON.stringify(saveContents));
+
+    const molstarState = await window.molstar?.snapshot.get();
+    body.append("molstarState", molstarState, "molstarState.zip");
+
+    // Set the headers so that flask correctly accepts the form data
     const headers = {
-      "Content-Type": "application/json",
       Accept: "application/json",
     };
 
     try {
-      const body = JSON.stringify(saveContents);
-
-      const response = await horusPost("/api/saveflow", headers, body);
+      const response = await horusPost(
+        "/api/saveflow",
+        headers,
+        body,
+        null,
+        10
+      );
       var savedFlow = await response.json();
     } catch (e) {
       setIsSavingFlow(false);
@@ -160,6 +175,7 @@ function FlowReciver(props: FlowReciverProps) {
     if (!savedFlow.ok) {
       alert(savedFlow.error);
       currentSaving.current = false;
+      setIsSavingFlow(false);
       return;
     }
 
@@ -192,7 +208,9 @@ function FlowReciver(props: FlowReciverProps) {
       const overwriteResponse = await horusPost(
         "/api/saveflow",
         headers,
-        overwriteBody
+        overwriteBody,
+        null,
+        10
       );
       savedFlow = await overwriteResponse.json();
 
@@ -551,10 +569,13 @@ function FlowReciver(props: FlowReciverProps) {
       }
     }
 
+    setIsLoadingFlow(true);
+
     let data = {
       ok: false,
       flow: null,
       error: "Early error opening flow",
+      molstarState: null,
     };
     let isDefaultFlow = false;
     if (openRecent !== null) {
@@ -572,7 +593,6 @@ function FlowReciver(props: FlowReciverProps) {
         path: openRecent.path,
       });
       const response = await horusPost("/api/openrecentflow", header, body);
-
       data = await response.json();
     } else {
       const response = await horusGet("/api/openflow");
@@ -582,6 +602,7 @@ function FlowReciver(props: FlowReciverProps) {
     if (!data.ok) {
       alert(data.error);
       openingFlow.current = false;
+      setIsLoadingFlow(false);
       return;
     }
 
@@ -598,8 +619,14 @@ function FlowReciver(props: FlowReciverProps) {
     }
 
     // Set the molstar state at the beggining in case blocks need structures
-    if (window.molstar && openedFlow.molstarState) {
-      await window.molstar.snapshot.set(openedFlow.molstarState);
+    // If it has the new molstar state, open it
+    if (window.molstar) {
+      if (data.molstarState) {
+        await window.molstar.snapshot.set(data.molstarState);
+      } else if (openedFlow.molstarState) {
+        // If it has the old molstar state, open it
+        await window.molstar.snapshot.set(openedFlow.molstarState);
+      }
     }
 
     // Set the flow name
@@ -666,6 +693,8 @@ function FlowReciver(props: FlowReciverProps) {
     if (openedFlow?.pendingActions && openedFlow.pendingActions.length > 0) {
       await applyPendingActions(openedFlow.pendingActions);
     }
+
+    setIsLoadingFlow(false);
   };
 
   const applyPendingActions = async (pendingActions) => {
@@ -1211,6 +1240,13 @@ function FlowReciver(props: FlowReciverProps) {
         body={<RotatingLines />}
         size="sm"
         show={isSavingFlow}
+      />
+      <HorusModal
+        header="Loading flow"
+        footer="Please wait while the flow is being loaded."
+        body={<RotatingLines />}
+        size="sm"
+        show={isLoadingFlow}
       />
       {TopBarTitle()}
       <div

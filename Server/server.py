@@ -315,9 +315,42 @@ class HorusServer:
         @self.server.route("/api/saveflow", methods=["POST"])
         @verifyToken
         def createFlow():
-            flowData = request.get_json()
+            # The client here sends a form data with two values:
+            # - flowData: The flow data as a JSON string (contains flow name, placed blocks...)
+            # - molstarState: The molstar state as a zip file
+
+            # Parse the request data
+            request.get_data()
+            data = request.form
+            files = request.files
+
+            if data is None or files is None:
+                success = {
+                    "ok": False,
+                    "error": "No data provided",
+                }
+
+                return flask.jsonify(success)
+
+            # Get the flow data and the molstar state
+            flowData = data.get("flowData", None)
+
+            if flowData is None:
+                success = {
+                    "ok": False,
+                    "error": "No flowData provided",
+                }
+
+                return flask.jsonify(success)
+
+            # Parse the data string as JSON
+            flowData = flask.json.loads(flowData)
+
+            # Get the molstar state
+            molstarState = files.get("molstarState", None)
+
             try:
-                flow = self.flowManager.saveFlow(flowData)
+                flow = self.flowManager.saveFlow(flowData, molstarState)
 
                 # Emit the saved flow to connected rooms
                 self.socketio.emit("flow", flow.encode(minimal=False), to=flow.savedID)
@@ -354,7 +387,24 @@ class HorusServer:
                     raise Exception(  # pylint: disable=broad-exception-raised
                         "This function is only available on desktop mode."
                     )
-                success = {"ok": True, "flow": flow.encode(minimal=False)}
+
+                # Get the flow JSON
+                flowJson = flow.encode(minimal=False)
+
+                # Get the molstarStte zip file
+                molstarState = flow.getMolstarState()
+
+                success = {"ok": True, "flow": flowJson}
+                if molstarState is not None:
+                    # Convert the molstar state to a hex string
+                    molstarState = molstarState.hex()
+
+                    success["molstarState"] = molstarState
+
+                # Return both the flow and the molstar state as binary
+                # to be later retrieved by the client as a blob
+                return flask.jsonify(success)
+
             except Exception as exc:  # pylint: disable=broad-exception-caught
                 success = {
                     "ok": False,
@@ -409,10 +459,24 @@ class HorusServer:
                             "No savedID provided"
                         )
                     flow = self.flowManager.loadPredefinedFlow(savedID)
-                success = {
-                    "ok": True,
-                    "flow": flow.encode(minimal=False),
-                }
+
+                # Get the flow JSON
+                flowJson = flow.encode(minimal=False)
+
+                # Get the molstarStte zip file
+                molstarState = flow.getMolstarState()
+
+                success = {"ok": True, "flow": flowJson}
+                if molstarState is not None:
+                    # Convert the molstar state to a hex string
+                    molstarState = molstarState.hex()
+
+                    success["molstarState"] = molstarState
+
+                # Return both the flow and the molstar state as binary
+                # to be later retrieved by the client as a blob
+                return flask.jsonify(success)
+
             except Exception as exc:  # pylint: disable=broad-exception-caught
                 success = {
                     "ok": False,
@@ -422,23 +486,37 @@ class HorusServer:
 
         @self.server.route("/api/updatemolstate", methods=["POST"])
         def updateMolState():
-            data = request.get_json()
+            # The client here sends a form data with two values:
+            # - flowPath: The path to the flow
+            # - molstarState: The molstar state as a zip file
 
-            if data is None:
+            # Parse the request data
+            request.get_data()
+
+            # Get the data from the request
+            flowPath = request.form.get("flowPath", None)
+
+            if flowPath is None:
                 success = {
                     "ok": False,
-                    "error": "No data provided",
+                    "error": "No flowPath provided",
                 }
 
+                return flask.jsonify(success)
+
+            file = request.files.get("molstarState", None)
+
+            if file is None:
+                success = {
+                    "ok": False,
+                    "error": "No molstar state provided",
+                }
+
+                return flask.jsonify(success)
+
             try:
-                flowPath = data.get("flowPath", None)
-                molstarState = data.get("molstarState", None)
-
-                if flowPath is None or molstarState is None:
-                    raise Exception("No flowPath or molstarState provided")
-
                 flow = self.flowManager.openFlowFromPath(flowPath)
-                flow.molstarState = molstarState
+                flow.saveMolstarState(file)
                 flow.pendingActions = []
                 flow.write()
 

@@ -657,7 +657,7 @@ class HorusMolstar {
     },
   };
 
-  private async getSession() {
+  private async getSession(): Promise<Blob> {
     // Erase previous session snapshots
     this.plugin.managers.snapshot.clear();
 
@@ -675,9 +675,9 @@ class HorusMolstar {
     // The molx format is basically a zip file
     // but for storing the molstar state in the flow, we need to convert it to a string
     // Therefore we will read the bytes of the zip file and convert it to a hex string
-    const textSession = await blobToHex(molxSession);
+    // const textSession = await blobToHex(molxSession);
 
-    return textSession;
+    return molxSession;
   }
 
   private async legacySession(session) {

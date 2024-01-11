@@ -12,6 +12,10 @@ import datetime
 import logging
 import multiprocessing
 import time
+import zipfile
+
+# Import the Workzeug FileStorage class
+from werkzeug.datastructures import FileStorage
 
 # Enum for the flow status
 from enum import Enum
@@ -143,11 +147,6 @@ class Flow:
     The current executing block (PlacedID)
     """
 
-    molstarState: typing.Dict[str, typing.Any]
-    """
-    The molstar state
-    """
-
     date: str
     """
     The date the flow was last saved as a string (YYYY-MM-DD HH:MM:SS)
@@ -239,7 +238,6 @@ class Flow:
         self.path = flow.get("path", None)
         self.remote = flow.get("remote", None)
         self.currentExecuting = flow.get("currentExecuting", None)
-        self.molstarState = flow.get("molstarState", {})
         self.date = flow.get("date", None)
         self.terminalOutput = flow.get("terminalOutput", None)
         self.pendingActions = flow.get("pendingActions", [])
@@ -386,7 +384,6 @@ class Flow:
             "status": self.status.value,
             "date": self.date,
             "blocks": blocksJSON,
-            "molstarState": self.molstarState,
             "terminalOutput": self.terminalOutput,
             "pendingActions": self.pendingActions,
         }
@@ -405,9 +402,12 @@ class Flow:
 
         logging.getLogger("Horus").debug("Writing flow '%s'", self.name)
 
+        with zipfile.ZipFile(self.path, "a", zipfile.ZIP_DEFLATED) as zipFile:
+            zipFile.writestr("flow.json", json.dumps(encodedFlow, indent=4))
+
         # Save the flow
-        with open(self.path, "w", encoding="utf-8") as file:
-            json.dump(encodedFlow, file, indent=4)
+        # with open(self.path, "w", encoding="utf-8") as file:
+        #     json.dump(encodedFlow, file, indent=4)
 
         # Return the encoded flow in case its needed
         return encodedFlow
@@ -418,14 +418,42 @@ class Flow:
         Reads a flow from a file
         """
 
-        # Read the flow
-        with open(path, "r", encoding="utf-8") as file:
-            flow = json.load(file)
+        # Read the flow with the new zipped version
+        try:
+            with zipfile.ZipFile(path, "r") as zipFile:
+                with zipFile.open("flow.json") as file:
+                    flow = json.load(file)
+        except:
+            # Read the old version
+            with open(path, "r", encoding="utf-8") as file:
+                flow = json.load(file)
 
         flow = Flow(flow)
         flow.path = path
 
         return flow
+
+    def saveMolstarState(self, molstarState: FileStorage):
+        """
+        Saves the molstar state molx file into the flow zip
+        """
+
+        with zipfile.ZipFile(self.path, "a", zipfile.ZIP_DEFLATED) as zipFile:
+            stateBytes = molstarState.stream.read()
+            zipFile.writestr("molstarState.molx", stateBytes)
+
+    def getMolstarState(self) -> typing.Optional[bytes]:
+        """
+        Gets the molstar state molx file from the flow zip
+        """
+
+        try:
+            with zipfile.ZipFile(self.path, "r") as zipFile:
+                with zipFile.open("molstarState.molx") as file:
+                    return file.read()
+        except Exception as exc:
+            logging.getLogger("Horus").info("Error reading molstar state: %s", exc)
+            return None
 
     def __eq__(self, other):
         if isinstance(other, Flow):
@@ -1183,7 +1211,9 @@ class FlowManager:
         self.recentFlows = []
         self._recentsWriter()
 
-    def _saveFlowInternal(self, flow: Flow, overwrite=False):
+    def _saveFlowInternal(
+        self, flow: Flow, overwrite=False, molstarState: typing.Optional[FileStorage] = None
+    ):
         """
         Saves a flow to a file. (overwrites if already exists)
         """
@@ -1223,13 +1253,20 @@ class FlowManager:
         else:
             flow.write()
 
+        if molstarState is not None:
+            flow.saveMolstarState(molstarState)
+
         # Add the flow to the recent flows list
         self._addToRecentFlows(flow)
 
         # Return the saved flow
         return flow
 
-    def saveFlow(self, flow: typing.Dict[str, typing.Any]):
+    def saveFlow(
+        self,
+        flow: typing.Dict[str, typing.Any],
+        molstarState: typing.Optional[FileStorage] = None,
+    ):
         """
         Saves the flow to a file.
         """
@@ -1267,7 +1304,7 @@ class FlowManager:
                     flowPath += ".flow"
                 flowInstance.path = flowPath
 
-        return self._saveFlowInternal(flowInstance, overwrite)
+        return self._saveFlowInternal(flowInstance, overwrite, molstarState)
 
     def openFlowFromPath(
         self, flowPath: str, socket: typing.Optional["HorusSocket"] = None

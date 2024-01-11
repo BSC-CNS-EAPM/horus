@@ -13,22 +13,44 @@ function getShemsuToken() {
 }
 
 // Tokenize the urls with the shemsu token
-async function horusGet(url, headers?, shemsu?) {
-  return await fetch(url, {
+async function horusGet(url, headers?, shemsu?, timeout?: number) {
+  const controller = new AbortController();
+  const signal = controller.signal;
+
+  let timeoutId: NodeJS.Timeout;
+
+  if (timeout) {
+    timeoutId = setTimeout(() => {
+      controller.abort();
+    }, timeout * 1000);
+  }
+
+  const fetchPromise = fetch(url, {
     method: "GET",
     headers: {
       socketiosid: window.socketiosid || parent.socketiosid || null,
       shemsu: shemsu || getShemsuToken(),
       ...headers,
     },
+    signal,
   });
+
+  try {
+    const response = await fetchPromise;
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw new Error("Timeout");
+  }
 }
 
-async function horusPost(url, headers, body, shemsu?) {
+async function horusPost(url, headers, body, shemsu?, timeout?: number) {
   /* Send a post request to the server to open a window
    * @param {string} url - The url to send the request to
    * @param {object} headers - The headers to send with the request
    * @param {object} body - The body to send with the request. Remember to stringify it if the header is application/json
+   * @param {number} timeout - The timeout duration in seconds
    * */
 
   if (headers === null) {
@@ -38,7 +60,18 @@ async function horusPost(url, headers, body, shemsu?) {
     };
   }
 
-  return await fetch(url, {
+  const controller = new AbortController();
+  const signal = controller.signal;
+
+  let timeoutId: NodeJS.Timeout;
+
+  if (timeout) {
+    timeoutId = setTimeout(() => {
+      controller.abort();
+    }, timeout * 1000);
+  }
+
+  const fetchPromise = fetch(url, {
     method: "POST",
     headers: {
       shemsu: shemsu || getShemsuToken(),
@@ -46,7 +79,17 @@ async function horusPost(url, headers, body, shemsu?) {
       ...headers,
     },
     body: body,
+    signal,
   });
+
+  try {
+    const response = await fetchPromise;
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    throw new Error("Timeout");
+  }
 }
 
 async function getVersion() {

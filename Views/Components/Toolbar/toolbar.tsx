@@ -209,23 +209,25 @@ const handleKeyDown = (event: KeyboardEvent) => {
   const isModifierKeyPressed = event.getModifierState(modifierKey);
   const isShiftKeyPressed = event.getModifierState(shiftKey);
 
-  // Prevent the default action of the keydown event
-  event.preventDefault();
-
   // Handle the keydown event
   if (event.code === "KeyT" && isShiftKeyPressed) {
+    event.preventDefault();
     toggleConsole();
   }
   if (event.code === "KeyZ" && isModifierKeyPressed && isShiftKeyPressed) {
+    event.preventDefault();
     redoEvent();
   }
   if (event.code === "KeyZ" && isModifierKeyPressed && !isShiftKeyPressed) {
+    event.preventDefault();
     undoEvent();
   }
   if (event.code === "KeyS" && isModifierKeyPressed && isShiftKeyPressed) {
+    event.preventDefault();
     saveAsEvent();
   }
   if (event.code === "KeyS" && isModifierKeyPressed) {
+    event.preventDefault();
     saveEvent();
   }
 };

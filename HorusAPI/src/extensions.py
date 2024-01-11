@@ -138,20 +138,22 @@ class Extensions(metaclass=SingletonMeta):
         if image.endswith(".png"):
             with open(image, "rb") as f:
                 imageData = base64.b64encode(f.read()).decode("utf-8")
-                image = f"data:image/png;base64,{imageData}"
+                image = "data:image/png;base64,{}".format(imageData)
         elif image.endswith(".jpg"):
             with open(image, "rb") as f:
                 imageData = base64.b64encode(f.read()).decode("utf-8")
-                image = f"data:image/jpg;base64,{imageData}"
+                image = "data:image/jpg;base64,{}".format(imageData)
         elif image.endswith(".gif"):
             with open(image, "rb") as f:
                 imageData = base64.b64encode(f.read()).decode("utf-8")
-                image = f"data:image/gif;base64,{imageData}"
+                image = "data:image/gif;base64,{}".format(imageData)
         else:
-            raise Exception(f"Unsupported image format {image}")
+            raise Exception("Unsupported image format {}".format(image))
 
         # Generate an HTML string that contains the image
-        image = f'<img src="{image}" alt="{title}" style="max-width: 100%; max-height: 100%;">'
+        image = '<img src="{}" alt="{}" style="max-width: 100%; max-height: 100%;">'.format(
+            image, title
+        )
 
         html = f"""
         <html>

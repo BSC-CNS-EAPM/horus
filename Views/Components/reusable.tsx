@@ -82,6 +82,7 @@ function HorusModal(props: HorusModalProps) {
       contentClassName={props.contentClassName}
       fullscreen={props.fullscreen ? true : "false"}
       size={props.size}
+      centered
     >
       <Modal.Header>
         <Modal.Title>{props.header}</Modal.Title>

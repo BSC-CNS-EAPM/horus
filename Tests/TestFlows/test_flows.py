@@ -81,7 +81,6 @@ def test_flow_properties(flow: Flow):
     assert flow.currentExecuting == 1
     assert flow.status == Flow.FlowStatus.RUNNING
     assert flow.date == "2022-01-01 12:00:00"
-    assert flow.molstarState == {}
     assert flow.terminalOutput == ["Test output"]
 
 
@@ -138,7 +137,6 @@ def test_flow_read(tmpdir, flow_data):
     assert read_flow.currentExecuting == 1
     assert read_flow.status == Flow.FlowStatus.RUNNING
     assert read_flow.date == "2022-01-01 12:00:00"
-    assert read_flow.molstarState == {}
     assert read_flow.terminalOutput == ["Test output"]
     assert len(read_flow.blocks) == 1
     assert isinstance(read_flow.blocks[0], Block)
