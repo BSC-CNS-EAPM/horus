@@ -21,8 +21,19 @@ interface ToolBarItemProps {
   children?: React.ReactNode;
 }
 
-const modifierKey: string = navigator.userAgent.includes("Mac") ? "⌥ " : "Alt ";
-const shiftKey: string = "⇧ ";
+// Define the logos for the shortcuts
+const modifierKeyLogo: string = navigator.userAgent.includes("Mac")
+  ? "⌘ "
+  : "Ctrl + ";
+const shiftKeyLogo: string = navigator.userAgent.includes("Mac")
+  ? "⇧ "
+  : "Shift + ";
+
+// Define the actual key to listen to
+const modifierKey: string = navigator.userAgent.includes("Mac")
+  ? "Meta"
+  : "Control";
+const shiftKey: string = "Shift";
 
 function ToolBarItem(props: ToolBarItemProps) {
   const navigate = useNavigate();
@@ -195,19 +206,26 @@ function SearchComponent(props: SearchProps) {
 }
 
 const handleKeyDown = (event: KeyboardEvent) => {
-  if (event.code === "KeyT" && event.altKey) {
+  const isModifierKeyPressed = event.getModifierState(modifierKey);
+  const isShiftKeyPressed = event.getModifierState(shiftKey);
+
+  // Prevent the default action of the keydown event
+  event.preventDefault();
+
+  // Handle the keydown event
+  if (event.code === "KeyT" && isShiftKeyPressed) {
     toggleConsole();
   }
-  if (event.code === "KeyZ" && event.altKey && event.shiftKey) {
+  if (event.code === "KeyZ" && isModifierKeyPressed && isShiftKeyPressed) {
     redoEvent();
   }
-  if (event.code === "KeyZ" && event.altKey && !event.shiftKey) {
+  if (event.code === "KeyZ" && isModifierKeyPressed && !isShiftKeyPressed) {
     undoEvent();
   }
-  if (event.code === "KeyS" && event.altKey && event.shiftKey) {
+  if (event.code === "KeyS" && isModifierKeyPressed && isShiftKeyPressed) {
     saveAsEvent();
   }
-  if (event.code === "KeyS" && event.altKey) {
+  if (event.code === "KeyS" && isModifierKeyPressed) {
     saveEvent();
   }
 };
@@ -428,7 +446,7 @@ export default function HorusToolbar() {
         },
         {
           name: "Save",
-          keyShortcut: `${modifierKey}S`,
+          keyShortcut: `${modifierKeyLogo}S`,
           svgPath: (
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -451,7 +469,7 @@ export default function HorusToolbar() {
         },
         {
           name: "Save as...",
-          keyShortcut: `${modifierKey}${shiftKey}S`,
+          keyShortcut: `${modifierKeyLogo}${shiftKeyLogo}S`,
           svgPath: (
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -523,7 +541,7 @@ export default function HorusToolbar() {
             // and will undo the last action
             undoEvent();
           },
-          keyShortcut: `${modifierKey}Z`,
+          keyShortcut: `${modifierKeyLogo}Z`,
           svgPath: (
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -546,7 +564,7 @@ export default function HorusToolbar() {
           onClick: () => {
             redoEvent();
           },
-          keyShortcut: `${modifierKey}${shiftKey}Z`,
+          keyShortcut: `${modifierKeyLogo}${shiftKeyLogo}Z`,
           svgPath: (
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -612,7 +630,7 @@ export default function HorusToolbar() {
             </svg>
           ),
           // Set a keyShortcut to enable keyboard navigation.
-          keyShortcut: `${modifierKey}T`,
+          keyShortcut: `${shiftKeyLogo}T`,
         },
         {
           name: "Center view",
