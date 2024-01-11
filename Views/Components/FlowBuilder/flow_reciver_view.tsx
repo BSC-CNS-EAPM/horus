@@ -1,5 +1,5 @@
 import { BlockView, DraggableBlockView } from "./block_view";
-import { useEffect, useRef, useState } from "react";
+import { CSSProperties, useEffect, useRef, useState } from "react";
 import { horusGet, horusPost, horusGetSettings } from "../../Utils/utils";
 import RotatingLines from "../RotatingLines/rotatinglines";
 import { useDroppable } from "@dnd-kit/core";
@@ -76,6 +76,7 @@ function FlowReciver(props: FlowReciverProps) {
 
   const { setNodeRef } = useDroppable({
     id: "flow-reciver",
+    disabled: isRunning,
   });
 
   const handleSaveAs = async () => {
@@ -1091,8 +1092,13 @@ function FlowReciver(props: FlowReciverProps) {
       setRemoteConnection: selectRemote,
     };
 
+    const blockDisabledWhenRunning: CSSProperties = {
+      pointerEvents: isRunning ? "none" : "auto",
+      opacity: isRunning ? 0.75 : 1,
+    };
+
     return (
-      <div key={block.placedID}>
+      <div key={block.placedID} style={blockDisabledWhenRunning}>
         <DraggableBlockView
           settings={flowSettings}
           key={`${block.placedID}-${block.id}`}
@@ -1193,8 +1199,8 @@ function FlowReciver(props: FlowReciverProps) {
 
   const initialMousePosition = useRef({ x: 0, y: 0 });
 
-  const style = {
-    cursor: isPanning ? "grabbing" : "default",
+  const style: CSSProperties = {
+    cursor: isPanning ? "grabbing" : isRunning ? "wait" : "auto",
   };
 
   return (
