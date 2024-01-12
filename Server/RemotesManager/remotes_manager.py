@@ -693,9 +693,10 @@ class RemotesAPI:
                 jobID = job["jobID"]
 
             if jobID is None:
-                raise Exception(  # pylint: disable=broad-exception-raised
-                    "Corrupted queue storage: block not found."
-                )
+                return "COMPLETED"
+                # raise Exception(  # pylint: disable=broad-exception-raised
+                #     "Corrupted queue storage: block not found."
+                # )
 
             # Get the job status
             status = self.getJobStatus(jobID)
@@ -1128,13 +1129,13 @@ class RemotesManager:
         if not os.path.exists(remotesFile):
             return
 
-        with open(remotesFile, "r") as f:
+        with open(remotesFile, "r", encoding="utf-8") as f:
             remotesConfig: t.Dict[str, str] = json.load(f)
 
         # Remove the remote
         remotesConfig.pop(name)
 
-        with open(remotesFile, "w") as f:
+        with open(remotesFile, "w", encoding="utf-8") as f:
             json.dump(remotesConfig, f)
 
     def connectRemote(self, name: str):
@@ -1148,16 +1149,11 @@ class RemotesManager:
         if self.remote is not None and self.remote.name == name:
             return
 
-        remotesFile = os.path.join(self.appSupportDir, "remotes.json")
-
-        remotesConfig: t.Dict[str, t.Any] = {}
-        if os.path.exists(remotesFile):
-            with open(remotesFile, "r") as f:
-                remotesConfig = json.load(f)
-
         # Check if the remote exists
-        if name not in remotesConfig.keys() and name.lower() != "local":
+        if not self.remoteExists(name):
             raise Exception(f"The remote {name} does not exist")
+
+        remotesConfig = self._remoteConfig()
 
         if name.lower() == "local":
             self.remote = RemotesAPI(None, local=True)
@@ -1173,3 +1169,27 @@ class RemotesManager:
 
         if not self.remote.isConnected:
             raise Exception("Could not connect to the remote")
+
+    def _remoteConfig(self) -> t.Dict[str, t.Any]:
+        """
+        Returns the remote configuration read from the file
+        """
+
+        remotesFile = os.path.join(self.appSupportDir, "remotes.json")
+
+        remotesConfig: t.Dict[str, t.Any] = {}
+        if os.path.exists(remotesFile):
+            with open(remotesFile, "r", encoding="utf-8") as f:
+                remotesConfig = json.load(f)
+
+        return remotesConfig
+
+    def remoteExists(self, remoteName: str) -> bool:
+        """
+        Returns wether a remote exists by the remote's name
+        """
+
+        if remoteName.lower() != "local":
+            return remoteName in self._remoteConfig().keys()
+        else:
+            return True
