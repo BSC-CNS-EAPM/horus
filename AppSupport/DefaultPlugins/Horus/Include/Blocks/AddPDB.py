@@ -110,6 +110,7 @@ visualizePDBinput = PluginVariable(
     id="file",
     description="The PDB file to visualize.",
     type=VariableTypes.FILE,
+    allowedValues=["pdb"],
 )
 
 visualizePDBfolder = PluginVariable(
