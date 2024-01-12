@@ -15,7 +15,7 @@ import "./block.css";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { ArrowBlockConnector } from "./arrow_connector";
 import { useXarrow } from "react-xarrows";
-import { SearchComponent } from "../Toolbar/toolbar";
+import { SearchComponent, modifierKey } from "../Toolbar/toolbar";
 import NBDButton from "../nbdbutton";
 import { BlockRemotes } from "./Remotes/block_remotes";
 
@@ -90,26 +90,26 @@ function PlayBlockButton({
   onClick,
 }: PlayBlockButtonProps) {
   const [executeDescription, setExecuteDescription] = useState("Execute block");
-  const isAltPressed = useRef(false);
+  const isModifierPressed = useRef(false);
 
   const handleClick = () => {
-    onClick(isAltPressed.current);
+    onClick(isModifierPressed.current);
   };
 
   // If the user presses the "Alt / option" key, change the description to
   // "Reset flow and execute block"
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Alt") {
+      if (event.getModifierState(modifierKey)) {
         setExecuteDescription("Reset flow and execute block");
-        isAltPressed.current = true;
+        isModifierPressed.current = true;
       }
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
-      if (event.key === "Alt") {
+      if (!event.getModifierState(modifierKey)) {
         setExecuteDescription("Execute block");
-        isAltPressed.current = false;
+        isModifierPressed.current = false;
       }
     };
 
