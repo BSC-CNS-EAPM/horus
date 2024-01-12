@@ -248,7 +248,7 @@ macos_icon = os.path.join(currentDir, "Resources", "horus.icns")
 
 app = BUNDLE(  # type: ignore pylint: disable=undefined-variable
     coll,
-    name="Horus.app",
+    name=f"{APP_INFO['NAME']}.app",
     icon=macos_icon,
     bundle_identifier=APP_INFO["BUNDLE_IDENTIFIER"],
     version=APP_INFO["APP_VERSION"],
@@ -264,6 +264,10 @@ if sys.platform == "darwin":
     with open(bundleInfo, "w", encoding="utf-8") as f:
         for key, value in APP_INFO.items():
             f.write(f"{key} = {value}\n")
+
+# If we are on Linux, copy the icon to the dist/Horus folder
+if sys.platform == "linux":
+    shutil.copy(macos_icon, os.path.join(currentDir, "dist", f"{APP_INFO['NAME']}", "horus.icns"))
 
 
 # Restore the original plugin.meta file
