@@ -73,6 +73,9 @@ From: rockylinux:8.6
     # Install requirements
     npm run requirements
 
+    # Reinstall the conda environment
+    conda env create -f Devtools/Environment/conda_horus.yaml -n horus_rocky8
+
     # Use yarn to fix parcel
     npm install --legacy-peer-deps yarn
     npx yarn
@@ -83,7 +86,7 @@ From: rockylinux:8.6
     python -m pip install pywebview[qt]==4.2.2
 
     # Activate conda environment
-    conda activate horus
+    conda activate horus_rocky8
 
     # Build horus
     npm run build

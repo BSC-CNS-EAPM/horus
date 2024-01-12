@@ -69,6 +69,9 @@ From: ubuntu:22.04
     # Install requirements
     npm run requirements
 
+    # Reinstall the conda environment
+    conda env create -f Devtools/Environment/conda_horus.yaml -n horus_ubuntu22
+
     # Fix parcel with yarn
     npm install --legacy-peer-deps yarn
     npx yarn
@@ -78,7 +81,7 @@ From: ubuntu:22.04
     python -m pip install pygobject pycairo
 
     # Activate conda environment
-    conda activate horus
+    conda activate horus_ubuntu22
 
     # Build horus
     npm run build

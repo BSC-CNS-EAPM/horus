@@ -60,10 +60,10 @@ From: ubuntu:14.04
     # Source conda
     . /opt/conda/etc/profile.d/conda.sh
 
-    conda env create -f Devtools/Environment/conda_horus.yaml -n horus
+    conda env create -f Devtools/Environment/conda_horus.yaml -n horus_ubuntu14
 
     # Activate conda environment
-    conda activate horus
+    conda activate horus_ubuntu14
 
     # Build horus
     sh Devtools/Compile/build_horus.sh
