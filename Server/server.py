@@ -769,7 +769,7 @@ class HorusServer:
             except Exception as exc:  # pylint: disable=broad-exception-caught
                 error = {
                     "ok": False,
-                    "error": str(exc),
+                    "msg": str(exc),
                 }
                 return flask.jsonify(error)
 

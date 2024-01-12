@@ -1313,7 +1313,7 @@ class PluginBlock:
 
         return fullBlock
 
-    config: typing.Optional[dict] = None
+    config: typing.Optional[dict] = {}
     """
     The configuration of the plugin that hosts this block.
     """
