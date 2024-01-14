@@ -239,21 +239,6 @@ Maintainer: Nostrum Biodiscovery it@nostrumbiodiscovery.com
 Description: Horus is the GUI software provided by Nostrum Biodiscovery.
 EOF
 
-# Copy the .icns file to dist/linux/DEBIAN
-cp dist/Horus.icns dist/linux/DEBIAN/
-
-# Create the desktop file inside dist/linux/DEBIAN
-cat > dist/linux/DEBIAN/horus.desktop << EOF
-[Desktop Entry]
-Name=Horus
-Comment=Horus is the GUI software provided by Nostrum Biodiscovery.
-Exec=/usr/local/bin/Horus/Horus
-Icon=/usr/local/bin/Horus/Horus.icns
-Terminal=false
-Type=Application
-Categories=Utility;Application;
-EOF
-
 # Create a postinst script inside dist/linux/DEBIAN
 cat > dist/linux/DEBIAN/postinst << EOF
 #!/bin/bash
@@ -293,7 +278,10 @@ if [ -d /usr/local/bin/Horus ]; then
 fi
 
 # Remove the Desktop file from /usr/share/applications
-rm /usr/share/applications/horus.desktop
+if [ -e /usr/share/applications/horus.desktop ]; then
+    echo "Removing Desktop file from /usr/share/applications"
+    rm /usr/share/applications/horus.desktop
+fi
 
 EOF
 
@@ -314,6 +302,21 @@ mkdir -p dist/linux/usr/local/bin/Horus
 
 # Copy the horus binaries to dist/linux/usr/local/bin
 cp -r dist/Horus/* dist/linux/usr/local/bin/Horus/
+
+# Create the desktop file inside the horus directory
+cat > dist/linux/usr/local/bin/Horus/horus.desktop << EOF
+[Desktop Entry]
+Name=Horus
+Comment=Horus is the GUI software provided by Nostrum Biodiscovery.
+Exec=/usr/local/bin/Horus/Horus
+Icon=/usr/local/bin/Horus/horus.png
+Terminal=true
+Type=Application
+Categories=Utility;Application;
+EOF
+
+# Copy the .png file to the horus directory
+cp Resources/horus.png dist/linux/usr/local/bin/Horus/
 
 echo "Creating the .deb file: $filename.deb"
 
