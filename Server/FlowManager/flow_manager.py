@@ -353,6 +353,22 @@ class Flow:
             ) in block._variableConnectionsReferences:  # pylint: disable=protected-access
                 checkVarConnection(refVar)
 
+        # Sanitize the blocks
+        from App import AppDelegate  # pylint: disable=import-outside-toplevel
+
+        for block in blocks:
+            # If the flow is not running but any block is running, set the block as not running
+            if block._isRunning and not self.isActive:
+                logging.getLogger("Horus").warning(
+                    "The block '%s' with placedID %s was running but the flow is not. "
+                    + "Setting the block as not running.",
+                    block.name,
+                    block._placedID,
+                )
+
+                block._isRunning = False
+                block._finishedExecution = True
+
         return blocks
 
     def encode(self, minimal: bool = True) -> typing.Dict[str, typing.Any]:
@@ -454,6 +470,16 @@ class Flow:
         except Exception as exc:
             logging.getLogger("Horus").info("Error reading molstar state: %s", exc)
             return None
+
+    @property
+    def isActive(self):
+        """
+        Returns whether the flow is active or not in any form.
+        For example, if its PAUSED, or RUNNING, will return True.
+        If FINISHED, ERROR, IDLE, STOPPED, will return False.
+        """
+
+        return self.status in [self.FlowStatus.PAUSED, self.FlowStatus.RUNNING]
 
     def __eq__(self, other):
         if isinstance(other, Flow):
@@ -1280,6 +1306,7 @@ class FlowManager:
 
         # Init the flow instance
         flowInstance = Flow(flow)
+
         # Check if the flow has a path, if its a new flow,
         # and if we are not overwriting
         # to ask the user for a new path

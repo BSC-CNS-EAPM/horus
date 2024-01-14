@@ -167,7 +167,12 @@ function InstalledPlugins(props: InstalledPluginsProps) {
         newConfig: newConfig,
       });
 
-      await horusPost("/api/plugins/config", header, body);
+      const response = await horusPost("/api/plugins/config", header, body);
+      const data = await response.json();
+
+      if (!data.ok) {
+        alert(data.msg);
+      }
     };
 
     const handleClose = () => {

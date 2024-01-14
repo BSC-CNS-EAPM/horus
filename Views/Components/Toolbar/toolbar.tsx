@@ -30,10 +30,10 @@ const shiftKeyLogo: string = navigator.userAgent.includes("Mac")
   : "Shift + ";
 
 // Define the actual key to listen to
-const modifierKey: string = navigator.userAgent.includes("Mac")
+export const modifierKey: string = navigator.userAgent.includes("Mac")
   ? "Meta"
   : "Control";
-const shiftKey: string = "Shift";
+export const shiftKey: string = "Shift";
 
 function ToolBarItem(props: ToolBarItemProps) {
   const navigate = useNavigate();

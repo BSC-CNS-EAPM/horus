@@ -15,7 +15,7 @@ import "./block.css";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { ArrowBlockConnector } from "./arrow_connector";
 import { useXarrow } from "react-xarrows";
-import { SearchComponent } from "../Toolbar/toolbar";
+import { SearchComponent, modifierKey } from "../Toolbar/toolbar";
 import NBDButton from "../nbdbutton";
 import { BlockRemotes } from "./Remotes/block_remotes";
 
@@ -90,26 +90,26 @@ function PlayBlockButton({
   onClick,
 }: PlayBlockButtonProps) {
   const [executeDescription, setExecuteDescription] = useState("Execute block");
-  const isAltPressed = useRef(false);
+  const isModifierPressed = useRef(false);
 
   const handleClick = () => {
-    onClick(isAltPressed.current);
+    onClick(isModifierPressed.current);
   };
 
   // If the user presses the "Alt / option" key, change the description to
   // "Reset flow and execute block"
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Alt") {
+      if (event.getModifierState(modifierKey)) {
         setExecuteDescription("Reset flow and execute block");
-        isAltPressed.current = true;
+        isModifierPressed.current = true;
       }
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
-      if (event.key === "Alt") {
+      if (!event.getModifierState(modifierKey)) {
         setExecuteDescription("Execute block");
-        isAltPressed.current = false;
+        isModifierPressed.current = false;
       }
     };
 
@@ -363,7 +363,15 @@ function VariableModalView(props: VariableModalViewProps) {
   );
 }
 
-function BlockView({ block, settings }: { block: Block; settings?: any }) {
+function BlockView({
+  block,
+  settings,
+  setDisableDrag,
+}: {
+  block: Block;
+  settings?: any;
+  setDisableDrag?: any;
+}) {
   // Track hovering on info button to display the description instead of the plugin
   const [isInfoHovering, setIsInfoHovering] = useState(false);
 
@@ -423,6 +431,9 @@ function BlockView({ block, settings }: { block: Block; settings?: any }) {
 
   const openVariablesModal = () => {
     // Open the variables modal
+    if (setDisableDrag) {
+      setDisableDrag(!variablesModal);
+    }
     setVariablesModal(!variablesModal);
   };
 
@@ -601,12 +612,16 @@ function DraggableBlockView(props: DraggableBlockViewProps) {
   const { block, updateBlockSelectedGroup } = props;
 
   const updateXarrow = useXarrow();
+
+  const [disableDrag, setDisableDrag] = useState(false);
+
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: block.placedID ? `${block.placedID}-${block.id}` : block.id,
     data: {
       block: block,
       updateXarrow: updateXarrow,
     },
+    disabled: disableDrag,
   });
 
   const { setNodeRef: setDropRef } = useDroppable({
@@ -752,7 +767,11 @@ function DraggableBlockView(props: DraggableBlockViewProps) {
         block.extensionsToOpen.length > 0 && (
           <BlockExtensionsView block={block} />
         )}
-      <BlockView block={block} settings={props.settings} />
+      <BlockView
+        block={block}
+        settings={props.settings}
+        setDisableDrag={setDisableDrag}
+      />
       {block.isPlaced &&
         block.inputs &&
         block.inputs.length > 0 &&

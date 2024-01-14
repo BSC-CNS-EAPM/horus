@@ -1063,6 +1063,17 @@ class PluginManager(metaclass=HorusSingleton):
         if block.selectedRemote != "Local":
             logging.getLogger("Horus").info("Connecting to remote %s", block.selectedRemote)
 
+        # If the selected remote of the block does not exist, set it to Local
+        if not remoteManager.remoteExists(block.selectedRemote):
+            logging.getLogger("Horus").warning(
+                "The selected remote '%s' for block '%s' does not exist. "
+                + "Setting it to 'Local'",
+                block.selectedRemote,
+                block.name,
+            )
+
+            block.selectedRemote = "Local"
+
         remoteManager.connectRemote(block.selectedRemote)
         rAPI = remoteManager.remote
 
