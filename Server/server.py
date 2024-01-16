@@ -349,6 +349,10 @@ class HorusServer:
             # Get the molstar state
             molstarState = files.get("molstarState", None)
 
+            # Read the bytes of the state
+            if molstarState is not None:
+                molstarState = molstarState.stream.read()
+
             try:
                 flow = self.flowManager.saveFlow(flowData, molstarState)
 
@@ -516,7 +520,7 @@ class HorusServer:
 
             try:
                 flow = self.flowManager.openFlowFromPath(flowPath)
-                flow.saveMolstarState(file)
+                flow.saveMolstarState(file.stream.read())
                 flow.pendingActions = []
                 flow.write()
 

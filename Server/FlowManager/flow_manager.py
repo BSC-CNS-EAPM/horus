@@ -13,9 +13,7 @@ import logging
 import multiprocessing
 import time
 import zipfile
-
-# Import the Workzeug FileStorage class
-from werkzeug.datastructures import FileStorage
+import warnings
 
 # Enum for the flow status
 from enum import Enum
@@ -163,6 +161,9 @@ class Flow:
 
     For example, any MolstarAPI action that needs to be executed on JS side
     """
+
+    FLOW_FILE: str = "flow.json"
+    MOLSTAR_STATE_FILE: str = "molstarState.molx"
 
     class FlowStatus(Enum):
         """
@@ -353,9 +354,6 @@ class Flow:
             ) in block._variableConnectionsReferences:  # pylint: disable=protected-access
                 checkVarConnection(refVar)
 
-        # Sanitize the blocks
-        from App import AppDelegate  # pylint: disable=import-outside-toplevel
-
         for block in blocks:
             # If the flow is not running but any block is running, set the block as not running
             if block._isRunning and not self.isActive:
@@ -416,14 +414,21 @@ class Flow:
         # Encode the flow
         encodedFlow = self.encode()
 
+        # Get the current molstar state, if any
+        molstarStateBytes = self.getMolstarState()
+
+        # Remove the current file
+        if os.path.exists(self.path):
+            os.remove(self.path)
+
         logging.getLogger("Horus").debug("Writing flow '%s'", self.name)
 
-        with zipfile.ZipFile(self.path, "a", zipfile.ZIP_DEFLATED) as zipFile:
-            zipFile.writestr("flow.json", json.dumps(encodedFlow, indent=4))
+        with zipfile.ZipFile(self.path, "w", zipfile.ZIP_DEFLATED) as zipFile:
+            zipFile.writestr(self.FLOW_FILE, json.dumps(encodedFlow, indent=4))
 
-        # Save the flow
-        # with open(self.path, "w", encoding="utf-8") as file:
-        #     json.dump(encodedFlow, file, indent=4)
+        # Store again the molstar state
+        if molstarStateBytes is not None:
+            self.saveMolstarState(molstarStateBytes)
 
         # Return the encoded flow in case its needed
         return encodedFlow
@@ -437,9 +442,9 @@ class Flow:
         # Read the flow with the new zipped version
         try:
             with zipfile.ZipFile(path, "r") as zipFile:
-                with zipFile.open("flow.json") as file:
+                with zipFile.open(cls.FLOW_FILE) as file:
                     flow = json.load(file)
-        except:
+        except Exception:
             # Read the old version
             with open(path, "r", encoding="utf-8") as file:
                 flow = json.load(file)
@@ -449,14 +454,18 @@ class Flow:
 
         return flow
 
-    def saveMolstarState(self, molstarState: FileStorage):
+    def saveMolstarState(self, molstarState: bytes):
         """
         Saves the molstar state molx file into the flow zip
         """
 
-        with zipfile.ZipFile(self.path, "a", zipfile.ZIP_DEFLATED) as zipFile:
-            stateBytes = molstarState.stream.read()
-            zipFile.writestr("molstarState.molx", stateBytes)
+        # Use the warning context manager to supress the duplication warning
+        # as the duplicated molstarState will be automatically removed when
+        # the flow is saved again
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            with zipfile.ZipFile(self.path, "a", zipfile.ZIP_DEFLATED) as zipFile:
+                zipFile.writestr(self.MOLSTAR_STATE_FILE, molstarState)
 
     def getMolstarState(self) -> typing.Optional[bytes]:
         """
@@ -465,7 +474,7 @@ class Flow:
 
         try:
             with zipfile.ZipFile(self.path, "r") as zipFile:
-                with zipFile.open("molstarState.molx") as file:
+                with zipFile.open(self.MOLSTAR_STATE_FILE) as file:
                     return file.read()
         except Exception as exc:
             logging.getLogger("Horus").info("Error reading molstar state: %s", exc)
@@ -742,9 +751,6 @@ class Flow:
         if self._socket is not None:
             self._socket.emit("flow", self.encode(minimal=False), to=self.savedID)
 
-        # Store the time the block finished executing
-        blockToRun.finalTime = datetime.datetime.now().timestamp()
-
         # Return the produced outputs of the block
         return outputs
 
@@ -863,9 +869,12 @@ class Flow:
                 + "The flow cannot be resumed as no current executing block is set for this flow."
             )
 
-        # Reset just the block that is going to be executed only if the self.currentExecuting is None
-        # When the flow is being resumed, the currentExecuting is not None, so we don't want to reset
-        # the block. For example, a paused SlurmBlock should not be resetted, as the status of the job
+        # Reset just the block that is going to be executed
+        # only if the self.currentExecuting is None
+        # When the flow is being resumed, the currentExecuting
+        # is not None, so we don't want to reset
+        # the block. For example, a paused SlurmBlock
+        # should not be resetted, as the status of the job
         # would be lost
         if self.currentExecuting is None:
             self.findBlockByPlacedID(placedID)._cleanRun()
@@ -1238,7 +1247,7 @@ class FlowManager:
         self._recentsWriter()
 
     def _saveFlowInternal(
-        self, flow: Flow, overwrite=False, molstarState: typing.Optional[FileStorage] = None
+        self, flow: Flow, overwrite=False, molstarState: typing.Optional[bytes] = None
     ):
         """
         Saves a flow to a file. (overwrites if already exists)
@@ -1291,7 +1300,7 @@ class FlowManager:
     def saveFlow(
         self,
         flow: typing.Dict[str, typing.Any],
-        molstarState: typing.Optional[FileStorage] = None,
+        molstarState: typing.Optional[bytes] = None,
     ):
         """
         Saves the flow to a file.

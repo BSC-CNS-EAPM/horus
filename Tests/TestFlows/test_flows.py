@@ -105,7 +105,6 @@ def test_flow_encode(flow: Flow):
     assert encoded_flow["currentExecuting"] == 1
     assert encoded_flow["status"] == "RUNNING"
     assert encoded_flow["date"] == "2022-01-01 12:00:00"
-    assert encoded_flow["molstarState"] == {}
     assert encoded_flow["terminalOutput"] == ["Test output"]
     assert len(encoded_flow["blocks"]) == 1
     assert encoded_flow["blocks"][0]["id"] == "horus.string"
@@ -118,12 +117,11 @@ def test_flow_write(tmpdir, flow: Flow):
     flow.path = os.path.join(tmpdir, "test_flow.flow")
     encoded_flow = flow.write()
     assert os.path.exists(flow.path)
-    with open(flow.path, "r") as f:
-        saved_flow = json.load(f)
 
-    print(saved_flow)
-    print(encoded_flow)
-    assert saved_flow == encoded_flow
+    # Read the saved flow
+    saved_flow = Flow.read(flow.path)
+
+    assert saved_flow.encode() == encoded_flow
 
 
 def test_flow_read(tmpdir, flow_data):
