@@ -63,25 +63,25 @@ From: ubuntu:22.04
     # Source conda
     . /opt/conda/etc/profile.d/conda.sh
 
-    # Set the bun path ~/.bun/bin/bun
-    export PATH=~/.bun/bin:${PATH}
+    # Remove the old node_modules
+    rm -rf node_modules
 
     # Install requirements
     npm run requirements
 
-    # Reinstall the conda environment
-    conda env create -f Devtools/Environment/conda_horus.yaml -n horus_ubuntu22
-
     # Fix parcel with yarn
-    npm install --legacy-peer-deps yarn
+    npm install --legacy-peer-deps yarn@1.22.21
     npx yarn
 
-    # Update conda environment with Ubuntu-specific packages
-    conda activate horus
-    python -m pip install pygobject pycairo
+    # Reinstall the conda environment
+    conda env remove -n horus_ubuntu22 --all -y
+    conda env create -f Devtools/Environment/conda_horus.yaml -n horus_ubuntu22
 
     # Activate conda environment
     conda activate horus_ubuntu22
+    
+    # Update conda environment with Ubuntu-specific packages
+    python -m pip install pygobject==3.46.0 pycairo==1.25.1
 
     # Build horus
     npm run build
