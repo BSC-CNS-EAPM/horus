@@ -246,7 +246,8 @@ const PluginVariableView = (props: PluginVariableViewProps) => {
 
   const isSafari =
     /^((?!chrome|android).)*applewebkit/i.test(navigator.userAgent) &&
-    !/chrome/i.test(navigator.userAgent);
+    !/chrome/i.test(navigator.userAgent) &&
+    navigator.userAgent.includes("Mac");
 
   return (
     <div className={props.applyStyle === false ? null : "plugin-variable"}>
