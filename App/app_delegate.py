@@ -273,7 +273,7 @@ class AppDelegate(metaclass=HorusSingleton):
 
         return openedWindows
 
-    APP_INFO = {}
+    APP_INFO: typing.Dict[str, str] = {}
     """
     Stores relevant information about the app, such as
 
@@ -413,7 +413,7 @@ class AppDelegate(metaclass=HorusSingleton):
         with open(envPath, "r", encoding="utf-8") as file:
             lines = file.readlines()
 
-        appInfo = {}
+        appInfo: typing.Dict[str, str] = {}
         # Parse the lines
         for line in lines:
             # Skip empty lines
@@ -454,19 +454,19 @@ class AppDelegate(metaclass=HorusSingleton):
         self.platform = sys.platform
 
         if hasattr(sys, "_MEIPASS"):
+            appFolderName = self.APP_INFO["BUNDLE_IDENTIFIER"].lower().replace(" ", "")
+
             if self.platform == "darwin":
                 appSupportDir = os.path.join(
                     os.path.expanduser("~"),
                     "Library",
                     "Application Support",
-                    self.APP_INFO["BUNDLE_IDENTIFIER"],
+                    appFolderName,
                 )
             elif self.platform == "win32":
                 appSupportDir = os.getenv("APPDATA")
                 if appSupportDir is not None:
-                    appSupportDir = os.path.join(
-                        appSupportDir, self.APP_INFO["BUNDLE_IDENTIFIER"]
-                    )
+                    appSupportDir = os.path.join(appSupportDir, appFolderName)
                 else:
                     raise Exception(  # pylint: disable=broad-exception-raised
                         "APPDATA environment variable not set"
@@ -476,7 +476,7 @@ class AppDelegate(metaclass=HorusSingleton):
                     os.path.expanduser("~"),
                     ".local",
                     "share",
-                    self.APP_INFO["BUNDLE_IDENTIFIER"],
+                    appFolderName,
                 )
             else:
                 raise Exception(  # pylint: disable=broad-exception-raised

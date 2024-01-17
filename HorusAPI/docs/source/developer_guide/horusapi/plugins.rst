@@ -133,6 +133,39 @@ or from a function that returns the plugin object:
 Once you have instantiated your :bdg-secondary-line:`Plugin` object, you can start adding blocks and extensions to it. Please refer
 to the :ref:`api-reference` section for more information about how to add blocks and extensions to your plugin using the :bdg-secondary-line:`Plugin` object.
 
+Live development
+================
+
+When developing a plugin, you may want to test it without having to install it in Horus every time a change is made. To do this, you can use the
+:bdg-secondary-line:`development mode` setting when running Horus. This setting is available in the :bdg-secondary-line:`Settings` section of the app.
+When this setting is enabled, a new button in the Bloks sidebar will appear. This button will allow you to reload the plugin without having to restart
+Horus.
+
+Furthermore, it is recommended to make a symlink of your plugin development folder in the :bdg-secondary-line:`Plugins` folder of Horus. This way, you can
+develop your plugin in a separate folder and reload it in Horus without having to copy the plugin folder every time a change is made. To do this, you can
+run the following command in your terminal:
+
+.. code-block:: bash
+
+    # Linux
+    ln -s /absolute/path/to/your/plugin /home/<username>/.local/share/horus/Plugins
+
+    # macOS
+    ln -s /absolute/path/to/your/plugin /Users/<username>/Library/Application\ Support/horus/Plugins
+
+.. warning::
+
+    Make sure the symlink is correctly created in the :bdg-secondary-line:`Plugins` folder of Horus. Otherwise, the plugin will not be loaded.
+    The folder containing the *.py entry (and all the plugin files), should be inside the :bdg-secondary-line:`Plugins` folder. For example, if your plugin
+    folder is called :bdg-secondary-line:`MyPlugin`, the final path to the entry point of the plugin should look like:
+
+    .. code-block:: bash
+
+        # Linux
+        /home/<username>/.local/share/com.nostrumbiodiscovery.com/Plugins/MyPlugin/main.py
+
+        # macOS
+        /Users/<username>/Library/Application\ Support/com.nostrumbiodiscovery.com/Plugins/MyPlugin/main.py
 
 Distributing plugins
 ====================
