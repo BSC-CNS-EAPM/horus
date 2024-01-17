@@ -210,7 +210,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
   const isShiftKeyPressed = event.getModifierState(shiftKey);
 
   // Handle the keydown event
-  if (event.code === "KeyT" && isShiftKeyPressed) {
+  if (event.code === "KeyK" && isModifierKeyPressed) {
     event.preventDefault();
     toggleConsole();
   }
@@ -632,7 +632,7 @@ export default function HorusToolbar() {
             </svg>
           ),
           // Set a keyShortcut to enable keyboard navigation.
-          keyShortcut: `${shiftKeyLogo}T`,
+          keyShortcut: `${modifierKeyLogo}K`,
         },
         {
           name: "Center view",
