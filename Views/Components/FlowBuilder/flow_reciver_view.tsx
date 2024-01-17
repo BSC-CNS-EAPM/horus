@@ -156,13 +156,20 @@ function FlowReciver(props: FlowReciverProps) {
       Accept: "application/json",
     };
 
+    // Set a timeout on the first save only if the flow is NOT new
+    // Otherwise the saving process will be canceled on the first save
+    // while the user is selecting the folder where to save the flow
+    // This happens only in the desktop version
+    const timeout =
+      window.isDesktop && savedID.current !== "new_flow" ? 10 : null;
+
     try {
       const response = await horusPost(
         "/api/saveflow",
         headers,
         body,
         null,
-        10
+        timeout
       );
       var savedFlow = await response.json();
     } catch (e) {
@@ -193,7 +200,7 @@ function FlowReciver(props: FlowReciverProps) {
     ) {
       setIsSavingFlow(false);
       currentSaving.current = false;
-      return;
+      return "cancelled";
     }
 
     if (overwrite) {
@@ -203,7 +210,9 @@ function FlowReciver(props: FlowReciverProps) {
         path: path,
         overwrite: true,
       };
-      const overwriteBody = JSON.stringify(overwriteContents);
+      const overwriteBody = new FormData();
+      overwriteBody.append("flowData", JSON.stringify(overwriteContents));
+      overwriteBody.append("molstarState", molstarState, "molstarState.zip");
 
       const overwriteResponse = await horusPost(
         "/api/saveflow",
@@ -1285,8 +1294,11 @@ function FlowReciver(props: FlowReciverProps) {
           fileProps={{
             openFolder: true,
             onFileSelect: () => {},
-            onFileConfirm: (path: string) => {
+            onFileConfirm: async (path: string) => {
               const strippedFlowName = flowName.replace(/[^a-zA-Z0-9]/g, "_");
+
+              const currentFlowPath = flowPath.current;
+              const currentSavedID = savedID.current;
 
               // append the flow name
               flowPath.current = path + "/" + strippedFlowName + ".flow";
@@ -1295,7 +1307,12 @@ function FlowReciver(props: FlowReciverProps) {
 
               // Save the flow
               // preHandleSave();
-              handleSave();
+              const confirmed = await handleSave();
+
+              if (confirmed === "cancelled") {
+                flowPath.current = currentFlowPath;
+                savedID.current = currentSavedID;
+              }
             },
           }}
           open={serverFolderPickerOpen}
