@@ -839,7 +839,7 @@ class HorusMolstar {
           message += " Chain " + chain + " not found in " + structureLabel;
           message +=
             " Available chains: " +
-            chains.map((chain) => `'${chain}'`).join(", ");
+            chains.map((chain) => `'${chain.chainID}'`).join(", ");
           return message;
         }
       }
@@ -1338,10 +1338,10 @@ class HorusMolstar {
       structures = this.structures();
     }
 
-    if (!structures) return;
-
     const chainList: AtomInfo[] = [];
     for (const structure of structures) {
+      if (!structure) continue;
+
       const data = structure.cell.obj.data;
       const chains = this.getResiduesFromStructure(data, "chain");
       chainList.push(...chains);

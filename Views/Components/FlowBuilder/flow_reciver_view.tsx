@@ -393,8 +393,9 @@ function FlowReciver(props: FlowReciverProps) {
     resetFlow: boolean = true
   ): Promise<void> => {
     if (resetFlow) {
-      // Clean the terminal if present
+      // Clear the terminal if present
       window.horusTerm.ref?.current?.clearStdout();
+      window.horusTerm.storedMessages = [];
     }
 
     const response = await horusPost(

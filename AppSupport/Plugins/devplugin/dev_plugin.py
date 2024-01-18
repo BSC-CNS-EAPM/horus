@@ -313,6 +313,8 @@ sleep {timeToWait}
 def finalTestSlurmBlockAction(block: SlurmBlock):
     print("Test slurm block final action")
 
+    block.setOutput("time_to_wait", block.inputs["timeToWait"])
+
 
 slurmBlockTest = SlurmBlock(
     name="Slurm block test",
@@ -324,6 +326,14 @@ slurmBlockTest = SlurmBlock(
             id="timeToWait",
             name="Time to wait",
             description="Time to wait",
+            type=VariableTypes.NUMBER,
+        )
+    ],
+    outputs=[
+        PluginVariable(
+            id="time_to_wait",
+            name="Time waited",
+            description="The same as input",
             type=VariableTypes.NUMBER,
         )
     ],

@@ -1,5 +1,4 @@
 import { useEffect, createRef } from "react";
-import { socket } from "../../Utils/socket";
 
 // Load the molstar default style
 import "molstar/lib/mol-plugin-ui/skin/light.scss";
@@ -8,6 +7,7 @@ import "molstar/lib/mol-plugin-ui/skin/light.scss";
 import "./molstar.css";
 
 import HorusMolstar from "./HorusWrapper/horusmolstar";
+import { ErrorBoundary } from "../reusable";
 
 declare global {
   interface Window {
@@ -31,16 +31,25 @@ export default function Molstar() {
   }, []);
 
   return (
-    <div
-      id="home-molstar"
-      className="home-molstar"
-      ref={parent}
-      style={{
-        // Place a top margin of 2 rem to avoid the toolbar
-        position: "relative",
-        width: "100%",
-        border: "none",
-      }}
-    />
+    <ErrorBoundary
+      fallback={
+        <div className="alert alert-danger" role="alert">
+          An error occurred while loading Molstar. Open the Horus console and
+          type "molreset" to reload Molstar.
+        </div>
+      }
+    >
+      <div
+        id="home-molstar"
+        className="home-molstar"
+        ref={parent}
+        style={{
+          // Place a top margin of 2 rem to avoid the toolbar
+          position: "relative",
+          width: "100%",
+          border: "none",
+        }}
+      />
+    </ErrorBoundary>
   );
 }

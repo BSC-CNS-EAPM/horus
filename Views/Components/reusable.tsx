@@ -96,4 +96,37 @@ function HorusModal(props: HorusModalProps) {
   );
 }
 
+type ErrorBoundaryProps = {
+  fallback: React.ReactNode;
+  children: React.ReactNode;
+};
+
+export class ErrorBoundary extends React.Component {
+  state: { hasError: boolean };
+  props: ErrorBoundaryProps;
+
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    // Update state so the next render will show the fallback UI.
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, info) {
+    console.log("Error: ", error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      // You can render any custom fallback UI
+      return this.props.fallback;
+    }
+
+    return this.props.children;
+  }
+}
+
 export { HorusModal, HorusModalProps, debounce, HorusPopover };

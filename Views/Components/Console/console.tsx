@@ -1,6 +1,3 @@
-import { io } from "socket.io-client";
-import { Socket } from "socket.io";
-import { DefaultEventsMap } from "socket.io/dist/typed-events";
 import React, { useEffect } from "react";
 import { socket } from "../../Utils/socket";
 import Terminal from "react-console-emulator";
@@ -73,6 +70,8 @@ export default function HorusTerm() {
           borderRadius: "0px",
           height: "100%",
         }}
+        disableOnProcess
+        noDefaults
       />
     </div>
   );
