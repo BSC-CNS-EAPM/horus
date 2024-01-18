@@ -1086,7 +1086,8 @@ class HorusServer:
                 self.pluginManager.reloadPlugins()
 
                 # Reload the plugin pages
-                self._pluginPages()
+                # Hide the UserWarning from Flask
+                # self._pluginPages()
 
                 # Emit plugin changes
                 self.socketio.emit("pluginChanges")
