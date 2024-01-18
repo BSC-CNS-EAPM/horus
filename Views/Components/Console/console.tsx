@@ -66,12 +66,13 @@ export default function HorusTerm() {
         promptLabel={"horus:~$ "}
         ref={term}
         style={{
-          border: "none",
           borderRadius: "0px",
-          height: "100%",
+          maxHeight: "15rem",
+          minHeight: "15rem",
         }}
         disableOnProcess
         noDefaults
+        autoFocus
       />
     </div>
   );

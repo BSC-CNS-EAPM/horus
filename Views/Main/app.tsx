@@ -208,15 +208,6 @@ export function App() {
   // so that it is always available
   const term = useRef(<HorusTerm />);
 
-  const consolePanel = (
-    <>
-      <ResizeHandle />
-      <Panel maxSize={50} order={2} defaultSize={20}>
-        {term.current}
-      </Panel>
-    </>
-  );
-
   const iFrameRef = useRef(null);
 
   const iframeViewPanel = (
@@ -247,7 +238,7 @@ export function App() {
   return (
     <div className="grid">
       <HorusToolbar />
-      <div id="root-routes" className="root-routes root-routes-console-hidden">
+      <div id="root-routes" className="flex flex-col root-routes">
         <Routes>
           <Route
             path="/"
@@ -260,11 +251,11 @@ export function App() {
                     {molstarPanel}
                   </PanelGroup>
                 </Panel>
-                {showConsole && consolePanel}
               </PanelGroup>
             }
           />
         </Routes>
+        {showConsole && term.current}
       </div>
     </div>
   );

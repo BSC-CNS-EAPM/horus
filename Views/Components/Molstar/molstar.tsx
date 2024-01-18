@@ -47,6 +47,7 @@ export default function Molstar() {
           // Place a top margin of 2 rem to avoid the toolbar
           position: "relative",
           width: "100%",
+          height: "100%",
           border: "none",
         }}
       />
