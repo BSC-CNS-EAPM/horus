@@ -1,4 +1,4 @@
-type HorusPlugin = {
+export type HorusPlugin = {
   id: string;
   name: string;
   description: string;
@@ -10,7 +10,16 @@ type HorusPlugin = {
   default: boolean;
 };
 
-enum PluginVariableTypes {
+export type PluginPage = {
+  name: string;
+  url: string;
+  description: string;
+  hidden: boolean;
+  id: string;
+  plugin: string;
+};
+
+export enum PluginVariableTypes {
   ANY = "any",
   STRING = "string",
   NUMBER = "number",
@@ -36,7 +45,7 @@ enum PluginVariableTypes {
   CUSTOM = "custom",
 }
 
-type PluginVariable = {
+export type PluginVariable = {
   name: string;
   id: string;
   description: string;
@@ -49,9 +58,16 @@ type PluginVariable = {
 
   // For GroupVariable
   variables?: Array<PluginVariable>;
+
+  // Check if the variable is custom
+  isCustom?: boolean;
 };
 
-enum BlockTypes {
+export type CustomVariable = PluginVariable & {
+  customPage: PluginPage;
+};
+
+export enum BlockTypes {
   BASE = "base",
   INPUT = "input",
   ACTION = "action",
@@ -59,7 +75,7 @@ enum BlockTypes {
   CONFIG = "config",
 }
 
-type VariableGroup = {
+export type VariableGroup = {
   id: string;
   name: string;
   description: string;
@@ -74,13 +90,13 @@ export type VariableConnection = {
   currentCycle: number;
 };
 
-type ExtensionsToOpen = {
+export type ExtensionsToOpen = {
   title: string;
   url: string;
   data: any;
 };
 
-type Block = {
+export type Block = {
   // Basic info about the block
   id: string;
   name: string;
@@ -149,7 +165,7 @@ type Block = {
   setRemoteConnection: (remote: string) => void;
 };
 
-type BlockVarPair = {
+export type BlockVarPair = {
   placedID: number;
   blockID: string;
   blockType: BlockTypes;
@@ -159,7 +175,7 @@ type BlockVarPair = {
   variableAllowedValues: Array<string>;
 };
 
-enum FlowStatus {
+export enum FlowStatus {
   RUNNING = "RUNNING",
   PAUSED = "PAUSED",
   FINISHED = "FINISHED",
@@ -167,13 +183,3 @@ enum FlowStatus {
   ERROR = "ERROR",
   IDLE = "IDLE",
 }
-
-export {
-  HorusPlugin,
-  PluginVariable,
-  PluginVariableTypes,
-  BlockTypes,
-  Block,
-  BlockVarPair,
-  FlowStatus,
-};

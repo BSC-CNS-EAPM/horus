@@ -1,4 +1,7 @@
+import time
+
 from HorusAPI import (
+    InputBlock,
     SlurmBlock,
     Plugin,
     VariableTypes,
@@ -6,9 +9,10 @@ from HorusAPI import (
     PluginVariable,
     Extensions,
     MolstarAPI,
+    PluginPage,
+    CustomVariable,
 )
 
-import time
 
 plugin = Plugin("devplugin")
 
@@ -379,3 +383,46 @@ testExtensionsShortcutsBlock = PluginBlock(
 )
 
 plugin.addBlock(testExtensionsShortcutsBlock)
+
+devPage = PluginPage(
+    id="dev_page",
+    name="Dev page",
+    description="Dev page",
+    html="dev.html",
+    hidden=True,
+)
+
+plugin.addPage(devPage)
+
+customRenderPage = PluginPage(
+    id="custom_render_page",
+    name="Custom render page",
+    description="Custom render page",
+    html="customrender.html",
+    hidden=False,
+)
+
+plugin.addPage(customRenderPage)
+
+customVariableTest = CustomVariable(
+    id="custom_variable_test",
+    name="Custom variable test",
+    description="Custom variable test",
+    customPage=devPage,
+    type=VariableTypes.NUMBER,
+    category="Custom variables",
+)
+
+
+def customVariableAction(block: InputBlock):
+    print(block.inputs["custom_variable_test"])
+
+
+testCustomVariableInputBlock = InputBlock(
+    name="Test custom variable",
+    description="Test custom variable",
+    variable=customVariableTest,
+    action=customVariableAction,
+)
+
+plugin.addBlock(testCustomVariableInputBlock)

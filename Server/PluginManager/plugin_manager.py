@@ -1144,6 +1144,7 @@ class PluginManager(metaclass=HorusSingleton):
             "url": f"/plugins/pages/{pg.id}",
             "deps": os.path.join(p._path, "deps"),
             "pluginDir": p._path,
+            "hidden": pg.hidden,
         }
 
     def _getDevelopmentPage(self):

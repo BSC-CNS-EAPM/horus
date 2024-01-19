@@ -7,7 +7,7 @@ from enum import Enum
 from copy import deepcopy
 import contextlib
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from .utils import ResetRemoteException
 
@@ -132,15 +132,13 @@ class PluginEndpoint:
 
 
 class PluginPage:
+    """
+    Class that defines a page that can be accessed from the extension menu.
+    """
+
     endpoints: typing.List[PluginEndpoint] = []
     """
-    Define endpoints that the plugin can access from the defined pages.
-    The endpoint URL should be defined as a string, for example: "/my_endpoint".
-    Later, Horus will add the endpoint in the following format:
-    "/plugins/pages/pluginid.pagename/my_endpoint".
-    Therefore, remember to perform any GET or POST request to that endpoint.
-
-    Note: pluginid and pagename are always lowercase.
+    The endpoints of the page.
     """
 
     _pageInfo: typing.Dict[str, typing.Any] = {}
@@ -148,23 +146,35 @@ class PluginPage:
     Internal variable used to store the page info.
     """
 
-    def __init__(self, id: str, name: str, description: str, html: str):
+    def __init__(self, id: str, name: str, description: str, html: str, hidden: bool = False):
         """
         Create a new PluginPage.
 
         :param id: The ID of the page.
         :param name: The name of the page.
         :param description: A description of the page.
-        :param html: The name of the HTML file (i.e. "my_page.html"). The html file must be located in the "Pages" folder of the plugin.
+        :param html: The name of the HTML file (i.e. "my_page.html"). \
+        The html file must be located in the "Pages" folder of the plugin.
+        :param hidden: Whether the page should be hidden from the extension menu (default: False).
         """
         self.id = id
         self.name = name
         self.description = description
         self.html = html
+        self.hidden = hidden
 
     def addEndpoint(self, endpoint: PluginEndpoint):
         """
         Add an endpoint to the page.
+
+        Define endpoints that the plugin can access from the defined pages. \
+        The endpoint URL should be defined as a string, for example: "/my_endpoint". \
+        Later, Horus will add the endpoint in the following format: \
+        "/plugins/pages/<pluginID>.<pageID>/my_endpoint". \
+        Therefore, remember to perform any GET or POST request to that endpoint. \
+        You can use 'window.location' in JS to get the current URL.
+
+        Note: pluginID and pageID are always lowercase.
 
         :param endpoint: The endpoint to add.
         """
@@ -467,6 +477,65 @@ class PluginVariable:
 
     def __str__(self):
         return json.dumps(self.toDict(), indent=4)
+
+
+class CustomVariable(PluginVariable):
+    """
+    Custom varialbe which supports custom view
+    """
+
+    customPage: PluginPage
+    """
+    The ID of the page where the variable will be rendered.
+    """
+
+    _isCustom: bool = True
+    """
+    Flag for the frontend to know that this is a custom variable.
+    """
+
+    def __init__(
+        self,
+        id: str,
+        name: str,
+        description: str,
+        type: VariableTypes,
+        customPage: PluginPage,
+        defaultValue: Any | None = None,
+        allowedValues: List[Any] | None = None,
+        category: str | None = None,
+    ):
+        """
+        The custom variable works like a regular variable, but it can use an extension \
+        page to render a custom and complex configuration view to define the variable value. \
+        The variableType attribute will work just as the regular variables counterpart.
+
+        Inside the extension page, the variable value can be set using the following function:
+        ```
+        parent.horus.setVariableValue(variableID, value)
+        ```
+        Where variableID is the ID of the variable and value is the value to set. \
+        The values must be JSON serializable.
+        
+
+        :param customPage: The page instance where the variable will be rendered.
+        """
+        super().__init__(id, name, description, type, defaultValue, allowedValues, category)
+        self.customPage = customPage
+
+    def toDict(self, minimal: bool = False):
+        """
+        Converts the variable to a dictionary and adds the pageID.
+        """
+
+        # Call the super method
+        encodedVar = super().toDict(minimal)
+
+        # Add the pageID
+        encodedVar["isCustom"] = self._isCustom
+        encodedVar["customPage"] = self.customPage._pageInfo
+
+        return encodedVar
 
 
 class VariableGroup(PluginVariable):

@@ -4,11 +4,12 @@ import { useDraggable, useDroppable } from "@dnd-kit/core";
 import {
   Block,
   BlockVarPair,
+  CustomVariable,
   PluginVariable,
   PluginVariableTypes,
 } from "./flow_builder_types";
 import NBDButton from "../nbdbutton";
-import { SearchComponent } from "../Toolbar/toolbar";
+import { SearchComponent, loadPage } from "../Toolbar/toolbar";
 import { HorusFileExplorer } from "../FileExplorer/file_explorer";
 import Xarrow from "react-xarrows";
 import { AtomInfo, SphereRef } from "../Molstar/HorusWrapper/horusmolstar";
@@ -249,27 +250,22 @@ const PluginVariableView = (props: PluginVariableViewProps) => {
     !/chrome/i.test(navigator.userAgent) &&
     navigator.userAgent.includes("Mac");
 
-  return (
-    <div className={props.applyStyle === false ? null : "plugin-variable"}>
-      {!hideName && (
-        <div
-          className={
-            props.hiddeDescription
-              ? "plugin-variable-description"
-              : "plugin-variable-name"
-          }
-        >
-          {props.variable.name}
-        </div>
-      )}
-      {!props.hiddeDescription && (
-        <div className="plugin-variable-description">
-          {props.variable.description}
-        </div>
-      )}
-      <div className="plugin-variable-value">
-        {/* Define an input based on the type */}
+  const VariableRenderer = () => {
+    {
+      /* If its a custom variable, use the custom renderer */
+    }
+    if (variable?.isCustom) {
+      return (
+        <CustomVariableRenderer
+          variable={variable as CustomVariable}
+          onChange={handleChange}
+        />
+      );
+    }
 
+    return (
+      <>
+        {/* Define an input based on the type */}
         {/* If its a string, int or float, set a basic input */}
         {props.variable.type === PluginVariableTypes.STRING && (
           <input
@@ -448,6 +444,30 @@ const PluginVariableView = (props: PluginVariableViewProps) => {
             variable={props.variable}
           />
         )}
+      </>
+    );
+  };
+
+  return (
+    <div className={props.applyStyle === false ? null : "plugin-variable"}>
+      {!hideName && (
+        <div
+          className={
+            props.hiddeDescription
+              ? "plugin-variable-description"
+              : "plugin-variable-name"
+          }
+        >
+          {props.variable.name}
+        </div>
+      )}
+      {!props.hiddeDescription && (
+        <div className="plugin-variable-description">
+          {props.variable.description}
+        </div>
+      )}
+      <div className="plugin-variable-value">
+        <VariableRenderer />
       </div>
     </div>
   );
@@ -1759,6 +1779,33 @@ function OutputVariableBallConnector(props: OutputVariableBallConnectorProps) {
           />
         )}
       </div>
+    </div>
+  );
+}
+
+function CustomVariableRenderer(props: {
+  variable: CustomVariable;
+  onChange: (value: any) => void;
+}) {
+  const setupWindowVariables = () => {
+    // Load into the window the getVariable and setVariable functions
+    window.horus.getVariable = () => {
+      return props.variable;
+    };
+
+    window.horus.setVariable = (value: any) => {
+      props.onChange(value);
+    };
+  };
+
+  const openCustomPage = () => {
+    setupWindowVariables();
+    loadPage(props.variable.customPage.url, props.variable.customPage.name);
+  };
+
+  return (
+    <div className="w-full flex flex-col gap-2 items-center justify-center p-2">
+      <NBDButton action={openCustomPage}>Configure</NBDButton>
     </div>
   );
 }

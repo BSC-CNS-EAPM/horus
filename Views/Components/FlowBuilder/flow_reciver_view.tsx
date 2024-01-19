@@ -126,6 +126,18 @@ function FlowReciver(props: FlowReciverProps) {
     setIsSavingFlow(false);
   };
 
+  const serializeFlow = () => {
+    return {
+      name: flowName,
+      blocks: props.placedBlocks,
+      savedID: savedID.current,
+      path: flowPath.current,
+      remote: selectedRemote,
+      currentExecuting: flowExecuter.current.currentExecuting,
+      terminalOutput: window.horusTerm.storedMessages,
+    };
+  };
+
   const handleSave = async () => {
     if (currentSaving.current) {
       return;
@@ -136,15 +148,7 @@ function FlowReciver(props: FlowReciverProps) {
 
     const body = new FormData();
 
-    const saveContents = {
-      name: flowName,
-      blocks: props.placedBlocks,
-      savedID: savedID.current,
-      path: flowPath.current,
-      remote: selectedRemote,
-      currentExecuting: flowExecuter.current.currentExecuting,
-      terminalOutput: window.horusTerm.storedMessages,
-    };
+    const saveContents = serializeFlow();
 
     body.append("flowData", JSON.stringify(saveContents));
 
@@ -533,6 +537,7 @@ function FlowReciver(props: FlowReciverProps) {
       return currentBlocks.map((b) => {
         if (b.placedID === blockPlacedID) {
           b.finishedExecution = false;
+          b.runError = false;
         }
         return b;
       });
@@ -556,6 +561,76 @@ function FlowReciver(props: FlowReciverProps) {
         : ""
     );
   }, [terminalOutput]);
+
+  const internalLoadFlow = async (openedFlow: any) => {
+    // Exit the socket flow room
+    if (savedID.current !== "new_flow") {
+      socket.emit("leaveFlow", savedID.current);
+    }
+
+    // Set the flow name
+    setFlowName(openedFlow.name);
+    savedID.current = openedFlow.savedID;
+    flowPath.current = openedFlow.path;
+    flowExecuter.current.setSavedID(savedID.current);
+    flowExecuter.current.updatePlacedBlocks(openedFlow.blocks);
+    flowExecuter.current.updateFlowPath(flowPath.current);
+
+    setIsCancelling(false);
+
+    // Set the terminal output
+    setTerminalOutput(openedFlow.terminalOutput);
+
+    setIsRunning(
+      openedFlow.status === FlowStatus.RUNNING ||
+        openedFlow.status === FlowStatus.PAUSED
+    );
+
+    // Parse the blocks
+    // const parsedBlocks =
+    //   await props.flowBuilderController.parseBlocksFromOpenedFlow(
+    //     openedFlow.blocks
+    //   );
+    props.setPlacedBlocks(openedFlow.blocks);
+
+    // Set the selected remote
+    setSelectedRemote(openedFlow.remote);
+
+    // Set the placedIDCounter
+    // Search for the highest placedID in the blocks and subblocks
+    const placedIDs = openedFlow.blocks.map((b) => b.placedID);
+    for (const block of openedFlow.blocks) {
+      if (block.placedSubBlocks?.length > 0) {
+        for (const subBlock of block.placedSubBlocks) {
+          placedIDs.push(subBlock.placedID);
+        }
+      }
+    }
+    props.placedIDCounter.current = Math.max(...placedIDs) + 1;
+
+    // Set the current executing block
+    setCurrentExecuting(openedFlow.currentExecuting);
+
+    // setTestSavedInternal(!isDefaultFlow);
+
+    // console.log("Setting currentsaved to true");
+    // currentSaved.current = true;
+
+    savedID.current = openedFlow.savedID;
+
+    openingFlow.current = false;
+
+    // Connect to a socketio room with the flowID
+    socket.emit("joinFlow", savedID.current);
+
+    // Clean the terminal if present
+    window.horusTerm.ref?.current?.clearStdout();
+
+    // Apply any pending MolstarAPI actions if present
+    if (openedFlow?.pendingActions && openedFlow.pendingActions.length > 0) {
+      await applyPendingActions(openedFlow.pendingActions);
+    }
+  };
 
   const loadFlow = async (
     openRecent: {
@@ -623,11 +698,6 @@ function FlowReciver(props: FlowReciverProps) {
       return;
     }
 
-    // Exit the socket flow room
-    if (savedID.current !== "new_flow") {
-      socket.emit("leaveFlow", savedID.current);
-    }
-
     // Set the molstar state at the beggining in case blocks need structures
     // If it has the new molstar state, open it
     if (window.molstar) {
@@ -639,70 +709,10 @@ function FlowReciver(props: FlowReciverProps) {
       }
     }
 
-    // Set the flow name
-    setFlowName(openedFlow.name);
-    savedID.current = openedFlow.savedID;
-    flowPath.current = openedFlow.path;
-    flowExecuter.current.setSavedID(savedID.current);
-    flowExecuter.current.updatePlacedBlocks(openedFlow.blocks);
-    flowExecuter.current.updateFlowPath(flowPath.current);
-
-    setIsCancelling(false);
-
-    // Set the terminal output
-    setTerminalOutput(openedFlow.terminalOutput);
-
-    setIsRunning(
-      openedFlow.status === FlowStatus.RUNNING ||
-        openedFlow.status === FlowStatus.PAUSED
-    );
-
-    // Parse the blocks
-    // const parsedBlocks =
-    //   await props.flowBuilderController.parseBlocksFromOpenedFlow(
-    //     openedFlow.blocks
-    //   );
-    props.setPlacedBlocks(openedFlow.blocks);
-
-    // Set the selected remote
-    setSelectedRemote(openedFlow.remote);
-
-    // Set the placedIDCounter
-    // Search for the highest placedID in the blocks and subblocks
-    const placedIDs = openedFlow.blocks.map((b) => b.placedID);
-    for (const block of openedFlow.blocks) {
-      if (block.placedSubBlocks?.length > 0) {
-        for (const subBlock of block.placedSubBlocks) {
-          placedIDs.push(subBlock.placedID);
-        }
-      }
-    }
-    props.placedIDCounter.current = Math.max(...placedIDs) + 1;
-
-    // Set the current executing block
-    setCurrentExecuting(openedFlow.currentExecuting);
+    await internalLoadFlow(openedFlow);
 
     // Set the saved state
     setSaved(!isDefaultFlow);
-    // setTestSavedInternal(!isDefaultFlow);
-
-    // console.log("Setting currentsaved to true");
-    // currentSaved.current = true;
-
-    savedID.current = openedFlow.savedID;
-
-    openingFlow.current = false;
-
-    // Connect to a socketio room with the flowID
-    socket.emit("joinFlow", savedID.current);
-
-    // Clean the terminal if present
-    window.horusTerm.ref?.current?.clearStdout();
-
-    // Apply any pending MolstarAPI actions if present
-    if (openedFlow?.pendingActions && openedFlow.pendingActions.length > 0) {
-      await applyPendingActions(openedFlow.pendingActions);
-    }
 
     setIsLoadingFlow(false);
   };
@@ -976,6 +986,16 @@ function FlowReciver(props: FlowReciverProps) {
   const debounceHandleSave = debounce(preHandleSave, 1000);
 
   useEffect(() => {
+    // Update the window.horus.getFlow function
+    window.horus.getFlow = () => {
+      return serializeFlow();
+    };
+
+    // Update the window.horus.setFlow function
+    window.horus.setFlow = (flow) => {
+      internalLoadFlow(flow);
+    };
+
     // Add an event listener to clear all the state when the "New" button is clicked in the toolbar
     window.addEventListener("newFlow", (e) => {
       handleNew();

@@ -18,8 +18,17 @@ declare global {
   interface Window {
     isDesktop: boolean;
     horusSettings: any;
+    horus: {
+      getVariable?: () => any;
+      setVariable?: (value: any) => void;
+      getFlow?: () => any;
+      setFlow?: (value: any) => void;
+    };
   }
 }
+
+// Define an empty window.horus object
+window.horus = {};
 
 export default function ResizeHandle({
   horizontal = false,
@@ -163,6 +172,7 @@ export function App() {
   };
 
   useEffect(() => {
+    // Event listeners
     window.addEventListener("mainView", handleMainView);
     window.addEventListener("mainViewURL", handleIFrame);
     window.addEventListener("toggleConsole", toggleConsole);

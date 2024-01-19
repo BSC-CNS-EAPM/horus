@@ -5,4 +5,5 @@ htmlLoader = PluginPage(
     name="HTML Loader",
     description="Load HTML files into Horus",
     html="pageloader.html",
+    hidden=True,
 )

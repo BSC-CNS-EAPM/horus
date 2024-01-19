@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Dev</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+    <h1>Configure variable</h1>
+    <button onclick="modifyFlow()">Modify flow</button>
+
+    <script>
+
+        function modifyFlow() {
+            flow = parent.horus.getFlow();
+
+            console.log("flow", flow)
+
+            // Modify from the flow the first block position
+            flow.name = "New name!!";
+
+            // Create a new block
+            const newBlock = flow.blocks[0];
+
+            // Modify the block
+            newBlock.name = "New block name!!";
+
+            // Modify the position
+            newBlock.position = {
+                x: newBlock.position.x + 100,
+                y: newBlock.position.y + 100
+            }
+
+            // Replace the block with the new one
+            flow.blocks[0] = newBlock;
+
+            // Remove the second block
+            flow.blocks.splice(1, 1);
+
+            // Set the flow
+            parent.horus.setFlow(flow);
+
+            console.log("flow modified")
+
+        }
+
+    </script>
+
+</body>
+
+</html>

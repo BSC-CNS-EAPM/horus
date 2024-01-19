@@ -138,7 +138,7 @@ returned value will be a dictionary with the ids of the variables as keys and th
 On render, the variable groups appear as regular :bdg-secondary-line:`PluginVariable`, but with the inner variables grouped together.
 
 VariableList
-=============
+============
 
 Besides from the simple :bdg-secondary-line:`VariableTypes.LIST` type, there is also the :bdg-secondary-line:`VariableList` class. 
 
@@ -164,4 +164,67 @@ Notice the :bdg-secondary-line:`prototypes` parameter. This parameter defines th
 .. image:: images/variable_list.png
     :width: 500px
     :align: center
+
+Custom variables
+================
+
+If more customization is needed during the configuration of a variable, the :bdg-secondary-line:`CustomVariable`
+class is available. This class allows for the definition of a custom renderer for the variable. For example,
+some variables of a particular block may require extensive preparation that is not possible to do in the
+:bdg-secondary-line:`Flow builder`. For example, in the preparation of a protein for a simulation, the user may 
+want to select the residues that will be mutated, or select a set of residues from a model folder. 
+This can be done using the :bdg-secondary-line:`CustomVariable` class. The :bdg-secondary-line:`type` parameter of the class
+will be used to determine to which other variables the custom variable can be connected in the :bdg-secondary-line:`Flow builder`,
+just like a regular :bdg-secondary-line:`PluginVariable`. For example:
+
+.. code-block:: python
+
+    customRenderPage = PluginPage(
+        id="custom_render_page",
+        name="Custom render page",
+        description="Custom render page",
+        html="customrender.html",
+        hidden=True,
+    )
+
+    plugin.addPage(customRenderPage)
+
+    // Setting type to custom so that the output can be connected to 'Number' variables
+    customVariableTest = CustomVariable(
+        id="custom_variable_test",
+        name="Custom variable test",
+        description="Custom variable test",
+        customPage=devPage,
+        type=VariableTypes.NUMBER,
+        category="Custom variables",
+    )
+
+The variable will be rendered as a "Configure" button which will open
+the specified :bdg-secondary-line:`PluginPage`. For more information about :bdg-secondary-line:`PluginPage`, refer to the
+:ref:`Extensions` section.
+
+.. image:: images/custom_var.png
+    :width: 500px
+    :align: center
+
+Inside the custom view, the variable and the flow can be accessed in JavaScript
+using the :bdg-secondary-line:`window.horus` object. For example:
+
+.. code-block:: javascript
+
+    // Get the current state of the variable which opened the custom view
+    const variable = window.horus.getVariable();
+
+    // Set a new value for the variable
+    window.horus.setVariable("new_value");
+
+    // Get the current state of the flow
+    const newFlow = window.horus.getFlow();
+
+    // For example, modify the title of the flow
+    newFlow.title = "New title";
+
+    // Set a new value for the flow
+    window.horus.setFlow(newFlow)
+
 

@@ -10,7 +10,14 @@ import { socket } from "../../Utils/socket";
 import { SettingsView } from "../../Settings/settings";
 import { FlowStatusView } from "../FlowStatus/flow_status";
 import RotatingLines from "../RotatingLines/rotatinglines";
+import { PluginPage } from "../FlowBuilder/flow_builder_types";
 // import RotatingLines from "../RotatingLines/rotatinglines";
+
+export const loadPage = async (url: string, pagename: string) => {
+  // Emit an event to the iframe
+  const event = new CustomEvent("mainViewURL", { detail: { url, pagename } });
+  window.dispatchEvent(event);
+};
 
 interface ToolBarItemProps {
   name: string;
@@ -295,7 +302,7 @@ export default function HorusToolbar() {
   // Will lie on top of the page and will contain the
   // user menu, search bar, etc.
 
-  const [pluginPages, setPluginPages] = useState([]);
+  const [pluginPages, setPluginPages] = useState<PluginPage[]>([]);
 
   const getPluginPages = async () => {
     const response = await horusGet("/api/plugins/listpages");
@@ -308,7 +315,7 @@ export default function HorusToolbar() {
       return;
     }
 
-    const data = await response.json();
+    const data: [PluginPage] = await response.json();
 
     setPluginPages(data);
   };
@@ -324,12 +331,6 @@ export default function HorusToolbar() {
       socket.off("pluginChanges", getPluginPages);
     };
   }, []);
-
-  const loadPage = async (url: string, pagename: string) => {
-    // Emit an event to the iframe
-    const event = new CustomEvent("mainViewURL", { detail: { url, pagename } });
-    window.dispatchEvent(event);
-  };
 
   const menus: ToolBarMenuProps[] = [
     {
@@ -726,28 +727,33 @@ export default function HorusToolbar() {
           ),
           onClick: hideExtensions,
         },
-        ...pluginPages.map((page) => ({
-          name: page.name,
-          svgPath: (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-6 h-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M8.25 4.5l7.5 7.5-7.5 7.5"
-              />
-            </svg>
+        ...pluginPages
+          .filter((page) => !page.hidden)
+          .map(
+            (page) =>
+              !page.hidden && {
+                name: page.name,
+                svgPath: (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="w-6 h-6"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M8.25 4.5l7.5 7.5-7.5 7.5"
+                    />
+                  </svg>
+                ),
+                onClick: () => {
+                  loadPage(page.url, page.name);
+                },
+              }
           ),
-          onClick: () => {
-            loadPage(page.url, page.name);
-          },
-        })),
       ],
     },
     {
@@ -995,13 +1001,7 @@ function HorusSearch(props: HorusSearchProps) {
 }
 
 type PluginPageViewProps = {
-  pages: Array<{
-    name: string;
-    description: string;
-    plugin: string;
-    url: string;
-    id: string;
-  }>;
+  pages: Array<PluginPage>;
   loadPage: any;
 };
 
@@ -1015,18 +1015,20 @@ function PluginPagesView(props: PluginPageViewProps) {
   return (
     <div className="flex flex-col gap-1">
       <div className="predefined-flow-name font-bold">Extensions</div>
-      {pages?.map((page) => (
-        <div
-          key={page.id}
-          onClick={() => {
-            loadPage(page.url, page.name);
-          }}
-          className="predefined-flow"
-        >
-          <div className="predefined-flow-name">{page.name}</div>
-          <div className="predefined-flow-plugin">{page.description}</div>
-        </div>
-      ))}
+      {pages
+        ?.filter((page) => !page.hidden)
+        .map((page) => (
+          <div
+            key={page.id}
+            onClick={() => {
+              loadPage(page.url, page.name);
+            }}
+            className="predefined-flow"
+          >
+            <div className="predefined-flow-name">{page.name}</div>
+            <div className="predefined-flow-plugin">{page.description}</div>
+          </div>
+        ))}
     </div>
   );
 }
