@@ -800,6 +800,7 @@ class PluginManager(metaclass=HorusSingleton):
                 depsDir,
                 "--upgrade",
                 "--no-input",
+                "--no-deps",
             ],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
