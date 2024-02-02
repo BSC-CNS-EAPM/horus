@@ -136,12 +136,12 @@ class PluginPage:
     Class that defines a page that can be accessed from the extension menu.
     """
 
-    endpoints: typing.List[PluginEndpoint] = []
+    endpoints: typing.List[PluginEndpoint]
     """
     The endpoints of the page.
     """
 
-    _pageInfo: typing.Dict[str, typing.Any] = {}
+    _pageInfo: typing.Dict[str, typing.Any]
     """
     Internal variable used to store the page info.
     """
@@ -162,6 +162,10 @@ class PluginPage:
         self.description = description
         self.html = html
         self.hidden = hidden
+
+        # Initialize instance-specific variables
+        self.endpoints = []
+        self._pageInfo = {}
 
     def addEndpoint(self, endpoint: PluginEndpoint):
         """

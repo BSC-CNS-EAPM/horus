@@ -1087,7 +1087,7 @@ class HorusServer:
 
                 # Reload the plugin pages
                 # Hide the UserWarning from Flask
-                # self._pluginPages()
+                self._pluginPages()
 
                 # Emit plugin changes
                 self.socketio.emit("pluginChanges")
@@ -1270,7 +1270,7 @@ class HorusServer:
                     )
 
                     logging.getLogger("Horus").debug(
-                        "Added endpoint %s to page %s", epURL, page._pageInfo["id"]
+                        "Added endpoint '%s' to page '%s'", epURL, page._pageInfo["id"]
                     )
 
                 return newBluePrint
@@ -1288,15 +1288,18 @@ class HorusServer:
                     page._pageInfo["pluginDir"],  # pylint: disable=protected-access
                 )
             except Exception as exc:  # pylint: disable=broad-exception-caught
-                errorMSG = (
-                    "\033[91mError registering page for plugin "
-                    + page.id
-                    + ": "
-                    + str(exc)
-                    + "\033[0m"
-                )
-                print(errorMSG)
-                self.socketio.emit("printTerm", errorMSG)
+
+                if "The setup method 'register_blueprint'" not in str(exc):
+                    errorMSG = (
+                        "\033[91mError registering page for plugin: "
+                        + page.id
+                        + ": "
+                        + str(exc)
+                        + "\033[0m"
+                    )
+                    logging.getLogger("Horus").error(errorMSG)
+                else:
+                    logging.getLogger("Horus").warning(str(exc))
 
     def _debugRoutes(self):
         @self.server.route("/stop", methods=["GET"])
