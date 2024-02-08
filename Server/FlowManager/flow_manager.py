@@ -1272,8 +1272,8 @@ class FlowManager:
             except Exception:  # pylint: disable=broad-exception-caught
                 overwriteCaution = True
 
-        # Create a new savedID if it doesn't exist or is "new_flow"
-        if not flow.savedID or flow.savedID == "new_flow":
+        # Create a new savedID if it doesn't exist
+        if not flow.savedID:
             flow.savedID = str(uuid.uuid4())
 
         # If we are overwriting a flow, check if the user wants to overwrite it
@@ -1326,7 +1326,7 @@ class FlowManager:
         # Check if the flow has a path, if its a new flow,
         # and if we are not overwriting
         # to ask the user for a new path
-        if not flowInstance.path and flowInstance.savedID == "new_flow" and not overwrite:
+        if not flowInstance.path and not flowInstance.savedID and not overwrite:
             from App import AppDelegate
 
             if AppDelegate().serverMode:
@@ -1426,7 +1426,7 @@ class FlowManager:
 
         # Replace the savedID and the flow path so
         # the forntend can save it to another location
-        loadedFLow.savedID = "new_flow"
+        loadedFLow.savedID = None
         loadedFLow.path = None  # type: ignore
 
         return loadedFLow

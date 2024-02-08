@@ -64,7 +64,7 @@ export default function RecentUserFlows(props: RecentUserFlowProps) {
       {flows?.length > 0 ? (
         flows.map((flow) => (
           <div
-            key={flow.savedID ?? "new_flow"}
+            key={flow.savedID ?? "Unknown flow ID"}
             onClick={() => {
               openFlow(flow);
             }}

@@ -314,7 +314,8 @@ class HorusServer:
 
         @self.server.route("/api/saveflow", methods=["POST"])
         @verifyToken
-        def createFlow():
+        def saveFlow():
+
             # The client here sends a form data with two values:
             # - flowData: The flow data as a JSON string (contains flow name, placed blocks...)
             # - molstarState: The molstar state as a zip file

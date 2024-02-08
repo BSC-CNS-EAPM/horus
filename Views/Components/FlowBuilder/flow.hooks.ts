@@ -1078,8 +1078,8 @@ export function useFlowBuilder() {
     setFlowText("Opening a new flow");
     setFlowLoading(true);
 
-    // Leave the socket flow room
-    if (flow.savedID !== "new_flow") {
+    // Leave the socket flow room if the savedID is present
+    if (flow.savedID) {
       socket.emit("leaveFlow", flow.savedID);
     }
 
