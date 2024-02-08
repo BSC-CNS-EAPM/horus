@@ -100,8 +100,8 @@ Extensions class
 
 Apart from opening the extensions view from the menu, you can also use the :bdg-secondary-line:`Extensions` class
 to open the view directly from a :bdg-secondary-line:`Block` action. Using the :bdg-secondary-line:`open()` method you can pass
-data to your extension, that can be handled, for example, in a React useEffect hook. You will need
-the ID of the plugin that provides the extension, and the extension ID.
+data to your extension that can be handled when loading the HTML. You will need
+the ID of the plugin that provides the extension and the extension ID.
 
 In your block's action:
 
@@ -110,9 +110,21 @@ In your block's action:
     from HorusAPI import Extensions
 
     # Open the extensions view
-    Extensions().open("mypluginid", "customView", {"someData": data})
+    Extensions().open(pluginID="mypluginid", pageID="customView", data={"someData": data})
 
-Inside the JavaScript file of your extension:
+
+You can also store the "result" inside the block that provided the data. This will display
+an "Extensions" button in the block's view with the provided label. When clicked, the extension
+will open with the provided data.
+
+.. code-block:: python
+
+    from HorusAPI import Extensions
+
+    # Open the extensions view
+    Extensions().storeExtensionResults(pluginID="mypluginid", pageID="customView", data={"someData": data}, title="View results")
+
+You can access the data in JavaScript as follows:
 
 .. code-block:: javascript
     
