@@ -224,6 +224,7 @@ def test_install_dep_internal_success(mocker):
         "/path/to/dependencies",
         "--upgrade",
         "--no-input",
+        "--no-deps",
     ]
     assert last_call_kwargs["stdout"] == subprocess.PIPE
     assert last_call_kwargs["stderr"] == subprocess.STDOUT
@@ -273,8 +274,6 @@ def test_install_dep_internal_frozen_app(mocker):
     # Set the app delegate to be on "Server mode"
     AppDelegate().serverMode = True
 
-
-
     # Mock the sys.frozen attribute to simulate a frozen app
     with patch.object(sys, "frozen", True, create=True):
         # Mock the subprocess.Popen context manager
@@ -307,6 +306,7 @@ def test_install_dep_internal_frozen_app(mocker):
         "/path/to/dependencies",
         "--upgrade",
         "--no-input",
+        "--no-deps",
     ]
     assert last_call_kwargs["stdout"] == subprocess.PIPE
     assert last_call_kwargs["stderr"] == subprocess.STDOUT

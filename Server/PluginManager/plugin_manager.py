@@ -655,6 +655,17 @@ class PluginManager(metaclass=HorusSingleton):
                 elif hasToUpgrade:
                     print(f"Upgrading dependency {dep} for plugin {pluginName}...")
 
+                    # Remove the old dependency dist-info
+                    for depDir in listedDeps:
+                        if f"{name}-" in depDir:
+                            logging.getLogger("Horus").info(
+                                "Removing old dependency %s...", depDir
+                            )
+                            shutil.rmtree(os.path.join(depsDir, depDir))
+
+                    # Remove the actual package
+                    shutil.rmtree(os.path.join(depsDir, name))
+
                 try:
                     self._installDepInternal(dep, depsDir)
                 except Exception as e:
