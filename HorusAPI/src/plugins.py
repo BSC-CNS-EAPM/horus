@@ -1200,7 +1200,7 @@ class PluginBlock:
 
     _isOriginal = True
     """
-    Wether the block is original (created by the plugin) or not.
+    Whether the block is original (created by the plugin) or not.
     """
 
     remote: PluginRemote
@@ -1908,8 +1908,8 @@ class Plugin:
                 flowInfo = {
                     "name": flowName,
                     "path": filePath,
-                    "plugin_id": self.id,
-                    "plugin_name": self.info["name"],
+                    "pluginID": self.id,
+                    "pluginName": self.info["name"],
                     "savedID": savedID,
                 }
                 flows.append(flowInfo)

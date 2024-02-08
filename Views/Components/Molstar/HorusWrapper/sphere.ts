@@ -1,3 +1,4 @@
+// Mol* imports
 import { PluginUIContext } from "molstar/lib/mol-plugin-ui/context";
 import { Color } from "molstar/lib/mol-util/color";
 import { StateObjectSelector } from "molstar/lib/mol-state";
@@ -9,7 +10,7 @@ import { Mesh } from "molstar/lib/mol-geo/geometry/mesh/mesh";
 import { LocationIterator } from "molstar/lib/mol-geo/util/location-iterator";
 import { PickingId } from "molstar/lib/mol-geo/geometry/picking";
 import { NullLocation } from "molstar/lib/mol-model/location";
-import { DataLoci, EmptyLoci, Loci } from "molstar/lib/mol-model/loci";
+import { EmptyLoci, Loci } from "molstar/lib/mol-model/loci";
 import { Structure, Unit } from "molstar/lib/mol-model/structure";
 import {
   StructureRepresentation,
@@ -32,15 +33,7 @@ import { VisualUpdateState } from "molstar/lib/mol-repr/util";
 import { VisualContext } from "molstar/lib/mol-repr/visual";
 import { Theme, ThemeRegistryContext } from "molstar/lib/mol-theme/theme";
 import { ParamDefinition as PD } from "molstar/lib/mol-util/param-definition";
-
-import "molstar/lib/mol-plugin-ui/skin/light.scss";
-
-// declare global {
-//   interface Window {
-//     sphereRef?: any;
-//     molStructures?: any;
-//   }
-// }
+import { StructureRepresentationProps } from "molstar/lib/mol-plugin-state/helpers/structure-representation-params";
 
 const DockingSphereVisuals = {
   sphere: (
@@ -234,14 +227,13 @@ async function addSphereTo(
     alpha: number;
   }
 ) {
-
   const struc = await ms.builders.structure.representation.addRepresentation(
     structure,
     {
       type: "sphere" as any, // Coerce TypeScript into accepting the representation name
       typeParams: sphere,
       colorParams: sphere.color ? { value: sphere.color } : void 0,
-    }
+    } as StructureRepresentationProps
   );
 
   return struc.ref;

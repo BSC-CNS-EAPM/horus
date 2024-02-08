@@ -308,7 +308,7 @@ def test_extensions_on_blocks(flow_appDelegate):
         extension1 = extOpen[0]
 
         assert extension1["data"] is not None
-        assert extension1["pageURL"] is not None
+        assert extension1["url"] is not None
         assert extension1["title"] == "Results"
     finally:
         copy_flow.write()

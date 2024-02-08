@@ -1,20 +1,21 @@
+// React
 import { useEffect, useState } from "react";
+
+// Spinner
 import RotatingLines from "../RotatingLines/rotatinglines";
 
-declare global {
-  interface Window {
-    extensionData: any;
-  }
-}
-
-interface IFrameLoaderProps {
+type IFrameLoaderProps = {
   pagename: string;
   url: string;
   data: any;
-}
+};
 
 function IFrameLoader({ url, pagename, data }: IFrameLoaderProps) {
   const [loading, setLoading] = useState(true);
+
+  const handleLoad = () => {
+    setLoading(false);
+  };
 
   useEffect(() => {
     window.extensionData = data;
@@ -28,15 +29,11 @@ function IFrameLoader({ url, pagename, data }: IFrameLoaderProps) {
     };
   }, [url, pagename, data]);
 
-  const handleLoad = () => {
-    setLoading(false);
-  };
-
   return (
     <div id="iframe-loader" className="h-full w-full p-0 m-0">
       {loading && (
         <div className="flex flex-col items-center justify-center h-full">
-          <RotatingLines />
+          <RotatingLines size={"100px"} />
           Loading {pagename}
         </div>
       )}

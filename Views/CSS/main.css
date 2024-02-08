@@ -1,0 +1,140 @@
+/* html,
+body {
+  height: 100vh;
+  width: 100vw;
+} */
+
+@import "../CSS/colors.css";
+@import "../CSS/animations.css";
+@import "../CSS/font.css";
+
+html {
+  background: var(--grey-white);
+}
+
+div[role="button"] {
+  cursor: auto;
+}
+
+button {
+  cursor: default !important;
+}
+
+/* Disable any outline for all inputs */
+input,
+textarea {
+  outline: none;
+}
+
+.splash-container {
+  /* Use a media query so that when the viewpoer width is less than 600px, height changes from 100% to fit*/
+  max-height: 100vh;
+  padding: 2rem;
+}
+
+.vertical-splash-separator {
+  height: 60%;
+  width: 1px;
+  background-color: var(--digital-grey-V);
+}
+
+.flex-direction-splash-buttons {
+  @apply flex-col;
+}
+
+@media (max-width: 1120px) {
+  .vertical-splash-separator {
+    display: none;
+  }
+
+  .flex-direction-splash-buttons {
+    @apply flex-row;
+  }
+}
+
+.scrollable-welcome {
+  height: 450px;
+}
+
+@media (max-width: 895px) {
+  .scrollable-welcome {
+    height: 100%;
+  }
+}
+
+.ResizeHandleOuter {
+  flex: 0 0 10px;
+  position: relative;
+  background: var(--whitesmoke);
+}
+
+.ResizeHandleOuter--vertical {
+  border-top: 1px solid black;
+  border-bottom: 1px solid black;
+}
+
+.ResizeHandleOuter--horizontal {
+  border-left: 1px solid black;
+  border-right: 1px solid black;
+}
+
+.ResizeHandleOuter[data-resize-handle-active] {
+  background: var(--light-blue);
+  transition: background-color 0.2s linear;
+}
+
+.ResizeHandleInner {
+  position: absolute;
+  transition: background-color 0.2s linear;
+  inset: 0 !important;
+}
+
+.Icon {
+  width: 1em;
+  height: 1em;
+  position: absolute;
+  left: calc(50% - 0.5rem);
+  top: calc(50% - 0.5rem);
+}
+
+.Icon-horizontal {
+  transform: rotate(90deg);
+}
+
+.horus-scroll {
+  overflow-y: scroll;
+  border-radius: 0.25rem;
+}
+
+.modal-body {
+  flex: auto !important;
+  position: relative !important;
+  padding: 0 !important;
+}
+
+.modal-content {
+  border-radius: 15px !important;
+  overflow: hidden !important;
+  transition: height 1s ease-in-out !important;
+}
+.modal {
+  backdrop-filter: blur(5px);
+}
+
+.modal-backdrop {
+  /* Apply the same style as the blurred modal */
+  background: transparent;
+  /* backdrop-filter: blur(5px); */
+}
+
+.root {
+  height: 100vh;
+}
+
+.normal-container {
+  background-color: whitesmoke;
+  height: 100%;
+  border-radius: 15px;
+  padding: 0.5rem;
+  border: 1px solid var(--vintage-code);
+}

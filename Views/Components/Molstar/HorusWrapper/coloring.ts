@@ -32,7 +32,7 @@ export function createProteopediaCustomTheme(colors: number[]) {
   };
   type ProteopediaCustomColorThemeParams =
     typeof ProteopediaCustomColorThemeParams;
-  function getChainIdColorThemeParams(ctx: ThemeDataContext) {
+  function getChainIdColorThemeParams(_: ThemeDataContext) {
     return ProteopediaCustomColorThemeParams; // TODO return copy
   }
 
@@ -65,14 +65,14 @@ export function createProteopediaCustomTheme(colors: number[]) {
 
     const colors = props.colors,
       colorCount = colors.length,
-      defaultColor = colors[0].color;
+      defaultColor = colors[0]!.color;
 
     if (ctx.structure) {
       const l = StructureElement.Location.create(ctx.structure);
       const { models } = ctx.structure;
       const asymIdSerialMap = new Map<string, number>();
       for (let i = 0, il = models.length; i < il; ++i) {
-        const m = models[i];
+        const m = models[i]!;
         addAsymIds(asymIdSerialMap, m.atomicHierarchy.chains.label_asym_id);
         if (m.coarseHierarchy.isDefined) {
           addAsymIds(asymIdSerialMap, m.coarseHierarchy.spheres.asym_id);
@@ -84,13 +84,13 @@ export function createProteopediaCustomTheme(colors: number[]) {
         if (StructureElement.Location.is(location)) {
           const asym_id = getAsymId(location.unit);
           const o = asymIdSerialMap.get(asym_id(location)) || 0;
-          return colors[o % colorCount].color;
+          return colors[o % colorCount]!.color;
         } else if (Bond.isLocation(location)) {
           const asym_id = getAsymId(location.aUnit);
           l.unit = location.aUnit;
-          l.element = location.aUnit.elements[location.aIndex];
+          l.element = location.aUnit.elements[location.aIndex]!;
           const o = asymIdSerialMap.get(asym_id(l)) || 0;
-          return colors[o % colorCount].color;
+          return colors[o % colorCount]!.color;
         }
         return defaultColor;
       };
@@ -105,7 +105,7 @@ export function createProteopediaCustomTheme(colors: number[]) {
       props,
       description: Description,
       legend: undefined,
-    };
+    } as any;
   }
 
   return {

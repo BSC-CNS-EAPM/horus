@@ -1,7 +1,7 @@
 import { setChonkyDefaults, ChonkyActions } from "chonky";
 import { ChonkyIconFA } from "chonky-icon-fontawesome";
 import { horusPost } from "../../Utils/utils";
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { HorusModal } from "../reusable";
 import NBDButton from "../nbdbutton";
 
@@ -10,12 +10,6 @@ import NBDButton from "../nbdbutton";
 setChonkyDefaults({ iconComponent: ChonkyIconFA });
 
 import { FileBrowser, FileNavbar, FileToolbar, FileList } from "chonky";
-
-declare global {
-  interface Window {
-    isDesktop: boolean;
-  }
-}
 
 // Create custom hook for server picker file explorer
 function useServerExplorer(
@@ -54,7 +48,7 @@ function useServerExplorer(
     setFolderChain(data.folderChain);
   };
 
-  const handleFileAction = (action) => {
+  const handleFileAction = (action: any) => {
     // If the action is double clickinga folder, open it
     if (action.id === "open_files") {
       if (action.payload.targetFile.isDir) {
@@ -103,7 +97,7 @@ function useServerExplorer(
   };
 }
 
-type FileExplorerProps = {
+export type FileExplorerProps = {
   children?: React.ReactNode;
   openFolder?: boolean;
   onFileSelect: (file: any) => void;
@@ -133,12 +127,37 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
       onFileConfirm,
       fileProps.allowedExtensions
     );
+
+  const chonkyActions = [
+    ChonkyActions.UploadFiles,
+    ChonkyActions.DownloadFiles,
+    ChonkyActions.CreateFolder,
+  ];
+
   return (
-    <HorusModal
-      show={open}
-      onHide={() => setOpen(false)}
-      header={openFolder ? "Select a folder" : "Select a file"}
-      footer={
+    <HorusModal show={open} onHide={() => setOpen(false)}>
+      <div className="w-full flex flex-col gap-2 p-2">
+        <div className="text-3xl text-bold">
+          {openFolder ? "Select a folder" : "Select a file"}
+        </div>
+        <div
+          className="w-full"
+          style={{
+            height: "65vh",
+          }}
+        >
+          <FileBrowser
+            defaultFileViewActionId={ChonkyActions.EnableListView.id}
+            fileActions={chonkyActions}
+            files={files}
+            folderChain={folderChain}
+            onFileAction={handleFileAction}
+          >
+            <FileNavbar />
+            <FileToolbar />
+            <FileList />
+          </FileBrowser>
+        </div>
         <div className="flex justify-end flex-row gap-2">
           <NBDButton
             action={() => {
@@ -156,25 +175,6 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
             Select
           </NBDButton>
         </div>
-      }
-      size="xl"
-    >
-      <div
-        style={{
-          height: "70vh",
-          width: "100%",
-        }}
-      >
-        <FileBrowser
-          defaultFileViewActionId={ChonkyActions.EnableListView.id}
-          files={files}
-          folderChain={folderChain}
-          onFileAction={handleFileAction}
-        >
-          <FileNavbar />
-          <FileToolbar />
-          <FileList />
-        </FileBrowser>
       </div>
     </HorusModal>
   );

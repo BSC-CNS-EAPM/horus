@@ -329,8 +329,6 @@ class PluginManager(metaclass=HorusSingleton):
                 shutil.rmtree(tmpInstallDir)
             raise Exception(e) from e
 
-        print("Plugin installed. It is safe to close this window.")
-
     def _getPlugin(self, byName: str) -> Plugin:
         """
         Returns a plugin with the given name.

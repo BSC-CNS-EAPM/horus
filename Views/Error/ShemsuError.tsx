@@ -1,6 +1,5 @@
-import React, { useState } from "react";
-
 // Import the image
+// @ts-ignore
 import horus_god from "../../Resources/horus_god.png";
 
 // Import the css file

@@ -1,0 +1,176 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Define color variables */
+@layer base {
+  :root {
+    --tech-blue: #0d47a1;
+    --tech-red: #b71c1c;
+    --tech-green: #1b5e20;
+    --tech-yellow: #f57f17;
+    --tech-orange: #e65100;
+    --tech-purple: #4a148c;
+    --tech-pink: #880e4f;
+    --tech-gray: #616161;
+    --tech-black: #212121;
+    --tech-white: #ffffff;
+    --broken-white: #f5f5f5;
+
+    /* Custom colors */
+    --light-orange: #ffcc80;
+    --light-red: #ef9a9a;
+    --light-green: #a5d6a7;
+    --light-blue: #90caf9;
+
+    /* NBD Colors */
+    --warm-white: #f8fafa;
+    --digital-black: #00091e;
+    --grey-nostrum: #586061;
+    --digital-blue: #001b60;
+    --tech-blue: #00467c;
+    --nbd-teal: #026d7c;
+    --vintage-code: #00a9ae;
+    --pop-code: #00cfbf;
+    --flash-green: #00ffcc;
+    --waring-orange: #ff7d00;
+    --danger-red: #ff2e00;
+    --teal-white: rgba(255, 255, 255, 0.7);
+    --shadow: rgba(0, 0, 0, 0.2);
+    --softer-blue: #008eae;
+    --white-background: #f5f5f5;
+
+    /* Figma colors */
+    --digital-grey-I: #213539;
+    --digital-grey-II: #2c464c;
+    --digital-grey-III: #41646d;
+    --digital-grey-IV: #628189;
+    --digital-grey-V: #bccccb;
+    --red-error: #fd1e46;
+    --grey-white: #f8fafa;
+
+    /* Custom gradients */
+    --gradient-blue: linear-gradient(
+      145deg,
+      var(--softer-blue) 10%,
+      var(--tech-blue) 80%,
+      var(--digital-blue) 110%
+    );
+
+    --gradient-red: linear-gradient(
+      145deg,
+      var(--light-red) 1%,
+      var(--danger-red) 30%,
+      var(--tech-red) 100%
+    );
+
+    --gradient-gray: linear-gradient(
+      145deg,
+      var(--grey-nostrum) 1%,
+      var(--tech-gray) 30%,
+      var(--tech-black) 100%
+    );
+
+    --gradient-gray-light: linear-gradient(
+      145deg,
+      var(--broken-white) 20%,
+      var(--tech-gray) 100%
+    );
+
+    --gradient-black: linear-gradient(315deg, #2b4162 0%, #12100e 74%);
+
+    --background-gradient: linear-gradient(
+      120deg,
+      var(--teal-white) 0%,
+      var(--tech-gray) 200%
+    );
+  }
+}
+
+.background-gradient {
+  background: var(--background-gradient);
+}
+
+.black-gradient {
+  background-color: #090947;
+  background-image: linear-gradient(315deg, #090947 0%, #5a585a 74%);
+
+  /* background: var(--gradient-black); */
+}
+
+/* Define dark-mode color variables */
+@layer base {
+  :root[data-theme="dark"] {
+    --tech-blue: #64b5f6;
+    --tech-red: #ef5350;
+    --tech-green: #66bb6a;
+    --tech-yellow: #ffb74d;
+    --tech-orange: #ff7043;
+    --tech-purple: #9c27b0;
+    --tech-pink: #e91e63;
+    --tech-gray: #bdbdbd;
+    --tech-black: #000000;
+    --tech-white: #ffffff;
+    --broken-white: #f5f5f5;
+
+    /* Custom colors */
+    --light-orange: #ffcc80;
+    --light-red: #ef9a9a;
+    --light-green: #a5d6a7;
+    --light-blue: #90caf9;
+
+    /* NBD Colors */
+    --warm-white: #f8fafa;
+    --digital-black: #00091e;
+    --grey-nostrum: #586061;
+    --digital-blue: #001b60;
+    --tech-blue: #00467c;
+    --nbd-teal: #026d7c;
+    --vintage-code: #00a9ae;
+    --pop-code: #00cfbf;
+    --flash-green: #00ffcc;
+    --waring-orange: #ff7d00;
+    --danger-red: #ff2e00;
+    --teal-white: rgba(255, 255, 255, 0.7);
+    --shadow: rgba(0, 169, 174, 0.2);
+    --softer-blue: #008eae;
+
+    /* Figma colors */
+    --digital-grey-I: #213539;
+    --digital-grey-II: #2c464c;
+    --digital-grey-III: #41646d;
+    --digital-grey-IV: #628189;
+    --digital-grey-V: #bccccb;
+    --red-error: #fd1e46;
+    --grey-white: #f8fafa;
+  }
+}
+
+@layer base {
+  .root {
+    background: var(--grey-white);
+  }
+}
+
+/* Create an animated gradient class */
+.animated-gradient {
+  background-size: 100% 100% !important;
+  transition: background-size 1s ease, transform 0.2s ease-in-out;
+}
+
+.animated-gradient:hover {
+  background-size: 400% 400% !important;
+  animation: gradient 15s ease infinite;
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}

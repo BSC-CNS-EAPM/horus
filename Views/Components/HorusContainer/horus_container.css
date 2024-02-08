@@ -1,0 +1,17 @@
+.horus-container {
+  height: fit-content;
+  padding: 5px;
+  background: var(--grey-white);
+  border: 1px solid var(--pop-code);
+  border-radius: 10px;
+  box-shadow: 0 1px 15px 1px var(--shadow);
+  color: var(--digital-grey-IV);
+}
+
+.red-container {
+  height: fit-content;
+  padding: 5px;
+  background: var(--gradient-red);
+  border-radius: 10px;
+  box-shadow: 0 10px 10px 5px var(--shadow);
+}

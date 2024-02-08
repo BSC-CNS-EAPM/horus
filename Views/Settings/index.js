@@ -1,26 +1,31 @@
 // Create the main window view
-import React from "react"
-import ReactDOM from "react-dom/client"
-import { BrowserRouter } from "react-router-dom"
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
 
 import { SettingsView } from "./settings";
 
-import 'bootstrap/dist/css/bootstrap.css';
+// Import CSS
+import "bootstrap/dist/css/bootstrap.css";
+import "../CSS/main.css";
+import "../CSS/colors.css";
+import "../CSS/animations.css";
+import "../CSS/font.css";
 
 let container = null;
 
 document.addEventListener("DOMContentLoaded", () => {
-    if (!container) { // check if createRoot has already been called
-        container = document.getElementById("settings-root")
-        container.className = "root-plugin-container";
-        const root = ReactDOM.createRoot(container)
-        root.render(
-            <React.StrictMode>
-                <BrowserRouter>
-                    <SettingsView />
-                </BrowserRouter>
-            </React.StrictMode>
-        )
-    }
+  if (!container) {
+    // check if createRoot has already been called
+    container = document.getElementById("settings-root");
+    container.className = "root-plugin-container";
+    const root = ReactDOM.createRoot(container);
+    root.render(
+      <React.StrictMode>
+        <BrowserRouter>
+          <SettingsView />
+        </BrowserRouter>
+      </React.StrictMode>
+    );
+  }
 });
-

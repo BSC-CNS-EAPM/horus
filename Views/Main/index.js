@@ -1,11 +1,15 @@
 // Create the main window view
-import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 
 import { App } from "./app";
 
+// Import CSS
 import "bootstrap/dist/css/bootstrap.css";
+import "../CSS/main.css";
+import "../CSS/colors.css";
+import "../CSS/animations.css";
+import "../CSS/font.css";
 
 let container = null;
 

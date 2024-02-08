@@ -4,7 +4,12 @@ import ReactDOM from "react-dom/client";
 
 import ConfigRemotes from "./remotes";
 
+// Import CSS
 import "bootstrap/dist/css/bootstrap.css";
+import "../CSS/main.css";
+import "../CSS/colors.css";
+import "../CSS/animations.css";
+import "../CSS/font.css";
 
 let container = null;
 

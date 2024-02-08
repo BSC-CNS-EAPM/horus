@@ -4,9 +4,18 @@ import { useState, useEffect } from "react";
 import NBDButton from "../Components/nbdbutton";
 
 import { horusGet } from "../Utils/utils";
+
+// @ts-ignore
 import nostrum_logo from "../../Resources/horus.png";
 
 import RotatingLines from "../Components/RotatingLines/rotatinglines";
+
+// Import CSS
+import "bootstrap/dist/css/bootstrap.css";
+import "../CSS/main.css";
+import "../CSS/colors.css";
+import "../CSS/animations.css";
+import "../CSS/font.css";
 
 function BrowserMode() {
   const [url, setUrl] = useState(null);

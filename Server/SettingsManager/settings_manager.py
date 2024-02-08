@@ -372,7 +372,7 @@ class SettingsManager(metaclass=HorusSingleton):
         with open(self.userSettingsPath, "w", encoding="utf-8") as file:
             json.dump(settingsToSave, file)
 
-    def listSettings(self):
+    def listSettings(self) -> typing.Dict[str, dict]:
         """
         Returns the list of settings as a JSON object
         """
@@ -382,17 +382,13 @@ class SettingsManager(metaclass=HorusSingleton):
 
         from App import AppDelegate
 
-        settingsList = []
+        settingsDict: typing.Dict[str, dict]= {}
         for settingID, setting in self.settings.items():
             if setting.desktopOnly and AppDelegate().safeMode and not AppDelegate().debug:
                 continue
-            parsedSetting = {
-                "id": settingID,
-                "setting": setting.toDict(),
-            }
-            settingsList.append(parsedSetting)
+            settingsDict[settingID] = setting.toDict()
 
-        return settingsList
+        return settingsDict
 
     def saveSettings(self, newSettings: typing.List[typing.Dict[str, str]]):
         """

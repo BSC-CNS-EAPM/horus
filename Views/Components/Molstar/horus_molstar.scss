@@ -1,0 +1,43 @@
+// this is complement of the dark theme
+
+@function compl($color) {
+  @return rgb(255 - red($color), 255 - green($color), 255 - blue($color));
+}
+
+$default-background: #f8fafa;
+$font-color: black;
+$hover-font-color: #51a2fb;
+$entity-current-font-color: #68befd;
+$msp-btn-commit-on-font-color: #68befd;
+$entity-badge-font-color: lighten(#ccd4e0, 10%);
+$msp-btn-remove-background: #de0a28;
+$msp-btn-remove-hover-font-color: #f2f4f7;
+
+// used in LOG
+$log-message: #0cca5d;
+$log-info: #5e3673;
+$log-warning: #fcc937;
+$log-error: #fd354b;
+
+$logo-background: compl(#111318);
+
+@function color-lower-contrast($color, $amount) {
+  @return lighten($color, $amount);
+}
+
+@function color-increase-contrast($color, $amount) {
+  @return darken($color, $amount);
+}
+
+@import "molstar/lib/mol-plugin-ui/skin/base/base";
+
+// Vanilla CSS
+.msp-plugin .msp-layout-expanded {
+  position: absolute !important;
+}
+
+.msp-plugin {
+  height: 100%;
+  width: 100%;
+}
+

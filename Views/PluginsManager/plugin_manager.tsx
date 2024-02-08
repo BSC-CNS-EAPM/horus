@@ -1,52 +1,134 @@
-// Create the main window view
+// React imports
 import { useState, useEffect } from "react";
-import {
-  fetchDesktop,
-  horusGet,
-  horusGetSettings,
-  horusPost,
-} from "../Utils/utils";
-import NBDButton from "../Components/nbdbutton";
-import "./plugin_manager.css";
-import { SearchComponent } from "../Components/Toolbar/toolbar";
-import { HorusModal, HorusModalProps } from "../Components/reusable";
+
+// Web-server imports
 import { socket } from "../Utils/socket";
-import {
-  HorusPlugin,
-  Block,
-  PluginVariableTypes,
-} from "../Components/FlowBuilder/flow_builder_types";
+import { fetchDesktop, horusGet, horusPost } from "../Utils/utils";
 
-import RotatingLines from "../Components/RotatingLines/rotatinglines";
-
-import { PluginVariableView } from "../Components/FlowBuilder/block_variables";
+// Components
 import { HorusFileExplorer } from "../Components/FileExplorer/file_explorer";
+import { SearchComponent } from "../Components/Toolbar/toolbar";
+import { PluginVariableView } from "../Components/FlowBuilder/Variables/variables";
+import NBDButton from "../Components/nbdbutton";
+import RotatingLines from "../Components/RotatingLines/rotatinglines";
+import HorusContainer from "../Components/HorusContainer/horus_container";
+import BackArrowIcon from "../Components/Toolbar/Icons/BackArrow";
+
+// TS Types
+import { HorusPlugin, Block } from "../Components/FlowBuilder/flow.types";
+
+// Styles
+import "./plugin_manager.css";
+import "../CSS/colors.css";
+import "../CSS/animations.css";
 
 interface PluginConfigViewProps {
   configBlocks: Block[];
-  handleChange: (value: PluginVariableTypes, id: string) => void;
 }
 
 function PluginConfigView(props: PluginConfigViewProps) {
-  const { configBlocks, handleChange } = props;
+  // Create a state to store the modified config
+  const [tempChanges, setTempChanges] = useState<Block[]>([]);
+  const [hasChanges, setHasChanges] = useState<boolean>(false);
+
+  const { configBlocks } = props;
+
+  const handleModifyConfig = (value: any, id: string, groupID?: string) => {
+    const changeID = groupID ? groupID : id;
+
+    const updatedChanges = [...tempChanges]; // Create a copy of tempChanges
+    const existingChangeIndex = updatedChanges.findIndex(
+      (change) => change.id === changeID
+    ); // Check if the change already exists
+
+    // Update the value of the variable in the tempChanges array (set to the block)
+    if (existingChangeIndex >= 0) {
+      const updateVar = updatedChanges[existingChangeIndex]!.variables.find(
+        (variable) => variable.id === changeID
+      )!;
+      // If the change already exists, update the value
+      if (groupID) {
+        updateVar.variables!.find((variable) => variable.id === id)!.value =
+          value;
+      } else {
+        updateVar.value = value;
+      }
+    } else {
+      // Find the block that has the variable
+      for (let i = 0; i < configBlocks.length; i++) {
+        const variable = configBlocks[i]!.variables.find(
+          (variable) => variable.id === changeID
+        );
+        if (variable) {
+          // Update the value of the variable
+          if (groupID) {
+            variable.variables!.find((variable) => variable.id === id)!.value =
+              value;
+          } else {
+            variable.value = value;
+          }
+
+          // If the variable exists, push the block to the tempChanges array
+          updatedChanges.push(configBlocks[i]!);
+          break;
+        }
+      }
+    }
+    setTempChanges(updatedChanges);
+    setHasChanges(true);
+  };
+
+  const handleSave = async () => {
+    // Replace the config blocks with the tempChanges
+    const newConfig = [...configBlocks];
+    for (let i = 0; i < tempChanges.length; i++) {
+      const blockIndex = newConfig.findIndex(
+        (block) => block.id === tempChanges[i]!.id
+      )!;
+      newConfig[blockIndex] = tempChanges[i]!;
+    }
+
+    // Send the changes to the server
+    const header = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    };
+
+    const body = JSON.stringify({
+      newConfig: newConfig,
+    });
+
+    const response = await horusPost("/api/plugins/config", header, body);
+    const data = await response.json();
+
+    if (!data.ok) {
+      alert(data.msg);
+      return;
+    }
+    setHasChanges(false);
+  };
 
   return (
-    <div>
-      {/* Map the config blocks and place a <PluginVariable/> component */}
-      {configBlocks.map((block, index) => {
-        return block.variables.map((variable, index) => {
-          return (
-            <div>
-              {block.name}
+    <div className="flex flex-col gap-2 justify-center items-center w-full">
+      <div className="flex flex-row gap-2 flex-wrap w-full">
+        {/* Map the config blocks and place a <PluginVariable/> component */}
+        {configBlocks.map((block) => {
+          return block.variables.map((variable) => {
+            return (
               <PluginVariableView
                 key={variable.id}
                 variable={variable}
-                onChange={handleChange}
+                onChange={handleModifyConfig}
               />
-            </div>
-          );
-        });
-      })}
+            );
+          });
+        })}
+      </div>
+      <NBDButton
+        text="Save"
+        action={handleSave}
+        className={hasChanges ? "bg-orange-300" : ""}
+      />
     </div>
   );
 }
@@ -57,209 +139,27 @@ type InstalledPluginsProps = {
     plugins?: HorusPlugin[];
   };
   loading: boolean;
-  fetchData: () => void;
+  deletePlugin: (id: string) => void;
+  setSubView: (view: React.ReactNode) => void;
 };
 
 function InstalledPlugins(props: InstalledPluginsProps) {
-  const { pluginList, loading, fetchData: propFetchData } = props;
-
-  const [modalProps, setModalProps] = useState<HorusModalProps>({
-    header: null,
-    body: null,
-    footer: null,
-    show: false,
-    size: "xl",
-  });
-
-  const fetchData = async () => {
-    setModalProps({
-      ...modalProps,
-      show: false,
-    });
-
-    propFetchData();
-  };
-
-  // Create a state to store the modified config
-  const [tempChanges, setTempChanges] = useState<Block[]>([]);
+  const { pluginList, loading, deletePlugin } = props;
 
   if (loading) {
     return (
       // Center the spinner to the page using TailwindCSS
-      <div className="flex justify-center items-center h-screen overflow-hidden">
-        <div className="spinner-border" role="status"></div>
+      <div className="flex justify-center items-center h-48 overflow-hidden">
+        <RotatingLines />
       </div>
     );
   }
 
-  const openPluginConfiguration = (plugin: HorusPlugin) => {
-    // Get the config blocks from the plugin
-    let newConfigBlocks: Block[] = [];
-
-    // Loop through the blocks and subBlocks and store the ones that have config
-    for (let i = 0; i < plugin.config.length; i++) {
-      newConfigBlocks = [...newConfigBlocks, plugin.config[i]];
-    }
-    const handleModifyConfig = (value: any, id: string, groupID?: string) => {
-      const changeID = groupID ? groupID : id;
-
-      const updatedChanges = [...tempChanges]; // Create a copy of tempChanges
-      const existingChangeIndex = updatedChanges.findIndex(
-        (change) => change.id === changeID
-      ); // Check if the change already exists
-
-      // Update the value of the variable in the tempChanges array (set to the block)
-      if (existingChangeIndex >= 0) {
-        const updateVar = updatedChanges[existingChangeIndex].variables.find(
-          (variable) => variable.id === changeID
-        );
-        // If the change already exists, update the value
-        if (groupID) {
-          updateVar.variables.find((variable) => variable.id === id).value =
-            value;
-        } else {
-          updateVar.value = value;
-        }
-      } else {
-        // Find the block that has the variable
-        for (let i = 0; i < newConfigBlocks.length; i++) {
-          const variable = newConfigBlocks[i].variables.find(
-            (variable) => variable.id === changeID
-          );
-          if (variable) {
-            // Update the value of the variable
-            if (groupID) {
-              variable.variables.find((variable) => variable.id === id).value =
-                value;
-            } else {
-              variable.value = value;
-            }
-
-            // If the variable exists, push the block to the tempChanges array
-            updatedChanges.push(newConfigBlocks[i]);
-            break;
-          }
-        }
-      }
-      setTempChanges(updatedChanges);
-    };
-
-    const handleSave = async () => {
-      // Replace the config blocks with the tempChanges
-      const newConfig = [...newConfigBlocks];
-      for (let i = 0; i < tempChanges.length; i++) {
-        const blockIndex = newConfig.findIndex(
-          (block) => block.id === tempChanges[i].id
-        );
-        newConfig[blockIndex] = tempChanges[i];
-      }
-
-      // Update the state with the new config blocks
-      // setNewConfigBlocks(newConfig);
-
-      // Send the changes to the server
-      const header = {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      };
-
-      const body = JSON.stringify({
-        newConfig: newConfig,
-      });
-
-      const response = await horusPost("/api/plugins/config", header, body);
-      const data = await response.json();
-
-      if (!data.ok) {
-        alert(data.msg);
-      }
-    };
-
-    const handleClose = () => {
-      // Reset the temporary changes array
-      setTempChanges([]);
-
-      // Close the modal
-      setModalProps({
-        ...modalProps,
-        show: false,
-      });
-    };
-
-    // Pass the selected plugin to the plugin config view
-    setModalProps({
-      header: plugin.name,
-      body: (
-        <PluginConfigView
-          configBlocks={newConfigBlocks}
-          handleChange={handleModifyConfig}
-        />
-      ),
-      footer: (
-        <div className="d-flex justify-content-between gap-2">
-          <NBDButton
-            text="Save"
-            action={() => {
-              // Save the changes
-              handleSave();
-              handleClose();
-            }}
-          />
-          <NBDButton
-            text="Cancel"
-            action={() => {
-              handleClose();
-            }}
-          />
-        </div>
-      ),
-      show: true,
-      size: "xl",
-    });
-  };
-
-  const deletingPluginModal = (pluginName: string) => {
-    setModalProps({
-      header: "Deleting plugin",
-      body: (
-        <div className="flex justify-center align-items-center flex-col">
-          <RotatingLines />
-          <div className="text-center">{"Deleting plugin " + pluginName}</div>
-        </div>
-      ),
-      footer: (
-        <div className="text-center">
-          Please wait while the plugin is being deleted. This may take a while.
-        </div>
-      ),
-      show: true,
-      size: "lg",
-    });
-  };
-
-  const dummyPlguins = () => {
-    const fakePluginList = [];
-    for (let i = 0; i < 10; i++) {
-      fakePluginList.push({
-        name: "Plugin " + i,
-        description: "Description " + i,
-        version: "1.0.0",
-      });
-    }
-    return fakePluginList;
-  };
-
-  const hasPlugins = pluginList?.plugins?.length > 0;
+  const hasPlugins = (pluginList?.plugins?.length ?? 0) > 0;
 
   return (
     <div>
-      <HorusModal {...modalProps} />
-      {/* Render loaded plugin data */}
       <div className="plugin-list gap-2">
-        {/* {dummyPlguins().map((plugin) => {
-          return <PluginCard key={plugin.name} plugin={plugin} error={false} />;
-        })} */}
-
         {!hasPlugins && (
           <div className="flex justify-center align-items-center flex-col">
             <div className="text-center">No plugins found</div>
@@ -271,12 +171,8 @@ function InstalledPlugins(props: InstalledPluginsProps) {
             <PluginCard
               key={plugin.name}
               plugin={plugin}
-              error={false}
-              configPlugin={() => {
-                openPluginConfiguration(plugin);
-              }}
-              deleteModal={deletingPluginModal}
-              fetchData={fetchData}
+              setSubview={props.setSubView}
+              deletePlugin={deletePlugin}
             />
           );
         })}
@@ -286,9 +182,9 @@ function InstalledPlugins(props: InstalledPluginsProps) {
             <PluginCard
               key={error.name}
               plugin={error}
-              error={true}
-              deleteModal={deletingPluginModal}
-              fetchData={fetchData}
+              error
+              setSubview={props.setSubView}
+              deletePlugin={deletePlugin}
             />
           );
         })}
@@ -299,18 +195,23 @@ function InstalledPlugins(props: InstalledPluginsProps) {
 
 interface PluginCardProps {
   plugin: HorusPlugin;
-  error: boolean;
-  configPlugin?: () => void;
-  deleteModal?: (name: string) => void;
-  fetchData: () => void;
+  error?: boolean;
+  setSubview: (view: React.ReactNode) => void;
+  deletePlugin: (id: string) => void;
 }
 
 function PluginCard(props: PluginCardProps) {
-  const { plugin, error, configPlugin, deleteModal, fetchData } = props;
+  const { plugin, error } = props;
+
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [showDeletingView, setShowDeletingView] = useState<boolean>(false);
 
   const deletePlugin = async () => {
-    // Show the deleting plugin modal
-    deleteModal(plugin.name);
+    if (!confirm("Are you sure you want to delete this plugin?")) {
+      return;
+    }
+
+    setIsDeleting(true);
 
     const body = JSON.stringify({
       name: plugin.name,
@@ -321,40 +222,56 @@ function PluginCard(props: PluginCardProps) {
       Accept: "application/json",
     };
 
+    // Wait for the animation to finish
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    setShowDeletingView(true);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
     const response = await horusPost("/api/plugins/uninstall", headers, body);
 
     const data = await response.json();
 
     if (!data.ok) {
       alert("Error deleting plugin: " + data.message);
+    } else {
+      props.deletePlugin(plugin.id);
     }
 
-    // Fetch the new data
-    fetchData();
+    setIsDeleting(false);
+    setShowDeletingView(false);
   };
 
+  if (showDeletingView) {
+    return (
+      <div className="p-2 card w-full flex flex-col gap-2 justify-center items-center fade-in-animation red-container animated-gradient">
+        <RotatingLines />
+        Removing {plugin.name}
+      </div>
+    );
+  }
+
   return (
-    <div className="card plugin-card">
+    <div
+      className={`card plugin-card animated-gradient ${
+        isDeleting ? "slide-left-exit-animation" : null
+      }`}
+      onClick={() => {
+        if (isDeleting) return;
+        !error &&
+          plugin.config.length > 0 &&
+          props.setSubview(<PluginConfigView configBlocks={plugin.config} />);
+      }}
+    >
       <div className="card-body d-flex justify-content-between align-items-start">
         <div>
-          <h5 className="card-title">{plugin.name}</h5>
+          <div className="flex flex-row items-baseline gap-2">
+            <div className="text-xl font-semibold">{plugin.name}</div> -
+            <div className="card-subtitle">{plugin.description}</div>
+          </div>
           {!error ? (
             <>
-              <h6 className="card-subtitle text-muted">{plugin.description}</h6>
               <div>Version: {plugin.version}</div>
               <div>Author: {plugin.author}</div>
-              {plugin.dependencies && plugin.dependencies.length > 0 ? (
-                <div>
-                  Dependencies:
-                  <div>
-                    {plugin.dependencies?.map((dependency) => {
-                      return <li key={dependency}>{dependency}</li>;
-                    })}
-                  </div>
-                </div>
-              ) : (
-                "No dependencies"
-              )}
             </>
           ) : (
             <div className="plugin-error">{plugin.description}</div>
@@ -362,8 +279,14 @@ function PluginCard(props: PluginCardProps) {
         </div>
         <div>
           <div className="d-flex justify-content-between gap-2">
-            {!error && (
-              <button onClick={configPlugin}>
+            {!error && plugin.config.length > 0 && (
+              <button
+                onClick={() => {
+                  props.setSubview(
+                    <PluginConfigView configBlocks={plugin.config} />
+                  );
+                }}
+              >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 20 20"
@@ -405,118 +328,39 @@ function PluginCard(props: PluginCardProps) {
   );
 }
 
+type PluginList = {
+  plugins: HorusPlugin[];
+  errors: HorusPlugin[];
+};
+
 export function PluginManager() {
-  const [modalProps, setModalProps] = useState<HorusModalProps>({
-    header: "Installing plugin",
-    body: (
-      <div className="flex justify-center align-items-center flex-col">
-        <RotatingLines />
-        <div className="text-center">{"Select a plugin to install..."}</div>
-      </div>
-    ),
-    footer: (
-      <div className="text-center">
-        Please wait while the plugin is being installed. This may take a while.
-      </div>
-    ),
-    show: false,
-    size: "lg",
-  });
+  const [subView, setSubView] = useState<React.ReactNode>(null);
+  const [hideSubView, setHideSubView] = useState<boolean>(true);
 
-  const installingModal = <HorusModal {...modalProps} />;
-
-  const [pluginList, setPluginList] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [filteredPluginList, setFilteredPluginList] = useState(pluginList);
-  const [developmentMode, setDevelopmentMode] = useState(false);
+  const [pluginList, setPluginList] = useState<PluginList | null>(null);
+  const [filteredPluginList, setFilteredPluginList] =
+    useState<typeof pluginList>(pluginList);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [developmentMode, setDevelopmentMode] = useState<boolean>(false);
 
   const fetchData = async () => {
     setLoading(true);
     try {
       const response = await horusGet("/api/plugins/list");
       const data = await response.json();
+
       setPluginList(data);
       setFilteredPluginList(data);
 
       // Set the development mode
-      const devMode = await horusGetSettings("developmentMode");
+      const devMode = window.horusSettings["developmentMode"]?.value;
 
-      setDevelopmentMode(devMode?.value || false);
-
-      setLoading(false);
+      setDevelopmentMode(devMode || false);
     } catch (error) {
-      setPluginList(["Error loading plugins"]);
+      alert(`Error fetching plugins: ${error}`);
+    } finally {
       setLoading(false);
     }
-  };
-
-  const updateText = (data) => {
-    let stringData = data.toString();
-
-    // Strip the string
-    stringData = stringData.replace(/(\r\n|\n|\r)/gm, "");
-
-    if (stringData === "" || stringData === " ") {
-      return;
-    }
-
-    // Update the state
-    setModalProps((currentModalProps) => {
-      return {
-        ...currentModalProps,
-        body: (
-          <div className="flex justify-center align-items-center flex-col">
-            <RotatingLines />
-            <div className="text-center">{stringData}</div>
-          </div>
-        ),
-      };
-    });
-  };
-
-  useEffect(() => {
-    // When recieving a message from the server, log it to the console
-    socket.on("installPluginDep", updateText);
-
-    return () => {
-      socket.off("installPluginDep", updateText);
-    };
-  }, []);
-
-  // Open new window for plugin installation
-  const installPlugin = async (file) => {
-    if (file === null || file === undefined) {
-      return;
-    }
-
-    setModalProps({
-      ...modalProps,
-      show: true,
-    });
-
-    const header = {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    };
-
-    const body = JSON.stringify({
-      file: file,
-    });
-
-    const response = await horusPost("/api/plugins/install", header, body);
-    const data = await response.json();
-
-    if (!data.ok) {
-      alert("Error installing plugin: " + data.message);
-    }
-
-    setModalProps({
-      ...modalProps,
-      show: false,
-    });
-
-    // Fetch the new data
-    fetchData();
   };
 
   // Open plugins folder
@@ -539,15 +383,13 @@ export function PluginManager() {
     fetchData();
   }, []);
 
-  const filterPlugins = (event) => {
-    const searchTerm = event.target.value;
-
+  const filterPlugins = (searchTerm: string) => {
     if (searchTerm === "") {
       setFilteredPluginList(pluginList);
       return;
     }
 
-    const filteredPlugins = pluginList.plugins.filter((plugin) => {
+    const filteredPlugins = pluginList?.plugins.filter((plugin) => {
       return (
         plugin.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         plugin.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -555,7 +397,7 @@ export function PluginManager() {
       );
     });
 
-    const filteredErrors = pluginList.errors.filter((plugin) => {
+    const filteredErrors = pluginList?.errors.filter((plugin) => {
       return (
         plugin.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         plugin.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -564,57 +406,179 @@ export function PluginManager() {
     });
 
     setFilteredPluginList({
-      plugins: filteredPlugins,
-      errors: filteredErrors,
+      plugins: filteredPlugins ?? [],
+      errors: filteredErrors ?? [],
     });
+  };
+
+  const deletePlugin = (id: string) => {
+    const newPluginList = { ...pluginList } as PluginList;
+
+    // Remove the plugin from the list
+    newPluginList.plugins = newPluginList.plugins.filter(
+      (plugin) => plugin.id !== id
+    );
+
+    setPluginList(newPluginList);
+    setFilteredPluginList(newPluginList);
   };
 
   useEffect(() => {
     fetchDesktop();
   }, []);
 
+  const handleSetSubview = (subView: React.ReactNode) => {
+    setHideSubView(false);
+    setSubView(subView);
+  };
+
+  const returnToMainView = () => {
+    setHideSubView(true);
+  };
+
   return (
-    <div className="root-plugin-container overflow-hidden">
+    <div className="overflow-hidden w-full">
       <div className="flex flex-col">
         <div className="plugin-manager-title flex">
-          <h1>Plugin manager</h1>
+          <div
+            className="
+            text-2xl
+            font-semibold
+            flex
+            justify-center
+            items-center
+            gap-2
+            ml-2
+          "
+          >
+            Plugin manager
+          </div>
           <div className="flex flex-row flex-wrap justify-center gap-2 mr-2">
-            <HorusFileExplorer
-              onFileConfirm={(file) => {
-                installPlugin(file);
+            <NBDButton
+              text="Install plugin"
+              action={() => {
+                handleSetSubview(
+                  <InstallingPluginView onPluginInstall={fetchData} />
+                );
               }}
-              onFileSelect={() => {}}
-              allowedExtensions={["hp"]}
-            >
-              Install plugin
-            </HorusFileExplorer>
+            />
             {developmentMode && (
               <NBDButton text="Reload plugins" action={reloadPlugins} />
             )}
             <NBDButton text="Open Horus folder" action={openPluginsFolder} />
             <SearchComponent
               placeholder="Search plugins..."
-              onChange={filterPlugins}
+              onChange={(e) => {
+                filterPlugins(e.target.value);
+              }}
             />
           </div>
         </div>
-        <div>
-          {/* Add a hidden rotating lines div because otherwise the rotating lines will not be shown in the modal */}
-          <div
-            style={{
-              display: "none",
-            }}
-          >
-            <RotatingLines />
+        {hideSubView ? (
+          <div className="fade-in-animation">
+            <InstalledPlugins
+              pluginList={filteredPluginList!}
+              loading={loading}
+              setSubView={handleSetSubview}
+              deletePlugin={deletePlugin}
+            />
           </div>
-          {installingModal}
-          <InstalledPlugins
-            pluginList={filteredPluginList}
-            loading={loading}
-            fetchData={fetchData}
-          />
-        </div>
+        ) : (
+          <>
+            <div className="p-2 flex flex-row fade-in-animation">
+              <button onClick={returnToMainView} id="back-arrow-plugins">
+                <BackArrowIcon className="w-10 h-10" />
+              </button>
+              <div className="flex-grow p-2">{subView}</div>
+            </div>
+          </>
+        )}
       </div>
+    </div>
+  );
+}
+
+function InstallingPluginView({
+  onPluginInstall,
+}: {
+  onPluginInstall: () => void;
+}) {
+  const [isInstalling, setIsInstalling] = useState(false);
+  const [text, setText] = useState("Select a plugin to install");
+
+  const updateText = (data: any) => {
+    let stringData = data.toString();
+
+    // Strip the string
+    stringData = stringData.replace(/(\r\n|\n|\r)/gm, "");
+
+    if (stringData === "" || stringData === " ") {
+      return;
+    }
+
+    // Update the state
+    setText(stringData);
+  };
+
+  // Open new window for plugin installation
+  const installPlugin = async (file: string) => {
+    if (file === null || file === undefined) {
+      return;
+    }
+
+    setIsInstalling(true);
+
+    const header = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    };
+
+    const body = JSON.stringify({
+      file: file,
+    });
+
+    const response = await horusPost("/api/plugins/install", header, body);
+    const data = await response.json();
+
+    setIsInstalling(false);
+
+    if (!data.ok) {
+      alert("Error installing plugin: " + data.message);
+    }
+
+    // Reload the plugins
+    onPluginInstall();
+
+    // Go back to the main view by clicking the "back" button
+    document.getElementById("back-arrow-plugins")?.click();
+  };
+
+  useEffect(() => {
+    // When recieving a message from the server, log it to the console
+    socket.on("installPluginDep", updateText);
+
+    return () => {
+      socket.off("installPluginDep", updateText);
+    };
+  }, []);
+
+  return (
+    <div className="h-48 flex flex-col justify-center items-center gap-2">
+      <HorusContainer className="w-[25rem] h-[10rem] flex flex-col gap-2 justify-center items-center">
+        {isInstalling && <RotatingLines />}
+        <div>{text}</div>
+        {!isInstalling && (
+          <HorusFileExplorer
+            onFileConfirm={(file) => {
+              installPlugin(file);
+            }}
+            onFileSelect={() => {}}
+            allowedExtensions={["hp"]}
+          >
+            Browse...
+          </HorusFileExplorer>
+        )}
+      </HorusContainer>
     </div>
   );
 }

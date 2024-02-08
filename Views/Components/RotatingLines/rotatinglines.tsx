@@ -1,17 +1,32 @@
-import rotatinglines from "./rotating.gif";
+// @ts-ignore
+// import rotatinglines from "./rotating.gif";
 
-export default function RotatingLines(props: any) {
+// Pulsating circle
+import { CSSProperties, useEffect, useRef } from "react";
+import "./rotating.css";
+
+export default function RotatingLines(
+  props: React.HTMLAttributes<HTMLDivElement> & {
+    size?: number | string;
+  }
+) {
+  const loaderRef = useRef<HTMLDivElement>(null);
+
+  loaderRef.current?.style.setProperty(
+    "--size",
+    props.size ? `${props.size}` : "50px"
+  );
+
+  useEffect(() => {
+    loaderRef.current?.style.setProperty(
+      "--size",
+      props.size ? `${props.size}` : "50px"
+    );
+  }, [props.size]);
+
   return (
-    <div className="flex flex-col items-center justify-center">
-      <img
-        src={rotatinglines}
-        alt="rotating lines"
-        style={
-          props.style || {
-            height: "50px",
-          }
-        }
-      />
+    <div {...props}>
+      <div ref={loaderRef} className="loader" />
     </div>
   );
 }

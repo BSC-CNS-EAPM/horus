@@ -684,16 +684,16 @@ class HorusServer:
                     flow, placedID, resetRemoteBlock, self.socketio, resetFlow
                 )
 
-                succsess = {
+                success = {
                     "ok": True,
                 }
             except Exception as exc:
-                succsess = {
+                success = {
                     "ok": False,
                     "message": str(exc),
                 }
 
-            return flask.jsonify(succsess)
+            return flask.jsonify(success)
 
         @self.server.route("/api/plugins/stopflow", methods=["POST"])
         @verifyToken
@@ -714,36 +714,6 @@ class HorusServer:
                 return flask.jsonify({"ok": True})
             except Exception as exc:
                 return flask.jsonify({"ok": False, "msg": str(exc)})
-
-        @self.server.route("/api/plugins/checkremoteblock", methods=["POST"])
-        @verifyToken
-        def checkRemoteBlock():
-            # Check if the remote block is still running
-            data = request.get_json()
-
-            flowSavedID = data.get("flowSavedID", None)
-            blockPlacedID = data.get("blockPlacedID", None)
-
-            try:
-                remote = self.remoteManager.remote
-                if remote is None:
-                    raise Exception(  # pylint: disable=broad-exception-raised
-                        "Could not check remote block. No remote connected"
-                    )
-
-                status = remote.getRemoteBlockStatus(flowSavedID, blockPlacedID)
-
-                success = {
-                    "ok": True,
-                    "status": status,
-                }
-            except Exception as exc:  # pylint: disable=broad-exception-caught
-                success = {
-                    "ok": False,
-                    "error": str(exc),
-                }
-
-            return flask.jsonify(success)
 
         @self.server.route("/internal/removefinishedflow", methods=["POST"])
         def removeFlowFromQueue():
@@ -859,16 +829,18 @@ class HorusServer:
             try:
                 from App import AppDelegate  # pylint: disable=import-outside-toplevel
 
-                version = AppDelegate().APP_INFO["APP_VERSION"]
+                appINFO = AppDelegate().APP_INFO
+
                 success = {
                     "ok": True,
-                    "version": version,
+                    "appINFO": appINFO,
                 }
-            except Exception as exc:  # pylint: disable=broad-exception-caught
+            except Exception as exc:
                 success = {
                     "ok": False,
                     "msg": str(exc),
                 }
+
             return flask.jsonify(success)
 
         @self.server.route("/api/filepicker", methods=["POST"])
@@ -1086,7 +1058,7 @@ class HorusServer:
                 self.pluginManager.reloadPlugins()
 
                 # Reload the plugin pages
-                # Hide the UserWarning from Flask
+                # TODO: Hide the UserWarning from Flask
                 self._pluginPages()
 
                 # Emit plugin changes
@@ -1185,7 +1157,7 @@ class HorusServer:
             # Return 200 status
             return "OK"
 
-        # Add a new Flask request so that the HorusSocket can check wether the
+        # Add a new Flask request so that the HorusSocket can check whether the
         # client has currently vieweing the flow
         @self.server.route("/internal/checkjoinedflow/", methods=["POST"])
         def checkJoinedFlow():
@@ -1630,6 +1602,10 @@ class HorusSocket(SocketIO):
         @self.on("joinFlow")
         def joinFlow(flowID):
             sid = request.sid  # type: ignore
+
+            if flowID is None:
+                return
+
             logging.getLogger("Horus").info("Joined room for flowID %s", flowID)
 
             # Join the flow room
@@ -1643,6 +1619,9 @@ class HorusSocket(SocketIO):
         @self.on("leaveFlow")
         def leaveFlow(flowID):
             sid = request.sid  # type: ignore
+            if flowID is None:
+                return
+
             logging.getLogger("Horus").debug("Left room for flowID %s", flowID)
 
             # Leave the flow room

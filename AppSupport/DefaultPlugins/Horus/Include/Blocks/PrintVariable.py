@@ -18,7 +18,7 @@ customMessage = PluginVariable(
 printBlockPlacedID = PluginVariable(
     name="Print block placed ID",
     id="print_block_placed_id",
-    description="Wether to print the placedID of this block.",
+    description="Whether to print the placedID of this block.",
     type=VariableTypes.BOOLEAN,
 )
 

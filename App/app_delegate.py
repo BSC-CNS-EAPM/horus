@@ -273,7 +273,7 @@ class AppDelegate(metaclass=HorusSingleton):
 
         return openedWindows
 
-    APP_INFO: typing.Dict[str, str] = {}
+    APP_INFO: typing.Dict[str, typing.Any] = {}
     """
     Stores relevant information about the app, such as
 
@@ -566,11 +566,37 @@ class AppDelegate(metaclass=HorusSingleton):
         # Add the window to the list of windows
         # self.windows.append(window) # Not neccessary using the webview module
 
+    def _extraInfoData(self):
+        """
+        Populate the App Info with extra data
+        """
+
+        def getOsName():
+            # Obtain the OS version too
+            import platform
+
+            if self.platform == "darwin":
+                return "macOS " + platform.mac_ver()[0]
+            if self.platform == "win32":
+                return "Windows " + platform.release()
+            if self.platform == "linux":
+                return "Linux " + platform.release()
+            return "Unknown"
+
+        # Load extra data to the app info
+        self.APP_INFO["platform"] = getOsName()
+        self.APP_INFO["debug"] = self.debug
+        self.APP_INFO["mode"] = "server" if self.serverMode else "app"
+        self.APP_INFO["appSupportDir"] = self.appSupportDir
+
     def applicationDidFinishLaunching(self):
         """
         This will be called when the app is launched.
         It will create the first window and launch the app
         """
+
+        # Populate the App Info with extra data
+        self._extraInfoData()
 
         # Initialize the server
         self.initializeServer()

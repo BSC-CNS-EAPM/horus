@@ -1,5 +1,7 @@
 import RotatingLines from "../RotatingLines/rotatinglines";
-import { FlowStatus } from "../FlowBuilder/flow_builder_types";
+import { FlowStatus } from "../FlowBuilder/flow.types";
+import ErrorIcon from "../Toolbar/Icons/Error";
+import CheckMark from "../Toolbar/Icons/CheckMark";
 
 type FlowStatusViewProps = {
   status: FlowStatus;
@@ -47,12 +49,7 @@ function FlowStatusBase(props: FlowStatusBaseProps) {
 function RunningFlowStatus() {
   return (
     <FlowStatusBase color="blue">
-      <RotatingLines
-        style={{
-          height: "1rem",
-          width: "1rem",
-        }}
-      />
+      <RotatingLines size={"1.5rem"} />
       <div>Running</div>
     </FlowStatusBase>
   );
@@ -110,20 +107,7 @@ function StoppedFlowStatus() {
 function FinishedFlowStatus() {
   return (
     <FlowStatusBase color="green">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        strokeWidth={1.5}
-        stroke="currentColor"
-        className="w-5 h-5"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-        />
-      </svg>
+      <CheckMark />
       Finished
     </FlowStatusBase>
   );
@@ -132,20 +116,7 @@ function FinishedFlowStatus() {
 function ErrorFlowStatus() {
   return (
     <FlowStatusBase color="red">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        strokeWidth={1.5}
-        stroke="currentColor"
-        className="w-5 h-5"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
-        />
-      </svg>
+      <ErrorIcon />
       Failed
     </FlowStatusBase>
   );

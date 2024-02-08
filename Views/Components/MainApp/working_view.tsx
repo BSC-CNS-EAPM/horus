@@ -1,0 +1,311 @@
+// React imports
+import { useState, useEffect, useRef } from "react";
+
+// Horus imports
+import Molstar from "../Molstar/molstar";
+import HorusTerm from "../Console/console";
+import { FlowBuilderView } from "../FlowBuilder/flow.view";
+import HorusToolbar from "../Toolbar/toolbar";
+
+// Web-server tools
+import { socket } from "../../Utils/socket";
+import { fetchDesktop } from "../../Utils/utils";
+import IFrameLoader from "../IframeLoader/iframeloader";
+
+// Panels
+import {
+  Panel,
+  PanelGroup,
+  ImperativePanelHandle,
+} from "react-resizable-panels";
+import ResizeHandle from "../Panels/resize_handle";
+
+// Molstar image logo
+// @ts-ignore
+import MolstarLogo from "../../../Resources/molstar-logo.png";
+
+type WorkingViewProps = {
+  extensionToOpen?: {
+    url: string;
+    name: string;
+  };
+  flowToOpen?: {
+    savedID: string;
+    path: string;
+  };
+};
+
+export default function WorkingView(props: WorkingViewProps) {
+  // States
+  const [mainView, setMainView] = useState(<FlowBuilderView />);
+  const [iframeView, setIframeView] = useState<React.ReactNode | null>(null);
+  const [showIFrame, setShowIFrame] = useState(false);
+  const [showConsole, setShowConsole] = useState(false);
+
+  const handleMainView = (event: Event) => {
+    const mainView = (event as CustomEvent).detail;
+    setMainView(mainView);
+  };
+
+  const currentIframeBlockID = useRef<number>(-1);
+
+  const handleIFrame = (event: Event) => {
+    // Opening it from a block action yields a socket event
+    const parsedEvent = event as CustomEvent;
+
+    const url: string | null = parsedEvent.detail?.url ?? null;
+    const pagename: string = parsedEvent.detail?.pagename;
+    const data: any = parsedEvent.detail?.data ?? null;
+    const blockIDCustom: number = parsedEvent.detail?.blockIDCustom ?? -1;
+
+    // The block which provided the custom variable view unmounted,
+    // Therefore we need to hide the current extension view
+    if (blockIDCustom === currentIframeBlockID.current && !url) {
+      setShowIFrame(false);
+      return;
+    }
+
+    // An unmount event came from a custom block, but its not the currently displayed
+    if (!url && blockIDCustom !== -1) {
+      return;
+    }
+
+    // No url was provided, hidding the view
+    if (!url) {
+      setShowIFrame(false);
+      return;
+    }
+
+    currentIframeBlockID.current = blockIDCustom;
+
+    const key = url + "-" + pagename + Date.now().toString();
+    setIframeView(
+      <IFrameLoader key={key} url={url} pagename={pagename} data={data} />
+    );
+    setShowIFrame(true);
+  };
+
+  const toggleConsole = () => {
+    setShowConsole((currentShowConsole) => !currentShowConsole);
+  };
+
+  useEffect(() => {
+    // Event listeners
+    window.addEventListener("mainView", handleMainView);
+    window.addEventListener("loadExtension", handleIFrame);
+    window.addEventListener("toggleConsole", toggleConsole);
+    socket.on("openExtension", handleIFrame);
+
+    // Set the global isDesktop variable
+    fetchDesktop();
+
+    return () => {
+      window.removeEventListener("mainView", handleMainView);
+      window.removeEventListener("loadExtension", handleIFrame);
+      window.removeEventListener("toggleConsole", toggleConsole);
+      socket.off("openExtension", handleIFrame);
+    };
+  }, []);
+
+  const mainPanelRef = useRef<ImperativePanelHandle | null>(null);
+
+  // Instantiate the HorusTerm in a ref
+  // so that it is always available
+  const term = useRef(<HorusTerm />);
+
+  const iFrameRef = useRef(null);
+
+  useEffect(() => {
+    if (props.extensionToOpen) {
+      // Create a fake event with the required data
+      const extensionEvent: any = {
+        detail: {
+          pagename: props.extensionToOpen.name,
+          url: props.extensionToOpen.url,
+        },
+      };
+      handleIFrame(extensionEvent);
+
+      // Collapse the main panel
+      mainPanelRef.current?.collapse();
+    }
+
+    if (props.flowToOpen) {
+      let event: CustomEvent | null = null;
+      if (props.flowToOpen.savedID === "open") {
+        event = new CustomEvent("openFlow", {
+          detail: {},
+        });
+      } else {
+        event = new CustomEvent("openFlow", {
+          detail: {
+            savedID: props.flowToOpen.savedID,
+            path: props.flowToOpen.path,
+          },
+        });
+      }
+
+      // Dispatch the event 1s after the component mounts
+      // to allow the flow builder to mount
+      if (event) {
+        setTimeout(() => {
+          window.dispatchEvent(event!);
+        }, 1000);
+      }
+    }
+  }, [props.extensionToOpen, props.flowToOpen]);
+
+  return (
+    <div className="root flex flex-col fade-in-animation zoom-out-animation">
+      <HorusToolbar />
+      <div className="flex flex-col w-full h-full">
+        <PanelGroup direction="vertical">
+          <Panel collapsible={true}>
+            <PanelGroup direction="horizontal">
+              <Panel
+                ref={mainPanelRef}
+                order={1}
+                collapsible={true}
+                defaultSize={props.extensionToOpen ? 0 : 50}
+                minSize={30}
+                id="flow-builder-panel"
+              >
+                {mainView}
+              </Panel>
+              {showIFrame && (
+                <>
+                  <ResizeHandle horizontal={true} />
+                  <Panel
+                    className="zoom-in-animation h-full"
+                    id="iframe-panel"
+                    ref={iFrameRef}
+                    order={3}
+                    collapsible={true}
+                    defaultSize={props.extensionToOpen ? 100 : 50}
+                  >
+                    {iframeView}
+                  </Panel>
+                </>
+              )}
+            </PanelGroup>
+          </Panel>
+          <MolstarPanel />
+        </PanelGroup>
+        <div className={showConsole ? "block" : "hidden"}>{term.current}</div>
+      </div>
+    </div>
+  );
+}
+
+function MolstarPanel() {
+  const [showMolstar, setShowMolstar] = useState<Boolean>(true);
+  const [initialMolstarHidden, setInitialMolstarHidden] =
+    useState<Boolean>(true);
+
+  const [isDragging, setIsDragging] = useState<Boolean>(false);
+
+  // Panels ref
+  const molstarPanelRef = useRef<ImperativePanelHandle | null>(null);
+
+  const toggleMolstar = () => {
+    if (initialMolstarHidden) {
+      setInitialMolstarHidden(false);
+      molstarPanelRef.current?.resize(100);
+    }
+
+    if (!showMolstar) {
+      molstarPanelRef.current?.expand();
+      setShowMolstar(true);
+    } else {
+      molstarPanelRef.current?.collapse();
+      setShowMolstar(false);
+    }
+  };
+
+  const handlePanelSettings = () => {
+    // Get the "molstarHidden" setting
+    const molstarHidden = window.horusSettings["molstarHidden"]?.value;
+
+    if (molstarHidden) {
+      // Hide the molstar panel
+      molstarPanelRef.current?.collapse();
+
+      setInitialMolstarHidden(true);
+      setShowMolstar(false);
+    } else {
+      // Show the molstar panel
+      setInitialMolstarHidden(false);
+      setShowMolstar(true);
+      // Hide the molstar panel
+      molstarPanelRef.current?.expand();
+    }
+  };
+
+  const handleMolstarDrag = (dragging: boolean) => {
+    setIsDragging(dragging);
+  };
+
+  const MolstarResizing = () => {
+    return (
+      <div className="flex justify-center items-center w-full h-full zoom-out-animation bg-white">
+        <img
+          src={MolstarLogo}
+          style={{
+            height: "150px",
+          }}
+        />
+      </div>
+    );
+  };
+
+  useEffect(() => {
+    window.addEventListener("toggleMolstar", toggleMolstar);
+
+    return () => {
+      window.removeEventListener("toggleMolstar", toggleMolstar);
+    };
+  }, [showMolstar, initialMolstarHidden]);
+
+  useEffect(() => {
+    // Handle the panel settings as are needed when mounting this view
+    handlePanelSettings();
+  }, [molstarPanelRef.current]);
+
+  return (
+    <>
+      <ResizeHandle onDragging={handleMolstarDrag} />
+      <Panel
+        className="bg-white"
+        id="molstar-panel"
+        order={2}
+        collapsible={true}
+        defaultSize={0}
+        minSize={30}
+        ref={molstarPanelRef}
+        onCollapse={
+          // Close molstar when the panel is collapsed
+          () => {
+            setShowMolstar(false);
+          }
+        }
+        onResize={() => {
+          if (molstarPanelRef?.current?.getSize()! > 0) {
+            setShowMolstar(true);
+          }
+        }}
+      >
+        <div className="w-full h-full">
+          {isDragging && <MolstarResizing />}
+          <div
+            className="w-full h-full"
+            style={{
+              display: isDragging ? "none" : "block",
+            }}
+          >
+            <Molstar />
+          </div>
+        </div>
+      </Panel>
+    </>
+  );
+}

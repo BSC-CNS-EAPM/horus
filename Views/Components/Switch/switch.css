@@ -1,0 +1,21 @@
+.horus-switch {
+  @apply relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2  focus-visible:ring-white/75;
+}
+
+.horus-switch__thumb {
+  @apply relative inline-flex items-center justify-center h-[32px] w-[32px] rounded-full transition-transform duration-200 ease-in-out bg-white shadow-sm;
+}
+
+.horus-switch__thumb::before {
+  @apply absolute h-[26px] w-[26px] rounded-full bg-white transform translate-x-[-50%] translate-y-[-50%] shadow-sm;
+  content: "";
+}
+
+.horus-switch__track {
+  @apply absolute left-0 inline-flex items-center justify-center h-[38px] w-[74px] rounded-full border border-transparent;
+  background: var(--bg-grey-nostrum);
+}
+
+.horus-switch:disabled {
+  @apply cursor-not-allowed opacity-50;
+}

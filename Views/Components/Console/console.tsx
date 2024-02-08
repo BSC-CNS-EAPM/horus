@@ -1,20 +1,20 @@
-import React, { useEffect } from "react";
+// React
+import { createRef, useEffect } from "react";
+
+// Horus web-server
 import { socket } from "../../Utils/socket";
+
+// Terminal component
+// @ts-ignore
 import Terminal from "react-console-emulator";
+
+// Terminal commands
 import getCommands from "./commands";
+
+// Styling to the console
 import "./console.css";
 
 // Setup the terminal
-
-declare global {
-  interface Window {
-    horusTerm: {
-      ref: React.RefObject<Terminal>;
-      storedMessages: string[];
-    };
-  }
-}
-
 window.horusTerm = {
   ref: null,
   storedMessages: [],
@@ -27,9 +27,9 @@ socket.on("printTerm", (data) => {
 
 export default function HorusTerm() {
   // Create a ref to the Terminal and assign the Terminal type
-  const term = React.createRef<Terminal>();
+  const term = createRef<Terminal>();
 
-  function printTerm(data) {
+  function printTerm(data: string | Buffer) {
     // Always convert to string
     data = data.toString();
 
@@ -60,7 +60,7 @@ export default function HorusTerm() {
   }, []);
 
   return (
-    <div id="console-div" className="horus-term">
+    <div id="console-div" className="horus-term zoom-in-animation">
       <Terminal
         commands={getCommands()}
         promptLabel={"horus:~$ "}

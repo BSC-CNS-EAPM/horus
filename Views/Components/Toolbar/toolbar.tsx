@@ -1,23 +1,39 @@
 // Desc: This is the toolbar component
-import { Menu, Transition } from "@headlessui/react";
-import { Fragment, useEffect, useState } from "react";
-import { useNavigate } from "react-router";
-import "../nbdbutton.css";
-import { horusGet } from "../../Utils/utils";
-import { FlowBuilderView } from "../FlowBuilder/flow_builder_view";
-import "./toolbar.css";
-import { socket } from "../../Utils/socket";
-import { SettingsView } from "../../Settings/settings";
-import { FlowStatusView } from "../FlowStatus/flow_status";
-import RotatingLines from "../RotatingLines/rotatinglines";
-import { PluginPage } from "../FlowBuilder/flow_builder_types";
-// import RotatingLines from "../RotatingLines/rotatinglines";
 
-export const loadPage = async (url: string, pagename: string) => {
-  // Emit an event to the iframe
-  const event = new CustomEvent("mainViewURL", { detail: { url, pagename } });
-  window.dispatchEvent(event);
-};
+// React
+import { ChangeEvent, Fragment, useEffect, useState } from "react";
+
+// Useful components from HeadlessUI
+import { Menu, Transition } from "@headlessui/react";
+
+// Horus components
+import { FlowBuilderView } from "../FlowBuilder/flow.view";
+import RotatingLines from "../RotatingLines/rotatinglines";
+import SplashScreen from "../MainApp/welcome_screen";
+import RecentUserFlows, {
+  PredefinedFlows,
+  useGetRecentFlows,
+} from "../FlowStatus/recent_flows";
+import PluginPagesView, { loadPage, usePluginPages } from "./extensions_list";
+
+// Icons
+import NewFlowIcon from "./Icons/New";
+import PluginsIcon from "./Icons/Plugins";
+import OpenFlowIcon from "./Icons/Open";
+import MolStarIcon from "./Icons/MolStar";
+
+// Horus web-server utils
+import { horusGet } from "../../Utils/utils";
+
+// Styles
+import "../nbdbutton.css";
+import "./toolbar.css";
+import { Flow, PluginPage } from "../FlowBuilder/flow.types";
+import EyeIcon from "./Icons/Eye";
+import EyeDashIcon from "./Icons/EyeDash";
+import Chevron from "./Icons/Chevron";
+import TrashIcon from "./Icons/Trash";
+// import RotatingLines from "../RotatingLines/rotatinglines";
 
 interface ToolBarItemProps {
   name: string;
@@ -43,11 +59,6 @@ export const modifierKey: string = navigator.userAgent.includes("Mac")
 export const shiftKey: string = "Shift";
 
 function ToolBarItem(props: ToolBarItemProps) {
-  const navigate = useNavigate();
-
-  const navigateTo = async () => {
-    await navigate(props.link);
-  };
   const [active, setActive] = useState(false);
 
   const handleMouseOver = () => {
@@ -73,12 +84,11 @@ function ToolBarItem(props: ToolBarItemProps) {
       onMouseLeave={handleMouseLeave}
       className="toolbar-item"
       onClick={async () => {
-        await navigateTo();
         props.onClick?.();
       }}
     >
       <MenuIcon active={active || isOpen} svgPath={props.svgPath} />
-      <div>{props.name}</div>
+      <div className="cut-text">{props.name}</div>
       {props.children}
       {props.keyShortcut ? (
         <div className="ml-auto toolbar-item-key-shortcut">
@@ -102,16 +112,14 @@ interface ToolBarMenuProps {
 
 function ToolbarMenu(props: ToolBarMenuProps) {
   return (
-    <div>
+    <div className="h-full">
       {props.link || props.onClick ? (
         <ToolBarItem {...props} />
       ) : (
         <Menu>
-          <div>
-            <Menu.Button>
-              <ToolBarItem {...props} />
-            </Menu.Button>
-          </div>
+          <Menu.Button className={"h-full"}>
+            <ToolBarItem {...props} />
+          </Menu.Button>
           <Transition
             as={Fragment}
             enter="transition ease-out duration-100"
@@ -121,7 +129,7 @@ function ToolbarMenu(props: ToolBarMenuProps) {
             leaveFrom="transform opacity-100 scale-100"
             leaveTo="transform opacity-0 scale-95"
           >
-            <Menu.Items className="absolute p-md-2 mt-2 w-56 origin-top-left divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+            <Menu.Items className="absolute p-md-2 mt-2 w-56 origin-top-left rounded-xl bg-white toolbar-menu">
               {/* // Here the items will be rendered */}
               {props.items?.map((item) => (
                 <Menu.Item key={item.name}>
@@ -156,6 +164,12 @@ const MenuIcon = ({ active, svgPath }: IconProps) => {
 
   // Color of the fill
   const fillColor = "transparent";
+
+  // If the svgPath provided is directly a <svg> element, then we return it
+  if (typeof svgPath === "object") {
+    return svgPath;
+  }
+
   return (
     <svg
       viewBox="0 0 20 20"
@@ -172,23 +186,27 @@ const MenuIcon = ({ active, svgPath }: IconProps) => {
 
 interface SearchProps {
   placeholder: string;
-  onChange: (event) => void;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
   showIcon?: boolean;
   onFocus?: () => void;
   onBlur?: () => void;
+  className?: string;
 }
 
 function SearchComponent(props: SearchProps) {
-  const { placeholder, onChange, showIcon = true } = props;
+  const { placeholder, onChange, showIcon = true, className } = props;
   return (
-    <div className="app-button flex flex-row">
+    <div className={`app-button flex flex-row ${className}`}>
       <input
+        id="search-input"
         type="text"
         placeholder={placeholder}
-        className=""
+        className="w-full outline-none"
         onChange={onChange}
         onFocus={props.onFocus}
         onBlur={props.onBlur}
+        // Disable browser completion
+        autoComplete="off"
       />
       {showIcon && (
         <button>
@@ -221,6 +239,12 @@ const handleKeyDown = (event: KeyboardEvent) => {
     event.preventDefault();
     toggleConsole();
   }
+
+  if (event.code === "KeyM" && isModifierKeyPressed && isShiftKeyPressed) {
+    event.preventDefault();
+    toggleMolstar();
+  }
+
   if (event.code === "KeyZ" && isModifierKeyPressed && isShiftKeyPressed) {
     event.preventDefault();
     redoEvent();
@@ -237,6 +261,11 @@ const handleKeyDown = (event: KeyboardEvent) => {
     event.preventDefault();
     saveEvent();
   }
+};
+
+const toggleMolstar = () => {
+  const centerEvent = new CustomEvent("toggleMolstar");
+  window.dispatchEvent(centerEvent);
 };
 
 const toggleConsole = () => {
@@ -293,7 +322,7 @@ const cleanRecents = async () => {
 document.addEventListener("keydown", handleKeyDown);
 
 const hideExtensions = () => {
-  const event = new CustomEvent("mainViewURL");
+  const event = new CustomEvent("loadExtension");
   window.dispatchEvent(event);
 };
 
@@ -302,35 +331,7 @@ export default function HorusToolbar() {
   // Will lie on top of the page and will contain the
   // user menu, search bar, etc.
 
-  const [pluginPages, setPluginPages] = useState<PluginPage[]>([]);
-
-  const getPluginPages = async () => {
-    const response = await horusGet("/api/plugins/listpages");
-
-    if (!response) {
-      return;
-    }
-
-    if (!response.ok) {
-      return;
-    }
-
-    const data: [PluginPage] = await response.json();
-
-    setPluginPages(data);
-  };
-
-  useEffect(() => {
-    // Fetch the pages from the server api
-    getPluginPages();
-
-    // Add a scoket listener to update the extensions list after a plugin is installed/uninstalled
-    socket.on("pluginChanges", getPluginPages);
-
-    return () => {
-      socket.off("pluginChanges", getPluginPages);
-    };
-  }, []);
+  const pluginPages = usePluginPages();
 
   const menus: ToolBarMenuProps[] = [
     {
@@ -353,12 +354,25 @@ export default function HorusToolbar() {
         </svg>
       ),
       onClick: () => {
-        // Set the secondary view to null
-        hideExtensions();
+        // confirm the user if the flow is not saved
+        const currentFlow: (Flow & { saved: boolean }) | null = window.horus
+          .getFlow
+          ? window.horus.getFlow()
+          : null;
+
+        if (currentFlow && !currentFlow.saved) {
+          if (
+            !confirm(
+              "The current flow is not saved. Are you sure you want to continue?"
+            )
+          ) {
+            return;
+          }
+        }
 
         // Show the flow builder in the main view
-        const event = new CustomEvent("mainView", {
-          detail: <FlowBuilderView />,
+        const event = new CustomEvent("start-working", {
+          detail: <SplashScreen />,
         });
         window.dispatchEvent(event);
       },
@@ -384,22 +398,7 @@ export default function HorusToolbar() {
       items: [
         {
           name: "New",
-          svgPath: (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-6 h-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m3.75 9v6m3-3H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
-              />
-            </svg>
-          ),
+          svgPath: <NewFlowIcon />,
           onClick: () => {
             // Emit an event "newFlow"
             // This event will be captured by the flowReciever component
@@ -421,22 +420,7 @@ export default function HorusToolbar() {
         },
         {
           name: "Open",
-          svgPath: (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-6 h-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776"
-              />
-            </svg>
-          ),
+          svgPath: <OpenFlowIcon />,
           onClick: () => {
             // Emit an event "openFlow"
             // This event will be captured by the flowReciever component
@@ -495,22 +479,7 @@ export default function HorusToolbar() {
         },
         {
           name: "Clean recents",
-          svgPath: (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-6 h-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
-              />
-            </svg>
-          ),
+          svgPath: <TrashIcon />,
           onClick: () => {
             cleanRecents();
           },
@@ -589,28 +558,17 @@ export default function HorusToolbar() {
     },
     {
       name: "View",
-      svgPath: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth={1.5}
-          stroke="currentColor"
-          className="w-6 h-6"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
-          />
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-          />
-        </svg>
-      ),
+      svgPath: <EyeIcon />,
       items: [
+        {
+          name: "Toggle Mol*",
+          onClick: () => {
+            toggleMolstar();
+          },
+          svgPath: <MolStarIcon />,
+          // Set a keyShortcut to enable keyboard navigation.
+          keyShortcut: `${modifierKeyLogo}${shiftKeyLogo}M`,
+        },
         {
           name: "Toggle console",
           onClick: () => {
@@ -664,134 +622,31 @@ export default function HorusToolbar() {
     },
     {
       name: "Extensions",
-      svgPath: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth={1.5}
-          stroke="currentColor"
-          className="w-6 h-6"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M14.25 6.087c0-.355.186-.676.401-.959.221-.29.349-.634.349-1.003 0-1.036-1.007-1.875-2.25-1.875s-2.25.84-2.25 1.875c0 .369.128.713.349 1.003.215.283.401.604.401.959v0a.64.64 0 01-.657.643 48.39 48.39 0 01-4.163-.3c.186 1.613.293 3.25.315 4.907a.656.656 0 01-.658.663v0c-.355 0-.676-.186-.959-.401a1.647 1.647 0 00-1.003-.349c-1.036 0-1.875 1.007-1.875 2.25s.84 2.25 1.875 2.25c.369 0 .713-.128 1.003-.349.283-.215.604-.401.959-.401v0c.31 0 .555.26.532.57a48.039 48.039 0 01-.642 5.056c1.518.19 3.058.309 4.616.354a.64.64 0 00.657-.643v0c0-.355-.186-.676-.401-.959a1.647 1.647 0 01-.349-1.003c0-1.035 1.008-1.875 2.25-1.875 1.243 0 2.25.84 2.25 1.875 0 .369-.128.713-.349 1.003-.215.283-.4.604-.4.959v0c0 .333.277.599.61.58a48.1 48.1 0 005.427-.63 48.05 48.05 0 00.582-4.717.532.532 0 00-.533-.57v0c-.355 0-.676.186-.959.401-.29.221-.634.349-1.003.349-1.035 0-1.875-1.007-1.875-2.25s.84-2.25 1.875-2.25c.37 0 .713.128 1.003.349.283.215.604.401.96.401v0a.656.656 0 00.658-.663 48.422 48.422 0 00-.37-5.36c-1.886.342-3.81.574-5.766.689a.578.578 0 01-.61-.58v0z"
-          />
-        </svg>
-      ),
+      svgPath: <PluginsIcon />,
       items: [
         {
-          name: "Plugin manager",
-          svgPath: (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-6 h-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 6.878V6a2.25 2.25 0 012.25-2.25h7.5A2.25 2.25 0 0118 6v.878m-12 0c.235-.083.487-.128.75-.128h10.5c.263 0 .515.045.75.128m-12 0A2.25 2.25 0 004.5 9v.878m13.5-3A2.25 2.25 0 0119.5 9v.878m0 0a2.246 2.246 0 00-.75-.128H5.25c-.263 0-.515.045-.75.128m15 0A2.25 2.25 0 0121 12v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6c0-.98.626-1.813 1.5-2.122"
-              />
-            </svg>
-          ),
-          onClick: () => {
-            const page = {
-              name: "Plugin manager",
-              url: "/plugins",
-            };
-            loadPage(page.url, page.name);
-          },
-        },
-        {
           name: "Hide extensions",
-          svgPath: (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-6 h-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"
-              />
-            </svg>
-          ),
+          svgPath: <EyeDashIcon />,
           onClick: hideExtensions,
         },
         ...pluginPages
           .filter((page) => !page.hidden)
-          .map(
-            (page) =>
-              !page.hidden && {
-                name: page.name,
-                svgPath: (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                    className="w-6 h-6"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M8.25 4.5l7.5 7.5-7.5 7.5"
-                    />
-                  </svg>
-                ),
-                onClick: () => {
-                  loadPage(page.url, page.name);
-                },
-              }
-          ),
+          .map((page) => {
+            return {
+              name: page.name,
+              svgPath: <Chevron direction="right" stroke="none" />,
+              onClick: () => {
+                loadPage(page.url, page.name);
+              },
+            } as ToolBarItemProps;
+          }),
       ],
-    },
-    {
-      name: "Settings",
-      svgPath: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth={1.5}
-          stroke="currentColor"
-          className="w-6 h-6"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.107-1.204l-.527-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z"
-          />
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-          />
-        </svg>
-      ),
-      onClick: () => {
-        // Set the secondary view to null
-        const event = new CustomEvent("mainView", {
-          detail: <SettingsView />,
-        });
-        window.dispatchEvent(event);
-      },
     },
   ];
 
   return (
-    <div className="z-20 flex flex-row justify-between toolbar mt-1">
-      <div className="flex flex-row gap-1 ml-1 mr-1">
+    <div className="flex flex-row justify-between toolbar">
+      <div className="flex flex-row gap-1 ml-1 mr-1 h-full">
         {menus.map((menu, index) => (
           <ToolbarMenu key={index} {...menu} />
         ))}
@@ -809,60 +664,18 @@ type HorusSearchProps = {
 };
 
 function HorusSearch(props: HorusSearchProps) {
-  const [predefinedFlows, setPredefinedFlows] = useState([]);
-  const [recentFlows, setRecentFlows] = useState([]);
-  const [predefinedFilteredFlows, setPredefinedFilteredFlows] = useState([]);
-  const [recentFilteredFlows, setRecentFilteredFlows] = useState([]);
-  const [fetchingRecents, setFetchingRecents] = useState(true);
+  const [predefinedFilteredFlows, setPredefinedFilteredFlows] = useState<
+    Flow[]
+  >([]);
+  const [recentFilteredFlows, setRecentFilteredFlows] = useState<Flow[]>([]);
   const [filteredPages, setFilteredPages] = useState(props.pages);
 
-  const getFlows = async () => {
-    setFetchingRecents(true);
-    const responsePredefined = await horusGet("/api/plugins/flows");
+  // Get the recent flows with the custom hook
+  const [fetchingRecents, recentFlows, predefinedFlows, getFlows] =
+    useGetRecentFlows();
 
-    if (!responsePredefined) {
-      return;
-    }
-
-    const data = await responsePredefined.json();
-
-    if (!responsePredefined.ok) {
-      alert("Error getting flows: " + data.error);
-      return;
-    }
-
-    setPredefinedFlows(data.flows);
-
-    const recentFlowsResponse = await horusGet("/api/recentflows");
-
-    if (!recentFlowsResponse) {
-      alert("Error getting recent flows");
-      return;
-    }
-
-    const recentFlowsData = await recentFlowsResponse.json();
-
-    if (!recentFlowsData.ok) {
-      alert("Error getting recent flows: " + recentFlowsData.error);
-      return;
-    }
-
-    let flows = recentFlowsData.flows;
-
-    // Sort the flows by the flow.date field (yyyy-mm-dd hh:mm:ss)
-    flows.sort((a: any, b: any) => {
-      const dateA = new Date(a.date);
-      const dateB = new Date(b.date);
-
-      return dateB.getTime() - dateA.getTime();
-    });
-
-    setRecentFlows(flows);
-    setFetchingRecents(false);
-  };
-
-  const filterSearch = (event) => {
-    const value = event.target.value;
+  const filterSearch = (event: ChangeEvent<HTMLInputElement>) => {
+    const value = event.target?.value;
 
     if (value === "" || value === undefined) {
       setPredefinedFilteredFlows(predefinedFlows);
@@ -874,7 +687,9 @@ function HorusSearch(props: HorusSearchProps) {
     const filteredFlows = predefinedFlows.filter((flow) => {
       return (
         flow.name.toLowerCase().includes(value.toLowerCase()) ||
-        flow.plugin_name.toLowerCase().includes(value.toLowerCase())
+        (flow.pluginName ?? "Unnamed plugin")
+          .toLowerCase()
+          .includes(value.toLowerCase())
       );
     });
 
@@ -883,13 +698,15 @@ function HorusSearch(props: HorusSearchProps) {
     const filteredRecentFlows = recentFlows.filter((flow) => {
       return (
         flow.name.toLowerCase().includes(value.toLowerCase()) ||
-        flow.path.toLowerCase().includes(value.toLowerCase())
+        (flow.path ?? "Unknown path")
+          .toLowerCase()
+          .includes(value.toLowerCase())
       );
     });
 
     setRecentFilteredFlows(filteredRecentFlows);
 
-    const filteredPages = props.pages.filter((page) => {
+    const filteredPages = props.pages.filter((page: PluginPage) => {
       return (
         page.name.toLowerCase().includes(value.toLowerCase()) ||
         page.description.toLowerCase().includes(value.toLowerCase()) ||
@@ -920,13 +737,6 @@ function HorusSearch(props: HorusSearchProps) {
     }
   }, [isOnFocus]);
 
-  const openFlow = (flow) => {
-    const event = new CustomEvent("openFlow", {
-      detail: { savedID: flow.savedID, path: flow.path },
-    });
-    window.dispatchEvent(event);
-  };
-
   const hasFlows =
     recentFilteredFlows.length > 0 || predefinedFilteredFlows.length > 0;
 
@@ -934,43 +744,12 @@ function HorusSearch(props: HorusSearchProps) {
     return (
       <>
         {fetchingRecents ? (
-          <div className="flex flex-col justify-center text-center pt-4">
-            <RotatingLines
-              style={{
-                height: "2rem",
-                width: "2rem",
-              }}
-            />
+          <div className="flex flex-col justify-center items-center text-center">
+            <RotatingLines size={"2rem"} />
             <div>Loading recent flows...</div>
           </div>
         ) : (
-          recentFilteredFlows.length > 0 && (
-            <RecentUserFlows
-              recentFilteredFlows={recentFilteredFlows}
-              openFlow={openFlow}
-            />
-          )
-        )}
-        {predefinedFilteredFlows.length > 0 && (
-          <div className="flex flex-col gap-1">
-            <div className="predefined-flow-name font-bold">
-              Predefined flows
-            </div>
-            {predefinedFilteredFlows?.map((flow) => (
-              <div
-                key={flow.savedID}
-                onClick={() => {
-                  openFlow(flow);
-                }}
-                className="predefined-flow"
-              >
-                <div className="predefined-flow-name">{flow.name}</div>
-                <div className="predefined-flow-plugin">
-                  {flow.plugin_name} - Plugin flow
-                </div>
-              </div>
-            ))}
-          </div>
+          <RecentUserFlows flows={recentFilteredFlows} />
         )}
       </>
     );
@@ -978,6 +757,7 @@ function HorusSearch(props: HorusSearchProps) {
 
   return (
     <div
+      className="h-full overflow-y-scroll"
       onFocus={() => {
         setIsOnFocus(true);
       }}
@@ -989,76 +769,39 @@ function HorusSearch(props: HorusSearchProps) {
     >
       <SearchComponent placeholder="Search Horus..." onChange={filterSearch} />
       {isOnFocus && (hasFlows || filteredPages.length > 0) && (
-        <div className="absolute flex flex-col gap-1 predefined-flow-box">
-          {hasFlows && <RecentFlowsView />}
+        <div
+          className="flex flex-col gap-2 absolute p-2 mt-2 origin-top-right rounded-xl bg-white toolbar-menu overflow-y-scroll zoom-out-animation"
+          style={{
+            right: 4,
+            maxHeight: "calc(100vh - 4rem)",
+          }}
+        >
+          {hasFlows && (
+            <div className="plugin-variable">
+              <div className="predefined-flow-name font-semibold">
+                Recent flows
+              </div>
+              <RecentFlowsView />
+            </div>
+          )}
+          {predefinedFilteredFlows.length > 0 && (
+            <div className="plugin-variable">
+              <div className="predefined-flow-name font-semibold">
+                Preset flows
+              </div>
+              <PredefinedFlows flows={predefinedFilteredFlows} />
+            </div>
+          )}
           {filteredPages && (
-            <PluginPagesView pages={filteredPages} loadPage={props.loadPage} />
+            <div className="plugin-variable">
+              <div className="predefined-flow-name font-semibold">
+                Extensions
+              </div>
+              <PluginPagesView pages={filteredPages} />
+            </div>
           )}
         </div>
       )}
-    </div>
-  );
-}
-
-type PluginPageViewProps = {
-  pages: Array<PluginPage>;
-  loadPage: any;
-};
-
-function PluginPagesView(props: PluginPageViewProps) {
-  const { pages, loadPage } = props;
-
-  if (pages.length === 0) {
-    return null;
-  }
-
-  return (
-    <div className="flex flex-col gap-1">
-      <div className="predefined-flow-name font-bold">Extensions</div>
-      {pages
-        ?.filter((page) => !page.hidden)
-        .map((page) => (
-          <div
-            key={page.id}
-            onClick={() => {
-              loadPage(page.url, page.name);
-            }}
-            className="predefined-flow"
-          >
-            <div className="predefined-flow-name">{page.name}</div>
-            <div className="predefined-flow-plugin">{page.description}</div>
-          </div>
-        ))}
-    </div>
-  );
-}
-
-type RecentUserFlowProps = {
-  recentFilteredFlows: any;
-  openFlow: any;
-};
-
-function RecentUserFlows(props: RecentUserFlowProps) {
-  const { recentFilteredFlows, openFlow } = props;
-
-  return (
-    <div className="flex flex-col gap-1">
-      <div className="predefined-flow-name font-bold">Recent flows</div>
-      {recentFilteredFlows.map((flow) => (
-        <div
-          key={flow.savedID}
-          onClick={() => {
-            openFlow(flow);
-          }}
-          className={"predefined-flow"}
-        >
-          <div className="flex flex-row justify-between">
-            <div className="predefined-flow-name">{flow.name}</div>
-            <FlowStatusView status={flow.status} />
-          </div>
-          <div className="predefined-flow-plugin">{flow.path}</div>
-        </div>
-      ))}
     </div>
   );
 }

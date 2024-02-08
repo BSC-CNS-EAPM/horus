@@ -1,23 +1,20 @@
-// Define the shemsu token
-declare global {
-  interface Window {
-    pywebview: {
-      token: string;
-    };
-    socketiosid: string;
-  }
-}
+// Purpose: Contains utility functions for the app
 
 function getShemsuToken() {
   return window.pywebview?.token || window.parent?.pywebview?.token;
 }
 
 // Tokenize the urls with the shemsu token
-async function horusGet(url, headers?, shemsu?, timeout?: number) {
+async function horusGet(
+  url: string,
+  headers?: any,
+  shemsu?: any,
+  timeout?: number
+) {
   const controller = new AbortController();
   const signal = controller.signal;
 
-  let timeoutId: NodeJS.Timeout;
+  let timeoutId: NodeJS.Timeout | null = null;
 
   if (timeout) {
     timeoutId = setTimeout(() => {
@@ -37,15 +34,21 @@ async function horusGet(url, headers?, shemsu?, timeout?: number) {
 
   try {
     const response = await fetchPromise;
-    clearTimeout(timeoutId);
+    timeoutId && clearTimeout(timeoutId);
     return response;
   } catch (error) {
-    clearTimeout(timeoutId);
+    timeoutId && clearTimeout(timeoutId);
     throw new Error("Timeout");
   }
 }
 
-async function horusPost(url, headers, body, shemsu?, timeout?: number) {
+async function horusPost(
+  url: string,
+  headers: any,
+  body: any,
+  shemsu?: string,
+  timeout?: number | null
+) {
   /* Send a post request to the server to open a window
    * @param {string} url - The url to send the request to
    * @param {object} headers - The headers to send with the request
@@ -63,7 +66,7 @@ async function horusPost(url, headers, body, shemsu?, timeout?: number) {
   const controller = new AbortController();
   const signal = controller.signal;
 
-  let timeoutId: NodeJS.Timeout;
+  let timeoutId: NodeJS.Timeout | null = null;
 
   if (timeout) {
     timeoutId = setTimeout(() => {
@@ -84,10 +87,10 @@ async function horusPost(url, headers, body, shemsu?, timeout?: number) {
 
   try {
     const response = await fetchPromise;
-    clearTimeout(timeoutId);
+    timeoutId && clearTimeout(timeoutId);
     return response;
   } catch (error) {
-    clearTimeout(timeoutId);
+    timeoutId && clearTimeout(timeoutId);
     throw new Error("Timeout");
   }
 }
@@ -108,7 +111,7 @@ async function getVersion() {
   return data;
 }
 
-async function openWindow(name, url) {
+async function openWindow(name: string, url: string) {
   const header = {
     "Content-Type": "application/json",
   };

@@ -24,7 +24,6 @@ import {
   InitVolumeStreaming,
 } from "molstar/lib/mol-plugin/behavior/dynamic/volume-streaming/transformers";
 import { PluginCommands } from "molstar/lib/mol-plugin/commands";
-import { PluginState } from "molstar/lib/mol-plugin/state";
 import { MolScriptBuilder as MS } from "molstar/lib/mol-script/language/builder";
 import {
   StateBuilder,
@@ -34,8 +33,6 @@ import {
 import { Asset } from "molstar/lib/mol-util/assets";
 import { Color } from "molstar/lib/mol-util/color";
 import { ColorNames } from "molstar/lib/mol-util/color/names";
-import { getFormattedTime } from "molstar/lib/mol-util/date";
-import { download } from "molstar/lib/mol-util/download";
 import { RxEventHelper } from "molstar/lib/mol-util/rx-event-helper";
 import { EvolutionaryConservation } from "./annotation";
 import { PluginConfig } from "molstar/lib/mol-plugin/config";
@@ -67,9 +64,6 @@ import { ObjectKeys } from "molstar/lib/mol-util/type-helpers";
 import { PluginSpec } from "molstar/lib/mol-plugin/spec";
 import { StructureRef } from "molstar/lib/mol-plugin-state/manager/structure/hierarchy-state";
 
-// Style
-require("molstar/lib/mol-plugin-ui/skin/light.scss");
-
 class HorusMolstar {
   static VERSION_MAJOR = 5;
   static VERSION_MINOR = 5;
@@ -80,8 +74,10 @@ class HorusMolstar {
     modelInfo: this._ev<ModelInfo>(),
   };
 
+  // @ts-ignore
   plugin: PluginUIContext;
 
+  // @ts-ignore
   target: HTMLDivElement;
 
   async init(target: HTMLDivElement) {
@@ -91,6 +87,7 @@ class HorusMolstar {
 
   private async initPlugin() {
     const ExtensionMap = {
+      // @ts-ignore
       mvs: PluginSpec.Behavior(MolViewSpec),
     };
 
@@ -1528,10 +1525,10 @@ class HorusMolstar {
    * - "ball-and-stick"
    */
   async addStructureRepresentation(
-    structure: Structure | null,
+    structure: StructureRef | null,
     representation: "cartoon" | "ball-and-stick"
   ) {
-    let structures = null;
+    let structures: StructureRef[] | null = null;
     if (!structure) {
       // Get the structures
       structures = this.structures();
@@ -1551,6 +1548,9 @@ class HorusMolstar {
 
     // Loop over the structures
     for (const structure of structures) {
+      // Skip hidden structures
+      if (structure.cell.state.isHidden) continue;
+
       // Update the representation
       const newRepr = builder.buildRepresentation(
         update,

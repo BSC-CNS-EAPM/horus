@@ -2,6 +2,7 @@
 import "./nbdbutton.css";
 
 type NBDButtonProps = {
+  id?: string;
   text?: string;
   action: () => void;
   style?: React.CSSProperties;
@@ -16,7 +17,12 @@ function NBDButton(props: NBDButtonProps) {
   return (
     <div>
       {/* Create a button with the text and the action */}
-      <button className={className} onClick={props.action} style={props.style}>
+      <button
+        id={props.id}
+        className={className}
+        onClick={props.action}
+        style={props.style}
+      >
         {props?.text}
         {props?.children}
       </button>

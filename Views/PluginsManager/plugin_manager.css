@@ -1,20 +1,11 @@
-html,
-body {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  background-color: whitesmoke;
-}
-
 .plugin-manager-title {
   position: sticky;
   top: 0;
   background: var(--tech-white);
-  border: 1px solid #ccc;
+  border-bottom: 1px solid #ccc;
   justify-content: space-between;
   align-items: center;
   padding: 1rem;
-  width: 100vw;
   flex-direction: row;
 }
 
@@ -28,17 +19,9 @@ body {
   display: flex;
   flex-direction: column;
   flex-wrap: wrap;
-  overflow-y: scroll;
   align-items: top;
   justify-content: center;
   margin: 2rem;
-}
-
-.root-plugin-container {
-  /* display: block;
-    /* Expand the whole container to the full height of the page */
-  /* height: 100%; */
-  background-color: whitesmoke;
 }
 
 .plugin-error {
@@ -47,35 +30,14 @@ body {
 }
 
 .plugin-card {
+  color: white;
   width: 100%;
+  background: var(--gradient-blue);
 }
 
 .plugin-manager-root {
   background-color: whitesmoke;
   height: 100%;
-}
-
-.app-button {
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  outline: none;
-  height: 1.75rem;
-  margin-top: 0.1rem;
-  padding-inline: 0.5rem;
-  align-items: center;
-  justify-content: left;
-  display: flex;
-  flex-direction: row;
-  /* Animate the background when hovering */
-  transition: background 0.2s ease-in-out;
-  margin-bottom: 0.3rem;
-}
-
-/* Change the font size of the app-button if the screen space is low */
-@media (max-width: 900px) {
-  .app-button {
-    font-size: 0.8rem;
-  }
 }
 
 .toolbar-search {

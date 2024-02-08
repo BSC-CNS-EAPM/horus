@@ -1,39 +1,46 @@
-import HorusMolstar from "../Molstar/HorusWrapper/horusmolstar";
-import Terminal from "react-console-emulator";
+type Command = {
+  description: string;
+  usage: string;
+  fn: (...args: string[]) => Promise<string> | string;
+};
 
-declare global {
-  interface Window {
-    molstar?: HorusMolstar;
-    selectedRemote?: string;
-    horusTerm: {
-      ref: React.RefObject<Terminal>;
-      storedMessages: string[];
-    };
-  }
-}
-
-export default function getCommands() {
+export default function getCommands(): {
+  [key: string]: Command;
+} {
   return {
+    help: {
+      description: "List all available commands.",
+      usage: "help",
+      fn: () => {
+        const commands: Command[] = Object.values(getCommands());
+        const commandsString = commands
+          .map((command) => {
+            return `${command.usage}: ${command.description}`;
+          })
+          .join("\n");
+        return commandsString;
+      },
+    },
     clear: {
       description: "Clear the console and the flow console output.",
       usage: "clear",
       fn: () => {
         // Clear the terminal and the stored messages
-        window.horusTerm.ref.current?.clearStdout();
+        window.horusTerm.ref?.current?.clearStdout();
         window.horusTerm.storedMessages = [];
 
         // Re focus the terminal
-        window.horusTerm.ref.current?.focusTerminal();
+        window.horusTerm.ref?.current?.focusTerminal();
 
         // Scroll to the bottom of the terminal
-        window.horusTerm.ref.current?.scrollToBottom();
+        window.horusTerm.ref?.current?.scrollToBottom();
         return "";
       },
     },
     echo: {
       description: "Echo a passed string.",
       usage: "echo <string>",
-      fn: (...args) => args.join(" "),
+      fn: (...args: string[]) => args.join(" "),
     },
     exit: {
       description: "Exit the terminal.",
@@ -48,23 +55,25 @@ export default function getCommands() {
     // sendsocket: {
     //   description: "Send a message to the server.",
     //   usage: "sendsocket <string>",
-    //   fn: (...args) => {
+    //   fn: (...args : string[]) => {
     //     socket.emit("message", "Hello from the client!");
     //   },
     // },
     molreset: {
       description: "Reset Mol* viewer",
       usage: "molreset",
-      fn: (...args) => {
-        const molstar = window.molstar;
-        return molstar ? molstar.reset() : "Molstar is not defined.";
+      fn: () => {
+        if (window.molstar) {
+          window.molstar.reset();
+        }
+        return "";
       },
     },
     focus: {
       description: "Focus a residue.",
       usage:
         "focus <structure label> -r <residueID> -c <chain> -s <surround radius>",
-      fn: (...args) => {
+      fn: (...args: string[]) => {
         // The residue ID is the first argument (if provided)
         // The user can just type focus -r <residueID> and the residue ID will be the first argument
         let structureLabel = args[0];
@@ -80,11 +89,11 @@ export default function getCommands() {
         }
 
         // Parse the optional arguments
-        const options = args.reduce((acc, arg, index) => {
+        const options = args.reduce((acc: any, arg, index) => {
           if (arg === "-r") {
             // The residue ID must be an integer
             try {
-              acc.resID = parseInt(args[index + 1]);
+              acc.resID = parseInt(args[index + 1]!);
             } catch (e) {
               return "The residue ID must be an integer.";
             }
@@ -93,7 +102,7 @@ export default function getCommands() {
           } else if (arg === "-s") {
             // The surround radius must be an integer
             try {
-              acc.surroundRadius = parseInt(args[index + 1]);
+              acc.surroundRadius = parseInt(args[index + 1]!);
             } catch (e) {
               return "The surround radius must be an integer.";
             }
@@ -111,109 +120,21 @@ export default function getCommands() {
                 options.surroundRadius
               )
             : "Molstar is not defined.";
-        } catch (e) {
+        } catch (e: any) {
           return "Internal error focusing residue: " + e.message;
         }
       },
     },
-    // os: {
-    //   description: "Run an OS command. Only available on the desktop app.",
-    //   usage: "os <command> <args>",
-    //   fn: async (...args) => {
-    //     const header = {
-    //       "Content-Type": "application/json",
-    //       Accept: "application/json",
-    //     };
-    //     const body = JSON.stringify({ command: args.join(" ") });
-    //     try {
-    //       const response = await horusPost(
-    //         "/api/desktop/command",
-    //         header,
-    //         body
-    //       );
-    //       const data = await response.json();
-
-    //       if (data.ok) {
-    //         return data.output;
-    //       }
-
-    //       return "Error running command: " + data.message;
-    //     } catch (e) {
-    //       return e.message;
-    //     }
-    //   },
-    // },
-    // newflow: {
-    //   description: "Clear the flow and open a new one.",
-    //   usage: "newflow",
-    //   fn: async (...args) => {
-    //     // Emit an event to clear the flow
-    //     const event = new CustomEvent("terminalCommand", {
-    //       detail: { command: "newflow", args: args },
-    //     });
-
-    //     const result = await window.dispatchEvent(event);
-    //     return result;
-    //   },
-    // },
-    // saveflow: {
-    //   description: "Save the current flow.",
-    //   usage: "saveflow",
-    //   fn: async (...args) => {
-    //     // Emit an event to save the flow
-    //     const event = new CustomEvent("terminalCommand", {
-    //       detail: { command: "saveflow", args: args },
-    //     });
-
-    //     const result = await window.dispatchEvent(event);
-    //     return result;
-    //   },
-    // },
-    // conn: {
-    //   description: "Connects two blocks",
-    //   usage: "conn <block1-placedid> <block2-placedid>",
-    //   fn: async (...args) => {
-    //     // Emit an event to connect two blocks
-    //     const event = new CustomEvent("terminalCommand", {
-    //       detail: { command: "conn", args: args },
-    //     });
-
-    //     const result = await window.dispatchEvent(event);
-    //     return result;
-    //   },
-    // },
-    // run: {
-    //   description: "Execute the current flow.",
-    //   usage: "run <starting-block-placedid>",
-    //   fn: async (...args) => {
-    //     // Emit an event to execute the flow
-    //     const event = new CustomEvent("terminalCommand", {
-    //       detail: { command: "run", args: args },
-    //     });
-
-    //     const result = await window.dispatchEvent(event);
-    //     return result;
-    //   },
-    // },
-    // del: {
-    //   description: "Delete a block.",
-    //   usage: "del <block-placedid>",
-    //   fn: async (...args) => {
-    //     // Emit an event to delete a block
-    //     const event = new CustomEvent("terminalCommand", {
-    //       detail: { command: "del", args: args },
-    //     });
-
-    //     const result = await window.dispatchEvent(event);
-    //     return result;
-    //   },
-    // },
     listmol: {
       description: "List structures in Mol*.",
       usage: "listmol",
-      fn: async (...args) => {
+      fn: async () => {
         const molstar = window.molstar;
         const strucList = molstar.listStructures();
+
+        if (strucList.length === 0) {
+          return "No structures found";
+        }
 
         const names = strucList.map((struc) => struc.name);
 
@@ -224,9 +145,8 @@ export default function getCommands() {
     },
     listchains: {
       description: "List chains in Mol*.",
-      usage:
-        "List all chains: listchains. List chains in a structure: listchains <structure label>",
-      fn: async (...args) => {
+      usage: "listchains <structure label>",
+      fn: async (...args: string[]) => {
         // The structure label is the first argument (if provided)
         // The user can just type listchains <structure label> and the structure label will be the first argument
         let structureLabel = args[0];

@@ -10,6 +10,7 @@ import {
   Model,
   ElementIndex,
   ResidueIndex,
+  ChainIndex,
 } from "molstar/lib/mol-model/structure";
 import { Color } from "molstar/lib/mol-util/color";
 import { CustomProperty } from "molstar/lib/mol-model-props/common/custom-property";
@@ -28,7 +29,7 @@ const EvolutionaryConservationPalette: Color[] = [
   [16, 200, 209], // 1
 ]
   .reverse()
-  .map(([r, g, b]) => Color.fromRgb(r, g, b));
+  .map(([r, g, b]) => Color.fromRgb(r ?? 0, g ?? 0, b ?? 0));
 const EvolutionaryConservationDefaultColor = Color(0x999999);
 
 export const EvolutionaryConservation = CustomElementProperty.create<number>({
@@ -62,14 +63,14 @@ export const EvolutionaryConservation = CustomElementProperty.create<number>({
     const chainIndex = model.atomicHierarchy.chainAtomSegments.index;
 
     for (let rI = 0 as ResidueIndex; rI < residueCount; rI++) {
-      const cI = chainIndex[residueOffsets[rI]];
+      const cI = chainIndex[residueOffsets[rI] as ElementIndex];
       const key = `${model.atomicHierarchy.chains.auth_asym_id.value(
-        cI
+        cI as ChainIndex
       )} ${model.atomicHierarchy.residues.auth_seq_id.value(rI)}`;
       if (!conservationMap.has(key)) continue;
       const ann = conservationMap.get(key)!;
-      for (let aI = residueOffsets[rI]; aI < residueOffsets[rI + 1]; aI++) {
-        map.set(aI, ann);
+      for (let aI = residueOffsets[rI]; aI! < residueOffsets[rI + 1]!; aI!++) {
+        map.set(aI!, ann);
       }
     }
 
@@ -78,7 +79,7 @@ export const EvolutionaryConservation = CustomElementProperty.create<number>({
   coloring: {
     getColor(e: number) {
       if (e < 1 || e > 10) return EvolutionaryConservationDefaultColor;
-      return EvolutionaryConservationPalette[e - 1];
+      return EvolutionaryConservationPalette[e - 1]!;
     },
     defaultColor: EvolutionaryConservationDefaultColor,
   },

@@ -60,13 +60,13 @@ export namespace ModelInfo {
     const hetMap = new Map<string, ModelInfo["hetResidues"][0]>();
 
     for (let rI = 0 as ResidueIndex; rI < residueCount; rI++) {
-      const cI = chainIndex[residueOffsets[rI]];
+      const cI = chainIndex[residueOffsets[rI]!]!;
       const eI = model.atomicHierarchy.index.getEntityFromChain(cI);
       const entityType = model.entities.data.type.value(eI);
       if (entityType !== "non-polymer" && entityType !== "branched") continue;
 
       const comp_id = model.atomicHierarchy.atoms.label_comp_id.value(
-        residueOffsets[rI]
+        residueOffsets[rI]!
       );
 
       let lig = hetMap.get(comp_id);

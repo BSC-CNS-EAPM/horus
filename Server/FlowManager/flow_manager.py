@@ -864,6 +864,10 @@ class Flow:
             self.pendingActions = []
 
         if placedID is None:
+
+            # Stop the flow
+            self.stop("No block to start the execution from.", fail=True)
+
             raise Exception(  # pylint: disable=broad-exception-raised
                 "No placedID was provided for the run of the flow. "
                 + "The flow cannot be resumed as no current executing block is set for this flow."
@@ -996,6 +1000,9 @@ class Flow:
                 block._runError = True
                 block._runErrorMessage = message
                 block._finishedExecution = True
+
+        # Save the flow
+        self.write()
 
     class TerminalOutputUpdater(PrintCapturer):
         """

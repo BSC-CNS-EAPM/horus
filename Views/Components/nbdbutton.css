@@ -61,12 +61,13 @@
 }
 
 .app-button {
+  cursor: default !important;
   border: 1px solid #ccc;
   border-radius: 5px;
   outline: none;
   height: 1.75rem;
   /* margin-top: 0.1rem; */
-  padding-inline: 0.5rem;
+  padding: 0.5rem;
   align-items: center;
   justify-content: left;
   display: flex;
@@ -74,4 +75,11 @@
   /* Animate the background when hovering */
   transition: background 0.2s ease-in-out;
   /* margin-bottom: 0.3rem; */
+}
+
+/* Change the font size of the app-button if the screen space is low */
+@media (max-width: 900px) {
+  .app-button {
+    font-size: 0.8rem;
+  }
 }

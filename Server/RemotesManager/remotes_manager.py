@@ -1186,7 +1186,7 @@ class RemotesManager:
 
     def remoteExists(self, remoteName: str) -> bool:
         """
-        Returns wether a remote exists by the remote's name
+        Returns whether a remote exists by the remote's name
         """
 
         if remoteName.lower() != "local":

@@ -1,11 +1,5 @@
 import { io } from "socket.io-client";
 
-declare global {
-  interface Window {
-    socketiosid: string;
-  }
-}
-
 // Create the socket
 export const socket = io({
   autoConnect: true,
@@ -18,6 +12,5 @@ socket.on("connect", () => {
 
 // When disconnected, remove the sid from the window
 socket.on("disconnect", () => {
-  delete window.socketiosid;
+  window.socketiosid = null;
 });
-

@@ -1,0 +1,16 @@
+.sidebar-unselected {
+  border: 1px solid var(--tech-blue);
+  color: black;
+}
+
+.sidebar-selected {
+  color: white;
+  border: 1px solid var(--tech-blue);
+  background: var(--gradient-blue);
+}
+
+.sidebar-item {
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  cursor: default;
+}
