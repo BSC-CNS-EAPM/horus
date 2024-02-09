@@ -1781,8 +1781,11 @@ class Plugin:
 
         metaPath = os.path.join(self._path, "plugin.meta")
         if os.path.exists(metaPath):
-            with open(metaPath, "r") as metaFile:
-                self.info = json.load(metaFile)
+            try:
+                with open(metaPath, "r", encoding="utf-8") as metaFile:
+                    self.info = json.load(metaFile)
+            except Exception as exc:
+                raise Exception(f"Error loading plugin.meta file ({metaPath}): {exc}") from exc
         else:
             raise Exception("plugin.meta file not found.")
 

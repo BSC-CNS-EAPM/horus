@@ -517,7 +517,10 @@ class PluginManager(metaclass=HorusSingleton):
 
         # Load the plugin.meta
         with open(pluginMeta, "r", encoding="utf-8") as f:
-            pluginMeta = json.load(f)
+            try:
+                pluginMeta = json.load(f)
+            except Exception as e:
+                raise Exception(f"Could not load plugin meta ({pluginMeta}): {e}") from e
 
         # Dependencies for the plugin
         depsDir = os.path.join(pluginDir, "deps")
