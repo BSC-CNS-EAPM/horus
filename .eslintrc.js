@@ -3,7 +3,7 @@ module.exports = {
     browser: true,
     es2021: true,
   },
-  extends: ["standard-with-typescript", "plugin:react/recommended"],
+  extends: ["plugin:@typescript-eslint/recommended"],
   overrides: [
     {
       env: {
@@ -15,10 +15,16 @@ module.exports = {
       },
     },
   ],
+  parser: "@typescript-eslint/parser",
   parserOptions: {
-    ecmaVersion: "latest",
-    sourceType: "module",
+    jsx: true,
+    useJSXTextNode: true,
   },
-  plugins: ["react"],
-  rules: {},
+  plugins: ["@typescript-eslint", "react-hooks"],
+  rules: {
+    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/explicit-function-return-type": "off",
+    "react-hooks/rules-of-hooks": "error",
+    "react-hooks/exhaustive-deps": "warn",
+  },
 };
