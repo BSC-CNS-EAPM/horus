@@ -5,6 +5,7 @@ Server-mode file explorer for Flask
 import os
 import logging
 import typing
+import hashlib
 
 
 class FileExplorer:
@@ -92,12 +93,15 @@ class FileExplorer:
 
         # Split the path into an array
         splittedPath = self.currentPath.split(os.sep)
-        for folder in splittedPath:
+        for folder, index in zip(splittedPath, range(len(splittedPath))):
+            # The ID should be a hash of the folder
+            id = hashlib.md5(folder.encode()).hexdigest()
+
             currentChain = os.path.join(currentChain, folder)
             chain.append(
                 {
-                    "id": folder,
-                    "name": folder,
+                    "id": id,
+                    "name": "root" if index == 0 else folder,
                     "isDir": True,
                     "fullpath": currentChain,
                 }

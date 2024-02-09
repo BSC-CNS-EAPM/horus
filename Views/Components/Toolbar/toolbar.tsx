@@ -37,6 +37,7 @@ import TrashIcon from "./Icons/Trash";
 
 interface ToolBarItemProps {
   name: string;
+  hidden?: boolean;
   link?: string;
   svgPath: React.ReactNode;
   onClick?: () => void;
@@ -103,6 +104,7 @@ function ToolBarItem(props: ToolBarItemProps) {
 
 interface ToolBarMenuProps {
   name: string;
+  hidden?: boolean;
   svgPath: React.ReactNode;
   items?: ToolBarItemProps[];
   link?: string;
@@ -111,6 +113,10 @@ interface ToolBarMenuProps {
 }
 
 function ToolbarMenu(props: ToolBarMenuProps) {
+  if (props.hidden) {
+    return <></>;
+  }
+
   return (
     <div className="h-full">
       {props.link || props.onClick ? (
@@ -131,20 +137,22 @@ function ToolbarMenu(props: ToolBarMenuProps) {
           >
             <Menu.Items className="absolute p-md-2 mt-2 w-56 origin-top-left rounded-xl bg-white toolbar-menu">
               {/* // Here the items will be rendered */}
-              {props.items?.map((item) => (
-                <Menu.Item key={item.name}>
-                  {({ close }) => (
-                    <ToolBarItem
-                      key={item.name}
-                      {...item}
-                      onClick={() => {
-                        item.onClick?.();
-                        close();
-                      }}
-                    />
-                  )}
-                </Menu.Item>
-              ))}
+              {props.items?.map((item) =>
+                item.hidden ? null : (
+                  <Menu.Item key={item.name}>
+                    {({ close }) => (
+                      <ToolBarItem
+                        key={item.name}
+                        {...item}
+                        onClick={() => {
+                          item.onClick?.();
+                          close();
+                        }}
+                      />
+                    )}
+                  </Menu.Item>
+                )
+              )}
             </Menu.Items>
           </Transition>
         </Menu>
@@ -295,6 +303,12 @@ const saveEvent = () => {
 const saveAsEvent = () => {
   // Emit a save event
   const event = new CustomEvent("saveFlowAs");
+  window.dispatchEvent(event);
+};
+
+const fileExplorerEvent = () => {
+  // Emit a file explorer event
+  const event = new CustomEvent("toggleFileExplorer");
   window.dispatchEvent(event);
 };
 
@@ -475,6 +489,29 @@ export default function HorusToolbar() {
           ),
           onClick: () => {
             saveAsEvent();
+          },
+        },
+        {
+          name: "File explorer",
+          hidden: window.isDesktop,
+          svgPath: (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="w-6 h-6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m5.231 13.481L15 17.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v16.5c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Zm3.75 11.625a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"
+              />
+            </svg>
+          ),
+          onClick: () => {
+            fileExplorerEvent();
           },
         },
         {

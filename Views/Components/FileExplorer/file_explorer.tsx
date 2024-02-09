@@ -1,7 +1,7 @@
 import { setChonkyDefaults, ChonkyActions } from "chonky";
 import { ChonkyIconFA } from "chonky-icon-fontawesome";
 import { horusPost } from "../../Utils/utils";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { HorusModal } from "../reusable";
 import NBDButton from "../nbdbutton";
 
@@ -10,6 +10,18 @@ import NBDButton from "../nbdbutton";
 setChonkyDefaults({ iconComponent: ChonkyIconFA });
 
 import { FileBrowser, FileNavbar, FileToolbar, FileList } from "chonky";
+
+function saveBlob(blob: Blob, fileName: string) {
+  var a = document.createElement("a") as HTMLAnchorElement;
+  document.body.appendChild(a);
+  a.setAttribute("style", "display: none");
+
+  var url = window.URL.createObjectURL(blob);
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  window.URL.revokeObjectURL(url);
+}
 
 // Create custom hook for server picker file explorer
 function useServerExplorer(
@@ -21,10 +33,16 @@ function useServerExplorer(
   const [files, setFiles] = useState([]);
   const [folderChain, setFolderChain] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [actionFilesActive, setActionFilesActive] = useState({
+    status: false,
+    progress: 0,
+    file: "",
+    text: "",
+  });
 
   const currentPath = useRef(null);
 
-  const fetchFolders = async () => {
+  const fetchFolders = useCallback(async () => {
     const header = {
       "Content-Type": "application/json",
       "Access-Control-Allow-Origin": "*",
@@ -46,7 +64,7 @@ function useServerExplorer(
 
     setFiles(data.contents);
     setFolderChain(data.folderChain);
-  };
+  }, [extensions, openFolder]);
 
   const handleFileAction = (action: any) => {
     // If the action is double clickinga folder, open it
@@ -83,16 +101,228 @@ function useServerExplorer(
         onFileConfirm(action.payload.targetFile.fullpath);
       }
     }
+
+    if (action.id === "create_folder") {
+      createFolder();
+    }
+
+    if (action.id === "upload_files") {
+      uploadFiles();
+    }
+
+    if (action.id === "download_files") {
+      downloadFiles(action.state.selectedFilesForAction);
+    }
+
+    if (action.id === "delete_files") {
+      deleteFiles(action.state.selectedFilesForAction);
+    }
   };
+
+  const createFolder = useCallback(async () => {
+    // Ask the user for the folder name
+    const folderName = prompt("Enter the folder name");
+
+    if (!folderName) {
+      return;
+    }
+
+    const header = {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+    };
+
+    const body = JSON.stringify({
+      path: currentPath.current,
+      folderName: folderName,
+    });
+
+    const response = await horusPost(
+      "/api/filepicker/createfolder",
+      header,
+      body
+    );
+
+    const data = await response.json();
+
+    if (!data.ok) {
+      alert(data.msg);
+    }
+
+    fetchFolders();
+  }, [currentPath]);
+
+  const resetActionFiles = () => {
+    setActionFilesActive({
+      status: false,
+      progress: 0,
+      file: "",
+      text: "",
+    });
+  };
+
+  const uploadFiles = useCallback(async () => {
+    // Ask the user for the files opening the file picker
+    const input = document.createElement("input");
+    input.type = "file";
+    input.multiple = true;
+    input.click();
+
+    input.onchange = async (e) => {
+      const files = (e.target as HTMLInputElement).files;
+
+      if (!files) {
+        return;
+      }
+
+      const header = {
+        Accept: "application/json",
+        "Access-Control-Allow-Origin": "*",
+      };
+
+      for (let i = 0; i < files.length; i++) {
+        const formData = new FormData();
+        formData.append("files", files[i]!);
+        formData.append("path", currentPath.current!);
+
+        setActionFilesActive({
+          status: true,
+          progress: (i / files.length) * 100,
+          file: files[i]!.name,
+          text: "Uploading files...",
+        });
+
+        const response = await horusPost(
+          "/api/filepicker/upload",
+          header,
+          formData,
+          undefined,
+          null
+        );
+
+        const data = await response.json();
+
+        if (!data.ok) {
+          alert(data.msg);
+          break;
+        }
+      }
+
+      fetchFolders();
+
+      resetActionFiles();
+    };
+  }, [currentPath]);
+
+  const downloadFiles = useCallback(
+    async (
+      filePaths: [
+        {
+          fullpath: string;
+        }
+      ]
+    ) => {
+      const header = {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      };
+
+      for (let i = 0; i < filePaths.length; i++) {
+        const filePath = filePaths[i]!;
+
+        setActionFilesActive({
+          status: true,
+          progress: (i / filePaths.length) * 100,
+          file: filePath.fullpath,
+          text: "Downloading files...",
+        });
+
+        const body = JSON.stringify({
+          path: filePath.fullpath,
+        });
+
+        const response = await horusPost(
+          "/api/filepicker/download",
+          header,
+          body
+        );
+
+        if (response.headers.get("content-type") === "application/json") {
+          const data = await response.json();
+
+          if (!response.ok) {
+            alert(data.msg);
+            break;
+          }
+        }
+
+        // If the response is not a JSON, continue
+        const data = await response.blob();
+        // Get the name of the file (last part of the path)
+        const fileName = filePath.fullpath.split("/").pop();
+
+        saveBlob(data, fileName ?? "downloaded_file");
+      }
+      resetActionFiles();
+    },
+    [currentPath]
+  );
+
+  const deleteFiles = useCallback(
+    async (
+      filePaths: [
+        {
+          fullpath: string;
+        }
+      ]
+    ) => {
+      const header = {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      };
+
+      for (let i = 0; i < filePaths.length; i++) {
+        const filePath = filePaths[i]!;
+
+        setActionFilesActive({
+          status: true,
+          progress: (i / filePaths.length) * 100,
+          file: filePath.fullpath,
+          text: "Deleting files...",
+        });
+
+        const body = JSON.stringify({
+          path: filePath.fullpath,
+        });
+
+        const response = await horusPost(
+          "/api/filepicker/delete",
+          header,
+          body
+        );
+
+        const data = await response.json();
+
+        if (!data.ok) {
+          alert(data.msg);
+          break;
+        }
+      }
+
+      resetActionFiles();
+    },
+    [currentPath]
+  );
 
   useEffect(() => {
     fetchFolders();
-  }, []);
+  }, [fetchFolders]);
 
   return {
     files,
     folderChain,
     selectedFile,
+    isUploading: actionFilesActive,
     handleFileAction,
   };
 }
@@ -100,13 +330,13 @@ function useServerExplorer(
 export type FileExplorerProps = {
   children?: React.ReactNode;
   openFolder?: boolean;
-  onFileSelect: (file: any) => void;
-  onFileConfirm: (file: any) => void;
+  onFileSelect?: (file: any) => void;
+  onFileConfirm?: (file: any) => void;
   allowedExtensions?: string[];
 };
 
 type ServerFileExplorerModalProps = {
-  fileProps: FileExplorerProps;
+  fileProps?: FileExplorerProps;
   open: boolean;
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
 };
@@ -115,30 +345,39 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
   const { open, setOpen, fileProps } = props;
 
   const onFileConfirm = (file: any) => {
-    fileProps.onFileConfirm(file);
+    fileProps?.onFileConfirm ? fileProps.onFileConfirm(file) : null;
     setOpen(false);
   };
 
-  const openFolder = fileProps.openFolder || false;
-  const { files, folderChain, handleFileAction, selectedFile } =
+  const openFolder = fileProps?.openFolder ?? false;
+  const { files, folderChain, handleFileAction, selectedFile, isUploading } =
     useServerExplorer(
       openFolder,
-      fileProps.onFileSelect,
+      fileProps?.onFileSelect
+        ? fileProps.onFileSelect
+        : (_) => {
+            _;
+          },
       onFileConfirm,
-      fileProps.allowedExtensions
+      fileProps?.allowedExtensions
     );
 
   const chonkyActions = [
     ChonkyActions.UploadFiles,
     ChonkyActions.DownloadFiles,
     ChonkyActions.CreateFolder,
+    ChonkyActions.DeleteFiles,
   ];
 
   return (
-    <HorusModal show={open} onHide={() => setOpen(false)}>
-      <div className="w-full flex flex-col gap-2 p-2">
+    <HorusModal show={open} onHide={() => setOpen(false)} size="xl">
+      <div className="w-full flex flex-col gap-2 p-4">
         <div className="text-3xl text-bold">
-          {openFolder ? "Select a folder" : "Select a file"}
+          {fileProps
+            ? openFolder
+              ? "Select a folder"
+              : "Select a file"
+            : "Browse"}
         </div>
         <div
           className="w-full"
@@ -153,9 +392,23 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
             folderChain={folderChain}
             onFileAction={handleFileAction}
           >
-            <FileNavbar />
-            <FileToolbar />
-            <FileList />
+            {isUploading.status ? (
+              <div className="h-full flex flex-col gap-2 justify-center items-center">
+                <div className="flex flex-row gap-2">
+                  <div className="horus-container p-2">{isUploading.text}</div>
+                  <div className="horus-container p-2 flex flex-row gap-2 items-center justify-center">
+                    {isUploading.progress.toFixed(1)} %
+                  </div>
+                </div>
+                <div className="horus-container p-2">{isUploading.file}</div>
+              </div>
+            ) : (
+              <>
+                <FileNavbar />
+                <FileToolbar />
+                <FileList />
+              </>
+            )}
           </FileBrowser>
         </div>
         <div className="flex justify-end flex-row gap-2">
@@ -166,14 +419,18 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
           >
             Close
           </NBDButton>
-          <NBDButton
-            action={() => {
-              fileProps.onFileConfirm(selectedFile);
-              setOpen(false);
-            }}
-          >
-            Select
-          </NBDButton>
+          {fileProps?.onFileConfirm && (
+            <NBDButton
+              action={() => {
+                fileProps?.onFileConfirm
+                  ? fileProps.onFileConfirm(selectedFile)
+                  : null;
+                setOpen(false);
+              }}
+            >
+              Select
+            </NBDButton>
+          )}
         </div>
       </div>
     </HorusModal>
@@ -240,8 +497,8 @@ function DesktopFileExplorer(props: FileExplorerProps) {
 
   const { openFilePicker } = useDesktopExplorer(
     openFolder,
-    props.onFileSelect,
-    props.onFileConfirm,
+    props.onFileSelect ? props.onFileSelect : (_) => _,
+    props.onFileConfirm ? props.onFileConfirm : (_) => _,
     props.allowedExtensions
   );
 

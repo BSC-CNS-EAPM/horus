@@ -23,6 +23,9 @@ import ResizeHandle from "../Panels/resize_handle";
 // Molstar image logo
 // @ts-ignore
 import MolstarLogo from "../../../Resources/molstar-logo.png";
+import {
+  ServerFileExplorerModal,
+} from "../FileExplorer/file_explorer";
 
 type WorkingViewProps = {
   extensionToOpen?: {
@@ -41,6 +44,7 @@ export default function WorkingView(props: WorkingViewProps) {
   const [iframeView, setIframeView] = useState<React.ReactNode | null>(null);
   const [showIFrame, setShowIFrame] = useState(false);
   const [showConsole, setShowConsole] = useState(false);
+  const [showFileExplorer, setShowFileExplorer] = useState(false);
 
   const handleMainView = (event: Event) => {
     const mainView = (event as CustomEvent).detail;
@@ -89,11 +93,16 @@ export default function WorkingView(props: WorkingViewProps) {
     setShowConsole((currentShowConsole) => !currentShowConsole);
   };
 
+  const toggleFileExplorer = () => {
+    setShowFileExplorer((currentShowFileExplorer) => !currentShowFileExplorer);
+  };
+
   useEffect(() => {
     // Event listeners
     window.addEventListener("mainView", handleMainView);
     window.addEventListener("loadExtension", handleIFrame);
     window.addEventListener("toggleConsole", toggleConsole);
+    window.addEventListener("toggleFileExplorer", toggleFileExplorer);
     socket.on("openExtension", handleIFrame);
 
     // Set the global isDesktop variable
@@ -103,6 +112,7 @@ export default function WorkingView(props: WorkingViewProps) {
       window.removeEventListener("mainView", handleMainView);
       window.removeEventListener("loadExtension", handleIFrame);
       window.removeEventListener("toggleConsole", toggleConsole);
+      window.removeEventListener("toggleFileExplorer", toggleFileExplorer);
       socket.off("openExtension", handleIFrame);
     };
   }, []);
@@ -193,16 +203,23 @@ export default function WorkingView(props: WorkingViewProps) {
         </PanelGroup>
         <div className={showConsole ? "block" : "hidden"}>{term.current}</div>
       </div>
+      {/* Used for the fileExplorer event */}
+      {!window.isDesktop && showFileExplorer && (
+        <ServerFileExplorerModal
+          open={showFileExplorer}
+          setOpen={setShowFileExplorer}
+        />
+      )}
     </div>
   );
 }
 
 function MolstarPanel() {
-  const [showMolstar, setShowMolstar] = useState<Boolean>(true);
+  const [showMolstar, setShowMolstar] = useState<boolean>(true);
   const [initialMolstarHidden, setInitialMolstarHidden] =
-    useState<Boolean>(true);
+    useState<boolean>(true);
 
-  const [isDragging, setIsDragging] = useState<Boolean>(false);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
 
   // Panels ref
   const molstarPanelRef = useRef<ImperativePanelHandle | null>(null);

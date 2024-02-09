@@ -254,9 +254,7 @@ function SettingsHeader(props: {
       <div className="flex flex-row flex-wrap justify-center items-center gap-2 mr-2">
         {props.hasChanges &&
           (props.isSaving ? (
-            <NBDButton action={() => {}} className="flex flex-row gap-2">
-              <RotatingLines className="w-5 h-5" />
-            </NBDButton>
+            <RotatingLines className="app-button" size={"1.5rem"} />
           ) : (
             <NBDButton
               className={props.hasChanges ? "bg-orange-200" : ""}

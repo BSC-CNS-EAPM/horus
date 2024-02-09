@@ -835,6 +835,109 @@ class HorusServer:
 
             return flask.jsonify(success)
 
+        @self.server.route("/api/filepicker/createfolder", methods=["POST"])
+        @verifyToken
+        def createFolder():
+            path = request.get_json().get("path", os.getcwd())
+            folderName = request.get_json().get("folderName", None)
+
+            if folderName is None:
+                return flask.jsonify({"ok": False, "msg": "No folder name provided"})
+
+            try:
+                os.makedirs(os.path.join(path, folderName))
+                return flask.jsonify({"ok": True})
+            except Exception as exc:
+                return flask.jsonify({"ok": False, "msg": str(exc)})
+
+        @self.server.route("/api/filepicker/upload", methods=["POST"])
+        @verifyToken
+        def uploadFiles():
+            request.get_data()
+            path = request.form.get("path", None)
+            files = request.files
+
+            if path is None:
+                return flask.jsonify({"ok": False, "msg": "No path provided"})
+
+            if files is None:
+                return flask.jsonify({"ok": False, "msg": "No file provided"})
+
+            try:
+
+                if not os.path.exists(path):
+                    os.makedirs(path)
+
+                for file in files.values():
+                    if file.filename:
+                        file.save(os.path.join(path, file.filename))
+
+                return flask.jsonify({"ok": True})
+            except Exception as exc:
+                return flask.jsonify({"ok": False, "msg": str(exc)})
+
+        @self.server.route("/api/filepicker/download", methods=["POST"])
+        @verifyToken
+        def downloadFiles():
+
+            path = request.get_json().get("path", None)
+
+            if path is None:
+                return flask.jsonify({"ok": False, "msg": "No path provided"})
+
+            if os.path.isdir(path):
+                # Zip the folder
+                import tempfile
+                import zipfile
+
+                tempDir = tempfile.mkdtemp()
+                tempZip = os.path.join(tempDir, "download.zip")
+
+                with zipfile.ZipFile(tempZip, "w") as zipf:
+                    for root, _, files in os.walk(path):
+                        for file in files:
+                            zipf.write(
+                                os.path.join(root, file),
+                                os.path.relpath(os.path.join(root, file), path),
+                            )
+
+                path = tempZip
+
+            downloadName = os.path.basename(path)
+            import mimetypes
+
+            mimetype = mimetypes.guess_type(path)[0]
+
+            try:
+                return flask.send_file(
+                    path,
+                    download_name=downloadName,
+                    mimetype=mimetype,
+                    as_attachment=True,
+                )
+            except Exception as exc:
+                return flask.jsonify({"ok": False, "msg": str(exc)})
+
+        @self.server.route("/api/filepicker/delete", methods=["POST"])
+        @verifyToken
+        def deleteFiles():
+            data = request.get_json()
+            path = data.get("path", None)
+
+            if path is None:
+                return flask.jsonify({"ok": False, "msg": "No path provided"})
+
+            try:
+                if os.path.isdir(path):
+                    import shutil
+
+                    shutil.rmtree(path)
+                else:
+                    os.remove(path)
+                return flask.jsonify({"ok": True})
+            except Exception as exc:
+                return flask.jsonify({"ok": False, "msg": str(exc)})
+
         @self.server.route("/api/openfolder", methods=["GET", "POST"])
         @verifyToken
         def openFolder():
@@ -843,8 +946,10 @@ class HorusServer:
 
                 selFolder = AppDelegate().openFolderSelectDialog()
             else:  # Implement folder picker for web/server mode
-                print("WARNING: Folder picker not implemented for web/server mode")
-                selFolder = "/example/path"
+                logging.getLogger("Horus").critical(
+                    "WARNING: Folder picker must call Chonky explorer instead of /api/openfolder"
+                )
+                selFolder = "/deprecated/method/"
 
             return flask.jsonify({"path": selFolder})
 

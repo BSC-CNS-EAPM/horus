@@ -138,3 +138,7 @@ textarea {
   padding: 0.5rem;
   border: 1px solid var(--vintage-code);
 }
+
+.chonky-infoContainer {
+  display: none !important ;
+}
