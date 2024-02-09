@@ -185,7 +185,7 @@ class HorusMolstar {
             x: x,
             y: y,
             z: z,
-            strucutre_label: molInfo.name,
+            structure_label: molInfo.name,
             structure: molInfo,
           };
           detail["atom"] = atomInfo;
@@ -1187,6 +1187,7 @@ class HorusMolstar {
       const molInfo = this.extractFromLoci(loci);
       molInfo["id"] = structure.cell.sourceRef;
       molList.push(molInfo);
+      console.log(molInfo);
     }
 
     return molList;
@@ -1274,7 +1275,7 @@ class HorusMolstar {
           x: x,
           y: y,
           z: z,
-          strucutre_label: molInfo.name,
+          structure_label: molInfo.name,
           structure: molInfo,
         };
 
@@ -1390,7 +1391,7 @@ class HorusMolstar {
             x: x,
             y: y,
             z: z,
-            strucutre_label: molInfo.name,
+            structure_label: molInfo.name,
             structure: molInfo,
           };
 
@@ -1784,6 +1785,6 @@ export type AtomInfo = {
   x: number;
   y: number;
   z: number;
-  strucutre_label: string;
+  structure_label: string;
   structure: MolInfo;
 };

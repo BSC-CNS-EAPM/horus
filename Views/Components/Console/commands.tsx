@@ -165,7 +165,7 @@ export default function getCommands(): {
         // Parse as a string with \n as a separator
         const chainsString = chainList
           .map((chain) => {
-            return `${chain.strucutre_label}: ${chain.chainID}`;
+            return `${chain.structure_label}: ${chain.chainID}`;
           })
           .join("\n");
         return chainsString;

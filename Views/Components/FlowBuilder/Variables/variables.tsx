@@ -164,19 +164,20 @@ function VariableListView(props: VariableViewProps) {
     };
 
     return (
-      <div className="h-full w-full flex flex-col gap-1 justify-between">
-        {index === 0 && (
-          <div
-            className=""
-            style={{
-              minWidth: "fit-content",
-              marginTop: "0.5rem",
-              paddingBottom: "0.5rem",
-            }}
-          >
-            {variable.name}
-          </div>
-        )}
+      <div className="h-full w-full flex flex-col gap-1 justify-between flex-grow">
+        <div
+          className="w-full whitespace-nowrap"
+          style={{
+            // minWidth: "fit-content",
+            marginTop: "0.5rem",
+            paddingBottom: "0.5rem",
+            opacity: index === 0 ? 1 : 0,
+            position: index === 0 ? "relative" : "absolute",
+          }}
+        >
+          {variable.name}
+        </div>
+
         <PluginVariableView
           variable={updatedVariable}
           onChange={(value: any, id: string, groupID?: string) => {
@@ -982,7 +983,7 @@ function AtomView(props: VariableViewProps) {
   return (
     <div
       onClick={() => setActive(!active)}
-      className={`w-[150px] h-full max-h-28 overflow-auto border-2 rounded-xl ${
+      className={`w-full h-full max-h-28 overflow-auto border-2 rounded-xl ${
         active ? "bg-green-200 border-green-200" : "bg-white border-white"
       }`}
     >
@@ -1030,13 +1031,13 @@ function ChainView(props: VariableViewProps) {
                 id={`${props.variable.id}-${index}`}
                 style={{ width: "1rem" }}
                 type="checkbox"
-                value={`${chain.chainID} - ${chain.strucutre_label}`}
+                value={`${chain.chainID} - ${chain.structure_label}`}
                 checked={
                   currentValue &&
                   currentValue.find((val: any) => {
                     return (
                       val.chainID === chain.chainID &&
-                      val.strucutre_label === chain.strucutre_label
+                      val.structure_label === chain.structure_label
                     );
                   }) !== undefined
                 }
@@ -1062,7 +1063,7 @@ function ChainView(props: VariableViewProps) {
                 }}
               />
               <div className="ml-2">
-                {chain.chainID} - {chain.strucutre_label}
+                {chain.chainID} - {chain.structure_label}
               </div>
             </div>
           ))}
