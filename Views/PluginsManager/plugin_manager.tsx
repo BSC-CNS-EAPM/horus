@@ -266,7 +266,9 @@ function PluginCard(props: PluginCardProps) {
         <div>
           <div className="flex flex-row items-baseline gap-2">
             <div className="text-xl font-semibold">{plugin.name}</div> -
-            <div className="card-subtitle">{plugin.description}</div>
+            {!error && (
+              <div className="card-subtitle">{plugin.description}</div>
+            )}
           </div>
           {!error ? (
             <>

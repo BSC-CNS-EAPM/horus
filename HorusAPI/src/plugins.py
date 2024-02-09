@@ -1429,6 +1429,13 @@ class InputBlock(PluginBlock):
     the user. It works as a regular PluginBlock but only shows its PluginVariable.
     Its output will be automatically set to the value the variable has if it does
     not have a defined action.
+
+    When only the variable parameter is defined, the block will output directly the value
+    of the variable.
+
+    If parsing of the variable is needed, the action parameter can be used to define
+    a function that will parse the value of the variable and return the parsed value. In that
+    case, use the output parameter to define the output variable of the block.
     """
 
     def __init__(
@@ -1436,6 +1443,7 @@ class InputBlock(PluginBlock):
         name,
         description,
         variable: PluginVariable,
+        output: typing.Optional[PluginVariable] = None,
         action: typing.Optional[typing.Callable] = None,
     ):
         """
@@ -1447,7 +1455,7 @@ class InputBlock(PluginBlock):
         # Check that the variable is a PluginVariable instance
         if not isinstance(variable, PluginVariable):
             raise Exception(  # pylint: disable=broad-exception-raised
-                "The variable must be a single PluginVariable instance."
+                f"The input variable of block {name} must be a single PluginVariable instance."
             )
 
         super().__init__(
@@ -1456,7 +1464,7 @@ class InputBlock(PluginBlock):
             action=action,
             variables=[variable],
             inputs=[variable],
-            outputs=[variable],
+            outputs=[variable if output is None else output],
             blockType=PluginBlockTypes.INPUT,
         )
 

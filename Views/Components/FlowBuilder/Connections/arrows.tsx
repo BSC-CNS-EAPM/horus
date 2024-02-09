@@ -33,7 +33,7 @@ export function ConnectedArrows(props: ConnectedArrows) {
 
   const delayedRender = async () => {
     setShown(false);
-    await new Promise((resolve) => setTimeout(resolve, 350));
+    await new Promise((resolve) => setTimeout(resolve, 500));
     setShown(true);
   };
 

@@ -37,6 +37,7 @@ def sanitizePath(path: str):
 
 
 def CIFtoPDB(cifFile: str, pdbFile: str):
+
     from Bio.PDB.MMCIFParser import MMCIFParser  # type: ignore
     from Bio.PDB import PDBIO  # type: ignore
 

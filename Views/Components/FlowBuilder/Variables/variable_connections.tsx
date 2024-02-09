@@ -164,7 +164,7 @@ export function PlacedBlockVariables(props: PlacedBlockVariablesProps) {
   const { block } = props;
 
   if (block.type === "input") {
-    const outputVar = block.variables[0];
+    const outputVar = block.outputs[0];
 
     if (!outputVar) return null;
 

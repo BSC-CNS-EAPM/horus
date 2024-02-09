@@ -185,8 +185,12 @@ export function useFlowBuilder() {
   // State for loading the flow
   const [flowLoading, setFlowLoading] = useState<boolean>(false);
   const [flowText, setFlowText] = useState<string>("Flow busy");
-  const isFlowActive =
-    flow.status === FlowStatus.RUNNING || flow.status === FlowStatus.CANCELLING;
+  const isFlowActive = useMemo(() => {
+    return (
+      flow.status === FlowStatus.RUNNING ||
+      flow.status === FlowStatus.CANCELLING
+    );
+  }, [flow]);
 
   // State for the remote servers
   const [remotesOptions, setRemotesOptions] = useState<string[]>([]);
@@ -295,7 +299,8 @@ export function useFlowBuilder() {
   const handleBlockChanges = (
     newBlocks: Block[],
     isNew: boolean = false,
-    updateHistory: boolean = false
+    updateHistory: boolean = false,
+    resetExecution: boolean = true
   ) => {
     const updatedBlocks = isNew
       ? [...flow.blocks, ...newBlocks]
@@ -303,11 +308,17 @@ export function useFlowBuilder() {
           const matchingNewBlock = newBlocks.find(
             (newBlock: Block) => newBlock.placedID === block.placedID
           );
+
           if (matchingNewBlock) {
-            return matchingNewBlock;
-          } else {
-            return block;
+            return {
+              ...matchingNewBlock,
+              finishedExecution: resetExecution
+                ? false
+                : block.finishedExecution,
+            } as Block;
           }
+
+          return block;
         });
 
     const newFlow: Flow = {
@@ -408,7 +419,7 @@ export function useFlowBuilder() {
     }
   ) => {
     // Update the state
-    handleBlockChanges([moveBlock(block, delta, scale)], false, true);
+    handleBlockChanges([moveBlock(block, delta, scale)], false, true, false);
   };
 
   const addBlockToFlow = (block: Block) => {
@@ -1032,7 +1043,7 @@ export function useFlowBuilder() {
         }),
       };
 
-      async () => {
+      const applyActions = async () => {
         // Check for any pending actions if the flow has finished
         if (recivedFlow.status !== FlowStatus.RUNNING) {
           if (
@@ -1047,6 +1058,8 @@ export function useFlowBuilder() {
           }
         }
       };
+
+      applyActions();
 
       return parsedFlow;
     });
@@ -1468,6 +1481,14 @@ export function useFlowBuilder() {
       return;
     }
 
+    setFlowText("Submitting flow");
+    setFlowLoading(true);
+
+    setFlow({
+      ...flow,
+      status: FlowStatus.RUNNING,
+    });
+
     if (resetFlow) {
       // Clear the terminal if present
       window.horusTerm.ref?.current?.clearStdout();
@@ -1488,7 +1509,13 @@ export function useFlowBuilder() {
 
     if (!result.ok) {
       alert(result.message);
+      setFlow({
+        ...flow,
+        status: FlowStatus.ERROR,
+      });
     }
+
+    setFlowLoading(false);
   }
 
   async function stopFlow() {

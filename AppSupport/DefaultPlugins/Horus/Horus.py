@@ -29,6 +29,11 @@ def createPlugin():
     # Add the addPDB block to the plugin
     plugin.addBlock(addPDBBlock)
 
+    from Blocks.GetPDB import getPDBBlock  # type: ignore
+
+    # Add the getPDB block to the plugin
+    plugin.addBlock(getPDBBlock)
+
     from Blocks.HeteroRes import heteroResBlock  # type: ignore
 
     # Add the heteroRes block to the plugin

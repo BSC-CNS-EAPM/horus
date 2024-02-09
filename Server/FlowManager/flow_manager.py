@@ -559,7 +559,7 @@ class Flow:
 
         # If the block is already executed, return its outputs.
         # Except for when we are ressetting the flow run
-        if blockToRun._finishedExecution and not resetRemoteBlock:  # and not comesFromCyclic
+        if blockToRun._finishedExecution and not resetRemoteBlock and not blockToRun._runError:  # and not comesFromCyclic
             return blockToRun._storedOutputs
 
         # Execute the regular inputs before the cyclic ones
@@ -1426,7 +1426,7 @@ class FlowManager:
 
         # Replace the savedID and the flow path so
         # the forntend can save it to another location
-        loadedFLow.savedID = None
+        loadedFLow.savedID = None # type: ignore
         loadedFLow.path = None  # type: ignore
 
         return loadedFLow
