@@ -940,106 +940,6 @@ class PluginManager(metaclass=HorusSingleton):
 
         return block
 
-    def executeBlockLegacy(
-        self,
-        blockID: str,
-        blockPlacedID: int,
-        variables: dict,
-        inputs: dict,
-        workingDir: str,
-        flowSavedID: str,
-        socketio: SocketIO,
-        selectedInputGroup: str,
-        resetRemoteBlock: bool = False,
-    ):
-        """
-        Executes an action of a plugin.
-
-        :param blockID: The id of the block to execute.
-        :param variables: The variables of the block.
-        :param inputs: The inputs of the block.
-        :param workingDir: The working directory to execute the block.
-        :param selectedRemote: If any, the remote where to execute the block.
-        """
-
-        # Find the block object to execute
-        # Copy it so we don't modify the original
-        block = self.findBlock(blockID).copy()
-
-        # Set the selected input group
-        block.selectedInputGroup = selectedInputGroup
-
-        # Set the variables
-        block._updateVariables(variables)  # pylint: disable=protected-access
-
-        # Set the inputs
-        block._updateInputs(inputs)  # pylint: disable=protected-access
-
-        # Get the plugin
-        plugin = self._getPluginByID(blockID.split(".")[0])
-
-        # Read the config file for the block
-        configPath = self._pluginConfigPath(plugin)
-
-        if os.path.exists(configPath):
-            # Set the plugin config to execute the block
-            plugin._updateConfigs(configPath)  # pylint: disable=protected-access
-
-            # Set the block config to execute the block
-            block.config = plugin.config
-
-        # Set the working dir to run python from
-        os.chdir(os.path.dirname(workingDir))
-
-        # Find the plugin
-        plugin = self._getPluginByID(blockID.split(".")[0])
-
-        # Add to the python path the dependencies folder of the plugin
-        # self._includeDepsPath(plugin._path)  # pylint: disable=protected-access
-
-        # Get the cluster api from the app delegate
-        from App import AppDelegate  # pylint: disable=import-outside-toplevel
-
-        rAPI = AppDelegate().server.remoteManager.remote
-        if rAPI is None:
-            raise Exception("No cluster selected.")  #  pylint: disable=broad-exception-raised
-
-        rAPI._blockID = blockID  # pylint: disable=protected-access
-        rAPI._blockPlacedID = blockPlacedID  # pylint: disable=protected-access
-        rAPI._flowSavedID = flowSavedID  # pylint: disable=protected-access
-        rAPI._resetRemoteBlock = resetRemoteBlock  # pylint: disable=protected-access
-
-        # Update the block with the remote configuration
-        block._setRemote(rAPI)  # pylint: disable=protected-access
-
-        # print("Executing block: " + blockID)
-
-        # Execute the block
-        error = False
-        errorMSG = ""
-        outputs = None
-        try:
-            with PluginDeps(plugin._path):
-                with PrintSocketCapturer(socketio):
-                    outputs = block()
-        except Exception as exc:  # pylint: disable=broad-exception-caught
-            error = True
-            errorMSG = str(exc)
-
-        # print("Block executed: " + blockID)
-
-        # Restore the working dir
-        os.chdir(self.workingDir)
-
-        # Restore the python path
-        # self._removeDepsPath(plugin._path)  # pylint: disable=protected-access
-
-        if error:
-            raise Exception(errorMSG)
-
-        # Return the output of the block
-        return outputs
-
     def executeBlock(
         self,
         block: PluginBlock,
@@ -1119,9 +1019,13 @@ class PluginManager(metaclass=HorusSingleton):
             with PluginDeps(plugin._path):
                 # Execute the block
                 outputs = block()
-        except Exception as exc:  # pylint: disable=broad-exception-caught
+        except Exception:  # pylint: disable=broad-exception-caught
+
+            # Get the full traceback
+            import traceback
+
+            errorMSG = traceback.format_exc()
             error = True
-            errorMSG = str(exc)
         finally:
             # Calculate the final time
             finalTime = datetime.datetime.now().timestamp()

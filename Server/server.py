@@ -610,50 +610,6 @@ class HorusServer:
             pages = self.pluginManager.getPages()
             return flask.jsonify(pages)
 
-        @self.server.route("/api/plugins/executeblock", methods=["POST"])
-        @verifyToken
-        def executeBlock():
-            data = request.get_json()
-            # Execute the action from a given block
-            try:
-                try:
-                    variables = data["variables"]
-                    blockID = data["blockID"]
-                    workingDir = data["path"]
-                    inputs = data["inputs"]
-                    flowSavedID = data["flowSavedID"]
-                    blockPlacedID = data["blockPlacedID"]
-                    selectedInputGroup = data["selectedInputGroup"]
-                except KeyError as keye:
-                    raise Exception(  # pylint: disable=broad-exception-raised
-                        f"Missing key: {keye} in executeBlock request."
-                    ) from keye
-
-                resetRemote = data.get("resetRemote", False)
-                outputs = self.pluginManager.executeBlockLegacy(
-                    blockID,
-                    blockPlacedID,
-                    variables,
-                    inputs,
-                    workingDir,
-                    flowSavedID,
-                    self.socketio,
-                    selectedInputGroup=selectedInputGroup,
-                    resetRemoteBlock=resetRemote,
-                )
-                success = {
-                    "ok": True,
-                    "outputs": outputs,
-                }
-            except Exception as exc:  # pylint: disable=broad-exception-caught
-                errorMSG = str(exc).strip()
-                self.socketio.emit("printTerm", errorMSG)
-                success = {
-                    "ok": False,
-                    "error": errorMSG,
-                }
-            return flask.jsonify(success)
-
         @self.server.route("/api/plugins/executeflow", methods=["POST"])
         @verifyToken
         def executeFlow():
