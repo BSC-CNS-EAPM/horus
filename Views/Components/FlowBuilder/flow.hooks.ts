@@ -1,5 +1,5 @@
 // React
-import { useRef, useState, useEffect, useMemo } from "react";
+import { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import type { MouseEvent, PointerEvent } from "react";
 
 // Drag and drop toolkit
@@ -29,9 +29,7 @@ import {
   FlowStatus,
   VariableConnection,
 } from "./flow.types";
-
 import { FileExplorerProps } from "../FileExplorer/file_explorer";
-import { modifierKey } from "../Toolbar/toolbar";
 
 /**
  * An extended "PointerSensor" that prevent some
@@ -206,9 +204,229 @@ export function useFlowBuilder() {
   const [past, setPast] = useState<Flow[]>([]);
   const [future, setFuture] = useState<Flow[]>([]);
 
+  const resetHistory = useCallback(() => {
+    setPast([]);
+    setFuture([]);
+  }, []);
+
+  function handleHistoryChange(newFlow: Flow) {
+    setPast((prevPast) => [...prevPast, newFlow]);
+    setFuture([]);
+  }
+
+  // Helper function that should be called every time the flow changes
+  // It updates the flow state and the saved state
+  const handleFlowChange = useCallback(
+    (newFlow: Flow, updateHistory: boolean = false) => {
+      const handledFlow: Flow = { ...newFlow, status: FlowStatus.IDLE };
+      setFlow((currentFlow) => {
+        if (updateHistory) {
+          handleHistoryChange(currentFlow);
+        }
+        return handledFlow;
+      });
+      setSaved(false);
+    },
+    []
+  );
+
+  const updateMolstarState = useCallback(async () => {
+    // Check that the flow has a valid path and
+    // that Mol* is mounted
+    if (!flow.path || !window.molstar) {
+      return;
+    }
+
+    try {
+      const molstarState = await window.molstar.snapshot.get();
+      const formData = new FormData();
+      formData.append("flowPath", flow.path);
+      formData.append("molstarState", molstarState, "molstarState.molx");
+      const headers = {
+        Accept: "application/json",
+      };
+
+      const response = await horusPost(
+        "/api/updatemolstate",
+        headers,
+        formData,
+        undefined,
+        10
+      );
+      const data = await response.json();
+
+      if (!data.ok) {
+        throw new Error(data.error);
+      }
+    } catch (e) {
+      alert("Error updating mol* state: " + e);
+    }
+  }, [flow.path]);
+
+  const internalLoadFlow = useCallback(
+    async (openedFlow: Flow) => {
+      // Exit the socket flow room
+      socket.emit("leaveFlow", flow.savedID);
+
+      // Connect to a socketio room with the flowID
+      socket.emit("joinFlow", openedFlow.savedID);
+
+      // Set the flow state
+      setFlow(openedFlow);
+
+      // Set the placedIDCounter
+      // Search for the highest placedID in the blocks and subblocks
+      const placedIDs = openedFlow.blocks.map((b) => b.placedID);
+
+      placedIDCounter.current = Math.max(...placedIDs) + 1;
+
+      if (openedFlow.terminalOutput.length > 0) {
+        window.horusTerm.storedMessages = openedFlow.terminalOutput;
+
+        // Print all stored messages if the terminal is mounted
+        window.horusTerm.ref?.current?.pushToStdout(
+          window.horusTerm.storedMessages
+            ? window.horusTerm.storedMessages.join("\n")
+            : ""
+        );
+      }
+
+      // Apply any pending MolstarAPI actions if present
+      if (openedFlow.pendingActions && openedFlow.pendingActions.length > 0) {
+        for (const action of openedFlow.pendingActions) {
+          await window.molstar?.applyAction(action);
+        }
+        // Save the mol* state after applying the actions
+        await updateMolstarState();
+      }
+
+      // Set the block connections
+      const blockConnections: VariableConnection[] = [];
+      for (const block of openedFlow.blocks) {
+        for (const variableConnection of block.variableConnections) {
+          blockConnections.push(variableConnection);
+        }
+      }
+    },
+    [flow.savedID, updateMolstarState]
+  );
+
+  const isLoadingFlow = useRef<boolean>(false);
+
+  const loadFlow = useCallback(
+    async (
+      openRecent: { savedID: string | null; path: string } | null = null
+    ) => {
+      // If the flow is already loading, exit early
+      if (isLoadingFlow.current) {
+        return;
+      }
+
+      isLoadingFlow.current = true;
+
+      // prettier-ignore
+      if (!saved && !confirm("Current flow is not saved. Are you sure you want to open a new one?")) {
+      return;
+    }
+
+      setFlowText("Opening flow");
+      setFlowLoading(true);
+
+      // Wait a second for the animation to play
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      try {
+        // Define the initial data to open the flow
+        let data: {
+          ok: boolean;
+          flow: Flow | null;
+          error: string;
+          molstarState: string | null;
+        } = {
+          ok: false,
+          flow: null,
+          error: "Early error opening flow",
+          molstarState: null,
+        };
+
+        // If a default flow is being opened, some variables need to be set
+        let isDefaultFlow = false;
+
+        // If the flow is being opened from the recent flows list, use the savedID
+        if (openRecent !== null) {
+          const header = {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          };
+
+          if (openRecent.path === undefined) {
+            isDefaultFlow = true;
+          }
+
+          const body = JSON.stringify({
+            savedID: openRecent.savedID,
+            path: openRecent.path,
+          });
+          const response = await horusPost("/api/openrecentflow", header, body);
+          data = await response.json();
+        } else {
+          const response = await horusGet("/api/openflow");
+          data = await response.json();
+        }
+
+        if (!data.ok) {
+          alert(data.error);
+          return;
+        }
+
+        const openedFlow = data.flow;
+
+        if (!openedFlow) {
+          return;
+        }
+
+        // Set the molstar state at the beggining in case blocks need structures
+        // If it has the new molstar state, open it
+        if (window.molstar) {
+          if (data.molstarState) {
+            await window.molstar.snapshot.set(data.molstarState);
+          }
+        }
+
+        await internalLoadFlow(openedFlow);
+
+        // Set the saved state
+        setSaved(!isDefaultFlow);
+
+        // Reset the history
+        resetHistory();
+      } finally {
+        setFlowLoading(false);
+        isLoadingFlow.current = false;
+      }
+    },
+    [saved, resetHistory, setSaved, internalLoadFlow]
+  );
+
   // State for the server file picker
   const [serverFilePickerOpen, setServerFilePickerOpen] =
     useState<boolean>(false);
+
+  const serverPickerFlow = useCallback(() => {
+    return {
+      openFolder: false,
+      allowedExtensions: ["flow"],
+      onFileSelect: () => {},
+      onFileConfirm: (path: string) => {
+        setServerFilePickerOpen(false);
+        // Load the flow
+        loadFlow({
+          savedID: null,
+          path: path,
+        });
+      },
+    };
+  }, [loadFlow]);
 
   const [fileProps, setFileProps] = useState<FileExplorerProps>(
     serverPickerFlow()
@@ -229,41 +447,193 @@ export function useFlowBuilder() {
     setScale(newScaleNumber);
   }
 
-  function handleMouseWheel(event: WheelEvent) {
-    event.preventDefault();
+  // function handleMouseWheel(event: WheelEvent) {
+  //   event.preventDefault();
 
-    // If the modifier key is pressed, scale the view
-    if (event.getModifierState(modifierKey)) {
-      if (event.deltaY > 0) {
-        handleScaleChange(scale - 0.1);
-      } else {
-        handleScaleChange(scale + 0.1);
-      }
-      // Otherwise, pan the view
-    } else {
-      const deltaX = -event.deltaX;
-      const deltaY = -event.deltaY;
-      moveBlocksPan(deltaX * (1 / scale), deltaY * (1 / scale));
-    }
-  }
+  //   // If the modifier key is pressed, scale the view
+  //   if (event.getModifierState(modifierKey)) {
+  //     if (event.deltaY > 0) {
+  //       handleScaleChange(scale - 0.1);
+  //     } else {
+  //       handleScaleChange(scale + 0.1);
+  //     }
+  //     // Otherwise, pan the view
+  //   } else {
+  //     const deltaX = -event.deltaX;
+  //     const deltaY = -event.deltaY;
+  //     moveBlocksPan(deltaX * (1 / scale), deltaY * (1 / scale));
+  //   }
+  // }
 
-  function serverPickerFlow() {
+  const serializeFlow = useCallback((): Flow => {
     return {
-      openFolder: false,
-      allowedExtensions: ["flow"],
-      onFileSelect: () => {},
-      onFileConfirm: (path: string) => {
-        setServerFilePickerOpen(false);
-        // Load the flow
-        loadFlow({
-          savedID: null,
-          path: path,
-        });
-      },
+      ...flow,
+      terminalOutput: window.horusTerm.storedMessages,
     };
-  }
+  }, [flow]);
 
-  function serverPickerFolder() {
+  const isSaving = useRef<boolean>(false);
+
+  /**
+   * Saves the flow data to the server.
+   *
+   * @param flowToSave - Optional flow object to save. If not provided, the current flow will be serialized and saved.
+   * @returns A Promise that resolves to the saved Flow object if successful, or null otherwise.
+   */
+  const handleSave = useCallback(
+    async (flowToSave?: Flow): Promise<Flow | null> => {
+      // If the flow is already saving, exit early
+      if (isSaving.current) {
+        return null;
+      }
+
+      // Set the state
+      isSaving.current = true;
+      setFlowText("Saving flow");
+      setFlowLoading(true);
+
+      // The serialization of the flow to save
+      const saveContents = flowToSave ? flowToSave : serializeFlow();
+
+      // Set a timeout on the first save only if the flow is NOT new
+      // Otherwise the saving process will be canceled on the first save
+      // while the user is selecting the folder where to save the flow
+      // This happens only in the desktop version, but we will setup
+      // the timeout for both versions as the request might fail due
+      // to Flask request aprser not being able to parse the form data
+      // mainly due the Mol* state being too large. Sometimes sending
+      // the request again fixes the issue
+      const timeout = saveContents.path ? 10 : null;
+
+      try {
+        // Prepare the body for the save request
+        const body = new FormData();
+        body.append("flowData", JSON.stringify(saveContents));
+
+        // Append the molstar state if present
+        let molstarState: Blob | null = null;
+        if (window.molstar) {
+          molstarState = await window.molstar!.snapshot.get();
+          body.append("molstarState", molstarState, "molstarState.zip");
+        }
+
+        // Set the headers so that flask correctly accepts the form data
+        const headers = {
+          Accept: "application/json",
+        };
+
+        // Post the flow to the server
+        const response = await horusPost(
+          "/api/saveflow",
+          headers,
+          body,
+          undefined,
+          timeout
+        );
+
+        // Read the response
+        let savedFlow = await response.json();
+
+        if (!savedFlow) {
+          alert("No response from the server");
+          return null;
+        }
+
+        if (!savedFlow.ok) {
+          alert(savedFlow.error);
+          return null;
+        }
+        // } catch (e) {
+        //   console.error(e);
+        //   alert(`Error saving flow. ${e}`);
+        //   return;
+        // }
+
+        // Get relevant flow data
+        // If we are on App mode, the overwrite process gets handled by the system file explroer,
+        // on server mode though, we need to handle the overwrite process here, this is why we
+        //  to parse the overwrite and existingName flags
+        const overwrite = savedFlow.overwrite;
+        const existingName = savedFlow.existingName;
+        const path = overwrite ? savedFlow.path : saveContents.path;
+        const desktop = savedFlow.desktop;
+
+        // Check if the flow with the same name already exists
+        if (
+          overwrite &&
+          !desktop &&
+          !confirm(
+            "Flow with the same name already exists. Are you sure you want to overwrite the flow?"
+          )
+        ) {
+          return null;
+        }
+
+        // If the user decided to overwrite the flow, re-send the request with the overwrite flag
+        if (overwrite) {
+          // Re send the request with the overwrite flag
+          const overwriteContents = {
+            ...saveContents,
+            name: existingName,
+            path: path,
+            overwrite: true,
+          };
+
+          // Create a new form data object
+          const overwriteBody = new FormData();
+          overwriteBody.append("flowData", JSON.stringify(overwriteContents));
+
+          // Append the molstar state if present
+          if (molstarState) {
+            overwriteBody.append(
+              "molstarState",
+              molstarState,
+              "molstarState.zip"
+            );
+          }
+
+          // Send the request again
+          const overwriteResponse = await horusPost(
+            "/api/saveflow",
+            headers,
+            overwriteBody,
+            undefined,
+            10
+          );
+
+          savedFlow = await overwriteResponse.json();
+
+          if (!savedFlow.ok) {
+            alert(savedFlow.error);
+            return null;
+          }
+        }
+
+        // If everything went well, update the flow state
+        socket.emit("leaveFlow", saveContents.savedID);
+
+        handleFlowChange({
+          ...saveContents,
+          savedID: savedFlow.savedID,
+          path: savedFlow.path,
+        });
+
+        // Join the room with the new savedID
+        socket.emit("joinFlow", savedFlow.savedID);
+
+        setSaved(true);
+
+        return savedFlow as Flow;
+      } finally {
+        // Reset the state of the loading flow when everything is done
+        isSaving.current = false;
+        setFlowLoading(false);
+      }
+    },
+    [serializeFlow, handleFlowChange]
+  );
+
+  const serverPickerFolder = useCallback(() => {
     return {
       openFolder: true,
       onFileSelect: () => {},
@@ -279,20 +649,7 @@ export function useFlowBuilder() {
         await handleSave(flowToSave);
       },
     };
-  }
-
-  // Helper function that should be called every time the flow changes
-  // It updates the flow state and the saved state
-  const handleFlowChange = (newFlow: Flow, updateHistory: boolean = false) => {
-    const handledFlow: Flow = { ...newFlow, status: FlowStatus.IDLE };
-    setFlow((currentFlow) => {
-      if (updateHistory) {
-        handleHistoryChange(currentFlow);
-      }
-      return handledFlow;
-    });
-    setSaved(false);
-  };
+  }, [flow, handleSave]);
 
   // Helper function that should be called every time any block changes
   // It updates the flow state and the saved state efficiently
@@ -848,222 +1205,53 @@ export function useFlowBuilder() {
     handleBlockChanges([newDestinationBlock, newOriginBlock]);
   }
 
-  async function updateMolstarState() {
-    // Check that the flow has a valid path and
-    // that Mol* is mounted
-    if (!flow.path || !window.molstar) {
-      return;
-    }
+  const loadSocketFlow = useCallback(
+    async (recivedFlow: Flow) => {
+      setFlow((currentFlow) => {
+        if (recivedFlow.savedID !== currentFlow.savedID) {
+          // Its not the currently opened flow
+          // Ignore the socket flow
+          return currentFlow;
+        }
 
-    try {
-      const molstarState = await window.molstar.snapshot.get();
-      const formData = new FormData();
-      formData.append("flowPath", flow.path);
-      formData.append("molstarState", molstarState, "molstarState.molx");
-      const headers = {
-        Accept: "application/json",
-      };
-
-      const response = await horusPost(
-        "/api/updatemolstate",
-        headers,
-        formData,
-        undefined,
-        10
-      );
-      const data = await response.json();
-
-      if (!data.ok) {
-        throw new Error(data.error);
-      }
-    } catch (e) {
-      alert("Error updating mol* state: " + e);
-    }
-  }
-
-  async function internalLoadFlow(openedFlow: Flow) {
-    // Exit the socket flow room
-    socket.emit("leaveFlow", flow.savedID);
-
-    // Connect to a socketio room with the flowID
-    socket.emit("joinFlow", openedFlow.savedID);
-
-    // Set the flow state
-    setFlow(openedFlow);
-
-    // Set the placedIDCounter
-    // Search for the highest placedID in the blocks and subblocks
-    const placedIDs = openedFlow.blocks.map((b) => b.placedID);
-
-    placedIDCounter.current = Math.max(...placedIDs) + 1;
-
-    if (openedFlow.terminalOutput.length > 0) {
-      window.horusTerm.storedMessages = openedFlow.terminalOutput;
-
-      // Print all stored messages if the terminal is mounted
-      window.horusTerm.ref?.current?.pushToStdout(
-        window.horusTerm.storedMessages
-          ? window.horusTerm.storedMessages.join("\n")
-          : ""
-      );
-    }
-
-    // Apply any pending MolstarAPI actions if present
-    if (openedFlow.pendingActions && openedFlow.pendingActions.length > 0) {
-      for (const action of openedFlow.pendingActions) {
-        await window.molstar?.applyAction(action);
-      }
-      // Save the mol* state after applying the actions
-      await updateMolstarState();
-    }
-
-    // Set the block connections
-    const blockConnections: VariableConnection[] = [];
-    for (const block of openedFlow.blocks) {
-      for (const variableConnection of block.variableConnections) {
-        blockConnections.push(variableConnection);
-      }
-    }
-  }
-
-  const isLoadingFlow = useRef<boolean>(false);
-
-  async function loadFlow(
-    openRecent: { savedID: string | null; path: string } | null = null
-  ) {
-    // If the flow is already loading, exit early
-    if (isLoadingFlow.current) {
-      return;
-    }
-
-    isLoadingFlow.current = true;
-
-    // prettier-ignore
-    if (!saved && !confirm("Current flow is not saved. Are you sure you want to open a new one?")) {
-      return;
-    }
-
-    setFlowText("Opening flow");
-    setFlowLoading(true);
-
-    // Wait a second for the animation to play
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    try {
-      // Define the initial data to open the flow
-      let data: {
-        ok: Boolean;
-        flow: Flow | null;
-        error: string;
-        molstarState: string | null;
-      } = {
-        ok: false,
-        flow: null,
-        error: "Early error opening flow",
-        molstarState: null,
-      };
-
-      // If a default flow is being opened, some variables need to be set
-      let isDefaultFlow = false;
-
-      // If the flow is being opened from the recent flows list, use the savedID
-      if (openRecent !== null) {
-        const header = {
-          "Content-Type": "application/json",
-          Accept: "application/json",
+        // Do not update the position of the blocks
+        // This is because the user might be panning the view
+        // during the flow execution
+        const parsedFlow: Flow = {
+          ...recivedFlow,
+          blocks: recivedFlow.blocks.map((block) => {
+            return {
+              ...block,
+              position: currentFlow.blocks.find(
+                (b) => b.placedID === block.placedID
+              )?.position ?? { x: 0, y: 0 },
+            };
+          }),
         };
 
-        if (openRecent.path === undefined) {
-          isDefaultFlow = true;
-        }
-
-        const body = JSON.stringify({
-          savedID: openRecent.savedID,
-          path: openRecent.path,
-        });
-        const response = await horusPost("/api/openrecentflow", header, body);
-        data = await response.json();
-      } else {
-        const response = await horusGet("/api/openflow");
-        data = await response.json();
-      }
-
-      if (!data.ok) {
-        alert(data.error);
-        return;
-      }
-
-      const openedFlow = data.flow;
-
-      if (!openedFlow) {
-        return;
-      }
-
-      // Set the molstar state at the beggining in case blocks need structures
-      // If it has the new molstar state, open it
-      if (window.molstar) {
-        if (data.molstarState) {
-          await window.molstar.snapshot.set(data.molstarState);
-        }
-      }
-
-      await internalLoadFlow(openedFlow);
-
-      // Set the saved state
-      setSaved(!isDefaultFlow);
-
-      // Reset the history
-      resetHistory();
-    } finally {
-      setFlowLoading(false);
-      isLoadingFlow.current = false;
-    }
-  }
-
-  async function loadSocketFlow(recivedFlow: Flow) {
-    setFlow((currentFlow) => {
-      if (recivedFlow.savedID !== currentFlow.savedID) {
-        // Its not the currently opened flow
-        // Ignore the socket flow
-        return currentFlow;
-      }
-
-      // Do not update the position of the blocks
-      // This is because the user might be panning the view
-      // during the flow execution
-      const parsedFlow: Flow = {
-        ...recivedFlow,
-        blocks: recivedFlow.blocks.map((block) => {
-          return {
-            ...block,
-            position: currentFlow.blocks.find(
-              (b) => b.placedID === block.placedID
-            )?.position ?? { x: 0, y: 0 },
-          };
-        }),
-      };
-
-      const applyActions = async () => {
-        // Check for any pending actions if the flow has finished
-        if (recivedFlow.status !== FlowStatus.RUNNING) {
-          if (
-            recivedFlow.pendingActions &&
-            recivedFlow.pendingActions.length > 0
-          ) {
-            for (const action of recivedFlow.pendingActions) {
-              await window.molstar?.applyAction(action);
+        const applyActions = async () => {
+          // Check for any pending actions if the flow has finished
+          if (recivedFlow.status !== FlowStatus.RUNNING) {
+            if (
+              recivedFlow.pendingActions &&
+              recivedFlow.pendingActions.length > 0
+            ) {
+              for (const action of recivedFlow.pendingActions) {
+                await window.molstar?.applyAction(action);
+              }
+              // Save the mol* state after applying the actions
+              await updateMolstarState();
             }
-            // Save the mol* state after applying the actions
-            await updateMolstarState();
           }
-        }
-      };
+        };
 
-      applyActions();
+        applyActions();
 
-      return parsedFlow;
-    });
-  }
+        return parsedFlow;
+      });
+    },
+    [updateMolstarState]
+  );
 
   async function fetchRemotes() {
     const response = await horusGet("/api/remotes/names");
@@ -1078,7 +1266,7 @@ export function useFlowBuilder() {
   }
 
   // Handle a new flow.
-  async function handleNewFlow() {
+  const handleNewFlow = useCallback(async () => {
     if (
       !saved &&
       !confirm(
@@ -1109,17 +1297,7 @@ export function useFlowBuilder() {
     window.horusTerm.storedMessages = [];
 
     setFlowLoading(false);
-  }
-
-  function resetHistory() {
-    setPast([]);
-    setFuture([]);
-  }
-
-  function handleHistoryChange(newFlow: Flow) {
-    setPast((prevPast) => [...prevPast, newFlow]);
-    setFuture([]);
-  }
+  }, [flow.savedID, saved, resetHistory]);
 
   /**
    * Handles the undo functionality by reverting to the previous state of the flow.
@@ -1127,7 +1305,7 @@ export function useFlowBuilder() {
    *
    * @returns void
    */
-  function handleUndo() {
+  const handleUndo = useCallback(() => {
     if (past.length < 1) {
       return; // If there are no previous states, do nothing
     }
@@ -1144,11 +1322,7 @@ export function useFlowBuilder() {
     setPast(newPast); // Update the past array
 
     handleFlowChange(undoTo); // Handle the flow change to the previous state
-
-    const variableConnectionsInUndo = undoTo.blocks.map((block) => {
-      return block.variableConnections;
-    }, []);
-  }
+  }, [flow, past, future, handleFlowChange]);
 
   /**
    * Handles the redo functionality by reverting to the next state in the future array.
@@ -1156,7 +1330,7 @@ export function useFlowBuilder() {
    *
    * @returns void
    */
-  function handleRedo() {
+  const handleRedo = useCallback(() => {
     // If there are no next states, do nothing
     if (future.length < 1) {
       return;
@@ -1175,52 +1349,46 @@ export function useFlowBuilder() {
     setFuture(newFuture); // Update the future array
 
     handleFlowChange(redoTo); // Handle the flow change to the next state
-  }
+  }, [flow, past, future, handleFlowChange]);
 
-  const handleOpenFlow = (
-    e: CustomEvent<{ savedID: string; path: string }>
-  ) => {
-    const hasPath = e.detail.path !== undefined;
-    const hasSavedID = e.detail.savedID !== undefined;
-    if (!window.isDesktop && !hasPath && !hasSavedID) {
-      setFileProps(serverPickerFlow());
-      setServerFilePickerOpen(true);
-    } else {
-      loadFlow(Object.keys(e.detail).length === 0 ? null : e.detail);
-    }
-  };
-
-  function serializeFlow(): Flow {
-    return {
-      ...flow,
-      terminalOutput: window.horusTerm.storedMessages,
-    };
-  }
+  const handleOpenFlow = useCallback(
+    (e: CustomEvent<{ savedID: string; path: string }>) => {
+      const hasPath = e.detail.path !== undefined;
+      const hasSavedID = e.detail.savedID !== undefined;
+      if (!window.isDesktop && !hasPath && !hasSavedID) {
+        setFileProps(serverPickerFlow());
+        setServerFilePickerOpen(true);
+      } else {
+        loadFlow(Object.keys(e.detail).length === 0 ? null : e.detail);
+      }
+    },
+    [loadFlow, serverPickerFlow]
+  );
 
   // For the server mode, we need to open first the file picker in folder mode
   // to select the saving folder
-  async function preHandleSave(
-    comesFromExecuteBlock: boolean = false,
-    flowToSave?: Flow
-  ) {
-    if (!window.isDesktop && (flowToSave?.path === null || !flow.path)) {
-      if (comesFromExecuteBlock === true) {
-        // Alert the user that the flow needs to be saved first
-        alert(
-          "The flow needs to be saved first. Please select a folder to save the flow"
-        );
+  const preHandleSave = useCallback(
+    async (comesFromExecuteBlock: boolean = false, flowToSave?: Flow) => {
+      if (!window.isDesktop && (flowToSave?.path === null || !flow.path)) {
+        if (comesFromExecuteBlock === true) {
+          // Alert the user that the flow needs to be saved first
+          alert(
+            "The flow needs to be saved first. Please select a folder to save the flow"
+          );
+        }
+
+        // Open the file picker
+        setFileProps(serverPickerFolder());
+        setServerFilePickerOpen(true);
+        return;
+      } else {
+        return await handleSave(flowToSave);
       }
+    },
+    [handleSave, serverPickerFolder, flow.path]
+  );
 
-      // Open the file picker
-      setFileProps(serverPickerFolder());
-      setServerFilePickerOpen(true);
-      return;
-    } else {
-      return await handleSave(flowToSave);
-    }
-  }
-
-  async function handleSaveAs() {
+  const handleSaveAs = useCallback(async () => {
     const newUnsavedFlow: Flow = {
       ...flow,
       savedID: null,
@@ -1228,134 +1396,7 @@ export function useFlowBuilder() {
     };
 
     await preHandleSave(false, newUnsavedFlow);
-  }
-
-  const isSaving = useRef<boolean>(false);
-  async function handleSave(flowToSave?: Flow) {
-    // If the flow is already saving, exit early
-    if (isSaving.current) {
-      return;
-    }
-
-    isSaving.current = true;
-
-    setFlowText("Saving flow");
-    setFlowLoading(true);
-
-    try {
-      // Prepare the body for the save request
-      const body = new FormData();
-      const saveContents = flowToSave ? flowToSave : serializeFlow();
-      body.append("flowData", JSON.stringify(saveContents));
-
-      // Append the molstar state if present
-      let molstarState: Blob | null = null;
-      if (window.molstar) {
-        molstarState = await window.molstar!.snapshot.get();
-        body.append("molstarState", molstarState, "molstarState.zip");
-      }
-
-      // Set the headers so that flask correctly accepts the form data
-      const headers = {
-        Accept: "application/json",
-      };
-
-      // Set a timeout on the first save only if the flow is NOT new
-      // Otherwise the saving process will be canceled on the first save
-      // while the user is selecting the folder where to save the flow
-      // This happens only in the desktop version
-      const timeout = window.isDesktop && !flow.savedID ? 10 : null;
-
-      try {
-        const response = await horusPost(
-          "/api/saveflow",
-          headers,
-          body,
-          undefined,
-          timeout
-        );
-        var savedFlow = await response.json();
-
-        if (!savedFlow.ok) {
-          throw new Error(savedFlow.error);
-        }
-      } catch (e) {
-        console.error(e);
-        alert("Error saving flow. Try again later");
-        return;
-      }
-
-      const overwrite = savedFlow.overwrite;
-      const existingName = savedFlow.existingName;
-      const path = overwrite ? savedFlow.path : flow.path;
-      const desktop = savedFlow.desktop;
-
-      if (
-        overwrite &&
-        !desktop &&
-        !confirm(
-          "Flow with the same name already exists. Are you sure you want to overwrite the flow?"
-        )
-      ) {
-        return;
-      }
-
-      if (overwrite) {
-        // Re send the request with the overwrite flag
-        const overwriteContents = {
-          ...saveContents,
-          name: existingName,
-          path: path,
-          overwrite: true,
-        };
-
-        const overwriteBody = new FormData();
-        overwriteBody.append("flowData", JSON.stringify(overwriteContents));
-        // Append the molstar state if present
-        if (molstarState) {
-          overwriteBody.append(
-            "molstarState",
-            molstarState,
-            "molstarState.zip"
-          );
-        }
-
-        const overwriteResponse = await horusPost(
-          "/api/saveflow",
-          headers,
-          overwriteBody,
-          undefined,
-          10
-        );
-
-        savedFlow = await overwriteResponse.json();
-
-        if (!savedFlow.ok) {
-          alert(savedFlow.error);
-          return;
-        }
-      }
-
-      // Leave the current socket flow room
-      socket.emit("leaveFlow", flow.savedID);
-
-      handleFlowChange({
-        ...flow,
-        savedID: savedFlow.savedID,
-        path: savedFlow.path,
-      });
-
-      // Join the room with the new savedID
-      socket.emit("joinFlow", savedFlow.savedID);
-
-      setSaved(true);
-
-      return savedFlow as Flow;
-    } finally {
-      isSaving.current = false;
-      setFlowLoading(false);
-    }
-  }
+  }, [flow, preHandleSave]);
 
   function handleMouseDown(e: MouseEvent) {
     const target = e.target as HTMLElement;
@@ -1389,7 +1430,27 @@ export function useFlowBuilder() {
     }
   }
 
-  function centerView() {
+  const moveBlocksPan = useCallback(
+    (deltaX: number, deltaY: number) => {
+      const newBlocks: Block[] = flow.blocks.map((block: Block) => {
+        return {
+          ...block,
+          position: {
+            x: block.position.x + deltaX,
+            y: block.position.y + deltaY,
+          },
+        };
+      });
+
+      setFlow({
+        ...flow,
+        blocks: newBlocks,
+      });
+    },
+    [flow, setFlow]
+  );
+
+  const centerView = useCallback(() => {
     // Set the first block to be at the center of the canvas
     // Then move all blocks by delta respective to the first block
 
@@ -1421,24 +1482,7 @@ export function useFlowBuilder() {
 
     moveBlocksPan(delta.x, delta.y);
     setScale(1);
-  }
-
-  function moveBlocksPan(deltaX: number, deltaY: number) {
-    const newBlocks: Block[] = flow.blocks.map((block: Block) => {
-      return {
-        ...block,
-        position: {
-          x: block.position.x + deltaX,
-          y: block.position.y + deltaY,
-        },
-      };
-    });
-
-    setFlow({
-      ...flow,
-      blocks: newBlocks,
-    });
-  }
+  }, [flow.blocks, moveBlocksPan, setScale]);
 
   function handleMouseUp(element: MouseEvent) {
     const canvas = document.getElementById(DroppableEntity.CANVAS);
@@ -1567,10 +1611,10 @@ export function useFlowBuilder() {
     return () => {
       socket.off("flow", loadSocketFlow);
     };
-  }, []);
+  }, [loadSocketFlow]);
 
   // Remove the event listeners
-  const removeListeners = () => {
+  const removeListeners = useCallback(() => {
     window.removeEventListener("newFlow", handleNewFlow);
 
     // @ts-ignore
@@ -1583,9 +1627,17 @@ export function useFlowBuilder() {
     window.removeEventListener("undo", handleUndo);
     window.removeEventListener("redo", handleRedo);
     // window.removeEventListener("wheel", handleMouseWheel);
-  };
+  }, [
+    handleNewFlow,
+    handleOpenFlow,
+    preHandleSave,
+    handleSaveAs,
+    centerView,
+    handleUndo,
+    handleRedo,
+  ]);
 
-  const addListeners = () => {
+  const addListeners = useCallback(() => {
     // Add an event listeners for flow control
     window.addEventListener("undo", handleUndo);
     window.addEventListener("redo", handleRedo);
@@ -1609,7 +1661,15 @@ export function useFlowBuilder() {
 
     // Event for the wheel mouse event
     // window.addEventListener("wheel", handleMouseWheel);
-  };
+  }, [
+    handleUndo,
+    handleRedo,
+    handleNewFlow,
+    handleOpenFlow,
+    preHandleSave,
+    handleSaveAs,
+    centerView,
+  ]);
 
   useEffect(() => {
     // Update the window.horus.getFlow function
@@ -1635,7 +1695,7 @@ export function useFlowBuilder() {
     return () => {
       removeListeners();
     };
-  }, [flow, scale]);
+  }, [flow, scale, saved, addListeners, removeListeners]);
 
   return {
     flow: {

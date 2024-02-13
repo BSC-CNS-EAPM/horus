@@ -1,5 +1,12 @@
 // React
-import { useEffect, useState, useRef, useMemo, ChangeEvent } from "react";
+import {
+  useEffect,
+  useState,
+  useRef,
+  useMemo,
+  ChangeEvent,
+  useCallback,
+} from "react";
 
 // SMILES variable
 // @ts-ignore - JSME is not typed
@@ -1238,33 +1245,78 @@ function HeteroResView(props: VariableViewProps) {
 function SphereVariableView(props: VariableViewProps) {
   const { currentValue, variable, onChange } = props;
 
-  const [position, setPosition] = useState<{
-    x: number;
-    y: number;
-    z: number;
-  }>({ x: 0, y: 0, z: 0 });
-  const [radius, setRadius] = useState(10);
-  const sphereRef = useRef<SphereRef | null>(null);
+  const sphereRef = useRef<SphereRef | null>(currentValue?.ref ?? null);
 
   const [active, setActive] = useState(false);
-  const [activeColor, setActiveColor] = useState("#a5d6a7");
+  const [activeColor, setActiveColor] = useState(
+    sphereRef.current ? Color.toHexStyle(sphereRef.current.color) : "#a5d6a7"
+  );
   const mounted = useRef(false);
 
-  const handleChange = async (
-    position: {
-      x: number;
-      y: number;
-      z: number;
-    },
-    radius: number
-  ) => {
-    const molstar = window.molstar;
+  const parseNumberOrNegative = (value: string) => {
+    // If the field is empty, return "",
+    // if the value is "-", return "-",
+    // if the value is a number, return the number
+    // If the value does not qualify for a number (contains characters), return ""
+    // Allow also for decimals
 
-    if (!molstar) return;
+    if (value === "") {
+      return "";
+    }
 
-    const structures = molstar.listStructures();
+    if (value === "-") {
+      return "-";
+    }
 
-    if (structures.length === 0) {
+    // If the last character is a dot, return the value
+    if (value[value.length - 1] === ".") {
+      return value;
+    }
+
+    const parsedValue = Number(value);
+
+    if (isNaN(parsedValue)) {
+      return "";
+    } else {
+      return value;
+    }
+  };
+
+  const handleChange = useCallback(
+    async (
+      position: {
+        x: number | string;
+        y: number | string;
+        z: number | string;
+      },
+      radius: number | string
+    ) => {
+      const molstar = window.molstar;
+
+      if (!molstar) return;
+
+      if (!mounted.current) {
+        return;
+      }
+
+      const parsedSphereNumbers = {
+        x: Number(position.x),
+        y: Number(position.y),
+        z: Number(position.z),
+      };
+
+      const ref = await molstar.addSphere(
+        parsedSphereNumbers,
+        Number(radius),
+        0.3,
+        undefined,
+        sphereRef.current ?? undefined
+      );
+
+      sphereRef.current = ref;
+
+      setActiveColor(Color.toHexStyle(ref.color));
+
       const sphereData = {
         center: {
           x: position.x,
@@ -1272,47 +1324,15 @@ function SphereVariableView(props: VariableViewProps) {
           z: position.z,
         },
         radius: radius,
-        ref: null,
+        ref: ref,
       };
 
       onChange(sphereData);
-      return;
-    }
 
-    if (!mounted.current) {
-      return;
-    }
-
-    const ref = await molstar.addSphere(
-      position,
-      radius,
-      0.3,
-      undefined,
-      sphereRef.current ?? undefined
-    );
-
-    sphereRef.current = ref;
-
-    setActiveColor(Color.toHexStyle(ref.color));
-
-    const sphereData = {
-      center: {
-        x: position.x,
-        y: position.y,
-        z: position.z,
-      },
-      radius: radius,
-      ref: ref,
-    };
-
-    onChange(sphereData);
-
-    window.molstar?.plugin.managers.interactivity.lociSelects.deselectAll();
-  };
-
-  useEffect(() => {
-    handleChange(position, radius);
-  }, [position, radius]);
+      window.molstar?.plugin.managers.interactivity.lociSelects.deselectAll();
+    },
+    [onChange]
+  );
 
   // When unmounting, remove the sphere
   useEffect(() => {
@@ -1323,17 +1343,23 @@ function SphereVariableView(props: VariableViewProps) {
     };
   }, []);
 
-  const handleCoordinates = (e: Event) => {
-    if (active) {
-      const data = (e as CustomEvent).detail;
+  const handleCoordinates = useCallback(
+    (e: Event) => {
+      if (active) {
+        const data = (e as CustomEvent).detail;
 
-      setPosition({
-        x: data.x,
-        y: data.y,
-        z: data.z,
-      });
-    }
-  };
+        handleChange(
+          {
+            x: data.x,
+            y: data.y,
+            z: data.z,
+          },
+          currentValue?.radius ?? 10
+        );
+      }
+    },
+    [active, currentValue, handleChange]
+  );
 
   // Place the sphere in the center of the screen
   useEffect(() => {
@@ -1348,25 +1374,43 @@ function SphereVariableView(props: VariableViewProps) {
     return () => {
       window.removeEventListener("molstar-coordinates", handleCoordinates);
     };
-  }, [active]);
+  }, [active, handleCoordinates]);
+
+  const handleNewlyPlaced = useCallback(async () => {
+    const sphereData: any = {
+      center: {
+        x: 0,
+        y: 0,
+        z: 0,
+      },
+      radius: 10,
+      ref: null,
+    };
+
+    if (window.molstar) {
+      const ref = await window.molstar.addSphere(
+        sphereData.center,
+        sphereData.radius,
+        0.3,
+        undefined,
+        undefined
+      );
+      sphereRef.current = ref;
+      setActiveColor(Color.toHexStyle(ref.color));
+
+      sphereData.ref = ref;
+    }
+
+    onChange(sphereData);
+  }, [onChange]);
 
   useEffect(() => {
-    // Set the initial position to the variable value
-    if (currentValue) {
-      const sphereData = currentValue;
-
-      setPosition({
-        x: sphereData.center.x,
-        y: sphereData.center.y,
-        z: sphereData.center.z,
-      });
-
-      setRadius(sphereData.radius);
-
-      sphereRef.current = sphereData.ref;
+    // Set the initial value in case it's not set
+    if (!currentValue && !mounted.current) {
+      handleNewlyPlaced();
     }
     mounted.current = true;
-  }, []);
+  });
 
   return (
     <div className="flex flex-col p-2 gap-2">
@@ -1375,9 +1419,21 @@ function SphereVariableView(props: VariableViewProps) {
         <input
           id={`${variable.id}-radius`}
           className="plugin-variable-value text-black"
-          type="number"
-          value={radius}
-          onChange={(e) => setRadius(Number(e.target.value))}
+          value={currentValue?.radius ?? ""}
+          onChange={(e) => {
+            const newRadius = parseNumberOrNegative(e.target.value);
+
+            console.log(newRadius);
+
+            handleChange(
+              {
+                x: currentValue.center.x,
+                y: currentValue.center.y,
+                z: currentValue.center.z,
+              },
+              newRadius
+            );
+          }}
         />
       </div>
       <div className="flex flex-row gap-2">
@@ -1386,10 +1442,17 @@ function SphereVariableView(props: VariableViewProps) {
           <input
             id={`${variable.id}-x`}
             className="plugin-variable-value text-black"
-            value={position.x}
-            onChange={(e) =>
-              setPosition({ ...position, x: Number(e.target.value) })
-            }
+            value={currentValue?.center?.x ?? ""}
+            onChange={(e) => {
+              handleChange(
+                {
+                  x: parseNumberOrNegative(e.target.value),
+                  y: currentValue.center.y,
+                  z: currentValue.center.z,
+                },
+                currentValue.radius
+              );
+            }}
           />
         </div>
         <div>
@@ -1397,10 +1460,17 @@ function SphereVariableView(props: VariableViewProps) {
           <input
             id={`${variable.id}-y`}
             className="plugin-variable-value text-black"
-            value={position.y}
-            onChange={(e) =>
-              setPosition({ ...position, y: Number(e.target.value) })
-            }
+            value={currentValue?.center?.y ?? 0}
+            onChange={(e) => {
+              handleChange(
+                {
+                  x: currentValue.center.x,
+                  y: parseNumberOrNegative(e.target.value),
+                  z: currentValue.center.z,
+                },
+                currentValue.radius
+              );
+            }}
           />
         </div>
         <div>
@@ -1408,10 +1478,17 @@ function SphereVariableView(props: VariableViewProps) {
           <input
             id={`${variable.id}-z`}
             className="plugin-variable-value text-black"
-            value={position.z}
-            onChange={(e) =>
-              setPosition({ ...position, z: Number(e.target.value) })
-            }
+            value={currentValue?.center?.z ?? 0}
+            onChange={(e) => {
+              handleChange(
+                {
+                  x: currentValue.center.x,
+                  y: currentValue.center.y,
+                  z: parseNumberOrNegative(e.target.value),
+                },
+                currentValue.radius
+              );
+            }}
           />
         </div>
       </div>

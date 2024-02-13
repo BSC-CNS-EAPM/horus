@@ -1187,7 +1187,6 @@ class HorusMolstar {
       const molInfo = this.extractFromLoci(loci);
       molInfo["id"] = structure.cell.sourceRef;
       molList.push(molInfo);
-      console.log(molInfo);
     }
 
     return molList;
