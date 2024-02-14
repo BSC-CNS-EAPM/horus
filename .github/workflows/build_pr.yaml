@@ -4,136 +4,81 @@ on:
   pull_request:
     branches: [main]
 
-env:
-  CACHE_NUMBER: 0 # increase to reset cache manually
-
 jobs:
-  build-ubuntu:
-    permissions:
-      contents: write
-      pull-requests: write
-    runs-on: ubuntu-20.04
+  test:
+    runs-on: [self-hosted]
     defaults:
       run:
         shell: bash -l {0}
 
     steps:
       - uses: actions/checkout@v3
-      - name: Install nodejs
-        uses: actions/setup-node@v3
-        with:
-          node-version: "18.x"
-      - uses: actions/cache@v3.3.1
-        with:
-          path: node_modules
-          key: linux-64-node-${{ hashFiles('package.json') }}-${{ env.CACHE_NUMBER }}
-        id: cache-node-linux
-      - name: Install dependencies
+      - name: Cleaning up
         run: |
-          npm run requirements-action
-        if: steps.cache-node-linux.outputs.cache-hit != 'true'
-      - name: Setup Mambaforge
-        uses: conda-incubator/setup-miniconda@v2.2.0
-        with:
-          miniforge-version: latest
-          miniforge-variant: mambaforge
-          use-mamba: true
-          python-version: 3.9.16
-          add-pip-as-python-dependency: true
-          auto-activate-base: false
-          activate-environment: horus
-      - uses: actions/cache@v3.3.1
-        with:
-          path: /usr/share/miniconda3/envs/horus
-          key: /usr/share/miniconda3/envs/horus-conda-${{ hashFiles('Devtools/Environment/conda_horus.yaml') }}-${{ env.CACHE_NUMBER }}
-        id: cache-conda-linux
-      - name: Update environment
-        run: mamba env update -n horus -f Devtools/Environment/conda_horus.yaml
-        if: steps.cache-conda-linux.outputs.cache-hit != 'true'
-      - name: Build GUI
-        run: npm run buildparcel
-      - name: Test
+          singularity exec --bind .:/app docker://chdominguez/horus_rocky npm run clean-all 
+          singularity exec --bind .:/app docker://chdominguez/horus_rocky conda env remove -n horus_test -y
+      - name: Install requirements
         run: |
-          npm run test
-      - name: Build
+          singularity exec --bind .:/app docker://chdominguez/horus_rocky npm install --legacy-peer-deps
+          singularity exec --bind .:/app docker://chdominguez/horus_rocky conda env create -f Devtools/Environment/conda_horus.yaml -n horus_test
+      - name: Build GUI with Rocky 8 image
+        run: singularity exec --bind .:/app docker://chdominguez/horus_rocky npm run buildparcel
+      - name: Test Horus with Rocky 8 image
         run: |
-          npm run build
-      - name: Package
-        run: |
-          npm run distribute
-          cd dist/Packages
-          export FILENAME=$(ls *.deb)
-          echo "filename=$FILENAME" >> $GITHUB_ENV
-          echo "Produced artifact: $FILENAME"
-      - name: Upload Artifact
-        id: upload
-        uses: actions/upload-artifact@v3.1.2
-        with:
-          name: ${{ env.filename }}
-          path: dist/Packages/*.deb
-          if-no-files-found: error
-
-  build-macos:
+          singularity exec --bind .:/app docker://chdominguez/horus_rocky sh Devtools/Singularity/test_horus.sh
+  build:
     permissions:
       contents: write
       pull-requests: write
-    runs-on: macos-latest
+    runs-on: [self-hosted]
     defaults:
       run:
         shell: bash -l {0}
 
     steps:
       - uses: actions/checkout@v3
-      - name: Install nodejs
-        uses: actions/setup-node@v3
         with:
-          node-version: "18.x"
-      - uses: actions/cache@v3.3.1
-        with:
-          path: node_modules
-          key: osx-64-node-${{ hashFiles('package.json') }}-${{ env.CACHE_NUMBER }}
-        id: cache-node-macos
-      - name: Install dependencies
+          fetch-depth: 0
+      - uses: FranzDiebold/github-env-vars-action@v2
+      - name: Gather CI environment
         run: |
-          npm run requirements-action
-        if: steps.cache-node-macos.outputs.cache-hit != 'true'
-      - name: Setup Mambaforge
-        uses: conda-incubator/setup-miniconda@v2.2.0
+          export GIT_TAG=$(git describe --tags --abbrev=0)
+          echo "GIT_TAG=$GIT_TAG" >> $GITHUB_ENV
+          echo "Latest tag: $GIT_TAG"
+          export GIT_BRANCH=$CI_HEAD_REF
+          echo "GIT_BRANCH=$GIT_BRANCH" >> $GITHUB_ENV
+          echo "Branch: $GIT_BRANCH"
+          export GIT_COMMIT=$CI_SHA_SHORT
+          echo "GIT_COMMIT=$GIT_COMMIT" >> $GITHUB_ENV
+          echo "Commit: $GIT_COMMIT"
+          # Set the version as tag-branch-commit from the env
+          # If the branch == tag, then the version is just the tag
+          # If the branch != tag, then the version is tag-branch-commit
+          if [ "$GIT_TAG" == "$GIT_BRANCH" ]; then
+            export VERSION=$GIT_TAG
+          else
+            export VERSION=$GIT_TAG-$GIT_BRANCH-$GIT_COMMIT
+          fi
+          echo "version=$VERSION" >> $GITHUB_ENV
+          echo "Built version: $VERSION"
+      - name: Build Rocky 8
+        run: singularity run --bind .:/app docker://chdominguez/horus_rocky
+      - name: Upload Rocky 8 artifact
+        uses: actions/upload-artifact@v4
         with:
-          miniforge-version: latest
-          miniforge-variant: mambaforge
-          use-mamba: true
-          python-version: 3.9.16
-          add-pip-as-python-dependency: true
-          auto-activate-base: false
-          activate-environment: horus
-      - uses: actions/cache@v3.3.1
+          name: Horus-${{ env.version }}-Rocky8-QT
+          path: dist/*Rocky.tar.gz
+      - name: Build Ubuntu 22.04
+        run: singularity run --bind .:/app docker://chdominguez/horus_ubuntu
+      - name: Upload Ubuntu 22 artifact
+        uses: actions/upload-artifact@v4
         with:
-          path: /Users/runner/miniconda3/envs/horus
-          key: osx-64-conda-${{ hashFiles('Devtools/Environment/conda_horus.yaml') }}-${{ env.CACHE_NUMBER }}
-        id: cache-conda-macos
-      - name: Update environment
-        run: mamba env update -n horus -f Devtools/Environment/conda_horus.yaml
-        if: steps.cache-conda-macos.outputs.cache-hit != 'true'
-      - name: Build GUI
-        run: npm run buildparcel
-      - name: Test
-        run: |
-          npm run test
-      - name: Build
-        run: |
-          npm run build
-      - name: Package
-        run: |
-          npm run distribute
-          cd dist/Packages
-          export FILENAME=$(ls *.dmg)
-          echo "filename=$FILENAME" >> $GITHUB_ENV
-          echo "Produced artifact: $FILENAME"
-      - name: Upload Artifact
-        id: upload
-        uses: actions/upload-artifact@v3.1.2
+          name: Horus-${{ env.version }}-Ubuntu22-GTK
+          path: dist/*Ubuntu22.tar.gz
+      - name: Build Linux Universal
+        run: singularity run --bind .:/app docker://chdominguez/horus_universal
+      - name: Upload Linux Universal artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.filename }}
-          path: dist/Packages/*.dmg
-          if-no-files-found: error
+          name: Horus-${{ env.version }}-Linux-Universal
+          path: dist/*Universal.tar.gz

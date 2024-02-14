@@ -6,7 +6,7 @@ on:
 jobs:
   pr_comment:
     if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted]
     steps:
       - uses: actions/github-script@v6
         with:
@@ -37,15 +37,8 @@ jobs:
             }
             let body = `Download the artifacts for this pull request:\n`;
             for (const art of artifacts) {
-                body += `\n* [${art.name}](https://github.com/NBDsoftware/horus/suites/${run_id}/artifacts/${art.id})`;
+                body += `\n* [${art.name}](https://github.com/NBDsoftware/horus/actions/runs/${run_id}/artifacts/${art.id})`;
             }
 
-            const {data: comments} = await github.rest.issues.listComments({repo, owner, issue_number});
-            const existing_comment = comments.find((c) => c.user.login === 'github-actions[bot]');
-            if (existing_comment) {
-              core.info(`Updating comment ${existing_comment.id}`);
-              await github.rest.issues.updateComment({repo, owner, comment_id: existing_comment.id, body});
-            } else {
-              core.info(`Creating a comment`);
-              await github.rest.issues.createComment({repo, owner, issue_number, body});
-            }
+            core.info(`Creating a comment`);
+            await github.rest.issues.createComment({repo, owner, issue_number, body});
