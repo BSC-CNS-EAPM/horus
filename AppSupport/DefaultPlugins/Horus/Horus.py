@@ -84,6 +84,11 @@ def createPlugin():
     # Add the print block to the plugin
     plugin.addBlock(printBlock)
 
+    from Blocks.TextArea import textAreaBlock  # type: ignore
+
+    # Add the print block to the plugin
+    plugin.addBlock(textAreaBlock)
+
     # Add the "Page loader" extension
     from Extensions.PageLoader import htmlLoader  # type: ignore
 

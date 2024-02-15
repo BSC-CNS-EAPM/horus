@@ -302,6 +302,14 @@ function VariableRenderer(props: {
           onChange={handleVariableChangeInternal}
         />
       );
+    case PluginVariableTypes.TEXT_AREA:
+      return (
+        <TextAreaVariableView
+          currentValue={currentValue}
+          variable={variableToRender}
+          onChange={handleVariableChangeInternal}
+        />
+      );
     case PluginVariableTypes.INTEGER:
     case PluginVariableTypes.FLOAT:
     case PluginVariableTypes.NUMBER:
@@ -515,6 +523,18 @@ function StringVariableView(props: VariableViewProps) {
       id={props.variable.id}
       type="text"
       placeholder="Write a value"
+      value={(props.currentValue as string) ?? ""}
+      onChange={(e) => props.onChange(e.target.value)}
+    />
+  );
+}
+
+function TextAreaVariableView(props: VariableViewProps) {
+  return (
+    <textarea
+      className="plugin-variable-value"
+      id={props.variable.id}
+      placeholder="Write text here..."
       value={(props.currentValue as string) ?? ""}
       onChange={(e) => props.onChange(e.target.value)}
     />

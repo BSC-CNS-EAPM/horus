@@ -22,6 +22,7 @@ export type PluginPage = {
 export enum PluginVariableTypes {
   ANY = "any",
   STRING = "string",
+  TEXT_AREA = "text_area",
   NUMBER = "number",
   INTEGER = "integer",
   FLOAT = "float",

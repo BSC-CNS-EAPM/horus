@@ -201,6 +201,13 @@ class VariableTypes(str, Enum):
     Will render as a text input.
     """
 
+    TEXT_AREA = "text_area"
+    """
+    A large text like a paragraph, can contain multiple lines. like "Hello world \n Hello planet".
+    
+    Will render as a text input.
+    """
+
     NUMBER = "number"
     """
     A number like 1, 2.5, 3.1415...
