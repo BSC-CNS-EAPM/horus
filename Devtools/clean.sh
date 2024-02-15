@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Remove the GUI
-rm -rf build GUI .parcel-cache .pytest_cache
+# Remove the GUI caches
+rm -rf build .parcel-cache .pytest_cache
 
 # Remove the docs
-npm run doc-clean
+rm -rf HorusAPI/docs/build/*
 
 # Remove the stubs
 rm -rf HorusAPI/stubs

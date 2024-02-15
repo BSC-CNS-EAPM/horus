@@ -13,20 +13,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - name: Cleaning up
+      - name: Testing Horus with Rocky 8 image
         run: |
-          singularity exec --bind .:/app docker://chdominguez/horus_rocky npm run clean-all 
-          singularity exec --bind .:/app docker://chdominguez/horus_rocky conda env remove -n horus_test -y
-      - name: Install requirements
-        run: |
-          singularity exec --bind .:/app docker://chdominguez/horus_rocky npm install --legacy-peer-deps
-          singularity exec --bind .:/app docker://chdominguez/horus_rocky conda env create -f Devtools/Environment/conda_horus.yaml -n horus_test
-      - name: Build GUI with Rocky 8 image
-        run: singularity exec --bind .:/app docker://chdominguez/horus_rocky npm run buildparcel
-      - name: Test Horus with Rocky 8 image
-        run: |
-          singularity exec --bind .:/app docker://chdominguez/horus_rocky sh Devtools/Singularity/test_horus.sh
+          singularity exec --bind .:/app docker://chdominguez/horus_rocky sh Devtools/Docker/test_rocky8.sh
   build:
+    needs: test
     permissions:
       contents: write
       pull-requests: write

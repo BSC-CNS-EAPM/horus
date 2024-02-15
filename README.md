@@ -11,9 +11,9 @@ Horus is a cross-platform graphical user interface of the NBDSuite, a collection
 
 ## Linux
 
-1. Download the latest Linux release from the [releases page]()
-2. Install the .deb/.rpm depending on your distro
-3. Run the application by executing the `horus` command:
+1. Download the latest Linux release from the [releases page](https://github.com/NBDsoftware/horus/releases/latest)
+2. Install the .deb depending on your distro
+3. Run the application by executing the `horus` command or opening the Horus icon:
 
    ```
    horus
@@ -21,7 +21,7 @@ Horus is a cross-platform graphical user interface of the NBDSuite, a collection
 
 ## macOS
 
-1. Download the latest macOS release from the [releases page]()
+1. Download the latest macOS release from the [releases page](https://github.com/NBDsoftware/horus/releases/latest)
 2. Open the .dmg file and drag the application to your usual applications folder
 3. Run the application by double clicking on the `Horus` icon in your applications folder
 
@@ -69,10 +69,10 @@ Unfortunately, a Windows version cannot be provided at the moment. However, you 
 
    If you want to compile a QT5 version of Horus, remember to install the QT5 library alongside with python bindings.
 
-2. Install Miniconda
+2. Install Micromamba
 
    ```
-   wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && bash ~/miniconda.sh
+   "${SHELL}" <(curl -L micro.mamba.pm/install.sh)
    ```
 
 3. Install Bun (recommended) or NodeJS 18
@@ -111,10 +111,10 @@ Unfortunately, a Windows version cannot be provided at the moment. However, you 
 
 ## macOS
 
-1. Install Miniconda
+1. Install micromamba
 
    ```
-   brew install --cask miniconda
+   brew install micromamba
    ```
 
 2. Install Node 18
@@ -130,7 +130,7 @@ Unfortunately, a Windows version cannot be provided at the moment. However, you 
 Once all the dependencies are installed, you can create a virtual environment with the following command:
 
 ```
-npm run requirements
+bun run requirements
 ```
 
 This will install all the required node packages and will create a new conda environment named 'horus' with all the needed python packages.
@@ -168,7 +168,7 @@ In debug mode, the app is accessible in the following url: [http://127.0.0.1:300
 2. Make sure you are on the root folder of the project and run the following command:
 
    ```
-   npm run build
+   bun run build
    ```
 
    The compiled application will be located in the `dist` folder.
@@ -176,13 +176,13 @@ In debug mode, the app is accessible in the following url: [http://127.0.0.1:300
    You can clean all the produced files during the build process with:
 
    ```
-   npm run clean
+   bun run clean
    ```
 
 # Distributing
 
 ```
-npm run distribute
+bun run distribute
 ```
 
 This will create a .dmg file on macOS, a .deb on Debian based systems and a .rpm file on RedHat based systems.

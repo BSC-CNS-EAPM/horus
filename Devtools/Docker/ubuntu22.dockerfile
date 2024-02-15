@@ -1,11 +1,5 @@
 FROM --platform=x86_64 ubuntu:22.04
 
-# Setup the ENV for conda
-ENV PATH /opt/conda/bin:$PATH
-
-# Set the working directory in the container
-WORKDIR /app
-
 # Set some non-interactive environment variables
 RUN export DEBIAN_FRONTEND=noninteractive
 RUN export TZ=Etc/UTC
@@ -29,24 +23,27 @@ gir1.2-webkit2-4.0 \
 libgtk-4-dev \
 libglib2.0-dev
 
-# Install miniconda
-RUN curl -LO https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-RUN bash Miniconda3-latest-Linux-x86_64.sh -b -p /opt/conda
-RUN rm Miniconda3-latest-Linux-x86_64.sh
-RUN echo "source /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc
-RUN echo "conda activate base" >> ~/.bashrc
+# Install micromamba
+RUN curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xvj bin/micromamba
 
-# Activate conda environment and install requirements
-RUN . /opt/conda/etc/profile.d/conda.sh && conda init && conda activate base
+# Bun
+RUN curl -fsSL https://bun.sh/install | bash
 
-# Setup ENV variables for conda
-ENV PATH /opt/conda/bin:$PATH
+# Move the installation of bun from /root/.bun to /.bun
+RUN mv /root/.bun /
 
+# Add bun to PATH
+ENV PATH /.bun/bin:$PATH
+
+# NodeJS 18, needed to fix parcel runtime
 RUN apt-get install -y ca-certificates curl gnupg
 RUN mkdir -p /etc/apt/keyrings
 RUN curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
 RUN NODE_MAJOR=18 && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list
 RUN apt-get update
 RUN apt-get install nodejs -y
+
+# Set the working directory in the container
+WORKDIR /app
 
 ENTRYPOINT [ "/bin/bash", "/app/Devtools/Docker/build_ubuntu22.sh" ]

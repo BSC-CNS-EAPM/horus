@@ -3,7 +3,7 @@
 # WARNING:
 # In this script, the frontend is assumed compiled
 # In order to compile the frontend, run the following command:
-# npm run buildparcel
+# bun run buildparcel
 
 # Check if the GUI folder exists
 if [ ! -d "GUI" ]; then

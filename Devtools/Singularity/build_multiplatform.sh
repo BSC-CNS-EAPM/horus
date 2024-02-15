@@ -9,44 +9,31 @@
 #SBATCH --qos=short
 #SBATCH --partition=short
 
-# Build singularity images
-echo "Building Rocky Linux 8 image..."
-singularity build Devtools/Singularity/rocky8.sif Devtools/Singularity/rocky8.yml
-echo "Finished building Rocky Linux 8 image"
-
-echo "Building Ubuntu 22.04 image..."
-singularity build Devtools/Singularity/ubuntu22.sif Devtools/Singularity/ubuntu22.yml
-echo "Finished building Ubuntu 22.04 image"
-
-echo "Building Ubuntu 14.04 image..."
-singularity build Devtools/Singularity/ubuntu14.sif Devtools/Singularity/ubuntu14.yml
-echo "Finished building Ubuntu 14.04 image"
-
 # Clean the build folder using the singularity image
-echo "Running npm run clean-all using Node from Rocky image..."
-singularity exec --bind .:/ Devtools/Singularity/rocky8.sif npm run clean-all
+echo "Running bun run clean-all using Node from Rocky image..."
+singularity exec --bind .:/ docker://chdominguez/horus_rocky bun run clean-all
 
 # Build Horus for Rocky Linux 8
 echo "Building Horus for Rocky Linux 8..."
-singularity run --bind .:/ Devtools/Singularity/rocky8.sif
+singularity run --bind .:/ docker://chdominguez/horus_rocky
 echo "Finished building Horus for Rocky Linux 8"
 
 # Clean the compiled files
-echo "Running npm run clean-build using Node from Rocky image..."
-singularity exec --bind .:/ Devtools/Singularity/rocky8.sif npm run clean-build
+echo "Running bun run clean-build using Node from Rocky image..."
+singularity exec --bind .:/ docker://chdominguez/horus_rocky bun run clean-build
 
 # Build for Ubuntu 22.04
 echo "Building Horus for Ubuntu 22.04..."
-singularity run --bind .:/ Devtools/Singularity/ubuntu22.sif
+singularity run --bind .:/ docker://chdominguez/horus_ubuntu
 echo "Finished building Horus for Ubuntu 22.04"
 
 # Clean the compiled files
-echo "Running npm run clean-build using Node from Rocky image..."
-singularity exec --bind .:/ Devtools/Singularity/rocky8.sif npm run clean-build
+echo "Running bun run clean-build using Node from Rocky image..."
+singularity exec --bind .:/ docker://chdominguez/horus_ubuntu bun run clean-build
 
 # Build for Ubuntu 14.04
 echo "Building Horus on Ubuntu 14.04 (Universal linux, no-gui)..."
-singularity run --bind .:/ Devtools/Singularity/ubuntu14.sif
+singularity run --bind .:/ docker://chdominguez/horus_universal
 echo "Finished building Horus for Ubuntu 14.04"
 
 echo "\n"

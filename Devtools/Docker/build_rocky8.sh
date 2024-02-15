@@ -1,36 +1,45 @@
 #!/bin/bash
 
+# Clean the environment
+echo "Cleaning the environment"
+bun run clean
+
+# Initialize micromamba
+echo "Initializing micromamba"
+eval "$(micromamba shell hook --shell bash)"
+
 echo "Starting the build process for Rocky Linux 8"
 
-# Source conda
-. /opt/conda/etc/profile.d/conda.sh
+# Install node_modules requirements
+echo "Installing frontend requirements"
+bun i --no-save
 
-# Remove the old node_modules
-rm -rf node_modules
-
-# Install npm requirements
-npm install --legacy-peer-deps
-
-# Use yarn to fix parceljs runtime
-npm install --legacy-peer-deps yarn@1.22.21
-npx yarn
+# Fix parcel with npm
+echo "Fixing parcel"
+npm i --save-dev --legacy-peer-deps --save-exact parcel@2.11.0
 
 # Reinstall the conda environment
-conda env remove -n horus_rocky8 -y
-conda env create -f Devtools/Environment/conda_horus.yaml -n horus_rocky8
+echo "Reinstalling the conda environment"
+set +e
+micromamba env remove -n horus_rocky8 -y
+set -e
+micromamba env create -f Devtools/Environment/conda_horus.yaml -n horus_rocky8
 
 # Activate conda environment
-conda activate horus_rocky8
+micromamba activate horus_rocky8
 
 # Because on Rocky we are using QT,
 # we need to install pywebview with the QT backend
 python -m pip install pywebview[qt]==4.2.2
 
 # Build horus
-npm run build
+echo "Building horus"
+bun run build
 
 # Create the packages
-npm run distribute
+echo "Creating the packages"
+bun run distribute
 
 # Clean the environment
-npm run clean-build
+echo "Cleaning the environment"
+bun run clean
