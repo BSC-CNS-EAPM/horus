@@ -1,23 +1,21 @@
 <!DOCTYPE html>
 <html>
-
-<head>
+  <head>
     <title>Manage plugins</title>
     <script src="index.js" type="module" id="js-id"></script>
     <script>
-        // Load the token from jinja2 variable
-        const token = "{{ shemsu }}";
-        if (token) {
-            window.pywebview = window.pywebview || {};
-            window.pywebview.token = token;
-        }
-        // Remove from the url the token
-        window.history.replaceState({}, document.title, "/plugins/");
+      // Load the token from jinja2 variable
+      const token = "{{ shemsu }}";
+      if (token) {
+        window.pywebview = window.pywebview || {};
+        window.pywebview.token = token;
+      }
+      // Remove from the url the token
+      window.history.replaceState({}, document.title, "/plugins/");
     </script>
-</head>
+  </head>
 
-<body>
+  <body>
     <div id="plugin-manager-root"></div>
-</body>
-
+  </body>
 </html>

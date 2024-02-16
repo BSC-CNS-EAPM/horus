@@ -382,7 +382,7 @@ class SettingsManager(metaclass=HorusSingleton):
 
         from App import AppDelegate
 
-        settingsDict: typing.Dict[str, dict]= {}
+        settingsDict: typing.Dict[str, dict] = {}
         for settingID, setting in self.settings.items():
             if setting.desktopOnly and AppDelegate().safeMode and not AppDelegate().debug:
                 continue

@@ -8,9 +8,15 @@ import { horusGet } from "../../Utils/utils";
 // Horus imports
 import { PluginPage } from "../FlowBuilder/flow.types";
 
-export const loadPage = async (url?: string, pagename?: string, blockIDCustom?: number) => {
+export const loadPage = async (
+  url?: string,
+  pagename?: string,
+  blockIDCustom?: number
+) => {
   // Emit an event to the iframe
-  const event = new CustomEvent("loadExtension", { detail: { url, pagename, blockIDCustom } });
+  const event = new CustomEvent("loadExtension", {
+    detail: { url, pagename, blockIDCustom },
+  });
   window.dispatchEvent(event);
 };
 

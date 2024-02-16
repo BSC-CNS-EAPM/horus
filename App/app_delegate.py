@@ -1,6 +1,7 @@
 """
 App Delegate
 """
+
 import multiprocessing
 
 # Basic imports

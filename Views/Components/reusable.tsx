@@ -188,5 +188,4 @@ export function MovingChevron({ down }: { down: boolean }) {
   );
 }
 
-
 export { HorusModal, HorusModalProps, debounce, HorusPopover };

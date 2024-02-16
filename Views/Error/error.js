@@ -5,9 +5,9 @@ import Error from "./ShemsuError";
 let container = null;
 
 document.addEventListener("DOMContentLoaded", () => {
-    if (!container) {
-        container = document.getElementById("error");
-        const root = createRoot(container)
-        root.render(<Error />);
-    }
+  if (!container) {
+    container = document.getElementById("error");
+    const root = createRoot(container);
+    root.render(<Error />);
+  }
 });

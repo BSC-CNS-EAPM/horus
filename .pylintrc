@@ -18,6 +18,11 @@ max-line-length=98
 # W0719: Raising too general exception 'Exception'
 # E0401: Unable to import 'foo'. Pylance is who reports missing imports
 # C0415: Import outside toplevel.
-disable=W0718,W0719,E0401,C0415,W0622,C0302,W0212
-
+# C0114: Missing module docstring
+# R0903: Too few public methods
+# R0902: Too many instance attributes
+# R0912: Too many branches
+# R0915: Too many statements
+# R0913: Too many arguments
+disable=W0718,W0719,E0401,C0415,W0622,C0302,W0212,C0114,R0903,R0902,R0912,R0915,R0913
       

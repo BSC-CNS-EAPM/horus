@@ -1368,6 +1368,9 @@ class HorusServer:
             horusLogger = logging.getLogger("Horus")
             horusLogger.error("Page not found: %s", str(error))
 
+            # Log the full request
+            horusLogger.error("Request: %s", str(request))
+
             return flask.render_template("Error/error.html", errormsg=errorMSG)
 
         # Setup a template not found error

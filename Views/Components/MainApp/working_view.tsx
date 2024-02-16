@@ -23,9 +23,7 @@ import ResizeHandle from "../Panels/resize_handle";
 // Molstar image logo
 // @ts-ignore
 import MolstarLogo from "../../../Resources/molstar-logo.png";
-import {
-  ServerFileExplorerModal,
-} from "../FileExplorer/file_explorer";
+import { ServerFileExplorerModal } from "../FileExplorer/file_explorer";
 
 type WorkingViewProps = {
   extensionToOpen?: {
