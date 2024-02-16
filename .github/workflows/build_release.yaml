@@ -24,7 +24,6 @@ jobs:
           export GIT_TAG=$(git describe --tags --abbrev=0)
           echo "GIT_TAG=$GIT_TAG" >> $GITHUB_ENV
           echo "Latest tag: $GIT_TAG"
-          export GIT_BRANCH=$CI_HEAD_REF
           echo "GIT_BRANCH=$GIT_TAG" >> $GITHUB_ENV
           echo "We are on release, tag=branch: $GIT_BRANCH"
           export GIT_COMMIT=$CI_SHA_SHORT
