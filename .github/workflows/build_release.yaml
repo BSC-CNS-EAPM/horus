@@ -25,13 +25,12 @@ jobs:
           echo "GIT_TAG=$GIT_TAG" >> $GITHUB_ENV
           echo "Latest tag: $GIT_TAG"
           export GIT_BRANCH=$CI_HEAD_REF
-          echo "GIT_BRANCH=$GIT_BRANCH" >> $GITHUB_ENV
-          echo "Branch: $GIT_BRANCH"
+          echo "GIT_BRANCH=$GIT_TAG" >> $GITHUB_ENV
+          echo "We are on release, tag=branch: $GIT_BRANCH"
           export GIT_COMMIT=$CI_SHA_SHORT
           echo "GIT_COMMIT=$GIT_COMMIT" >> $GITHUB_ENV
           echo "Commit: $GIT_COMMIT"
           # Set the version as tag because we are on release
-          export GIT_BRANCH=$GIT_TAG
           export VERSION=$GIT_TAG
           echo "version=$VERSION" >> $GITHUB_ENV
           echo "Built version: $VERSION"

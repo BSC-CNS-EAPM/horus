@@ -21,6 +21,9 @@ jobs:
         with:
           environment-file: Devtools/Environment/docs.yaml
           environment-name: horus_docs
+          cache-environment: true
+          download-micromamba: false
+          micromamba-binary-path: /home/nbdweb/micromamba-bin/micromamba
       - name: Build docs
         run: |
           cd HorusAPI/docs && make html
