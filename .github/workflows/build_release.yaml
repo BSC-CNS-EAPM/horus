@@ -30,14 +30,9 @@ jobs:
           export GIT_COMMIT=$CI_SHA_SHORT
           echo "GIT_COMMIT=$GIT_COMMIT" >> $GITHUB_ENV
           echo "Commit: $GIT_COMMIT"
-          # Set the version as tag-branch-commit from the env
-          # If the branch is empty, then the version is just the tag
-          if [ "$GIT_BRANCH" == "" ]; then
-            export GIT_BRANCH=$GIT_TAG
-            export VERSION=$GIT_TAG
-          else
-            export VERSION=$GIT_TAG-$GIT_BRANCH-$GIT_COMMIT
-          fi
+          # Set the version as tag because we are on release
+          export GIT_BRANCH=$GIT_TAG
+          export VERSION=$GIT_TAG
           echo "version=$VERSION" >> $GITHUB_ENV
           echo "Built version: $VERSION"
       - name: Build Horus - Rocky 8
