@@ -1,0 +1,52 @@
+name: Publish Horus
+
+on:
+  push:
+    tags:
+      - "*.*.*"
+
+jobs:
+  build:
+    permissions:
+      contents: write
+      pull-requests: write
+    runs-on: [self-hosted]
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: FranzDiebold/github-env-vars-action@v2
+      - name: Gather CI environment
+        run: |
+          export GIT_TAG=$(git describe --tags --abbrev=0)
+          echo "GIT_TAG=$GIT_TAG" >> $GITHUB_ENV
+          echo "Latest tag: $GIT_TAG"
+          export GIT_BRANCH=$CI_HEAD_REF
+          echo "GIT_BRANCH=$GIT_BRANCH" >> $GITHUB_ENV
+          echo "Branch: $GIT_BRANCH"
+          export GIT_COMMIT=$CI_SHA_SHORT
+          echo "GIT_COMMIT=$GIT_COMMIT" >> $GITHUB_ENV
+          echo "Commit: $GIT_COMMIT"
+          # Set the version as tag-branch-commit from the env
+          # If the branch == tag, then the version is just the tag
+          # If the branch != tag, then the version is tag-branch-commit
+          if [ "$GIT_TAG" == "$GIT_BRANCH" ]; then
+            export VERSION=$GIT_TAG
+          else
+            export VERSION=$GIT_TAG-$GIT_BRANCH-$GIT_COMMIT
+          fi
+          echo "version=$VERSION" >> $GITHUB_ENV
+          echo "Built version: $VERSION"
+      - name: Build Horus - Rocky 8
+        run: singularity run --bind .:/app docker://chdominguez/horus_rocky
+      - name: Build Horus - Ubuntu 22.04
+        run: singularity run --bind .:/app docker://chdominguez/horus_ubuntu
+      - name: Build Horus - Linux Universal
+        run: singularity run --bind .:/app docker://chdominguez/horus_universal
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: "dist/*.tar.gz"
