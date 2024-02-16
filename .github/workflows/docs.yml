@@ -8,7 +8,7 @@ on:
 
 jobs:
   build_docs:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted]
     defaults:
       run:
         shell: bash -l {0}
