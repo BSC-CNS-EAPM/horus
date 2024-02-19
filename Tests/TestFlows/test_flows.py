@@ -6,11 +6,10 @@ import os
 import json
 
 import pytest
-import datetime
 
 from Server.FlowManager.flow_manager import Flow, FlowManager
-from HorusAPI import PluginBlock as Block, SlurmBlock
 from Server.PluginManager.plugin_manager import PluginManager
+from HorusAPI import PluginBlock as Block
 from App import AppDelegate
 
 
@@ -115,13 +114,21 @@ def test_flow_encode(flow: Flow):
 
 def test_flow_write(tmpdir, flow: Flow):
     flow.path = os.path.join(tmpdir, "test_flow.flow")
-    encoded_flow = flow.write()
-    assert os.path.exists(flow.path)
 
-    # Read the saved flow
-    saved_flow = Flow.read(flow.path)
+    # Backup the flow
+    os.system(f"cp {flow.path} {flow.path}.bak")
 
-    assert saved_flow.encode() == encoded_flow
+    try:
+        encoded_flow = flow.write()
+        assert os.path.exists(flow.path)
+
+        # Read the saved flow
+        saved_flow = Flow.read(flow.path)
+
+        assert saved_flow.encode() == encoded_flow
+    finally:
+        # Restore the flow by copying the .bak file to the original file
+        os.system(f"mv {flow.path}.bak {flow.path}")
 
 
 def test_flow_read(tmpdir, flow_data):
@@ -165,7 +172,8 @@ def test_flow_find_block_by_placed_id(flow: Flow):
 def test_flow_run(flow_appDelegate):
     path = os.path.join(os.path.dirname(__file__), "test_flow.flow")
 
-    copy_flow = Flow.read(path)
+    # Backup the flow
+    os.system(f"cp {path} {path}.bak")
 
     try:
         flow = Flow.read(path)
@@ -182,13 +190,15 @@ def test_flow_run(flow_appDelegate):
 
         assert read_flow == encoded_flow
     finally:
-        copy_flow.write()
+        # Restore the flow by copying the .bak file to the original file
+        os.system(f"mv {path}.bak {path}")
 
 
 def test_double_circular_flow_run(flow_appDelegate, capfd):
     path = os.path.join(os.path.dirname(__file__), "test_flow_double_circular.flow")
 
-    copy_flow = Flow.read(path)
+    # Create a backup of the flow by copying the file to a .bak file
+    os.system(f"cp {path} {path}.bak")
 
     try:
         flow = Flow.read(path)
@@ -230,13 +240,15 @@ def test_double_circular_flow_run(flow_appDelegate, capfd):
 
         assert read_flow == encoded_flow
     finally:
-        copy_flow.write()
+        # Restore the flow by copying the .bak file to the original file
+        os.system(f"mv {path}.bak {path}")
 
 
 def test_flow_terminal_output_storage(flow_appDelegate):
     path = os.path.join(os.path.dirname(__file__), "test_flow.flow")
 
-    copy_flow = Flow.read(path)
+    # Backup the flow
+    os.system(f"cp {path} {path}.bak")
 
     try:
         flow = Flow.read(path)
@@ -254,13 +266,15 @@ def test_flow_terminal_output_storage(flow_appDelegate):
         assert flow.terminalOutput[2] == "Received variable: test"
         assert flow.terminalOutput[3] == "\n"
     finally:
-        copy_flow.write()
+        # Restore the flow by copying the .bak file to the original file
+        os.system(f"mv {path}.bak {path}")
 
 
 def test_background_molstar_api(flow_appDelegate):
     path = os.path.join(os.path.dirname(__file__), "molstarapi_background.flow")
 
-    copy_flow = Flow.read(path)
+    # Backup the flow
+    os.system(f"cp {path} {path}.bak")
 
     try:
         flow = Flow.read(path)
@@ -279,13 +293,15 @@ def test_background_molstar_api(flow_appDelegate):
 
         assert action["type"] == "addPDB"
     finally:
-        copy_flow.write()
+        # Restore the flow by copying the .bak file to the original file
+        os.system(f"mv {path}.bak {path}")
 
 
 def test_extensions_on_blocks(flow_appDelegate):
     path = os.path.join(os.path.dirname(__file__), "open_extension_test.flow")
 
-    copy_flow = Flow.read(path)
+    # Backup the flow
+    os.system(f"cp {path} {path}.bak")
 
     try:
         flow = Flow.read(path)
@@ -311,17 +327,18 @@ def test_extensions_on_blocks(flow_appDelegate):
         assert extension1["url"] is not None
         assert extension1["title"] == "Results"
     finally:
-        copy_flow.write()
+        # Restore the flow by copying the .bak file to the original file
+        os.system(f"mv {path}.bak {path}")
 
 
 def test_no_inputs_block(flow_appDelegate):
     path = os.path.join(os.path.dirname(__file__), "no_inputs_test.flow")
 
-    copy_flow = Flow.read(path)
-
-    flow = Flow.read(path)
+    # Backup the flow
+    os.system(f"cp {path} {path}.bak")
 
     try:
+        flow = Flow.read(path)
         flow.run(placedID=2)
 
         # Check that the flow has been updated
@@ -331,13 +348,15 @@ def test_no_inputs_block(flow_appDelegate):
         for block in flow.blocks:
             assert block._finishedExecution
     finally:
-        copy_flow.write()
+        # Restore the flow by copying the .bak file to the original file
+        os.system(f"mv {path}.bak {path}")
 
 
 def test_molview_flow(flow_appDelegate):
     path = os.path.join(os.path.dirname(__file__), "molview.flow")
 
-    copy_flow = Flow.read(path)
+    # Save a backup of the clean flow
+    os.system(f"cp {path} {path}.bak")
 
     flow = Flow.read(path)
 
@@ -354,14 +373,15 @@ def test_molview_flow(flow_appDelegate):
         # Check that it has 6 molstar pending actions (is the ones present in the dev_plugin molviewSpecBlock)
         assert len(flow.pendingActions) == 6
     finally:
-        copy_flow.write()
+        # Restore the flow by copying the .bak file to the original file
+        os.system(f"mv {path}.bak {path}")
 
 
 def test_extra_data_block(flow_appDelegate):
     path = os.path.join(os.path.dirname(__file__), "extra_data_test.flow")
 
     # Save a backup of the clean flow
-    copy_flow = Flow.read(path)
+    os.system(f"cp {path} {path}.bak")
 
     try:
         flow = Flow.read(path)
@@ -385,14 +405,15 @@ def test_extra_data_block(flow_appDelegate):
         # The second run, it should print (Runs: 2)
         assert flow.terminalOutput[2] == "Runs: 2"
     finally:
-        copy_flow.write()
+        # Restore the flow by copying the .bak file to the original file
+        os.system(f"mv {path}.bak {path}")
 
 
 def test_flow_inside_block(flow_appDelegate):
     path = os.path.join(os.path.dirname(__file__), "Flow_inside_block.flow")
 
     # Save a backup of the clean flow
-    copy_flow = Flow.read(path)
+    os.system(f"cp {path} {path}.bak")
 
     try:
         flow = Flow.read(path)
@@ -411,7 +432,8 @@ def test_flow_inside_block(flow_appDelegate):
         # The first run, it should print the savedID of the flow
         assert flow.terminalOutput[0] == flow.savedID
     finally:
-        copy_flow.write()
+        # Restore the flow by copying the .bak file to the original file
+        os.system(f"mv {path}.bak {path}")
 
 
 def test_slurm_flow_second_action(flow_appDelegate):
@@ -420,7 +442,7 @@ def test_slurm_flow_second_action(flow_appDelegate):
     dir_flow = os.path.dirname(path)
 
     # Save a backup of the clean flow
-    copy_flow = Flow.read(path)
+    os.system(f"cp {path} {path}.bak")
 
     try:
         flow = Flow.read(path)
@@ -435,8 +457,6 @@ def test_slurm_flow_second_action(flow_appDelegate):
 
         assert flow.terminalOutput is not None
 
-        print(flow.terminalOutput)
-
         # The first run, it should print the savedID of the flow
         assert flow.terminalOutput[0] == "Test slurm block final action"
 
@@ -450,4 +470,5 @@ def test_slurm_flow_second_action(flow_appDelegate):
         except:
             pass
 
-        copy_flow.write()
+        # Restore the flow by copying the .bak file to the original file
+        os.system(f"mv {path}.bak {path}")
