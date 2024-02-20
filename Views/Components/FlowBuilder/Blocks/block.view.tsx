@@ -266,6 +266,7 @@ function BlockExtensionsView(props: { block: Block }) {
       {block.extensionsToOpen.map((extension, index) => {
         return (
           <div
+            key={index}
             className="w-full mb-2 extensions-box cursor-pointer"
             style={{
               top: shown ? `-${(index + 1) * 2}rem` : 0,

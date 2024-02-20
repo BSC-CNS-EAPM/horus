@@ -666,17 +666,15 @@ export default function HorusToolbar() {
           svgPath: <EyeDashIcon />,
           onClick: hideExtensions,
         },
-        ...pluginPages
-          .filter((page) => !page.hidden)
-          .map((page) => {
-            return {
-              name: page.name,
-              svgPath: <Chevron direction="right" stroke="none" />,
-              onClick: () => {
-                loadPage(page.url, page.name);
-              },
-            } as ToolBarItemProps;
-          }),
+        ...pluginPages.map((page) => {
+          return {
+            name: page.name,
+            svgPath: <Chevron direction="right" stroke="none" />,
+            onClick: () => {
+              loadPage(page.url, page.name);
+            },
+          } as ToolBarItemProps;
+        }),
       ],
     },
   ];
@@ -696,8 +694,8 @@ export default function HorusToolbar() {
 }
 
 type HorusSearchProps = {
-  pages: any;
-  loadPage: any;
+  pages: PluginPage[];
+  loadPage: (url: string, pagename: string) => void;
 };
 
 function HorusSearch(props: HorusSearchProps) {
@@ -705,7 +703,7 @@ function HorusSearch(props: HorusSearchProps) {
     Flow[]
   >([]);
   const [recentFilteredFlows, setRecentFilteredFlows] = useState<Flow[]>([]);
-  const [filteredPages, setFilteredPages] = useState(props.pages);
+  const [filteredPages, setFilteredPages] = useState<PluginPage[]>(props.pages);
 
   // Get the recent flows with the custom hook
   const [fetchingRecents, recentFlows, predefinedFlows, getFlows] =
@@ -743,13 +741,15 @@ function HorusSearch(props: HorusSearchProps) {
 
     setRecentFilteredFlows(filteredRecentFlows);
 
-    const filteredPages = props.pages.filter((page: PluginPage) => {
-      return (
-        page.name.toLowerCase().includes(value.toLowerCase()) ||
-        page.description.toLowerCase().includes(value.toLowerCase()) ||
-        page.plugin.toLowerCase().includes(value.toLowerCase())
-      );
-    });
+    const filteredPages: PluginPage[] = props.pages.filter(
+      (page: PluginPage) => {
+        return (
+          page.name.toLowerCase().includes(value.toLowerCase()) ||
+          page.description.toLowerCase().includes(value.toLowerCase()) ||
+          page.plugin.toLowerCase().includes(value.toLowerCase())
+        );
+      }
+    );
 
     setFilteredPages(filteredPages);
   };
@@ -772,7 +772,7 @@ function HorusSearch(props: HorusSearchProps) {
     if (isOnFocus) {
       getFlows();
     }
-  }, [isOnFocus]);
+  }, [isOnFocus, getFlows]);
 
   const hasFlows =
     recentFilteredFlows.length > 0 || predefinedFilteredFlows.length > 0;
@@ -792,6 +792,11 @@ function HorusSearch(props: HorusSearchProps) {
     );
   }
 
+  const hasContent =
+    recentFilteredFlows.length > 0 ||
+    predefinedFilteredFlows.length > 0 ||
+    filteredPages.length > 0;
+
   return (
     <div
       className="h-full overflow-y-scroll"
@@ -805,14 +810,17 @@ function HorusSearch(props: HorusSearchProps) {
       }}
     >
       <SearchComponent placeholder="Search Horus..." onChange={filterSearch} />
-      {isOnFocus && (hasFlows || filteredPages.length > 0) && (
+      {isOnFocus && (
         <div
-          className="flex flex-col gap-2 absolute p-2 mt-2 origin-top-right rounded-xl bg-white toolbar-menu overflow-y-scroll zoom-out-animation"
+          className="flex flex-col gap-2 absolute p-2 mt-3 origin-top-right rounded-xl bg-white toolbar-menu overflow-y-scroll zoom-out-animation"
           style={{
             right: 4,
             maxHeight: "calc(100vh - 4rem)",
           }}
         >
+          {!hasContent && (
+            <div className="predefined-flow text-center">Nothing found...</div>
+          )}
           {hasFlows && (
             <div className="plugin-variable">
               <div className="predefined-flow-name font-semibold">
@@ -829,7 +837,7 @@ function HorusSearch(props: HorusSearchProps) {
               <PredefinedFlows flows={predefinedFilteredFlows} />
             </div>
           )}
-          {filteredPages && (
+          {filteredPages.length > 0 && (
             <div className="plugin-variable">
               <div className="predefined-flow-name font-semibold">
                 Extensions

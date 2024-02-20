@@ -72,10 +72,13 @@ export function usePluginPages() {
 
     const data: [PluginPage] = await response.json();
 
-    // Order the pages alphabetically
-    data.sort((a, b) => a.name.localeCompare(b.name));
+    // Skip hidden pages
+    const filteredPages = data.filter((page) => !page.hidden);
 
-    setPluginPages(data);
+    // Order the pages alphabetically
+    filteredPages.sort((a, b) => a.name.localeCompare(b.name));
+
+    setPluginPages(filteredPages);
   };
 
   useEffect(() => {
