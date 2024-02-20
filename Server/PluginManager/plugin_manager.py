@@ -28,6 +28,10 @@ from contextlib import redirect_stdout, redirect_stderr
 # For the SocketIO type completion
 from flask_socketio import SocketIO
 
+# Plugin deps context manager, forking the process prevents
+# importend modules from being imported twice
+import multiprocess as mp
+
 # More types from the HorusAPI
 from HorusAPI import Plugin, PluginBlock, PluginPage, HorusSingleton, SlurmBlock
 
@@ -1018,7 +1022,7 @@ class PluginManager(metaclass=HorusSingleton):
         try:
             with PluginDeps(plugin._path):
                 # Execute the block
-                outputs = block()
+                outputs = PluginDeps.subprocessBlock(block)
         except Exception:  # pylint: disable=broad-exception-caught
 
             # Get the full traceback
@@ -1374,16 +1378,21 @@ class PluginDeps:
         includeDir = os.path.join(self.pluginDir, "Include")
 
         # Remove them also from the sys.modules
+        # WARNING: With the creation of subprocessBlock and subprocessCall,
+        # this should not be necessary anymore. But we will leave just in case.
         for key, module in list(sys.modules.items()):
+
+            # Check if its a new module, otherwise skip it because it is required by Horus
+            if key in self.intialModules:
+                continue
+
             # Get the module path
             modulePath = module.__file__ if hasattr(module, "__file__") else None
 
-            # If the module is not a file, skip it
-            if modulePath is None:
-                continue
-
             # If the module is in the deps folder, remove it
-            if modulePath.startswith(includeDir) or modulePath.startswith(depsDir):
+            if modulePath is not None and (
+                modulePath.startswith(includeDir) or modulePath.startswith(depsDir)
+            ):
                 if key in self.intialModules:
                     logging.getLogger("Horus").warning(
                         "Module %s used by plugin %s is in the App default modules. "
@@ -1391,9 +1400,9 @@ class PluginDeps:
                         key,
                         self.pluginDir,
                     )
-                else:
-                    # Unload the module
-                    del sys.modules[key]
+
+            # Unload the module
+            del sys.modules[key]
 
         # Restore the initial python path
         sys.path = self.initialPath
@@ -1403,3 +1412,95 @@ class PluginDeps:
 
         # Remove the include directory from the working set
         pkg_resources.working_set.entries.remove(includeDir)
+
+    @classmethod
+    def subprocessCall(cls, fn, *args, **kwargs):
+        """
+        Calls the given function in a subprocess and returns the result.
+
+        Why? Because each plugin can import libraries from their dependencies. We want these
+        libraries to be only loaded within the scope of the plugin's action (for example, an endpoint). This way, we can
+        avoid conflicts between libraries of different plugins, and re-import the libraries each time we execute a plugin's action.
+        """
+
+        ctx = mp.context.ForkContext()
+        q = ctx.Queue(1)
+        error = ctx.Value("b", False)
+
+        def target():
+            try:
+                q.put(fn(*args, **kwargs))
+            except BaseException as e:
+                error.value = True  # type: ignore
+                q.put(e)
+
+        ctx.Process(target=target).start()
+        result = q.get()
+        if error.value:  # type: ignore
+            raise result
+
+        return result
+
+    @classmethod
+    def subprocessBlock(cls, block: PluginBlock):
+        """
+        Calls the given block's action in a subprocess.
+        Returns the result and the updated block.
+
+        Why? Because each block can import libraries from their dependencies. We want these
+        libraries to be only loaded within the scope of the block's action. This way, we can
+        avoid conflicts between libraries of different blocks.
+        """
+
+        # Fork the current context to execute the block in a subprocess
+        ctx = mp.context.ForkContext()
+
+        # Setup a queue to communicate with the subprocess, only 1 element
+        q = ctx.Queue(1)
+
+        # Fork the block
+        def target(forkedBlock: PluginBlock):
+            # Block outputs
+            outputs = None
+
+            # Block error
+            error = None
+
+            # Try to execute the block
+            try:
+                outputs = forkedBlock()
+            except BaseException as e:
+                error = e
+
+            q.put(
+                {
+                    "pendingActions": forkedBlock.flow.pendingActions,
+                    "terminalOutput": forkedBlock.flow.terminalOutput,
+                    "block": forkedBlock._minimalEncode(),
+                    "outputs": outputs,
+                    "error": error,
+                }
+            )
+
+        ctx.Process(target=target, args=[block]).start()
+
+        result = q.get()
+
+        # Update the block to get the updated outputVariables, extraData...
+        updatedBlock = result["block"]
+        block._parseInternalVariables(updatedBlock)
+
+        # Update the terminal output of the block
+        block.flow.terminalOutput.clear()
+        block.flow.terminalOutput.extend(result["terminalOutput"])
+
+        # Update the pending actions of the block
+        block.flow.pendingActions.clear()
+        block.flow.pendingActions.extend(result["pendingActions"])
+
+        # If there was an error, raise it
+        if result["error"] is not None:
+            raise result["error"]
+
+        # If everything went well, return the outputs
+        return result["outputs"]

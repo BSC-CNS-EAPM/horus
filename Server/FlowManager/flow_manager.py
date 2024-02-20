@@ -150,7 +150,11 @@ class Flow:
     The date the flow was last saved as a string (YYYY-MM-DD HH:MM:SS)
     """
 
-    terminalOutput: typing.Optional[typing.List[str]]
+    # WARNING: Properties added here may be updated by the blocks during their actions.
+    # Please if you add any property here, make sure to update the PluginDeps.subprocessBlock
+    # classmethod to include the new property in the subprocess block
+
+    terminalOutput: typing.List[str]
     """
     The terminal output produced by the flow
     """
@@ -240,7 +244,7 @@ class Flow:
         self.remote = flow.get("remote", None)
         self.currentExecuting = flow.get("currentExecuting", None)
         self.date = flow.get("date", None)
-        self.terminalOutput = flow.get("terminalOutput", None)
+        self.terminalOutput = flow.get("terminalOutput", [])
         self.pendingActions = flow.get("pendingActions", [])
 
         # Set the flow status
@@ -476,8 +480,7 @@ class Flow:
             with zipfile.ZipFile(self.path, "r") as zipFile:
                 with zipFile.open(self.MOLSTAR_STATE_FILE) as file:
                     return file.read()
-        except Exception as exc:
-            logging.getLogger("Horus").info("Error reading molstar state: %s", exc)
+        except Exception:
             return None
 
     @property
@@ -628,7 +631,15 @@ class Flow:
 
             # Update the inputs dictionary with the outputs of the block
             # Setting the correct keys for each block
-            inputs[connection.destination.variableID] = outputs[connection.origin.variableID]
+            try:
+                inputs[connection.destination.variableID] = outputs[connection.origin.variableID]
+            except KeyError:
+                raise BlocksException(
+                    blockToRun,
+                    f"The block '{variableBlock.name}' does not provide the variable "
+                    + f"'{connection.origin.variableID}' to the block '{blockToRun.name}'. "
+                    + "Did you forget to call setOutput() in the action of the block?",
+                )
 
         # With the generated inputs, update the block to run
         blockToRun._updateInputs(inputs)
@@ -898,10 +909,6 @@ class Flow:
         # Set the flow status to running
         self.status = self.FlowStatus.RUNNING
 
-        # Initialize the terminal output if its none
-        if self.terminalOutput is None:
-            self.terminalOutput = []
-
         # Send the flow to the frontend if a socket is provided
         if self._socket is not None:
             self._socket.emit("flow", self.encode(minimal=False), to=self.savedID)
@@ -934,8 +941,10 @@ class Flow:
             except StoppedFlowException as stopped:
                 print(stopped.message)
                 self.status = self.FlowStatus.STOPPED
-            except Exception as exc:  # pylint: disable=broad-exception-raised
-                print(f"Error running flow: {exc}")
+            except Exception:  # pylint: disable=broad-exception-raised
+                import traceback
+
+                traceback.print_exc()
                 self.status = self.FlowStatus.ERROR
             finally:
                 # Save the flow
@@ -944,18 +953,6 @@ class Flow:
         # Send the flow to the frontend if a socket is provided
         if self._socket is not None:
             self._socket.emit("flow", self.encode(minimal=False), to=self.savedID)
-
-        # else:
-        #     try:
-        #         self._runPreviousBlocks(placedID, resetRemoteBlock)
-        #         self._runNextBlocks(placedID)
-        #         self.status = self.FlowStatus.FINISHED
-        #     except ErrorRunningBlock as errorBlock:
-        #         print(f"Error running block {errorBlock.block.name}: {errorBlock}")
-        #         self.status = self.FlowStatus.ERROR
-        #     finally:
-        #         # Save the flow
-        #         self.write()
 
         # Restore the working dir
         os.chdir(oldWD)

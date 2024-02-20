@@ -5,22 +5,8 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug Horus run flow mode",
-            "type": "python",
-            "request": "launch",
-            "program": "${workspaceFolder}/Horus.py",
-            "console": "integratedTerminal",
-            "args": [
-                "--debug",
-                "--flow",
-                "Tests/TestFlows/test_flow.flow",
-                "-i",
-                "1"
-            ]
-        },
-        {
             "name": "Debug Horus server mode",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/Horus.py",
             "console": "integratedTerminal",
@@ -35,7 +21,7 @@
         },
         {
             "name": "Debug Horus desktop (browser) mode",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/Horus.py",
             "console": "integratedTerminal",
@@ -48,10 +34,24 @@
         },
         {
             "name": "Run Horus desktop (App) mode",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/Horus.py",
             "console": "integratedTerminal",
+        },
+        {
+            "name": "Debug Horus run flow mode",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/Horus.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--debug",
+                "--flow",
+                "Tests/TestFlows/molstarapi_background.flow",
+                "-i",
+                "1"
+            ]
         },
     ]
 }

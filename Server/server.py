@@ -1256,7 +1256,7 @@ class HorusServer:
             def wrapper(*args, **kwargs):
                 with PrintSocketCapturer(self.socketio):
                     with PluginDeps(page._pageInfo["pluginDir"]):
-                        result = endPoint.function(*args, **kwargs)
+                        result = PluginDeps.subprocessCall(endPoint.function, *args, **kwargs)
                 return result
 
             return wrapper
