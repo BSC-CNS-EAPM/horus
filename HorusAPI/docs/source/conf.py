@@ -7,8 +7,8 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "HorusAPI"
-copyright = "2023, NBD | Nostrum Biodiscovery"
-author = "Nostrum Biodiscovery"
+copyright = "2023, BSC | Barcelona Supercomputing Center"
+author = "Barcelona Supercomputing Center"
 
 # HorusAPI source path
 import os
@@ -98,18 +98,18 @@ html_theme_options = {
     },
     "icon_links": [
         {
-            "name": "Nostrum Biodiscovery website",
-            "url": "https://www.nostrumbiodiscovery.com",
-            "icon": "fa-regular fa-globe",
+            "name": "Barcelona Supercomputing Centre website",
+            "url": "https://www.bsc.es/",
+            "icon": "fa fa-globe",
         },
         {
             "name": "Twitter",
-            "url": "https://www.twitter.com/HelloNostrum",
+            "url": "https://www.twitter.com/EAPM_BSC",
             "icon": "fa-brands fa-twitter",
         },
         {
             "name": "Linkedin",
-            "url": "https://www.linkedin.com/company/nostrum-biodiscovery-sl/",
+            "url": "https://www.linkedin.com/company/barcelona-supercomputing-center/",
             "icon": "fa-brands fa-linkedin",
         },
     ],
