@@ -15,14 +15,30 @@ class FileExplorer:
     Provides Flask a JSON with the information about the files and folders in the given path.
     """
 
-    def __init__(self, currentPath: str = os.getcwd()) -> None:
+    def __init__(self, currentPath: str = os.getcwd(), highestBoundary: str = "/") -> None:
+        """
+        :param currentPath: The current path to be shown in the directory.
+        :param highestBoundary: The highest boundary to be shown in the directory. For WebApp mode, this
+        should be the user's directory.
+        """
         self.currentPath = currentPath
+        self.highestBoundary = highestBoundary
 
     @property
     def isAccesible(self) -> bool:
         """
         Returns True if the current path is accessible, False otherwise.
         """
+
+        # If the path is outside the highest boundary, it is not accessible
+        if self.highestBoundary != "/":
+            if not self.currentPath.startswith(self.highestBoundary):
+                logging.getLogger("Horus").error(
+                    "Path %s is outside the highest boundary %s",
+                    self.currentPath,
+                    self.highestBoundary,
+                )
+                return False
 
         return os.path.exists(self.currentPath)
 
@@ -36,10 +52,10 @@ class FileExplorer:
 
         :param allowedExtensions: A list of allowed extensions.
         If None, all extensions are allowed.
+        :param openFolder: If True, only folders will be listed.
         """
 
         if not self.isAccesible:
-            logging.getLogger("Horus").error("Path %s is not accessible", self.currentPath)
             raise Exception("Path is not accessible")
 
         # List the files in the current path
@@ -68,6 +84,11 @@ class FileExplorer:
             )
             if not selectable:
                 continue
+
+            # Take into account the highest boundary
+            if self.highestBoundary != "/":
+                path = path.replace(self.highestBoundary, "")
+
             files.append(
                 {
                     "id": file,
@@ -85,14 +106,29 @@ class FileExplorer:
         Returns the folder chain for the current path.
         """
 
+        if not self.isAccesible:
+            raise Exception("Path is not accessible")
+
         # Array where the chain will be stored
         chain = []
 
-        # Set initially the current chain into the root
-        currentChain = os.sep
+        # Set initially the current chain to the highest boundary
+        currentChain = self.highestBoundary
+
+        # Get the current path
+        currentPath = self.currentPath
+
+        # Take into account the highest boundary
+        if self.highestBoundary != "/":
+            currentPath = currentPath.replace(self.highestBoundary, "")
+            currentChain = "/"
 
         # Split the path into an array
-        splittedPath = self.currentPath.split(os.sep)
+        splittedPath = currentPath.split(os.sep)
+
+        # Root namee would be the last element of the highest boundary
+        rootName = self.highestBoundary.split(os.sep)[-1]
+
         for folder, index in zip(splittedPath, range(len(splittedPath))):
             # The ID should be a hash of the folder
             id = hashlib.md5(folder.encode()).hexdigest()
@@ -101,7 +137,7 @@ class FileExplorer:
             chain.append(
                 {
                     "id": id,
-                    "name": "root" if index == 0 else folder,
+                    "name": rootName if index == 0 else folder,
                     "isDir": True,
                     "fullpath": currentChain,
                 }

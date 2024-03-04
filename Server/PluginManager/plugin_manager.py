@@ -14,7 +14,6 @@ import logging
 import json
 import shutil
 import datetime
-import pkg_resources
 
 # Type for modules in PluginDeps context manager
 from types import ModuleType
@@ -24,6 +23,9 @@ import importlib.util
 
 # For the PrintCapturer class
 from contextlib import redirect_stdout, redirect_stderr
+
+# For the PluginDeps class
+import pkg_resources
 
 # For the SocketIO type completion
 from flask_socketio import SocketIO
@@ -57,9 +59,18 @@ class PluginManager(metaclass=HorusSingleton):
     # Track if the plugins need to be reloaded
     pluginChanges = True
 
-    def __init__(self, appSupportDir: typing.Optional[str] = None):
+    # HorusSettings instance
+    horusSettings: SettingsManager
+
+    def __init__(
+        self,
+        appSupportDir: typing.Optional[str] = None,
+    ):
         if appSupportDir is None:
             raise Exception("AppSupport directory not provided in PluginManager init call.")
+
+        # Set the HorusSettings instance
+        self.horusSettings = SettingsManager(appSupportDir)
 
         self.appSupportDir = appSupportDir
 
@@ -243,7 +254,7 @@ class PluginManager(metaclass=HorusSingleton):
             if not os.path.exists(pluginFinalPath) and not loadedPlugin in self.loadedPlugins:
                 print("Saving new plugin to its folder...")
                 shutil.move(tmpInstallDir, pluginFinalPath)
-
+                print("Plugin installed.")
                 self.loadedPlugins.append(loadedPlugin)
             else:
                 # If we are installing the same plugin, upgrade it only if the version is higher
@@ -449,7 +460,10 @@ class PluginManager(metaclass=HorusSingleton):
         except DefaultPluginConfigException:
             return None
         except Exception as e:
-            logging.getLogger("Horus").error("Error loading plugin: %s", str(e))
+            import traceback
+
+            logging.getLogger("Horus").error("Error loading plugin: %s", e)
+            logging.getLogger("Horus").error("Traceback: %s", traceback.format_exc())
             raise e
 
         # Check that the plugin is not already loaded
@@ -696,11 +710,7 @@ class PluginManager(metaclass=HorusSingleton):
         # where to visualize the pip output)
         # This is to prevent the app taking too long to
         # start without any feedback to the user
-        if (
-            not AppDelegate().serverMode
-            and not AppDelegate().browser
-            and not hasattr(AppDelegate(), "_server")
-        ):
+        if AppDelegate().desktop and not hasattr(AppDelegate(), "_server"):
             msg = (
                 "A dependency installation was requested during the startup of the app. "
                 + "In order to correctly install dependencies, please install the plugin"
@@ -723,7 +733,7 @@ class PluginManager(metaclass=HorusSingleton):
         # and we need to raise an exception.
         interpreter: str = "python"
         try:
-            interpreter = str(SettingsManager().getSetting("dependenciesInterpreter").value)
+            interpreter = str(self.horusSettings.getSetting("dependenciesInterpreter").value)
         except Exception as e:
             msg = f"Could not get the python interpreter from the user settings: {e}"
             msg += "\nDefaulting to system python interpreter."
@@ -1075,8 +1085,8 @@ class PluginManager(metaclass=HorusSingleton):
 
         # Check for the "developmentExtensuonURL setting"
         # If we are on development mode, add the "Develop extension" page
-        if SettingsManager().getSetting("developmentMode").value:
-            extensionURL: str = SettingsManager().getSetting("extensionDevelopmentURL").value
+        if self.horusSettings.getSetting("developmentMode").value:
+            extensionURL: str = self.horusSettings.getSetting("extensionDevelopmentURL").value
 
             # Parse the URL if it does not have http://
             if not extensionURL.startswith("http://"):
@@ -1419,8 +1429,10 @@ class PluginDeps:
         Calls the given function in a subprocess and returns the result.
 
         Why? Because each plugin can import libraries from their dependencies. We want these
-        libraries to be only loaded within the scope of the plugin's action (for example, an endpoint). This way, we can
-        avoid conflicts between libraries of different plugins, and re-import the libraries each time we execute a plugin's action.
+        libraries to be only loaded within the scope of the plugin's action
+        (for example, an endpoint). This way, we can
+        avoid conflicts between libraries of different plugins, and re-import the
+        libraries each time we execute a plugin's action.
         """
 
         ctx = mp.context.ForkContext()

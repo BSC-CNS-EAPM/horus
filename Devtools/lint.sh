@@ -20,6 +20,9 @@ bunx prettier --write Views/
 # Check for Python errors with pylint
 pylint App Server HorusAPI
 
+# Check for types errors with pyright
+pyright App Server HorusAPI
+
 # Format python with black
 black --line-length 98 App Server HorusAPI
 

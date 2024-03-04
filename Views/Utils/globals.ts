@@ -13,7 +13,17 @@ export {};
 declare global {
   interface Window {
     // App mode
-    isDesktop: boolean;
+    horusInternal: {
+      isDesktop: boolean;
+      mode: "server" | "app" | "browser" | "webapp";
+      webApp?: {
+        appName: string;
+        companyName: string;
+        requireRegistration: boolean;
+        allowRemotes: boolean;
+        allowDemoUser: boolean;
+      };
+    };
     // Socket connection ID
     socketiosid: string | null;
     // pywebview App mode

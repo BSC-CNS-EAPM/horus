@@ -133,15 +133,18 @@ async function openWindow(name: string, url: string) {
   return data;
 }
 
-const fetchDesktop = async () => {
+const fetchInternals = async () => {
   try {
-    const response = await horusGet("/api/isdesktop");
-    window.isDesktop = await response.json();
+    const response = await horusGet("/api/internal");
+    window.horusInternal = await response.json();
   } catch (err) {
     alert(
       `Could not detect running mode. Expect errors while running the app. ${err}`
     );
-    window.isDesktop = false;
+    window.horusInternal = {
+      isDesktop: false,
+      mode: "server",
+    };
   }
 };
 
@@ -163,5 +166,5 @@ export {
   horusPost,
   getVersion,
   openWindow,
-  fetchDesktop,
+  fetchInternals as fetchDesktop,
 };

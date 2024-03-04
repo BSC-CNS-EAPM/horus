@@ -12,10 +12,16 @@ import RotatingLines from "../Components/RotatingLines/rotatinglines";
 
 // Hooks
 import { fetchSettings } from "../Settings/settings";
+import { fetchDesktop } from "../Utils/utils";
 
 export function App() {
   const [workingView, setWorkingView] = useState<React.ReactNode>(
-    <SplashScreen />
+    <div className="grid place-items-center h-screen bg-transparent">
+      <div className="flex flex-col gap-2 items-center">
+        <RotatingLines />
+        Loading Horus...
+      </div>
+    </div>
   );
 
   const [serverActive, setServerActive] = useState<boolean>(true);
@@ -23,6 +29,12 @@ export function App() {
   const getHorusSettings = async () => {
     // Store the settings in the window object
     await fetchSettings();
+
+    // Set the global isDesktop variable
+    await fetchDesktop();
+
+    // Set the working view after the settings are fetched
+    setWorkingView(<SplashScreen />);
   };
 
   const handleStartWorking = (event: CustomEvent) => {

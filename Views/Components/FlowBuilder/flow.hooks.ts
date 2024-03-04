@@ -256,7 +256,7 @@ export function useFlowBuilder() {
       const data = await response.json();
 
       if (!data.ok) {
-        throw new Error(data.error);
+        throw new Error(data.msg);
       }
     } catch (e) {
       alert("Error updating mol* state: " + e);
@@ -340,12 +340,12 @@ export function useFlowBuilder() {
         let data: {
           ok: boolean;
           flow: Flow | null;
-          error: string;
+          msg: string;
           molstarState: string | null;
         } = {
           ok: false,
           flow: null,
-          error: "Early error opening flow",
+          msg: "Early error opening flow",
           molstarState: null,
         };
 
@@ -375,7 +375,7 @@ export function useFlowBuilder() {
         }
 
         if (!data.ok) {
-          alert(data.error);
+          alert(data.msg);
           return;
         }
 
@@ -540,14 +540,9 @@ export function useFlowBuilder() {
         }
 
         if (!savedFlow.ok) {
-          alert(savedFlow.error);
+          alert(savedFlow.msg);
           return null;
         }
-        // } catch (e) {
-        //   console.error(e);
-        //   alert(`Error saving flow. ${e}`);
-        //   return;
-        // }
 
         // Get relevant flow data
         // If we are on App mode, the overwrite process gets handled by the system file explroer,
@@ -604,7 +599,7 @@ export function useFlowBuilder() {
           savedFlow = await overwriteResponse.json();
 
           if (!savedFlow.ok) {
-            alert(savedFlow.error);
+            alert(savedFlow.msg);
             return null;
           }
         }
@@ -1258,7 +1253,7 @@ export function useFlowBuilder() {
     const data = await response.json();
 
     if (!data.ok) {
-      alert(data.error);
+      alert(data.msg);
       return;
     }
 
@@ -1355,7 +1350,7 @@ export function useFlowBuilder() {
     (e: CustomEvent<{ savedID: string; path: string }>) => {
       const hasPath = e.detail.path !== undefined;
       const hasSavedID = e.detail.savedID !== undefined;
-      if (!window.isDesktop && !hasPath && !hasSavedID) {
+      if (!window.horusInternal.isDesktop && !hasPath && !hasSavedID) {
         setFileProps(serverPickerFlow());
         setServerFilePickerOpen(true);
       } else {
@@ -1369,7 +1364,10 @@ export function useFlowBuilder() {
   // to select the saving folder
   const preHandleSave = useCallback(
     async (comesFromExecuteBlock: boolean = false, flowToSave?: Flow) => {
-      if (!window.isDesktop && (flowToSave?.path === null || !flow.path)) {
+      if (
+        !window.horusInternal.isDesktop &&
+        (flowToSave?.path === null || !flow.path)
+      ) {
         if (comesFromExecuteBlock === true) {
           // Alert the user that the flow needs to be saved first
           alert(

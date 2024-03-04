@@ -126,7 +126,7 @@ export function useGetRecentFlows(): [
     const data = await responsePredefined.json();
 
     if (!responsePredefined.ok) {
-      alert("Error getting flows: " + data.error);
+      alert("Error getting flows: " + data.msg);
       return;
     }
 
@@ -142,11 +142,11 @@ export function useGetRecentFlows(): [
     const recentFlowsData = await recentFlowsResponse.json();
 
     if (!recentFlowsData.ok) {
-      alert("Error getting recent flows: " + recentFlowsData.error);
+      alert("Error getting recent flows: " + recentFlowsData.msg);
       return;
     }
 
-    let flows: Flow[] = recentFlowsData.flows;
+    const flows: Flow[] = recentFlowsData.flows;
 
     // Sort the flows by the flow.date field (yyyy-mm-dd hh:mm:ss)
     flows.sort((a: Flow, b: Flow) => {

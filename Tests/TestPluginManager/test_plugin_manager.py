@@ -192,7 +192,8 @@ def test_install_dep_internal_success(mocker):
     from App import AppDelegate
 
     # Set the app delegate to be on "Server mode"
-    AppDelegate().serverMode = True
+    AppDelegate().mode = "server"
+    AppDelegate().desktop = False
 
     # Mock the subprocess.Popen context manager
     mock_popen = mocker.Mock()
@@ -272,7 +273,8 @@ def test_install_dep_internal_frozen_app(mocker):
     from App import AppDelegate
 
     # Set the app delegate to be on "Server mode"
-    AppDelegate().serverMode = True
+    AppDelegate().mode = "server"
+    AppDelegate().desktop = False
 
     # Mock the sys.frozen attribute to simulate a frozen app
     with patch.object(sys, "frozen", True, create=True):

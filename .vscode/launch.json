@@ -20,6 +20,21 @@
             ]
         },
         {
+            "name": "Debug Horus WebApp mode",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/Horus.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--webapp",
+                "--debug",
+                "--host",
+                "0.0.0.0",
+                "--port",
+                "3000"
+            ]
+        },
+        {
             "name": "Debug Horus desktop (browser) mode",
             "type": "debugpy",
             "request": "launch",

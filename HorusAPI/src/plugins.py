@@ -1756,12 +1756,6 @@ class Plugin:
         # Set the id of the plugin
         self.id = id.lower().replace(" ", "_")
 
-        # Add all the blocks present in the subclass to the list of blocks
-        self._addBlocks()
-
-        # Same for pages
-        self._addPages()
-
     # Define comparison operators
     def __eq__(self, other):
         if isinstance(other, Plugin):
@@ -1837,8 +1831,13 @@ class Plugin:
         # Check if the property is a PluginBlock
         # If it is, add it to the list of blocks
         for attr in dir(self):
+
+            logging.getLogger("Horus").debug("Checking attribute %s", attr)
+
             # Get the attribute
             attr = getattr(self, attr)
+
+            logging.getLogger("Horus").debug("Attribute type: %s", type(attr))
 
             # Add the block to the list of blocks
             self.addBlock(attr)
@@ -1887,7 +1886,7 @@ class Plugin:
             self.addPage(attr)
 
     @property
-    def _flows(self):
+    def _flows(self) -> list[dict[str, typing.Any]]:
         """
         Returns a list of the flows contained
         in the 'flows' folder of the plugin.
@@ -1902,33 +1901,32 @@ class Plugin:
         if not os.path.exists(flowsDir):
             return []
 
+        # Import the flow class
+        from Server.FlowManager import Flow
+
         # Get the list of flows
-        flows = []
+        flows: list[dict[str, typing.Any]] = []
         for file in os.listdir(flowsDir):
             if file.endswith(".flow"):
                 # Get the path of the flow file
                 filePath = os.path.join(flowsDir, file)
 
                 # Read the flow file to get the name of the flow
-                flowName = "Unnamed flow"
-                savedID = "flow_id"
-                with open(filePath, "r", encoding="utf-8") as flowFile:
-                    try:
-                        flow = json.load(flowFile)
-                    except Exception as exc:
-                        logging.getLogger("Horus").error("Error loading flow %s: %s", file, exc)
-                        continue
-
-                    flowName = flow.get("name", "Unnamed flow")
-                    savedID = flow.get("savedID", "flow_id")
+                try:
+                    flow = Flow.read(filePath)
+                except Exception as exc:
+                    logging.getLogger("Horus").error(
+                        "Error reading preset flow file %s: %s", filePath, exc
+                    )
+                    continue
 
                 # Add the flow to the list
                 flowInfo = {
-                    "name": flowName,
-                    "path": filePath,
+                    "name": flow.name,
+                    "path": flow.path,
                     "pluginID": self.id,
                     "pluginName": self.info["name"],
-                    "savedID": savedID,
+                    "savedID": flow.savedID,
                 }
                 flows.append(flowInfo)
 

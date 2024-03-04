@@ -213,3 +213,11 @@ bun.lockb
 
 # Development plugin fors tests
 !AppSupport/Plugins/devplugin/
+
+# Horus webapp configuration
+horus.config.json
+tos.html
+horus_users
+.coverage
+*.db
+logo.png

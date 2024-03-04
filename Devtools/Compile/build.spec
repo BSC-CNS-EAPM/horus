@@ -118,6 +118,10 @@ imports = [
     "multiprocess",
     "pathvalidate",
     "molviewspec",
+    "sqlalchemy",
+    "secrets",
+    "smtplib",
+    "ssl",
 ]
 
 # Add all the submodules required by flask_socketio
@@ -141,6 +145,15 @@ imports += [
     "dns.asyncresolver",
     "dns.asyncquery",
     "dns.versioned",
+]
+
+# Modules required for flask_session and webapp mode
+imports += [
+    "flask_login",
+    "email",
+    "email.mime",
+    "email.mime.text",
+    "email.mime.*",
 ]
 
 # Import biopython for the Horus default plugin

@@ -17,7 +17,7 @@ div[role="button"] {
 }
 
 button {
-  cursor: default !important;
+  cursor: default;
 }
 
 /* Disable any outline for all inputs */

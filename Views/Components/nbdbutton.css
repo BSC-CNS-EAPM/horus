@@ -1,7 +1,7 @@
 .nbd-btn {
   border: none;
-  border: 2px solid var(--tech-blue);
-  background-color: blue;
+  border: 2px solid var(--gradient-blue);
+  background: var(--gradient-blue);
   position: relative;
   color: white;
   font-weight: 400;
@@ -21,7 +21,7 @@
   text-align: center;
 }
 
-.nbd-btn:after {
+/* .nbd-btn:after {
   background-color: #fff;
   content: "";
   border-radius: 0%;
@@ -58,6 +58,13 @@
 
 .nbd-btn:hover svg path {
   fill: #fff;
+} */
+
+.nbd-btn:disabled {
+  background: #ccc;
+  border: 2px solid #ccc;
+  color: #fff;
+  cursor: not-allowed;
 }
 
 .app-button {

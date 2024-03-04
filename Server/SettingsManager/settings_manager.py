@@ -58,7 +58,7 @@ class Setting:
 
     desktopOnly: bool = False
     """
-    If the setting is only available on desktop. If not,
+    If the setting is only available on desktop (no webapp). If not,
     the setting will always return the default value
     """
 
@@ -133,9 +133,6 @@ class Setting:
     def __hash__(self):
         return hash(self.id)
 
-    def __dict__(self):
-        return self.toDict()
-
     # Define a method to get a JSON serializable dict of the setting
     def toDict(self):
         """
@@ -154,7 +151,7 @@ class Setting:
         }
 
 
-class SettingsManager(metaclass=HorusSingleton):
+class SettingsManager:
     """
     Manage the Horus app settings
     """
@@ -168,7 +165,7 @@ class SettingsManager(metaclass=HorusSingleton):
     - value: The setting instance
     """
 
-    def __init__(self, appSupportDir: typing.Optional[str] = None) -> None:
+    def __init__(self, appSupportDir: str) -> None:
         """
         Manage and load the settings of the app
 
@@ -223,8 +220,16 @@ class SettingsManager(metaclass=HorusSingleton):
             self._createSettings()
 
         # Load the settings
-        with open(self.userSettingsPath, "r", encoding="utf-8") as f:
-            fileSettings = json.load(f)
+        try:
+            with open(self.userSettingsPath, "r", encoding="utf-8") as f:
+                fileSettings = json.load(f)
+        except json.JSONDecodeError:
+            # If the settings file is corrupted, create a new one
+            self._createSettings()
+
+            # Re-read the settings
+            with open(self.userSettingsPath, "r", encoding="utf-8") as f:
+                fileSettings = json.load(f)
 
         # Load the default settings and add any missing settings
         with open(self.defaultSettingsPath, "r", encoding="utf-8") as f:
@@ -407,7 +412,7 @@ class SettingsManager(metaclass=HorusSingleton):
             # Update the setting only if it is not desktop only or if the app is not in safe mode
             if setting.desktopOnly and AppDelegate().safeMode and not AppDelegate().debug:
                 logging.getLogger("Horus").warning(
-                    "Trying to update an unsfe setting '%s' in secure mode. Skipping...",
+                    "Trying to update an unsfe setting '%s' in WebApp mode. Skipping...",
                     setting.id,
                 )
                 continue

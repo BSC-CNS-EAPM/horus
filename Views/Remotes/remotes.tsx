@@ -125,6 +125,14 @@ function RemoteListView(props: RemoteListProps) {
     );
   }
 
+  if (remotes.length === 0) {
+    return (
+      <div className="w-fit h-fit p-2 m-2 flex flex-col justify-center items-center">
+        No remotes found
+      </div>
+    );
+  }
+
   return (
     <div className="fade-in-animation p-2 w-full flex flex-col gap-2">
       {remotes?.map((remote) => (

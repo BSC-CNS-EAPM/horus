@@ -3,22 +3,23 @@ from Server import HorusServer
 from multiprocess import Process  # type: ignore pylint: disable=no-name-in-module
 import requests
 import time
-import sys
-
-from Server.PluginManager import PluginManager
 
 # Re init the PluginManager
-PluginManager("AppSupport").appSupportDir = "AppSupport"
+# WARNING: NOT NEEDED ANYMORE
+# Plus, this line was making other tests, outside this file,
+# to fail. The initial AppDelegate tests: test_launch_app_not_compiled and test_launch_app_compiled
+# failed because of this line. I commented it out and the tests passed.
+# PluginManager("AppSupport").appSupportDir = "AppSupport"
 
 
 @pytest.fixture
 def desktopServer():
-    return HorusServer(desktop=True, port=3000)
+    return HorusServer(mode="app", port=3000)
 
 
 @pytest.fixture
 def server():
-    return HorusServer(desktop=False)
+    return HorusServer(mode="server")
 
 
 def test_desktop_server_init(desktopServer):
@@ -39,33 +40,9 @@ def test_gui_dir(desktopServer):
     assert isinstance(gui_dir, str)
 
 
-def test_gui_dir_debug_mode_parcel_running(mocker):
-    # Create an instance of HorusServer with debug and parcelURL set to True
-    server = HorusServer(debug=True)
-    server._checkParcel = mocker.Mock(return_value=True)
-
-    # Mock os.path.abspath and os.path.join
-    mocker.patch(
-        "os.path.abspath", side_effect=lambda x: x
-    )  # No actual path joining, just return the input
-    mocker.patch(
-        "os.path.join", side_effect=lambda *args: "/".join(args)
-    )  # Join path components with a "/"
-
-    # Mock the os.path.dirname method to simulate a module
-    mocker.patch("os.path.dirname", return_value="/path/to/your_module")
-
-    # Call the _guiDir method
-    gui_dir = server._guiDir()
-
-    # Assert that the GUI directory is constructed as expected
-    assert gui_dir == "/path/to/your_module/../dist"
-
-
 def test_gui_dir_debug_mode_parcel_not_running(mocker):
     # Create an instance of HorusServer with debug and parcelURL set to True
     server = HorusServer(debug=True)
-    server._checkParcel = mocker.Mock(return_value=False)
 
     # Mock os.path.abspath and os.path.join
     mocker.patch(
@@ -74,6 +51,9 @@ def test_gui_dir_debug_mode_parcel_not_running(mocker):
     mocker.patch(
         "os.path.join", side_effect=lambda *args: "/".join(args)
     )  # Join path components with a "/"
+
+    # Patch the os.path.exists method to simulate the GUI directory being found
+    mocker.patch("os.path.exists", return_value=True)
 
     # Mock the os.path.dirname method to simulate a module
     mocker.patch("os.path.dirname", return_value="/path/to/your_executable")
@@ -85,7 +65,7 @@ def test_gui_dir_debug_mode_parcel_not_running(mocker):
     gui_dir = server._guiDir()
 
     # Assert that the GUI directory is constructed as expected
-    assert gui_dir == "/path/to/your_executable/GUI"
+    assert gui_dir == "/path/to/your_executable/../GUI"
 
 
 def test_gui_dir_frozen_executable(mocker):
@@ -100,6 +80,9 @@ def test_gui_dir_frozen_executable(mocker):
         "os.path.join", side_effect=lambda *args: "/".join(args)
     )  # Join path components with a "/"
 
+    # Patch the os.path.exists method to simulate the GUI directory being found
+    mocker.patch("os.path.exists", return_value=True)
+
     # Mock the os.path.dirname method to simulate a module
     mocker.patch("os.path.dirname", return_value="/path/to/your_executable")
 
@@ -110,7 +93,7 @@ def test_gui_dir_frozen_executable(mocker):
     gui_dir = server._guiDir()
 
     # Assert that the GUI directory is constructed as expected for a frozen executable
-    assert gui_dir == "/path/to/your_executable/GUI"
+    assert gui_dir == "/path/to/your_executable/../GUI"
 
 
 def test_gui_dir_not_frozen_executable(mocker):
@@ -127,13 +110,13 @@ def test_gui_dir_not_frozen_executable(mocker):
 
     # Call the _guiDir method without mocking sys._MEIPASS to simulate
     # a non-frozen executable environment
-    with pytest.raises(Exception, match="App not frozen and GUI directory not found"):
+    with pytest.raises(Exception, match="GUI directory not found"):
         server._guiDir()
 
 
 def test_get_token_desktop(mocker):
     # Create an instance of HorusServer with desktop set to True
-    server = HorusServer(desktop=True, port=3000)
+    server = HorusServer(mode="app", port=3000)
 
     # Mock the webview module and its token attribute
     mocked_token = "mocked_token"
@@ -148,44 +131,13 @@ def test_get_token_desktop(mocker):
 
 def test_get_token_no_desktop(mocker):
     # Create an instance of HorusServer with desktop set to False
-    server = HorusServer(desktop=False, port=3000)
+    server = HorusServer(mode="server", port=3000)
 
     # Call the _getToken method
     token = server._getToken()
 
     # Assert that the token is a string containing only digits
     assert token.isdigit()
-
-
-def test_check_parcel_server_running(mocker):
-    # Create an instance of HorusServer with a mock parcel URL
-    server = HorusServer(port=3000)
-
-    # Mock requests.get to simulate a successful response
-    mocker.patch("requests.get", side_effect=lambda *args, **kwargs: mocker.Mock())
-
-    # Call the _checkParcel method
-    result = server._checkParcel()
-
-    # Assert that the result is True when the parcel server is running
-    assert result is True
-
-
-def test_check_parcel_server_not_running(mocker):
-    # Create an instance of HorusServer with a mock parcel URL
-    server = HorusServer(port=3000)
-
-    # Mock requests.get to simulate a ConnectionError
-    # when trying to connect to the parcel server
-    from requests.exceptions import ConnectionError
-
-    mocker.patch("requests.get", side_effect=ConnectionError)
-
-    # Call the _checkParcel method
-    result = server._checkParcel()
-
-    # Assert that the result is False when the parcel server is not running
-    assert result is False
 
 
 def test_tokenize():
@@ -212,7 +164,7 @@ def test_checkToken():
 
 
 def test_run_server_mode_production():
-    server = HorusServer(desktop=False, debug=False)
+    server = HorusServer(mode="server", debug=False)
 
     # Define a function to run the test
     def run_test():
@@ -234,7 +186,7 @@ def test_run_server_mode_production():
 
 
 def test_run_server_mode_debug():
-    server = HorusServer(desktop=False, debug=True)
+    server = HorusServer(mode="server", debug=True)
 
     # Define a function to run the test
     def run_test():
@@ -256,7 +208,7 @@ def test_run_server_mode_debug():
 
 
 def test_run_app_mode_debug():
-    server = HorusServer(desktop=True, debug=True)
+    server = HorusServer(mode="app", debug=True)
 
     # Define a function to run the test
     def run_test():
@@ -278,7 +230,7 @@ def test_run_app_mode_debug():
 
 
 def test_run_app_mode_production():
-    server = HorusServer(desktop=True, debug=False)
+    server = HorusServer(mode="app", debug=False)
 
     # Define a function to run the test
     def run_test():

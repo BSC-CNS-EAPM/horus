@@ -150,6 +150,16 @@ class Flow:
     The date the flow was last saved as a string (YYYY-MM-DD HH:MM:SS)
     """
 
+    isPreset: bool = False
+    """
+    Whether the flow is a preset flow or not
+    """
+
+    horusSettings: typing.Optional[SettingsManager] = None
+    """
+    The settings manager instance for the user
+    """
+
     # WARNING: Properties added here may be updated by the blocks during their actions.
     # Please if you add any property here, make sure to update the PluginDeps.subprocessBlock
     # classmethod to include the new property in the subprocess block
@@ -235,6 +245,7 @@ class Flow:
         Create a flow instance
 
         :param flow: The flow to create
+        :param horusSettings: The settings manager instance for the user
         """
 
         # Set the flow properties
@@ -633,13 +644,13 @@ class Flow:
             # Setting the correct keys for each block
             try:
                 inputs[connection.destination.variableID] = outputs[connection.origin.variableID]
-            except KeyError:
+            except KeyError as keye:
                 raise BlocksException(
                     blockToRun,
                     f"The block '{variableBlock.name}' does not provide the variable "
                     + f"'{connection.origin.variableID}' to the block '{blockToRun.name}'. "
                     + "Did you forget to call setOutput() in the action of the block?",
-                )
+                ) from keye
 
         # With the generated inputs, update the block to run
         blockToRun._updateInputs(inputs)
@@ -702,7 +713,11 @@ class Flow:
             try:
                 currentStatus = blockToRun._status
                 while blockToRun.isWaitingForJob:
-                    waitTime = int(SettingsManager().getSetting("queueWaitTime").value)
+                    waitTime = (
+                        int(self.horusSettings.getSetting("queueWaitTime").value)
+                        if self.horusSettings
+                        else 10
+                    )
                     time.sleep(waitTime)
 
                     # If the block's status changed, store the flow
@@ -901,6 +916,13 @@ class Flow:
 
         # Assign the plugin manager instance
         self._pluginManager = PluginManager()
+
+        # Verify the SettingsManager instance
+        if self.horusSettings is None:
+            logging.getLogger("Horus").warning(
+                "The settings manager instance is not available. "
+                + "The flow will run with the default settings."
+            )
 
         # Update the working dir
         oldWD = os.getcwd()
@@ -1179,7 +1201,7 @@ class FlowManager:
         """
 
         # If the flow is a default flow, don't add it to the recent flows list
-        if self.appSupportDir in flow.path:
+        if flow.isPreset:
             return
 
         # Add the flow to the recent flows list
@@ -1278,7 +1300,7 @@ class FlowManager:
         # If we are overwriting a flow, check if the user wants to overwrite it
         from App import AppDelegate  # pylint: disable=import-outside-toplevel
 
-        if overwriteCaution and not overwrite and AppDelegate().serverMode:
+        if overwriteCaution and not overwrite and not AppDelegate().desktop:
             raise OverwriteException(
                 name=flow.name, path=flowPath, message="Trying to overwrite a flow."
             )
@@ -1328,7 +1350,7 @@ class FlowManager:
         if not flowInstance.path and not flowInstance.savedID and not overwrite:
             from App import AppDelegate
 
-            if AppDelegate().serverMode:
+            if not AppDelegate().desktop:
                 overwrite = True
                 flowInstance.path = os.path.join("flows", flowInstance.name + ".flow")
             else:  # On desktop mode, open the file picker
@@ -1393,7 +1415,7 @@ class FlowManager:
         """
         from App import AppDelegate
 
-        if not AppDelegate().serverMode:
+        if AppDelegate().desktop:
             flowPath = AppDelegate().openFileSelectDialog(
                 allowMultiple=False, fileTypes=("Flow (*.flow)",)
             )
@@ -1475,6 +1497,9 @@ class FlowManager:
         def flowRun():
             try:
                 logging.getLogger("Horus").info("Started flow %s", flow.name)
+
+                # Assign the horusSettings to the flow
+                flow.horusSettings = SettingsManager(self.appSupportDir)
 
                 # Run the flow
                 flow.run(placedID, resetRemoteBlock, socket, resetFlow)

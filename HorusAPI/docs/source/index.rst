@@ -14,6 +14,12 @@ Welcome to HorusAPI's documentation!
 
 .. toctree::
    :maxdepth: 3
+   :caption: Web App mode
+   
+   webapp_mode/index
+
+.. toctree::
+   :maxdepth: 3
    :caption: Building Horus plugins
 
    developer_guide/index

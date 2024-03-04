@@ -46,6 +46,7 @@ type PluginVariableViewProps = {
   hideDescription?: boolean;
   applyStyle?: boolean;
   customClass?: string;
+  placeholder?: string;
 };
 
 export function PluginVariableView(props: PluginVariableViewProps) {
@@ -331,8 +332,14 @@ function VariableRenderer(props: {
       );
     case PluginVariableTypes.STRING_LIST:
     case PluginVariableTypes.NUMBER_LIST:
+      // If the current value is not set, set i to the first allowed value
+      if (!currentValue && variableToRender.allowedValues) {
+        handleVariableChangeInternal(variableToRender.allowedValues[0]);
+      }
+
       return (
         <select
+          style={{ border: "none", outline: "none", WebkitAppearance: "none" }}
           value={currentValue}
           onChange={(e) => handleVariableChangeInternal(e.target.value as any)}
         >
@@ -522,7 +529,7 @@ function StringVariableView(props: VariableViewProps) {
       className="plugin-variable-value"
       id={props.variable.id}
       type="text"
-      placeholder="Write a value"
+      placeholder={props.variable.placeholder ?? ""}
       value={(props.currentValue as string) ?? ""}
       onChange={(e) => props.onChange(e.target.value)}
     />

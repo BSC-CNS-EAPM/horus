@@ -10,7 +10,7 @@ import RecentUserFlows, {
 } from "../FlowStatus/recent_flows";
 import RotatingLines from "../RotatingLines/rotatinglines";
 import PluginPagesView, { usePluginPages } from "../Toolbar/extensions_list";
-import { HorusModal } from "../reusable";
+import { BlurredModal, HorusModal } from "../reusable";
 
 // Icons
 import NewFlowIcon from "../Toolbar/Icons/New";
@@ -20,11 +20,13 @@ import ServerIcon from "../Toolbar/Icons/Server";
 import OpenFlowIcon from "../Toolbar/Icons/Open";
 
 // Import the horus logo
-// @ts-ignore
-import HorusLogo from "../../../Resources/horus.png";
+import Logo from "../logo";
 import { PluginManager } from "../../PluginsManager/plugin_manager";
 import ConfigRemotes from "../../Remotes/remotes";
 import { SettingsView } from "../../Settings/settings";
+import Login from "../Toolbar/Icons/Login";
+import UserIcon from "../Toolbar/Icons/User";
+import Profile from "../../Login/profile";
 
 type SplashModal = {
   header?: React.ReactNode;
@@ -43,13 +45,17 @@ export default function SplashScreen() {
 
   return (
     <div className="flex flex-col justify-center items-center h-screen">
-      <WelcomeToHorus />
+      <WelcomeToHorus setModalContent={updateModalContent} />
       <div className="splash-container flex flex-row flex-wrap justify-center items-center w-full gap-8 zoom-in-animation overflow-auto text-white m-auto">
         <div className="flex gap-2 p-2 flex-wrap justify-center flex-direction-splash-buttons">
           <CreateNewFlow />
           <OpenFlow />
-          <ManagePlugins setModalContent={updateModalContent} />
-          <ManageRemotes setModalContent={updateModalContent} />
+          {!window.horusInternal.webApp && (
+            <ManagePlugins setModalContent={updateModalContent} />
+          )}
+          {window.horusInternal.webApp?.allowRemotes && (
+            <ManageRemotes setModalContent={updateModalContent} />
+          )}
           <Settings setModalContent={updateModalContent} />
         </div>
         <div className="vertical-splash-separator" />
@@ -88,9 +94,16 @@ function ModalView(props: {
   );
 }
 
-function WelcomeToHorus() {
+function WelcomeToHorus(props: {
+  setModalContent: (modal: SplashModal) => void;
+}) {
+  const appName = window.horusInternal.webApp?.appName || "Horus";
+  const loginRequried =
+    window.horusInternal.webApp?.requireRegistration || false;
+
   return (
     <HorusContainer
+      className="flex flex-row items-center px-2 w-full"
       style={{
         borderTop: "none",
         borderLeft: "none",
@@ -99,10 +112,35 @@ function WelcomeToHorus() {
         width: "100%",
       }}
     >
-      <div className="flex flex-row gap-2 justify-center items-center font-semibold w-full px-1">
-        Welcome to Horus
-        <img src={HorusLogo} className="w-16" />
+      <div>
+        <Logo className="h-16" />
       </div>
+      <div className="flex justify-center items-center w-full font-semibold">
+        Welcome to {appName}
+      </div>
+      {loginRequried && (
+        <div className="flex flex-row gap-2">
+          <UserIcon
+            style={{
+              cursor: "pointer",
+            }}
+            onClick={() => {
+              props.setModalContent({
+                body: <Profile />,
+              });
+            }}
+          />
+          <a
+            className="flex flex-row gap-2 items-center text-decoration-none"
+            style={{
+              color: "var(--digital-grey-IV)",
+            }}
+            href="/users/logout"
+          >
+            <Login />
+          </a>
+        </div>
+      )}
     </HorusContainer>
   );
 }

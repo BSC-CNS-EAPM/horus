@@ -135,7 +135,7 @@ function ToolbarMenu(props: ToolBarMenuProps) {
             leaveFrom="transform opacity-100 scale-100"
             leaveTo="transform opacity-0 scale-95"
           >
-            <Menu.Items className="absolute p-md-2 mt-2 w-56 origin-top-left rounded-xl bg-white toolbar-menu">
+            <Menu.Items className="absolute p-md-2 mt-2 w-56 origin-top-left rounded-xl bg-white toolbar-menu outline-none">
               {/* // Here the items will be rendered */}
               {props.items?.map((item) =>
                 item.hidden ? null : (
@@ -328,7 +328,7 @@ const cleanRecents = async () => {
   const data = await response.json();
 
   if (!data.ok) {
-    alert("Error cleaning recents: " + data.error);
+    alert("Error cleaning recents: " + data.msg);
     return;
   }
 };
@@ -493,7 +493,7 @@ export default function HorusToolbar() {
         },
         {
           name: "File explorer",
-          hidden: window.isDesktop,
+          hidden: window.horusInternal.isDesktop,
           svgPath: (
             <svg
               xmlns="http://www.w3.org/2000/svg"

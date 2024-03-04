@@ -109,8 +109,40 @@ class HorusLogger:
         fh = logging.FileHandler(logFile)  # pylint: disable=invalid-name
         fh.setLevel(logging.NOTSET)
 
+        class ColoredFormatter(logging.Formatter):
+            """
+            Colors for the logger
+            """
+
+            # Different colors for different log levels
+            COLOR_CODES = {
+                "DEBUG": "\033[1;34m",  # Blue
+                "INFO": "\033[1;32m",  # Green
+                "WARNING": "\033[1;33m",  # Yellow
+                "ERROR": "\033[1;31m",  # Red
+                "CRITICAL": "\033[1;35m",  # Magenta
+            }
+            RESET_CODE = "\033[0m"  # Reset to default color
+            # White for the capturer
+            CAPTURER_COLOR = "\033[1;37m"
+
+            def format(self, record):
+
+                # Define the colors for the log levels
+                logLevelColor = self.COLOR_CODES.get(record.levelname, "")
+
+                if record.name == "Capturer":
+                    # Apply the white color for the capturer
+                    logLevelColor = self.CAPTURER_COLOR
+
+                # Apply the colors
+                formatted = super().format(record)
+                colored = f"{logLevelColor}{formatted}{self.RESET_CODE}"
+
+                return colored
+
         # Create formatter and add it to the file handler
-        formatter = logging.Formatter(
+        formatter = ColoredFormatter(
             "%(asctime)s - %(name)s - %(levelname)s: %(message)s", "%Y-%m-%d %H:%M:%S"
         )
         fh.setFormatter(formatter)
@@ -181,6 +213,12 @@ class HorusLogger:
         else:
             # Set the level of the root logger to INFO
             self.root.setLevel(logging.INFO)
+
+            # Crital and error logs to the old stderr
+            rootErrorHandler = logging.StreamHandler(oldStderr)
+            rootErrorHandler.setLevel(logging.ERROR)
+            rootErrorHandler.setFormatter(formatter)
+            self.root.addHandler(rootErrorHandler)
 
 
 class WindowOptions:
@@ -334,24 +372,30 @@ class AppDelegate(metaclass=HorusSingleton):
     def __init__(
         self,
         debug: bool = False,
-        serverMode: bool = False,
-        browser: bool = False,
+        mode: str = "app",
         debugURL: typing.Optional[str] = None,
         host: typing.Optional[str] = None,
         port: typing.Optional[int] = None,
-        safeMode: bool = False,
     ):
         """
         Initialize the AppDelegate.
         This will start the backend server and create the first window.
         """
         self.debug = debug
-        self.serverMode = serverMode
-        self.browser = browser
+        self.mode = mode
         self.debugURL = debugURL
         self.host = host
         self.port = port
-        self.safeMode = safeMode
+
+        self.desktop = self.mode == "app" or self.mode == "browser"
+        """
+        Handy variable for checking if we are running in "Desktop" app or just as a server
+        """
+
+        self.safeMode = self.mode == "webapp"
+        """
+        Handy variable for checking if we are running in "WebApp" mode, thus "safe mode"
+        """
 
         # Load the app info from the APP_INFO file
         self._loadAppInfo()
@@ -361,6 +405,20 @@ class AppDelegate(metaclass=HorusSingleton):
 
         # Start the logger if needed
         self._loadLogger()
+
+        # Setup special platform requirements
+        self._internalPlatformSetup()
+
+    def _internalPlatformSetup(self):
+        """
+        Setup special platform requirements
+        """
+
+        # If we are on macOS, set the enviornment to disable some thread safety
+        # This is needed for subprocessing the blocks
+        if self.platform == "darwin":
+            os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
+            os.environ["DISABLE_SPRING"] = "YES"
 
     def initializeServer(self):
         """
@@ -375,11 +433,10 @@ class AppDelegate(metaclass=HorusSingleton):
         # Prepare the server
         self._server = HorusServer(
             debug=self.debug,
-            desktop=not self.serverMode,
+            mode=self.mode,
             appSupportDir=self.appSupportDir,
             host=self.host,
             port=self.port,
-            safeMode=self.safeMode,
         )
 
     def _loadLogger(self):
@@ -393,9 +450,7 @@ class AppDelegate(metaclass=HorusSingleton):
         self.logger.horus.info("Starting Horus %s", self.APP_INFO["APP_VERSION"])
         self.logger.horus.info("Platform: %s", self.platform)
         self.logger.horus.info("Debug: %s", self.debug)
-        self.logger.horus.info("Server Mode: %s", self.serverMode)
-        self.logger.horus.info("Browser Mode: %s", self.browser)
-        self.logger.horus.info("Safe Mode: %s", self.safeMode)
+        self.logger.horus.info("Horus mode: %s", self.mode)
         self.logger.horus.info("Debug URL: %s", self.debugURL)
         self.logger.horus.info("AppSupport Dir: %s", self.appSupportDir)
 
@@ -587,7 +642,7 @@ class AppDelegate(metaclass=HorusSingleton):
         # Load extra data to the app info
         self.APP_INFO["platform"] = getOsName()
         self.APP_INFO["debug"] = self.debug
-        self.APP_INFO["mode"] = "server" if self.serverMode else "app"
+        self.APP_INFO["mode"] = self.mode
         self.APP_INFO["appSupportDir"] = self.appSupportDir
 
     def applicationDidFinishLaunching(self):
@@ -602,10 +657,10 @@ class AppDelegate(metaclass=HorusSingleton):
         # Initialize the server
         self.initializeServer()
 
-        if self.browser:
+        if self.mode == "browser":
             # Start browser mode
             self._startBrowserMode()
-        elif self.serverMode:
+        elif self.mode == "server" or self.mode == "webapp":
             # Start server mode
             self._startServerMode()
         else:
@@ -618,7 +673,7 @@ class AppDelegate(metaclass=HorusSingleton):
         """
 
         # If any flow is running, pause them
-        if self.server.flowManager.areThereRunningFlows:
+        if self.server.flowManager and self.server.flowManager.areThereRunningFlows:
             print("Found running flows. Pausing them...")
             self.server.flowManager.pauseAllFlows()
 
@@ -629,6 +684,7 @@ class AppDelegate(metaclass=HorusSingleton):
         ):
             return
 
+    # FIXME: REMOVE THIS
     def _menus(self):
         def newHorus():
             self.openWindow("Horus", forceNew=True)
@@ -637,7 +693,17 @@ class AppDelegate(metaclass=HorusSingleton):
             pluginsURL = self.server.baseURL + "/plugins/"
             pluginsURL = self.tokenize(pluginsURL)
             pluginWindow = self.openWindow("Plugins", url=pluginsURL)
-            pluginWindow.evaluate_js(f"window.isDesktop = {not self.serverMode}")
+
+            import json
+
+            internalInfo = json.dumps(
+                {
+                    "isDesktop": self.desktop,
+                    "mode": self.mode,
+                }
+            )
+
+            pluginWindow.evaluate_js(f"window.horusInternal = {internalInfo}")
 
         def aboutHorus():
             aboutURL = self.server.baseURL + "/about"
@@ -724,7 +790,7 @@ class AppDelegate(metaclass=HorusSingleton):
         homeURL = self.server.baseURL
 
         windowOptions = WindowOptions()
-        if self.browser:
+        if self.mode == "browser":
             homeURL += "/bmode"
             windowOptions.width = 300
             windowOptions.height = 250
@@ -981,18 +1047,20 @@ def parseArgs() -> typing.Dict[str, typing.Any]:
                 print("No debug URL provided. Usage: -d -u <url>")
                 sys.exit(1)
 
+    # Parse the mode of the app
+    mode: str = "app"  # Default mode is App / Desktop
+
     # Check for the --browser (-b) flag
-    browser = False
     if "--browser" in sys.argv or "-b" in sys.argv or os.getenv("HORUS_MODE") == "browser":
-        browser = True
+        mode = "browser"
 
     # Check for the --server (-s) flag
-    serverMode = False
     if "--server" in sys.argv or "-s" in sys.argv or os.getenv("HORUS_MODE") == "server":
-        if browser:
-            browser = False
-            print("Server mode overrides browser mode")
-        serverMode = True
+        mode = "server"
+
+    # Check for the --webapp (-w) flag
+    if "--webapp" in sys.argv or "-w" in sys.argv or os.getenv("HORUS_MODE") == "webapp":
+        mode = "webapp"
 
     # Check for the --port (-p) flag to force a port on the app
     port = None
@@ -1027,21 +1095,13 @@ def parseArgs() -> typing.Dict[str, typing.Any]:
     elif envHost is not None:
         host = envHost
 
-    # Check for the --secure flag to force safeMode. This mode is intended for
-    # running Horus as a public server
-    safeMode = False
-    if "--safe" in sys.argv:
-        safeMode = True
-        print("Running Horus in safe mode")
-
+    # Parse the arguments
     args = {
         "debug": debug,
-        "serverMode": serverMode,
-        "browser": browser,
+        "mode": mode,
         "debugURL": debugURL,
         "host": host,
         "port": port,
-        "safeMode": safeMode,
     }
 
     return args
@@ -1080,8 +1140,17 @@ def runFlowInsteadOfLaunch(app: AppDelegate):
                 print("Invalid block index provided. Usage: -i <block index>")
                 sys.exit(1)
 
+        if app.server.flowManager is None:
+            raise Exception(
+                "Flow manager not initialized. This is a bug with Horus, please report it."
+            )
+
         # Open the flow
         flow = app.server.flowManager.openFlowFromPath(flowPath)
+
+        # Assign the global HorusSettings instance to the flow
+        # TODO: Read for the users settings instead!
+        flow.horusSettings = app.server.settingsManager
 
         # Run the flow
         try:
@@ -1104,7 +1173,15 @@ def launchApp():
     app = AppDelegate(**args)
 
     # Initialize the server
-    app.initializeServer()
+    try:
+        app.initializeServer()
+    except Exception as exc:
+        import traceback
+
+        logging.getLogger("Horus").critical(
+            "Error initializing server: %s", traceback.format_exc() if app.debug else str(exc)
+        )
+        sys.exit(1)
 
     # If a flow was provided as an argument, it will run the flow instead of launching the app.
     runFlowInsteadOfLaunch(app)

@@ -1,4 +1,4 @@
-import { setChonkyDefaults, ChonkyActions } from "chonky";
+import { setChonkyDefaults, ChonkyActions, selectCurrentFolder } from "chonky";
 import { ChonkyIconFA } from "chonky-icon-fontawesome";
 import { horusPost } from "../../Utils/utils";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -12,11 +12,11 @@ setChonkyDefaults({ iconComponent: ChonkyIconFA });
 import { FileBrowser, FileNavbar, FileToolbar, FileList } from "chonky";
 
 function saveBlob(blob: Blob, fileName: string) {
-  var a = document.createElement("a") as HTMLAnchorElement;
+  const a = document.createElement("a") as HTMLAnchorElement;
   document.body.appendChild(a);
   a.setAttribute("style", "display: none");
 
-  var url = window.URL.createObjectURL(blob);
+  const url = window.URL.createObjectURL(blob);
   a.href = url;
   a.download = fileName;
   a.click();
@@ -64,7 +64,17 @@ function useServerExplorer(
 
     setFiles(data.contents);
     setFolderChain(data.folderChain);
-  }, [extensions, openFolder]);
+
+    // If the selected path is null, set it to the current path if we are on folder mode
+    if (!selectedFile && openFolder) {
+      setSelectedFile(data.folderChain[data.folderChain.length - 1].fullpath);
+    }
+
+    if (!currentPath.current) {
+      currentPath.current =
+        data.folderChain[data.folderChain.length - 1].fullpath;
+    }
+  }, [extensions, openFolder, selectedFile]);
 
   const handleFileAction = (action: any) => {
     // If the action is double clickinga folder, open it
@@ -150,7 +160,7 @@ function useServerExplorer(
     }
 
     fetchFolders();
-  }, [currentPath]);
+  }, [currentPath, fetchFolders]);
 
   const resetActionFiles = () => {
     setActionFilesActive({
@@ -212,7 +222,7 @@ function useServerExplorer(
 
       resetActionFiles();
     };
-  }, [currentPath]);
+  }, [currentPath, fetchFolders]);
 
   const downloadFiles = useCallback(
     async (
@@ -265,7 +275,7 @@ function useServerExplorer(
       }
       resetActionFiles();
     },
-    [currentPath]
+    []
   );
 
   const deleteFiles = useCallback(
@@ -311,19 +321,18 @@ function useServerExplorer(
 
       resetActionFiles();
     },
-    [currentPath]
+    []
   );
-
-  useEffect(() => {
-    fetchFolders();
-  }, [fetchFolders]);
 
   return {
     files,
     folderChain,
+    setFolderChain,
     selectedFile,
+    setSelectedFile,
     isUploading: actionFilesActive,
     handleFileAction,
+    fetchFolders,
   };
 }
 
@@ -350,17 +359,25 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
   };
 
   const openFolder = fileProps?.openFolder ?? false;
-  const { files, folderChain, handleFileAction, selectedFile, isUploading } =
-    useServerExplorer(
-      openFolder,
-      fileProps?.onFileSelect
-        ? fileProps.onFileSelect
-        : (_) => {
-            _;
-          },
-      onFileConfirm,
-      fileProps?.allowedExtensions
-    );
+  const {
+    files,
+    folderChain,
+    handleFileAction,
+    selectedFile,
+    isUploading,
+    fetchFolders,
+    setSelectedFile,
+    setFolderChain,
+  } = useServerExplorer(
+    openFolder,
+    fileProps?.onFileSelect
+      ? fileProps.onFileSelect
+      : (_) => {
+          _;
+        },
+    onFileConfirm,
+    fileProps?.allowedExtensions
+  );
 
   const chonkyActions = [
     ChonkyActions.UploadFiles,
@@ -368,6 +385,16 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
     ChonkyActions.CreateFolder,
     ChonkyActions.DeleteFiles,
   ];
+
+  useEffect(() => {
+    if (open) {
+      fetchFolders();
+    } else {
+      // Reset the selected file
+      setSelectedFile(null);
+      setFolderChain(null);
+    }
+  }, [open, fetchFolders, setSelectedFile, setFolderChain]);
 
   return (
     <HorusModal show={open} onHide={() => setOpen(false)} size="xl">
@@ -510,7 +537,7 @@ function DesktopFileExplorer(props: FileExplorerProps) {
 }
 
 function HorusFileExplorer(props: FileExplorerProps) {
-  if (window.isDesktop || window.parent.isDesktop) {
+  if (window.horusInternal.isDesktop || window.parent.horusInternal.isDesktop) {
     return <DesktopFileExplorer {...props} />;
   } else {
     return <ServerFileExplorer {...props} />;

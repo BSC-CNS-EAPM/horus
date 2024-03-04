@@ -79,7 +79,6 @@
   border-radius: 10px;
   padding: 0.5rem;
   font-size: 0.8rem;
-  border: 1px solid var(--pop-code);
   gap: 0.5rem;
 }
 
@@ -97,9 +96,8 @@
 .plugin-variable-value input,
 .plugin-variable-value textarea {
   width: 100%;
-  text-align: center;
-  border-bottom: 1px solid var(--pop-code);
-  background: var(--grey-white);
+  /* text-align: center; */
+  border-bottom: 1px solid var(--soft-grey);
 }
 
 .plugin-variable-value.no_border {

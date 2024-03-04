@@ -56,7 +56,8 @@
     "description": "The interval in seconds to check for remote jobs status (in seconds).",
     "category": "Flow",
     "value": 10,
-    "type": "integer"
+    "type": "integer",
+    "desktopOnly": true
   },
   "darkMode": {
     "name": "Dark mode (beta)",

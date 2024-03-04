@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Reset Horus password</title>
+    <style>
+      html,
+      body {
+        height: 100%;
+      }
+
+      html {
+        display: table;
+        margin: auto;
+      }
+
+      body {
+        display: table-cell;
+        vertical-align: middle;
+      }
+    </style>
+  </head>
+
+  <body class="bg-transparent">
+    <meta id="meta-mail" data-mail="{{ mail }}" />
+    <script>
+      // Load from jinja2 any message
+      const mail = document.getElementById("meta-mail").dataset.mail;
+
+      if (mail) {
+        window.mail = mail;
+      } else {
+        window.mail = null;
+      }
+    </script>
+    <div id="reset-root"></div>
+    <script src="reset.js" type="module"></script>
+  </body>
+</html>

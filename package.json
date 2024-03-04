@@ -4,10 +4,12 @@
   "description": "Molecular visualizer from EAPM group at BSC",
   "source": "Views/Main/index.html",
   "scripts": {
-    "test": "python -m pytest Tests/ -vv",
+    "test": "python -m pytest Tests/ -vv -W ignore::DeprecationWarning",
     "develop": "python Horus.py -s -d",
+    "webapp": "python Horus.py -d -w",
     "buildparcel": "parcel build Views/**/*.html --dist-dir GUI --no-scope-hoist && cp -r Views/Favicon/ GUI/Favicon",
     "devparcel:main": "parcel --port 3001 --host 0.0.0.0",
+    "devparcel:login": "parcel Views/Login/login.html --port 3001 --host 0.0.0.0",
     "devparcel:about": "parcel Views/About/index.html --port 3001 --host 0.0.0.0",
     "devparcel:browsermode": "parcel Views/BrowserMode/index.html --port 3001 --host 0.0.0.0",
     "devparcel:pluginsmanager": "parcel Views/PluginsManager/index.html --port 3001 --host 0.0.0.0",
@@ -66,6 +68,7 @@
     "react-resizable-panels": "0.0.51",
     "react-router": "6.11.2",
     "react-router-dom": "6.11.2",
+    "react-simple-captcha": "9.3.1",
     "react-xarrows": "2.0.2",
     "socket.io": "4.6.1",
     "socket.io-client": "4.6.1"
@@ -91,6 +94,7 @@
     "eslint-plugin-promise": "6.1.1",
     "eslint-plugin-react": "7.33.2",
     "eslint-plugin-react-hooks": "4.6.0",
+    "events": "3.3.0",
     "fp-ts": "2.16.2",
     "husky": "9.0.10",
     "lint-staged": "15.2.2",
@@ -99,6 +103,7 @@
     "prettier": "2.8.8",
     "process": "0.11.10",
     "run-script-os": "1.1.6",
+    "string_decoder": "1.3.0",
     "tailwindcss": "3.3.2",
     "typescript": "5.1.6"
   },

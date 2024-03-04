@@ -9,7 +9,6 @@ import HorusToolbar from "../Toolbar/toolbar";
 
 // Web-server tools
 import { socket } from "../../Utils/socket";
-import { fetchDesktop } from "../../Utils/utils";
 import IFrameLoader from "../IframeLoader/iframeloader";
 
 // Panels
@@ -102,9 +101,6 @@ export default function WorkingView(props: WorkingViewProps) {
     window.addEventListener("toggleConsole", toggleConsole);
     window.addEventListener("toggleFileExplorer", toggleFileExplorer);
     socket.on("openExtension", handleIFrame);
-
-    // Set the global isDesktop variable
-    fetchDesktop();
 
     return () => {
       window.removeEventListener("mainView", handleMainView);
@@ -202,7 +198,7 @@ export default function WorkingView(props: WorkingViewProps) {
         <div className={showConsole ? "block" : "hidden"}>{term.current}</div>
       </div>
       {/* Used for the fileExplorer event */}
-      {!window.isDesktop && showFileExplorer && (
+      {!window.horusInternal.isDesktop && showFileExplorer && (
         <ServerFileExplorerModal
           open={showFileExplorer}
           setOpen={setShowFileExplorer}

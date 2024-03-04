@@ -379,7 +379,7 @@ export function PluginManager() {
     // If we are on an iFrame (plugin manager server)
     // get the isDesktop variable from the parent window
     if (window.parent !== window) {
-      window.isDesktop = window.parent.isDesktop;
+      window.horusInternal.isDesktop = window.parent.horusInternal.isDesktop;
     }
 
     fetchData();

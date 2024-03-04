@@ -56,6 +56,7 @@ export type PluginVariable = {
   allowedValues: Array<any>;
   defaultValue: any;
   category: string;
+  placeholder?: string;
 
   // For GroupVariable
   variables?: Array<PluginVariable>;

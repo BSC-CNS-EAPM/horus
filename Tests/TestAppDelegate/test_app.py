@@ -57,44 +57,47 @@ def test_launch_app_not_compiled():
 
 def test_launch_app_compiled():
     # mock the cython.compiled variable to return true
-    with patch("cython.compiled", True):
-        from Horus import launchApp
+    from Horus import launchApp
 
-        def launchHorusProcess():
-            # Clean the sys.argv
-            sys.argv = sys.argv[:1]
+    def launchHorusProcess():
+        # Clean the sys.argv
+        sys.argv = sys.argv[:1]
 
-            # Add arguments to simulate the command line
-            sys.argv.append("--server")
-            sys.argv.append("--host")
-            sys.argv.append("localhost")
-            sys.argv.append("--port")
-            sys.argv.append("3000")
+        # Add arguments to simulate the command line
+        sys.argv.append("--server")
+        sys.argv.append("--host")
+        sys.argv.append("localhost")
+        sys.argv.append("--port")
+        sys.argv.append("3000")
 
-            launchApp()
+        patch("cython.compiled", True)
+        patch("sys._MEIPASS", "path", create=True)
+        patch("os.path.exists", return_value=True)
 
-        # Create a new thread and start it
-        process = Process(target=launchHorusProcess)
-        process.start()
+        launchApp()
 
-        # Wait for the server to start
+    # Create a new thread and start it
+    process = Process(target=launchHorusProcess)
+    process.start()
+
+    # Wait for the server to start
+    time.sleep(1)
+
+    baseURL = "http://localhost:3000"
+
+    # Check that the server is running
+    try:
+        requests.get(baseURL, timeout=10)
+    except requests.exceptions.ConnectionError:
+        pytest.fail("Connection error")
+    finally:
+        # Kill the process
+        process.kill()
+
+        # Wait for the process to finish
+        process.join()
+
         time.sleep(1)
-
-        baseURL = "http://localhost:3000"
-
-        # Check that the server is running
-        try:
-            requests.get(baseURL, timeout=10)
-        except requests.exceptions.ConnectionError:
-            pytest.fail("Connection error")
-        finally:
-            # Kill the process
-            process.kill()
-
-            # Wait for the process to finish
-            process.join()
-
-            time.sleep(1)
 
 
 @pytest.fixture
@@ -106,8 +109,8 @@ def appDelegate_default():
 def test_AppDelegate_startup(appDelegate_default: AppDelegate):
     # Check basic props
     assert appDelegate_default.debug is False
-    assert appDelegate_default.serverMode is False
-    assert appDelegate_default.browser is False
+    assert appDelegate_default.desktop is True
+    assert appDelegate_default.safeMode is False
 
     # Check app info
     assert appDelegate_default.APP_INFO != {}

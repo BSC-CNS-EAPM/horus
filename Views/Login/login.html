@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Login to Horus</title>
+    <style>
+      html,
+      body {
+        height: 100%;
+      }
+
+      html {
+        display: table;
+        margin: auto;
+      }
+
+      body {
+        display: table-cell;
+        vertical-align: middle;
+      }
+    </style>
+  </head>
+
+  <body class="bg-transparent">
+    <meta id="meta-message" data-message="{{ message }}" />
+    <meta id="meta-message-ok" data-ok="{{ message_ok }}" />
+    <script>
+      // Load from jinja2 any message
+      const message = document.getElementById("meta-message").dataset.message;
+      const message_ok = document.getElementById("meta-message-ok").dataset.ok;
+
+      if (message) {
+        window.message = {
+          ok: message_ok,
+          msg: message,
+        };
+      } else {
+        window.message = null;
+      }
+    </script>
+    <div class="" id="login-root"></div>
+    <script src="login.js" type="module"></script>
+  </body>
+</html>

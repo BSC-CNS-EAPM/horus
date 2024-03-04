@@ -87,16 +87,15 @@ ext_modules = [
         ["Server/FileExplorer/__init__.py"],
         include_package_data=True,  # type: ignore
     ),
-    # Compile the HorusAPI
-    # Extension("HorusAPI.plugins", ["HorusAPI/src/plugins.py"]),
-    # Extension("HorusAPI.molstar", ["HorusAPI/src/molstar.py"]),
-    # Extension("HorusAPI.extensions", ["HorusAPI/src/extensions.py"]),
-    # Extension("HorusAPI.utils", ["HorusAPI/src/utils.py"]),
-    # Extension(
-    #     "HorusAPI.__init__",
-    #     ["HorusAPI/src/__init__.py"],
-    #     include_package_data=True,  # type: ignore
-    # ),
+    # WebApp manager
+    Extension("Server.WebAppManager.webapp_manager", ["Server/WebAppManager/webapp_manager.py"]),
+    Extension("Server.WebAppManager.database", ["Server/WebAppManager/database.py"]),
+    Extension("Server.WebAppManager.user", ["Server/WebAppManager/user.py"]),
+    Extension(
+        "Server.WebAppManager.__init__",
+        ["Server/WebAppManager/__init__.py"],
+        include_package_data=True,  # type: ignore
+    ),
 ]
 
 setup(
