@@ -21,6 +21,11 @@ import NewFlowIcon from "./Icons/New";
 import PluginsIcon from "./Icons/Plugins";
 import OpenFlowIcon from "./Icons/Open";
 import MolStarIcon from "./Icons/MolStar";
+import EyeIcon from "./Icons/Eye";
+import EyeDashIcon from "./Icons/EyeDash";
+import Chevron from "./Icons/Chevron";
+import TrashIcon from "./Icons/Trash";
+import LogFile from "./Icons/LogFile";
 
 // Horus web-server utils
 import { horusGet } from "../../Utils/utils";
@@ -29,10 +34,7 @@ import { horusGet } from "../../Utils/utils";
 import "../nbdbutton.css";
 import "./toolbar.css";
 import { Flow, PluginPage } from "../FlowBuilder/flow.types";
-import EyeIcon from "./Icons/Eye";
-import EyeDashIcon from "./Icons/EyeDash";
-import Chevron from "./Icons/Chevron";
-import TrashIcon from "./Icons/Trash";
+
 // import RotatingLines from "../RotatingLines/rotatinglines";
 
 interface ToolBarItemProps {
@@ -654,6 +656,15 @@ export default function HorusToolbar() {
               </svg>
             </>
           ),
+        },
+        {
+          name: "Debug flow",
+          hidden: !window.horusInternal.debug,
+          onClick: () => {
+            const centerEvent = new CustomEvent("toggleDebugFlow");
+            window.dispatchEvent(centerEvent);
+          },
+          svgPath: <LogFile />,
         },
       ],
     },

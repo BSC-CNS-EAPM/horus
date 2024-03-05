@@ -16,6 +16,7 @@ declare global {
     horusInternal: {
       isDesktop: boolean;
       mode: "server" | "app" | "browser" | "webapp";
+      debug: boolean;
       webApp?: {
         appName: string;
         companyName: string;

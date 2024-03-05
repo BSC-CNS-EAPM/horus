@@ -776,6 +776,7 @@ class HorusServer:
             internalSettings = {
                 "isDesktop": self.desktop,
                 "mode": self.mode,
+                "debug": self.debug,
             }
 
             if self.webAppManager is not None:
@@ -2265,13 +2266,19 @@ class HorusSocket(SocketIO):
             if sid not in self.joinedRooms:
                 self.joinedRooms[sid] = []
 
-            self.joinedRooms[sid].append(flowID)
+            # Append only if not already in the list
+            if flowID not in self.joinedRooms[sid]:
+                self.joinedRooms[sid].append(flowID)
 
         @self.on("leaveFlow")
         def leaveFlow(flowID):
             sid = request.sid  # type: ignore
             if flowID is None:
-                return
+                # Leave all rooms
+                for room in self.joinedRooms[sid]:
+                    leave_room(room)
+
+                self.joinedRooms.pop(sid, None)
 
             logging.getLogger("Horus").debug("Left room for flowID %s", flowID)
 
@@ -2300,6 +2307,16 @@ class HorusSocket(SocketIO):
         def handleMessage(data):
             print("received message: " + data)
             self.emit("printTerm", "Hello from the server!")
+
+        # Add some debugging routes
+        @self.on("getRoom")
+        def getRoom(data):
+            """
+            Returns the room where the current client is
+            """
+
+            sid = request.sid  # type: ignore
+            return self.joinedRooms.get(sid, None)
 
     def isClientJoinedFlow(self, flowID: str) -> bool:
         """

@@ -1523,6 +1523,9 @@ export function useFlowBuilder() {
       return;
     }
 
+    // Make sure we have joined the flow room
+    socket.emit("joinFlow", flow.savedID);
+
     setFlowText("Submitting flow");
     setFlowLoading(true);
 
@@ -1564,6 +1567,9 @@ export function useFlowBuilder() {
     if (!confirm("Are you sure you want to stop executing the flow?")) {
       return;
     }
+
+    // Make sure we have joined the flow room
+    socket.emit("joinFlow", flow.savedID);
 
     const stoppedFlow = {
       ...flow,
