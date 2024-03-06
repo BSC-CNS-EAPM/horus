@@ -2,10 +2,12 @@ import RotatingLines from "../RotatingLines/rotatinglines";
 import { FlowStatus } from "../FlowBuilder/flow.types";
 import ErrorIcon from "../Toolbar/Icons/Error";
 import CheckMark from "../Toolbar/Icons/CheckMark";
+import ChronoIcon from "../Toolbar/Icons/Chrono";
+import StopIcon from "../Toolbar/Icons/Stop";
 
 type FlowStatusViewProps = {
   status: FlowStatus;
-};
+} & React.HTMLAttributes<HTMLDivElement>;
 
 function FlowStatusView(props: FlowStatusViewProps) {
   const { status } = props;
@@ -21,6 +23,10 @@ function FlowStatusView(props: FlowStatusViewProps) {
       return <FinishedFlowStatus />;
     case FlowStatus.ERROR:
       return <ErrorFlowStatus />;
+    case FlowStatus.QUEUED:
+      return <QueuedFlowStatus />;
+    case FlowStatus.CANCELLING:
+      return <CancellingFlowStatus />;
     default:
       return null;
   }
@@ -28,7 +34,7 @@ function FlowStatusView(props: FlowStatusViewProps) {
 
 type FlowStatusBaseProps = {
   children: React.ReactNode;
-  color: "red" | "orange" | "blue" | "green";
+  color: "red" | "orange" | "blue" | "green" | "purple";
 };
 
 function FlowStatusBase(props: FlowStatusBaseProps) {
@@ -37,6 +43,7 @@ function FlowStatusBase(props: FlowStatusBaseProps) {
     orange: "text-orange-500",
     blue: "text-blue-500",
     green: "text-green-500",
+    purple: "text-purple-500",
   };
 
   const classColorName = colorStyle[props.color];
@@ -44,6 +51,15 @@ function FlowStatusBase(props: FlowStatusBaseProps) {
   const className = `flex flex-row gap-1 items-center ${classColorName}`;
 
   return <div className={className}>{props.children}</div>;
+}
+
+function QueuedFlowStatus() {
+  return (
+    <FlowStatusBase color="purple">
+      <ChronoIcon />
+      <div>Queued</div>
+    </FlowStatusBase>
+  );
 }
 
 function RunningFlowStatus() {
@@ -80,6 +96,15 @@ function PausedFlowStatus() {
 function StoppedFlowStatus() {
   return (
     <FlowStatusBase color="red">
+      <StopIcon />
+      <div>Stopped</div>
+    </FlowStatusBase>
+  );
+}
+
+function CancellingFlowStatus() {
+  return (
+    <FlowStatusBase color="red">
       <svg
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
@@ -99,7 +124,7 @@ function StoppedFlowStatus() {
           d="M9 9.563C9 9.252 9.252 9 9.563 9h4.874c.311 0 .563.252.563.563v4.874c0 .311-.252.563-.563.563H9.564A.562.562 0 019 14.437V9.564z"
         />
       </svg>
-      <div>Stopped</div>
+      <div>Cancelling</div>
     </FlowStatusBase>
   );
 }

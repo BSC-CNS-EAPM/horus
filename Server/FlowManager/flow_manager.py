@@ -214,6 +214,11 @@ class Flow:
         The flow was stopped
         """
 
+        QUEUED = "QUEUED"
+        """
+        The flow is queued in the Semaphore
+        """
+
         def __str__(self):
             return self.value
 
@@ -425,6 +430,10 @@ class Flow:
 
         :returns: The encoded flow
         """
+
+        # If the flow does not have a name, set to "Unnamed flow"
+        if self.name is None or self.name == "":
+            self.name = "Unnamed flow"
 
         # Encode the flow
         encodedFlow = self.encode()
@@ -1482,7 +1491,17 @@ class FlowManager:
                 # Check if the process is alive
                 process = self._flowProcesses[runningFlowPath]
 
-                if process.is_alive():
+                isProcessAlive = process.is_alive()
+                if isProcessAlive and process.pid is not None:
+                    # Verify if really the flow is running
+                    # Sometimes is_alive() returns True when the process is not running
+                    # just because the PID still exists
+                    try:
+                        os.kill(process.pid, 0)
+                    except OSError:
+                        isProcessAlive = False
+
+                if isProcessAlive:
                     raise Exception(  # pylint: disable=broad-exception-raised
                         "The flow is already running."
                     )
@@ -1492,6 +1511,12 @@ class FlowManager:
 
         # Set the socket instance
         flow._socket = socket
+
+        # Set the flow as QUEUED
+        flow.status = flow.FlowStatus.QUEUED
+
+        # Save the flow
+        flow.write()
 
         # Run the flow in a separate process
         def flowRun():
@@ -1559,7 +1584,7 @@ class FlowManager:
                 continue
 
             # Kill the flow
-            self._killFlow(flowPath)
+            self._killFlow(flow)
 
             # Set the flow status to paused
             flow.status = Flow.FlowStatus.PAUSED
@@ -1585,8 +1610,8 @@ class FlowManager:
         # Read the latest status of the flow
         updatedFlowToStop = Flow.read(flowPath)
 
-        # Kill the flow
-        self._killFlow(flowPath)
+        # Kill the flow process
+        self._killFlow(updatedFlowToStop)
 
         # Set the flow status to stopped
         updatedFlowToStop.stop()
@@ -1596,15 +1621,15 @@ class FlowManager:
 
         return updatedFlowToStop
 
-    def _killFlow(self, flowPath: str):
+    def _killFlow(self, flow: Flow):
         """
         Internal function to kill running flows
         """
 
-        logging.getLogger("Horus").debug("Killing flow %s", flowPath)
+        logging.getLogger("Horus").debug("Killing flow %s", flow.path)
 
         # Kill the process
-        process = self._flowProcesses.get(flowPath, None)
+        process = self._flowProcesses.get(flow.path, None)
 
         if process is not None and process.is_alive():
             logging.getLogger("Horus").debug("Flow PID: %s", process.pid)
@@ -1612,6 +1637,15 @@ class FlowManager:
             process.join()
 
             # Remove the flow from the running flows list
-            self._flowProcesses.pop(flowPath)
+            self._flowProcesses.pop(flow.path)
+
+            # Unlock the semaphore to allow queued flows to run
+            # Only if the flow was running
+
+            if flow.status == flow.FlowStatus.RUNNING:
+                from App import AppDelegate
+
+                AppDelegate().server.taskSemaphore.release()
+
         else:
-            logging.getLogger("Horus").debug("Flow %s is not running", flowPath)
+            logging.getLogger("Horus").debug("Flow %s is not running", flow.path)

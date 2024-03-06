@@ -186,7 +186,8 @@ export function useFlowBuilder() {
   const isFlowActive = useMemo(() => {
     return (
       flow.status === FlowStatus.RUNNING ||
-      flow.status === FlowStatus.CANCELLING
+      flow.status === FlowStatus.CANCELLING ||
+      flow.status === FlowStatus.QUEUED
     );
   }, [flow]);
 
@@ -1202,6 +1203,14 @@ export function useFlowBuilder() {
 
   const loadSocketFlow = useCallback(
     async (recivedFlow: Flow) => {
+      // Fixes overwritting the queued or running states with the
+      // new recived flow that comes from the preHandleSave function
+      // inside the executeFlow function. This prevented the flow to update
+      // even tough the flow was running
+      if (isExeutingInProcess.current) {
+        return;
+      }
+
       setFlow((currentFlow) => {
         if (recivedFlow.savedID !== currentFlow.savedID) {
           // Its not the currently opened flow
@@ -1517,50 +1526,68 @@ export function useFlowBuilder() {
     handleBlockChanges(updatedBlocks);
   }
 
+  // Take into account if we are inside the executeFlow function
+  // in order to not update the flow from the socket
+  // This will prevent overwriting the flow status
+  const isExeutingInProcess = useRef(false);
+
   async function executeFlow(placedID: number, resetFlow: boolean = false) {
-    // Check that the flow is saved
-    if (!(await preHandleSave(true))) {
+    if (isExeutingInProcess.current) {
       return;
     }
 
-    // Make sure we have joined the flow room
-    socket.emit("joinFlow", flow.savedID);
+    try {
+      isExeutingInProcess.current = true;
 
-    setFlowText("Submitting flow");
-    setFlowLoading(true);
+      // Check that the flow is saved
+      if (!(await preHandleSave(true))) {
+        return;
+      }
 
-    setFlow({
-      ...flow,
-      status: FlowStatus.RUNNING,
-    });
+      // Make sure we have joined the flow room
+      socket.emit("joinFlow", flow.savedID);
 
-    if (resetFlow) {
-      // Clear the terminal if present
-      window.horusTerm.ref?.current?.clearStdout();
-      window.horusTerm.storedMessages = [];
+      setFlowText("Submitting flow");
+      setFlowLoading(true);
+
+      setFlow(
+        (currentFlow) =>
+          ({
+            ...currentFlow,
+            status: FlowStatus.QUEUED,
+          } as Flow)
+      );
+
+      if (resetFlow) {
+        // Clear the terminal if present
+        window.horusTerm.ref?.current?.clearStdout();
+        window.horusTerm.storedMessages = [];
+      }
+
+      const response = await horusPost(
+        "/api/plugins/executeflow",
+        null,
+        JSON.stringify({
+          flowPath: flow.path,
+          placedID: placedID,
+          resetFlow: resetFlow,
+        })
+      );
+
+      const result = await response.json();
+
+      if (!result.ok) {
+        alert(result.message);
+        setFlow({
+          ...flow,
+          status: FlowStatus.ERROR,
+        });
+      }
+
+      setFlowLoading(false);
+    } finally {
+      isExeutingInProcess.current = false;
     }
-
-    const response = await horusPost(
-      "/api/plugins/executeflow",
-      null,
-      JSON.stringify({
-        flowPath: flow.path,
-        placedID: placedID,
-        resetFlow: resetFlow,
-      })
-    );
-
-    const result = await response.json();
-
-    if (!result.ok) {
-      alert(result.message);
-      setFlow({
-        ...flow,
-        status: FlowStatus.ERROR,
-      });
-    }
-
-    setFlowLoading(false);
   }
 
   async function stopFlow() {

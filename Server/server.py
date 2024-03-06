@@ -28,8 +28,9 @@ import socket
 import cython
 
 # Multiprocess module, a fork of multiprocessing with enhancements
-from multiprocess import Process  # type: ignore pylint: disable=no-name-in-module
+from multiprocess import Process, Semaphore  # type: ignore pylint: disable=no-name-in-module
 import multiprocess.process as mp
+import multiprocessing  # For the number of CPUs
 
 # Flask
 import flask
@@ -216,6 +217,21 @@ class HorusServer:
         logging.getLogger("Horus").info("Host: %s", self.host)
         logging.getLogger("Horus").info("Port: %s", self.port)
         logging.getLogger("Horus").info("BaseURL: %s", self.baseURL)
+
+        # Assign the maximum number of running flows
+        maxConcurrentFlows = 1  # Default to 1
+        try:
+            maxConcurrentFlows = len(os.sched_getaffinity(0)) - 1  # type: ignore
+        except AttributeError:
+            maxConcurrentFlows = multiprocessing.cpu_count() - 1
+
+        # Make sure we have at least one flow, even on potato computers
+        self._maxConcurrentFlows = maxConcurrentFlows if maxConcurrentFlows > 0 else 1
+
+        self.taskSemaphore = Semaphore(self._maxConcurrentFlows)
+        logging.getLogger("Horus").info(
+            "Maximum number of concurrent flows: %s", maxConcurrentFlows
+        )
 
         self.desktop = self.mode == "app" or self.mode == "browser"
         """
@@ -2074,6 +2090,17 @@ class HorusServer:
         # Start the server if not on web app mode
         self.socketio.run(self.server, **runArgs)
 
+    _maxConcurrentFlows: int = 1
+    """
+    The maximum number of concurrent flows that the server can run
+    """
+
+    _taskSemaphore: Semaphore
+    """
+    A semaphore to queue the background tasks
+    according to the number of cores
+    """
+
     def backgroundRun(self, func: typing.Callable):
         """
         Runs the given function in a background process. This function requires
@@ -2083,14 +2110,17 @@ class HorusServer:
         """
 
         # Define a function to run the request on
-        def requestRunner(environment):
-            with self.server.request_context(environment):
-                func()
+        def requestRunner(environment, semaphore):
+            with semaphore:
+                with self.server.request_context(environment):
+                    func()
 
         # Start a new process for the flowRunner function
         process = Process(  # pylint: disable=not-callable
-            target=requestRunner, args=(request.environ,)
+            target=requestRunner, args=(request.environ, self.taskSemaphore)
         )
+
+        # Start the process
         process.start()
 
         # Return the process object
@@ -2273,14 +2303,10 @@ class HorusSocket(SocketIO):
         @self.on("leaveFlow")
         def leaveFlow(flowID):
             sid = request.sid  # type: ignore
+
             if flowID is None:
-                # Leave all rooms
-                for room in self.joinedRooms[sid]:
-                    leave_room(room)
-
-                self.joinedRooms.pop(sid, None)
-
-            logging.getLogger("Horus").debug("Left room for flowID %s", flowID)
+                # Do nothing
+                return
 
             # Leave the flow room
             leave_room(flowID)
@@ -2288,6 +2314,8 @@ class HorusSocket(SocketIO):
             if sid in self.joinedRooms:
                 if flowID in self.joinedRooms[sid]:
                     self.joinedRooms[sid].remove(flowID)
+
+            logging.getLogger("Horus").debug("Left room for flowID %s", flowID)
 
         # Log the socketio connections
         @self.on("connect")

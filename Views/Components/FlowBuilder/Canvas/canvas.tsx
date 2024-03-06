@@ -1,17 +1,20 @@
 // DND
 import { useDroppable } from "@dnd-kit/core";
 
-// Horus components
-import RotatingLines from "../../RotatingLines/rotatinglines";
-
 // Types
 import { DroppableEntity, FlowStatus } from "../flow.types";
 
 // Hooks
 import { FlowHooks, HandleMouseHooks } from "../flow.hooks";
+
+// Icons
 import ZoomInIcon from "../../Toolbar/Icons/ZoomIn";
 import ZoomOutIcon from "../../Toolbar/Icons/ZoomOut";
 import Slider from "rc-slider";
+
+// Flow status view and stop button
+import StopIcon from "../../Toolbar/Icons/Stop";
+import { FlowStatusView } from "../../FlowStatus/flow_status";
 
 type FlowCanvasProps = {
   flowHooks: FlowHooks;
@@ -104,7 +107,7 @@ function CanvasZoom({ flowHooks }: { flowHooks: FlowHooks }) {
 
 function FlowTopBar(props: { flowHooks: FlowHooks }) {
   return (
-    <div className="flex flex-row top-bar-flow-reciver flow-title gap-2">
+    <div className="flex flex-row top-bar-flow-reciver gap-2">
       <input
         style={{
           // Set the border color to red if the flow is not saved
@@ -112,7 +115,7 @@ function FlowTopBar(props: { flowHooks: FlowHooks }) {
             ? "var(--digital-grey-IV)"
             : "orange",
         }}
-        className="flow-name"
+        className="flow-name flow-title"
         type="text"
         id="flow-name"
         placeholder={"Flow Name"}
@@ -124,30 +127,38 @@ function FlowTopBar(props: { flowHooks: FlowHooks }) {
         }}
         value={props.flowHooks.flow.name}
       />
-      {props.flowHooks.isFlowActive && (
-        <div className="flex flex-col gap-0 items-center text-center">
-          <RotatingLines
-            onClick={(_) => {
-              props.flowHooks.flow.status !== FlowStatus.CANCELLING &&
-                props.flowHooks.stopFlow();
-            }}
-            size="3rem"
-            className="cursor-pointer"
-            style={{
-              cursor: props.flowHooks.isFlowActive
-                ? "pointer !important"
-                : "default",
-            }}
-          />
-
-          {props.flowHooks.flow.status === FlowStatus.CANCELLING && (
-            <div className="text-xs">Stopping</div>
+      <div
+        className={`flex flex-col gap-0 items-center text-center justify-center ${
+          props.flowHooks.flow.status === FlowStatus.RUNNING ||
+          props.flowHooks.flow.status === FlowStatus.QUEUED
+            ? "cursor-pointer"
+            : "cursor-default"
+        } ${props.flowHooks.flow.status !== FlowStatus.IDLE && "flow-name"}`}
+        onClick={() => {
+          (props.flowHooks.flow.status === FlowStatus.RUNNING ||
+            props.flowHooks.flow.status === FlowStatus.QUEUED) &&
+            props.flowHooks.stopFlow();
+        }}
+      >
+        <div className="flex flex-row gap-1 items-center justify-center">
+          {(props.flowHooks.flow.status === FlowStatus.RUNNING ||
+            props.flowHooks.flow.status === FlowStatus.QUEUED) && (
+            <>
+              <StopIcon className="text-red-500 w-6 h-6" />
+              <div
+                className="h-6 mx-2"
+                style={{
+                  border: "0.5px solid var(--digital-grey-IV)",
+                }}
+              ></div>{" "}
+            </>
           )}
-          {props.flowHooks.flow.pendingActions.length > 0 && (
-            <div className="text-xs text-green-500">Applying actions</div>
-          )}
+          <FlowStatusView status={props.flowHooks.flow.status} />
         </div>
-      )}
+        {props.flowHooks.flow.pendingActions.length > 0 && (
+          <div className="text-xs text-green-500">Applying actions</div>
+        )}
+      </div>
     </div>
   );
 }

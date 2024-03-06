@@ -53,7 +53,7 @@ export default function SplashScreen() {
           {!window.horusInternal.webApp && (
             <ManagePlugins setModalContent={updateModalContent} />
           )}
-          {window.horusInternal.webApp?.allowRemotes && (
+          {window.horusInternal.webApp?.allowRemotes !== false && (
             <ManageRemotes setModalContent={updateModalContent} />
           )}
           <Settings setModalContent={updateModalContent} />

@@ -192,6 +192,10 @@ export enum FlowStatus {
    * The flow is being cancelled.
    */
   CANCELLING = "CANCELLING",
+  /**
+   * The flow is queued.
+   */
+  QUEUED = "QUEUED",
 }
 
 /**

@@ -1,5 +1,5 @@
 // React imports
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 // Horus web-server
 import { horusGet } from "../../Utils/utils";
@@ -115,6 +115,32 @@ export function useGetRecentFlows(): [
   const [recentFlows, setRecentFlows] = useState<Flow[]>([]);
   const [predefinedFlows, setPredefinedFlows] = useState<Flow[]>([]);
 
+  const internalGetRecentFlows = useCallback(async () => {
+    const recentFlowsResponse = await horusGet("/api/recentflows");
+
+    if (!recentFlowsResponse) {
+      return;
+    }
+
+    const recentFlowsData = await recentFlowsResponse.json();
+
+    if (!recentFlowsData.ok) {
+      return;
+    }
+
+    const flows: Flow[] = recentFlowsData.flows;
+
+    // Sort the flows by the flow.date field (yyyy-mm-dd hh:mm:ss)
+    flows.sort((a: Flow, b: Flow) => {
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+
+      return dateB.getTime() - dateA.getTime();
+    });
+
+    setRecentFlows(flows);
+  }, []);
+
   const getFlows = useCallback(async () => {
     setFetchingRecents(true);
     const responsePredefined = await horusGet("/api/plugins/flows");
@@ -132,33 +158,20 @@ export function useGetRecentFlows(): [
 
     setPredefinedFlows(data.flows);
 
-    const recentFlowsResponse = await horusGet("/api/recentflows");
+    // Fetch the recent flows
+    internalGetRecentFlows();
 
-    if (!recentFlowsResponse) {
-      alert("Error getting recent flows");
-      return;
-    }
-
-    const recentFlowsData = await recentFlowsResponse.json();
-
-    if (!recentFlowsData.ok) {
-      alert("Error getting recent flows: " + recentFlowsData.msg);
-      return;
-    }
-
-    const flows: Flow[] = recentFlowsData.flows;
-
-    // Sort the flows by the flow.date field (yyyy-mm-dd hh:mm:ss)
-    flows.sort((a: Flow, b: Flow) => {
-      const dateA = new Date(a.date);
-      const dateB = new Date(b.date);
-
-      return dateB.getTime() - dateA.getTime();
-    });
-
-    setRecentFlows(flows);
     setFetchingRecents(false);
-  }, []);
+  }, [internalGetRecentFlows]);
+
+  useEffect(() => {
+    // Get the recent flows every 10 seconds
+    const interval = setInterval(internalGetRecentFlows, 10000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [internalGetRecentFlows]);
 
   return [fetchingRecents, recentFlows, predefinedFlows, getFlows];
 }
