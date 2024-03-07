@@ -156,7 +156,15 @@ function FlowTopBar(props: { flowHooks: FlowHooks }) {
           <FlowStatusView status={props.flowHooks.flow.status} />
         </div>
         {props.flowHooks.flow.pendingActions.length > 0 && (
-          <div className="text-xs text-green-500">Applying actions</div>
+          <div
+            className="text-xs text-green-500 text-center"
+            style={{
+              position: "absolute",
+              bottom: "-1.5rem",
+            }}
+          >
+            Applying actions
+          </div>
         )}
       </div>
     </div>

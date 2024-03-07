@@ -259,6 +259,14 @@ export function useFlowBuilder() {
       if (!data.ok) {
         throw new Error(data.msg);
       }
+
+      // Empty the pending actions
+      setFlow((currentFlow) => {
+        return {
+          ...currentFlow,
+          pendingActions: [],
+        };
+      });
     } catch (e) {
       alert("Error updating mol* state: " + e);
     }
@@ -1634,9 +1642,6 @@ export function useFlowBuilder() {
   }
 
   useEffect(() => {
-    // Fetch the remotes
-    fetchRemotes();
-
     socket.on("flow", loadSocketFlow);
 
     return () => {
@@ -1727,6 +1732,11 @@ export function useFlowBuilder() {
       removeListeners();
     };
   }, [flow, scale, saved, addListeners, removeListeners]);
+
+  // Fetch the remotes only one time after the component is mounted
+  useEffect(() => {
+    fetchRemotes();
+  }, []);
 
   return {
     flow: {
