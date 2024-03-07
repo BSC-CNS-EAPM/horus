@@ -141,8 +141,13 @@ class HorusLogger:
 
                 return colored
 
-        # Create formatter and add it to the file handler
-        formatter = ColoredFormatter(
+        # Create color formatter and add it to the console handler
+        colorFormatter = ColoredFormatter(
+            "%(asctime)s - %(name)s - %(levelname)s: %(message)s", "%Y-%m-%d %H:%M:%S"
+        )
+
+        # Create regular formatter and add it to the file handler
+        formatter = logging.Formatter(
             "%(asctime)s - %(name)s - %(levelname)s: %(message)s", "%Y-%m-%d %H:%M:%S"
         )
         fh.setFormatter(formatter)
@@ -208,7 +213,7 @@ class HorusLogger:
         if self.debug:
             rootDebugHandler = logging.StreamHandler(oldStdout)
             rootDebugHandler.setLevel(logging.NOTSET)
-            rootDebugHandler.setFormatter(formatter)
+            rootDebugHandler.setFormatter(colorFormatter)
             self.root.addHandler(rootDebugHandler)
         else:
             # Set the level of the root logger to INFO
@@ -217,7 +222,7 @@ class HorusLogger:
             # Crital and error logs to the old stderr
             rootErrorHandler = logging.StreamHandler(oldStderr)
             rootErrorHandler.setLevel(logging.ERROR)
-            rootErrorHandler.setFormatter(formatter)
+            rootErrorHandler.setFormatter(colorFormatter)
             self.root.addHandler(rootErrorHandler)
 
 
