@@ -1,5 +1,5 @@
 // React imports
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 // Web-server imports
 import { socket } from "../Utils/socket";
@@ -257,9 +257,7 @@ function PluginCard(props: PluginCardProps) {
       }`}
       onClick={() => {
         if (isDeleting) return;
-        !error &&
-          plugin.config.length > 0 &&
-          props.setSubview(<PluginConfigView configBlocks={plugin.config} />);
+        !error && plugin.config.length > 0;
       }}
     >
       <div className="card-body d-flex justify-content-between align-items-start">
@@ -508,7 +506,7 @@ function InstallingPluginView({
   const [isInstalling, setIsInstalling] = useState(false);
   const [text, setText] = useState("Select a plugin to install");
 
-  const updateText = (data: any) => {
+  const updateText = useCallback((data: any) => {
     let stringData = data.toString();
 
     // Strip the string
@@ -520,7 +518,7 @@ function InstallingPluginView({
 
     // Update the state
     setText(stringData);
-  };
+  }, []);
 
   // Open new window for plugin installation
   const installPlugin = async (file: string) => {
@@ -546,23 +544,28 @@ function InstallingPluginView({
 
     if (!data.ok) {
       alert("Error installing plugin: " + data.message);
+    } else {
+      goBack();
     }
+  };
 
+  const goBack = useCallback(() => {
     // Reload the plugins
     onPluginInstall();
-
     // Go back to the main view by clicking the "back" button
     document.getElementById("back-arrow-plugins")?.click();
-  };
+  }, [onPluginInstall]);
 
   useEffect(() => {
     // When recieving a message from the server, log it to the console
     socket.on("installPluginDep", updateText);
+    socket.on("pluginChanges", goBack);
 
     return () => {
       socket.off("installPluginDep", updateText);
+      socket.off("pluginChanges", goBack);
     };
-  }, []);
+  }, [goBack, updateText]);
 
   return (
     <div className="h-48 flex flex-col justify-center items-center gap-2">

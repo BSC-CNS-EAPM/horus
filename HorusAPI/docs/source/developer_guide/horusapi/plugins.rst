@@ -43,7 +43,7 @@ This is a JSON object that represents a plugin for the Horus app. The object con
 - ``author``: The author of the plugin.
 - ``version``: The version of the plugin.
 - ``pluginFile``: The entry point of the plugin. This file must be located in the root of the plugin folder.
-- ``dependencies``: An array of strings that contains the dependencies of the plugin. 
+- ``dependencies``: An array of strings that contains the PyPI dependencies of the plugin. This dependencies can be declared as DEPENDENCY==VERSION or using the --no-deps (DEPENDENCY==VERSION --no-deps) flag which will allow to install the dependency without installing the others that are necessary for it.
 
 Dependencies of plugins
 -----------------------
@@ -80,6 +80,11 @@ when the plugin is loaded.
     When importing a library in your python Plugin code, make sure to always import inside scoped functions. Libraries
     imported at top level may not work as the plugin gets automatically unloaded when not in use. This may result in
     the library being unloaded and the plugin not working as expected.
+
+.. note::
+
+    Aditionally, preinst.sh and postinst.sh files can be provided in the plugin folder to declare pre-install and post-install scripts. These will execute before and after the plugin install process, respectively. Those scripts allow
+    to perform custom actions like copying files, setting environment variables...
 
 Code organization
 -----------------

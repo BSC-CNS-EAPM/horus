@@ -139,6 +139,8 @@ class PluginManager(metaclass=HorusSingleton):
 
         self.reloadPlugins()
 
+        socketio.emit("pluginChanges")
+
     def _installPlugin(self, path):
         # Get the name of the plugin
         pluginName = os.path.basename(path)
@@ -239,7 +241,9 @@ class PluginManager(metaclass=HorusSingleton):
 
         try:
             print("Checking plugin...")
+            self._preinstallDependencies(tmpInstallDir)
             loadedPlugin = self._loadPlugin(tmpInstallDir, appendToLoaded=False)
+            self._postinstallDependencies(tmpInstallDir)
 
             if loadedPlugin is None:
                 raise Exception(
@@ -254,7 +258,7 @@ class PluginManager(metaclass=HorusSingleton):
             if not os.path.exists(pluginFinalPath) and not loadedPlugin in self.loadedPlugins:
                 print("Saving new plugin to its folder...")
                 shutil.move(tmpInstallDir, pluginFinalPath)
-                print("Plugin installed.")
+                print("Plugin installed")
                 self.loadedPlugins.append(loadedPlugin)
             else:
                 # If we are installing the same plugin, upgrade it only if the version is higher
@@ -333,12 +337,6 @@ class PluginManager(metaclass=HorusSingleton):
                     logging.getLogger("Horus").error(message)
 
                     raise Exception(message)
-
-                # raise Exception(
-                #     f"Plugin {loadedPlugin.id} already exists.\
-                #     Uninstall it first to install the new version."
-                # )
-
         except Exception as e:
             if os.path.exists(tmpInstallDir):
                 shutil.rmtree(tmpInstallDir)
@@ -659,8 +657,9 @@ class PluginManager(metaclass=HorusSingleton):
 
         # Iterate through the required dependencies
         for dep in dependencies:
-            name = dep.split("==")[0].lower()
-            version = dep.split("==")[1] if "==" in dep else None
+            parsedDep = dep.replace(" --no-deps", "")
+            name = parsedDep.split("==")[0].lower()
+            version = parsedDep.split("==")[1] if "==" in dep else None
 
             # Condense the if statements to have better readability
             exists = installedDeps.get(name, None)
@@ -670,9 +669,9 @@ class PluginManager(metaclass=HorusSingleton):
 
             if hasToInstall:
                 if doNotExist:
-                    print(f"Installing dependency {dep} for plugin {pluginName}...")
+                    print(f"Installing dependency {parsedDep} for plugin {pluginName}...")
                 elif hasToUpgrade:
-                    print(f"Upgrading dependency {dep} for plugin {pluginName}...")
+                    print(f"Upgrading dependency {parsedDep} for plugin {pluginName}...")
 
                     # Remove the old dependency dist-info
                     for depDir in listedDeps:
@@ -690,6 +689,66 @@ class PluginManager(metaclass=HorusSingleton):
                 except Exception as e:
                     print(e)
                     raise e
+
+    def _preinstallDependencies(self, pluginDir: str):
+        if os.path.isfile(os.path.join(pluginDir, "preinst.sh")):
+            print("Executing pre-install script")
+            with subprocess.Popen(
+                ["sh", os.path.join(str(pluginDir), "preinst.sh")],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                stdin=subprocess.PIPE,
+                cwd=pluginDir,
+            ) as p:
+                # Print the output
+                if p.stdout is None:
+                    raise Exception("Could not get the output of the pre-install script.")
+
+                for line in p.stdout:
+                    strippedOut = line.decode("utf-8").strip()
+                    if strippedOut != "":
+                        print(strippedOut)
+                # Print the error
+                if p.stderr:
+                    for line in p.stderr:
+                        strippedErr = line.decode("utf-8").strip()
+                        if strippedErr != "":
+                            print(strippedErr)
+            # Wait for the process to finish
+            p.wait()
+            # Check the return code
+            if p.returncode != 0 and p.returncode is not None:
+                raise Exception("Pre-install script failed")
+
+    def _postinstallDependencies(self, pluginDir: str):
+        if os.path.isfile(os.path.join(str(pluginDir), "postinst.sh")):
+            print("Executing pos-tinstall script")
+            with subprocess.Popen(
+                ["sh", os.path.join(str(pluginDir), "postinst.sh")],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                stdin=subprocess.PIPE,
+                cwd=pluginDir,
+            ) as p:
+                # Print the output
+                if p.stdout is None:
+                    raise Exception("Could not get the output of the post-install script.")
+
+                for line in p.stdout:
+                    strippedOut = line.decode("utf-8").strip()
+                    if strippedOut != "":
+                        print(strippedOut)
+                # Print the error
+                if p.stderr:
+                    for line in p.stderr:
+                        strippedErr = line.decode("utf-8").strip()
+                        if strippedErr != "":
+                            print(strippedErr)
+                # Wait for the process to finish
+                p.wait()
+                # Check the return code
+                if p.returncode != 0 and p.returncode is not None:
+                    raise Exception("Post-install script failed")
 
     def _installDepInternal(self, dep: str, depsDir: str):
         """
@@ -815,6 +874,12 @@ class PluginManager(metaclass=HorusSingleton):
         }
 
         # Execute the pip command with the selected interpreter
+        if "--no-deps" in dep:
+            dep = dep.replace(" --no-deps", "")
+            noDependencies = True
+        else:
+            noDependencies = False
+
         with subprocess.Popen(
             [
                 interpreter,
@@ -826,7 +891,7 @@ class PluginManager(metaclass=HorusSingleton):
                 depsDir,
                 "--upgrade",
                 "--no-input",
-                "--no-deps",
+                *(["--no-deps"] if noDependencies else []),
             ],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,

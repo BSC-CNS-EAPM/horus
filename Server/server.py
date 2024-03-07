@@ -815,7 +815,6 @@ class HorusServer:
 
             try:
                 self.pluginManager.installPlugin(self.socketio, path)
-                self.socketio.emit("pluginChanges")
                 success = {
                     "ok": True,
                 }

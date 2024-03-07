@@ -327,6 +327,9 @@ class SettingsManager:
         :param id: The ID of the setting
         """
 
+        # Reload the settings
+        self._loadSettings()
+
         # Get the setting
         setting = self.settings.get(id, None)
 
@@ -382,8 +385,8 @@ class SettingsManager:
         Returns the list of settings as a JSON object
         """
 
-        # with open(self.userSettingsPath, "r", encoding="utf-8") as file:
-        #     settings = json.load(file)
+        # Reload the settings
+        self._loadSettings()
 
         from App import AppDelegate
 

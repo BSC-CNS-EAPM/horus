@@ -225,7 +225,6 @@ def test_install_dep_internal_success(mocker):
         "/path/to/dependencies",
         "--upgrade",
         "--no-input",
-        "--no-deps",
     ]
     assert last_call_kwargs["stdout"] == subprocess.PIPE
     assert last_call_kwargs["stderr"] == subprocess.STDOUT
@@ -308,7 +307,6 @@ def test_install_dep_internal_frozen_app(mocker):
         "/path/to/dependencies",
         "--upgrade",
         "--no-input",
-        "--no-deps",
     ]
     assert last_call_kwargs["stdout"] == subprocess.PIPE
     assert last_call_kwargs["stderr"] == subprocess.STDOUT
@@ -322,6 +320,124 @@ def test_install_dep_internal_frozen_app(mocker):
 
 # Create a mock plugin file
 pluginDir = "Tests/TestPluginManager/Plugins/"
+
+
+def test_no_dependencies_install(mocker):
+    # Create an instance of MyClass
+    pluginManager = PluginManager("AppSupport")
+    pluginManager.appSupportDir = "AppSupport"
+
+    from App import AppDelegate
+
+    # Set the app delegate to be on "Server mode"
+    AppDelegate().mode = "server"
+    AppDelegate().desktop = False
+
+    # Mock the subprocess.Popen context manager
+    mock_popen = mocker.Mock()
+    mock_popen.returncode = 0
+    mocker.patch("subprocess.Popen", return_value=mock_popen)
+    mock_popen.__enter__ = mocker.Mock(return_value=mock_popen)
+    mock_popen.__exit__ = mocker.Mock(return_value=None)
+
+    # Call the _installDepInternal method
+    dep_to_install = "numpy==1.26.4 --no-deps"
+    deps_dir = "/path/to/dependencies"
+
+    with pytest.raises(Exception):
+        pluginManager._installDepInternal(dep_to_install, deps_dir)
+
+        last_call_args, last_call_kwargs = subprocess.Popen.call_args  # type: ignore
+        assert last_call_args[0] == [
+            "python",
+            "-m",
+            "pip",
+            "install",
+            "numpy==1.26.4",
+            "--target",
+            "/path/to/dependencies",
+            "--upgrade",
+            "--no-input",
+            "--no-deps",
+        ]
+    del pluginManager
+
+
+def test_preinstall(mocker):
+    # Create an instance of MyClass
+    pluginManager = PluginManager("AppSupport")
+    pluginManager.appSupportDir = "AppSupport"
+
+    from App import AppDelegate
+
+    # Set the app delegate to be on "Server mode"
+    AppDelegate().mode = "server"
+    AppDelegate().desktop = False
+
+    # Mock the subprocess.Popen context manager
+    mock_popen = mocker.Mock()
+    mock_popen.returncode = 0
+    mocker.patch("subprocess.Popen", return_value=mock_popen)
+    mock_popen.__enter__ = mocker.Mock(return_value=mock_popen)
+    mock_popen.__exit__ = mocker.Mock(return_value=None)
+
+    pluginDir = "Tests/TestPluginManager"
+    pluginPath = "Tests/TestPluginManager/preinst.sh"
+
+    with open(pluginPath, "w") as f:
+        f.write("echo 'preinstallation script was run'")
+
+    with pytest.raises(Exception):
+        pluginManager._preinstallDependencies(pluginDir)
+    last_call_args, last_call_kwargs = subprocess.Popen.call_args  # type: ignore
+    assert last_call_args[0] == [
+        "sh",
+        "Tests/TestPluginManager/preinst.sh",
+    ]
+    os.remove(pluginPath)
+    pluginManager._preinstallDependencies(pluginDir)
+
+    assert subprocess.Popen.call_count == 1  # type: ignore
+
+    del pluginManager
+
+
+def test_postinstall(mocker):
+    # Create an instance of MyClass
+    pluginManager = PluginManager("AppSupport")
+    pluginManager.appSupportDir = "AppSupport"
+
+    from App import AppDelegate
+
+    # Set the app delegate to be on "Server mode"
+    AppDelegate().mode = "server"
+    AppDelegate().desktop = False
+
+    # Mock the subprocess.Popen context manager
+    mock_popen = mocker.Mock()
+    mock_popen.returncode = 0
+    mocker.patch("subprocess.Popen", return_value=mock_popen)
+    mock_popen.__enter__ = mocker.Mock(return_value=mock_popen)
+    mock_popen.__exit__ = mocker.Mock(return_value=None)
+
+    pluginDir = "Tests/TestPluginManager"
+    pluginPath = "Tests/TestPluginManager/postinst.sh"
+
+    with open(pluginPath, "w") as f:
+        f.write("echo 'postinstalation script was run'")
+    with pytest.raises(Exception):
+        pluginManager._postinstallDependencies(pluginDir)
+    last_call_args, last_call_kwargs = subprocess.Popen.call_args  # type: ignore
+    assert last_call_args[0] == [
+        "sh",
+        "Tests/TestPluginManager/postinst.sh",
+    ]
+    os.remove(pluginPath)
+    pluginManager._postinstallDependencies(pluginDir)
+
+    assert subprocess.Popen.call_count == 1  # type: ignore
+
+    del pluginManager
 
 
 # Test the PluginConfigs
