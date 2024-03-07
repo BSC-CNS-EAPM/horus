@@ -1552,16 +1552,15 @@ class HorusServer:
         Setup the plugin pages
         """
 
-        from Server.PluginManager import PluginDeps, PrintSocketCapturer
+        from Server.PluginManager import PluginDeps
 
         # Create a wrapper function to add to
         # python path the plugin deps folder
         def viewFunctionWrapper(func, page, endPoint):
             @wraps(func)
             def wrapper(*args, **kwargs):
-                with PrintSocketCapturer(self.socketio):
-                    with PluginDeps(page._pageInfo["pluginDir"]):
-                        result = PluginDeps.subprocessCall(endPoint.function, *args, **kwargs)
+                with PluginDeps(page._pageInfo["pluginDir"]):
+                    result = PluginDeps.subprocessCall(endPoint.function, *args, **kwargs)
                 return result
 
             return wrapper
@@ -2257,7 +2256,7 @@ class HorusSocket(SocketIO):
                     requests.post(
                         f"{self.baseURL}/internal/backgroundsocketio/",
                         json=data,
-                        timeout=5,
+                        timeout=1,
                     )
                 except requests.exceptions.RequestException:
                     logging.getLogger("Horus").error(
