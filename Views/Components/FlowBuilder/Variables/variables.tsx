@@ -589,6 +589,10 @@ function IntegerFloatVariableView(props: VariableViewProps) {
   };
 
   const parseInsideAllowedValues = (value: any) => {
+    // If no allowedValues are set, return the value
+    if (!variable.allowedValues || variable.allowedValues.length === 0) {
+      return;
+    }
     // If the allowedValues contains the value, return it
     if (variable.allowedValues?.includes(value)) {
       setNumberMessage(null);

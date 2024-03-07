@@ -218,21 +218,6 @@ class HorusServer:
         logging.getLogger("Horus").info("Port: %s", self.port)
         logging.getLogger("Horus").info("BaseURL: %s", self.baseURL)
 
-        # Assign the maximum number of running flows
-        maxConcurrentFlows = 1  # Default to 1
-        try:
-            maxConcurrentFlows = len(os.sched_getaffinity(0)) - 1  # type: ignore
-        except AttributeError:
-            maxConcurrentFlows = multiprocessing.cpu_count() - 1
-
-        # Make sure we have at least one flow, even on potato computers
-        self._maxConcurrentFlows = maxConcurrentFlows if maxConcurrentFlows > 0 else 1
-
-        self.taskSemaphore = Semaphore(self._maxConcurrentFlows)
-        logging.getLogger("Horus").info(
-            "Maximum number of concurrent flows: %s", maxConcurrentFlows
-        )
-
         self.desktop = self.mode == "app" or self.mode == "browser"
         """
         Handy variable for checking if we are running in "Desktop" app or just as a server
@@ -268,6 +253,9 @@ class HorusServer:
         """
         FlowManager class. Handle saving and opening of flows.
         """
+
+        # Setup the maximum number of processes per flow
+        self._setupSemaphore()
 
         # Security token
         self.token = self._getToken()
@@ -2098,6 +2086,34 @@ class HorusServer:
     A semaphore to queue the background tasks
     according to the number of cores
     """
+
+    def _setupSemaphore(self):
+        """
+        Assings the maxConcurrentFlows to the semaphore
+        """
+
+        # Read from the general settings the maximum number of concurrent flows
+        automatic = self.settingsManager.getSetting("automaticConcurrentFlows").value
+
+        # Assign the maximum number of running flows
+        maxConcurrentFlows = 1  # Default to 1
+
+        if automatic:
+            try:
+                maxConcurrentFlows = len(os.sched_getaffinity(0)) - 1  # type: ignore
+            except AttributeError:
+                maxConcurrentFlows = multiprocessing.cpu_count() - 1
+        else:
+            # Read from the general settings the maximum number of concurrent flows
+            maxConcurrentFlows = self.settingsManager.getSetting("maxConcurrentFlows").value
+
+        # Make sure we have at least one flow, even on potato computers
+        self._maxConcurrentFlows = maxConcurrentFlows if maxConcurrentFlows > 0 else 1
+
+        self.taskSemaphore = Semaphore(self._maxConcurrentFlows)
+        logging.getLogger("Horus").info(
+            "Maximum number of concurrent flows: %s", maxConcurrentFlows
+        )
 
     def backgroundRun(self, func: typing.Callable):
         """

@@ -65,5 +65,21 @@
     "category": "Horus",
     "value": false,
     "type": "boolean"
+  },
+  "automaticConcurrentFlows": {
+    "name": "Automatic concurrent flows",
+    "description": "Whether to automatically set the maximum number of concurrent flows based on the number of available cores. Changing this setting will require a restart of the application.",
+    "category": "Advanced",
+    "value": true,
+    "type": "boolean",
+    "desktopOnly": true
+  },
+  "maxConcurrentFlows": {
+    "name": "Max concurrent flows",
+    "description": "If set to 0, the number of concurrent flows will be unlimited. This setting is only used if 'Automatic concurrent flows' is disabled. Changing this setting will require a restart of the application.",
+    "category": "Advanced",
+    "value": 0,
+    "type": "integer",
+    "desktopOnly": true
   }
 }

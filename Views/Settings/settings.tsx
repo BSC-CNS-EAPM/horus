@@ -56,13 +56,13 @@ function parseSettingsIntoPluginVariable(
     return {
       placedID: 0,
       id: settingID,
-      category: settings[settingID]?.category ?? "Unknown",
-      name: settings[settingID]?.name ?? "Unknown",
-      description: settings[settingID]?.description ?? "Unknown",
-      value: settings[settingID]?.value ?? "Unknown",
-      defaultValue: settings[settingID]?.defaultValue ?? "Unknown",
+      category: settings[settingID]?.category ?? "No category",
+      name: settings[settingID]?.name ?? "Unnamed setting",
+      description: settings[settingID]?.description ?? "No description",
+      value: settings[settingID]?.value ?? null,
+      defaultValue: settings[settingID]?.defaultValue ?? null,
       type: settings[settingID]?.type ?? PluginVariableTypes.ANY,
-      allowedValues: settings[settingID]?.allowedValues ?? ["Unknown"],
+      allowedValues: settings[settingID]?.allowedValues ?? [],
     };
   });
 }
