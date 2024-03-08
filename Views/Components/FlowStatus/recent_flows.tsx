@@ -1,5 +1,5 @@
 // React imports
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 
 // Horus web-server
 import { horusGet } from "../../Utils/utils";
@@ -109,11 +109,13 @@ export function useGetRecentFlows(): [
   boolean,
   Flow[],
   Flow[],
-  () => Promise<void>
+  () => Promise<void>,
+  (active: boolean) => void
 ] {
   const [fetchingRecents, setFetchingRecents] = useState(true);
   const [recentFlows, setRecentFlows] = useState<Flow[]>([]);
   const [predefinedFlows, setPredefinedFlows] = useState<Flow[]>([]);
+  const interval = useRef<Timer | null>(null);
 
   const internalGetRecentFlows = useCallback(async () => {
     const recentFlowsResponse = await horusGet("/api/recentflows");
@@ -164,14 +166,35 @@ export function useGetRecentFlows(): [
     setFetchingRecents(false);
   }, [internalGetRecentFlows]);
 
+  // Toggle the interval
+  const toggleInterval = useCallback(
+    (active: boolean) => {
+      // Clear the interval if it was set
+      if (interval.current) {
+        clearInterval(interval.current);
+      }
+      // If active, set the interval
+      if (active) {
+        interval.current = setInterval(internalGetRecentFlows, 10000);
+      }
+    },
+    [internalGetRecentFlows]
+  );
+
   useEffect(() => {
     // Get the recent flows every 10 seconds
-    const interval = setInterval(internalGetRecentFlows, 10000);
+    toggleInterval(true);
 
     return () => {
-      clearInterval(interval);
+      toggleInterval(false);
     };
-  }, [internalGetRecentFlows]);
+  }, [toggleInterval]);
 
-  return [fetchingRecents, recentFlows, predefinedFlows, getFlows];
+  return [
+    fetchingRecents,
+    recentFlows,
+    predefinedFlows,
+    getFlows,
+    toggleInterval,
+  ];
 }

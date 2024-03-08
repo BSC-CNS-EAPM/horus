@@ -10,7 +10,7 @@ import RecentUserFlows, {
 } from "../FlowStatus/recent_flows";
 import RotatingLines from "../RotatingLines/rotatinglines";
 import PluginPagesView, { usePluginPages } from "../Toolbar/extensions_list";
-import { BlurredModal, HorusModal } from "../reusable";
+import { HorusModal } from "../reusable";
 
 // Icons
 import NewFlowIcon from "../Toolbar/Icons/New";

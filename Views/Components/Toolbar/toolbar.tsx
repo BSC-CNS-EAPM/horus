@@ -717,8 +717,13 @@ function HorusSearch(props: HorusSearchProps) {
   const [filteredPages, setFilteredPages] = useState<PluginPage[]>(props.pages);
 
   // Get the recent flows with the custom hook
-  const [fetchingRecents, recentFlows, predefinedFlows, getFlows] =
-    useGetRecentFlows();
+  const [
+    fetchingRecents,
+    recentFlows,
+    predefinedFlows,
+    getFlows,
+    toggleInterval,
+  ] = useGetRecentFlows();
 
   const filterSearch = (event: ChangeEvent<HTMLInputElement>) => {
     const value = event.target?.value;
@@ -782,8 +787,11 @@ function HorusSearch(props: HorusSearchProps) {
   useEffect(() => {
     if (isOnFocus) {
       getFlows();
+      toggleInterval(true);
+    } else {
+      toggleInterval(false);
     }
-  }, [isOnFocus, getFlows]);
+  }, [isOnFocus, getFlows, toggleInterval]);
 
   const hasFlows =
     recentFilteredFlows.length > 0 || predefinedFilteredFlows.length > 0;
