@@ -31,6 +31,7 @@ import cython
 from multiprocess import Process, Semaphore  # type: ignore pylint: disable=no-name-in-module
 import multiprocess.process as mp
 import multiprocessing  # For the number of CPUs
+import threading  # For background socketio thread
 
 # Flask
 import flask
@@ -2269,16 +2270,24 @@ class HorusSocket(SocketIO):
 
                 # Send the data to the server
                 try:
-                    requests.post(
-                        f"{self.baseURL}/internal/backgroundsocketio/",
-                        json=data,
-                        timeout=1,
-                    )
+
+                    def sendRequest():
+                        requests.post(
+                            f"{self.baseURL}/internal/backgroundsocketio/",
+                            json=data,
+                            timeout=1,
+                        )
+
+                    # Send the request and wait for it to finish 1 second
+                    timer = threading.Thread(target=sendRequest)
+                    timer.start()
+                    timer.join(1)
                 except requests.exceptions.RequestException:
                     logging.getLogger("Horus").error(
-                        "Could not connect to server to emit event %s", event
+                        "Could not connect to server with requests to emit event %s", event
                     )
 
+                # Exit the function
                 return
 
             logging.getLogger("Horus").debug(

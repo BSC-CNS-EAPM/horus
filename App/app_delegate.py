@@ -679,15 +679,11 @@ class AppDelegate(metaclass=HorusSingleton):
 
         # If any flow is running, pause them
         if self.server.flowManager and self.server.flowManager.areThereRunningFlows:
-            print("Found running flows. Pausing them...")
             self.server.flowManager.pauseAllFlows()
 
-        # Proceed only if we are in the main thread and not in a subprocess
-        if (
-            threading.current_thread() != threading.main_thread()
-            or multiprocessing.current_process().name != "MainProcess"
-        ):
-            return
+        # End all the child processes
+        for process in multiprocessing.active_children():
+            process.terminate()
 
     # FIXME: REMOVE THIS
     def _menus(self):
