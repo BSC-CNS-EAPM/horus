@@ -210,7 +210,6 @@ class HorusServer:
                 logging.getLogger("Horus").error(
                     "Address %s is already in use. %s", self.baseURL, str(ose)
                 )
-                print(f"Address {self.baseURL} is already in use")
                 raise Exception(  # pylint: disable=broad-exception-raised
                     f"Adress {self.baseURL} is already in use"
                 ) from ose
