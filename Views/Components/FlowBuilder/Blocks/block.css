@@ -84,13 +84,15 @@
 
 .plugin-variable-name {
   font-weight: bold;
-  font-size: 1.2rem;
+  font-size: 1rem;
   color: var(--digital-grey-IV);
 }
 .plugin-variable-value {
   width: 100% !important;
   overflow: hidden;
   font-size: 1rem;
+  background: transparent;
+  color: black;
 }
 .plugin-variable-value select,
 .plugin-variable-value input,
@@ -120,6 +122,7 @@
 .plugin-variable-description {
   width: 100%;
   font-size: 1rem;
+  color: var(--digital-grey-III);
 }
 
 .plugin-variable-id {

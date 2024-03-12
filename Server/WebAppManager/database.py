@@ -18,8 +18,9 @@ import sqlalchemy
 from HorusAPI import VariableTypes
 
 if typing.TYPE_CHECKING:
-    from .webapp_manager import WebAppManager, DatabaseConfig, MailServer
+    from .webapp_manager import WebAppManager, DatabaseConfig
     from .user import HorusUser
+    from Server.FlowManager import Flow
 
 
 class UserError(Exception):
@@ -123,20 +124,25 @@ class Database:
         self.flows = sqlalchemy.Table(
             "flows",
             self.metadata,
+            # Each flow has a unique ID
+            sqlalchemy.Column(
+                "flow_id",
+                sqlalchemy.String,
+                unique=True,
+                primary_key=True,
+            ),
             # Each flow is associated with the user who sent it
             sqlalchemy.Column(
                 "id",
                 sqlalchemy.Integer,
                 sqlalchemy.ForeignKey("users.id"),
-                primary_key=True,
-                unique=True,
             ),
-            # Each flow has a unique ID
-            sqlalchemy.Column("flow_id", sqlalchemy.String, unique=True),
             # The time the flow took to execute, this is important for the quotas
-            sqlalchemy.Column("time", sqlalchemy.Integer),
+            sqlalchemy.Column("time", sqlalchemy.Float, default=0),
             # The size that the flow is taking, also important for the quotas
-            sqlalchemy.Column("size", sqlalchemy.Integer),
+            sqlalchemy.Column("size", sqlalchemy.Integer, default=0),
+            # If the flow was deleted adn therefore should not be counted in the quotas
+            sqlalchemy.Column("deleted", sqlalchemy.Boolean, default=False),
         )
 
         # Create the tables
@@ -168,6 +174,9 @@ class Database:
         """
         Registers a user in the database with the given form data
         """
+
+        # Always lowercase the email
+        formData["email"] = formData["email"].lower()
 
         # Check if the user already exists
         if self.getUser(mail=formData["email"]) is not None:
@@ -350,6 +359,9 @@ class Database:
         :return: The user data as a dictionary or None if the user does not exist
         """
 
+        # Always lowercase the email
+        mail = mail.lower()
+
         # Get the user
         dbUser: typing.Optional[sqlalchemy.engine.row.Row[typing.Any]] = None
         with self.engine.connect() as connection:
@@ -370,6 +382,15 @@ class Database:
 
         # Convert the row to a dictionary for easier manipulation
         userDict = dbUser._asdict()
+
+        # If everithing wen well, update the last login date
+        with self.engine.connect() as connection:
+            connection.execute(
+                self.users.update()
+                .where(self.users.c.email == mail)
+                .values(last_login=datetime.datetime.now())
+            )
+            connection.commit()
 
         from Server.WebAppManager import HorusUser
 
@@ -393,3 +414,265 @@ class Database:
             return False
 
         return True
+
+    def _getUserQuotas(self, userID: int) -> typing.Dict[str, typing.Any]:
+        """
+        Retrieves the quotas of a user from the database
+        """
+
+        with self.engine.connect() as connection:
+            result = connection.execute(
+                self.users.select().where(self.users.c.id == userID)
+            ).fetchone()
+
+            if result is None:
+                raise UserError("User does not exist")
+
+            # If any of the quotas is 0, it means that the user has no quotas for that
+            # specific field, so we set it to None
+            result = result._asdict()
+
+            for key in ["maxStorage", "maxFlows", "maxTime"]:
+                if result[key] == 0:
+                    result[key] = None
+
+            return result
+
+    def _getUserFlows(self, userID: int) -> typing.List[typing.Dict[str, typing.Any]]:
+        """
+        Retrieves the flows of a user from the database
+        """
+
+        with self.engine.connect() as connection:
+            # Select all the flows of the user that are not deleted
+            result = connection.execute(
+                self.flows.select().where(
+                    sqlalchemy.and_(
+                        self.flows.c.id == userID,
+                        self.flows.c.deleted == False,  # pylint: disable=singleton-comparison
+                    )
+                )
+            ).fetchall()
+
+            if result is None:
+                return []
+
+            dictResult = []
+            for row in result:
+                dictResult.append(row._asdict())
+
+            return dictResult
+
+    def getUserCurrentQuotasForDisplayOnUserPage(
+        self, user: "HorusUser"
+    ) -> typing.Dict[str, typing.Any]:
+        """
+        Returns a dictionary with
+        - The current storage used by the user
+        - The maximum storage allowed for the user
+        - The current number of flows executed by the user
+        - The maximum number of flows allowed for the user
+        - The current time used by the user
+        - The maximum time allowed for the user
+
+        In the form:
+        {
+            "currentFlows": 0,
+            "maxFlows": 0,
+            "usedSpace": 0,
+            "maxFlows": 0,
+            "usedHours": 0,
+            "maxHours": 0
+        }
+
+        :param user: The user
+        :return: A dictionary with the current quotas
+        """
+
+        quotas = self._getUserQuotas(user.id)
+
+        # Get all the flows of the user
+        userFlows = self._getUserFlows(user.id)
+
+        # Check within the user directory also for the
+        # number of simulations (directories)
+        userSims = 0
+        if user.appSupportDir:
+            userSims = len(os.listdir(user.flowsDir))
+
+        return {
+            "currentFlows": userSims,
+            "maxFlows": quotas["maxFlows"],
+            "usedSpace": sum([flow["size"] for flow in userFlows]),
+            "maxSpace": quotas["maxStorage"],
+            "usedHours": sum([flow["time"] for flow in userFlows]),
+            "maxHours": quotas["maxTime"],
+        }
+
+    def hasReachedQuota(self, user: "HorusUser") -> bool:
+        """
+        Checks if the user has reached the quotas
+        """
+
+        # Get the user quotas
+        quotas = self._getUserQuotas(user.id)
+
+        # Get all the flows of the user
+        userFlows = self._getUserFlows(user.id)
+
+        # Check within the user directory also for the
+        # number of simulations (directories)
+        userSims = 0
+        if user.appSupportDir:
+            userSims = len(os.listdir(user.flowsDir))
+
+        # If the user has reached the maximum number of flows
+        if quotas["maxFlows"] is not None:
+            if len(userFlows) >= quotas["maxFlows"] or userSims >= quotas["maxFlows"]:
+                return True
+
+        # If the user has reached the maximum storage
+        if quotas["maxStorage"] is not None:
+            if sum([flow["size"] for flow in userFlows]) >= quotas["maxStorage"]:
+                return True
+
+        # If the user has reached the maximum time
+        if quotas["maxTime"] is not None:
+            if sum([flow["time"] for flow in userFlows]) >= quotas["maxTime"]:
+                return True
+
+        return False
+
+    def registerFlowForUser(self, user: "HorusUser", flow: "Flow"):
+        """
+        Registers a flow for a user
+
+        :param user: The user that executed the flow
+        :param flow: The flow that was executed
+        """
+
+        # Insert the flow into the database
+        with self.engine.connect() as connection:
+            # Skip if the flow ID is already in the database
+            if connection.execute(
+                self.flows.select().where(self.flows.c.flow_id == flow.savedID)
+            ).fetchone():
+                return
+
+            connection.execute(
+                self.flows.insert().values(
+                    flow_id=flow.savedID,
+                    id=user.id,
+                    time=0,
+                    size=0,
+                )
+            )
+            connection.commit()
+
+    def updateFlowForUser(self, flow: "Flow"):
+        """
+        Updates a flow for a user
+
+        :param user: The user that executed the flow
+        :param flow: The flow that was executed
+        """
+
+        # If the time or the size are not set, do not update the flow
+        if flow.startedTime is None or flow.finishedTime is None or flow.size is None:
+            logging.getLogger("Horus").critical(
+                "Flow time and size are not set. The flow cannot be updated in the database."
+            )
+            raise ValueError("Flow time and size are not set.")
+
+        # Compute the elapsed time
+        elapsed = (flow.finishedTime - flow.startedTime).total_seconds()
+
+        # Convert the elapsed time to hours
+        elapsed = elapsed / 3600
+
+        # If the flow already exists in the database, sum the time
+        # to the existing time. The size does not need to be summed
+        # here because the flow size is computed for the whole folder everytime
+        # the flow ends automatically
+        with self.engine.connect() as connection:
+            result = connection.execute(
+                self.flows.select().where(self.flows.c.flow_id == flow.savedID)
+            ).fetchone()
+
+            if result is None:
+                # Insert the flow into the database
+                raise ValueError(
+                    f"Flow {flow.path} tried to update into the"
+                    + "database but does not exist in it."
+                )
+            else:
+                # By default, the time is 0, so we can just add the elapsed time
+                elapsed += result.time
+
+                # Update the flow in the database
+                connection.execute(
+                    self.flows.update()
+                    .where(self.flows.c.flow_id == flow.savedID)
+                    .values(time=elapsed, size=flow.size)
+                )
+
+            connection.commit()
+
+    def removeFlowForUser(self, flow: "Flow"):
+        """
+        Removes a flow from the user's flows quotas (sets the deleted flag to True)
+
+        :param user: The user that executed the flow
+        :param flow: The flow that was executed
+        """
+
+        # Remove the flow from the database
+        with self.engine.connect() as connection:
+            connection.execute(
+                self.flows.update()
+                .where(self.flows.c.flow_id == flow.savedID)
+                .values(deleted=True)
+            )
+            connection.commit()
+
+    def dumpDatabase(self):
+        """
+        Dumps the database as a JSON object
+        """
+
+        database = {}
+        with self.engine.connect() as connection:
+            result = connection.execute(self.users.select()).fetchall()
+            dictResult = []
+            for row in result:
+                dictUser = row._asdict()
+                # Remove the password
+                dictUser.pop("password")
+                dictResult.append(dictUser)
+
+            database["users"] = dictResult
+
+            result = connection.execute(self.flows.select()).fetchall()
+            dictResult = []
+
+            for row in result:
+                dictResult.append(row._asdict())
+
+            database["flows"] = dictResult
+
+        return database
+
+    def updateUserQuotas(self, userID: int, quotas: typing.Dict[str, typing.Any]):
+        """
+        Updates the quotas of a user in the database
+        """
+
+        with self.engine.connect() as connection:
+            connection.execute(
+                self.users.update().where(self.users.c.id == userID).values(quotas)
+            )
+            connection.commit()
+
+            logging.getLogger("Horus").info(
+                "Successfully updated quotas for user: %s with %s", userID, quotas
+            )

@@ -1,18 +1,18 @@
 import { IconProps } from "./IconType";
 
-export default function OpenFlowIcon(props: IconProps) {
+export default function HomeIcon(props: IconProps) {
   return (
     <svg
       className="w-6 h-6"
       xmlns="http://www.w3.org/2000/svg"
-      fill="none"
+      fill="currentColor"
       viewBox="0 0 24 24"
       strokeWidth={0}
       stroke="currentColor"
       {...props}
     >
       <path
-        d="M2 20V4H10L12 6H22V8H11.175L9.175 6H4V18L6.4 10H23.5L20.5 20H2ZM6.1 18H19L20.8 12H7.9L6.1 18Z"
+        d="M12 5.69L17 10.19V18H15V12H9V18H7V10.19L12 5.69ZM12 3L2 12H5V20H11V14H13V20H19V12H22L12 3Z"
         fill="currentColor"
       />
     </svg>

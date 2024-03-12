@@ -4,12 +4,25 @@ import RotatingLines from "../Components/RotatingLines/rotatinglines";
 import Logo from "../Components/logo";
 import "../Components/nbdbutton.css";
 import "../Components/FlowBuilder/Blocks/block.css";
+import LockIcon from "../Components/Toolbar/Icons/Lock";
+
+type UserQuota = {
+  currentFlows: number;
+  usedSpace: number;
+  usedHours: number;
+  maxFlows: number;
+  maxSpace: number;
+  maxHours: number;
+};
 
 type UserData = {
   username: string;
   email: string;
   group: string;
+  admin: boolean;
   registration_date: string;
+  // Can be optional as maybe the webapp doesn't have quotas
+  quota?: UserQuota;
 };
 
 export default function Profile() {
@@ -21,8 +34,6 @@ export default function Profile() {
       return;
     }
     const data = await response.json();
-
-    console.log(data);
 
     if (!data.logged) {
       window.location.href = "/users/login";
@@ -74,7 +85,7 @@ export default function Profile() {
 
   if (!userData) {
     return (
-      <div>
+      <div className="flex flex-row w-full justify-center items-center">
         <RotatingLines />
       </div>
     );
@@ -95,6 +106,39 @@ export default function Profile() {
         <>
           <div className="plugin-block mb-2">
             <span className="font-bold">Email:</span> {userData.email}
+          </div>
+          {userData.quota && (
+            <>
+              <div className="plugin-block mb-2">
+                <span className="font-bold">Flows:</span>{" "}
+                {userData.quota.currentFlows} /{" "}
+                {userData.quota.maxFlows ?? "Unlimited"}
+              </div>
+              <div className="plugin-block mb-2">
+                <span className="font-bold">Used space:</span>{" "}
+                {userData.quota.usedSpace} /{" "}
+                {userData.quota.maxSpace ?? "Unlimited"} MB
+              </div>
+              <div className="plugin-block mb-2">
+                <span className="font-bold">Computation hours:</span>{" "}
+                {userData.quota?.usedHours.toFixed(2)} /{" "}
+                {userData.quota?.maxHours}h
+              </div>
+            </>
+          )}
+          <div>
+            {userData.admin && (
+              <a
+                className="plugin-block mb-2 p-2 flex flex-row justify-between items-center cursor-pointer"
+                style={{
+                  color: "var(--waring-orange)",
+                }}
+                href="/users/admintools"
+                target="_blank"
+              >
+                Enter AdminTools <LockIcon />
+              </a>
+            )}
           </div>
           <div className="flex flex-col gap-2 mb-4">
             <a

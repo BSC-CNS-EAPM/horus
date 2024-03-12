@@ -20,8 +20,9 @@ This document describes the configuration options available in the JSON configur
 .. code-block:: javascript
 
     {
-      // WSGI server configuration. Usually, 4 workers are enough for a small server
-      workers: 4,
+      // Host and port where the server will listen
+      "host": "yourIP",
+      "port": 3000,
       // External URL. Will be used in mail activation links and other places
       "externalURL": "app.horus.com",
       // Company name
@@ -66,8 +67,6 @@ This document describes the configuration options available in the JSON configur
             maxFlows: 10,
             // Max computation hours
             maxTime: 100,
-            // When to reset the computation hours (in days or "null" to never reset)
-            resetTime: null,
           },
           // Extra fields for the user table, those work as the PluginVariables of HorusAPI
           // id, password, email, activated, register_date, last_login, admin, user_group are present by default.
@@ -99,9 +98,10 @@ This document describes the configuration options available in the JSON configur
 Configuration Options
 ---------------------
 
-1. **WSGI Server Configuration**:
+1. **Server Configuration**:
 
-   - `workers`: The number of worker processes for the WSGI server.
+   - `host`: The host where the server will listen.
+   - `port`: The port where the server will listen.
    - `externalURL`: The external URL of the server.
    - `companyName`: The name of the company.
    - `appName`: The name of the app.
@@ -136,10 +136,11 @@ Configuration Options
 
 5. **User Storage Quotas**:
 
+  .. note::
+      Set the quotas to 0 to disable the limit.
+
    - `maxStorage`: Maximum storage allowed per user (in MB).
 
    - `maxFlows`: Maximum number of flows allowed per user.
 
    - `maxTime`: Maximum computation hours allowed per user.
-
-   - `resetTime`: Time interval for resetting computation hours. Null to never reset.

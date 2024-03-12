@@ -13,7 +13,7 @@ type RecentUserFlowProps = {
   flows: Flow[];
 };
 
-const openFlow = (flow: Flow) => {
+export const openFlow = (flow: Flow) => {
   // Set the working view
   const startWorkingEvent = new CustomEvent("start-working", {
     detail: (
@@ -43,12 +43,15 @@ export default function RecentUserFlows(props: RecentUserFlowProps) {
       path.shift();
       path.pop();
       return (
-        <div className="flex flex-row gap-1">
+        <div className="flex flex-row gap-1 overflow-x-scroll">
           {path.map((p, index) => {
             return (
-              <div key={index} className="predefined-flow-plugin">
-                {index > 0 && <>▸ </>}
-                {p}
+              <div
+                key={index}
+                className="flex flex-row gap-2 predefined-flow-plugin w-full m-0"
+              >
+                {index > 0 && <div>▸</div>}
+                <div>{p}</div>
               </div>
             );
           })}
@@ -105,20 +108,21 @@ export function PredefinedFlows(props: RecentUserFlowProps) {
   );
 }
 
-export function useGetRecentFlows(): [
-  boolean,
-  Flow[],
-  Flow[],
-  () => Promise<void>,
-  (active: boolean) => void
-] {
+export function useGetRecentFlows(
+  webAppFlows: boolean = false
+): [boolean, Flow[], Flow[], () => Promise<void>, (active: boolean) => void] {
   const [fetchingRecents, setFetchingRecents] = useState(true);
   const [recentFlows, setRecentFlows] = useState<Flow[]>([]);
   const [predefinedFlows, setPredefinedFlows] = useState<Flow[]>([]);
   const interval = useRef<Timer | null>(null);
 
   const internalGetRecentFlows = useCallback(async () => {
-    const recentFlowsResponse = await horusGet("/api/recentflows");
+    let recentFlowsResponse;
+    if (webAppFlows) {
+      recentFlowsResponse = await horusGet("/users/flows");
+    } else {
+      recentFlowsResponse = await horusGet("/api/recentflows");
+    }
 
     if (!recentFlowsResponse) {
       return;
@@ -141,10 +145,11 @@ export function useGetRecentFlows(): [
     });
 
     setRecentFlows(flows);
-  }, []);
+  }, [webAppFlows]);
 
   const getFlows = useCallback(async () => {
     setFetchingRecents(true);
+
     const responsePredefined = await horusGet("/api/plugins/flows");
 
     if (!responsePredefined) {
@@ -189,6 +194,12 @@ export function useGetRecentFlows(): [
       toggleInterval(false);
     };
   }, [toggleInterval]);
+
+  // Get the flows
+  useEffect(() => {
+    getFlows();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return [
     fetchingRecents,

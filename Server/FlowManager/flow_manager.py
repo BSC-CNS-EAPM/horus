@@ -11,8 +11,10 @@ import uuid
 import datetime
 import logging
 import multiprocessing
+import subprocess
 import time
 import zipfile
+import tarfile
 import warnings
 
 # Enum for the flow status
@@ -176,6 +178,21 @@ class Flow:
     For example, any MolstarAPI action that needs to be executed on JS side
     """
 
+    size: typing.Optional[int] = None
+    """
+    The size of the folder that the flow is in (MB)
+    """
+
+    startedTime: typing.Optional[datetime.datetime] = None
+    """
+    The time the flow started running
+    """
+
+    finishedTime: typing.Optional[datetime.datetime] = None
+    """
+    The time the flow finished running
+    """
+
     FLOW_FILE: str = "flow.json"
     MOLSTAR_STATE_FILE: str = "molstarState.molx"
 
@@ -262,6 +279,18 @@ class Flow:
         self.date = flow.get("date", None)
         self.terminalOutput = flow.get("terminalOutput", [])
         self.pendingActions = flow.get("pendingActions", [])
+
+        # Get the flow size and time
+        self.size = flow.get("size", None)
+        self.startedTime = flow.get("startedTime", None)
+        self.finishedTime = flow.get("finishedTime", None)
+
+        # Convert the times to datetime
+        if self.startedTime is not None:
+            self.startedTime = datetime.datetime.fromtimestamp(self.startedTime)
+
+        if self.finishedTime is not None:
+            self.finishedTime = datetime.datetime.fromtimestamp(self.finishedTime)
 
         # Set the flow status
         status = flow.get("status", "IDLE")
@@ -417,6 +446,9 @@ class Flow:
             "currentExecuting": self.currentExecuting,
             "status": self.status.value,
             "date": self.date,
+            "size": self.size,
+            "startedTime": self.startedTime.timestamp() if self.startedTime else None,
+            "finishedTime": self.finishedTime.timestamp() if self.finishedTime else None,
             "blocks": blocksJSON,
             "terminalOutput": self.terminalOutput,
             "pendingActions": self.pendingActions,
@@ -960,6 +992,13 @@ class Flow:
 
         extAPI._flow = self
 
+        # Reset the flow size and the finished time
+        self.size = None
+        self.finishedTime = None
+
+        # Set the started time
+        self.startedTime = datetime.datetime.now()
+
         # Run the blocks
         with self.TerminalOutputUpdater(self.terminalOutput, self.savedID, socket):
             try:
@@ -975,18 +1014,62 @@ class Flow:
             except Exception:  # pylint: disable=broad-exception-raised
                 import traceback
 
-                traceback.print_exc()
+                logging.getLogger("Horus").error(
+                    traceback.format_exc(),
+                    exc_info=True,
+                )
                 self.status = self.FlowStatus.ERROR
-            finally:
-                # Save the flow
-                self.write()
 
-        # Send the flow to the frontend if a socket is provided
-        if self._socket is not None:
-            self._socket.emit("flow", self.encode(minimal=False), to=self.savedID)
+        # Set the finished time
+        self.finishedTime = datetime.datetime.now()
+
+        # Compute the size of the folder the flow is in
+        self.size = self._computeSize()
 
         # Restore the working dir
         os.chdir(oldWD)
+
+        # Save the flow
+        self.write()
+
+        # Send the flow to the frontend if a socket is provided
+        # Send a request to the main server to remove the flow from the running flows list
+        if socket is not None:
+            socket.removeFinishedFlowFromRunningFlows(self.path)
+            socket.emit("flow", self.encode(minimal=False), to=self.savedID)
+
+    def _computeSize(self) -> typing.Optional[int]:
+        """
+        Computes the size of the folder the flow is in
+
+        returns: The size of the folder in MB or None if the size could not be computed
+        """
+
+        # If the flow is not saved, return None
+        if self.path is None:
+            return None
+
+        # Get the folder of the flow
+        folder = os.path.dirname(self.path)
+
+        # Get the size of the using the du command
+        size = None
+        with subprocess.Popen(
+            ["du", "-cshm", folder], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        ) as proc:
+
+            if proc.stdout is None:
+                return None
+
+            try:
+                size = int(proc.stdout.read().decode("utf-8").split("\t")[0])
+            except Exception:
+                logging.getLogger("Horus").warning(
+                    "Could not compute the size of the flow folder. "
+                    + "This can constitute a problem on web app mode."
+                )
+
+        return size
 
     def stop(self, message: str = "The flow was stopped.", fail: bool = False):
         """
@@ -1030,6 +1113,10 @@ class Flow:
                 block._runError = True
                 block._runErrorMessage = message
                 block._finishedExecution = True
+
+        # Update the flow size and the finished time
+        self.size = self._computeSize()
+        self.finishedTime = datetime.datetime.now()
 
         # Save the flow
         self.write()
@@ -1144,8 +1231,17 @@ class FlowManager:
         Updates the recent flows file and removes non-existing flows
         """
         # Read the recent flows file
-        with open(self.recentFlowsPath, "r", encoding="utf-8") as file:
-            recentFlows = json.load(file)
+        read = False
+        recentFlows = {}
+        while not read:
+            with open(self.recentFlowsPath, "r", encoding="utf-8") as file:
+                try:
+                    recentFlows = json.load(file)
+                    read = True
+                except json.JSONDecodeError as exc:
+                    logging.getLogger("Horus").error(
+                        "Error reading recent flows file: %s", str(exc)
+                    )
 
         updatedRecentFlows = {}
         for flow in recentFlows:
@@ -1234,14 +1330,14 @@ class FlowManager:
         self.recentFlows.append(flow)
 
         # Remove the oldest flow if the list is longer than 10
-        while len(self.recentFlows) > 10:
-            oldestFlow = self.recentFlows[0]
-            for savedFlow in self.recentFlows:
-                if savedFlow.dateAsInt < oldestFlow.dateAsInt:
-                    oldestFlow = savedFlow
+        # while len(self.recentFlows) > 10:
+        #     oldestFlow = self.recentFlows[0]
+        #     for savedFlow in self.recentFlows:
+        #         if savedFlow.dateAsInt < oldestFlow.dateAsInt:
+        #             oldestFlow = savedFlow
 
-            logging.getLogger("Horus").debug("Removing oldest flow '%s'", oldestFlow.name)
-            self.recentFlows.remove(oldestFlow)
+        #     logging.getLogger("Horus").debug("Removing oldest flow '%s'", oldestFlow.name)
+        #     self.recentFlows.remove(oldestFlow)
 
         # Write the recent flows list to the file
         self._recentsWriter()
@@ -1380,7 +1476,10 @@ class FlowManager:
         return self._saveFlowInternal(flowInstance, overwrite, molstarState)
 
     def openFlowFromPath(
-        self, flowPath: str, socket: typing.Optional["HorusSocket"] = None
+        self,
+        flowPath: str,
+        socket: typing.Optional["HorusSocket"] = None,
+        addToRecents: bool = True,
     ) -> Flow:
         """
         Opens a flow from a file.
@@ -1399,7 +1498,8 @@ class FlowManager:
         flow = Flow.read(flowPath)
 
         # Add the flow to the recent flows list
-        self._addToRecentFlows(flow)
+        if addToRecents:
+            self._addToRecentFlows(flow)
 
         # If the flow was paused, resume it
         if flow.status == flow.FlowStatus.PAUSED:
@@ -1449,7 +1549,7 @@ class FlowManager:
         loadedFLow = None
         for pFlow in pluginFlows:
             if pFlow["savedID"] == savedID:
-                loadedFLow = self.openFlowFromPath(pFlow["path"])
+                loadedFLow = self.openFlowFromPath(pFlow["path"], addToRecents=False)
                 break
         if not loadedFLow:
             raise Exception("Flow not found.")  # pylint: disable=broad-exception-raised
@@ -1528,10 +1628,6 @@ class FlowManager:
 
                 # Run the flow
                 flow.run(placedID, resetRemoteBlock, socket, resetFlow)
-
-                # Send a request to the main server to remove the flow from the running flows list
-                if socket is not None:
-                    socket.removeFinishedFlowFromRunningFlows(flow.path)
 
                 logging.getLogger("Horus").info("Flow %s completed", flow.name)
             except KeyboardInterrupt:
@@ -1649,3 +1745,29 @@ class FlowManager:
 
         else:
             logging.getLogger("Horus").debug("Flow %s is not running", flow.path)
+
+    def compressFlow(self, flow: "Flow") -> str:
+        """
+        Will compress in a tar file the flow folder
+
+        :param flow: The flow to compress
+
+        :returns: The path to the compressed file
+        """
+
+        # Generate the "download folders" if they don't exist
+        downloadsFolder = os.path.join(self.appSupportDir, "download")
+
+        if not os.path.exists(downloadsFolder):
+            os.makedirs(downloadsFolder)
+
+        # Get the dirname of the flow
+        flowDir = os.path.dirname(flow.path)
+
+        # Create the tar file
+        tarPath = os.path.join(downloadsFolder, f"{flowDir}.tar")
+
+        with tarfile.open(tarPath, "w") as tar:
+            tar.add(flowDir, arcname=os.path.basename(flowDir))
+
+        return tarPath

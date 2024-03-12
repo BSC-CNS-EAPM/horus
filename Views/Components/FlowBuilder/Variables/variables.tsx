@@ -90,7 +90,10 @@ export function PluginVariableView(props: PluginVariableViewProps) {
     >
       <div>
         {!hideName && (
-          <div
+          <span
+            style={{
+              marginRight: "0.5rem",
+            }}
             className={`${
               props.hideDescription
                 ? "plugin-variable-description"
@@ -98,12 +101,12 @@ export function PluginVariableView(props: PluginVariableViewProps) {
             }`}
           >
             {variable.name}
-          </div>
+          </span>
         )}
         {!props.hideDescription && (
-          <div className="plugin-variable-description">
+          <span className="plugin-variable-description">
             {variable.description}
-          </div>
+          </span>
         )}
       </div>
       <div className={`plugin-variable-value flex justify-start w-full`}>
@@ -1595,14 +1598,14 @@ export function InputView(props: { groups: VariableGroup[] }) {
     return (
       <>
         {props.groups[0]!.variables.map((variable) => {
-          return <SimpleVariableView variable={variable} />;
+          return <SimpleVariableView variable={variable} border={false} />;
         })}
       </>
     );
   }
 
   return (
-    <div className="flex flex-row flex-wrap gap-2">
+    <div className="flex flex-col flex-wrap gap-2">
       {props.groups.map((group) => {
         return (
           <div
@@ -1614,7 +1617,7 @@ export function InputView(props: { groups: VariableGroup[] }) {
           >
             <div className="text-xl font-semibold">{group.name}</div>
             <div>{group.description}</div>
-            <div className="flex flex-row gap-2 overflow-x-scroll h-full flex-wrap">
+            <div className="flex flex-col gap-2 overflow-x-scroll h-full flex-wrap">
               {group.variables.map((variable) => {
                 return <SimpleVariableView variable={variable} />;
               })}
@@ -1626,9 +1629,17 @@ export function InputView(props: { groups: VariableGroup[] }) {
   );
 }
 
-export function SimpleVariableView(props: { variable: PluginVariable }) {
+export function SimpleVariableView(props: {
+  variable: PluginVariable;
+  border?: boolean;
+}) {
   return (
-    <div className="plugin-variable animated-gradient">
+    <div
+      className="plugin-variable animated-gradient"
+      style={{
+        border: props.border ? "1px solid var(--pop-code)" : "none",
+      }}
+    >
       <div className="plugin-variable-name">{props.variable.name}</div>
       <div className="plugin-variable-description">
         {props.variable.description}
