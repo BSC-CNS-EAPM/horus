@@ -22,8 +22,28 @@ button {
 
 /* Disable any outline for all inputs */
 input,
-textarea {
+textarea,
+select {
   outline: none;
+}
+
+select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-size: 1.5em;
+  background: transparent;
+  transition: all 0.3s ease-in-out;
+  padding-inline: 0.5rem;
+}
+
+select:hover {
+  border: 1px solid var(--vintage-code);
+  appearance: default;
+  -webkit-appearance: default;
+  -moz-appearance: default;
+  background: var(--vintage-code);
+  color: white;
 }
 
 .splash-container {

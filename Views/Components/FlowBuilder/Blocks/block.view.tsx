@@ -34,6 +34,7 @@ import TrashIcon from "../../Toolbar/Icons/Trash";
 import SettingsIcon from "../../Toolbar/Icons/Settings";
 import CheckMark from "../../Toolbar/Icons/CheckMark";
 import ErrorIcon from "../../Toolbar/Icons/Error";
+import PlayIcon from "../../Toolbar/Icons/Play";
 
 export function BlockView(props: BlockViewProps) {
   const blockState = useBlockView(props);
@@ -78,7 +79,7 @@ export function BlockView(props: BlockViewProps) {
                 <div className="text-gray-400">{props.block.placedID}</div>
               )}
             </div>
-            <div className="flex flex-row gap-1 items-center cursor-auto">
+            <div className="flex flex-row gap-1 items-end cursor-auto">
               {/* Play button to execute the block */}
               {/* Delete button to remove the block from the canvas */}
               {props.block.isPlaced && (
@@ -155,7 +156,7 @@ export function BlockView(props: BlockViewProps) {
                     </div>
                   )}
                   {(props.block.type === BlockTypes.SLURM ||
-                    blockState.settings.allowRemotesOnNonSlurm) &&
+                    window.horusSettings["allowRemotesOnNonSlurm"]?.value) &&
                     props.block.isPlaced && (
                       <div>
                         <hr className="mt-1 mb-1" />
@@ -334,8 +335,12 @@ function FinishedCheck(props: { runError: boolean; runErrorMessage?: string }) {
             setIsOpen(true);
           }}
           className="cursor-pointer"
+          style={{
+            position: "relative",
+            top: "-2px",
+          }}
         >
-          <ErrorIcon color="var(--red-error)" />
+          <ErrorIcon color="var(--red-error)" className="w-5 h-5" />
         </div>
       </>
     );
@@ -401,8 +406,15 @@ function BlockVariablesButton({ onClick }: { onClick: () => void }) {
   return (
     <HorusPopover
       trigger={
-        <button onClick={onClick}>
-          <SettingsIcon />
+        <button
+          onClick={onClick}
+          style={{
+            position: "relative",
+            top: "-2px",
+            right: "-1px",
+          }}
+        >
+          <SettingsIcon className="w-5 h-5" />
         </button>
       }
     >
@@ -419,8 +431,20 @@ function DeleteBlockButton({ block, onClick }: DeleteBlockButtonProps) {
   return (
     <HorusPopover
       trigger={
-        <button onClick={deleteBlock}>
-          <TrashIcon color="var(--red-error)" />
+        <button
+          onClick={deleteBlock}
+          style={{
+            position: "relative",
+            top: "-2px",
+          }}
+        >
+          <TrashIcon
+            color="var(--red-error)"
+            style={{
+              height: "1.35rem",
+              width: "1.35rem",
+            }}
+          />
         </button>
       }
     >
@@ -471,21 +495,22 @@ function PlayBlockButton({
     <HorusPopover
       trigger={
         isRunning ? (
-          <RotatingLines size="1.5rem" />
+          <RotatingLines
+            size="1.5rem"
+            style={{
+              position: "relative",
+              top: "-4px",
+            }}
+          />
         ) : (
-          <button onClick={handleClick}>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill={runError ? "red" : "current"}
-              className="w-5 h-5"
-            >
-              <path
-                fillRule="evenodd"
-                d="M2 10a8 8 0 1116 0 8 8 0 01-16 0zm6.39-2.908a.75.75 0 01.766.027l3.5 2.25a.75.75 0 010 1.262l-3.5 2.25A.75.75 0 018 12.25v-4.5a.75.75 0 01.39-.658z"
-                clipRule="evenodd"
-              />
-            </svg>
+          <button
+            onClick={handleClick}
+            style={{
+              position: "relative",
+              right: "-2px",
+            }}
+          >
+            <PlayIcon />
           </button>
         )
       }
@@ -500,7 +525,13 @@ function InputRunningSpinner(props: { isRunning: boolean }) {
     return (
       <>
         <BlockTime />
-        <RotatingLines size="1.5rem" />
+        <RotatingLines
+          size="1.5rem"
+          style={{
+            position: "relative",
+            top: "-1px",
+          }}
+        />
       </>
     );
   }

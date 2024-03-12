@@ -18,14 +18,19 @@ import PluginPagesView, { loadPage, usePluginPages } from "./extensions_list";
 
 // Icons
 import NewFlowIcon from "./Icons/New";
-import PluginsIcon from "./Icons/Plugins";
 import OpenFlowIcon from "./Icons/Open";
 import MolStarIcon from "./Icons/MolStar";
-import EyeIcon from "./Icons/Eye";
 import EyeDashIcon from "./Icons/EyeDash";
 import Chevron from "./Icons/Chevron";
-import TrashIcon from "./Icons/Trash";
 import LogFile from "./Icons/LogFile";
+import SaveIcon from "./Icons/Save";
+import SaveAsIcon from "./Icons/SaveAs";
+import CreateFolderIcon from "./Icons/CreateFolder";
+import TrashLines from "./Icons/TrashLines";
+import BackArrow from "./Icons/Undo";
+import ForwardArrow from "./Icons/Redo";
+import CenterView from "./Icons/CenterView";
+import ConsoleIcon from "./Icons/Console";
 
 // Horus web-server utils
 import { horusGet } from "../../Utils/utils";
@@ -35,13 +40,11 @@ import "../nbdbutton.css";
 import "./toolbar.css";
 import { Flow, PluginPage } from "../FlowBuilder/flow.types";
 
-// import RotatingLines from "../RotatingLines/rotatinglines";
-
 interface ToolBarItemProps {
   name: string;
   hidden?: boolean;
   link?: string;
-  svgPath: React.ReactNode;
+  svgPath?: React.ReactNode;
   onClick?: () => void;
   keyShortcut?: string;
   children?: React.ReactNode;
@@ -90,7 +93,9 @@ function ToolBarItem(props: ToolBarItemProps) {
         props.onClick?.();
       }}
     >
-      <MenuIcon active={active || isOpen} svgPath={props.svgPath} />
+      {props.svgPath && (
+        <MenuIcon active={active || isOpen} svgPath={props.svgPath} />
+      )}
       <div className="cut-text">{props.name}</div>
       {props.children}
       {props.keyShortcut ? (
@@ -107,7 +112,7 @@ function ToolBarItem(props: ToolBarItemProps) {
 interface ToolBarMenuProps {
   name: string;
   hidden?: boolean;
-  svgPath: React.ReactNode;
+  svgPath?: React.ReactNode;
   items?: ToolBarItemProps[];
   link?: string;
   onClick?: () => void;
@@ -137,7 +142,12 @@ function ToolbarMenu(props: ToolBarMenuProps) {
             leaveFrom="transform opacity-100 scale-100"
             leaveTo="transform opacity-0 scale-95"
           >
-            <Menu.Items className="absolute p-md-2 mt-2 w-56 origin-top-left rounded-xl bg-white toolbar-menu outline-none">
+            <Menu.Items
+              className="absolute p-md-2 mt-2 w-56 origin-top-left rounded-xl bg-white toolbar-menu outline-none overflow-y-scroll"
+              style={{
+                maxHeight: "calc(100vh - 4rem)",
+              }}
+            >
               {/* // Here the items will be rendered */}
               {props.items?.map((item) =>
                 item.hidden ? null : (
@@ -353,22 +363,6 @@ export default function HorusToolbar() {
     {
       name: "Home",
       link: "/",
-      svgPath: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth={1.5}
-          stroke="currentColor"
-          className="w-6 h-6"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
-          />
-        </svg>
-      ),
       onClick: () => {
         // confirm the user if the flow is not saved
         const currentFlow: (Flow & { saved: boolean }) | null = window.horus
@@ -395,22 +389,6 @@ export default function HorusToolbar() {
     },
     {
       name: "File",
-      svgPath: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth={1.5}
-          stroke="currentColor"
-          className="w-6 h-6"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
-          />
-        </svg>
-      ),
       items: [
         {
           name: "New",
@@ -450,22 +428,7 @@ export default function HorusToolbar() {
         {
           name: "Save",
           keyShortcut: `${modifierKeyLogo}S`,
-          svgPath: (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-6 h-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"
-              />
-            </svg>
-          ),
+          svgPath: <SaveIcon />,
           onClick: () => {
             saveEvent();
           },
@@ -473,22 +436,7 @@ export default function HorusToolbar() {
         {
           name: "Save as...",
           keyShortcut: `${modifierKeyLogo}${shiftKeyLogo}S`,
-          svgPath: (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-6 h-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3l3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"
-              />
-            </svg>
-          ),
+          svgPath: <SaveAsIcon />,
           onClick: () => {
             saveAsEvent();
           },
@@ -496,29 +444,14 @@ export default function HorusToolbar() {
         {
           name: "File explorer",
           hidden: window.horusInternal.isDesktop,
-          svgPath: (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-6 h-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m5.231 13.481L15 17.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v16.5c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Zm3.75 11.625a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"
-              />
-            </svg>
-          ),
+          svgPath: <CreateFolderIcon />,
           onClick: () => {
             fileExplorerEvent();
           },
         },
         {
           name: "Clean recents",
-          svgPath: <TrashIcon />,
+          svgPath: <TrashLines />,
           onClick: () => {
             cleanRecents();
           },
@@ -527,22 +460,6 @@ export default function HorusToolbar() {
     },
     {
       name: "Edit",
-      svgPath: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          strokeWidth={1.5}
-          stroke="currentColor"
-          className="w-6 h-6"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
-          />
-        </svg>
-      ),
       items: [
         {
           name: "Undo",
@@ -553,22 +470,7 @@ export default function HorusToolbar() {
             undoEvent();
           },
           keyShortcut: `${modifierKeyLogo}Z`,
-          svgPath: (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-6 h-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"
-              />
-            </svg>
-          ),
+          svgPath: <BackArrow />,
         },
         {
           name: "Redo",
@@ -576,28 +478,12 @@ export default function HorusToolbar() {
             redoEvent();
           },
           keyShortcut: `${modifierKeyLogo}${shiftKeyLogo}Z`,
-          svgPath: (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-6 h-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15 15l6-6m0 0l-6-6m6 6H9a6 6 0 000 12h3"
-              />
-            </svg>
-          ),
+          svgPath: <ForwardArrow />,
         },
       ],
     },
     {
       name: "View",
-      svgPath: <EyeIcon />,
       items: [
         {
           name: "Toggle Mol*",
@@ -613,22 +499,7 @@ export default function HorusToolbar() {
           onClick: () => {
             toggleConsole();
           },
-          svgPath: (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-6 h-6"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z"
-              />
-            </svg>
-          ),
+          svgPath: <ConsoleIcon />,
           // Set a keyShortcut to enable keyboard navigation.
           keyShortcut: `${modifierKeyLogo}K`,
         },
@@ -638,24 +509,7 @@ export default function HorusToolbar() {
             const centerEvent = new CustomEvent("centerView");
             window.dispatchEvent(centerEvent);
           },
-          svgPath: (
-            <>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-                className="w-6 h-6"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25"
-                />
-              </svg>
-            </>
-          ),
+          svgPath: <CenterView />,
         },
         {
           name: "Debug flow",
@@ -670,7 +524,6 @@ export default function HorusToolbar() {
     },
     {
       name: "Extensions",
-      svgPath: <PluginsIcon />,
       items: [
         {
           name: "Hide extensions",

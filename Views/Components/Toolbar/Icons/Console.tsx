@@ -1,6 +1,6 @@
 import { IconProps } from "./IconType";
 
-export default function OpenFlowIcon(props: IconProps) {
+export default function ConsoleIcon(props: IconProps) {
   return (
     <svg
       className="w-6 h-6"
@@ -12,7 +12,7 @@ export default function OpenFlowIcon(props: IconProps) {
       {...props}
     >
       <path
-        d="M2 20V4H10L12 6H22V8H11.175L9.175 6H4V18L6.4 10H23.5L20.5 20H2ZM6.1 18H19L20.8 12H7.9L6.1 18Z"
+        d="M2 20V4H22V20H2ZM4 18H20V8H4V18ZM7.5 17L6.1 15.6L8.675 13L6.075 10.4L7.5 9L11.5 13L7.5 17ZM12 17V15H18V17H12Z"
         fill="currentColor"
       />
     </svg>

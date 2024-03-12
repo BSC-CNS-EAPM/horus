@@ -4,6 +4,7 @@ import ErrorIcon from "../Toolbar/Icons/Error";
 import CheckMark from "../Toolbar/Icons/CheckMark";
 import ChronoIcon from "../Toolbar/Icons/Chrono";
 import StopIcon from "../Toolbar/Icons/Stop";
+import PausedIcon from "../Toolbar/Icons/Paused";
 
 type FlowStatusViewProps = {
   status: FlowStatus;
@@ -27,6 +28,8 @@ function FlowStatusView(props: FlowStatusViewProps) {
       return <QueuedFlowStatus />;
     case FlowStatus.CANCELLING:
       return <CancellingFlowStatus />;
+    case FlowStatus.IDLE:
+      return <IdleFlowStatus />;
     default:
       return null;
   }
@@ -34,7 +37,7 @@ function FlowStatusView(props: FlowStatusViewProps) {
 
 type FlowStatusBaseProps = {
   children: React.ReactNode;
-  color: "red" | "orange" | "blue" | "green" | "purple";
+  color: "red" | "orange" | "blue" | "green" | "purple" | "black";
 };
 
 function FlowStatusBase(props: FlowStatusBaseProps) {
@@ -44,13 +47,32 @@ function FlowStatusBase(props: FlowStatusBaseProps) {
     blue: "text-blue-500",
     green: "text-green-500",
     purple: "text-purple-500",
+    black: "",
   };
 
   const classColorName = colorStyle[props.color];
 
   const className = `flex flex-row gap-1 items-center ${classColorName}`;
 
-  return <div className={className}>{props.children}</div>;
+  return (
+    <div
+      className={className}
+      style={{
+        color: props.color === "black" ? "var(--digital-grey-IV)" : "",
+      }}
+    >
+      {props.children}
+    </div>
+  );
+}
+
+function IdleFlowStatus() {
+  return (
+    <FlowStatusBase color="black">
+      <CheckMark />
+      <div>Saved</div>
+    </FlowStatusBase>
+  );
 }
 
 function QueuedFlowStatus() {
@@ -74,20 +96,7 @@ function RunningFlowStatus() {
 function PausedFlowStatus() {
   return (
     <FlowStatusBase color="orange">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        strokeWidth={1.5}
-        stroke="currentColor"
-        className="w-5 h-5"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M14.25 9v6m-4.5 0V9M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-        />
-      </svg>
+      <PausedIcon />
       <div>Paused</div>
     </FlowStatusBase>
   );

@@ -14,6 +14,7 @@ import Slider from "rc-slider";
 
 // Flow status view and stop button
 import StopIcon from "../../Toolbar/Icons/Stop";
+import SaveIcon from "../../Toolbar/Icons/Save";
 import { FlowStatusView } from "../../FlowStatus/flow_status";
 
 type FlowCanvasProps = {
@@ -114,6 +115,7 @@ function FlowTopBar(props: { flowHooks: FlowHooks }) {
           borderColor: props.flowHooks.saved
             ? "var(--digital-grey-IV)"
             : "orange",
+          minWidth: "200px",
         }}
         className="flow-name flow-title"
         type="text"
@@ -128,16 +130,22 @@ function FlowTopBar(props: { flowHooks: FlowHooks }) {
         value={props.flowHooks.flow.name}
       />
       <div
-        className={`flex flex-col gap-0 items-center text-center justify-center ${
+        className={`flex flex-col gap-0 items-center text-center justify-center bg-white flow-name ${
           props.flowHooks.flow.status === FlowStatus.RUNNING ||
           props.flowHooks.flow.status === FlowStatus.QUEUED
             ? "cursor-pointer"
             : "cursor-default"
-        } ${props.flowHooks.flow.status !== FlowStatus.IDLE && "flow-name"}`}
+        }`}
         onClick={() => {
           (props.flowHooks.flow.status === FlowStatus.RUNNING ||
             props.flowHooks.flow.status === FlowStatus.QUEUED) &&
             props.flowHooks.stopFlow();
+        }}
+        style={{
+          borderColor: props.flowHooks.saved
+            ? "var(--digital-grey-IV)"
+            : "orange",
+          minWidth: "200px",
         }}
       >
         <div className="flex flex-row gap-1 items-center justify-center">
@@ -153,7 +161,19 @@ function FlowTopBar(props: { flowHooks: FlowHooks }) {
               ></div>{" "}
             </>
           )}
-          <FlowStatusView status={props.flowHooks.flow.status} />
+          {props.flowHooks.saved ? (
+            <FlowStatusView status={props.flowHooks.flow.status} />
+          ) : (
+            <div
+              className="flex flex-row gap-2"
+              style={{
+                color: "orange",
+              }}
+            >
+              <SaveIcon />
+              <div>Unsaved</div>
+            </div>
+          )}
         </div>
         {props.flowHooks.flow.pendingActions.length > 0 && (
           <div
