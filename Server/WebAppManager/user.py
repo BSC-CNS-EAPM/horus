@@ -92,7 +92,7 @@ class HorusUser(flask_login.UserMixin):
         self.activated = userDict.get("activated", False)
         self.registrationDate = userDict.get("registration_date")
         self.lastLogin = userDict.get("last_login")
-        self.admin = userDict.get("admin")
+        self.admin = userDict.get("admin", False)
         self.group = userDict.get("group")
 
         if self.email is None:

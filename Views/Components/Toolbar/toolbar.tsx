@@ -7,7 +7,6 @@ import { ChangeEvent, Fragment, useEffect, useState } from "react";
 import { Menu, Transition } from "@headlessui/react";
 
 // Horus components
-import { FlowBuilderView } from "../FlowBuilder/flow.view";
 import RotatingLines from "../RotatingLines/rotatinglines";
 import SplashScreen from "../MainApp/welcome_screen";
 import RecentUserFlows, {
@@ -456,7 +455,7 @@ export default function HorusToolbar() {
         {
           name: "Clean recents",
           hidden: window.horusInternal.mode === "webapp",
-          svgPath: <TrashIcon />,
+          svgPath: <TrashLines />,
           onClick: () => {
             cleanRecents();
           },
