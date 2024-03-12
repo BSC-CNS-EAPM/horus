@@ -43,12 +43,12 @@ export default function RecentUserFlows(props: RecentUserFlowProps) {
       path.shift();
       path.pop();
       return (
-        <div className="flex flex-row gap-1 overflow-x-scroll">
+        <div className="flex flex-row gap-1 overflow-x-scroll justify-start">
           {path.map((p, index) => {
             return (
               <div
                 key={index}
-                className="flex flex-row gap-2 predefined-flow-plugin w-full m-0 justify-start"
+                className="flex flex-row gap-1 predefined-flow-plugin m-0"
               >
                 {index > 0 && <div>▸</div>}
                 <div>{p}</div>
