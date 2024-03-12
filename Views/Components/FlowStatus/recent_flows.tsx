@@ -48,7 +48,7 @@ export default function RecentUserFlows(props: RecentUserFlowProps) {
             return (
               <div
                 key={index}
-                className="flex flex-row gap-2 predefined-flow-plugin w-full m-0"
+                className="flex flex-row gap-2 predefined-flow-plugin w-full m-0 justify-start"
               >
                 {index > 0 && <div>▸</div>}
                 <div>{p}</div>

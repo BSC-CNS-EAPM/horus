@@ -120,14 +120,14 @@ export function VariableModalView(props: VariableModalViewProps) {
         <div className="flex flex-col h-full">
           <div className="sticky top-0 z-10">
             <div className="variables-modal-title-search">
-              <h1
-                className="font-semibold"
+              <div
+                className="font-semibold text-3xl"
                 style={{
                   color: "var(--digital-grey-IV)",
                 }}
               >
                 {block.name}
-              </h1>
+              </div>
               <div className="flex flex-row gap-2">
                 <SearchComponent
                   placeholder="Search variables"
@@ -138,7 +138,7 @@ export function VariableModalView(props: VariableModalViewProps) {
                 )}
               </div>
             </div>
-            <hr className="mb-1"></hr>
+            <hr className="my-4 p-0"></hr>
           </div>
           {block.variables && block.variables.length > 0 && (
             <SidebarView views={getGroupedVariables()} />
