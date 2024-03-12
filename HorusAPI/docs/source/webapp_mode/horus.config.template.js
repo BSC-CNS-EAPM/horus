@@ -1,6 +1,4 @@
 export const config = {
-  // WSGI server configuration. Usually, 4 workers are enough for a small server
-  workers: 4,
   // External URL. Will be used in mail activation links and other places
   externalURL: "app.horus.com",
   // Company name

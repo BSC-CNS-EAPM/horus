@@ -495,11 +495,6 @@ class WebAppManager:
     rawConfig: Dict[str, Any]
 
     # Parsed config data
-    workers: int
-    """
-    The number of workers to use for the server WSGI backend
-    """
-
     host: str
     """
     The host to use for the server
@@ -556,7 +551,6 @@ class WebAppManager:
         with open(self.HORUS_CONFIG_FILE, "r", encoding="utf-8") as file:
             self.rawConfig: Dict[str, Any] = json.load(file)
 
-        self.workers = self.rawConfig.get("workers", 1)
         self.host = self.rawConfig.get("host", "localhost")
         self.port = self.rawConfig.get("port", 5000)
         self.externalURL = self.rawConfig.get("externalURL", None)

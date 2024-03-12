@@ -239,6 +239,21 @@ export type Flow = {
    * The Mol* pending tasks
    */
   pendingActions: Array<any>;
+
+  /**
+   * The flow size
+   */
+  size?: number;
+
+  /**
+   * Timestamp when the flow started executing
+   */
+  startedTime?: number;
+
+  /**
+   * Timestamp when the flow finished executing
+   */
+  finishedTime?: number;
 };
 
 export enum DraggableEntity {

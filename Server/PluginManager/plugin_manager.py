@@ -1098,12 +1098,8 @@ class PluginManager(metaclass=HorusSingleton):
             with PluginDeps(plugin._path):
                 # Execute the block
                 outputs = PluginDeps.subprocessBlock(block)
-        except Exception:  # pylint: disable=broad-exception-caught
-
-            # Get the full traceback
-            import traceback
-
-            errorMSG = traceback.format_exc()
+        except Exception as exc:
+            errorMSG = str(exc)
             error = True
         finally:
             # Calculate the final time

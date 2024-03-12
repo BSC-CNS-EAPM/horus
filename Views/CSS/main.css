@@ -50,6 +50,7 @@ select:hover {
   /* Use a media query so that when the viewpoer width is less than 600px, height changes from 100% to fit*/
   max-height: 100vh;
   padding: 2rem;
+  grid-col: 1;
 }
 
 .vertical-splash-separator {
@@ -161,4 +162,104 @@ select:hover {
 
 .chonky-infoContainer {
   display: none !important ;
+}
+
+.sticky-app-header {
+  grid-row: 1;
+  grid-column: 1;
+  position: sticky;
+  top: 0;
+}
+
+.nbd-btn {
+  border: none;
+  border: 2px solid var(--gradient-blue);
+  background: var(--gradient-blue);
+  position: relative;
+  color: white;
+  font-weight: 400;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  width: max-content;
+  margin: 0 auto;
+  padding: 5px;
+  border-radius: 20px;
+  min-width: 230px;
+  text-decoration: none;
+  letter-spacing: 2px;
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+  text-align: center;
+}
+
+/* .nbd-btn:after {
+  background-color: #fff;
+  content: "";
+  border-radius: 0%;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  display: block;
+  -webkit-transform: scaleX(0) scaleY(1);
+  -ms-transform: scaleX(0) scaleY(1);
+  transform: scaleX(0) scaleY(1);
+  -webkit-transform-origin: left;
+  -ms-transform-origin: left;
+  transform-origin: left;
+  -webkit-transition: -webkit-transform 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+  transition: -webkit-transform 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+  -o-transition: transform 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+  transition: transform 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+  transition: transform 0.6s cubic-bezier(0.19, 1, 0.22, 1),
+    -webkit-transform 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+.nbd-btn:hover:after {
+  -webkit-transform: scaleX(1) scaleY(1);
+  -ms-transform: scaleX(1) scaleY(1);
+  transform: scaleX(1) scaleY(1);
+}
+
+.nbd-btn:hover {
+  color: rgb(0, 0, 0) !important;
+}
+
+.nbd-btn:hover svg path {
+  fill: #fff;
+} */
+
+.nbd-btn:disabled {
+  background: #ccc;
+  border: 2px solid #ccc;
+  color: #fff;
+  cursor: not-allowed;
+}
+
+.app-button {
+  cursor: default !important;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  outline: none;
+  height: 1.75rem;
+  /* margin-top: 0.1rem; */
+  padding: 0.5rem;
+  align-items: center;
+  justify-content: left;
+  display: flex;
+  flex-direction: row;
+  /* Animate the background when hovering */
+  transition: background 0.2s ease-in-out;
+  /* margin-bottom: 0.3rem; */
+}
+
+/* Change the font size of the app-button if the screen space is low */
+@media (max-width: 900px) {
+  .app-button {
+    font-size: 0.8rem;
+  }
 }

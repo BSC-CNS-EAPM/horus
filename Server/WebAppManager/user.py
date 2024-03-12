@@ -64,6 +64,11 @@ class HorusUser(flask_login.UserMixin):
     For web apps that do not require registration
     """
 
+    admin: bool
+    """
+    If the user is an admin
+    """
+
     def __init__(self, userDict: typing.Dict[str, typing.Any], appSupportDir: str) -> None:
         """
         :param userDict: The user dictionary from the database.
@@ -123,6 +128,9 @@ class HorusUser(flask_login.UserMixin):
         """
         Converts a relative path from the
         webapp mode into the full path
+
+        :param path: The relative path
+        :return: A tuple with the full path and the highest boundary
         """
 
         highestBoundary = os.path.abspath(self.flowsDir)

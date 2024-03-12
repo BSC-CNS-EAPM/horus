@@ -27,6 +27,7 @@ import { SettingsView } from "../../Settings/settings";
 import Login from "../Toolbar/Icons/Login";
 import UserIcon from "../Toolbar/Icons/User";
 import Profile from "../../Login/profile";
+import WebAppUserFlows from "../WebAppUserFlows/WebAppUserFlows";
 
 type SplashModal = {
   header?: React.ReactNode;
@@ -44,33 +45,42 @@ export default function SplashScreen() {
   };
 
   return (
-    <div className="flex flex-col justify-center items-center h-screen">
+    <div className="grid h-screen">
       <WelcomeToHorus setModalContent={updateModalContent} />
-      <div className="splash-container flex flex-row flex-wrap justify-center items-center w-full gap-8 zoom-in-animation overflow-auto text-white m-auto">
-        <div className="flex gap-2 p-2 flex-wrap justify-center flex-direction-splash-buttons">
-          <CreateNewFlow />
-          <OpenFlow />
-          {!window.horusInternal.webApp && (
-            <ManagePlugins setModalContent={updateModalContent} />
-          )}
-          {window.horusInternal.webApp?.allowRemotes !== false && (
-            <ManageRemotes setModalContent={updateModalContent} />
-          )}
-          <Settings setModalContent={updateModalContent} />
+      <div className="splash-container flex flex-col overflow-auto gap-4 items-center">
+        <div className="flex flex-row flex-wrap justify-center items-center w-full gap-8 zoom-in-animation text-white">
+          <div className="flex gap-2 p-2 flex-wrap justify-center flex-direction-splash-buttons">
+            <CreateNewFlow />
+            {!window.horusInternal.webApp && (
+              <>
+                <OpenFlow />
+                <ManagePlugins setModalContent={updateModalContent} />
+              </>
+            )}
+            {window.horusInternal.webApp?.allowRemotes !== false && (
+              <ManageRemotes setModalContent={updateModalContent} />
+            )}
+            <Settings setModalContent={updateModalContent} />
+          </div>
+          <div className="vertical-splash-separator" />
+          <div className="flex flex-row flex-wrap gap-2 justify-center">
+            {window.horusInternal.mode === "webapp" ? (
+              <PredefinedFlowsSplash />
+            ) : (
+              <RecentFlowsSplash />
+            )}
+            <ExploreExtensions />
+          </div>
         </div>
-        <div className="vertical-splash-separator" />
-        <div className="flex flex-row flex-wrap gap-2 justify-center">
-          <RecentFlowsSplash />
-          <ExploreExtensions />
-        </div>
-        {modalContent && (
-          <ModalView
-            modal={modalContent}
-            isOpen={showModal}
-            onHide={() => setShowModal(false)}
-          />
-        )}
+        {window.horusInternal.mode === "webapp" && <WebAppUserFlows />}
       </div>
+      {modalContent && (
+        <ModalView
+          modal={modalContent}
+          isOpen={showModal}
+          onHide={() => setShowModal(false)}
+        />
+      )}
     </div>
   );
 }
@@ -103,8 +113,11 @@ function WelcomeToHorus(props: {
 
   return (
     <HorusContainer
-      className="flex flex-row items-center px-2 w-full"
+      className="sticky-app-header flex flex-row items-center justify-between px-2 w-full bg-white"
       style={{
+        position: "sticky",
+        zIndex: 200,
+        top: "0",
         borderTop: "none",
         borderLeft: "none",
         borderRight: "none",
@@ -115,11 +128,11 @@ function WelcomeToHorus(props: {
       <div>
         <Logo className="h-16" />
       </div>
-      <div className="flex justify-center items-center w-full font-semibold">
-        Welcome to {appName}
+      <div className="flex justify-center items-center w-full font-semibold absolute mx-auto">
+        {appName}
       </div>
       {loginRequried && (
-        <div className="flex flex-row gap-2">
+        <div className="flex flex-row gap-2 z-10">
           <UserIcon
             style={{
               cursor: "pointer",
@@ -262,15 +275,56 @@ function Settings(props: ButtonOpensModalProps) {
   );
 }
 
-function RecentFlowsSplash() {
-  // Get the recent flows with the custom hook
-  const [fetchingRecents, recentFlows, predefinedFlows, getFlows] =
+// When running webapp mode, instead of showing the recent flows
+// we show the predefined flows. As the recents will be shown in the "Your flows"
+// section of the webapp
+function PredefinedFlowsSplash() {
+  // Get the predefined flows with the custom hook
+  const [fetchingRecents, , predefinedFlows, , toggleInterval] =
     useGetRecentFlows();
 
-  // Get the flows
   useEffect(() => {
-    getFlows();
-  }, []);
+    toggleInterval(false);
+  }, [toggleInterval]);
+
+  return (
+    <ScrollableViewWelcome.Root>
+      <ScrollableViewWelcome.Header>
+        <div className="text-xl font-semibold">Preset flows</div>
+      </ScrollableViewWelcome.Header>
+      <ScrollableViewWelcome.Body>
+        {fetchingRecents ? (
+          <div className="w-[26rem] h-full flex justify-center items-center">
+            <RotatingLines />
+          </div>
+        ) : (
+          <div className="w-full h-full">
+            {predefinedFlows.length === 0 ? (
+              <div className="h-full w-[26rem] flex justify-center items-center">
+                No preset flows
+              </div>
+            ) : (
+              <PredefinedFlows flows={predefinedFlows} />
+            )}
+          </div>
+        )}
+      </ScrollableViewWelcome.Body>
+      <ScrollableViewWelcome.Footer>
+        <a
+          className="app-button text-black text-decoration-none"
+          href="https://nbdsoftware.github.io/horus/running_flows/index.html"
+          target="_blank"
+        >
+          Learn more about flows
+        </a>
+      </ScrollableViewWelcome.Footer>
+    </ScrollableViewWelcome.Root>
+  );
+}
+
+function RecentFlowsSplash() {
+  // Get the recent flows with the custom hook
+  const [fetchingRecents, recentFlows, predefinedFlows] = useGetRecentFlows();
 
   return (
     <ScrollableViewWelcome.Root>
@@ -279,7 +333,7 @@ function RecentFlowsSplash() {
           {recentFlows.length === 0
             ? predefinedFlows.length === 0
               ? "Recent flows"
-              : "Sample flows"
+              : "Preset flows"
             : "Recent flows"}
         </div>
       </ScrollableViewWelcome.Header>

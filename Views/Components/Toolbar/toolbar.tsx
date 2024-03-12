@@ -254,32 +254,40 @@ const handleKeyDown = (event: KeyboardEvent) => {
   const isModifierKeyPressed = event.getModifierState(modifierKey);
   const isShiftKeyPressed = event.getModifierState(shiftKey);
 
-  // Handle the keydown event
+  // Toggle console
   if (event.code === "KeyK" && isModifierKeyPressed) {
     event.preventDefault();
     toggleConsole();
   }
-
+  // Toggle Molstar
   if (event.code === "KeyM" && isModifierKeyPressed && isShiftKeyPressed) {
     event.preventDefault();
     toggleMolstar();
   }
-
+  // Redo
   if (event.code === "KeyZ" && isModifierKeyPressed && isShiftKeyPressed) {
     event.preventDefault();
     redoEvent();
   }
+  // Undo
   if (event.code === "KeyZ" && isModifierKeyPressed && !isShiftKeyPressed) {
     event.preventDefault();
     undoEvent();
   }
+  // Save as
   if (event.code === "KeyS" && isModifierKeyPressed && isShiftKeyPressed) {
     event.preventDefault();
     saveAsEvent();
   }
+  // Save
   if (event.code === "KeyS" && isModifierKeyPressed) {
     event.preventDefault();
     saveEvent();
+  }
+  // New flow
+  if (event.code === "KeyN" && isModifierKeyPressed) {
+    event.preventDefault();
+    newFlowEvent();
   }
 };
 
@@ -310,6 +318,14 @@ const saveEvent = () => {
   // Emit a save event
   const event = new CustomEvent("saveFlow");
   window.dispatchEvent(event);
+};
+
+const newFlowEvent = () => {
+  // Emit an event "newFlow"
+  // This event will be captured by the flowReciever component
+  // and will clear the flow
+  const newFlowEvent = new CustomEvent("newFlow");
+  window.dispatchEvent(newFlowEvent);
 };
 
 const saveAsEvent = () => {
@@ -392,28 +408,15 @@ export default function HorusToolbar() {
       items: [
         {
           name: "New",
+          keyShortcut: `${modifierKeyLogo}N`,
           svgPath: <NewFlowIcon />,
           onClick: () => {
-            // Emit an event "newFlow"
-            // This event will be captured by the flowReciever component
-            // and will clear the flow
-
-            // Set the secondary view to the flow builder
-            const mainView = <FlowBuilderView />;
-
-            const mainViewEvent = new CustomEvent("mainView", {
-              detail: mainView,
-            });
-            window.dispatchEvent(mainViewEvent);
-
-            const newFlowEvent = new CustomEvent("newFlow", {
-              detail: {},
-            });
-            window.dispatchEvent(newFlowEvent);
+            newFlowEvent();
           },
         },
         {
           name: "Open",
+          hidden: window.horusInternal.mode === "webapp",
           svgPath: <OpenFlowIcon />,
           onClick: () => {
             // Emit an event "openFlow"
@@ -435,6 +438,7 @@ export default function HorusToolbar() {
         },
         {
           name: "Save as...",
+          hidden: window.horusInternal.mode === "webapp",
           keyShortcut: `${modifierKeyLogo}${shiftKeyLogo}S`,
           svgPath: <SaveAsIcon />,
           onClick: () => {
@@ -443,7 +447,7 @@ export default function HorusToolbar() {
         },
         {
           name: "File explorer",
-          hidden: window.horusInternal.isDesktop,
+          hidden: window.horusInternal.mode !== "server",
           svgPath: <CreateFolderIcon />,
           onClick: () => {
             fileExplorerEvent();
@@ -451,7 +455,8 @@ export default function HorusToolbar() {
         },
         {
           name: "Clean recents",
-          svgPath: <TrashLines />,
+          hidden: window.horusInternal.mode === "webapp",
+          svgPath: <TrashIcon />,
           onClick: () => {
             cleanRecents();
           },

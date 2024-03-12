@@ -1,0 +1,24 @@
+.flow-table {
+  display: grid;
+  grid-template-columns: repeat(8, auto);
+  gap: 0.5rem;
+}
+
+.header-row > div,
+.flow-row > div {
+  padding: 0.5rem;
+}
+
+.header-row {
+  font-weight: bold;
+  text-align: center;
+}
+
+.svg-container {
+  text-align: center;
+}
+
+.svg-container svg {
+  display: block;
+  margin-inline: auto;
+}

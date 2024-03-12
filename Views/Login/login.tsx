@@ -39,10 +39,15 @@ export default function LoginRegister() {
     msg: "",
   });
 
-  const setView = useCallback((newView: "login" | "register") => {
-    _setView(newView);
-    setMessages({ ok: false, msg: "" });
-  }, []);
+  const setView = useCallback(
+    (newView: "login" | "register", resetMessage: boolean = true) => {
+      _setView(newView);
+      if (resetMessage) {
+        setMessages({ ok: false, msg: "" });
+      }
+    },
+    []
+  );
 
   const isFirstRender = useRef(true);
 
@@ -147,6 +152,34 @@ function Login({
     }
   }, [setView]);
 
+  useEffect(() => {
+    // Get the input field
+    const email = document.getElementById("email")! as HTMLInputElement;
+    const password = document.getElementById("password")! as HTMLInputElement;
+
+    // Execute a function when the user presses a key on the keyboard
+    email.addEventListener("keypress", function (event) {
+      // If the user presses the "Enter" key on the keyboard
+      if (event.key === "Enter") {
+        // Cancel the default action, if needed
+        event.preventDefault();
+        // Trigger the button element with a click
+        document.getElementById("signInButton")!.click();
+      }
+    });
+
+    // Execute a function when the user presses a key on the keyboard
+    password.addEventListener("keypress", function (event) {
+      // If the user presses the "Enter" key on the keyboard
+      if (event.key === "Enter") {
+        // Cancel the default action, if needed
+        event.preventDefault();
+        // Trigger the button element with a click
+        document.getElementById("signInButton")!.click();
+      }
+    });
+  }, []);
+
   const login = async (event: any) => {
     event.preventDefault();
 
@@ -159,7 +192,13 @@ function Login({
       password: password,
     });
 
-    const response = await (await horusPost("/users/login", null, body)).json();
+    let response;
+    try {
+      response = await (await horusPost("/users/login", null, body)).json();
+    } catch (error) {
+      window.location.href = "/"; // or the redirect URL
+      return;
+    }
 
     if (!response.ok) {
       setLoginAttempts(1);
@@ -202,7 +241,11 @@ function Login({
             />
             <label htmlFor="password">Password</label>
           </div>
-          <button className="nbd-btn w-100 animated-gradient" onClick={login}>
+          <button
+            id="signInButton"
+            className="nbd-btn w-100 animated-gradient"
+            onClick={login}
+          >
             Sign in
           </button>
         </div>
@@ -244,7 +287,7 @@ function Register({
   setMessages,
   setView,
 }: {
-  setView: (newView: "login" | "register") => void;
+  setView: (newView: "login" | "register", resetMessage?: boolean) => void;
   setMessages: React.Dispatch<
     React.SetStateAction<{
       ok: boolean;
@@ -303,18 +346,18 @@ function Register({
       fields: parsedFields,
     });
 
-    const response = await (
-      await horusPost("/users/register", null, body)
-    ).json();
+    const response = await await horusPost("/users/register", null, body);
+
+    const data = await response.json();
 
     setMessages({
-      ok: response.ok,
-      msg: response.msg,
+      ok: data.ok,
+      msg: data.msg,
     });
 
-    if (response.ok) {
+    if (data.ok) {
       // Redirect to login
-      setView("login");
+      setView("login", false);
     }
   };
 

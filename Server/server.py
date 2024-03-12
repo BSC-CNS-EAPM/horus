@@ -10,6 +10,7 @@ The HorusServer module
 
 # Tools
 import os
+import shutil
 import sys
 import hashlib
 import logging
@@ -71,6 +72,7 @@ from Server.WebAppManager import HorusUser
 
 if typing.TYPE_CHECKING:
     from Server.WebAppManager import Database
+    from Server.FlowManager import Flow
 
     # Cast the flask_login UserMixin to the HorusUser class
     currentUser = typing.cast(HorusUser, flask_login.current_user)
@@ -415,6 +417,20 @@ class HorusServer:
 
             return db.getUser(id=user_id)
 
+        @loginManager.needs_refresh_handler
+        def refresh():
+
+            logging.getLogger("Horus").debug(
+                "User %s needs refresh for accessing this request %s",
+                currentUser.email,
+                request.url,
+            )
+
+            # Log the user out
+            flask_login.logout_user()
+
+            return flask.redirect("/users/login")
+
     def _setupServer(self):
         """
         Creates the Flask server instance. This will serve the GUI files and handle the
@@ -442,86 +458,129 @@ class HorusServer:
 
         return server
 
-    def _routes(self):
-
-        # Create a wrapper for login (only applies to webapp mode and requires registration)
-        def verifyLogin(func):
-            @wraps(func)
-            def wrapper(*args, **kwargs):
-                # If we are on webapp mode, and we require users to be logged in
-                # this wrapper will prevent access to the route if the user is not logged in
-                if self.webAppManager and self.webAppManager.userManagement.requireRegistration:
-                    # Check that the user is logged in
-                    if not currentUser.is_authenticated:
-                        return flask.redirect("/users/login")
-                elif (
-                    self.webAppManager
-                    and not self.webAppManager.userManagement.requireRegistration
-                ):
-                    # If we are on webapp mode, and we do not require registration
-                    # Authenticate the demo user if not authenticated
-                    if currentUser is not None and currentUser.is_authenticated:
-                        return func(*args, **kwargs)
-                    else:
-                        # Login the demo user
-                        return flask.redirect("/users/login")
-
-                return func(*args, **kwargs)
-
-            return wrapper
-
-        # Wrapper for demo user restriction
-        def stopDemoUser(func):
-            @wraps(func)
-            def wrapper(*args, **kwargs):
-
-                if self.webAppManager is None or self.webAppManager.userManagement is None:
+    # Create a wrapper for login (only applies to webapp mode and requires registration)
+    def verifyLogin(self, func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            # If we are on webapp mode, and we require users to be logged in
+            # this wrapper will prevent access to the route if the user is not logged in
+            if self.webAppManager and self.webAppManager.userManagement.requireRegistration:
+                # Check that the user is logged in
+                if not currentUser.is_authenticated:
+                    return flask.redirect("/users/login")
+            elif self.webAppManager and not self.webAppManager.userManagement.requireRegistration:
+                # If we are on webapp mode, and we do not require registration
+                # Authenticate the demo user if not authenticated
+                if currentUser is not None and currentUser.is_authenticated:
                     return func(*args, **kwargs)
+                else:
+                    # Login the demo user
+                    return flask.redirect("/users/login")
 
-                # Stop the user only if we require registration
-                if self.webAppManager.userManagement.requireRegistration:
-                    if currentUser is not None and currentUser.isDemo:
-                        return flask.jsonify(
-                            {"ok": False, "msg": "To use this feature, please register."}
-                        )
+            return func(*args, **kwargs)
 
+        return wrapper
+
+    def verifyAdmin(self, func):
+        @wraps(func)
+        # @flask_login.fresh_login_required
+        def wrapper(*args, **kwargs):
+            # If we are on webapp mode, and we require users to be logged in
+            # this wrapper will prevent access to the route if the user is not logged in
+            if not currentUser.admin:
+                return flask.jsonify(
+                    {"ok": False, "msg": "You do not have permission to perform this action."}
+                )
+
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    # Wrapper for demo user restriction
+    def stopDemoUser(self, func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+
+            if self.webAppManager is None or self.webAppManager.userManagement is None:
                 return func(*args, **kwargs)
 
-            return wrapper
+            # Stop the user only if we require registration
+            if self.webAppManager.userManagement.requireRegistration:
+                if currentUser is not None and currentUser.isDemo:
+                    return flask.jsonify(
+                        {"ok": False, "msg": "To use this feature, please register."}
+                    )
 
-        # Create a wrapper for checking if the app is on desktop mode or web mode
-        def desktopOnly(func):
-            @wraps(func)
-            def wrapper(*args, **kwargs):
-                if not self.desktop and not self.debug:
-                    error = {
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    # Wrapper for preventing access in the webapp mode
+    def preventOnWebApp(self, func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            if self.webAppManager is not None:
+                return flask.jsonify(
+                    {
                         "ok": False,
-                        "message": "This function is only available on desktop mode.",
+                        "msg": "This function is not available on Web App mode.",
                     }
-                    logging.getLogger("Horus").error(error["message"])
-                    return flask.jsonify(error)
-                return func(*args, **kwargs)
+                )
+            return func(*args, **kwargs)
 
-            return wrapper
+        return wrapper
 
-        def allowRemotes(func):
-            @wraps(func)
-            def wrapper(*args, **kwargs):
-                if self.webAppManager is not None and not self.webAppManager.allowRemotes:
-                    error = {
-                        "ok": False,
-                        "message": "This function is not available",
-                    }
-                    logging.getLogger("Horus").error(error["message"])
-                    return flask.jsonify(error)
-                return func(*args, **kwargs)
+    # Wrapper for preventing flow execution if the user has reached the quota
+    def verifyQuotas(self, func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            if self.webAppManager is not None and self.webAppManager.db is not None:
+                if self.webAppManager.db.hasReachedQuota(currentUser):
+                    return flask.jsonify(
+                        {
+                            "ok": False,
+                            "msg": "You have reached your quota. Please remove some flows to continue.",
+                        }
+                    )
+            return func(*args, **kwargs)
 
-            return wrapper
+        return wrapper
 
+    # Create a wrapper for checking if the app is on desktop mode or web mode
+    def desktopOnly(self, func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            if not self.desktop and not self.debug:
+                error = {
+                    "ok": False,
+                    "message": "This function is only available on desktop mode.",
+                }
+                logging.getLogger("Horus").error(error["message"])
+                return flask.jsonify(error)
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    def allowRemotes(self, func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            if self.webAppManager is not None and not self.webAppManager.allowRemotes:
+                error = {
+                    "ok": False,
+                    "message": "This function is not available",
+                }
+                logging.getLogger("Horus").error(error["message"])
+                return flask.jsonify(error)
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    def _routes(self):
         # API routes
         @self.server.route("/api/saveflow", methods=["POST"])
-        @verifyLogin
-        @stopDemoUser
+        @self.verifyLogin
+        @self.stopDemoUser
+        @self.verifyQuotas
         def saveFlow():
 
             # The client here sends a form data with two values:
@@ -565,7 +624,29 @@ class HorusServer:
             try:
 
                 # If we are on webapp mode, update the relative path to the user's folder
+                # All flows are stored in individual user folders
                 if self.webAppManager is not None:
+                    currentPath = flowData["path"]
+
+                    # If the flow has no path (is new)
+                    # then give it the user's directory
+                    # Create it by generating a
+                    # container folder with the sanitized name. Then, the flow will be
+                    # saved inside this folder
+                    if currentPath is None:
+                        from pathvalidate import sanitize_filepath
+
+                        sanitizedName = sanitize_filepath(flowData["name"], max_len=30)
+                        sanitizedName = sanitizedName.replace(" ", "_")
+
+                        # Create the folder
+                        finalPath = os.path.join(currentUser.flowsDir, sanitizedName)
+                        os.makedirs(finalPath, exist_ok=True)
+
+                        # Update the path
+                        flowData["path"] = os.path.join(sanitizedName, sanitizedName + ".flow")
+
+                    # Finally, update the path to the user's directory
                     flowData["path"] = currentUser.getUserPath(flowData["path"])[0]
 
                 flow = self.flowManager.saveFlow(flowData, molstarState)
@@ -596,7 +677,7 @@ class HorusServer:
             return flask.jsonify(success)
 
         @self.server.route("/api/openflow", methods=["GET"])
-        @verifyLogin
+        @self.verifyLogin
         def openFlow():
 
             if not self.flowManager:
@@ -635,7 +716,7 @@ class HorusServer:
             return flask.jsonify(success)
 
         @self.server.route("/api/recentflows", methods=["GET"])
-        @verifyLogin
+        @self.verifyLogin
         def recentFlows():
             try:
                 flows = self.flowManager.listRecentFlows()
@@ -661,8 +742,18 @@ class HorusServer:
             return flask.jsonify(success)
 
         @self.server.route("/api/cleanrecents", methods=["GET"])
-        @verifyLogin
+        @self.verifyLogin
         def cleanRecents():
+
+            # If we ar eon webapp mode, prevent users from cleaning the recents
+            if self.webAppManager is not None:
+                return flask.jsonify(
+                    {
+                        "ok": False,
+                        "msg": "This function is not available on webapp mode",
+                    }
+                )
+
             try:
                 self.flowManager.cleanRecentFlows()
                 success = {"ok": True}
@@ -674,7 +765,7 @@ class HorusServer:
             return flask.jsonify(success)
 
         @self.server.route("/api/openrecentflow", methods=["POST"])
-        @verifyLogin
+        @self.verifyLogin
         def openRecentflow():
             try:
                 data = request.get_json()
@@ -728,7 +819,7 @@ class HorusServer:
             return flask.jsonify(success)
 
         @self.server.route("/api/updatemolstate", methods=["POST"])
-        @verifyLogin
+        @self.verifyLogin
         def updateMolState():
             # The client here sends a form data with two values:
             # - flowPath: The path to the flow
@@ -796,7 +887,7 @@ class HorusServer:
             return flask.jsonify(internalSettings)
 
         @self.server.route("/api/plugins/install", methods=["POST"])
-        @desktopOnly
+        @self.desktopOnly
         def installPlugin():
             data = request.get_json()
 
@@ -815,7 +906,7 @@ class HorusServer:
             return flask.jsonify(success)
 
         @self.server.route("/api/plugins/uninstall", methods=["POST"])
-        @desktopOnly
+        @self.desktopOnly
         def uninstallPlugin():
             data = request.get_json()
             pluginName = data.get("name", None)
@@ -838,7 +929,7 @@ class HorusServer:
             return success
 
         @self.server.route("/api/desktop/appsupportdir", methods=["GET"])
-        @desktopOnly
+        @self.desktopOnly
         def openPluginsFolder():
             from App import AppDelegate  # pylint: disable=import-outside-toplevel
 
@@ -846,26 +937,27 @@ class HorusServer:
             return "OK"
 
         @self.server.route("/api/plugins/list", methods=["GET"])
-        @verifyLogin
+        @self.verifyLogin
         def listPlugins():
             plugins = self.pluginManager.getPlugins()
             return flask.jsonify(plugins)
 
         @self.server.route("/api/plugins/listblocks", methods=["GET"])
-        @verifyLogin
+        @self.verifyLogin
         def listblocks():
             plugins = self.pluginManager.getBlocks()
             return flask.jsonify(plugins)
 
         @self.server.route("/api/plugins/listpages", methods=["GET"])
-        @verifyLogin
+        @self.verifyLogin
         def listpages():
             pages = self.pluginManager.getPages()
             return flask.jsonify(pages)
 
         @self.server.route("/api/plugins/executeflow", methods=["POST"])
-        @verifyLogin
-        @stopDemoUser
+        @self.verifyLogin
+        @self.stopDemoUser
+        @self.verifyQuotas
         def executeFlow():
             # Get the request data
             data = request.get_json()
@@ -894,6 +986,11 @@ class HorusServer:
                     rAPI = RemotesAPI()
                     rAPI.deleteFlowFromQueue(flow.savedID)
 
+                # If we are on webappmode, register the flow
+                # into the database for the current user
+                if self.webAppManager is not None and self.webAppManager.db is not None:
+                    self.webAppManager.db.registerFlowForUser(currentUser, flow)
+
                 # Run the flow
                 self.flowManager.runFlow(
                     flow, placedID, resetRemoteBlock, self.socketio, resetFlow
@@ -911,7 +1008,7 @@ class HorusServer:
             return flask.jsonify(success)
 
         @self.server.route("/api/plugins/stopflow", methods=["POST"])
-        @verifyLogin
+        @self.verifyLogin
         def stopFlow():
             # Get the flowID from the request
             data = request.get_json()
@@ -923,6 +1020,11 @@ class HorusServer:
 
             try:
                 stoppedFlow = self.flowManager.stopFlow(flowPath)
+
+                # Update the flow in the database
+                if self.webAppManager is not None and self.webAppManager.db is not None:
+                    self.webAppManager.db.updateFlowForUser(stoppedFlow)
+
                 self.socketio.emit(
                     "flow", stoppedFlow.encode(minimal=False), to=stoppedFlow.savedID
                 )
@@ -931,7 +1033,6 @@ class HorusServer:
                 return flask.jsonify({"ok": False, "msg": str(exc)})
 
         @self.server.route("/internal/removefinishedflow", methods=["POST"])
-        @verifyLogin
         def removeFlowFromQueue():
             flowPath = request.get_json().get("flowPath", None)
 
@@ -940,12 +1041,22 @@ class HorusServer:
 
             try:
                 self.flowManager.removeRunningFlow(flowPath)
+
+                # If on webapp mode, we can update the database
+                # with the flow elapsed time and size
+                if self.webAppManager is not None and self.webAppManager.db is not None:
+                    # Load the flow
+                    flow = self.flowManager.openFlowFromPath(flowPath)
+
+                    # Update the database
+                    self.webAppManager.db.updateFlowForUser(flow)
+
                 return "OK"
             except Exception as exc:
                 return str(exc), 400
 
         @self.server.route("/api/plugins/config", methods=["POST"])
-        @verifyLogin
+        @self.verifyLogin
         def pluginConfig():
             data = request.get_json()
             # Save the config
@@ -964,7 +1075,7 @@ class HorusServer:
                 return flask.jsonify(error)
 
         @self.server.route("/api/plugins/flows", methods=["GET"])
-        @verifyLogin
+        @self.verifyLogin
         def listFlows():
             try:
                 flows = self.pluginManager.listFlows()
@@ -983,7 +1094,7 @@ class HorusServer:
             return flask.jsonify(success)
 
         @self.server.route("/api/desktop/command", methods=["POST", "GET"])
-        @desktopOnly
+        @self.desktopOnly
         def executeCommand():
             data = request.get_json()
             from App import AppDelegate  # pylint: disable=import-outside-toplevel
@@ -998,7 +1109,7 @@ class HorusServer:
                 }
 
         @self.server.route("/api/desktop/openwindow", methods=["POST"])
-        @desktopOnly
+        @self.desktopOnly
         def openWindow():
             name = request.get_json()["name"]
             url = request.get_json()["url"]
@@ -1009,14 +1120,14 @@ class HorusServer:
             return "OK"
 
         @self.server.route("/api/getbrowserurl", methods=["GET"])
-        @desktopOnly
-        @verifyLogin
+        @self.desktopOnly
+        @self.verifyLogin
         def getBrowserURL():
             return flask.jsonify({"url": self.baseURL})
 
         @self.server.route("/api/openbmode", methods=["GET"])
-        @desktopOnly
-        @verifyLogin
+        @self.desktopOnly
+        @self.verifyLogin
         def openBrowserMode():
             from App import AppDelegate  # pylint: disable=import-outside-toplevel
 
@@ -1026,8 +1137,8 @@ class HorusServer:
             return "OK"
 
         @self.server.route("/api/openURL", methods=["POST"])
-        @desktopOnly
-        @verifyLogin
+        @self.desktopOnly
+        @self.verifyLogin
         def openURL():
             from App import AppDelegate
 
@@ -1040,7 +1151,7 @@ class HorusServer:
             return flask.jsonify({"ok": True})
 
         @self.server.route("/api/version", methods=["GET"])
-        @verifyLogin
+        @self.verifyLogin
         def version():
             try:
                 from App import AppDelegate  # pylint: disable=import-outside-toplevel
@@ -1060,7 +1171,7 @@ class HorusServer:
             return flask.jsonify(success)
 
         @self.server.route("/api/filepicker", methods=["POST"])
-        @verifyLogin
+        @self.verifyLogin
         def filePicker():
 
             path = request.get_json().get("path")
@@ -1101,7 +1212,8 @@ class HorusServer:
             return flask.jsonify(success)
 
         @self.server.route("/api/filepicker/createfolder", methods=["POST"])
-        @verifyLogin
+        @self.verifyLogin
+        @self.preventOnWebApp
         def createFolder():
             path = request.get_json().get("path", os.getcwd())
             folderName = request.get_json().get("folderName", None)
@@ -1119,7 +1231,8 @@ class HorusServer:
                 return flask.jsonify({"ok": False, "msg": str(exc)})
 
         @self.server.route("/api/filepicker/upload", methods=["POST"])
-        @verifyLogin
+        @self.verifyLogin
+        @self.preventOnWebApp
         def uploadFiles():
             request.get_data()
             path = request.form.get("path", None)
@@ -1148,7 +1261,7 @@ class HorusServer:
                 return flask.jsonify({"ok": False, "msg": str(exc)})
 
         @self.server.route("/api/filepicker/download", methods=["POST"])
-        @verifyLogin
+        @self.verifyLogin
         def downloadFiles():
 
             path = request.get_json().get("path", None)
@@ -1193,7 +1306,8 @@ class HorusServer:
                 return flask.jsonify({"ok": False, "msg": str(exc)})
 
         @self.server.route("/api/filepicker/delete", methods=["POST"])
-        @verifyLogin
+        @self.verifyLogin
+        @self.preventOnWebApp
         def deleteFiles():
             data = request.get_json()
             path = data.get("path", None)
@@ -1206,8 +1320,6 @@ class HorusServer:
 
             try:
                 if os.path.isdir(path):
-                    import shutil
-
                     shutil.rmtree(path)
                 else:
                     os.remove(path)
@@ -1216,7 +1328,7 @@ class HorusServer:
                 return flask.jsonify({"ok": False, "msg": str(exc)})
 
         @self.server.route("/api/openfolder", methods=["GET", "POST"])
-        @verifyLogin
+        @self.verifyLogin
         def openFolder():
             if self.desktop:
                 from App import AppDelegate  # pylint: disable=import-outside-toplevel
@@ -1231,7 +1343,7 @@ class HorusServer:
             return flask.jsonify({"path": selFolder})
 
         @self.server.route("/api/openfile", methods=["GET", "POST"])
-        @verifyLogin
+        @self.verifyLogin
         def openFile():
             extensions = ("All Files (*.*)",)
             if request.method == "POST":
@@ -1257,8 +1369,8 @@ class HorusServer:
             return flask.jsonify({"path": selFile})
 
         @self.server.route("/api/savecontents", methods=["POST"])
-        @verifyLogin
-        @stopDemoUser
+        @self.verifyLogin
+        @self.stopDemoUser
         def saveFile():
             # Get from the request the data to save
             data = request.get_json()
@@ -1296,14 +1408,14 @@ class HorusServer:
                 )
 
         @self.server.route("/api/remotes/list", methods=["GET"])
-        @allowRemotes
-        @verifyLogin
+        @self.allowRemotes
+        @self.verifyLogin
         def listRemotes():
             return flask.jsonify(self.remoteManager.listRemotes())
 
         @self.server.route("/api/remotes/names", methods=["GET"])
-        @allowRemotes
-        @verifyLogin
+        @self.allowRemotes
+        @self.verifyLogin
         def listRemoteNames():
             try:
                 remotes = self.remoteManager.listRemotes(includeLocal=True)
@@ -1322,8 +1434,8 @@ class HorusServer:
             return flask.jsonify(success)
 
         @self.server.route("/api/remotes/configure", methods=["POST"])
-        @allowRemotes
-        @verifyLogin
+        @self.allowRemotes
+        @self.verifyLogin
         def configureRemote():
             data = request.get_json()
 
@@ -1337,8 +1449,8 @@ class HorusServer:
                 return flask.jsonify({"ok": False, "msg": str(exc)})
 
         @self.server.route("/api/remotes/delete", methods=["POST"])
-        @allowRemotes
-        @verifyLogin
+        @self.allowRemotes
+        @self.verifyLogin
         def deleteRemote():
             data = request.get_json()
 
@@ -1354,7 +1466,7 @@ class HorusServer:
                 return flask.jsonify({"ok": False, "msg": str(exc)})
 
         @self.server.route("/api/settings", methods=["GET"])
-        @verifyLogin
+        @self.verifyLogin
         def settings():
             settings = self.settingsManager.listSettings()
 
@@ -1362,14 +1474,14 @@ class HorusServer:
             # return flask.render_template("Settings/index.html")
 
         @self.server.route("/api/restoreSettings", methods=["GET"])
-        @verifyLogin
+        @self.verifyLogin
         def settingsDefaults():
             self.settingsManager.restoreDefaults()
 
             return flask.jsonify({"ok": True})
 
         @self.server.route("/api/settings/<settingID>", methods=["GET"])
-        @verifyLogin
+        @self.verifyLogin
         def setting(settingID):
             try:
                 setting = self.settingsManager.getSetting(settingID)
@@ -1379,8 +1491,8 @@ class HorusServer:
             return flask.jsonify({"ok": True, "setting": setting.toDict()})
 
         @self.server.route("/api/saveSettings", methods=["POST"])
-        @stopDemoUser
-        @verifyLogin
+        @self.verifyLogin
+        @self.stopDemoUser
         def saveSettings():
             data = request.get_json()
 
@@ -1417,7 +1529,7 @@ class HorusServer:
 
         # View routes
         @self.server.route("/")
-        @verifyLogin
+        @self.verifyLogin
         def index():
             # Get the query string
             shemsu = request.args.get("shemsu", None)
@@ -1430,30 +1542,30 @@ class HorusServer:
             return flask.render_template("Main/index.html")
 
         @self.server.route("/plugins/", methods=["GET"])
-        @desktopOnly
-        @verifyLogin
+        @self.desktopOnly
+        @self.verifyLogin
         def pluginsManager():
             return flask.render_template("PluginsManager/index.html", shemsu=self.token)
 
         @self.server.route("/bmode", methods=["GET"])
-        @desktopOnly
+        @self.desktopOnly
         def bmode():
             return flask.render_template("BrowserMode/index.html")
 
         @self.server.route("/about", methods=["GET"])
-        @verifyLogin
+        @self.verifyLogin
         def about():
             return flask.render_template("About/index.html", shemsu=self.token)
 
         @self.server.route("/remotes", methods=["GET"])
-        @allowRemotes
-        @desktopOnly
+        @self.allowRemotes
+        @self.desktopOnly
         def remotes():
             return flask.render_template("Remotes/index.html")
 
         @self.server.route("/settingsview")
-        @verifyLogin
-        @desktopOnly
+        @self.verifyLogin
+        @self.desktopOnly
         def settingsView():
             return flask.render_template("Settings/index.html")
 
@@ -1946,10 +2058,25 @@ class HorusServer:
                     return flask.jsonify({"ok": True, "logged": False})
 
                 if currentUser and currentUser.is_authenticated:
+
+                    userDict = currentUser.toDict()
+
+                    # Fetch the quota for the user too
+                    try:
+                        userDict["quota"] = (
+                            self.webAppManager.db.getUserCurrentQuotasForDisplayOnUserPage(
+                                currentUser
+                            )
+                            if self.webAppManager.db
+                            else None
+                        )
+                    except Exception:
+                        userDict["quota"] = None
+
                     # Send the user data
                     return flask.jsonify(
                         {
-                            "user": currentUser.toDict(),
+                            "user": userDict,
                             "logged": True,
                         }
                     )
@@ -2031,11 +2158,209 @@ class HorusServer:
                 self.webAppManager.db.deleteUser(currentUser.email)
 
                 # Delete the user directory
-                import shutil
-
                 shutil.rmtree(currentUser.appSupportDir)
 
                 flask_login.logout_user()
+                return flask.jsonify({"ok": True})
+            except Exception as exc:
+                return flask.jsonify({"ok": False, "msg": str(exc)})
+
+        @self.server.route("/users/flows", methods=["GET"])
+        @self.verifyLogin
+        def userFlows():
+            """
+            Returns the user's flows in web app mode
+            """
+
+            if self.webAppManager is None or self.webAppManager.db is None:
+                return flask.jsonify({"ok": False, "msg": "No user registration required"})
+
+            try:
+                # Loop over the user's flow directory and return the .flow files
+                flowInstances: typing.List["Flow"] = []
+                flowDirectories = os.listdir(currentUser.flowsDir)
+                for flowDir in flowDirectories:
+                    flowPath = os.path.join(currentUser.flowsDir, flowDir, flowDir + ".flow")
+                    if os.path.exists(flowPath):
+                        flowInstances.append(self.flowManager.openFlowFromPath(flowPath))
+
+                # If we are in webapp mode, remove the part of the paths that is not
+                # accessible by the user (otside its directory)
+                if self.webAppManager is not None:
+                    highestBoundary = os.path.abspath(currentUser.flowsDir)
+                    for flow in flowInstances:
+                        flow.path = (
+                            flow.path.replace(highestBoundary, "") if flow.path else flow.path
+                        )
+
+                # Convert the flows to JSON
+                flows = [flow.encode() for flow in flowInstances]
+
+                success = {"ok": True, "flows": flows}
+            except Exception as exc:  # pylint: disable=broad-exception-caught
+                success = {
+                    "ok": False,
+                    "msg": str(exc),
+                }
+            return flask.jsonify(success)
+
+        @self.server.route("/users/deleteflow", methods=["POST"])
+        @self.verifyLogin
+        def deleteUserFlow():
+            """
+            Deletes a flow from the user's flows in web app mode
+            """
+
+            if self.webAppManager is None or self.webAppManager.db is None:
+                return flask.jsonify({"ok": False, "msg": "No user registration required"})
+
+            # Get the flow data
+            data = request.get_json()
+
+            if data is None:
+                return flask.jsonify({"ok": False, "msg": "No data provided"})
+
+            # Remove the flow from the database and the user's directory
+            try:
+                flowPath = data.get("path", None)
+
+                if flowPath is None:
+                    return flask.jsonify({"ok": False, "msg": "No path provided"})
+
+                # Convert the path to the user's directory
+                flowPath, _ = currentUser.getUserPath(flowPath)
+
+                # Load the flow from the data
+                flow = self.flowManager.openFlowFromPath(flowPath)
+
+                # Delete the container folder of the flow
+                if os.path.exists(flow.path):
+                    shutil.rmtree(os.path.dirname(flow.path))
+                else:
+                    return flask.jsonify({"ok": False, "msg": "Flow path does not exist"})
+
+                self.webAppManager.db.removeFlowForUser(flow)
+                return flask.jsonify({"ok": True})
+            except Exception as exc:
+                return flask.jsonify({"ok": False, "msg": str(exc)})
+
+        @self.server.route("/users/downloadflow", methods=["GET", "POST"])
+        @self.verifyLogin
+        def downloadFlow():
+            """
+            Downloads a flow from the user's flows in web app mode
+            """
+
+            if self.webAppManager is None or self.webAppManager.db is None:
+                return flask.jsonify({"ok": False, "msg": "No user registration required"})
+
+            try:
+                # Generate the tar
+                if request.method == "POST":
+                    # Get the flow path from the request
+                    flowPath = request.get_json().get("path", None)
+
+                    if flowPath is None:
+                        return flask.jsonify({"ok": False, "msg": "No data provided"})
+                    # Convert the path to the user's directory
+                    flowPath, _ = currentUser.getUserPath(flowPath)
+
+                    # Open the flow
+                    flow = self.flowManager.openFlowFromPath(flowPath)
+
+                    # Compress the flow
+                    tarFile = self.flowManager.compressFlow(flow)
+
+                    # Return the path of the tar file
+                    return flask.jsonify({"ok": True, "path": tarFile})
+
+                # Download the tar
+                if request.method == "GET":
+
+                    # Get the tar file from the request
+                    tarFile = request.args.get("path", None)
+
+                    if tarFile is None:
+                        return flask.jsonify({"ok": False, "msg": "No data provided"})
+
+                    # Delete the tarfile after the download
+                    @flask.after_this_request
+                    def removeFile(response):
+                        try:
+                            os.remove(tarFile)
+                        except Exception as exc:
+                            logging.getLogger("Horus").error(
+                                "Error removing file {%s}: {%s}",
+                                tarFile,
+                                str(exc),
+                            )
+                        return response
+
+                    # Return the flow as a blob
+                    return flask.send_file(
+                        tarFile,
+                        as_attachment=True,
+                        mimetype="application/octet-stream",
+                    )
+            except Exception as exc:
+                return flask.jsonify({"ok": False, "msg": str(exc)})
+
+            return flask.jsonify({"ok": False, "msg": "Invalid request"})
+
+        @self.server.route("/users/admintools")
+        @self.verifyLogin
+        @self.verifyAdmin
+        def adminTools():
+            return flask.render_template("Login/admintools.html")
+
+        @self.server.route("/users/admintools/data", methods=["GET"])
+        @self.verifyLogin
+        @self.verifyAdmin
+        def adminData():
+
+            if not self.webAppManager or self.webAppManager.db is None:
+                return flask.jsonify({"ok": False, "msg": "No user registration required"})
+
+            # Return the database info
+            return flask.jsonify(self.webAppManager.db.dumpDatabase())
+
+        @self.server.route("/users/admintools/modifyuser", methods=["POST"])
+        @self.verifyLogin
+        @self.verifyAdmin
+        def modifyUserAdminTools():
+
+            if not self.webAppManager or self.webAppManager.db is None:
+                return flask.jsonify({"ok": False, "msg": "No user registration required"})
+
+            # Update the user
+            user = request.get_json()
+
+            if user is None:
+                return flask.jsonify({"ok": False, "msg": "No user provided"})
+
+            try:
+
+                # Parse the user to get only the fields that can be modified
+                userID = user.get("id", None)
+                newQuota = {
+                    "maxFlows": user.get("maxFlows", None),
+                    "maxStorage": user.get("maxStorage", None),
+                    "maxTime": user.get("maxTime", None),
+                }
+
+                # If any of the data is None, raise
+                if any(
+                    x is None
+                    for x in [
+                        userID,
+                        newQuota["maxFlows"],
+                        newQuota["maxStorage"],
+                        newQuota["maxTime"],
+                    ]
+                ):
+                    raise Exception("Missing data")
+
+                self.webAppManager.db.updateUserQuotas(userID, newQuota)
                 return flask.jsonify({"ok": True})
             except Exception as exc:
                 return flask.jsonify({"ok": False, "msg": str(exc)})

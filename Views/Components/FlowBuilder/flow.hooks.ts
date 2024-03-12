@@ -1381,7 +1381,12 @@ export function useFlowBuilder() {
   // to select the saving folder
   const preHandleSave = useCallback(
     async (comesFromExecuteBlock: boolean = false, flowToSave?: Flow) => {
-      if (
+      if (window.horusInternal.mode === "webapp") {
+        // On webapp mode, flows are saved on the server
+        // The server assigns the path, therefore we do not need to open the file picker
+        // Just pass the flow to the handleSave function
+        return await handleSave(flowToSave);
+      } else if (
         !window.horusInternal.isDesktop &&
         (flowToSave?.path === null || !flow.path)
       ) {
