@@ -209,9 +209,6 @@ class HorusServer:
             try:
                 sock.bind((localIp or self.host, self.port))
             except OSError as ose:
-                logging.getLogger("Horus").error(
-                    "Address %s is already in use. %s", self.baseURL, str(ose)
-                )
                 raise Exception(  # pylint: disable=broad-exception-raised
                     f"Adress {self.baseURL} is already in use"
                 ) from ose
