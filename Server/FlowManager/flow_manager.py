@@ -64,16 +64,16 @@ class BlocksException(Exception):
         super().__init__(message)
         self.block = block
 
+        # Set the block as with the error
+        self.block._runError = True
+        self.block._runErrorMessage = message
+        self.block._isRunning = False
+        self.block._finishedExecution = True
+
 
 class ErrorRunningBlock(BlocksException):
     """
     Custom error running block exception
-    """
-
-
-class SlurmBlockException(BlocksException):
-    """
-    Tells the flow runner to stop the execution of the flow to wait for the slurm job to finish
     """
 
 
@@ -604,12 +604,7 @@ class Flow:
 
         # If the flow is stopped, raise an exception
         if self.status == self.FlowStatus.STOPPED:
-            blockToRun._runError = True
-            blockToRun._runErrorMessage = "The flow was stopped gracefully."
-            blockToRun._isRunning = False
-            blockToRun._finishedExecution = True
             self.currentExecuting = None
-
             raise StoppedFlowException(blockToRun)
 
         # If the block is already executed, return its outputs.
@@ -649,7 +644,8 @@ class Flow:
                 connection.currentCycle += 1
 
                 if connection.currentCycle > connection.cycles:
-                    raise BlocksException(
+                    self.currentExecuting = None
+                    raise ErrorRunningBlock(
                         blockToRun, "Exceded the maximum number of cycles for this connection."
                     )
 
@@ -685,13 +681,13 @@ class Flow:
             # Setting the correct keys for each block
             try:
                 inputs[connection.destination.variableID] = outputs[connection.origin.variableID]
-            except KeyError as keye:
-                raise BlocksException(
+            except KeyError:
+                raise ErrorRunningBlock(
                     blockToRun,
                     f"The block '{variableBlock.name}' does not provide the variable "
                     + f"'{connection.origin.variableID}' to the block '{blockToRun.name}'. "
                     + "Did you forget to call setOutput() in the action of the block?",
-                ) from keye
+                )
 
         # With the generated inputs, update the block to run
         blockToRun._updateInputs(inputs)
@@ -719,10 +715,6 @@ class Flow:
         except Exception as exc:  # pylint: disable=broad-exception-raised
             # If an error was raised during the execution of the block
             # update acordingly the block's state
-            blockToRun._runError = True
-            blockToRun._runErrorMessage = str(exc)
-            blockToRun._isRunning = False
-            blockToRun._finishedExecution = True
             self.currentExecuting = None
 
             # Raise again a special "ErrorRunningBlock" exception
@@ -771,24 +763,16 @@ class Flow:
                         self._socket.emit("flow", self.encode(minimal=False), to=self.savedID)
 
             except Exception as exc:  # pylint: disable=broad-exception-raised
-                blockToRun._runError = True
-                blockToRun._runErrorMessage = str(exc)
-                blockToRun._isRunning = False
-                blockToRun._finishedExecution = True
                 self.currentExecuting = None
 
                 # Raise again a special "ErrorRunningBlock" exception
                 raise ErrorRunningBlock(blockToRun, str(exc)) from exc
 
             if blockToRun._status != SlurmBlock.Status.COMPLETED:
-                blockToRun._runError = True
-                blockToRun._runErrorMessage = (
-                    f"Slurm job failed. Status: {blockToRun._status.value}"
-                )
-                blockToRun._isRunning = False
-                blockToRun._finishedExecution = True
                 self.currentExecuting = None
-                raise ErrorRunningBlock(blockToRun, blockToRun._runErrorMessage)
+                raise ErrorRunningBlock(
+                    blockToRun, f"Slurm job failed. Status: {blockToRun._status.value}"
+                )
 
             # Once the block has been executed, call again the execution
             # of this block to execute the finalAction
@@ -799,10 +783,6 @@ class Flow:
             except Exception as exc:  # pylint: disable=broad-exception-raised
                 # If an error was raised during the execution of the block
                 # update acordingly the block's state
-                blockToRun._runError = True
-                blockToRun._runErrorMessage = str(exc)
-                blockToRun._isRunning = False
-                blockToRun._finishedExecution = True
                 self.currentExecuting = None
 
                 # Raise again a special "ErrorRunningBlock" exception
@@ -848,7 +828,10 @@ class Flow:
                     break
 
             if realConnection is None:
-                raise BlocksException(blockToRun, "The reference of a variable is not valid.")
+                raise ErrorRunningBlock(
+                    blockToRun,
+                    f"The reference of a variable is not valid. Origin: {nextConnection.origin.variableID}, Destination: {nextConnection.destination.variableID}",
+                )
 
             if realConnection.isCyclic:
                 runOrder.insert(0, realConnection)
@@ -1005,11 +988,9 @@ class Flow:
                 self._runPreviousBlocks(placedID, resetRemoteBlock)
                 self._runNextBlocks(placedID)
                 self.status = self.FlowStatus.FINISHED
-            except ErrorRunningBlock as errorBlock:
-                print(f"Error running block {errorBlock.block.name}: {errorBlock}")
+            except ErrorRunningBlock:
                 self.status = self.FlowStatus.ERROR
-            except StoppedFlowException as stopped:
-                print(stopped.message)
+            except StoppedFlowException:
                 self.status = self.FlowStatus.STOPPED
             except Exception:  # pylint: disable=broad-exception-raised
                 import traceback
