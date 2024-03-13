@@ -184,6 +184,7 @@ function VariableListView(props: VariableViewProps) {
             paddingBottom: "0.5rem",
             opacity: index === 0 ? 1 : 0,
             position: index === 0 ? "relative" : "absolute",
+            display: index === 0 ? "block" : "none",
           }}
         >
           {variable.name}
@@ -594,7 +595,7 @@ function IntegerFloatVariableView(props: VariableViewProps) {
         return rounded;
       }
     } else {
-      return parsedValue;
+      return value.endsWith(".") ? value : parsedValue;
     }
   };
 
