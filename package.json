@@ -7,7 +7,7 @@
     "test": "python -m pytest Tests/ -vv -W ignore::DeprecationWarning",
     "develop": "python Horus.py -s -d",
     "webapp": "python Horus.py -d -w",
-    "buildparcel": "parcel build Views/**/*.html --dist-dir GUI --no-scope-hoist && cp -r Views/Favicon/ GUI/Favicon",
+    "buildparcel": "parcel build Views/**/*.html --dist-dir GUI --no-scope-hoist && cp -r Views/Favicon/ GUI/Favicon && cp Resources/logo.png GUI/Favicon",
     "devparcel:main": "parcel --port 3001 --host 0.0.0.0",
     "devparcel:login": "parcel Views/Login/login.html --port 3001 --host 0.0.0.0",
     "devparcel:about": "parcel Views/About/index.html --port 3001 --host 0.0.0.0",

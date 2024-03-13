@@ -1855,9 +1855,8 @@ class HorusServer:
                 return flask.send_file(logoPath, mimetype="image/png")
 
             # If not, use the default Horus logo
-            return flask.send_from_directory(
-                os.path.join(self.guiDir, "Favicon"),
-                "logo.png",
+            return flask.send_file(
+                os.path.join(self.guiDir, "Favicon", "logo.png"),
                 mimetype="image/png",
             )
 
