@@ -82,6 +82,7 @@
   /* Animate the background when hovering */
   transition: background 0.2s ease-in-out;
   /* margin-bottom: 0.3rem; */
+  background: white;
 }
 
 /* Change the font size of the app-button if the screen space is low */

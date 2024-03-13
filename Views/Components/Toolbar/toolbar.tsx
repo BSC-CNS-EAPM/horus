@@ -573,6 +573,8 @@ function HorusSearch(props: HorusSearchProps) {
   const [recentFilteredFlows, setRecentFilteredFlows] = useState<Flow[]>([]);
   const [filteredPages, setFilteredPages] = useState<PluginPage[]>(props.pages);
 
+  const webAppMode = window.horusInternal.mode === "webapp";
+
   // Get the recent flows with the custom hook
   const [
     fetchingRecents,
@@ -580,7 +582,7 @@ function HorusSearch(props: HorusSearchProps) {
     predefinedFlows,
     getFlows,
     toggleInterval,
-  ] = useGetRecentFlows();
+  ] = useGetRecentFlows(webAppMode);
 
   const filterSearch = (event: ChangeEvent<HTMLInputElement>) => {
     const value = event.target?.value;

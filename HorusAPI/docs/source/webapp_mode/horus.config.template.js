@@ -15,6 +15,11 @@ export const config = {
     // If user registration is required, you may allow them to use the app in demo mode. Which means they can use the app without registering
     // But they cannot send any flow and their session is removed after they leave the page
     allowDemoUser: true,
+    // When not using requireRegistration, you may want to remove automatically
+    // the anonymus user data after a certain time. Specify the time in days
+    deleteInterval: 1,
+    // If requireRegistration is false, then you may want to limit the number of flows that an anonymous user can send
+    maxFlowsAnonymous: 10,
     // Mail server configuration
     mailServer: {
       host: "smtp.mail.com",

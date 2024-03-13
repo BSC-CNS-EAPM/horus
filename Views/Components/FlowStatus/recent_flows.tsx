@@ -75,7 +75,9 @@ export default function RecentUserFlows(props: RecentUserFlowProps) {
           >
             <div className="flex flex-row justify-between">
               <div className="predefined-flow-name">{flow.name}</div>
-              <FlowStatusView status={flow.status} />
+              <div className="text-base">
+                <FlowStatusView status={flow.status} />
+              </div>
             </div>
             <div className="predefined-flow-plugin">
               {<ParsedFlowPath flow={flow} />}

@@ -52,7 +52,7 @@ function FlowStatusBase(props: FlowStatusBaseProps) {
 
   const classColorName = colorStyle[props.color];
 
-  const className = `flex flex-row gap-1 items-center justify-center ${classColorName}`;
+  const className = `flow-status ${classColorName}`;
 
   return (
     <div

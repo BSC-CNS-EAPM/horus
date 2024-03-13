@@ -9,6 +9,9 @@ export default function ChronoIcon(props: IconProps) {
       viewBox="0 0 24 24"
       strokeWidth={0}
       stroke="currentColor"
+      style={{
+        transform: "translateX(1px)",
+      }}
       {...props}
     >
       <path

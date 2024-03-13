@@ -622,6 +622,8 @@ export function useFlowBuilder() {
           path: savedFlow.path,
         });
 
+        latestPath.current = savedFlow.path;
+
         // Join the room with the new savedID
         socket.emit("joinFlow", savedFlow.savedID);
 
@@ -1215,7 +1217,7 @@ export function useFlowBuilder() {
       // new recived flow that comes from the preHandleSave function
       // inside the executeFlow function. This prevented the flow to update
       // even tough the flow was running
-      if (isExeutingInProcess.current) {
+      if (isExecutingInProcess.current) {
         return;
       }
 
@@ -1542,15 +1544,17 @@ export function useFlowBuilder() {
   // Take into account if we are inside the executeFlow function
   // in order to not update the flow from the socket
   // This will prevent overwriting the flow status
-  const isExeutingInProcess = useRef(false);
+  const isExecutingInProcess = useRef(false);
+
+  const latestPath = useRef<string | null>(null);
 
   async function executeFlow(placedID: number, resetFlow: boolean = false) {
-    if (isExeutingInProcess.current) {
+    if (isExecutingInProcess.current) {
       return;
     }
 
     try {
-      isExeutingInProcess.current = true;
+      isExecutingInProcess.current = true;
 
       // Check that the flow is saved
       if (!(await preHandleSave(true))) {
@@ -1563,13 +1567,14 @@ export function useFlowBuilder() {
       setFlowText("Submitting flow");
       setFlowLoading(true);
 
-      setFlow(
-        (currentFlow) =>
-          ({
-            ...currentFlow,
-            status: FlowStatus.QUEUED,
-          } as Flow)
-      );
+      const updatedFlowPath = flow.path ?? latestPath.current;
+
+      setFlow((currentFlow) => {
+        return {
+          ...currentFlow,
+          status: FlowStatus.QUEUED,
+        } as Flow;
+      });
 
       if (resetFlow) {
         // Clear the terminal if present
@@ -1581,7 +1586,7 @@ export function useFlowBuilder() {
         "/api/plugins/executeflow",
         null,
         JSON.stringify({
-          flowPath: flow.path,
+          flowPath: updatedFlowPath,
           placedID: placedID,
           resetFlow: resetFlow,
         })
@@ -1599,7 +1604,7 @@ export function useFlowBuilder() {
 
       setFlowLoading(false);
     } finally {
-      isExeutingInProcess.current = false;
+      isExecutingInProcess.current = false;
     }
   }
 

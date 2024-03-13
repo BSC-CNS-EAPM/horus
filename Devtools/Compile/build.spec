@@ -154,6 +154,7 @@ imports += [
     "email.mime",
     "email.mime.text",
     "email.mime.*",
+    "apscheduler",
 ]
 
 # Import biopython for the Horus default plugin

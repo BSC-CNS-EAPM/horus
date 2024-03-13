@@ -162,8 +162,8 @@ export class ErrorBoundary extends Component {
   }
 
   override componentDidCatch(error: any, info: any) {
-    console.log("Error: ", error);
-    console.log("Info: ", info);
+    console.error("Error: ", error);
+    console.info("Info: ", info);
   }
 
   override render() {

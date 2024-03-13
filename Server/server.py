@@ -15,6 +15,7 @@ import sys
 import hashlib
 import logging
 import typing
+import traceback
 
 # Decorators
 from functools import wraps
@@ -456,6 +457,11 @@ class HorusServer:
 
     # Create a wrapper for login (only applies to webapp mode and requires registration)
     def verifyLogin(self, func):
+        """
+        In webapp mode, this wrapper will prevent access to the route if the user is not
+        logged in. If the user is not logged in, it will redirect to the login page.
+        """
+
         @wraps(func)
         def wrapper(*args, **kwargs):
             # If we are on webapp mode, and we require users to be logged in
@@ -478,6 +484,12 @@ class HorusServer:
         return wrapper
 
     def verifyAdmin(self, func):
+        """
+        For webapp mode, this wrapper will prevent access to the route if the user is not
+        an admin. If the user is not an admin, it will return a JSON response with an error
+        message.
+        """
+
         @wraps(func)
         # @flask_login.fresh_login_required
         def wrapper(*args, **kwargs):
@@ -494,6 +506,12 @@ class HorusServer:
 
     # Wrapper for demo user restriction
     def stopDemoUser(self, func):
+        """
+        On webapp mode, this wrapper will prevent access to the route if the user is a demo
+        user. If the user is a demo user, it will return a JSON response with an error
+        message.
+        """
+
         @wraps(func)
         def wrapper(*args, **kwargs):
 
@@ -513,6 +531,12 @@ class HorusServer:
 
     # Wrapper for preventing access in the webapp mode
     def preventOnWebApp(self, func):
+        """
+        This wrapper will prevent access to the route if the server is running in webapp
+        mode. If the server is running in webapp mode, it will return a JSON response with
+        an error message.
+        """
+
         @wraps(func)
         def wrapper(*args, **kwargs):
             if self.webAppManager is not None:
@@ -528,22 +552,47 @@ class HorusServer:
 
     # Wrapper for preventing flow execution if the user has reached the quota
     def verifyQuotas(self, func):
+        """
+        In webapp mode, this wrapper will prevent access to the route if the user has
+        reached the quota. If the user has reached the quota, it will return a JSON
+        response with an error message.
+        """
+
         @wraps(func)
         def wrapper(*args, **kwargs):
-            if self.webAppManager is not None and self.webAppManager.db is not None:
-                if self.webAppManager.db.hasReachedQuota(currentUser):
+            if self.webAppManager is not None:
+                if self.webAppManager.db is not None and self.webAppManager.db.hasReachedQuota(
+                    currentUser
+                ):
                     return flask.jsonify(
                         {
                             "ok": False,
-                            "msg": "You have reached your quota. Please remove some flows to continue.",
+                            "msg": "You have reached your quota. "
+                            + "Please remove some flows to continue.",
                         }
                     )
+                else:
+                    # Verify that the anonymous user has no more than 10 flows
+                    flowsCount = os.listdir(currentUser.flowsDir)
+                    if len(flowsCount) >= self.webAppManager.userManagement.maxFlowsAnonymous:
+                        return flask.jsonify(
+                            {
+                                "ok": False,
+                                "msg": "You have reached the maximum number of flows.",
+                            }
+                        )
             return func(*args, **kwargs)
 
         return wrapper
 
     # Create a wrapper for checking if the app is on desktop mode or web mode
     def desktopOnly(self, func):
+        """
+        This wrapper blocks access to the route if the server is not running in desktop
+        mode. If the server is not running in desktop mode, it will return a JSON response
+        with an error message.
+        """
+
         @wraps(func)
         def wrapper(*args, **kwargs):
             if not self.desktop and not self.debug:
@@ -558,6 +607,12 @@ class HorusServer:
         return wrapper
 
     def allowRemotes(self, func):
+        """
+        On webapp mode, this wrapper will prevent access to the route if the server is not
+        allowing remote connections. If the server is not allowing remote connections, it
+        will return a JSON response with an error message.
+        """
+
         @wraps(func)
         def wrapper(*args, **kwargs):
             if self.webAppManager is not None and not self.webAppManager.allowRemotes:
@@ -1015,6 +1070,11 @@ class HorusServer:
                 return flask.jsonify({"ok": False, "msg": "No flowPath provided"})
 
             try:
+
+                # Convert the flow to the user's directory
+                if self.webAppManager is not None:
+                    flowPath, _ = currentUser.getUserPath(flowPath)
+
                 stoppedFlow = self.flowManager.stopFlow(flowPath)
 
                 # Update the flow in the database
@@ -1790,6 +1850,10 @@ class HorusServer:
         # For extreme cases, setup a broad exception handler
         @self.server.errorhandler(Exception)
         def exceptionHandler(error):
+
+            if self.debug:
+                error = traceback.format_exc()
+
             horusLogger = logging.getLogger("Horus")
             horusLogger.critical(
                 "%s. Data: %s. Request: %s", error, str(request.data), str(request)
@@ -1865,6 +1929,13 @@ class HorusServer:
         Setup user routes such as registration, login...
         """
 
+        def _loginUserInternal(user: HorusUser) -> bool:
+            """
+            Login the user with flask_login and set the remember session
+            """
+
+            return flask_login.login_user(user, remember=True)
+
         @self.server.route("/users/login", methods=["GET", "POST"])
         def login():
 
@@ -1877,7 +1948,7 @@ class HorusServer:
                 anonyUser = HorusUser.anonymousUser(
                     self.webAppManager.userManagement.appSupportDir
                 )
-                flask_login.login_user(anonyUser)
+                _loginUserInternal(anonyUser)
                 return flask.redirect("/")
 
             # If the user is already logged in, redirect to the home page
@@ -1910,7 +1981,7 @@ class HorusServer:
                     if user is None:
                         raise UserError("No user found")
 
-                    loggedIn = flask_login.login_user(user)
+                    loggedIn = _loginUserInternal(user)
 
                     if not loggedIn:
                         raise UserError("Could not log in user")
@@ -2038,7 +2109,7 @@ class HorusServer:
 
             demoUser = HorusUser.demoUser()
 
-            flask_login.login_user(demoUser)
+            _loginUserInternal(demoUser)
 
             return flask.redirect("/")
 
@@ -2078,7 +2149,7 @@ class HorusServer:
 
                 return flask.jsonify({"ok": True, "logged": False})
 
-            return flask.render_template("Profile/index.html")
+            return flask.redirect("/")
 
         @self.server.route("/users/reset", methods=["GET", "POST"])
         def resetPassword():
@@ -2167,7 +2238,7 @@ class HorusServer:
             Returns the user's flows in web app mode
             """
 
-            if self.webAppManager is None or self.webAppManager.db is None:
+            if self.webAppManager is None:
                 return flask.jsonify({"ok": False, "msg": "No user registration required"})
 
             try:
@@ -2206,7 +2277,7 @@ class HorusServer:
             Deletes a flow from the user's flows in web app mode
             """
 
-            if self.webAppManager is None or self.webAppManager.db is None:
+            if self.webAppManager is None:
                 return flask.jsonify({"ok": False, "msg": "No user registration required"})
 
             # Get the flow data
@@ -2234,7 +2305,9 @@ class HorusServer:
                 else:
                     return flask.jsonify({"ok": False, "msg": "Flow path does not exist"})
 
-                self.webAppManager.db.removeFlowForUser(flow)
+                if self.webAppManager.db is not None:
+                    self.webAppManager.db.removeFlowForUser(flow)
+
                 return flask.jsonify({"ok": True})
             except Exception as exc:
                 return flask.jsonify({"ok": False, "msg": str(exc)})
@@ -2246,7 +2319,7 @@ class HorusServer:
             Downloads a flow from the user's flows in web app mode
             """
 
-            if self.webAppManager is None or self.webAppManager.db is None:
+            if self.webAppManager is None:
                 return flask.jsonify({"ok": False, "msg": "No user registration required"})
 
             try:

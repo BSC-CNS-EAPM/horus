@@ -28,7 +28,7 @@ export default function About() {
   const getVersion = async () => {
     const response = await horusGet("/api/version");
     if (!response.ok) {
-      console.log("Error getting application info");
+      console.error("Error getting application info");
       return;
     }
     const data = await response.json();

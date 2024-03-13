@@ -3,9 +3,11 @@ import { FlowStatusView } from "../FlowStatus/flow_status";
 import { openFlow, useGetRecentFlows } from "../FlowStatus/recent_flows";
 import RotatingLines from "../RotatingLines/rotatinglines";
 import HorusContainer from "../HorusContainer/horus_container";
+import { BlurredModal } from "../reusable";
 
 // Icons
 import TrashIcon from "../Toolbar/Icons/Trash";
+import OpenFlowIcon from "../Toolbar/Icons/Open";
 
 // Types
 import { Flow, FlowStatus } from "../FlowBuilder/flow.types";
@@ -13,15 +15,17 @@ import { Flow, FlowStatus } from "../FlowBuilder/flow.types";
 // Styling
 import "./webappflows.css";
 import CloudDownload from "../Toolbar/Icons/CloudDownload";
+
+// React
 import { useState } from "react";
-import { BlurredModal } from "../reusable";
 import { render, unmountComponentAtNode } from "react-dom";
+
+// Utils
 import { horusPost } from "../../Utils/utils";
-import OpenFlowIcon from "../Toolbar/Icons/Open";
 
 export default function WebAppUserFlows() {
   // Get the recent flows with the custom hook
-  const [, recentFlows, , getFlows] = useGetRecentFlows();
+  const [, recentFlows, , getFlows] = useGetRecentFlows(true);
 
   if (recentFlows.length === 0) {
     return null;
@@ -122,7 +126,7 @@ function FlowRowView({
         finishedTime={flow.finishedTime}
         status={flow.status}
       />
-      <div className="text-center">
+      <div className="text-center flex items-center justify-center">
         <FlowStatusView status={flow.status} />
       </div>
       <OpenFlowIcon

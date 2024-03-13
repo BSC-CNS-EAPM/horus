@@ -20,7 +20,7 @@
     "name": "Non-slurm remotes",
     "description": "Enable or disable remotes on non-slurm clusters. Sometimes regular blocks might need to access a remote cluster. Enable this setting to allow for regular blocks to access remotes.",
     "category": "Flow",
-    "value": true,
+    "value": false,
     "type": "boolean",
     "allowedValues": [],
     "desktopOnly": true

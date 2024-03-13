@@ -107,11 +107,12 @@ export function BlockView(props: BlockViewProps) {
                   ) : (
                     <InputRunningSpinner isRunning={props.block.isRunning} />
                   )}
-                  {props.block.variables.length > 0 && (
-                    <BlockVariablesButton
-                      onClick={blockState.blockViewHooks.toggleVariablesModal}
-                    />
-                  )}
+                  {props.block.variables.length > 0 &&
+                    props.block.type !== BlockTypes.INPUT && (
+                      <BlockVariablesButton
+                        onClick={blockState.blockViewHooks.toggleVariablesModal}
+                      />
+                    )}
 
                   <DeleteBlockButton
                     block={props.block}

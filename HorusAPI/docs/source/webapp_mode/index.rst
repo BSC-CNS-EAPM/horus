@@ -41,6 +41,11 @@ This document describes the configuration options available in the JSON configur
         // If user registration is required, you may allow them to use the app in demo mode. Which means they can use the app without registering
         // But they cannot send any flow and their session is removed after they leave the page
         allowDemoUser: true,
+        // When not using requireRegistration, you may want to remove automatically
+        // the anonymus user data after a certain time. Specify the time in days
+        deleteInterval: 1,
+        // Quotas for the anonymus users. Only the maximum number of flows can be set
+        maxFlowsAnonymous: 10,
         // Mail server configuration
         mailServer: {
           host: "smtp.mail.com",
@@ -115,6 +120,10 @@ Configuration Options
    - `requireActivation`: Boolean indicating if user email confirmation is required.
 
    - `allowDemoUser`: Boolean indicating if users can use the app in demo mode.
+
+   - `deleteInterval`: Time in days to remove the anonymus user data.
+
+   - `maxFlowsAnonymous`: Maximum number of flows allowed for anonymus users.
 
    - `mailServer`: Configuration options for the mail server.
 

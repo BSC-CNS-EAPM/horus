@@ -1,6 +1,12 @@
 # Typing
 from typing import Optional, List, Dict, Any
 
+# Basic tools
+import os
+import shutil
+import atexit
+import datetime
+
 # Loggin
 import logging
 
@@ -13,6 +19,9 @@ import socket
 # Mail server
 import smtplib
 from email.mime.text import MIMEText
+
+# User folder deletion intervals
+from apscheduler.schedulers.background import BackgroundScheduler
 
 # Generating the token in case the secret key is missing
 import secrets
@@ -430,6 +439,17 @@ class UserManagement:
     This is also the database controller.
     """
 
+    deleteInterval: int = 0
+    """
+    The interval in days to delete the user folders. Only applicable on non-registration servers
+    Set to 0 to disable
+    """
+
+    maxFlowsAnonymous: int = 10
+    """
+    The maximum number of flows for anonymous users (When not requiring registration)
+    """
+
     def __init__(
         self,
         rawUserManagement: Dict[str, Any],
@@ -448,6 +468,8 @@ class UserManagement:
         self.requireRegistration = rawUserManagement.get("requireRegistration", False)
         self.requireActivation = rawUserManagement.get("requireActivation", False)
         self.allowDemoUser = rawUserManagement.get("allowDemoUser", False)
+        self.deleteInterval = rawUserManagement.get("deleteInterval", 0)
+        self.maxFlowsAnonymous = rawUserManagement.get("maxFlowsAnonymous", 10)
 
         if self.requireActivation and not self.requireRegistration:
             raise ValueError(
@@ -484,6 +506,51 @@ class UserManagement:
         self.database = (
             DatabaseConfig(rawDatabase) if self.requireRegistration else None  # type: ignore
         )
+
+        # Start a background task to delete the user folders at a given interval
+        self._deleteUserFoldersInterval()
+
+    def _deleteUserFoldersInterval(self) -> None:
+        """
+        Deletes user folders at a given interval
+
+        :param interval: The interval in days to delete the user folders
+        """
+
+        if self.requireRegistration or self.deleteInterval == 0:
+            return
+
+        # Start a background task to delete the user folders at a given interval
+        def removeFolders():
+            for user in os.listdir(self.appSupportDir):
+                userPath = os.path.join(self.appSupportDir, user)
+
+                # Convert the folder creation time to elapsed time
+                folderAge = datetime.datetime.now() - datetime.datetime.fromtimestamp(
+                    os.path.getctime(userPath)
+                )
+
+                # Convert the folder age to seconds
+                folderAge = folderAge.days
+
+                # If the folder is older than the interval, delete it
+                if folderAge < self.deleteInterval:
+                    continue
+
+                logging.getLogger("Horus").info(
+                    "Deleting old anonymuous user folder: %s", userPath
+                )
+                shutil.rmtree(userPath)
+
+        # If the server just booted up, delete the folders
+        removeFolders()
+
+        scheduler = BackgroundScheduler()
+        scheduler.add_job(removeFolders, "interval", days=self.deleteInterval)
+        scheduler.start()
+
+        # Shut down the scheduler when the app exits
+        atexit.register(lambda: scheduler.shutdown())  # pylint: disable=unnecessary-lambda
 
 
 class WebAppManager:
@@ -532,7 +599,7 @@ class WebAppManager:
     """
 
     # Database
-    db: Optional[Database]
+    db: Optional[Database] = None
     """
     SQL interface for the user management system
     """

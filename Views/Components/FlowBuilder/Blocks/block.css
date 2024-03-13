@@ -102,6 +102,16 @@
   border-bottom: 1px solid var(--soft-grey);
 }
 
+.plugin-variable-value::-webkit-input-placeholder,
+.plugin-variable-value::-moz-placeholder,
+.plugin-variable-value:-ms-input-placeholder,
+.plugin-variable-value:-moz-placeholder,
+.plugin-variable-value::placeholder {
+  text-align: center;
+  align-items: center;
+  padding-top: 0.5rem;
+}
+
 .plugin-variable-value.no_border {
   border: none;
 }

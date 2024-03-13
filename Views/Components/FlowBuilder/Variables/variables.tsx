@@ -510,7 +510,14 @@ function StructureVariableView(props: VariableViewProps) {
       }}
     >
       {structures.length === 0 ? (
-        <option value="" disabled>
+        <option
+          value=""
+          disabled
+          className="text-center"
+          style={{
+            color: "darkgray",
+          }}
+        >
           No loaded structures
         </option>
       ) : (
@@ -670,7 +677,7 @@ function FilePickerView(props: FilePickerViewProps) {
       <input
         id={variable.id}
         placeholder="Write a path or browse..."
-        className="overflow-x-auto break-keep-all h-6"
+        className="overflow-x-auto break-keep-all h-6 plugin-variable-value"
         value={currentValue ?? ""}
         onChange={(e) => onChange(e.target.value)}
       />
@@ -832,19 +839,23 @@ function SmilesVariableView(props: VariableViewProps) {
     handleDragEnd(e);
   };
 
+  const defaultTextAreaClassName = "plugin-variable-value";
+
+  const [textAreaClassName, setTextAreaClassName] = useState(
+    defaultTextAreaClassName
+  );
+
   const handleDragEnd = (e: React.DragEvent<HTMLTextAreaElement>) => {
     e.preventDefault();
-    setTextAreaClassName("w-full text-black");
+    setTextAreaClassName(defaultTextAreaClassName);
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLTextAreaElement>) => {
     e.preventDefault();
-    setTextAreaClassName("w-full text-black bg-green-200");
+    setTextAreaClassName(`${defaultTextAreaClassName} bg-green-200`);
   };
 
   const jsmeRef = useRef(null);
-
-  const [textAreaClassName, setTextAreaClassName] = useState("text-black");
 
   return (
     <div className="flex flex-col gap-2 p-2 max-h-60 w-full justify-center items-center">
@@ -958,7 +969,7 @@ function ResidueView(props: VariableViewProps) {
     <div
       onClick={() => setActive(!active)}
       className={`w-full h-full max-h-28 overflow-auto border-2 rounded-xl ${
-        active ? "bg-green-200 border-green-200" : "bg-white border-white"
+        active && "bg-green-200 border-green-200"
       }`}
     >
       {!atom ? (
@@ -1024,8 +1035,8 @@ function AtomView(props: VariableViewProps) {
   return (
     <div
       onClick={() => setActive(!active)}
-      className={`w-full h-full max-h-28 overflow-auto border-2 rounded-xl ${
-        active ? "bg-green-200 border-green-200" : "bg-white border-white"
+      className={`w-full h-full max-h-28 overflow-auto border-2 rounded-xl bg-transparent ${
+        active && "bg-green-200 border-green-200"
       }`}
     >
       {!atom ? (
@@ -1055,9 +1066,17 @@ function ChainView(props: VariableViewProps) {
   }, []);
 
   return (
-    <div onMouseDown={loadMolstarChains}>
+    <div onMouseDown={loadMolstarChains} className="plugin-variable-value">
       {chains.length === 0 ? (
-        <div className="text-center">No chains found</div>
+        <div
+          role="placeholder"
+          className="text-center"
+          style={{
+            color: "darkgray",
+          }}
+        >
+          No chains found
+        </div>
       ) : (
         <>
           {chains.map((chain, index) => (
@@ -1146,9 +1165,17 @@ function StdResView(props: VariableViewProps) {
   }, []);
 
   return (
-    <div onMouseDown={loadMolstarStdRes} className="w-60">
+    <div onMouseDown={loadMolstarStdRes} className="w-60 plugin-variable-value">
       {stdRes.length === 0 ? (
-        <div className="text-center">No residues found</div>
+        <div
+          role="placeholder"
+          className="text-center"
+          style={{
+            color: "darkgray",
+          }}
+        >
+          No residues found
+        </div>
       ) : (
         <div className="w-full overflow-auto max-h-28 min-h-12">
           <SearchComponent
@@ -1221,9 +1248,17 @@ function HeteroResView(props: VariableViewProps) {
   }, []);
 
   return (
-    <div onMouseDown={loadMolstarHeteroRes}>
+    <div onMouseDown={loadMolstarHeteroRes} className="plugin-variable-value">
       {heteroRes.length === 0 ? (
-        <div className="text-center">No hetero atoms found</div>
+        <div
+          role="placeholder"
+          className="text-center"
+          style={{
+            color: "darkgray",
+          }}
+        >
+          No hetero atoms found
+        </div>
       ) : (
         <>
           {heteroRes.map((hRes, index) => (
@@ -1447,32 +1482,22 @@ function SphereVariableView(props: VariableViewProps) {
   });
 
   return (
-    <div className="flex flex-col p-2 gap-2">
-      <div className="flex flex-col">
-        Radius:
-        <input
-          id={`${variable.id}-radius`}
-          className="plugin-variable-value text-black"
-          value={currentValue?.radius ?? ""}
-          onChange={(e) => {
-            const newRadius = parseNumberOrNegative(e.target.value);
-
-            console.log(newRadius);
-
-            handleChange(
-              {
-                x: currentValue.center.x,
-                y: currentValue.center.y,
-                z: currentValue.center.z,
-              },
-              newRadius
-            );
-          }}
-        />
-      </div>
+    <div
+      className="flex flex-col p-2 gap-2"
+      style={{
+        padding: "0 !important",
+      }}
+    >
       <div className="flex flex-row gap-2">
-        <div>
-          X:
+        <div className="flex flex-row gap-2">
+          <span
+            className="font-semibold"
+            style={{
+              color: "darkgray",
+            }}
+          >
+            X:
+          </span>
           <input
             id={`${variable.id}-x`}
             className="plugin-variable-value text-black"
@@ -1489,8 +1514,15 @@ function SphereVariableView(props: VariableViewProps) {
             }}
           />
         </div>
-        <div>
-          Y:
+        <div className="flex flex-row gap-2">
+          <span
+            className="font-semibold"
+            style={{
+              color: "darkgray",
+            }}
+          >
+            Y:
+          </span>
           <input
             id={`${variable.id}-y`}
             className="plugin-variable-value text-black"
@@ -1507,8 +1539,15 @@ function SphereVariableView(props: VariableViewProps) {
             }}
           />
         </div>
-        <div>
-          Z:
+        <div className="flex flex-row gap-2">
+          <span
+            className="font-semibold"
+            style={{
+              color: "darkgray",
+            }}
+          >
+            Z:
+          </span>
           <input
             id={`${variable.id}-z`}
             className="plugin-variable-value text-black"
@@ -1521,6 +1560,32 @@ function SphereVariableView(props: VariableViewProps) {
                   z: parseNumberOrNegative(e.target.value),
                 },
                 currentValue.radius
+              );
+            }}
+          />
+        </div>
+        <div className="flex flex-row gap-2">
+          <span
+            className="font-semibold"
+            style={{
+              color: "darkgray",
+            }}
+          >
+            R:
+          </span>
+          <input
+            id={`${variable.id}-radius`}
+            className="plugin-variable-value text-black"
+            value={currentValue?.radius ?? ""}
+            onChange={(e) => {
+              const newRadius = parseNumberOrNegative(e.target.value);
+              handleChange(
+                {
+                  x: currentValue.center.x,
+                  y: currentValue.center.y,
+                  z: currentValue.center.z,
+                },
+                newRadius
               );
             }}
           />

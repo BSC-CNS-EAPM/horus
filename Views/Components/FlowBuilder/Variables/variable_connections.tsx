@@ -233,7 +233,7 @@ function VariableInputSelector({
       >
         <Chevron direction="left" />
       </NBDButton>
-      <div>
+      <div className="app-button">
         {selectedPageIndex + 1} / {block.inputs.length}
       </div>
       <NBDButton
