@@ -195,10 +195,13 @@ class HorusLogger:
                 """
                 Hook into the default stdout and stderr class
                 """
-                for line in message.rstrip().splitlines():
-                    self.capturer.log(self.level, line.rstrip())
-                    if self.level < logging.WARNING and not self.debug:
-                        self.oldStdOutErr.write(f"{line}\n")
+                try:
+                    for line in message.rstrip().splitlines():
+                        self.capturer.log(self.level, line.rstrip())
+                        if self.level < logging.WARNING and not self.debug:
+                            self.oldStdOutErr.write(f"{line}\n")
+                except BaseException:
+                    pass
 
             def flush(self):
                 """
