@@ -190,11 +190,11 @@ just like a regular :bdg-secondary-line:`PluginVariable`. For example:
     plugin.addPage(customRenderPage)
 
     // Setting type to custom so that the output can be connected to 'Number' variables
-    customVariableTest = CustomVariable(
-        id="custom_variable_test",
-        name="Custom variable test",
-        description="Custom variable test",
-        customPage=devPage,
+    customVariable = CustomVariable(
+        id="custom_variable",
+        name="Custom variable",
+        description="Custom variable",
+        customPage=customRenderPage,
         type=VariableTypes.NUMBER,
         category="Custom variables",
     )
