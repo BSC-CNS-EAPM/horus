@@ -232,7 +232,7 @@ function PluginCard(props: PluginCardProps) {
     const data = await response.json();
 
     if (!data.ok) {
-      alert("Error deleting plugin: " + data.message);
+      alert("Error deleting plugin: " + data.msg);
     } else {
       props.deletePlugin(plugin.id);
     }
@@ -545,7 +545,7 @@ function InstallingPluginView({
     setIsInstalling(false);
 
     if (!data.ok) {
-      alert("Error installing plugin: " + data.message);
+      alert("Error installing plugin: " + data.msg);
     } else {
       goBack();
     }

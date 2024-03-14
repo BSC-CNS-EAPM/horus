@@ -598,9 +598,9 @@ class HorusServer:
             if self.mode == "webapp":
                 error = {
                     "ok": False,
-                    "message": "This function is not available on webapp mode",
+                    "msg": "This function is not available on webapp mode",
                 }
-                logging.getLogger("Horus").error(error["message"])
+                logging.getLogger("Horus").error(error["msg"])
                 return flask.jsonify(error)
             return func(*args, **kwargs)
 
@@ -618,9 +618,9 @@ class HorusServer:
             if self.webAppManager is not None and not self.webAppManager.allowRemotes:
                 error = {
                     "ok": False,
-                    "message": "This function is not available",
+                    "msg": "This function is not available",
                 }
-                logging.getLogger("Horus").error(error["message"])
+                logging.getLogger("Horus").error(error["msg"])
                 return flask.jsonify(error)
             return func(*args, **kwargs)
 
@@ -952,7 +952,7 @@ class HorusServer:
             except Exception as exc:  # pylint: disable=broad-exception-caught
                 success = {
                     "ok": False,
-                    "message": str(exc),
+                    "msg": str(exc),
                 }
             return flask.jsonify(success)
 
@@ -964,7 +964,7 @@ class HorusServer:
             if pluginName is None:
                 success = {
                     "ok": False,
-                    "message": "Plugin name not provided.",
+                    "msg": "Plugin name not provided.",
                 }
             try:
                 self.pluginManager.uninstallPlugin(pluginName)
@@ -975,7 +975,7 @@ class HorusServer:
             except Exception as exc:  # pylint: disable=broad-exception-caught
                 success = {
                     "ok": False,
-                    "message": str(exc),
+                    "msg": str(exc),
                 }
             return success
 
@@ -1053,7 +1053,7 @@ class HorusServer:
             except Exception as exc:
                 success = {
                     "ok": False,
-                    "message": str(exc),
+                    "msg": str(exc),
                 }
 
             return flask.jsonify(success)

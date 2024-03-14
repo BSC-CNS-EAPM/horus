@@ -1595,7 +1595,7 @@ export function useFlowBuilder() {
       const result = await response.json();
 
       if (!result.ok) {
-        alert(result.message);
+        alert(result.msg);
         setFlow({
           ...flow,
           status: FlowStatus.ERROR,
