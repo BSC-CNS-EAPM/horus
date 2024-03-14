@@ -465,7 +465,9 @@ export function PluginManager() {
             {developmentMode && (
               <NBDButton text="Reload plugins" action={reloadPlugins} />
             )}
-            <NBDButton text="Open Horus folder" action={openPluginsFolder} />
+            {window.horusInternal.isDesktop && (
+              <NBDButton text="Open Horus folder" action={openPluginsFolder} />
+            )}
             <SearchComponent
               placeholder="Search plugins..."
               onChange={(e) => {
