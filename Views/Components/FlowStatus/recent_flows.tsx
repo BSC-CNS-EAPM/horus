@@ -79,7 +79,7 @@ export default function RecentUserFlows(props: RecentUserFlowProps) {
                 <FlowStatusView status={flow.status} />
               </div>
             </div>
-            <div className="predefined-flow-plugin">
+            <div className="predefined-flow-plugin break-keep	">
               {<ParsedFlowPath flow={flow} />}
             </div>
           </div>
