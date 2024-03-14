@@ -25,6 +25,7 @@ input,
 textarea,
 select {
   outline: none;
+  padding: 0;
 }
 
 select {
@@ -34,7 +35,6 @@ select {
   background-size: 1.5em;
   background: transparent;
   transition: all 0.3s ease-in-out;
-  padding-inline: 0.5rem;
 }
 
 select:hover {
