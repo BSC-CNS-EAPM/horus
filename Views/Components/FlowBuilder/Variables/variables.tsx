@@ -1033,7 +1033,7 @@ function AtomView(props: VariableViewProps) {
   return (
     <div
       onClick={() => setActive(!active)}
-      className={`w-full h-full max-h-28 overflow-auto border-2 rounded-xl bg-transparent ${
+      className={`w-full h-full max-h-28 overflow-auto border-2 rounded-xl ${
         active && "bg-green-200 border-green-200"
       }`}
     >
@@ -1234,11 +1234,24 @@ function HeteroResView(props: VariableViewProps) {
 
   const [heteroRes, setHeteroRes] = useState<any[]>([]);
 
+  const [filteredHeteroRes, setFilteredHeteroRes] = useState<any[]>([]);
+
+  const filterHeteroRes = (event: ChangeEvent<HTMLInputElement>) => {
+    const filterValue = event.target.value;
+    const filteredResidues = heteroRes.filter((residue) =>
+      residue.name.toLowerCase().includes(filterValue.toLowerCase())
+    );
+
+    setFilteredHeteroRes(filteredResidues);
+  };
+
   const loadMolstarHeteroRes = async () => {
     const molstar = window.molstar;
     const residues = await molstar?.listHeteroRes();
+    console.log(residues);
 
     setHeteroRes(residues ?? []);
+    setFilteredHeteroRes(residues ?? []);
   };
 
   useEffect(() => {
@@ -1258,8 +1271,13 @@ function HeteroResView(props: VariableViewProps) {
           No hetero atoms found
         </div>
       ) : (
-        <>
-          {heteroRes.map((hRes, index) => (
+        <div className="w-full overflow-auto max-h-28 min-h-12">
+          <SearchComponent
+            placeholder="Search for a residue"
+            onChange={filterHeteroRes}
+            showIcon={false}
+          />
+          {filteredHeteroRes.map((hRes, index) => (
             <div
               key={index}
               className="flex flex-row items-center justify-between"
@@ -1303,7 +1321,7 @@ function HeteroResView(props: VariableViewProps) {
               <div className="ml-2">{hRes.name}</div>
             </div>
           ))}
-        </>
+        </div>
       )}
     </div>
   );

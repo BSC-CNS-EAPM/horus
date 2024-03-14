@@ -1211,6 +1211,9 @@ class HorusMolstar {
         // auth_comp_id is the 3 letter code for the residue like "ALA", "GLY", etc.
         let auth_comp_id = StructureProperties.atom.auth_comp_id(loc);
 
+        // Skip waters
+        if (auth_comp_id === "HOH") return;
+
         if (get === "hetero" && standardResidues.includes(auth_comp_id)) return;
         else if (get === "standard" && !standardResidues.includes(auth_comp_id))
           return;
@@ -1227,13 +1230,20 @@ class HorusMolstar {
         const y = StructureProperties.atom.y(loc);
         const z = StructureProperties.atom.z(loc);
 
+        // If auth_comp_id has 2 characters instead of 3, then add a space
+        // before it
+        if (auth_comp_id.length === 2) {
+          auth_comp_id = " " + auth_comp_id;
+        }
+
         // If the molInfo.ID and the current auth_comp_id are already in the
         // heteroInfo array, then don't add it again
         if (unique) {
           for (const info of resInfo) {
             if (
               info.structure.id === molInfo.id &&
-              info.auth_comp_id === auth_comp_id
+              info.auth_comp_id === auth_comp_id &&
+              info.residue === resID
             ) {
               return;
             }
@@ -1255,12 +1265,6 @@ class HorusMolstar {
               return;
             }
           }
-        }
-
-        // If auth_comp_id has 2 characters instead of 3, then add a space
-        // before it
-        if (auth_comp_id.length === 2) {
-          auth_comp_id = " " + auth_comp_id;
         }
 
         const atomInfo: AtomInfo = {
