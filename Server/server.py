@@ -586,19 +586,19 @@ class HorusServer:
         return wrapper
 
     # Create a wrapper for checking if the app is on desktop mode or web mode
-    def desktopOnly(self, func):
+    def noWebApp(self, func):
         """
         This wrapper blocks access to the route if the server is not running in desktop
-        mode. If the server is not running in desktop mode, it will return a JSON response
+        mode / regular server mode. It will return a JSON response
         with an error message.
         """
 
         @wraps(func)
         def wrapper(*args, **kwargs):
-            if not self.desktop and not self.debug:
+            if self.mode == "webapp":
                 error = {
                     "ok": False,
-                    "message": "This function is only available on desktop mode.",
+                    "message": "This function is not available on webapp mode",
                 }
                 logging.getLogger("Horus").error(error["message"])
                 return flask.jsonify(error)
@@ -938,7 +938,7 @@ class HorusServer:
             return flask.jsonify(internalSettings)
 
         @self.server.route("/api/plugins/install", methods=["POST"])
-        @self.desktopOnly
+        @self.noWebApp
         def installPlugin():
             data = request.get_json()
 
@@ -957,7 +957,7 @@ class HorusServer:
             return flask.jsonify(success)
 
         @self.server.route("/api/plugins/uninstall", methods=["POST"])
-        @self.desktopOnly
+        @self.noWebApp
         def uninstallPlugin():
             data = request.get_json()
             pluginName = data.get("name", None)
@@ -980,7 +980,7 @@ class HorusServer:
             return success
 
         @self.server.route("/api/desktop/appsupportdir", methods=["GET"])
-        @self.desktopOnly
+        @self.noWebApp
         def openPluginsFolder():
             from App import AppDelegate  # pylint: disable=import-outside-toplevel
 
@@ -1150,7 +1150,7 @@ class HorusServer:
             return flask.jsonify(success)
 
         @self.server.route("/api/desktop/command", methods=["POST", "GET"])
-        @self.desktopOnly
+        @self.noWebApp
         def executeCommand():
             data = request.get_json()
             from App import AppDelegate  # pylint: disable=import-outside-toplevel
@@ -1165,7 +1165,7 @@ class HorusServer:
                 }
 
         @self.server.route("/api/desktop/openwindow", methods=["POST"])
-        @self.desktopOnly
+        @self.noWebApp
         def openWindow():
             name = request.get_json()["name"]
             url = request.get_json()["url"]
@@ -1176,13 +1176,13 @@ class HorusServer:
             return "OK"
 
         @self.server.route("/api/getbrowserurl", methods=["GET"])
-        @self.desktopOnly
+        @self.noWebApp
         @self.verifyLogin
         def getBrowserURL():
             return flask.jsonify({"url": self.baseURL})
 
         @self.server.route("/api/openbmode", methods=["GET"])
-        @self.desktopOnly
+        @self.noWebApp
         @self.verifyLogin
         def openBrowserMode():
             from App import AppDelegate  # pylint: disable=import-outside-toplevel
@@ -1193,7 +1193,7 @@ class HorusServer:
             return "OK"
 
         @self.server.route("/api/openURL", methods=["POST"])
-        @self.desktopOnly
+        @self.noWebApp
         @self.verifyLogin
         def openURL():
             from App import AppDelegate
@@ -1598,13 +1598,13 @@ class HorusServer:
             return flask.render_template("Main/index.html")
 
         @self.server.route("/plugins/", methods=["GET"])
-        @self.desktopOnly
+        @self.noWebApp
         @self.verifyLogin
         def pluginsManager():
             return flask.render_template("PluginsManager/index.html", shemsu=self.token)
 
         @self.server.route("/bmode", methods=["GET"])
-        @self.desktopOnly
+        @self.noWebApp
         def bmode():
             return flask.render_template("BrowserMode/index.html")
 
@@ -1615,13 +1615,13 @@ class HorusServer:
 
         @self.server.route("/remotes", methods=["GET"])
         @self.allowRemotes
-        @self.desktopOnly
+        @self.noWebApp
         def remotes():
             return flask.render_template("Remotes/index.html")
 
         @self.server.route("/settingsview")
         @self.verifyLogin
-        @self.desktopOnly
+        @self.noWebApp
         def settingsView():
             return flask.render_template("Settings/index.html")
 
