@@ -50,6 +50,9 @@ export default function WorkingView(props: WorkingViewProps) {
 
   const currentIframeBlockID = useRef<number>(-1);
 
+  const iFrameRef = useRef<ImperativePanelHandle | null>(null);
+
+
   const handleIFrame = (event: Event) => {
     // Opening it from a block action yields a socket event
     const parsedEvent = event as CustomEvent;
@@ -83,6 +86,11 @@ export default function WorkingView(props: WorkingViewProps) {
     setIframeView(
       <IFrameLoader key={key} url={url} pagename={pagename} data={data} />
     );
+
+    // Make sure the panel is expanded too
+    if (iFrameRef.current?.getSize()! < 5 || iFrameRef.current?.getCollapsed()!) {
+      iFrameRef.current?.expand();
+    }
     setShowIFrame(true);
   };
 
@@ -116,8 +124,6 @@ export default function WorkingView(props: WorkingViewProps) {
   // Instantiate the HorusTerm in a ref
   // so that it is always available
   const term = useRef(<HorusTerm />);
-
-  const iFrameRef = useRef(null);
 
   useEffect(() => {
     if (props.extensionToOpen) {
