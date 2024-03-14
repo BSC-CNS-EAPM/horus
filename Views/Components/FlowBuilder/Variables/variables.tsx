@@ -495,42 +495,39 @@ function StructureVariableView(props: VariableViewProps) {
   };
 
   return (
-    <select
-      defaultValue=""
-      defaultChecked={true}
-      onChange={(e) => {
-        // Get the selected structure
-        const selectedStructure = structures.find(
-          (structure) => structure.name === e.target.value
-        );
-
-        onChange(selectedStructure);
-      }}
-      onMouseDown={() => {
-        loadMolstarStructures();
-      }}
-    >
+    <div onMouseDown={loadMolstarStructures} className="plugin-variable-value">
       {structures.length === 0 ? (
-        <option
-          value=""
-          disabled
+        <div
+          role="placeholder"
           className="text-center"
           style={{
             color: "darkgray",
           }}
         >
-          No loaded structures
-        </option>
+          No structures loaded
+        </div>
       ) : (
-        <>
+        <select
+          className="plugin-variable-value p-0"
+          defaultValue=""
+          defaultChecked={true}
+          onChange={(e) => {
+            // Get the selected structure
+            const selectedStructure = structures.find(
+              (structure) => structure.name === e.target.value
+            );
+
+            onChange(selectedStructure);
+          }}
+        >
           {structures.map((structure, index) => (
-            <option key={index} value={structure.name}>
+            <option key={index} value={structure.name} className="p-0 m-0">
               {structure.name}
             </option>
           ))}
-        </>
+        </select>
       )}
-    </select>
+    </div>
   );
 }
 
