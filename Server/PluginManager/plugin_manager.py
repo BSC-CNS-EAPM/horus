@@ -461,7 +461,7 @@ class PluginManager(metaclass=HorusSingleton):
             import traceback
 
             logging.getLogger("Horus").error("Error loading plugin: %s", e)
-            logging.getLogger("Horus").error("Traceback: %s", traceback.format_exc())
+            logging.getLogger("Horus").debug("Traceback: %s", traceback.format_exc())
             raise e
 
         # Check that the plugin is not already loaded
