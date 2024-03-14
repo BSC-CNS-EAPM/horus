@@ -1470,7 +1470,6 @@ class HorusServer:
             return flask.jsonify(self.remoteManager.listRemotes())
 
         @self.server.route("/api/remotes/names", methods=["GET"])
-        @self.allowRemotes
         @self.verifyLogin
         def listRemoteNames():
             try:
