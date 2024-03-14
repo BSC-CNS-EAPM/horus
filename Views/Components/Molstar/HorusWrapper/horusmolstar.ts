@@ -1291,12 +1291,20 @@ class HorusMolstar {
 
   /*
    * List the hetero residues in the current loaded structures
+   * @param {String} label - The label of the structure (optional)
    * @returns {Array} - List of hetero residues
    */
-  listHeteroRes() {
-    const structures = this.structures();
+  listHeteroRes(label?: string) {
+    let structures = [];
+    if (label) {
+      // Get the structure object from the label
+      const structure = this.getStructureObjectFromLabel(label);
+      structures.push(structure);
+    } else {
+      structures = this.structures();
+    }
 
-    if (!structures) return;
+    if (!structures || structures.length === 0) return [];
 
     const heteroList = [];
     for (const structure of structures) {
@@ -1310,12 +1318,20 @@ class HorusMolstar {
 
   /*
    * List the standard residues in the current loaded structures
+   * @param {String} label - The label of the structure (optional)
    * @returns {Array} - List of standard residues
    */
-  listStdRes() {
-    const structures = this.structures();
+  listStdRes(label?: string) {
+    let structures = [];
+    if (label) {
+      // Get the structure object from the label
+      const structure = this.getStructureObjectFromLabel(label);
+      structures.push(structure);
+    } else {
+      structures = this.structures();
+    }
 
-    if (!structures) return;
+    if (!structures || structures.length === 0) return [];
 
     const stdList = [];
     for (const structure of structures) {
