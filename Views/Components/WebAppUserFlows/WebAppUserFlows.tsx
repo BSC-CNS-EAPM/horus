@@ -17,7 +17,7 @@ import "./webappflows.css";
 import CloudDownload from "../Toolbar/Icons/CloudDownload";
 
 // React
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { render, unmountComponentAtNode } from "react-dom";
 
 // Utils
@@ -72,6 +72,56 @@ function FlowRowView({
   flow: Flow;
   getFlows: () => Promise<void>;
 }) {
+  return (
+    <>
+      <div className="text-center">{flow.name}</div>
+      <div className="text-center">{flow.date}</div>
+      <FlowSize size={flow.size} status={flow.status} />
+      <FlowElapsed
+        startedTime={flow.startedTime}
+        finishedTime={flow.finishedTime}
+        status={flow.status}
+      />
+      <div className="text-center flex items-center justify-center">
+        <FlowStatusView status={flow.status} />
+      </div>
+      <OpenFlowIcon
+        className="cursor-pointer w-6 h-6"
+        onClick={() => {
+          openFlow(flow);
+        }}
+      />
+      <FlowDownload flow={flow} />
+      <DeleteFlow flow={flow} getFlows={getFlows} />
+    </>
+  );
+}
+
+function DeleteFlow({
+  flow,
+  getFlows,
+}: {
+  flow: Flow;
+  getFlows: () => Promise<void>;
+}) {
+  if (flow.status === FlowStatus.RUNNING || flow.status === FlowStatus.QUEUED) {
+    return <div>-</div>;
+  }
+
+  return (
+    <TrashIcon
+      className="w-6 h-6 text-center cursor-pointer items-center justify-center"
+      onClick={() => {
+        DeleteFlowModal({ flow, getFlows });
+      }}
+      style={{
+        color: "var(--danger-red)",
+      }}
+    />
+  );
+}
+
+function FlowDownload({ flow }: { flow: Flow }) {
   const [isDownloading, setIsDownloading] = useState(false);
 
   const downloadFlow = async () => {
@@ -116,81 +166,39 @@ function FlowRowView({
     }
   };
 
+  if (flow.status === FlowStatus.RUNNING || flow.status === FlowStatus.QUEUED) {
+    return <div>-</div>;
+  }
+
+  if (isDownloading) {
+    <RotatingLines
+      size="25px"
+      style={{
+        // Center the loading icon
+        margin: "0 auto",
+      }}
+    />;
+  }
+
   return (
-    <>
-      <div className="text-center">{flow.name}</div>
-      <div className="text-center">{flow.date}</div>
-      <FlowSize size={flow.size} status={flow.status} />
-      <FlowElapsed
-        startedTime={flow.startedTime}
-        finishedTime={flow.finishedTime}
-        status={flow.status}
-      />
-      <div className="text-center flex items-center justify-center">
-        <FlowStatusView status={flow.status} />
-      </div>
-      <OpenFlowIcon
-        className="cursor-pointer w-6 h-6"
-        onClick={() => {
-          openFlow(flow);
-        }}
-      />
-      {isDownloading ? (
-        <RotatingLines
-          size="25px"
-          style={{
-            // Center the loading icon
-            margin: "0 auto",
-          }}
-        />
-      ) : (
-        <CloudDownload
-          className="cursor-pointer w-6 h-6"
-          style={{
-            color: "var(--pop-code)",
-          }}
-          onClick={downloadFlow}
-        />
-      )}
-      <TrashIcon
-        className="w-6 h-6 text-center cursor-pointer items-center justify-center"
-        onClick={() => {
-          DeleteFlowModal({ flow, getFlows });
-        }}
-        style={{
-          color: "var(--danger-red)",
-        }}
-      />
-    </>
+    <CloudDownload
+      className="cursor-pointer w-6 h-6"
+      style={{
+        color: "var(--pop-code)",
+      }}
+      onClick={downloadFlow}
+    />
   );
 }
 
-function FlowSize({
-  size,
-  status,
-}: {
-  size: number | undefined;
-  status: FlowStatus;
-}) {
-  if (status === FlowStatus.FINISHED) {
+function FlowSize({ size }: { size: number | undefined; status: FlowStatus }) {
+  if (size) {
     // The size are MB, but if higher than 1000, then it's GB
-    if (size && size > 1000) {
+    if (size > 1000) {
       return <div>{(size / 1000).toFixed(2)} GB</div>;
     } else {
       return <div>{size ?? 0} MB</div>;
     }
-  }
-
-  if (status === FlowStatus.RUNNING) {
-    return (
-      <RotatingLines
-        size="25px"
-        style={{
-          // Center the loading icon
-          margin: "0 auto",
-        }}
-      />
-    );
   }
 
   return <div>-</div>;
@@ -199,14 +207,28 @@ function FlowSize({
 function FlowElapsed({
   startedTime,
   finishedTime,
-  status,
 }: {
   startedTime: number | undefined;
   finishedTime: number | undefined;
   status: FlowStatus;
 }) {
-  if (status === FlowStatus.FINISHED && startedTime && finishedTime) {
-    const elapsedSeconds = finishedTime - startedTime;
+  const [timer, setTimer] = useState<number>(Date.now());
+
+  useEffect(() => {
+    let interval: Timer;
+
+    if (startedTime && !finishedTime) {
+      interval = setInterval(() => {
+        setTimer(Date.now());
+      }, 1000);
+    }
+    return () => {
+      clearInterval(interval);
+    };
+  }, [startedTime, finishedTime]);
+
+  if (startedTime) {
+    const elapsedSeconds = (finishedTime ?? timer / 1000) - startedTime;
     const hours = Math.floor(elapsedSeconds / 3600);
     const minutes = Math.floor((elapsedSeconds % 3600) / 60);
     const seconds = Math.floor(elapsedSeconds % 60);
@@ -215,18 +237,6 @@ function FlowElapsed({
       <div>{`${hours.toString().padStart(2, "0")}:${minutes
         .toString()
         .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`}</div>
-    );
-  }
-
-  if (status === FlowStatus.RUNNING) {
-    return (
-      <RotatingLines
-        size="25px"
-        style={{
-          // Center the loading icon
-          margin: "0 auto",
-        }}
-      />
     );
   }
 
