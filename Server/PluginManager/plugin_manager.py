@@ -1539,6 +1539,10 @@ class PluginDeps:
             # Block error
             error = None
 
+            # Re-connect the remote
+            # As paramiko is not fork-safe, we need to reconnect the remote
+            forkedBlock.remote._remote.connect()
+
             # Try to execute the block
             try:
                 outputs = forkedBlock()
