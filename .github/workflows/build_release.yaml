@@ -1,10 +1,11 @@
 name: Publish Horus
 
 on:
+  workflow_dispatch:
   push:
     tags:
-      - "*.*.*"
-
+      - "*"
+  
 jobs:
   build:
     permissions:
