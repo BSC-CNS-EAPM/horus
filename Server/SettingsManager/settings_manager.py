@@ -184,7 +184,9 @@ class SettingsManager:
                 os.path.join(bundleDir, "default_settings.json")
             )
         except AttributeError:
-            self.defaultSettingsPath = os.path.join("App", "default_settings.json")
+            self.defaultSettingsPath = os.path.abspath(
+                os.path.join("App", "default_settings.json")
+            )
 
         # Define the user settings path
         self.userSettingsPath = os.path.join(appSupportDir, "settings.json")
