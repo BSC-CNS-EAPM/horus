@@ -397,7 +397,7 @@ function BlockTime(props: { time?: number }) {
     <div
       className="overflow-scroll max-w-14"
       style={{
-        transform: "translateY(-1px)",
+        transform: "translateY(-2px)",
       }}
     >
       {formatInterval(props.time || 0)}
