@@ -77,7 +77,7 @@ export function BlockView(props: BlockViewProps) {
               <div
                 className="block-name"
                 style={{
-                  transform: "translateY(-2px)",
+                  transform: props.block.isPlaced ? "translateY(-2px)" : "",
                 }}
               >
                 {props.block.name}
