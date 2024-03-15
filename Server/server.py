@@ -900,6 +900,12 @@ class HorusServer:
 
                 return flask.jsonify(success)
             try:
+
+                # If we are on webapp mode, update the path to the user's directory
+                if self.webAppManager is not None:
+                    # Update the path to the user's directory
+                    flowPath, _ = currentUser.getUserPath(flowPath)
+
                 flow = self.flowManager.openFlowFromPath(flowPath)
                 flow.saveMolstarState(file.stream.read())
                 flow.pendingActions = []
