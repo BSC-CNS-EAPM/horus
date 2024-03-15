@@ -75,11 +75,12 @@ export function BlockView(props: BlockViewProps) {
           <div className={`flex flex-row justify-between gap-2`}>
             <div className="flex flex-row gap-2 items-center">
               <div className="block-name">{props.block.name}</div>
-              {props.block.isPlaced && blockState.settings.showPlacedID && (
-                <div className="text-gray-400">{props.block.placedID}</div>
-              )}
+              {props.block.isPlaced &&
+                window.horusSettings["showPlacedID"]?.value && (
+                  <div className="text-gray-400">{props.block.placedID}</div>
+                )}
             </div>
-            <div className="flex flex-row gap-1 items-end cursor-auto">
+            <div className="flex flex-row gap-1 items-start cursor-auto">
               {/* Play button to execute the block */}
               {/* Delete button to remove the block from the canvas */}
               {props.block.isPlaced && (
@@ -347,7 +348,14 @@ function FinishedCheck(props: { runError: boolean; runErrorMessage?: string }) {
     );
   }
 
-  return <CheckMark color="var(--pop-code)" />;
+  return (
+    <CheckMark
+      color="var(--pop-code)"
+      style={{
+        transform: "translateY(-3px)",
+      }}
+    />
+  );
 }
 
 function BlockTime(props: { time?: number }) {
@@ -386,7 +394,12 @@ function BlockTime(props: { time?: number }) {
   };
 
   return (
-    <div className="overflow-scroll max-w-14">
+    <div
+      className="overflow-scroll max-w-14"
+      style={{
+        transform: "translateY(-1px)",
+      }}
+    >
       {formatInterval(props.time || 0)}
     </div>
   );
