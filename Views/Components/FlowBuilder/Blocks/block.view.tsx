@@ -73,12 +73,22 @@ export function BlockView(props: BlockViewProps) {
           } ${props.block.runError && "plugin-block-failed"}`}
         >
           <div className={`flex flex-row justify-between gap-2`}>
-            <div className="flex flex-row gap-2 items-center">
-              <div className="block-name">{props.block.name}</div>
-              {props.block.isPlaced &&
-                window.horusSettings["showPlacedID"]?.value && (
-                  <div className="text-gray-400">{props.block.placedID}</div>
-                )}
+            <div className="flex flex-row gap-2 items-start">
+              <div
+                className="block-name"
+                style={{
+                  transform: "translateY(-2px)",
+                }}
+              >
+                {props.block.name}
+                {props.block.isPlaced &&
+                  window.horusSettings["showPlacedID"]?.value && (
+                    <span className="text-gray-400" style={{}}>
+                      {" "}
+                      {props.block.placedID}
+                    </span>
+                  )}
+              </div>
             </div>
             <div className="flex flex-row gap-1 items-start cursor-auto">
               {/* Play button to execute the block */}
