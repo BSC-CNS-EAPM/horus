@@ -71,10 +71,10 @@ class Setting:
         from App import AppDelegate
 
         if self.desktopOnly and AppDelegate().safeMode and not AppDelegate().debug:
-            logging.getLogger("Horus").warning(
-                "The setting %s is only available on desktop. Returning the default value",
-                self.id,
-            )
+            # logging.getLogger("Horus").warning(
+            #     "The setting %s is only available on desktop. Returning the default value",
+            #     self.id,
+            # )
             return self.defaultValue
 
         return self._value
