@@ -94,61 +94,61 @@ jobs:
           echo "Built version: $VERSION"
       - name: Build Horus - Rocky 8
         run: singularity run --bind .:/app docker://chdominguez/horus_rocky
-      - name: Upload Rocky 8 artifact
-        uses: actions/upload-artifact@v4
-        id: upload-rocky
-        with:
-          name: Horus-${{ env.version }}-Rocky8-QT
-          path: dist/*Rocky.tar.gz
+      # - name: Upload Rocky 8 artifact
+      #   uses: actions/upload-artifact@v4
+      #   id: upload-rocky
+      #   with:
+      #     name: Horus-${{ env.version }}-Rocky8-QT
+      #     path: dist/*Rocky.tar.gz
       - name: Build Horus - Ubuntu 22.04
         run: singularity run --bind .:/app docker://chdominguez/horus_ubuntu
-      - name: Upload Ubuntu 22 artifact
-        uses: actions/upload-artifact@v4
-        id: upload-ubuntu
-        with:
-          name: Horus-${{ env.version }}-Ubuntu22-GTK
-          path: dist/*Ubuntu22.tar.gz
+      # - name: Upload Ubuntu 22 artifact
+      #   uses: actions/upload-artifact@v4
+      #   id: upload-ubuntu
+      #   with:
+      #     name: Horus-${{ env.version }}-Ubuntu22-GTK
+      #     path: dist/*Ubuntu22.tar.gz
       - name: Build Horus - Linux Universal
         run: singularity run --bind .:/app docker://chdominguez/horus_universal
-      - name: Upload Linux Universal artifact
-        uses: actions/upload-artifact@v4
-        id: upload-universal
-        with:
-          name: Horus-${{ env.version }}-Linux-Universal
-          path: dist/*Universal.tar.gz
-      - name: Comment artifacts on PR
-        uses: actions/github-script@v3
-        env:
-          RUN_ID: ${{ github.run_id }}
-          ROCKY: ${{ steps.upload-rocky.outputs.artifact-url }}
-          UBUNTU: ${{ steps.upload-ubuntu.outputs.artifact-url }}
-          UNIVERSAL: ${{ steps.upload-universal.outputs.artifact-url }}
-        with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
-          script: |
-            const issue_number = context.issue.number;
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const run_id = process.env.RUN_ID;
+      # - name: Upload Linux Universal artifact
+      #   uses: actions/upload-artifact@v4
+      #   id: upload-universal
+      #   with:
+      #     name: Horus-${{ env.version }}-Linux-Universal
+      #     path: dist/*Universal.tar.gz
+      # - name: Comment artifacts on PR
+      #   uses: actions/github-script@v3
+      #   env:
+      #     RUN_ID: ${{ github.run_id }}
+      #     ROCKY: ${{ steps.upload-rocky.outputs.artifact-url }}
+      #     UBUNTU: ${{ steps.upload-ubuntu.outputs.artifact-url }}
+      #     UNIVERSAL: ${{ steps.upload-universal.outputs.artifact-url }}
+      #   with:
+      #     github-token: ${{secrets.GITHUB_TOKEN}}
+      #     script: |
+      #       const issue_number = context.issue.number;
+      #       const owner = context.repo.owner;
+      #       const repo = context.repo.repo;
+      #       const run_id = process.env.RUN_ID;
 
-            const artifacts = [
-              {name: `Horus-${process.env.version}-Rocky8-QT`, url: process.env.ROCKY},
-              {name: `Horus-${process.env.version}-Ubuntu22-GTK`, url: process.env.UBUNTU},
-              {name: `Horus-${process.env.version}-Linux-Universal`, url: process.env.UNIVERSAL}
-            ];
+      #       const artifacts = [
+      #         {name: `Horus-${process.env.version}-Rocky8-QT`, url: process.env.ROCKY},
+      #         {name: `Horus-${process.env.version}-Ubuntu22-GTK`, url: process.env.UBUNTU},
+      #         {name: `Horus-${process.env.version}-Linux-Universal`, url: process.env.UNIVERSAL}
+      #       ];
 
-            if (!artifacts.length) {
-              return core.error(`No artifacts found`);
-            }
+      #       if (!artifacts.length) {
+      #         return core.error(`No artifacts found`);
+      #       }
 
-            let body = `Download the artifacts for this pull request:\n`;
-            for (const art of artifacts) {
-                body += `\n* [${art.name}](${art.url})`;
-            }
-            
-            github.issues.createComment({
-              issue_number: issue_number,
-              owner: owner,
-              repo: repo,
-              body: body
-            })
+      #       let body = `Download the artifacts for this pull request:\n`;
+      #       for (const art of artifacts) {
+      #           body += `\n* [${art.name}](${art.url})`;
+      #       }
+
+      #       github.issues.createComment({
+      #         issue_number: issue_number,
+      #         owner: owner,
+      #         repo: repo,
+      #         body: body
+      #       })
