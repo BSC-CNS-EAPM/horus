@@ -52,7 +52,6 @@ export default function WorkingView(props: WorkingViewProps) {
 
   const iFrameRef = useRef<ImperativePanelHandle | null>(null);
 
-
   const handleIFrame = (event: Event) => {
     // Opening it from a block action yields a socket event
     const parsedEvent = event as CustomEvent;
@@ -88,7 +87,10 @@ export default function WorkingView(props: WorkingViewProps) {
     );
 
     // Make sure the panel is expanded too
-    if (iFrameRef.current?.getSize()! < 5 || iFrameRef.current?.getCollapsed()!) {
+    if (
+      iFrameRef.current?.getSize()! < 5 ||
+      iFrameRef.current?.getCollapsed()!
+    ) {
       iFrameRef.current?.expand();
     }
     setShowIFrame(true);

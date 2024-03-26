@@ -29,6 +29,7 @@ import pkg_resources
 
 # For the SocketIO type completion
 from flask_socketio import SocketIO
+import flask_login
 
 # Plugin deps context manager, forking the process prevents
 # importend modules from being imported twice
@@ -42,6 +43,15 @@ from Server.RemotesManager import RemotesManager
 
 # Import the settings manager
 from Server.SettingsManager import SettingsManager
+
+# User management for remote son blocks
+from Server.WebAppManager import HorusUser
+
+if typing.TYPE_CHECKING:
+    # Cast the flask_login UserMixin to the HorusUser class
+    currentUser = typing.cast(HorusUser, flask_login.current_user)
+else:
+    currentUser = flask_login.current_user
 
 
 class DefaultPluginConfigException(Exception):
@@ -1047,10 +1057,10 @@ class PluginManager(metaclass=HorusSingleton):
             # Set the block config to execute the block
             block.config = plugin.config
 
-        # Add to the python path the dependencies folder of the plugin
-        # self._includeDepsPath(plugin._path)  # pylint: disable=protected-access
-
-        remoteManager = RemotesManager(self.appSupportDir)
+        try:
+            remoteManager = RemotesManager(currentUser.appSupportDir)
+        except AttributeError:
+            remoteManager = RemotesManager(self.appSupportDir)
 
         if block.selectedRemote != "Local":
             logging.getLogger("Horus").info("Connecting to remote %s", block.selectedRemote)
