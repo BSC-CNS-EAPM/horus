@@ -705,6 +705,7 @@ class HorusServer:
 
             # Read the bytes of the state
             if molstarState is not None:
+                molstarState.stream.seek(0)
                 molstarState = molstarState.stream.read()
 
             try:
@@ -875,16 +876,16 @@ class HorusServer:
                         )
                     flow = self.flowManager.loadPredefinedFlow(savedID)
 
-                # On webapp mode, remove the full path
-                if self.webAppManager is not None:
-                    _, highestBoundary = currentUser.getUserPath(path)
-                    flow.path = flow.path.replace(highestBoundary, "") if flow.path else flow.path
-
                 # Get the flow JSON
                 flowJson = flow.encode(minimal=False)
 
                 # Get the molstarStte zip file
                 molstarState = flow.getMolstarState()
+
+                # On webapp mode, remove the full path
+                if self.webAppManager is not None:
+                    _, highestBoundary = currentUser.getUserPath(path)
+                    flow.path = flow.path.replace(highestBoundary, "") if flow.path else flow.path
 
                 success = {"ok": True, "flow": flowJson}
                 if molstarState is not None:
@@ -941,10 +942,14 @@ class HorusServer:
                     # Update the path to the user's directory
                     flowPath, _ = currentUser.getUserPath(flowPath)
 
+                # Open the flow
                 flow = self.flowManager.openFlowFromPath(flowPath)
-                flow.saveMolstarState(file.stream.read())
+
+                # Seek the stream at the starting byte to load it
+                file.stream.seek(0)
+                molState = file.stream.read()
                 flow.pendingActions = []
-                flow.write()
+                flow.write(molState)
 
                 success = {
                     "ok": True,

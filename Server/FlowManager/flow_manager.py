@@ -456,7 +456,7 @@ class Flow:
 
         return flow
 
-    def write(self) -> typing.Dict[str, typing.Any]:
+    def write(self, molState: typing.Optional[bytes] = None) -> typing.Dict[str, typing.Any]:
         """
         Writes the flow to the file
 
@@ -471,7 +471,10 @@ class Flow:
         encodedFlow = self.encode()
 
         # Get the current molstar state, if any
-        molstarStateBytes = self.getMolstarState()
+        if molState is None:
+            molstarStateBytes = self.getMolstarState()
+        else:
+            molstarStateBytes = molState
 
         # Remove the current file
         if os.path.exists(self.path):
@@ -482,9 +485,9 @@ class Flow:
         with zipfile.ZipFile(self.path, "w", zipfile.ZIP_DEFLATED) as zipFile:
             zipFile.writestr(self.FLOW_FILE, json.dumps(encodedFlow, indent=4))
 
-        # Store again the molstar state
-        if molstarStateBytes is not None:
-            self.saveMolstarState(molstarStateBytes)
+            # Store again the molstar state
+            if molstarStateBytes is not None:
+                zipFile.writestr(self.MOLSTAR_STATE_FILE, molstarStateBytes)
 
         # Return the encoded flow in case its needed
         return encodedFlow
@@ -509,19 +512,6 @@ class Flow:
         flow.path = path
 
         return flow
-
-    def saveMolstarState(self, molstarState: bytes):
-        """
-        Saves the molstar state molx file into the flow zip
-        """
-
-        # Use the warning context manager to supress the duplication warning
-        # as the duplicated molstarState will be automatically removed when
-        # the flow is saved again
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            with zipfile.ZipFile(self.path, "a", zipfile.ZIP_DEFLATED) as zipFile:
-                zipFile.writestr(self.MOLSTAR_STATE_FILE, molstarState)
 
     def getMolstarState(self) -> typing.Optional[bytes]:
         """
@@ -1400,10 +1390,7 @@ class FlowManager:
                 "Trying to save empty flow. Please save flows that contain placed blocks."
             )
         else:
-            flow.write()
-
-        if molstarState is not None:
-            flow.saveMolstarState(molstarState)
+            flow.write(molstarState)
 
         # Add the flow to the recent flows list
         self._addToRecentFlows(flow)
