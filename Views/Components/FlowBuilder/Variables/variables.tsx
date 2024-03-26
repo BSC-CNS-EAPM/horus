@@ -363,6 +363,14 @@ function VariableRenderer(props: {
           onChange={handleVariableChangeInternal}
         />
       );
+    case PluginVariableTypes.CONSTRAINED_NUMBER_RANGE:
+      return (
+        <ConstrainedSliderVariableView
+          variable={variableToRender}
+          currentValue={currentValue}
+          onChange={handleVariableChangeInternal}
+        />
+      );
     case PluginVariableTypes.LIST:
       return (
         <ListView
@@ -682,6 +690,79 @@ function SliderVariableView(props: VariableViewProps) {
         currentValue={currentValue}
         variable={variable}
         onChange={onChange}
+      />
+      {/* <input className="min-w-[50px]" value={variable.value} /> */}
+    </div>
+  );
+}
+
+function ConstrainedSliderVariableView(props: VariableViewProps) {
+  const { currentValue, variable, onChange } = props;
+
+  const min = variable.allowedValues[0] ?? 0;
+  const max = variable.allowedValues[1] ?? 10;
+  const step = variable.allowedValues[2] ?? 1;
+
+  let value = currentValue;
+
+  if (value === null || value === undefined) {
+    value = [min, max];
+    onChange(value);
+  }
+
+  if (value[0] < min) {
+    value[0] = min;
+    onChange(value);
+  } else if (value[0] > max) {
+    value[0] = max;
+  } else if (value[1] > max) {
+    value[1] = max;
+    onChange(value);
+  } else if (value[1] < min) {
+    value[1] = min;
+    onChange(value);
+  }
+
+  return (
+    <div
+      className="flex flex-row p-2 w-full items-end gap-4"
+      data-testid="slider-container"
+    >
+      <IntegerFloatVariableView
+        currentValue={value?.[0] ?? min}
+        variable={variable}
+        onChange={(newValue) => {
+          onChange([newValue, value[1] ?? min]);
+        }}
+      />
+      <Slider
+        range
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={onChange}
+        count={1}
+        style={{
+          width: "300%",
+        }}
+        styles={{
+          track: { backgroundColor: "var(--pop-code)" },
+          handle: {
+            backgroundColor: "var(--vintage-code)",
+            border: "none",
+            outline: "none",
+            opacity: 1,
+            borderColor: "black",
+          },
+        }}
+      />
+      <IntegerFloatVariableView
+        currentValue={value?.[1] ?? max}
+        variable={variable}
+        onChange={(newValue) => {
+          onChange([value[0] ?? max, newValue]);
+        }}
       />
       {/* <input className="min-w-[50px]" value={variable.value} /> */}
     </div>

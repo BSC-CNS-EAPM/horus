@@ -263,6 +263,22 @@ class VariableTypes(str, Enum):
     - The third number in the list is the step.
     """
 
+    CONSTRAINED_NUMBER_RANGE = "[number, number, number, constrain]"
+    """
+    A range of numbers like 1-10.
+
+    Can be made an Integer range or a Float range depending on the step.
+
+    Will render as a slider with tho dragging handles. Used to define
+    a range between to points.
+    Use allowedValues to define: [min, max, step].
+    - The first number in the list is the minimum value.
+    - The second number in the list is the maximum value.
+    - The third number in the list is the step.
+
+    Will return two numbers, one for each handle.
+    """
+
     FILE = "file"
     """
     A file.

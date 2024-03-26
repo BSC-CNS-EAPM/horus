@@ -30,6 +30,7 @@ export enum PluginVariableTypes {
   STRING_LIST = "string[]",
   NUMBER_LIST = "number[]",
   NUMBER_RANGE = "[number, number, number]",
+  CONSTRAINED_NUMBER_RANGE = "[number, number, number, constrain]",
   FILE = "file",
   FOLDER = "folder",
   STRUCTURE = "structure",
