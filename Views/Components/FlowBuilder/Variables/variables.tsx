@@ -556,8 +556,10 @@ function TextAreaVariableView(props: VariableViewProps) {
   );
 }
 
-function IntegerFloatVariableView(props: VariableViewProps) {
-  const { currentValue, variable, onChange } = props;
+function IntegerFloatVariableView(
+  props: VariableViewProps & { preventMessage?: boolean }
+) {
+  const { currentValue, variable, onChange, preventMessage } = props;
 
   const [numberMessage, setNumberMessage] = useState<string | null>(null);
 
@@ -618,7 +620,9 @@ function IntegerFloatVariableView(props: VariableViewProps) {
 
   return (
     <div className="flex flex-col gap-2 justify-center text-center items-center w-full">
-      {numberMessage && <div className="text-red-500">{numberMessage}</div>}
+      {preventMessage && numberMessage && (
+        <div className="text-red-500">{numberMessage}</div>
+      )}
       <input
         className="plugin-variable-value"
         value={currentValue}
@@ -649,16 +653,36 @@ function SliderVariableView(props: VariableViewProps) {
   }
 
   return (
-    <div className="flex flex-row gap-2 p-2" data-testid="slider-container">
+    <div
+      className="flex flex-row p-2 w-full items-end gap-4"
+      data-testid="slider-container"
+    >
       <Slider
         min={min}
         max={max}
         step={step}
         value={currentValue}
         onChange={onChange}
-        dots
+        style={{
+          width: "300%",
+        }}
+        styles={{
+          track: { backgroundColor: "var(--pop-code)" },
+          handle: {
+            backgroundColor: "var(--vintage-code)",
+            border: "none",
+            outline: "none",
+            opacity: 1,
+            borderColor: "black",
+          },
+        }}
       />
-      {variable.value}
+      <IntegerFloatVariableView
+        currentValue={currentValue}
+        variable={variable}
+        onChange={onChange}
+      />
+      {/* <input className="min-w-[50px]" value={variable.value} /> */}
     </div>
   );
 }
