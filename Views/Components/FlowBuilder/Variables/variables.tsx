@@ -56,17 +56,6 @@ export function PluginVariableView(props: PluginVariableViewProps) {
     onChange(value, variable.id);
   };
 
-  if (variable.type === PluginVariableTypes.GROUP) {
-    return (
-      <GroupVariableView
-        onChange={props.onChange}
-        variable={variable}
-        hideName={hideName ?? false}
-        hideDescription={props.hideDescription ?? false}
-      />
-    );
-  }
-
   // If the variable is any of the list types or the group, always ocuppy the whole width using min-w-full
   const widthStyle = useMemo(() => {
     switch (variable.type) {
@@ -77,7 +66,18 @@ export function PluginVariableView(props: PluginVariableViewProps) {
       default:
         return {};
     }
-  }, []);
+  }, [variable.type]);
+
+  if (variable.type === PluginVariableTypes.GROUP) {
+    return (
+      <GroupVariableView
+        onChange={props.onChange}
+        variable={variable}
+        hideName={hideName ?? false}
+        hideDescription={props.hideDescription ?? false}
+      />
+    );
+  }
 
   return (
     <div
@@ -119,7 +119,7 @@ export function PluginVariableView(props: PluginVariableViewProps) {
 function VariableListView(props: VariableViewProps) {
   const { variable, currentValue, onChange } = props;
   const addRow = () => {
-    let newValues = currentValue ? [...currentValue] : [];
+    const newValues = currentValue ? [...currentValue] : [];
 
     // Push a new value that contains an array of objects representing each variable and its default value
     newValues.push(
@@ -286,6 +286,7 @@ function VariableRenderer(props: {
     // Assign the variable value that comes from the object to the
     // initial currentValue
     setCurrentValue(variableToRender.value);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Notice the empty dependency array so that the value is not updated with the variable
 
   if (variableToRender?.isCustom) {
@@ -1272,7 +1273,6 @@ function HeteroResView(props: VariableViewProps) {
   const loadMolstarHeteroRes = async () => {
     const molstar = window.molstar;
     const residues = await molstar?.listHeteroRes();
-    console.log(residues);
 
     setHeteroRes(residues ?? []);
     setFilteredHeteroRes(residues ?? []);

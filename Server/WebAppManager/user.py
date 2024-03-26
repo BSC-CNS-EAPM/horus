@@ -124,7 +124,9 @@ class HorusUser(flask_login.UserMixin):
 
         return super().get_id()
 
-    def getUserPath(self, path: typing.Union[None, str]) -> tuple[str, str]:
+    def getUserPath(
+        self, path: typing.Union[None, str], overrideBoundary: typing.Optional[str] = None
+    ) -> tuple[str, str]:
         """
         Converts a relative path from the
         webapp mode into the full path
@@ -133,7 +135,11 @@ class HorusUser(flask_login.UserMixin):
         :return: A tuple with the full path and the highest boundary
         """
 
-        highestBoundary = os.path.abspath(self.flowsDir)
+        if overrideBoundary is not None:
+            highestBoundary = os.path.abspath(overrideBoundary)
+        else:
+            highestBoundary = os.path.abspath(self.flowsDir)
+
         if path is None:
             path = highestBoundary
         else:
@@ -206,6 +212,42 @@ class HorusUser(flask_login.UserMixin):
         anonyUser.anonymous = True
 
         return anonyUser
+
+    def flowContextUserPath(
+        self, flowContextPath: str, path: typing.Optional[str] = None
+    ) -> typing.Tuple[str, str]:
+        """
+        Returns the highest boundary and relative path respect to the current flow
+
+        Parameters
+        ----------
+        flowContextPath: str
+            Path to the current flow
+        path: str
+            A path to be openen under the current flow directory.
+            If none provided, the flow dir will be opened
+
+        Returns
+        -------
+        A tuple with
+            relativePath: str
+                The ralative path respect the flow context
+            highestBoundary: str
+                The highest boundary path (abspath to the flow context)
+        """
+
+        flowContextBoundary = os.path.dirname(flowContextPath)
+
+        if not os.path.exists(flowContextBoundary):
+            # If the path does not exist, means that we are opening
+            # the flow directly to the flow directory
+            # and we need to add the user flows to the path
+            if flowContextBoundary.startswith("/"):
+                flowContextBoundary = flowContextBoundary[1:]
+
+            flowContextBoundary = os.path.join(self.flowsDir, flowContextBoundary)
+
+        return self.getUserPath(path or flowContextBoundary, overrideBoundary=flowContextBoundary)
 
     def toDict(self) -> dict[str, typing.Any]:
         """

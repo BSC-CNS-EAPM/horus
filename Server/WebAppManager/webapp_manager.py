@@ -403,6 +403,70 @@ class MailServer:
             raise ValueError("The token is invalid") from e
 
 
+class FileManagement:
+    """
+    Configuration about how the file picker should work in WebApp mode
+    """
+
+    allowUpload: bool = False
+    """
+    If users should be allowed to uplaod files to the flow
+    """
+
+    maxUploadSize: int = 2
+    """
+    If users are allowed to upload, then the maximum file size in MB
+    """
+
+    allowDownload: bool = False
+    """
+    If users are allowed to download files using the FilePicker
+    """
+
+    allowDelete: bool = False
+    """
+    If users can delete files using the FilePicker
+    """
+
+    allowNewFolder: bool = False
+    """
+    If users are allowed to create new folders using the FilePicker
+    """
+
+    def __init__(self, rawFileManager: dict[str, Any]) -> None:
+        self.allowUpload = rawFileManager.get("allowUpload", False)
+        self.maxUploadSize = rawFileManager.get("maxUploadSize", False)
+        self.allowDownload = rawFileManager.get("allowDownload", False)
+        self.allowDelete = rawFileManager.get("allowDelete", False)
+        self.allowNewFolder = rawFileManager.get("allowNewFolder", False)
+
+
+class AnonymousQuotas:
+    """
+    Control the limits of users in non-registration web-apps
+    """
+
+    maxFlows: int = 10
+    """
+    The maximum quantity of flows per user
+    """
+
+    maxStorage: int = 500
+    """
+    The maximum storage per user
+    """
+
+    maxTime: int = 100
+    """
+    The maximum flow time per user
+    """
+
+    def __init__(self, rawAnonymousQuotas: dict[str, Any]) -> None:
+        self.maxFlows = rawAnonymousQuotas.get("maxFlows", 10)
+        self.maxStorage = rawAnonymousQuotas.get("maxStorage", 500)
+        self.maxTime = rawAnonymousQuotas.get("maxTime", 100)
+
+
 class UserManagement:
     """
     User management information for the server such as the app support directory,
@@ -445,9 +509,14 @@ class UserManagement:
     Set to 0 to disable
     """
 
-    maxFlowsAnonymous: int = 10
+    anonymousQuotas: Optional[AnonymousQuotas]
     """
     The maximum number of flows for anonymous users (When not requiring registration)
+    """
+
+    fileManagement: FileManagement
+    """
+    Control how the FilePicker works in WebApp mode
     """
 
     def __init__(
@@ -469,7 +538,6 @@ class UserManagement:
         self.requireActivation = rawUserManagement.get("requireActivation", False)
         self.allowDemoUser = rawUserManagement.get("allowDemoUser", False)
         self.deleteInterval = rawUserManagement.get("deleteInterval", 0)
-        self.maxFlowsAnonymous = rawUserManagement.get("maxFlowsAnonymous", 10)
 
         if self.requireActivation and not self.requireRegistration:
             raise ValueError(
@@ -506,6 +574,16 @@ class UserManagement:
         self.database = (
             DatabaseConfig(rawDatabase) if self.requireRegistration else None  # type: ignore
         )
+
+        self.fileManagement = FileManagement(rawUserManagement.get("fileManagement", {}))
+        anonymousQuotas = rawUserManagement.get("anonymousQuotas")
+
+        if self.requireRegistration and anonymousQuotas is not None:
+            raise ValueError(
+                "If you require your users to registrate, do not setup Anonymous Quotas. Please modify the configuration file"
+            )
+
+        self.anonymousQuotas = AnonymousQuotas(anonymousQuotas if anonymousQuotas else {})
 
         # Start a background task to delete the user folders at a given interval
         self._deleteUserFoldersInterval()

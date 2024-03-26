@@ -23,6 +23,7 @@ declare global {
         requireRegistration: boolean;
         allowRemotes: boolean;
         allowDemoUser: boolean;
+        uploadSize: number;
       };
     };
     // Socket connection ID

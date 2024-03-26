@@ -530,23 +530,51 @@ class HorusServer:
         return wrapper
 
     # Wrapper for preventing access in the webapp mode
-    def preventOnWebApp(self, func):
+    def preventOnWebApp(self, specialBypass: str):
         """
         This wrapper will prevent access to the route if the server is running in webapp
         mode. If the server is running in webapp mode, it will return a JSON response with
         an error message.
         """
 
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            if self.webAppManager is not None:
-                return flask.jsonify(
-                    {
-                        "ok": False,
-                        "msg": "This function is not available on Web App mode.",
-                    }
-                )
-            return func(*args, **kwargs)
+        def wrapper(func):
+            @wraps(func)
+            def wrapperFunc(*args, **kwargs):
+
+                bypass = False
+                if self.webAppManager is not None:
+                    um = self.webAppManager.userManagement
+                    if specialBypass == "allowUpload":
+                        bypass = um.fileManagement.allowUpload
+                        if bypass:
+                            # Check the request for the file size too
+                            for f in request.files.values():
+                                # Get the size in MB
+                                size = len(f.read()) / (1024 * 1024)
+                                if size > um.fileManagement.maxUploadSize:
+                                    return flask.jsonify(
+                                        {
+                                            "ok": False,
+                                            "msg": f"The file size exceeds the limit of {um.fileManagement.maxUploadSize} MB",
+                                        }
+                                    )
+                    elif specialBypass == "allowDownload":
+                        bypass = um.fileManagement.allowDownload
+                    elif specialBypass == "allowDelete":
+                        bypass = um.fileManagement.allowDelete
+                    elif specialBypass == "allowNewFolder":
+                        bypass = um.fileManagement.allowNewFolder
+
+                if self.webAppManager is not None and not bypass:
+                    return flask.jsonify(
+                        {
+                            "ok": False,
+                            "msg": "This function is not available on Web App mode.",
+                        }
+                    )
+                return func(*args, **kwargs)
+
+            return wrapperFunc
 
         return wrapper
 
@@ -572,9 +600,16 @@ class HorusServer:
                         }
                     )
                 else:
+                    aq = self.webAppManager.userManagement.anonymousQuotas
+
+                    if aq is None:
+                        return flask.jsonify(
+                            {"ok": False, "msg": "Internal server error. Try again later."}
+                        )
+
                     # Verify that the anonymous user has no more than 10 flows
                     flowsCount = os.listdir(currentUser.flowsDir)
-                    if len(flowsCount) >= self.webAppManager.userManagement.maxFlowsAnonymous:
+                    if len(flowsCount) >= aq.maxFlows:
                         return flask.jsonify(
                             {
                                 "ok": False,
@@ -939,6 +974,7 @@ class HorusServer:
                     "companyName": self.webAppManager.companyName,
                     "allowRemotes": self.webAppManager.allowRemotes,
                     "allowDemoUser": self.webAppManager.userManagement.allowDemoUser,
+                    "uploadSize": self.webAppManager.userManagement.fileManagement.maxUploadSize,
                 }
 
             return flask.jsonify(internalSettings)
@@ -1236,16 +1272,24 @@ class HorusServer:
         @self.verifyLogin
         def filePicker():
 
-            path = request.get_json().get("path")
-            extensions = request.get_json().get("extensions")
-            openFolder = request.get_json().get("openFolder", False)
+            jsonData = request.get_json()
+            path = jsonData.get("path")
+            flowContextPath = jsonData.get("flowContextPath")
+            extensions = jsonData.get("extensions")
+            openFolder = jsonData.get("openFolder", False)
 
             if extensions is not None and extensions == ["*"]:
                 extensions = None
 
             # Handle webapp mode
             if self.webAppManager is not None:
-                path, highestBoundary = currentUser.getUserPath(path)
+
+                if flowContextPath is None:
+                    return {"ok": False, "msg": "Internal server error. Try again later."}
+                # If a flow context path was provided,
+                # set the highest boundary to that flow folder
+                path, highestBoundary = currentUser.flowContextUserPath(flowContextPath, path)
+
             else:
                 highestBoundary = "/"
                 if path is None:
@@ -1263,25 +1307,32 @@ class HorusServer:
                 }
             else:
                 fileExplorer = FileExplorer(path, highestBoundary)
-                directoryContents = fileExplorer.listDirectory(extensions, openFolder)
+                directoryContents = fileExplorer.listDirectory(
+                    extensions, openFolder, relative=self.webAppManager is not None
+                )
                 folderChain = fileExplorer.folderChain()
                 success = {
                     "ok": True,
                     "folderChain": folderChain,
                     "contents": directoryContents,
                 }
-
             return flask.jsonify(success)
 
         @self.server.route("/api/filepicker/createfolder", methods=["POST"])
         @self.verifyLogin
-        @self.preventOnWebApp
+        @self.preventOnWebApp(specialBypass="allowNewFolder")
         def createFolder():
-            path = request.get_json().get("path", os.getcwd())
-            folderName = request.get_json().get("folderName", None)
+            jsonData = request.get_json()
+            path = jsonData.get("path", os.getcwd())
+            folderName = jsonData.get("folderName", None)
+            flowContextPath = jsonData.get("flowContextPath")
 
             if self.webAppManager is not None:
-                path, _ = currentUser.getUserPath(path)
+                if flowContextPath is None:
+                    return {"ok": False, "msg": "Internal server error. Try again later."}
+                # If a flow context path was provided,
+                # set the highest boundary to that flow folder
+                path, highestBoundary = currentUser.flowContextUserPath(flowContextPath, path)
 
             if folderName is None:
                 return flask.jsonify({"ok": False, "msg": "No folder name provided"})
@@ -1294,10 +1345,10 @@ class HorusServer:
 
         @self.server.route("/api/filepicker/upload", methods=["POST"])
         @self.verifyLogin
-        @self.preventOnWebApp
+        @self.preventOnWebApp(specialBypass="allowUpload")
         def uploadFiles():
-            request.get_data()
             path = request.form.get("path", None)
+            flowContextPath = request.form.get("flowContextPath", None)
             files = request.files
 
             if path is None:
@@ -1307,7 +1358,11 @@ class HorusServer:
                 return flask.jsonify({"ok": False, "msg": "No file provided"})
 
             if self.webAppManager is not None:
-                path, _ = currentUser.getUserPath(path)
+                if flowContextPath is None or flowContextPath == "":
+                    return {"ok": False, "msg": "Internal server error. Try again later."}
+                # If a flow context path was provided,
+                # set the highest boundary to that flow folder
+                path, highestBoundary = currentUser.flowContextUserPath(flowContextPath, path)
 
             try:
 
@@ -1316,6 +1371,7 @@ class HorusServer:
 
                 for file in files.values():
                     if file.filename:
+                        file.stream.seek(0)
                         file.save(os.path.join(path, file.filename))
 
                 return flask.jsonify({"ok": True})
@@ -1324,15 +1380,22 @@ class HorusServer:
 
         @self.server.route("/api/filepicker/download", methods=["POST"])
         @self.verifyLogin
+        @self.preventOnWebApp(specialBypass="allowDownload")
         def downloadFiles():
 
-            path = request.get_json().get("path", None)
+            jsonData = request.get_json()
+            path = jsonData.get("path", None)
+            flowContextPath = jsonData.get("flowContextPath", None)
 
             if path is None:
                 return flask.jsonify({"ok": False, "msg": "No path provided"})
 
             if self.webAppManager is not None:
-                path, _ = currentUser.getUserPath(path)
+                if flowContextPath is None or flowContextPath == "":
+                    return {"ok": False, "msg": "Internal server error. Try again later."}
+                # If a flow context path was provided,
+                # set the highest boundary to that flow folder
+                path, highestBoundary = currentUser.flowContextUserPath(flowContextPath, path)
 
             if os.path.isdir(path):
                 # Zip the folder
@@ -1369,22 +1432,28 @@ class HorusServer:
 
         @self.server.route("/api/filepicker/delete", methods=["POST"])
         @self.verifyLogin
-        @self.preventOnWebApp
+        @self.preventOnWebApp(specialBypass="allowDelete")
         def deleteFiles():
             data = request.get_json()
             path = data.get("path", None)
+            flowContextPath = data.get("flowContextPath", None)
 
             if path is None:
                 return flask.jsonify({"ok": False, "msg": "No path provided"})
 
             if self.webAppManager is not None:
-                path, _ = currentUser.getUserPath(path)
+                if flowContextPath is None or flowContextPath == "":
+                    return {"ok": False, "msg": "Internal server error. Try again later."}
+                # If a flow context path was provided,
+                # set the highest boundary to that flow folder
+                path, highestBoundary = currentUser.flowContextUserPath(flowContextPath, path)
 
             try:
                 if os.path.isdir(path):
                     shutil.rmtree(path)
                 else:
                     os.remove(path)
+
                 return flask.jsonify({"ok": True})
             except Exception as exc:
                 return flask.jsonify({"ok": False, "msg": str(exc)})
@@ -1721,9 +1790,15 @@ class HorusServer:
         def viewFunctionWrapper(func, page, endPoint):
             @wraps(func)
             def wrapper(*args, **kwargs):
-                with PluginDeps(page._pageInfo["pluginDir"]):
-                    result = PluginDeps.subprocessCall(endPoint.function, *args, **kwargs)
-                return result
+                try:
+                    with PluginDeps(page._pageInfo["pluginDir"]):
+                        result = PluginDeps.subprocessCall(endPoint.function, *args, **kwargs)
+                    return result
+                except BaseException as e:
+                    logging.getLogger("Horus").error(
+                        "Error in plugin endpoint %s: %s", page._pageInfo["id"], str(e)
+                    )
+                    return flask.jsonify({"ok": False, "msg": str(e)}), 500
 
             return wrapper
 

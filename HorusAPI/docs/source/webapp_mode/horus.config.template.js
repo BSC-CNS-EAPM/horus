@@ -19,7 +19,27 @@ export const config = {
     // the anonymus user data after a certain time. Specify the time in days
     deleteInterval: 1,
     // If requireRegistration is false, then you may want to limit the number of flows that an anonymous user can send
-    maxFlowsAnonymous: 10,
+    // This is different from the "database" configuration in the sense that anonymous users cannot be tracked. This
+    // configuration will only apply to non-registered users, as registered ones have the "quotas". This won't apply
+    // in any case to webapps that have the requireRegistration set to true, as demo users cannot send calculations.
+    anonymousQuotas: {
+      maxFlows: 10,
+      maxStorage: 500,
+      maxTime: 100,
+    },
+    // This setting regulates the behaviour of the filepicker system for variables like "folder" or "file"
+    fileManagement: {
+      // Whether to allow users to upload files
+      allowUpload: true,
+      // For EACH file that they upload, the maximum size (in MB)
+      maxUploadSize: 500,
+      // If files / folders can be downloaded from the file picker
+      allowDownload: true,
+      // If files / folders can be deleted from the file picker
+      allowDelete: true,
+      // If users can create new folders with the "New folder" button
+      allowNewFolder: true,
+    },
     // Mail server configuration
     mailServer: {
       host: "smtp.mail.com",

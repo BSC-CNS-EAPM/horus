@@ -46,6 +46,7 @@ class FileExplorer:
         self,
         allowedExtensions: typing.Optional[typing.List[str]] = None,
         openFolder: bool = False,
+        relative: bool = False,
     ):
         """
         Lists the directory in the current path.
@@ -89,6 +90,12 @@ class FileExplorer:
             if self.highestBoundary != "/":
                 path = path.replace(self.highestBoundary, "")
 
+            if relative and path.startswith("/"):
+                # On webapp mode (where relative is True)
+                # the path starts with /flow_folder/actualfile.txt
+                # Therefore we need only the actualfie.txt part
+                path = os.sep.join(path.split(os.sep)[1:])
+
             files.append(
                 {
                     "id": file,
@@ -126,7 +133,7 @@ class FileExplorer:
         # Split the path into an array
         splittedPath = currentPath.split(os.sep)
 
-        # Root namee would be the last element of the highest boundary
+        # Root name would be the last element of the highest boundary
         rootName = self.highestBoundary.split(os.sep)[-1]
 
         for folder, index in zip(splittedPath, range(len(splittedPath))):

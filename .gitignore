@@ -218,6 +218,7 @@ bun.lockb
 horus.config.json
 tos.html
 horus_users
+horus_anonym
 .coverage
 *.db
 logo.png

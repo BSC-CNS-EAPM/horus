@@ -9,6 +9,8 @@ from Server.WebAppManager.webapp_manager import (
     UserManagement,
     Auth,
     MailServer,
+    FileManagement,
+    AnonymousQuotas,
 )
 
 
@@ -316,3 +318,80 @@ def test_no_scret_key_database():
     db = DatabaseConfig(raw_database)
 
     assert db.secretKey is not None
+
+
+def test_file_management_initialization():
+    raw_file_manager = {
+        "allowUpload": True,
+        "maxUploadSize": 1000,
+        "allowDownload": True,
+        "allowDelete": False,
+        "allowNewFolder": True,
+    }
+    file_manager = FileManagement(raw_file_manager)
+    assert file_manager.allowUpload == True
+    assert file_manager.maxUploadSize == 1000
+    assert file_manager.allowDownload == True
+    assert file_manager.allowDelete == False
+    assert file_manager.allowNewFolder == True
+
+
+def test_file_management_initialization_empty():
+    raw_file_manager = {
+        "allowUpload": True,
+        "maxUploadSize": 1000,
+        "allowDownload": True,
+        "allowDelete": False,
+        "allowNewFolder": True,
+    }
+    file_manager = FileManagement(raw_file_manager)
+    assert file_manager.allowUpload == True
+    assert file_manager.maxUploadSize == 1000
+    assert file_manager.allowDownload == True
+    assert file_manager.allowDelete == False
+    assert file_manager.allowNewFolder == True
+
+
+def test_anonymous_quotas_initialization():
+    raw_anonymous_quotas = {"maxFlows": 20, "maxStorage": 1000, "maxTime": 200}
+    quotas = AnonymousQuotas(raw_anonymous_quotas)
+    assert quotas.maxFlows == 20
+    assert quotas.maxStorage == 1000
+    assert quotas.maxTime == 200
+
+
+def test_user_management_registration_activation_requirement():
+    # Test when activation is required without registration
+    with pytest.raises(ValueError):
+        UserManagement({"requireActivation": True})
+
+    # Test when activation is required with registration but mail server is missing
+    with pytest.raises(ValueError):
+        UserManagement({"requireActivation": True, "requireRegistration": True})
+
+    # Test when demo user is allowed without registration
+    with pytest.raises(ValueError):
+        UserManagement({"allowDemoUser": True})
+
+    # Test when anonymous quotas are set with registration
+    with pytest.raises(ValueError):
+        UserManagement({"requireRegistration": True, "anonymousQuotas": {"maxFlows": 10}})
+
+    # Test when all requirements are met
+    raw_user_management = {
+        "requireRegistration": True,
+        "requireActivation": True,
+        "mailServer": {
+            "host": "example.com",
+            "port": 587,
+            "auth": {"user": "mymail@mail.com", "password": "mypassword123"},
+        },
+        "database": {"path": "users.db"},
+        "fileManagement": {},
+    }
+    user_management = UserManagement(raw_user_management)
+    assert user_management.requireRegistration == True
+    assert user_management.requireActivation == True
+    assert isinstance(user_management.mailServer, MailServer)
+    assert isinstance(user_management.database, DatabaseConfig)
+    assert isinstance(user_management.fileManagement, FileManagement)
