@@ -116,6 +116,11 @@ type BlurredModalProps = {
   onHide: () => void;
   children: React.ReactNode;
   zIndex?: number;
+  // As TailwindCSS classes
+  maxContentSize?: {
+    height?: string;
+    width?: string;
+  };
 };
 
 export function BlurredModal(props: BlurredModalProps) {
@@ -129,7 +134,11 @@ export function BlurredModal(props: BlurredModalProps) {
       className="blurred-modal-container flex justify-center items-center"
     >
       {/* This is the content */}
-      <div className="blurred-modal-content z-30 w-fit h-fit zoom-in-animation">
+      <div
+        className={`z-30 absolute blurred-modal-content zoom-in-animation ${
+          props.maxContentSize?.width ?? "max-w-[60%]"
+        }  ${props.maxContentSize?.height ?? "max-h-[85%]"}`}
+      >
         {props.children}
       </div>
       {/* This will make the background */}

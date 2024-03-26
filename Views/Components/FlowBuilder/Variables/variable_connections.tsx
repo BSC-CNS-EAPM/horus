@@ -6,6 +6,7 @@ import SidebarView from "../../SidebarView/sidebar_view";
 import NBDButton from "../../nbdbutton";
 import { SearchComponent } from "../../Toolbar/toolbar";
 import { InputView, SimpleVariableView, PluginVariableView } from "./variables";
+import { BlurredModal } from "../../reusable";
 
 // TS types
 import {
@@ -114,43 +115,44 @@ export function VariableModalView(props: VariableModalViewProps) {
   };
 
   return (
-    <div className="blurred-modal-container flex justify-center items-center">
-      {/* This is the content */}
-      <div className="z-30 absolute blurred-modal-content w-[60%] h-[85%] zoom-in-animation">
-        <div className="flex flex-col h-full">
-          <div className="sticky top-0 z-10">
-            <div className="variables-modal-title-search">
-              <div
-                className="font-semibold text-3xl"
-                style={{
-                  color: "var(--digital-grey-IV)",
-                }}
-              >
-                {block.name}
-              </div>
-              <div className="flex flex-row gap-2">
-                <SearchComponent
-                  placeholder="Search variables"
-                  onChange={filterVariables}
-                />
-                {props.handleClose && (
-                  <NBDButton action={props.handleClose}>Close</NBDButton>
-                )}
-              </div>
+    <BlurredModal
+      show
+      onHide={() => {
+        props?.handleClose?.();
+      }}
+      maxContentSize={{
+        height: "h-[85%]",
+        width: "w-[60%]",
+      }}
+    >
+      <div className="flex flex-col h-full">
+        <div className="sticky top-0 z-10">
+          <div className="variables-modal-title-search">
+            <div
+              className="font-semibold text-3xl"
+              style={{
+                color: "var(--digital-grey-IV)",
+              }}
+            >
+              {block.name}
             </div>
-            <hr className="my-4 p-0"></hr>
+            <div className="flex flex-row gap-2">
+              <SearchComponent
+                placeholder="Search variables"
+                onChange={filterVariables}
+              />
+              {props.handleClose && (
+                <NBDButton action={props.handleClose}>Close</NBDButton>
+              )}
+            </div>
           </div>
-          {block.variables && block.variables.length > 0 && (
-            <SidebarView views={getGroupedVariables()} />
-          )}
+          <hr className="my-4 p-0"></hr>
         </div>
+        {block.variables && block.variables.length > 0 && (
+          <SidebarView views={getGroupedVariables()} />
+        )}
       </div>
-      {/* This will make the background */}
-      <div
-        className="backdrop-blur-sm h-full w-full absolute z-20 blur-in-animation"
-        onClick={props.handleClose}
-      ></div>
-    </div>
+    </BlurredModal>
   );
 }
 
