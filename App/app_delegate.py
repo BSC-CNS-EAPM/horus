@@ -104,6 +104,13 @@ class HorusLogger:
             date = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
             logname += date
         logFile = os.path.join(self.logDir, f"{logname}.log")
+        latestLogFile = os.path.join(self.logDir, "latest.log")
+
+        # Generate a symlink to the latest log as "latest.log"
+        if os.path.exists(latestLogFile):
+            os.remove(latestLogFile)
+
+        os.symlink(logFile, latestLogFile)
 
         # Create the file handler
         fh = logging.FileHandler(logFile)  # pylint: disable=invalid-name
