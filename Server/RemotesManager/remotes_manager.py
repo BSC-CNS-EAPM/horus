@@ -94,6 +94,10 @@ class RemotesAPI:
             self.isLocal = True
             self.name = "Local"
             self.remoteName = "Local"
+
+            # For local, set the workDir as the current directory
+            self.workDir = os.getcwd()
+
             return
 
         # Set the remote details
@@ -297,6 +301,9 @@ class RemotesAPI:
         """
         Transfer a file from the local machine to the remote.
 
+        If the remote machine is the local one, no file will be moved nor transferred, and the
+        source path will be returned.
+
         :param source: The path to the file on the local machine.
         :param destination: The path to the file on the remote.
 
@@ -317,7 +324,6 @@ class RemotesAPI:
 
         if self.isLocal:
             os.system(f"cp -r {source} {destination}")
-
             return os.path.join(destination, os.path.basename(source))
 
         # Check if the source is a folder
@@ -365,6 +371,9 @@ class RemotesAPI:
         """
         Transfer a file from the remote to the local machine.
 
+        If the remote machine is the local one, no file will be moved nor transferred, and the
+        source path will be returned.
+
         :param source: The path to the file on the remote.
         :param destination: The path to the file on the local machine.
 
@@ -386,7 +395,6 @@ class RemotesAPI:
 
         if self.isLocal:
             os.system(f"cp -r {source} {destination}")
-
             return os.path.join(destination, os.path.basename(source))
 
         logging.getLogger("Horus").info("Transferring data from %s to %s", source, destination)
