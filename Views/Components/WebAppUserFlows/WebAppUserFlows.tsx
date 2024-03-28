@@ -4,6 +4,7 @@ import { openFlow, useGetRecentFlows } from "../FlowStatus/recent_flows";
 import RotatingLines from "../RotatingLines/rotatinglines";
 import HorusContainer from "../HorusContainer/horus_container";
 import { BlurredModal } from "../reusable";
+import { FlowElapsed } from "../FlowStatus/flow_elapsed";
 
 // Icons
 import TrashIcon from "../Toolbar/Icons/Trash";
@@ -17,7 +18,7 @@ import "./webappflows.css";
 import CloudDownload from "../Toolbar/Icons/CloudDownload";
 
 // React
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { render, unmountComponentAtNode } from "react-dom";
 
 // Utils
@@ -80,7 +81,7 @@ function FlowRowView({
       <FlowElapsed
         startedTime={flow.startedTime}
         finishedTime={flow.finishedTime}
-        status={flow.status}
+        elapsed={flow.elapsed}
       />
       <div className="text-center flex items-center justify-center">
         <FlowStatusView status={flow.status} />
@@ -199,45 +200,6 @@ function FlowSize({ size }: { size: number | undefined; status: FlowStatus }) {
     } else {
       return <div>{size ?? 0} MB</div>;
     }
-  }
-
-  return <div>-</div>;
-}
-
-function FlowElapsed({
-  startedTime,
-  finishedTime,
-}: {
-  startedTime: number | undefined;
-  finishedTime: number | undefined;
-  status: FlowStatus;
-}) {
-  const [timer, setTimer] = useState<number>(Date.now());
-
-  useEffect(() => {
-    let interval: Timer;
-
-    if (startedTime && !finishedTime) {
-      interval = setInterval(() => {
-        setTimer(Date.now());
-      }, 1000);
-    }
-    return () => {
-      clearInterval(interval);
-    };
-  }, [startedTime, finishedTime]);
-
-  if (startedTime) {
-    const elapsedSeconds = (finishedTime ?? timer / 1000) - startedTime;
-    const hours = Math.floor(elapsedSeconds / 3600);
-    const minutes = Math.floor((elapsedSeconds % 3600) / 60);
-    const seconds = Math.floor(elapsedSeconds % 60);
-
-    return (
-      <div>{`${hours.toString().padStart(2, "0")}:${minutes
-        .toString()
-        .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`}</div>
-    );
   }
 
   return <div>-</div>;

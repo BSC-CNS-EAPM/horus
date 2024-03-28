@@ -193,6 +193,11 @@ class Flow:
     The time the flow finished running
     """
 
+    elapsed: float = 0
+    """
+    The elapsed time of the flow. This is the accumulated time for all the runs
+    """
+
     FLOW_FILE: str = "flow.json"
     MOLSTAR_STATE_FILE: str = "molstarState.molx"
 
@@ -284,6 +289,10 @@ class Flow:
         self.size = flow.get("size", None)
         self.startedTime = flow.get("startedTime", None)
         self.finishedTime = flow.get("finishedTime", None)
+        self.elapsed = flow.get("elapsed", 0)
+
+        if self.elapsed < 0:
+            self.elapsed = 0
 
         # Convert the times to datetime
         if self.startedTime is not None:
@@ -449,6 +458,7 @@ class Flow:
             "size": self.size,
             "startedTime": self.startedTime.timestamp() if self.startedTime else None,
             "finishedTime": self.finishedTime.timestamp() if self.finishedTime else None,
+            "elapsed": self.elapsed,
             "blocks": blocksJSON,
             "terminalOutput": self.terminalOutput,
             "pendingActions": self.pendingActions,
@@ -905,6 +915,9 @@ class Flow:
             # Clean the pending actions
             self.pendingActions = []
 
+            # Restore the time
+            self.elapsed = 0
+
         if placedID is None:
 
             # Stop the flow
@@ -945,6 +958,10 @@ class Flow:
         # Set the flow status to running
         self.status = self.FlowStatus.RUNNING
 
+        # Reset the time
+        self.startedTime = datetime.datetime.now()
+        self.finishedTime = None
+
         # Send the flow to the frontend if a socket is provided
         if self._socket is not None:
             self._socket.emit("flow", self.encode(minimal=False), to=self.savedID)
@@ -969,9 +986,6 @@ class Flow:
         self.size = None
         self.finishedTime = None
 
-        # Set the started time
-        self.startedTime = datetime.datetime.now()
-
         # Run the blocks
         with self.TerminalOutputUpdater(self.terminalOutput, self.savedID, socket):
             try:
@@ -993,6 +1007,9 @@ class Flow:
 
         # Set the finished time
         self.finishedTime = datetime.datetime.now()
+
+        # Add the elapsed time
+        self.elapsed += (self.finishedTime - self.startedTime).total_seconds()
 
         # Compute the size of the folder the flow is in
         self.size = self._computeSize()

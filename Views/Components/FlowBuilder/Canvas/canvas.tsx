@@ -16,6 +16,7 @@ import Slider from "rc-slider";
 import StopIcon from "../../Toolbar/Icons/Stop";
 import SaveIcon from "../../Toolbar/Icons/Save";
 import { FlowStatusView } from "../../FlowStatus/flow_status";
+import { FlowElapsed } from "../../FlowStatus/flow_elapsed";
 
 type FlowCanvasProps = {
   flowHooks: FlowHooks;
@@ -107,6 +108,8 @@ function CanvasZoom({ flowHooks }: { flowHooks: FlowHooks }) {
 }
 
 function FlowTopBar(props: { flowHooks: FlowHooks }) {
+  const { flow } = props.flowHooks;
+
   return (
     <div className="flex flex-row top-bar-flow-reciver gap-2">
       <input
@@ -129,6 +132,23 @@ function FlowTopBar(props: { flowHooks: FlowHooks }) {
         }}
         value={props.flowHooks.flow.name}
       />
+      {flow.startedTime && (
+        <div
+          className="flex flex-col gap-0 items-center text-center justify-center bg-white flow-name"
+          style={{
+            borderColor: props.flowHooks.saved
+              ? "var(--digital-grey-IV)"
+              : "orange",
+            minWidth: "100px",
+          }}
+        >
+          <FlowElapsed
+            startedTime={flow.startedTime}
+            finishedTime={flow.finishedTime}
+            elapsed={flow.elapsed}
+          />
+        </div>
+      )}
       <div
         className={`flex flex-col gap-0 items-center text-center justify-center bg-white flow-name ${
           props.flowHooks.flow.status === FlowStatus.RUNNING ||

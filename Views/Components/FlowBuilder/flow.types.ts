@@ -256,6 +256,11 @@ export type Flow = {
    * Timestamp when the flow finished executing
    */
   finishedTime?: number;
+
+  /**
+   * Total seconds accumulated for all the runs of the flow
+   */
+  elapsed: number;
 };
 
 export enum DraggableEntity {
