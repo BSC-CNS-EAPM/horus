@@ -1,9 +1,9 @@
 # Horus
 
-Horus is a cross-platform workflow manager. Its modular nature allows for `Plugins` to increase the functionality the app.
+Horus is an innovative multi-platform GUI which empowers scientists in areas such as molecular modelling. Leveraging cutting-edge technologies, it can serve as a local application or as a centralized server for collaborative teamwork. Integrated with a 2D infinite canvas, Horus excels as a modular workflow designer across different environments. Its autonomous blocks enable seamless linking, facilitating customizable and distributable workflows via an accessible API, ushering in a new era of efficiency and adaptability in scientific endeavors.
 
 <p align="center">
-<img width="160" alt="horus" src="https://github.com/NBDsoftware/horus/assets/34599976/d9c603f7-11c6-4f2b-9cd1-6bba5b72bf3f">
+<img width="160" alt="horus" src="https://github.com/NBDsoftware/horus/assets/34599976/cd8a305a-cd91-449d-ab12-cb6284f7b244">
 <img height="160" alt="bsc" src="https://github.com/NBDsoftware/horus/assets/34599976/fdbc5625-8dec-4b97-b49e-3af1c783628a">
 <p\>
 
