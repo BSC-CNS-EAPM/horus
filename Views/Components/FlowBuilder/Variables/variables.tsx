@@ -28,6 +28,7 @@ import { SearchComponent } from "../../Toolbar/toolbar";
 import { HorusFileExplorer } from "../../FileExplorer/file_explorer";
 import { AtomInfo, SphereRef } from "../../Molstar/HorusWrapper/horusmolstar";
 import { Color } from "molstar/lib/mol-util/color";
+import LockIcon from "../../Toolbar/Icons/Lock";
 
 // Utility function to open an extension
 import { loadPage } from "../../Toolbar/extensions_list";
@@ -53,7 +54,9 @@ export function PluginVariableView(props: PluginVariableViewProps) {
   const { variable, onChange, hideName } = props;
 
   const handleChange = (value: any) => {
-    onChange(value, variable.id);
+    if (!variable.disabled) {
+      onChange(value, variable.id);
+    }
   };
 
   // If the variable is any of the list types or the group, always ocuppy the whole width using min-w-full
@@ -71,7 +74,7 @@ export function PluginVariableView(props: PluginVariableViewProps) {
   if (variable.type === PluginVariableTypes.GROUP) {
     return (
       <GroupVariableView
-        onChange={props.onChange}
+        onChange={handleChange}
         variable={variable}
         hideName={hideName ?? false}
         hideDescription={props.hideDescription ?? false}
@@ -81,12 +84,14 @@ export function PluginVariableView(props: PluginVariableViewProps) {
 
   return (
     <div
-      className={
+      className={`${variable.disabled && "cursor-not-allowed "} ${
         props.applyStyle === false
           ? props.customClass ?? "flex-auto"
           : "plugin-variable animated-gradient border-none"
-      }
-      style={widthStyle}
+      }`}
+      style={{
+        ...widthStyle,
+      }}
     >
       <div>
         {!hideName && (
@@ -108,8 +113,21 @@ export function PluginVariableView(props: PluginVariableViewProps) {
             {variable.description}
           </span>
         )}
+        {variable.disabled && (
+          <LockIcon
+            style={{
+              display: "inline",
+              transform: "translateY(-3px)",
+            }}
+          />
+        )}
       </div>
-      <div className={`plugin-variable-value flex justify-start w-full`}>
+      <div
+        className={`plugin-variable-value flex justify-start w-full`}
+        style={{
+          pointerEvents: variable.disabled ? "none" : "auto",
+        }}
+      >
         <VariableRenderer variable={variable} onChange={handleChange} />
       </div>
     </div>
@@ -169,9 +187,10 @@ function VariableListView(props: VariableViewProps) {
     value: any,
     variable: PluginVariable
   ) => {
-    const updatedVariable = {
+    const updatedVariable: PluginVariable = {
       ...variable,
       value: value[variable.id],
+      disabled: props.variable.disabled,
     };
 
     return (
@@ -198,7 +217,7 @@ function VariableListView(props: VariableViewProps) {
           hideDescription={true}
           applyStyle={false}
           hideName={true}
-          customClass="h-full justify-start min-w-[150px]"
+          customClass="h-full justify-start min-w-[150px] flex items-center"
         />
       </div>
     );
@@ -248,9 +267,10 @@ function GroupVariableView(props: PluginVariableViewProps) {
 
   return (
     <div className="plugin-variable">
-      <div className="plugin-variable-name">{props.variable.name}</div>
+      <span className="plugin-variable-name">{props.variable.name}</span>
       <div className="flex flex-wrap flex-row gap-2 justify-center">
         {variables!.map((variable) => {
+          variable.disabled = props.variable.disabled;
           return (
             <PluginVariableView
               variable={variable}
@@ -644,9 +664,9 @@ function IntegerFloatVariableView(
 function SliderVariableView(props: VariableViewProps) {
   const { currentValue, variable, onChange } = props;
 
-  const min = variable.allowedValues[0] ?? 0;
-  const max = variable.allowedValues[1] ?? 10;
-  const step = variable.allowedValues[2] ?? 1;
+  const min = variable?.allowedValues?.[0] ?? 0;
+  const max = variable?.allowedValues?.[1] ?? 10;
+  const step = variable?.allowedValues?.[2] ?? 1;
 
   let value = variable.value;
 
@@ -699,9 +719,9 @@ function SliderVariableView(props: VariableViewProps) {
 function ConstrainedSliderVariableView(props: VariableViewProps) {
   const { currentValue, variable, onChange } = props;
 
-  const min = variable.allowedValues[0] ?? 0;
-  const max = variable.allowedValues[1] ?? 10;
-  const step = variable.allowedValues[2] ?? 1;
+  const min = variable?.allowedValues?.[0] ?? 0;
+  const max = variable?.allowedValues?.[1] ?? 10;
+  const step = variable?.allowedValues?.[2] ?? 1;
 
   let value = currentValue;
 
@@ -805,7 +825,7 @@ function ListView(props: VariableViewProps) {
     if (variable.allowedValues) {
       newValues.push({
         value: "",
-        type: variable.allowedValues[0],
+        type: variable?.allowedValues?.[0] ?? PluginVariableTypes.STRING,
       });
     } else {
       newValues = currentValue ? [...currentValue] : [];
@@ -826,7 +846,7 @@ function ListView(props: VariableViewProps) {
     if (props.variable.allowedValues) {
       newValues[index] = {
         value: value,
-        type: props.variable.allowedValues[0],
+        type: variable?.allowedValues?.[0] ?? PluginVariableTypes.STRING,
       };
     } else {
       newValues[index] = value;

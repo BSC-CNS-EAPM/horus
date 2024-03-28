@@ -57,6 +57,7 @@ export type PluginVariable = {
   allowedValues: Array<any>;
   defaultValue: any;
   category: string;
+  disabled: boolean;
   placeholder?: string;
 
   // For GroupVariable

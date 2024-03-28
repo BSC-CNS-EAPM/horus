@@ -445,6 +445,7 @@ class PluginVariable:
         defaultValue: typing.Optional[typing.Any] = None,
         allowedValues: typing.Optional[typing.List[typing.Any]] = None,
         category: typing.Optional[str] = None,
+        disabled: bool = False,
     ):
         """
         :param name: The name of the variable.
@@ -453,10 +454,12 @@ class PluginVariable:
         :param defaultValue: The default value of the variable.
         :param id: The ID of the variable.
         :param allowedValues: A list of allowed values for the variable.
+        :param disabled: Whether the variable is disabled or not
         """
         self.name = name
         self.description = description
         self.type = type
+        self.disabled = disabled
 
         if type not in VariableTypes.getTypes():
             raise Exception(f"Invalid type {type}.")
@@ -498,6 +501,7 @@ class PluginVariable:
                 "type": str(self.type),
                 "value": self.value if self.value else self.defaultValue,
                 "allowedValues": self.allowedValues,
+                "disabled": self.disabled,
             }
 
         return varDict
@@ -531,6 +535,7 @@ class CustomVariable(PluginVariable):
         defaultValue: Any | None = None,
         allowedValues: List[Any] | None = None,
         category: str | None = None,
+        disabled: bool = False,
     ):
         """
         The custom variable works like a regular variable, but it can use an extension \
@@ -547,7 +552,9 @@ class CustomVariable(PluginVariable):
 
         :param customPage: The page instance where the variable will be rendered.
         """
-        super().__init__(id, name, description, type, defaultValue, allowedValues, category)
+        super().__init__(
+            id, name, description, type, defaultValue, allowedValues, category, disabled
+        )
         self.customPage = customPage
 
     def toDict(self, minimal: bool = False):
@@ -583,6 +590,7 @@ class VariableGroup(PluginVariable):
         variables: typing.List[PluginVariable],
         allowedValues: typing.Optional[typing.List[typing.Any]] = None,
         category: typing.Optional[str] = None,
+        disabled: bool = False,
     ) -> None:
         """
         Initialize a VariableGroup
@@ -593,6 +601,7 @@ class VariableGroup(PluginVariable):
         :param variables: The list of variables in the group.
         :param allowedValues: In this case, the allowed values will indicate in
         the GUI which groups can be connected (with the same allowedValues)
+        :param disabled: This will set all the variables under the group as disabled
         """
 
         self.variables = variables
@@ -608,6 +617,7 @@ class VariableGroup(PluginVariable):
             defaultValue=None,
             allowedValues=allowedValues,
             category=category,
+            disabled=disabled,
         )
 
     def toDict(self, minimal: bool = False):
@@ -615,22 +625,8 @@ class VariableGroup(PluginVariable):
         Converts the variable group to a dictionary.
         """
 
-        if minimal:
-            groupDict = {
-                "id": self.id,
-                "variables": [var.toDict(minimal) for var in self.variables],
-                "type": str(self.type),
-            }
-        else:
-            groupDict = {
-                "id": self.id,
-                "name": self.name,
-                "type": str(self.type),
-                "description": self.description,
-                "variables": [var.toDict(minimal) for var in self.variables],
-                "allowedValues": self.allowedValues,
-                "category": self.category,
-            }
+        groupDict = super().toDict(minimal)
+        groupDict["variables"] = [var.toDict(minimal) for var in self.variables]
 
         return groupDict
 
@@ -640,6 +636,8 @@ class VariableGroup(PluginVariable):
         """
 
         for variable in self.variables:
+            if variable.disabled:
+                continue
             if variable.id in values.keys():
                 variable.value = values[variable.id]
 
@@ -657,6 +655,7 @@ class VariableList(PluginVariable):
         prototypes: typing.List[PluginVariable],
         allowedValues: typing.Optional[typing.List[typing.Any]] = None,
         category: typing.Optional[str] = None,
+        disabled: bool = False,
     ):
         """
         :param id: The ID of the variable.
@@ -665,6 +664,7 @@ class VariableList(PluginVariable):
         :param prototypes: The list of variables in each row of the list.
         :param allowedValues: Matching allowedValues in other variables will \
         indicate in the GUI which variables can be connected.
+        :param disabled: Will set all variables under the list as disabled.
         """
 
         super().__init__(
@@ -675,6 +675,7 @@ class VariableList(PluginVariable):
             defaultValue=None,
             allowedValues=allowedValues,
             category=category,
+            disabled=disabled,
         )
 
         # prototypes cannot be VariableGroups
@@ -695,26 +696,30 @@ class VariableList(PluginVariable):
         Converts the variable list to a dictionary.
         """
 
-        if minimal:
-            listDict = {
-                "id": self.id,
-                "variables": [var.toDict(minimal) for var in self.prototypes],
-                "value": self.value if self.value else None,
-                "type": str(self.type),
-            }
-        else:
-            listDict = {
-                "id": self.id,
-                "name": self.name,
-                "type": str(self.type),
-                "value": self.value if self.value else None,
-                "description": self.description,
-                "variables": [var.toDict(minimal) for var in self.prototypes],
-                "allowedValues": self.allowedValues,
-                "category": self.category,
-            }
+        listDict = super().toDict(minimal)
+        listDict["variables"] = [var.toDict(minimal) for var in self.prototypes]
 
         return listDict
+
+    def _updateVariablesInList(self, value: list[dict]):
+        """
+        Updates the variable in the list and takes care of the disabled variables
+        """
+        # Create a set of disabled prototype IDs for faster lookup
+        disabledPrototypes = {p.id: p.defaultValue for p in self.prototypes if p.disabled}
+
+        # Replace from each value in the list, the value corresponding to the disabled variables
+        parsedList = []
+        for v in value:
+            parsedDict = {}
+            for key, variableValue in v.items():
+                if key in disabledPrototypes:
+                    parsedDict[key] = disabledPrototypes[key]
+                else:
+                    parsedDict[key] = variableValue
+            parsedList.append(parsedDict)
+
+        self.value = parsedList
 
 
 class PluginBlockTypes(str, Enum):
@@ -1057,11 +1062,15 @@ class PluginBlock:
         (JSON coming from frontend).
         """
         for variable in self._variables:
+            if variable.disabled:
+                continue
             if variable.id in values.keys():
                 if isinstance(variable, VariableGroup):
                     variable._updateVariablesInGroup(  # pylint: disable=protected-access
                         values[variable.id]
                     )
+                elif isinstance(variable, VariableList):
+                    variable._updateVariablesInList(values[variable.id])
                 else:
                     variable.value = values[variable.id]
 
@@ -1084,11 +1093,15 @@ class PluginBlock:
                 + f"Current block inputs are: {self._inputGroups.keys()}"
             ) from keye
         for variable in inputs:
+            if variable.disabled:
+                continue
             if variable.id in values.keys():
                 if isinstance(variable, VariableGroup):
                     variable._updateVariablesInGroup(  # pylint: disable=protected-access
                         values[variable.id]
                     )
+                elif isinstance(variable, VariableList):
+                    variable._updateVariablesInList(values[variable.id])
                 else:
                     variable.value = values[variable.id]
 
@@ -1166,8 +1179,12 @@ class PluginBlock:
         """
         for variable in self._outputs:
             if variable.id == id:
+                if variable.disabled:
+                    return
                 if isinstance(variable, VariableGroup):
                     variable._updateVariablesInGroup(value)
+                elif isinstance(variable, VariableList):
+                    variable._updateVariablesInList(value)
                 else:
                     variable.value = value
 
@@ -2007,6 +2024,8 @@ class Plugin:
                 if var.id in configs.keys():
                     if isinstance(var, VariableGroup):
                         var._updateVariablesInGroup(configs[var.id])
+                    elif isinstance(var, VariableList):
+                        var._updateVariablesInList(configs[var.id])
                     else:
                         var.value = configs[var.id]
 
