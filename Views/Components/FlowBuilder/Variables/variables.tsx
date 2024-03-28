@@ -987,7 +987,11 @@ function SmilesVariableView(props: VariableViewProps) {
     setTextAreaClassName(`${defaultTextAreaClassName} bg-green-200`);
   };
 
-  const jsmeRef = useRef(null);
+  const containerID = `${props.variable.id}-${props.variable.placedID}-jsmediv`;
+  const jsmeRef = useRef<any>(null);
+
+  const jsmeHeight = 500;
+  const jsmeContainerRef = useRef<HTMLDivElement>(null);
 
   return (
     <div className="flex flex-col gap-2 p-2 max-h-60 w-full justify-center items-center">
@@ -1019,9 +1023,15 @@ function SmilesVariableView(props: VariableViewProps) {
             onHide={() => {
               setShowJsme(false);
             }}
+            zIndex={1000}
+            maxContentSize={{
+              height: "h-[50%]",
+              width: "h-[50%]",
+            }}
           >
             <div className="w-full h-full text-black flex flex-col justify-center items-center">
               <select
+                className="w-full"
                 onChange={(e) => {
                   setCurrentSmiles(e.target.value);
                 }}
@@ -1030,14 +1040,20 @@ function SmilesVariableView(props: VariableViewProps) {
                   return <option value={smi}>{smi}</option>;
                 })}
               </select>
-              <Jsme
-                ref={jsmeRef}
-                key="jsme"
-                width="50vw"
-                height="50vh"
-                smiles={currentSmiles}
-                options="depict"
-              />
+              <div
+                className="overflow-hidden flex justify-center items-center h-full"
+                ref={jsmeContainerRef}
+                id={containerID}
+              >
+                <Jsme
+                  ref={jsmeRef}
+                  key="jsme"
+                  width={`${jsmeHeight}px`}
+                  height={`${jsmeHeight}px`}
+                  smiles={currentSmiles}
+                  options="depict"
+                />
+              </div>
               <AppButton action={() => setShowJsme(false)}>Close</AppButton>
             </div>
           </BlurredModal>,
