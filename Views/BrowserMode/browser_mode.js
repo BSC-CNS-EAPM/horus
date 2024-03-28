@@ -1,12 +1,12 @@
 // Create the error window view
 import { createRoot } from "react-dom/client";
 import { useState, useEffect } from "react";
-import NBDButton from "../Components/nbdbutton";
+import AppButton from "../Components/appbutton";
 
 import { horusGet } from "../Utils/utils";
 
 // @ts-ignore
-import nostrum_logo from "../../Resources/horus.png";
+import horus_logo from "../../Resources/horus.png";
 
 import RotatingLines from "../Components/RotatingLines/rotatinglines";
 
@@ -44,8 +44,8 @@ function BrowserMode() {
     return (
       <div className="flex flex-col justify-center items-center overflow-hidden h-full">
         <img
-          src={nostrum_logo}
-          alt="Nostrum Logo"
+          src={horus_logo}
+          alt="Horus logo"
           className="object-fit"
           width={100}
         />
@@ -61,14 +61,14 @@ function BrowserMode() {
   return (
     <div className="flex flex-col justify-center items-center overflow-hidden">
       <img
-        src={nostrum_logo}
-        alt="Nostrum Logo"
+        src={horus_logo}
+        alt="Horus logo"
         className="object-fit"
         width={100}
       />
       <p>Horus is running in browser mode.</p>
       <p className="mb-4">Do not close this window.</p>
-      <NBDButton action={openBrowser} text={"Open Horus"}></NBDButton>
+      <AppButton action={openBrowser} text={"Open Horus"}></AppButton>
     </div>
   );
 }

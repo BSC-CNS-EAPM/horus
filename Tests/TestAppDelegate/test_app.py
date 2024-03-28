@@ -115,7 +115,7 @@ def test_AppDelegate_startup(appDelegate_default: AppDelegate):
     # Check app info
     assert appDelegate_default.APP_INFO != {}
     assert appDelegate_default.APP_INFO["NAME"] == "Horus"
-    assert appDelegate_default.APP_INFO["BUNDLE_IDENTIFIER"] == "com.nostrumbiodiscovery.horus"
+    assert appDelegate_default.APP_INFO["BUNDLE_IDENTIFIER"] == "com.bsc.horus"
     assert appDelegate_default.APP_INFO["PYTHON_VERSION"] == "3.9.16"
 
 

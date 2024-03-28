@@ -21,7 +21,7 @@ import {
 } from "../flow.types";
 
 // Components
-import NBDButton from "../../nbdbutton";
+import AppButton from "../../appbutton";
 import Slider from "rc-slider";
 import HorusSwitch from "../../Switch/switch";
 import { SearchComponent } from "../../Toolbar/toolbar";
@@ -226,14 +226,14 @@ function VariableListView(props: VariableViewProps) {
   return (
     <div className="flex flex-col w-full">
       <div className="flex flex-row gap-2 justify-center my-2 mb-2">
-        <NBDButton action={addRow}>Add row</NBDButton>
-        <NBDButton
+        <AppButton action={addRow}>Add row</AppButton>
+        <AppButton
           action={() => {
             onChange([]);
           }}
         >
           Clear
-        </NBDButton>
+        </AppButton>
       </div>
       {currentValue?.length > 0 && (
         <div className="flex flex-col pb-2 gap-1 justify-between items-center overflow-x-scroll w-full">
@@ -874,14 +874,14 @@ function ListView(props: VariableViewProps) {
   return (
     <div className="flex flex-col w-full min-w-full flex-auto">
       <div className="flex flex-row gap-2 justify-center">
-        <NBDButton action={addRow}>Add row</NBDButton>
-        <NBDButton
+        <AppButton action={addRow}>Add row</AppButton>
+        <AppButton
           action={() => {
             onChange([]);
           }}
         >
           Clear
-        </NBDButton>
+        </AppButton>
       </div>
       {currentValue?.length > 0 && (
         <div className="flex flex-col gap-2 pb-2">
@@ -1004,13 +1004,13 @@ function SmilesVariableView(props: VariableViewProps) {
         {currentValue}
       </textarea>
       {currentSmiles && currentSmiles !== "" && (
-        <NBDButton
+        <AppButton
           action={() => {
             setShowJsme(!showJsme);
           }}
         >
           Show 2D structure
-        </NBDButton>
+        </AppButton>
       )}
       {showJsme &&
         createPortal(
@@ -1038,7 +1038,7 @@ function SmilesVariableView(props: VariableViewProps) {
                 smiles={currentSmiles}
                 options="depict"
               />
-              <NBDButton action={() => setShowJsme(false)}>Close</NBDButton>
+              <AppButton action={() => setShowJsme(false)}>Close</AppButton>
             </div>
           </BlurredModal>,
           document.getElementById(FlowBuilderIDs.FLOW_BUILDER_DIV)!
@@ -1802,7 +1802,7 @@ function CustomVariableRenderer(props: {
 
   return (
     <div className="w-full flex flex-col gap-2 items-center justify-center p-2">
-      <NBDButton action={openCustomPage}>Configure</NBDButton>
+      <AppButton action={openCustomPage}>Configure</AppButton>
     </div>
   );
 }

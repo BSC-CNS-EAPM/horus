@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from "react";
 import { horusGet, horusPost } from "../Utils/utils";
 
 // Components
-import NBDButton from "../Components/nbdbutton";
+import AppButton from "../Components/appbutton";
 import About from "../About/about";
 import SidebarView from "../Components/SidebarView/sidebar_view";
 import RotatingLines from "../Components/RotatingLines/rotatinglines";
@@ -256,14 +256,14 @@ function SettingsHeader(props: {
           (props.isSaving ? (
             <RotatingLines className="app-button" size={"1.5rem"} />
           ) : (
-            <NBDButton
+            <AppButton
               className={props.hasChanges ? "bg-orange-200" : ""}
               action={props.saveSettings}
             >
               Save changes
-            </NBDButton>
+            </AppButton>
           ))}
-        <NBDButton action={props.restoreSettings}>Restore defaults</NBDButton>
+        <AppButton action={props.restoreSettings}>Restore defaults</AppButton>
       </div>
     </div>
   );

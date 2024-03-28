@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 
 // Horus components
 import RotatingLines from "../../RotatingLines/rotatinglines";
-import NBDButton from "../../nbdbutton";
+import AppButton from "../../appbutton";
 import ServerIcon from "../../Toolbar/Icons/Server";
 import { BlurredModal, HorusPopover, MovingChevron } from "../../reusable";
 
@@ -343,13 +343,13 @@ function FinishedCheck(props: { runError: boolean; runErrorMessage?: string }) {
                 <pre className="h-full">{props.runErrorMessage}</pre>
                 <hr className="p-2"></hr>
                 <div className="flex items-center justify-center">
-                  <NBDButton
+                  <AppButton
                     action={() => {
                       setIsOpen(false);
                     }}
                   >
                     Close
-                  </NBDButton>
+                  </AppButton>
                 </div>
               </div>
             </BlurredModal>,

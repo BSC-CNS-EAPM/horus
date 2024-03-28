@@ -49,7 +49,7 @@ create-dmg \
   --icon "Horus.app" 200 190 \
   --hide-extension "Horus.app" \
   --app-drop-link 600 185 \
-  --background "Resources/nostrum_color.png" \
+  --background "Resources/bsc_logo.png" \
   $(if [[ -n "$identity" ]] && [[ "$identity" != "" ]]; then echo "--codesign \"$identity\""; fi) \
   "dist/$name" \
   "dist/Packages"
@@ -78,4 +78,3 @@ mv dist/*.whl "dist/Horus-$version-macOS-$osName"
 
 # Create a zip file of the folder
 cd dist && zip -r "Horus-$version-macOS-$osName.zip" "Horus-$version-macOS-$osName"
-

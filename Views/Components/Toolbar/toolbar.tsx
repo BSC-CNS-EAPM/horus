@@ -35,7 +35,7 @@ import ConsoleIcon from "./Icons/Console";
 import { horusGet } from "../../Utils/utils";
 
 // Styles
-import "../nbdbutton.css";
+import "../appbutton.css";
 import "./toolbar.css";
 import { Flow, PluginPage } from "../FlowBuilder/flow.types";
 

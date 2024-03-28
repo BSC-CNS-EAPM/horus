@@ -5,7 +5,7 @@ import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { horusPost, horusGet } from "../Utils/utils";
 
 // Horus components
-import NBDButton from "../Components/nbdbutton";
+import AppButton from "../Components/appbutton";
 import HorusContainer from "../Components/HorusContainer/horus_container";
 import RotatingLines from "../Components/RotatingLines/rotatinglines";
 import BackArrowIcon from "../Components/Toolbar/Icons/BackArrow";
@@ -74,7 +74,7 @@ export default function ConfigRemotes() {
             Remotes
           </div>
           <div className="flex flex-row gap-2 mr-2">
-            <NBDButton action={handleNewRemote}>New remote</NBDButton>
+            <AppButton action={handleNewRemote}>New remote</AppButton>
             <a
               className="app-button text-black text-decoration-none"
               href="https://nbdsoftware.github.io/horus/developer_guide/horusapi/remotes.html"
@@ -270,9 +270,9 @@ function DetailedRemote(props: DetailedRemoteViewProps) {
           setRemoteData={setRemoteData}
         />
       </div>
-      <NBDButton id="save-remote-button" action={handleSubmit}>
+      <AppButton id="save-remote-button" action={handleSubmit}>
         Save remote
-      </NBDButton>
+      </AppButton>
     </div>
   );
 }

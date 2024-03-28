@@ -3,7 +3,7 @@ import { CSSProperties, useEffect, useRef, useState } from "react";
 
 // Horus components
 import SidebarView from "../../SidebarView/sidebar_view";
-import NBDButton from "../../nbdbutton";
+import AppButton from "../../appbutton";
 import { SearchComponent } from "../../Toolbar/toolbar";
 import { InputView, SimpleVariableView, PluginVariableView } from "./variables";
 import { BlurredModal } from "../../reusable";
@@ -142,7 +142,7 @@ export function VariableModalView(props: VariableModalViewProps) {
                 onChange={filterVariables}
               />
               {props.handleClose && (
-                <NBDButton action={props.handleClose}>Close</NBDButton>
+                <AppButton action={props.handleClose}>Close</AppButton>
               )}
             </div>
           </div>
@@ -228,23 +228,23 @@ function VariableInputSelector({
 
   return (
     <div className="flex flex-row gap-1 items-center justify-between text-center p-0 m-0">
-      <NBDButton
+      <AppButton
         action={() => {
           handleSelectedInputGroupChange("down");
         }}
       >
         <Chevron direction="left" />
-      </NBDButton>
+      </AppButton>
       <div className="app-button">
         {selectedPageIndex + 1} / {block.inputs.length}
       </div>
-      <NBDButton
+      <AppButton
         action={() => {
           handleSelectedInputGroupChange("up");
         }}
       >
         <Chevron direction="right" />
-      </NBDButton>
+      </AppButton>
     </div>
   );
 }

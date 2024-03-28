@@ -9,7 +9,7 @@ import { fetchDesktop, horusGet, horusPost } from "../Utils/utils";
 import { HorusFileExplorer } from "../Components/FileExplorer/file_explorer";
 import { SearchComponent } from "../Components/Toolbar/toolbar";
 import { PluginVariableView } from "../Components/FlowBuilder/Variables/variables";
-import NBDButton from "../Components/nbdbutton";
+import AppButton from "../Components/appbutton";
 import RotatingLines from "../Components/RotatingLines/rotatinglines";
 import HorusContainer from "../Components/HorusContainer/horus_container";
 import BackArrowIcon from "../Components/Toolbar/Icons/BackArrow";
@@ -124,7 +124,7 @@ function PluginConfigView(props: PluginConfigViewProps) {
           });
         })}
       </div>
-      <NBDButton
+      <AppButton
         text="Save"
         action={handleSave}
         className={hasChanges ? "bg-orange-300" : ""}
@@ -454,7 +454,7 @@ export function PluginManager() {
             Plugin manager
           </div>
           <div className="flex flex-row flex-wrap justify-center gap-2 mr-2">
-            <NBDButton
+            <AppButton
               text="Install plugin"
               action={() => {
                 handleSetSubview(
@@ -463,10 +463,10 @@ export function PluginManager() {
               }}
             />
             {developmentMode && (
-              <NBDButton text="Reload plugins" action={reloadPlugins} />
+              <AppButton text="Reload plugins" action={reloadPlugins} />
             )}
             {window.horusInternal.isDesktop && (
-              <NBDButton text="Open Horus folder" action={openPluginsFolder} />
+              <AppButton text="Open Horus folder" action={openPluginsFolder} />
             )}
             <SearchComponent
               placeholder="Search plugins..."

@@ -92,7 +92,7 @@ setuptools.setup(
     name="HorusAPI",
     version=version,
     author="Nostrum Biodiscovery",
-    author_email="it@nostrumbiodiscovery.com",
+    author_email="christian.dominguez@bsc.es",
     description=f"Horus API package for building plugins. Version: {version}",
     long_description="Horus API",
     long_description_content_type="text/markdown",

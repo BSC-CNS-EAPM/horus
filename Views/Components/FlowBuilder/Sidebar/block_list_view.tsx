@@ -9,7 +9,7 @@ import { BlockView } from "../Blocks/block.view";
 import { SearchComponent } from "../../Toolbar/toolbar";
 import { MovingChevron } from "../../reusable";
 import RotatingLines from "../../RotatingLines/rotatinglines";
-import NBDButton from "../../nbdbutton";
+import AppButton from "../../appbutton";
 
 // Socket.io to fetch new blocks
 import { socket } from "../../../Utils/socket";
@@ -135,7 +135,7 @@ export function BlockListSidebar() {
             <div className="flex flex-row items-center justify-between w-full">
               <div className="flow-title">Blocks</div>
               {developmentMode && (
-                <NBDButton
+                <AppButton
                   className="m-0"
                   action={async () => {
                     await horusGet("/api/plugins/reload");
@@ -143,7 +143,7 @@ export function BlockListSidebar() {
                   }}
                 >
                   Reload
-                </NBDButton>
+                </AppButton>
               )}
             </div>
             <SearchComponent

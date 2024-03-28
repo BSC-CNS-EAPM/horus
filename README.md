@@ -1,10 +1,10 @@
 # Horus
 
-Horus is a cross-platform graphical user interface of the NBDSuite, a collection of tools developed by Nostrum Biodiscovery to help scientists in the process of drug discovery.
+Horus is a cross-platform workflow manager. Its modular nature allows for `Plugins` to increase the functionality the app.
 
 <p align="center">
 <img width="160" alt="horus" src="https://github.com/NBDsoftware/horus/assets/34599976/d9c603f7-11c6-4f2b-9cd1-6bba5b72bf3f">
-<img height="160" alt="nostrum" src="https://github.com/chdominguez/Horus/assets/34599976/7f8e1cf9-21e0-468f-98ac-2c0e8673e33e">
+<img height="160" alt="bsc" src="https://github.com/NBDsoftware/horus/assets/34599976/fdbc5625-8dec-4b97-b49e-3af1c783628a">
 <p\>
 
 # Installation

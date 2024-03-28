@@ -21,7 +21,7 @@ import ResizeHandle from "../Panels/resize_handle";
 
 // Molstar image logo
 // @ts-ignore
-import MolstarLogo from "../../../Resources/molstar-logo.png";
+import HorusLogo from "../../../Resources/horus-full.png";
 import { ServerFileExplorerModal } from "../FileExplorer/file_explorer";
 
 type WorkingViewProps = {
@@ -268,7 +268,7 @@ function MolstarPanel() {
     return (
       <div className="flex justify-center items-center w-full h-full zoom-out-animation bg-white">
         <img
-          src={MolstarLogo}
+          src={HorusLogo}
           style={{
             height: "150px",
           }}

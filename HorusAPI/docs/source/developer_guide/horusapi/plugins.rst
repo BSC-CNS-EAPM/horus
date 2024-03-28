@@ -167,10 +167,10 @@ run the following command in your terminal:
     .. code-block:: bash
 
         # Linux
-        /home/<username>/.local/share/com.nostrumbiodiscovery.com/Plugins/MyPlugin/main.py
+        /home/<username>/.local/share/com.bsc.horus/Plugins/MyPlugin/main.py
 
         # macOS
-        /Users/<username>/Library/Application\ Support/com.nostrumbiodiscovery.com/Plugins/MyPlugin/main.py
+        /Users/<username>/Library/Application\ Support/com.bsc.horus/Plugins/MyPlugin/main.py
 
 Distributing plugins
 ====================

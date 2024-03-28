@@ -23,7 +23,6 @@ Any block can be run as a standalone task, but the real power of Horus comes fro
 
 In addition to :bdg-secondary-line:`Flows`, |Product| also has a feature
 called :bdg-secondary-line:`Extensions`, which allows developers to build custom views to represent any data using standard web technologies such as HTML, CSS and Javascript.
-For example, the NBDSuite plugin comes with a wide variety of extensions that allow users to visualize and analyze the results of their simulations.
 
 Usage
 =====

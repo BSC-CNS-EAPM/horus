@@ -3,7 +3,7 @@ import { ChonkyIconFA } from "chonky-icon-fontawesome";
 import { horusPost } from "../../Utils/utils";
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { HorusModal } from "../reusable";
-import NBDButton from "../nbdbutton";
+import AppButton from "../appbutton";
 
 // Somewhere in your `index.ts`:
 // @ts-ignore
@@ -487,15 +487,15 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
             ref={filePicker}
             onChange={uploadFiles}
           ></input>
-          <NBDButton
+          <AppButton
             action={() => {
               setOpen(false);
             }}
           >
             Close
-          </NBDButton>
+          </AppButton>
           {fileProps?.onFileConfirm && (
-            <NBDButton
+            <AppButton
               action={() => {
                 fileProps?.onFileConfirm
                   ? fileProps.onFileConfirm(selectedFile)
@@ -504,7 +504,7 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
               }}
             >
               Select
-            </NBDButton>
+            </AppButton>
           )}
         </div>
       </div>
@@ -522,13 +522,13 @@ function ServerFileExplorer(props: FileExplorerProps) {
         open={open}
         setOpen={setOpen}
       />
-      <NBDButton
+      <AppButton
         action={() => {
           setOpen(true);
         }}
       >
         {props.children}
-      </NBDButton>
+      </AppButton>
     </div>
   );
 }
@@ -579,7 +579,7 @@ function DesktopFileExplorer(props: FileExplorerProps) {
 
   return (
     <div>
-      <NBDButton action={openFilePicker}>{props.children}</NBDButton>
+      <AppButton action={openFilePicker}>{props.children}</AppButton>
     </div>
   );
 }

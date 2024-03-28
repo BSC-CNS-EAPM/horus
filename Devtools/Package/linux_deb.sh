@@ -235,8 +235,8 @@ cat > dist/linux/DEBIAN/control << EOF
 Package: Horus
 Version: $version
 Architecture: $arch
-Maintainer: Nostrum Biodiscovery it@nostrumbiodiscovery.com
-Description: Horus is the GUI software provided by Nostrum Biodiscovery.
+Maintainer: Barcelona Supercomputing Center
+Description: Horus is the workflow manager provided by the BSC
 EOF
 
 # Create a postinst script inside dist/linux/DEBIAN

@@ -1,7 +1,7 @@
 // Import the css
-import "./nbdbutton.css";
+import "./appbutton.css";
 
-type NBDButtonProps = {
+type AppButtonProps = {
   id?: string;
   text?: string;
   action: () => void;
@@ -10,8 +10,8 @@ type NBDButtonProps = {
   className?: string;
 };
 
-// Create a component called NBDButton
-function NBDButton(props: NBDButtonProps) {
+// Create a component called AppButton
+function AppButton(props: AppButtonProps) {
   const className = "app-button " + props?.className;
 
   return (
@@ -31,4 +31,4 @@ function NBDButton(props: NBDButtonProps) {
 }
 
 // Export the component
-export default NBDButton;
+export default AppButton;

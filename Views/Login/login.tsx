@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import "../Components/nbdbutton.css";
+import "../Components/appbutton.css";
 
 import { fetchDesktop, horusGet, horusPost } from "../Utils/utils";
 import { PluginVariableView } from "../Components/FlowBuilder/Variables/variables";
