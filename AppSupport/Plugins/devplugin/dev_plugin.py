@@ -292,7 +292,10 @@ plugin.addBlock(flowInsideBlockBlock)
 
 
 def testSlurmBlockAction(block: SlurmBlock):
+
     print("Test slurm block action")
+
+    print("is local?", block.remote.isLocal)
 
     timeToWait = int(block.inputs.get("timeToWait", 0))
 

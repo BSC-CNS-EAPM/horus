@@ -116,6 +116,14 @@ class PluginRemote:
 
         return self._remote.host
 
+    @property
+    def isLocal(self) -> bool:
+        """
+        Returns whether the remote is local or not
+        """
+
+        return self._remote.name == "Local"
+
 
 class PluginEndpoint:
     def __init__(self, url: str, methods: typing.List[str], function: typing.Callable):
