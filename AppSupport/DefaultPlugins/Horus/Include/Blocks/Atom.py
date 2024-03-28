@@ -13,4 +13,5 @@ atomBlock = InputBlock(
     description="Select individual atoms",
     action=None,
     variable=atomsVariable,
+    id="atoms",
 )

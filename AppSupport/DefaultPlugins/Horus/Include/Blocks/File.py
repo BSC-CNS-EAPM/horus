@@ -29,5 +29,9 @@ def checkPathIsFile(block: InputBlock):
 
 # Create the block "File"
 fileBlock = InputBlock(
-    "File", description="Select a single file", action=checkPathIsFile, variable=fileVariable
+    "File",
+    description="Select a single file",
+    action=checkPathIsFile,
+    variable=fileVariable,
+    id="file",
 )

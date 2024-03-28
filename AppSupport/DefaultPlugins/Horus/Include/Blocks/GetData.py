@@ -51,4 +51,5 @@ getDataBlock = PluginBlock(
     action=getData,
     inputs=[inputPath],
     variables=[destinationPath],
+    id="get_data",
 )

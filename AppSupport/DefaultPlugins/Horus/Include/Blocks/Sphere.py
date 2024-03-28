@@ -13,4 +13,5 @@ sphereBlock = InputBlock(
     description="Select coordinates and radius of a sphere in a structure",
     action=None,
     variable=sphereVariable,
+    id="sphere",
 )

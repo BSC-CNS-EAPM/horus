@@ -127,4 +127,5 @@ strucBlock = InputBlock(
     description="Get a structure from the visualizer",
     action=saveStructure,
     variable=structureVariable,
+    id="structure",
 )

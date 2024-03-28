@@ -701,10 +701,15 @@ class VariableList(PluginVariable):
 
         return listDict
 
-    def _updateVariablesInList(self, value: list[dict]):
+    def _updateVariablesInList(self, value: typing.Optional[list[dict]]):
         """
         Updates the variable in the list and takes care of the disabled variables
         """
+
+        if value is None or not isinstance(value, list):
+            self.value = value
+            return
+
         # Create a set of disabled prototype IDs for faster lookup
         disabledPrototypes = {p.id: p.defaultValue for p in self.prototypes if p.disabled}
 
@@ -941,17 +946,27 @@ class PluginBlock:
         inputGroups: typing.List[VariableGroup] = [],
         outputs: typing.List[PluginVariable] = [],
         blockType: PluginBlockTypes = PluginBlockTypes.BASE,
+        id: typing.Optional[str] = None,
     ):
         """
         Initialize a PluginBlock.
         """
 
-        self.id: str = "baseplugin.block"  # pylint: disable=invalid-name
+        if id is None:
+            logging.getLogger("Horus").warning(
+                "Block '%s' does not have a unique ID assigned. "
+                + "The name of the block will be used instead. "
+                + "For consistency, please define an ID for your block.",
+                name,
+            )
+            id = name
+
+        self.id: str = id
         """
         The id of the block.
-        It is composed by the plugin name and the name of the block.
+        It is composed by the plugin id and the id/name of the block.
         The addBlock() method of the Plugin class will automatically
-        assign the id to the block.
+        assign the plugi id part to the block id.
         """
 
         self.name = name
@@ -1447,6 +1462,7 @@ class PluginConfig(PluginBlock):
         description: str,
         action: typing.Optional[typing.Callable] = None,
         variables: typing.List[PluginVariable] = [],
+        id: typing.Optional[str] = None,
     ):
         """
         :param name: The name of the block.
@@ -1460,7 +1476,9 @@ class PluginConfig(PluginBlock):
                 "A PluginConfig must have at least one variable."
             )
 
-        super().__init__(name, description, action, variables, blockType=PluginBlockTypes.CONFIG)
+        super().__init__(
+            name, description, action, variables, blockType=PluginBlockTypes.CONFIG, id=id
+        )
 
 
 class InputBlock(PluginBlock):
@@ -1485,6 +1503,7 @@ class InputBlock(PluginBlock):
         variable: PluginVariable,
         output: typing.Optional[PluginVariable] = None,
         action: typing.Optional[typing.Callable] = None,
+        id: typing.Optional[str] = None,
     ):
         """
         :param name: The name of the block.
@@ -1506,6 +1525,7 @@ class InputBlock(PluginBlock):
             inputs=[variable],
             outputs=[variable if output is None else output],
             blockType=PluginBlockTypes.INPUT,
+            id=id,
         )
 
     # Override the __call__ method to return
@@ -1579,6 +1599,7 @@ class SlurmBlock(PluginBlock):
         inputs: typing.List[PluginVariable] = [],
         inputGroups: typing.List[VariableGroup] = [],
         outputs: typing.List[PluginVariable] = [],
+        id: typing.Optional[str] = None,
     ):
         """
         :param name: The name of the block.
@@ -1599,6 +1620,7 @@ class SlurmBlock(PluginBlock):
             inputGroups=inputGroups,
             outputs=outputs,
             blockType=PluginBlockTypes.SLURM,
+            id=id,
         )
         self.initalAction = initialAction
         self.finalAction = finalAction
@@ -1851,7 +1873,7 @@ class Plugin:
         # If the attribute is a PluginBlock (not PluginConfig), add it to the list
         # Only add the block if it is not already in the list
         if isinstance(block, PluginBlock) and not isinstance(block, PluginConfig):
-            block.id = f"{self.id}.{block.name}".replace(" ", "_").lower()
+            block.id = f"{self.id}.{block.id}".replace(" ", "_").lower()
             try:
                 # If the block does not exist, an exception will be raised
                 self.getBlock(block.id)

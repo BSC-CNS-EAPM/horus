@@ -13,4 +13,5 @@ heteroResBlock = InputBlock(
     description="Select an hetero residue",
     action=None,
     variable=heteroResidueVariable,
+    id="hetero_residue",
 )

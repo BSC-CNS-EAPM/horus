@@ -13,4 +13,5 @@ chainBlock = InputBlock(
     description="Select individual chains",
     action=None,
     variable=chainsVariable,
+    id="chains",
 )

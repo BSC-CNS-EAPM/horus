@@ -46,6 +46,7 @@ testBlock = PluginBlock(
     inputs=[numberVariable],
     outputs=[numberOutput],
     action=sumNumbers,
+    id="add_1",
 )
 
 plugin.addBlock(testBlock)
@@ -97,6 +98,7 @@ waiterBlock = PluginBlock(
     variables=[timeToWaitVar],
     outputs=[waiterOutput],
     action=wait,
+    id="wait",
 )
 
 plugin.addBlock(waiterBlock)
@@ -126,6 +128,7 @@ openExtensionBlock = PluginBlock(
     description="Opens an extension",
     action=openExtension,
     inputs=[waiterInput],
+    id="open_extension",
 )
 
 plugin.addBlock(openExtensionBlock)
@@ -142,6 +145,7 @@ noInputBlock = PluginBlock(
     name="No input block",
     description="This block has no inputs",
     action=noInputBlockAction,
+    id="no_input_block",
 )
 
 plugin.addBlock(noInputBlock)
@@ -187,6 +191,7 @@ multipleInputOutputBlock = PluginBlock(
     action=multipleInputOutputAction,
     inputs=[multipleInput1, multipleInput2],
     outputs=[multipleOutput1, multipleOutput2],
+    id="multiple_input_output",
 )
 
 plugin.addBlock(multipleInputOutputBlock)
@@ -211,6 +216,7 @@ focusResidueBlock = PluginBlock(
             type=VariableTypes.NUMBER,
         )
     ],
+    id="focus_residue",
 )
 
 plugin.addBlock(focusResidueBlock)
@@ -245,6 +251,7 @@ molviewSpecBlock = PluginBlock(
     name="Molview spec",
     description="Loads the molview spec",
     action=molviewSpecAciton,
+    id="molview_spec",
 )
 
 plugin.addBlock(molviewSpecBlock)
@@ -264,6 +271,7 @@ extraDataBlock = PluginBlock(
     name="Extra data test",
     description="Stores extra data",
     action=storeBlockVariable,
+    id="extra_data_test",
 )
 
 plugin.addBlock(extraDataBlock)
@@ -277,6 +285,7 @@ flowInsideBlockBlock = PluginBlock(
     name="Flow inside block",
     description="Flow inside block",
     action=flowInsideBlock,
+    id="flow_inside_block",
 )
 
 plugin.addBlock(flowInsideBlockBlock)
@@ -341,6 +350,7 @@ slurmBlockTest = SlurmBlock(
             type=VariableTypes.NUMBER,
         )
     ],
+    id="slurm_block_test",
 )
 
 plugin.addBlock(slurmBlockTest)
@@ -380,6 +390,7 @@ testExtensionsShortcutsBlock = PluginBlock(
     name="Test extensions shortcuts",
     description="Tests extensions shortcuts",
     action=testExtensionsShortcuts,
+    id="test_extensions_shorcuts",
 )
 
 plugin.addBlock(testExtensionsShortcutsBlock)
@@ -423,6 +434,7 @@ testCustomVariableInputBlock = InputBlock(
     description="Test custom variable",
     variable=customVariableTest,
     action=customVariableAction,
+    id="test_custom_variable",
 )
 
 plugin.addBlock(testCustomVariableInputBlock)

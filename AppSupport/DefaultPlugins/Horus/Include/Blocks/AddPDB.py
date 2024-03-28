@@ -139,4 +139,5 @@ addPDBBlock = PluginBlock(
     description="Adds a PDB to Mol* from a file or all PDBs from a folder path",
     action=addPDB,
     inputGroups=[visualizePDBfileGroup, visualizePDBfolderGroup],
+    id="visualize_pdb",
 )

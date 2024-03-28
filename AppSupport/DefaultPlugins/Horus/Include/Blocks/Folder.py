@@ -28,5 +28,9 @@ def checkPathIsFolder(block: InputBlock):
 
 # Create the block "Folder"
 folderBlock = InputBlock(
-    "Folder", description="Select a folder", action=checkPathIsFolder, variable=folderVariable
+    "Folder",
+    description="Select a folder",
+    action=checkPathIsFolder,
+    variable=folderVariable,
+    id="folder",
 )

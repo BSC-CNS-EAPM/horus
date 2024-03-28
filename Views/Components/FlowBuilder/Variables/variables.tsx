@@ -507,11 +507,11 @@ type VariableViewProps = {
 };
 
 function StructureVariableView(props: VariableViewProps) {
-  const { onChange } = props;
+  const { currentValue, onChange } = props;
 
   const [structures, setStructures] = useState<any[]>([]);
 
-  const loadMolstarStructures = () => {
+  const loadMolstarStructures = useCallback(() => {
     const molstar = window.molstar;
     const structList = molstar?.listStructures();
 
@@ -519,9 +519,16 @@ function StructureVariableView(props: VariableViewProps) {
 
     setStructures(structList);
 
-    // Set the first structure as the default value
-    onChange(structList[0]);
-  };
+    // Set the first structure as the default value if none was selected
+    if (!currentValue) {
+      onChange(structList[0]);
+    }
+  }, [currentValue, onChange]);
+
+  useEffect(() => {
+    // Load the structures on placing the block and select the first, or if the variable comes with a value, the value
+    loadMolstarStructures();
+  }, [loadMolstarStructures]);
 
   return (
     <div onMouseDown={loadMolstarStructures} className="plugin-variable-value">
@@ -539,6 +546,7 @@ function StructureVariableView(props: VariableViewProps) {
         <select
           className="plugin-variable-value p-0"
           defaultValue=""
+          value={currentValue?.name}
           defaultChecked={true}
           onChange={(e) => {
             // Get the selected structure

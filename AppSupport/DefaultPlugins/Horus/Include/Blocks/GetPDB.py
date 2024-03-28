@@ -59,4 +59,5 @@ getPDBBlock = InputBlock(
     action=addPDB,
     variable=pdbID,
     output=structureOutput,
+    id="get_pdb",
 )

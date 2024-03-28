@@ -13,4 +13,5 @@ stdResBlock = InputBlock(
     description="Select a Standard residue",
     action=None,
     variable=stdResidueVariable,
+    id="standard_residue",
 )

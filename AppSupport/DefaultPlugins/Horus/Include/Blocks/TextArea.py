@@ -13,4 +13,5 @@ textAreaBlock = InputBlock(
     description="A Text area to be used as an input.",
     action=None,
     variable=inputArea,
+    id="text_area",
 )

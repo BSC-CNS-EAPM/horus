@@ -13,4 +13,5 @@ residueBlock = InputBlock(
     description="Select any residue",
     action=None,
     variable=residueVariable,
+    id="residue",
 )

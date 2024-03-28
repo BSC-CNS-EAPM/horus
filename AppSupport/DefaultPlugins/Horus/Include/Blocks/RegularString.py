@@ -13,4 +13,5 @@ stringBlock = InputBlock(
     description="A string to be used as an input.",
     action=None,
     variable=inputString,
+    id="string",
 )

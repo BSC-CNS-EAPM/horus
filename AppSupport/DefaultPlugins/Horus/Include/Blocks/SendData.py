@@ -20,7 +20,7 @@ def sendData(block: PluginBlock):
 
     if source is None:
         raise Exception("No source provided.")
-    
+
     if not os.path.exists(source):
         raise Exception("Source does not exist.")
 
@@ -49,7 +49,7 @@ inputFile = PluginVariable(
     id="file",
     description="A single file to send to the remote.",
     type=VariableTypes.FILE,
-    allowedValues=["*"]
+    allowedValues=["*"],
 )
 
 inputFolder = PluginVariable(
@@ -78,4 +78,5 @@ sendDataBlock = PluginBlock(
     description="Send data from the local machine to the remote.",
     action=sendData,
     inputGroups=[fileInputGroup, folderInputGroup],
+    id="send_data",
 )

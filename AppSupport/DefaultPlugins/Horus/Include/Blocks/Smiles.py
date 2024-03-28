@@ -9,8 +9,5 @@ smilesVariable = PluginVariable(
 
 # Create the block "Hetero smiles"
 smilesBlock = InputBlock(
-    name="SMILES",
-    description="Write SMILES",
-    action=None,
-    variable=smilesVariable,
+    name="SMILES", description="Write SMILES", action=None, variable=smilesVariable, id="smiles"
 )
