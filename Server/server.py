@@ -449,11 +449,29 @@ class HorusServer:
         if self.webAppManager:
             self._setupLoginManager(server)
 
-        if self.debug:
-            logging.getLogger("Horus").debug("Enabling CORS")
-            CORS(server, resources={r"/*": {"origins": "*"}}, origins="*")
+        # Setup CORS
+        self._setupCORS(server)
 
         return server
+
+    def _setupCORS(self, server: Flask):
+
+        # Default configuration for server mode, app mode...
+        resources = {r"/*": {"origins": "*"}}
+        origins = "*"
+
+        # Load specific configuration from the JSON in webapp mode
+        if self.webAppManager:
+            resources = self.webAppManager.cors.resources
+            origins = self.webAppManager.cors.origins
+
+        logging.getLogger("Horus").info("CORS Resources: %s", str(resources))
+        logging.getLogger("Horus").info("CORS Origins: %s", origins)
+
+        CORS(server, resources=resources, origins=origins)
+
+        # Save the configuration in the class
+        self.origins = origins
 
     # Create a wrapper for login (only applies to webapp mode and requires registration)
     def verifyLogin(self, func):
@@ -1720,7 +1738,7 @@ class HorusServer:
             self.socketio = HorusSocket(
                 self.server,
                 self.baseURL,
-                cors_allowed_origins="*" if self.debug else self.baseURL,
+                cors_allowed_origins=self.origins,
                 async_mode="threading" if self.debug else "eventlet",
                 manage_session=False,
             )
@@ -1731,7 +1749,7 @@ class HorusServer:
             self.socketio = HorusSocket(
                 self.server,
                 self.baseURL,
-                cors_allowed_origins="*" if self.debug else self.baseURL,
+                cors_allowed_origins=self.origins,
                 async_mode="eventlet",
                 manage_session=False,
             )

@@ -1,8 +1,21 @@
 export const config = {
+  // Host to listen to
+  host: "localhost",
+  // Port to listen to
+  port: 3000,
   // External URL. Will be used in mail activation links and other places
   externalURL: "app.horus.com",
   // Company name
   companyName: "Horus",
+  // App name to display instead of "Horus"
+  appName: "My App Name",
+  // Wether to allow users to configure and use remotes
+  allowRemotes: false,
+  // CORS configuration, by default, all origins are allowed
+  cors: {
+    origins: "*",
+    resources: { "/*": { origins: "*" } },
+  },
   // User management - If defined the "webapp" mode, then the user management is required
   userManagement: {
     // Path where the user data is stored. A folder for each user is created inside this path

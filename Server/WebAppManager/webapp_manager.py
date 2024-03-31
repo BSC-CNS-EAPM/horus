@@ -1,5 +1,5 @@
 # Typing
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 
 # Basic tools
 import os
@@ -631,6 +631,16 @@ class UserManagement:
         atexit.register(lambda: scheduler.shutdown())  # pylint: disable=unnecessary-lambda
 
 
+class WebAppCORS:
+
+    resources: Union[str, dict]
+    origins: Union[str, list]
+
+    def __init__(self, rawCORS: dict):
+        self.resources = rawCORS.get("resources", {r"/*": {"origins": "*"}})
+        self.origins = rawCORS.get("origins", "*")
+
+
 class WebAppManager:
     """
     Loads the horus.config.js file which contains information about the server setup
@@ -676,6 +686,13 @@ class WebAppManager:
     whether registration is required, and whether activation is required
     """
 
+    # CORS
+    cors: WebAppCORS
+    """
+    Cross-origin resource sharing configuration for webapp mode. If none
+    provided, all origins will be allowed
+    """
+
     # Database
     db: Optional[Database] = None
     """
@@ -714,6 +731,10 @@ class WebAppManager:
             )
 
         self.userManagement = UserManagement(rawUserManagement, self.externalURL)
+
+        # Load cors
+        rawCORS = self.rawConfig.get("cors", {})
+        self.cors = WebAppCORS(rawCORS)
 
     def startDatabase(self) -> None:
         """
