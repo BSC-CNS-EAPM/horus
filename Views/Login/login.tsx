@@ -103,7 +103,7 @@ export default function LoginRegister() {
 
   return (
     <div className="flex flex-col items-center justify-center">
-      <Logo className="h-32" />
+      <Logo className="h-32 mb-4" />
       {messages.msg && (
         <div
           className={`alert ${
