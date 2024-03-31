@@ -175,9 +175,9 @@ class HorusServer:
             # Load the webapp manager
             self.webAppManager = WebAppManager()
 
-            # Override the host and port
-            host = self.webAppManager.host
-            port = self.webAppManager.port
+            # Override the host and port if none was provided
+            host = host if host else self.webAppManager.host
+            port = port if port else self.webAppManager.port
 
             # Start the database if required
             self.webAppManager.startDatabase()
