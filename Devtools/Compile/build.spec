@@ -170,6 +170,9 @@ imports += [
     "colorsys",  # Needed for BSC Plugins
     "cProfile",  # Needed for BSC Plugins
     "timeit",  # Needed for BSC Plugins
+    "zope",  # Needed for BSC Plugins
+    "zope.interface",  # Needed for BSC Plugins
+    "zope.interface.adapter",  # Needed for BSC Plugins
 ]
 
 # Check that all the modules are installed in the environment
