@@ -1324,7 +1324,7 @@ class PluginManager(metaclass=HorusSingleton):
         return flows
 
 
-class PrintCapturer:
+class PrintCapturer(io.StringIO):
     """
     Captures any print statement.
     """
@@ -1342,6 +1342,8 @@ class PrintCapturer:
     def __init__(self):
         self.oldStdout = sys.stdout
         self.oldStderr = sys.stderr
+
+        super().__init__()
 
     def write(self, message):
         """

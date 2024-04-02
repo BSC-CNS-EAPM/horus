@@ -212,20 +212,23 @@ def test_double_circular_flow_run(flow_appDelegate, capfd):
         for block in flow.blocks:
             assert block._finishedExecution
 
-        # Verify that the print function was called 5 times
-        out, err = capfd.readouterr()
-
         # Split the output by line and remove the last empty line
-        splitted_out = out.split("\n")[:-1]
+        splitted_out = flow.terminalOutput
 
-        assert len(splitted_out) == 5
+        parsedOutput = []
+        for split in splitted_out:
+            if split == "\n":
+                continue
+            parsedOutput.append(split)
+
+        assert len(parsedOutput) == 5
 
         # Verify that the output is correct
-        assert splitted_out[0] == "Received variable: 13"
-        assert splitted_out[1] == "Received variable: 17"
-        assert splitted_out[2] == "Received variable: 13"
-        assert splitted_out[3] == "Received variable: 12"
-        assert splitted_out[4] == "Received variable: 33"
+        assert parsedOutput[0] == "Received variable: 13"
+        assert parsedOutput[1] == "Received variable: 17"
+        assert parsedOutput[2] == "Received variable: 13"
+        assert parsedOutput[3] == "Received variable: 12"
+        assert parsedOutput[4] == "Received variable: 33"
 
         # Verify that all the cycles count are equal to the cycles
         for block in flow.blocks:

@@ -12,6 +12,7 @@ import subprocess
 import webbrowser
 import logging
 import datetime
+import io
 
 # Import type annotations
 import typing
@@ -138,7 +139,7 @@ class HorusLogger:
                 # Define the colors for the log levels
                 logLevelColor = self.COLOR_CODES.get(record.levelname, "")
 
-                if record.name == "Capturer":
+                if record.name == "Capturer" and record.levelno < logging.ERROR:
                     # Apply the white color for the capturer
                     logLevelColor = self.CAPTURER_COLOR
 
@@ -168,7 +169,7 @@ class HorusLogger:
         oldStdout = sys.stdout
         oldStderr = sys.stderr
 
-        class FakeWriter:
+        class FakeWriter(io.StringIO):
             """
             Fake writer class
             """
@@ -198,22 +199,21 @@ class HorusLogger:
                 The old STDOUT and STDERR to print to
                 """
 
-            def write(self, message):
+                # Initialize the base class io.StringIO properly
+                super().__init__()
+
+            def write(self, message: str):
                 """
                 Hook into the default stdout and stderr class
                 """
                 try:
-                    for line in message.rstrip().splitlines():
-                        self.capturer.log(self.level, line.rstrip())
-                        if self.level < logging.WARNING and not self.debug:
-                            self.oldStdOutErr.write(f"{line}\n")
+                    self.capturer.log(
+                        self.level, message, stack_info=self.level > logging.WARNING
+                    )
+                    if not self.debug:
+                        self.oldStdOutErr.write(message)
                 except BaseException:
                     pass
-
-            def flush(self):
-                """
-                Hook the flush method
-                """
 
         # Set as the new stdout and stderr the capturer
         sys.stdout = FakeWriter(logging.INFO, self.capturer, oldStdout, debug=self.debug)
