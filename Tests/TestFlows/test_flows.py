@@ -475,3 +475,52 @@ def test_slurm_flow_second_action(flow_appDelegate):
 
         # Restore the flow by copying the .bak file to the original file
         os.system(f"mv {path}.bak {path}")
+
+
+def test_flow_elapsed_time():
+    path = os.path.join(os.path.dirname(__file__), "test_flow.flow")
+
+    # Backup the flow
+    os.system(f"cp {path} {path}.bak")
+
+    try:
+        flow = Flow.read(path)
+
+        initial_started_time = flow.startedTime
+        initial_finished_time = flow.finishedTime
+        initial_elapsed = flow.elapsed
+
+        flow.run(placedID=1)
+
+        assert initial_started_time != flow.startedTime
+        assert initial_finished_time != flow.finishedTime
+        assert initial_elapsed != flow.elapsed
+
+    finally:
+        # Restore the flow by copying the .bak file to the original file
+        os.system(f"mv {path}.bak {path}")
+
+
+def test_flow_elapsed_time_stop():
+    path = os.path.join(os.path.dirname(__file__), "test_flow.flow")
+
+    # Backup the flow
+    os.system(f"cp {path} {path}.bak")
+
+    try:
+        flow = Flow.read(path)
+
+        initial_started_time = flow.startedTime
+        initial_finished_time = flow.finishedTime
+        initial_elapsed = flow.elapsed
+
+        flow.run(placedID=1)
+        flow.stop()
+
+        assert initial_started_time != flow.startedTime
+        assert initial_finished_time != flow.finishedTime
+        assert initial_elapsed != flow.elapsed
+
+    finally:
+        # Restore the flow by copying the .bak file to the original file
+        os.system(f"mv {path}.bak {path}")
