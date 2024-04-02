@@ -1005,11 +1005,8 @@ class Flow:
                 )
                 self.status = self.FlowStatus.ERROR
 
-        # Set the finished time
-        self.finishedTime = datetime.datetime.now()
-
-        # Add the elapsed time
-        self.elapsed += (self.finishedTime - self.startedTime).total_seconds()
+        # Compute the elapsed and the finished time
+        self._computeFinalTime()
 
         # Compute the size of the folder the flow is in
         self.size = self._computeSize()
@@ -1025,6 +1022,20 @@ class Flow:
         if socket is not None:
             socket.removeFinishedFlowFromRunningFlows(self.path)
             socket.emit("flow", self.encode(minimal=False), to=self.savedID)
+
+    def _computeFinalTime(self):
+        """
+        Sets the finished time and the elapsed based on the started time
+        """
+        # Add the elapsed time
+        if self.startedTime is None:
+            return
+
+        # Set the finished time
+        self.finishedTime = datetime.datetime.now()
+
+        # Update the elapsed time
+        self.elapsed += (self.finishedTime - self.startedTime).total_seconds()
 
     def _computeSize(self) -> typing.Optional[int]:
         """
@@ -1104,7 +1115,7 @@ class Flow:
 
         # Update the flow size and the finished time
         self.size = self._computeSize()
-        self.finishedTime = datetime.datetime.now()
+        self._computeFinalTime()
 
         # Save the flow
         self.write()
@@ -1671,6 +1682,8 @@ class FlowManager:
 
             # Set the flow status to paused
             flow.status = Flow.FlowStatus.PAUSED
+            flow._computeFinalTime()
+
             print(f"Pausing flow {flowPath}")
 
             # Save the flow
