@@ -32,6 +32,7 @@ export function useBlockView({
   const [isInfoHovering, setIsInfoHovering] = useState(false);
 
   const [variablesModal, setVariablesModal] = useState(false);
+  const [slurmOutputModal, setSlurmOutputModal] = useState(false);
 
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: block.placedID ? `${block.placedID}-${block.id}` : block.id,
@@ -54,6 +55,13 @@ export function useBlockView({
       setDisableDrag(!variablesModal);
     }
     setVariablesModal(!variablesModal);
+  };
+
+  const toggleSlurmOutputModal = () => {
+    if (setDisableDrag) {
+      setDisableDrag(!slurmOutputModal);
+    }
+    setSlurmOutputModal(!slurmOutputModal);
   };
 
   const handleSelectedInputGroupChange = (direction: "up" | "down") => {
@@ -175,6 +183,8 @@ export function useBlockView({
       setIsInfoHovering: setIsInfoHovering,
       variablesModal,
       toggleVariablesModal: toggleVariablesModal,
+      slurmOutputModal,
+      toggleSlurmOutputModal: toggleSlurmOutputModal,
       handleVariableChange: handleVariableChange,
       handleSelectedInputGroupChange: handleSelectedInputGroupChange,
     },

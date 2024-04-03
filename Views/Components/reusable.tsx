@@ -129,7 +129,7 @@ export function BlurredModal(props: BlurredModalProps) {
   return (
     <div
       style={{
-        zIndex: props.zIndex ?? 99999,
+        zIndex: props.zIndex ?? 1000,
       }}
       className="blurred-modal-container flex justify-center items-center"
     >

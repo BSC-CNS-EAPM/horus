@@ -147,6 +147,10 @@ export type Block = {
   // Slurm blocks
   waitingForJob: boolean;
   status: string;
+  stdOut?: string;
+  stdErr?: string;
+  detailedStatus?: string;
+  jobID: Array<number>;
 
   // Remote connection
   selectedRemote: string;

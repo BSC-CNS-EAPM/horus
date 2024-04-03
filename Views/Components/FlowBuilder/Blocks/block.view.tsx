@@ -14,9 +14,10 @@ import { modifierKey } from "../../Toolbar/toolbar";
 // Variables
 import { PluginVariableView } from "../Variables/variables";
 import {
-  PlacedBlockVariables,
   VariableModalView,
+  PlacedBlockVariables,
 } from "../Variables/variable_connections";
+import { SlurmOutputModalView } from "../Logs/logs_connections";
 
 // Typescript types
 import { Block, BlockTypes, ExtensionsToOpen } from "../flow.types";
@@ -32,6 +33,7 @@ import InfoIcon from "../../Toolbar/Icons/Info";
 import RemoteIcon from "../../Toolbar/Icons/Remote";
 import TrashIcon from "../../Toolbar/Icons/Trash";
 import SettingsIcon from "../../Toolbar/Icons/Settings";
+import LogFileIcon from "../../Toolbar/Icons/LogFile";
 import CheckMark from "../../Toolbar/Icons/CheckMark";
 import ErrorIcon from "../../Toolbar/Icons/Error";
 import PlayIcon from "../../Toolbar/Icons/Play";
@@ -47,6 +49,19 @@ export function BlockView(props: BlockViewProps) {
           handleChange={blockState.blockViewHooks.handleVariableChange}
           handleClose={() => {
             blockState.blockViewHooks.toggleVariablesModal();
+          }}
+        />,
+        document.getElementById("flow-builder-div")!
+      )
+    : null;
+
+  const SlurmOutputModal = blockState.blockViewHooks.slurmOutputModal
+    ? createPortal(
+        <SlurmOutputModalView
+          block={props.block}
+          handleChange={blockState.blockViewHooks.handleVariableChange}
+          handleClose={() => {
+            blockState.blockViewHooks.toggleSlurmOutputModal();
           }}
         />,
         document.getElementById("flow-builder-div")!
@@ -155,7 +170,7 @@ export function BlockView(props: BlockViewProps) {
                 : "opacity-0")
             }
           >
-            <div className="flex flex-row justify-between">
+            <div className="flex flex-row gap-1 items-center cursor-auto ">
               {blockState.blockViewHooks.isInfoHovering ||
               props.block.isPlaced ? (
                 <div className="w-full">
@@ -164,7 +179,15 @@ export function BlockView(props: BlockViewProps) {
                   </div>
                   {props.block.type === BlockTypes.SLURM && (
                     <div className="remote-block-cloud">
+                      {SlurmOutputModal}
                       <ServerIcon /> Slurm Block - {props.block.status}
+                      <div style={{ position: "absolute", right: "15px" }}>
+                        <SlurmLoggingButton
+                          onClick={
+                            blockState.blockViewHooks.toggleSlurmOutputModal
+                          }
+                        />
+                      </div>
                     </div>
                   )}
                   {(props.block.type === BlockTypes.SLURM ||
@@ -323,7 +346,6 @@ function FinishedCheck(props: { runError: boolean; runErrorMessage?: string }) {
               onHide={() => {
                 setIsOpen(false);
               }}
-              zIndex={1000}
               maxContentSize={{
                 height: "h-[85%]",
               }}
@@ -459,7 +481,27 @@ function BlockVariablesButton({ onClick }: { onClick: () => void }) {
     </HorusPopover>
   );
 }
-
+function SlurmLoggingButton({ onClick }: { onClick: () => void }) {
+  return (
+    <HorusPopover
+      trigger={
+        <button
+          onClick={onClick}
+          style={{
+            pointerEvents: "all",
+            right: 0,
+            position: "absolute",
+            marginLeft: "auto",
+          }}
+        >
+          <LogFileIcon />
+        </button>
+      }
+    >
+      <div className="hover-description">Job info</div>
+    </HorusPopover>
+  );
+}
 function DeleteBlockButton({ block, onClick }: DeleteBlockButtonProps) {
   const deleteBlock = () => {
     onClick(block);

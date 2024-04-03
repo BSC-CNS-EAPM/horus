@@ -1023,7 +1023,6 @@ function SmilesVariableView(props: VariableViewProps) {
             onHide={() => {
               setShowJsme(false);
             }}
-            zIndex={1000}
             maxContentSize={{
               height: "h-[50%]",
               width: "h-[50%]",

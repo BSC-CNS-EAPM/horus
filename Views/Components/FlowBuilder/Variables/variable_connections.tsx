@@ -5,8 +5,9 @@ import { CSSProperties, useEffect, useRef, useState } from "react";
 import SidebarView from "../../SidebarView/sidebar_view";
 import AppButton from "../../appbutton";
 import { SearchComponent } from "../../Toolbar/toolbar";
-import { InputView, SimpleVariableView, PluginVariableView } from "./variables";
+import { InputView, PluginVariableView, SimpleVariableView } from "./variables";
 import { BlurredModal } from "../../reusable";
+import Xarrow from "react-xarrows";
 
 // TS types
 import {
@@ -17,10 +18,13 @@ import {
   PluginVariable,
   PluginVariableTypes,
 } from "../flow.types";
-import { BlockHooks } from "../flow.hooks";
+
+// Icons
 import Chevron from "../../Toolbar/Icons/Chevron";
+
+// Hooks
+import { BlockHooks } from "../flow.hooks";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
-import Xarrow from "react-xarrows";
 
 export function getBlockVarPair(
   block: Block,
@@ -153,6 +157,76 @@ export function VariableModalView(props: VariableModalViewProps) {
         )}
       </div>
     </BlurredModal>
+  );
+}
+
+function OutputVariableBallConnector({
+  block,
+  variable,
+}: {
+  block: Block;
+  variable: PluginVariable;
+}) {
+  const id = `output-drag-${variable.id}-${block.placedID}-connector`;
+
+  const { setNodeRef, transform, listeners, attributes } = useDraggable({
+    id: id,
+    data: {
+      blockVarPair: getBlockVarPair(block, variable),
+      type: DraggableEntity.CONNECTOR,
+    },
+  });
+
+  let style: CSSProperties = {
+    cursor: "grab",
+  };
+  let scale = 1;
+  if (transform) {
+    // Get the scale of the flow canvas
+    const flowCanvas = document.getElementById(DroppableEntity.SCALED_CANVAS)!;
+    scale =
+      1 /
+      parseFloat(
+        flowCanvas.style.transform.match(/scale\((.*?)\)/)?.[1] || "1"
+      );
+    style = {
+      transform: `translate(${transform.x * scale}px, ${
+        transform.y * scale
+      }px)`,
+      zIndex: 100,
+      cursor: "grabbing",
+    };
+  }
+
+  const ref = useRef(null);
+
+  useEffect(() => {
+    setNodeRef(ref.current);
+  }, [ref]);
+
+  return (
+    <div
+      id={id}
+      className="flex flex-row gap-1 align-center items-center justify-between variable-squared h-full"
+    >
+      <div className="cut-text">{variable.name}</div>
+      <div style={style} id={id} ref={ref} {...listeners} {...attributes}>
+        {transform ? (
+          <Xarrow
+            SVGcanvasStyle={{ scale: `${scale}` }}
+            start={id}
+            end={ref}
+            endAnchor={"right"}
+            dashness={{ animation: -2 }}
+            color={"var(--pop-code)"}
+            headShape={"circle"}
+            path="grid"
+          />
+        ) : (
+          <Chevron direction="right" />
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -391,76 +465,6 @@ function VariableInputConnectView(props: VariableConnectViewProps) {
     >
       <div className={classNameVariableBall} />
       <div className="cut-text">{props.variable.name}</div>
-    </div>
-  );
-}
-
-function OutputVariableBallConnector({
-  block,
-  variable,
-}: {
-  block: Block;
-  variable: PluginVariable;
-}) {
-  const id = `output-drag-${variable.id}-${block.placedID}-connector`;
-
-  const { setNodeRef, transform, listeners, attributes } = useDraggable({
-    id: id,
-    data: {
-      blockVarPair: getBlockVarPair(block, variable),
-      type: DraggableEntity.CONNECTOR,
-    },
-  });
-
-  let style: CSSProperties = {
-    cursor: "grab",
-  };
-  let scale = 1;
-  if (transform) {
-    // Get the scale of the flow canvas
-    const flowCanvas = document.getElementById(DroppableEntity.SCALED_CANVAS)!;
-    scale =
-      1 /
-      parseFloat(
-        flowCanvas.style.transform.match(/scale\((.*?)\)/)?.[1] || "1"
-      );
-    style = {
-      transform: `translate(${transform.x * scale}px, ${
-        transform.y * scale
-      }px)`,
-      zIndex: 100,
-      cursor: "grabbing",
-    };
-  }
-
-  const ref = useRef(null);
-
-  useEffect(() => {
-    setNodeRef(ref.current);
-  }, [ref]);
-
-  return (
-    <div
-      id={id}
-      className="flex flex-row gap-1 align-center items-center justify-between variable-squared h-full"
-    >
-      <div className="cut-text">{variable.name}</div>
-      <div style={style} id={id} ref={ref} {...listeners} {...attributes}>
-        {transform ? (
-          <Xarrow
-            SVGcanvasStyle={{ scale: `${scale}` }}
-            start={id}
-            end={ref}
-            endAnchor={"right"}
-            dashness={{ animation: -2 }}
-            color={"var(--pop-code)"}
-            headShape={"circle"}
-            path="grid"
-          />
-        ) : (
-          <Chevron direction="right" />
-        )}
-      </div>
     </div>
   );
 }

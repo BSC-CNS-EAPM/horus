@@ -142,7 +142,6 @@ function FlowBuilderView() {
               <BlurredModal
                 show={flowBuilderState.flow.flowLoading}
                 onHide={() => {}}
-                zIndex={1000}
               >
                 <div className="flex flex-col items-center w-full h-full gap-2 justify-center p-8">
                   <RotatingLines />

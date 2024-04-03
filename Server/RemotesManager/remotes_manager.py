@@ -184,7 +184,7 @@ class RemotesAPI:
         """
         return self.command("echo $HOME")
 
-    def command(self, command: str):
+    def command(self, command: str) -> str:
         """
         Runs a command on the remote (or locally).
 
@@ -220,7 +220,7 @@ class RemotesAPI:
                 logging.getLogger("Horus").debug("Local command output: %s", out)
                 return out
             else:
-                return f"Command {command} executed successfully."
+                return str(f"Command {command} executed successfully.")
 
         # Run command on remote
         # Hide is needed to avoid the output to be printed on the console
@@ -230,7 +230,7 @@ class RemotesAPI:
         try:
             out = self.conn.run(command, hide=True, in_stream=False)
         except Exception as exc:
-            logging.getLogger("Horus").critical(
+            logging.getLogger("Horus").error(
                 "Error running command %s on remote %s: %s", command, self.name, str(exc)
             )
             raise exc
@@ -239,7 +239,7 @@ class RemotesAPI:
         if out.failed:
             raise Exception(out.stderr.strip())  # pylint: disable=broad-exception-raised
 
-        out = out.stdout.strip()
+        out = str(out.stdout.strip())
 
         logging.getLogger("Horus").debug("Remote command output: %s", out)
 
@@ -572,6 +572,17 @@ class RemotesAPI:
             queue[self._flowSavedID] = []
 
         # Update the list of jobs for the flow
+        # only if there is not a job for the same remote / block / jobID
+        for job in queue[self._flowSavedID]:
+            if (
+                job["remote"] == self.remoteName
+                and job["jobID"] == jobID
+                and job["blockPlacedID"] == self._blockPlacedID
+            ):
+                logging.getLogger("Horus").error(
+                    "Trying to append an already existing job to the internal job queue. This may result in errors."
+                )
+
         queue[self._flowSavedID].append(
             {
                 "remote": self.remoteName,  # The remote the job is running on
@@ -598,7 +609,6 @@ class RemotesAPI:
 
         :return: The job ID.
         """
-
         # Check if the script exists
         try:
             self.command(f"test -f {script}")
@@ -688,11 +698,6 @@ class RemotesAPI:
             # its finalAction function.
             return "COMPLETED"
 
-            # raise Exception(  # pylint: disable=broad-exception-raised
-            #     "ERROR: Trying to fetch jobs for a flow that has not sent any."
-            #     + " Did any SlurmBlock fail?"
-            # )
-
         statuses = []
         for job in jobs:
             # Get the jobID
@@ -701,10 +706,8 @@ class RemotesAPI:
                 jobID = job["jobID"]
 
             if jobID is None:
-                return "COMPLETED"
-                # raise Exception(  # pylint: disable=broad-exception-raised
-                #     "Corrupted queue storage: block not found."
-                # )
+                statuses.append("COMPLETED")
+                continue
 
             # Get the job status
             status = self.getJobStatus(jobID)
@@ -776,6 +779,38 @@ class RemotesAPI:
 
         return time
 
+    def getRemoteBlockLogs(
+        self, flowSavedID: str, blockPlacedID: int
+    ) -> tuple[t.Union[str, None], t.Union[str, None], t.Union[str, None]]:
+        """
+        Retrieves from slurm the stdout, stderr and the detailed status
+        """
+
+        # Get the status of the job
+        queue = self.readQueue()
+        jobs = queue.get(flowSavedID, None)
+
+        if jobs is None:
+            # The slurm block did not send any job to a slurm queue
+            # returning COMPLETED will make the SlurmBlock to execute
+            # its finalAction function.
+            return (None, None, None)
+
+        for job in jobs:
+            # Get the jobID
+            jobID = None
+            if job["blockPlacedID"] == blockPlacedID:
+                jobID = job["jobID"]
+
+        if jobID is None:
+            return (None, None, None)
+
+        stdout = self._getSlurmStd("StdOut", jobID)
+        stderr = self._getSlurmStd("StdErr", jobID)
+        detailedStatus = self._getdetailedStatus(jobID)
+
+        return (stdout, stderr, detailedStatus)
+
     def _getSlurmStatus(self, jobID: int) -> str:
         """
         Get the status of a slurm job.
@@ -807,13 +842,13 @@ class RemotesAPI:
             status = SlurmBlock.Status.OUT_OF_ME.value
         elif SlurmBlock.Status.FAILED.value in status:
             status = SlurmBlock.Status.FAILED.value
-            self.command(f"scancel {jobID}")
+            # self.command(f"scancel {jobID}")
         elif SlurmBlock.Status.TIMEOUT.value in status:
             status = SlurmBlock.Status.TIMEOUT.value
-            self.command(f"scancel {jobID}")
+            # self.command(f"scancel {jobID}")
         elif SlurmBlock.Status.CANCELLED.value in status:
             status = SlurmBlock.Status.CANCELLED.value
-            self.command(f"scancel {jobID}")
+            # self.command(f"scancel {jobID}")
         elif status == "" or SlurmBlock.Status.PENDING.value in status:
             status = SlurmBlock.Status.PENDING.value
         elif SlurmBlock.Status.RUNNING.value in status:
@@ -828,7 +863,58 @@ class RemotesAPI:
 
         return status
 
-    def getJobStatus(self, jobID: int) -> str:
+    def _getSlurmStd(self, file: str, jobID: int):
+        """
+        Read Job's StdOut file
+        """
+        stdPath = self.command(f"scontrol show job {jobID} | grep {file} ")
+        try:
+            std = self.command(f"cat  {stdPath.split('=')[1]} ")
+            if std.strip() == "":
+                std = None
+        except Exception:
+            std = None
+
+        return std
+
+    def _getdetailedStatus(self, jobID: int):
+        try:
+            detailedStatus = self.command(f"scontrol show jobid -dd {jobID}")
+        except Exception:
+            detailedStatus = None
+        return detailedStatus
+
+    def getJobIDfromBlock(self, flowID: str, blockPlacedID: int) -> t.Union[list[int], None]:
+        """
+        Returns the jobIDs that a block sent
+
+        Parameters
+        ----------
+        flowID: str -> The flowID
+        blockPlacedID: int -> The block placed ID
+
+        Returns
+        -------
+        An array of JobIDs if the block sent any job, None otherwise
+        """
+
+        # Get the status of the job
+        queue = self.readQueue()
+        jobs = queue.get(flowID, None)
+
+        if jobs is None:
+            return None
+
+        jobIDS: t.List[int] = []
+        for job in jobs:
+            # Get the jobID
+            if job["blockPlacedID"] == blockPlacedID:
+                jobID = job["jobID"]
+                jobIDS.append(jobID)
+
+        return jobIDS
+
+    def getJobStatus(self, jobID: int):
         """
         Get the status of a job.
 
@@ -905,7 +991,6 @@ class RemotesAPI:
 
             # Get the job status
             newStatus = self.getJobStatus(queueJobID) if status is None else status
-
             # Update the job status
             job["status"] = newStatus
 
@@ -973,12 +1058,8 @@ class RemotesAPI:
             if status.lower() == "running" or status.lower() == "pending":
                 self.command(f"scancel {jobID}")
 
-        # Remove the flow from the queue storag if it exists
-        if flowID in queue:
-            queue.pop(flowID)
-
-        # Save the queue storage
-        self.writeQueue(queue)
+            # Update the queue
+            self.updateQueue(flowID, jobID)
 
     def writeQueue(self, queue: t.Dict[str, t.List[t.Dict[str, t.Any]]]):
         """
@@ -986,8 +1067,9 @@ class RemotesAPI:
 
         :param queue: The queue storage.
         """
+
         with open(self.queueStoragePath, "w", encoding="utf-8") as file:
-            json.dump(queue, file)
+            json.dump(queue, file, indent=4)
 
     def deleteFlowFromQueue(self, flowID: str):
         """

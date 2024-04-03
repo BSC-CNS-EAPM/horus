@@ -69,8 +69,8 @@ function FlowStatusBase(props: FlowStatusBaseProps) {
 function IdleFlowStatus() {
   return (
     <FlowStatusBase color="black">
-      <CheckMark />
       <div>Saved</div>
+      <CheckMark />
     </FlowStatusBase>
   );
 }
@@ -78,8 +78,8 @@ function IdleFlowStatus() {
 function QueuedFlowStatus() {
   return (
     <FlowStatusBase color="purple">
-      <ChronoIcon />
       <div>Queued</div>
+      <ChronoIcon />
     </FlowStatusBase>
   );
 }
@@ -87,8 +87,8 @@ function QueuedFlowStatus() {
 function RunningFlowStatus() {
   return (
     <FlowStatusBase color="blue">
-      <RotatingLines size={"1.5rem"} />
       <div>Running</div>
+      <RotatingLines size={"1.5rem"} />
     </FlowStatusBase>
   );
 }
@@ -96,8 +96,8 @@ function RunningFlowStatus() {
 function PausedFlowStatus() {
   return (
     <FlowStatusBase color="orange">
-      <PausedIcon />
       <div>Paused</div>
+      <PausedIcon />
     </FlowStatusBase>
   );
 }
@@ -105,8 +105,8 @@ function PausedFlowStatus() {
 function StoppedFlowStatus() {
   return (
     <FlowStatusBase color="red">
-      <StopIcon />
       <div>Stopped</div>
+      <StopIcon />
     </FlowStatusBase>
   );
 }
@@ -114,6 +114,7 @@ function StoppedFlowStatus() {
 function CancellingFlowStatus() {
   return (
     <FlowStatusBase color="red">
+      <div>Cancelling</div>
       <svg
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
@@ -133,7 +134,6 @@ function CancellingFlowStatus() {
           d="M9 9.563C9 9.252 9.252 9 9.563 9h4.874c.311 0 .563.252.563.563v4.874c0 .311-.252.563-.563.563H9.564A.562.562 0 019 14.437V9.564z"
         />
       </svg>
-      <div>Cancelling</div>
     </FlowStatusBase>
   );
 }
@@ -141,8 +141,8 @@ function CancellingFlowStatus() {
 function FinishedFlowStatus() {
   return (
     <FlowStatusBase color="green">
-      <CheckMark />
       Finished
+      <CheckMark />
     </FlowStatusBase>
   );
 }
@@ -150,8 +150,8 @@ function FinishedFlowStatus() {
 function ErrorFlowStatus() {
   return (
     <FlowStatusBase color="red">
-      <ErrorIcon />
       Failed
+      <ErrorIcon />
     </FlowStatusBase>
   );
 }

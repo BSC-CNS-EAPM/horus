@@ -501,6 +501,10 @@ class Flow:
             if molstarStateBytes is not None:
                 zipFile.writestr(self.MOLSTAR_STATE_FILE, molstarStateBytes)
 
+        # Send the flow to the frontend on write
+        if self._socket is not None:
+            self._socket.emit("flow", self.encode(minimal=False), to=self.savedID)
+
         # Return the encoded flow in case its needed
         return encodedFlow
 
@@ -701,10 +705,6 @@ class Flow:
         # Save the flow
         self.write()
 
-        # Send the flow to the frontend because the block is going to be run
-        if self._socket is not None:
-            self._socket.emit("flow", self.encode(minimal=False), to=self.savedID)
-
         # Execute the block by calling the plugin manager
         # Calling the PM is a must because it handles
         # the dependencies for each block
@@ -725,10 +725,6 @@ class Flow:
         # Save the flow
         self.write()
 
-        # Send the flow to the frontend if a socket is provided
-        if self._socket is not None:
-            self._socket.emit("flow", self.encode(minimal=False), to=self.savedID)
-
         # If a slurm block was run, check if we need to wait for the job to finish
         # That means that the action executed was the block's firstAction. When the job with
         # finishes, the block will be executed again with the secondAction. If _waitingForJob
@@ -740,29 +736,24 @@ class Flow:
 
             self.write()
 
-            # Update the fronted with the block's state
-            if self._socket is not None:
-                self._socket.emit("flow", self.encode(minimal=False), to=self.savedID)
-
             # Wait for the job to finish
             try:
-                currentStatus = blockToRun._status
                 while blockToRun.isWaitingForJob:
+
+                    # Update the flow (running time, queue...)
+                    self.write()
+
                     waitTime = (
                         int(self.horusSettings.getSetting("queueWaitTime").value)
                         if self.horusSettings
                         else 10
                     )
+
                     time.sleep(waitTime)
 
-                    # If the block's status changed, store the flow
-                    if blockToRun._status != currentStatus:
-                        currentStatus = blockToRun._status
-                        self.write()
-
-                    # Update the fronted with the block's state
-                    if self._socket is not None:
-                        self._socket.emit("flow", self.encode(minimal=False), to=self.savedID)
+                # When exiting the loop, the status will be updated
+                # Then we need to update the frontend and the flow too
+                self.write()
 
             except Exception as exc:  # pylint: disable=broad-exception-raised
                 self.currentExecuting = None
@@ -797,10 +788,6 @@ class Flow:
 
         # Save the flow
         self.write()
-
-        # Send the flow to the frontend if a socket is provided
-        if self._socket is not None:
-            self._socket.emit("flow", self.encode(minimal=False), to=self.savedID)
 
         # Return the produced outputs of the block
         return outputs
@@ -1023,7 +1010,20 @@ class Flow:
         # Send a request to the main server to remove the flow from the running flows list
         if socket is not None:
             socket.removeFinishedFlowFromRunningFlows(self.path)
-            socket.emit("flow", self.encode(minimal=False), to=self.savedID)
+
+    def _computeFinalTime(self):
+        """
+        Sets the finished time and the elapsed based on the started time
+        """
+        # Add the elapsed time
+        if self.startedTime is None:
+            return
+
+        # Set the finished time
+        self.finishedTime = datetime.datetime.now()
+
+        # Update the elapsed time
+        self.elapsed += (self.finishedTime - self.startedTime).total_seconds()
 
     def _computeFinalTime(self):
         """
@@ -1080,8 +1080,17 @@ class Flow:
                         )  #  pylint: disable=broad-exception-raised
 
                     rAPI.cancelJobs(self.savedID)
+
+                    # Parse the failed status
+                    block._setRemote(rAPI)
+                    block.flow = self
+                    block.parseStatus()
+
+                    # Remove the flow from the queue
+                    rAPI.deleteFlowFromQueue(self.savedID)
+
                 except Exception as exc:
-                    print(f"Error cancelling job: {exc}")
+                    logging.getLogger("Horus").error("Error cancelling job: %s", str(exc))
 
         # Set the status to stopped
         self.status = self.FlowStatus.ERROR if fail else self.FlowStatus.STOPPED

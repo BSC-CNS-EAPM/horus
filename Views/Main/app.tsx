@@ -67,7 +67,7 @@ export function App() {
 
   return (
     <>
-      <BlurredModal show={!serverActive} onHide={() => {}}>
+      <BlurredModal show={!serverActive} onHide={() => {}} zIndex={99999}>
         <div className="flex flex-col gap-2 text-center justify-center items-center">
           <div className="text-xl font-semibold">
             Could not connect to the Horus server
