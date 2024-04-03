@@ -16,6 +16,7 @@ import sqlalchemy
 
 # Horus imports
 from HorusAPI import VariableTypes
+from Server.FileExplorer import FileExplorer
 
 if typing.TYPE_CHECKING:
     from .webapp_manager import WebAppManager, DatabaseConfig
@@ -185,19 +186,16 @@ class Database:
         # Add the registration date
         formData["registration_date"] = datetime.datetime.now()
 
+        self._validatePassword(formData["password"])
+
         # Hash the password
         formData["password"] = self.hashPassword(formData["password"])
 
-        if not self._validatePassword(formData["password"]):
-            raise UserError(
-                "Password does not meet the requirements. It must be at least 8 characters long."
-            )
-
-        if not self.webAppManager.userManagement.mailServer:
-            raise ValueError("Mail server is not configured")
-
         # If activation is required, send an email to the user
         if self.webAppManager.userManagement.requireActivation:
+            if not self.webAppManager.userManagement.mailServer:
+                raise ValueError("Mail server is not configured")
+
             self.webAppManager.userManagement.mailServer.sendActivationMail(
                 formData["email"], self.dbConfig.secretKey
             )
@@ -225,19 +223,17 @@ class Database:
         Resets the password of a user in the database with the given email
         """
 
-        # Check if the user already exists
-        if self.getUser(mail=mail) is None:
-            raise UserError("User does not exist")
+        message = "Check your email to reset your password."
 
-        if not self.webAppManager.userManagement.mailServer:
-            raise ValueError("Mail server is not configured")
+        # Check if the user exists
+        if self.getUser(mail=mail) and self.webAppManager.userManagement.mailServer:
+            # Send an email to the user
+            self.webAppManager.userManagement.mailServer.sendResetPasswordMail(
+                mail, self.dbConfig.secretKey
+            )
 
-        # Send an email to the user
-        self.webAppManager.userManagement.mailServer.sendResetPasswordMail(
-            mail, self.dbConfig.secretKey
-        )
-
-        return "Check your email to reset your password."
+        # Return good message even when failed to spoof the user / hacker
+        return message
 
     def confirmResetPassword(self, token: str, newPassword: str):
         """
@@ -251,10 +247,7 @@ class Database:
             token, self.dbConfig.secretKey, self.VALIDATION_MAIL_EXPIRATION
         )
 
-        if not self._validatePassword(newPassword):
-            raise UserError(
-                "Password does not meet the requirements. It must be at least 8 characters long."
-            )
+        self._validatePassword(newPassword)
 
         # Hash the password
         newPassword = self.hashPassword(newPassword)
@@ -350,7 +343,7 @@ class Database:
 
             return dictResult
 
-    def loginUser(self, mail: str, password: str) -> typing.Union[None, "HorusUser"]:
+    def loginUser(self, mail: str, password: str) -> "HorusUser":
         """
         Logs a user in by email and password
 
@@ -369,12 +362,9 @@ class Database:
                 self.users.select().where((self.users.c.email == mail))
             ).fetchone()
 
-        if dbUser is None:
-            raise UserError("User does not exist")
-
         # Verify the password
-        if not check_password_hash(dbUser.password, password):
-            return None
+        if dbUser is None or not check_password_hash(dbUser.password, password):
+            raise UserError("Wrong email or password")
 
         # If the user is not activated, return None
         if not dbUser.activated:
@@ -405,15 +395,37 @@ class Database:
         # Hash the password
         return generate_password_hash(password, method="pbkdf2:sha256", salt_length=8)
 
-    def _validatePassword(self, password: str) -> bool:
+    def _validatePassword(self, password: str):
         """
-        Validates the minimum password requirements
+        Validates the minimum password requirements.
+
+        Raises
+        ------
+        UserError if the password does not meet requirements
         """
 
+        validated = True
+
+        # Verify length
         if len(password) < 8:
-            return False
+            validated = False
 
-        return True
+        # Check that it has at least one special character
+        if not any(not c.isalnum() for c in password):
+            validated = False
+
+        # Check that it has at least one letter
+        if not any(c.isalpha() for c in password):
+            validated = False
+
+        # Check that it has at least one letter
+        if not any(not c.isdigit() for c in password):
+            validated = False
+
+        if not validated:
+            raise UserError(
+                "Password must be at least 8 characters long and has to include at least one number, one letter and a special character."
+            )
 
     def _getUserQuotas(self, userID: int) -> typing.Dict[str, typing.Any]:
         """
@@ -491,19 +503,13 @@ class Database:
 
         quotas = self._getUserQuotas(user.id)
 
-        # Get all the flows of the user
+        # Get all the flows of the user from the DB (mainly for the time)
         userFlows = self._getUserFlows(user.id)
 
-        # Check within the user directory also for the
-        # number of simulations (directories)
-        userSims = 0
-        if user.appSupportDir:
-            userSims = len(os.listdir(user.flowsDir))
-
         return {
-            "currentFlows": userSims,
+            "currentFlows": len(os.listdir(user.flowsDir)),
             "maxFlows": quotas["maxFlows"],
-            "usedSpace": sum([flow["size"] for flow in userFlows]),
+            "usedSpace": FileExplorer.computeFolderSize(user.flowsDir),
             "maxSpace": quotas["maxStorage"],
             "usedHours": sum([flow["time"] for flow in userFlows]),
             "maxHours": quotas["maxTime"],
@@ -520,23 +526,24 @@ class Database:
         # Get all the flows of the user
         userFlows = self._getUserFlows(user.id)
 
-        # Check within the user directory also for the
-        # number of simulations (directories)
-        userSims = 0
-        if user.appSupportDir:
-            userSims = len(os.listdir(user.flowsDir))
-
         # If the user has reached the maximum number of flows
+        # Use always the quantity of folders instead of the database,
+        # as a flow can be removed manually by an admin
         if quotas["maxFlows"] is not None:
-            if len(userFlows) >= quotas["maxFlows"] or userSims >= quotas["maxFlows"]:
+            # Check within the user directory also for the
+            # number of simulations (directories)
+            if len(os.listdir(user.flowsDir)) >= quotas["maxFlows"]:
                 return True
 
         # If the user has reached the maximum storage
+        # For so, check the actual size of the folder instead
+        # of the DB data
         if quotas["maxStorage"] is not None:
-            if sum([flow["size"] for flow in userFlows]) >= quotas["maxStorage"]:
+            if FileExplorer.computeFolderSize(user.flowsDir) >= quotas["maxStorage"]:
                 return True
 
         # If the user has reached the maximum time
+        # This has to come from the DB
         if quotas["maxTime"] is not None:
             if sum([flow["time"] for flow in userFlows]) >= quotas["maxTime"]:
                 return True

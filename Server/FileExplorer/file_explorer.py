@@ -2,10 +2,12 @@
 Server-mode file explorer for Flask
 """
 
+# Standard imports
 import os
 import logging
 import typing
 import hashlib
+import subprocess
 
 
 class FileExplorer:
@@ -151,3 +153,34 @@ class FileExplorer:
             )
 
         return chain
+
+    @classmethod
+    def computeFolderSize(cls, dir: str) -> int:
+        """
+        Returns the size of a folder in MB
+
+        Parameters
+        ----------
+        :param: dir -> Path to the directory to compute its size
+
+        Returns
+        -------
+        :param: int -> The folder size in MB
+        """
+        # Get the size of the using the du command
+        size = 0
+        try:
+            with subprocess.Popen(
+                ["du", "-cshm", dir], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            ) as proc:
+                if proc.stdout is not None:
+                    size = int(proc.stdout.read().decode("utf-8").split("\t")[0])
+                else:
+                    raise Exception("stdout from du command is None")
+
+        except Exception as e:
+            logging.getLogger("Horus").warning(
+                "Could not compute the size of %s: %s", dir, str(e)
+            )
+
+        return size

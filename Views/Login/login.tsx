@@ -108,7 +108,7 @@ export default function LoginRegister() {
         <div
           className={`alert ${
             messages.ok ? "alert-success" : "alert-danger"
-          } mt-3`}
+          } mt-3 max-w-[350px]`}
         >
           {messages.msg}
         </div>

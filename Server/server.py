@@ -2047,7 +2047,7 @@ class HorusServer:
 
             # If the server does not require user registration,
             # redirect to the home page with the anonymous user
-            if not self.webAppManager.userManagement.requireActivation:
+            if not self.webAppManager.userManagement.requireRegistration:
                 anonyUser = HorusUser.anonymousUser(
                     self.webAppManager.userManagement.appSupportDir
                 )
@@ -2058,7 +2058,7 @@ class HorusServer:
             if currentUser and currentUser.is_authenticated:
                 # Except if the user is Demo, then logout the demo user
                 # Only if we require registration
-                if currentUser.isDemo and self.webAppManager.userManagement.requireActivation:
+                if currentUser.isDemo and self.webAppManager.userManagement.requireRegistration:
                     flask_login.logout_user()
                     return flask.render_template("Login/login.html")
 
@@ -2080,9 +2080,6 @@ class HorusServer:
                 # Login the user
                 try:
                     user = db.loginUser(email, password)
-
-                    if user is None:
-                        raise UserError("No user found")
 
                     loggedIn = _loginUserInternal(user)
 
@@ -2138,7 +2135,10 @@ class HorusServer:
         @self.server.route("/users/logout")
         def logout():
 
-            if not self.webAppManager or not self.webAppManager.userManagement.requireActivation:
+            if (
+                not self.webAppManager
+                or not self.webAppManager.userManagement.requireRegistration
+            ):
                 return flask.redirect("/")
 
             if currentUser and currentUser.is_authenticated:
@@ -2222,7 +2222,7 @@ class HorusServer:
             if request.method == "POST":
                 if (
                     not self.webAppManager
-                    or not self.webAppManager.userManagement.requireActivation
+                    or not self.webAppManager.userManagement.requireRegistration
                 ):
                     return flask.jsonify({"ok": True, "logged": False})
 
@@ -2260,7 +2260,7 @@ class HorusServer:
             if (
                 self.webAppManager is None
                 or self.webAppManager.userManagement.mailServer is None
-                or not self.webAppManager.userManagement.requireActivation
+                or not self.webAppManager.userManagement.requireRegistration
                 or self.webAppManager.db is None
             ):
                 raise Exception("No user registration required")
@@ -2315,7 +2315,7 @@ class HorusServer:
         def deleteUser():
             if (
                 not self.webAppManager
-                or not self.webAppManager.userManagement.requireActivation
+                or not self.webAppManager.userManagement.requireRegistration
                 or not self.webAppManager.db
             ):
                 return flask.redirect("/")

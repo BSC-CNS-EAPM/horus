@@ -15,7 +15,6 @@ import subprocess
 import time
 import zipfile
 import tarfile
-import warnings
 
 # Enum for the flow status
 from enum import Enum
@@ -31,6 +30,9 @@ from Server.RemotesManager import RemotesManager
 
 # Import the settings manager
 from Server.SettingsManager import SettingsManager
+
+# Import file epxlorer for folder size
+from Server.FileExplorer import FileExplorer
 
 # Internal, development types
 if typing.TYPE_CHECKING:
@@ -1051,24 +1053,7 @@ class Flow:
         # Get the folder of the flow
         folder = os.path.dirname(self.path)
 
-        # Get the size of the using the du command
-        size = None
-        with subprocess.Popen(
-            ["du", "-cshm", folder], stdout=subprocess.PIPE, stderr=subprocess.PIPE
-        ) as proc:
-
-            if proc.stdout is None:
-                return None
-
-            try:
-                size = int(proc.stdout.read().decode("utf-8").split("\t")[0])
-            except Exception:
-                logging.getLogger("Horus").warning(
-                    "Could not compute the size of the flow folder. "
-                    + "This can constitute a problem on web app mode."
-                )
-
-        return size
+        return FileExplorer.computeFolderSize(folder)
 
     def stop(self, message: str = "The flow was stopped.", fail: bool = False):
         """
