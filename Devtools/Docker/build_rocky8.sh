@@ -30,7 +30,7 @@ micromamba activate horus_rocky8
 
 # Because on Rocky we are using QT,
 # we need to install pywebview with the QT backend
-python -m pip install pywebview[qt]==4.2.2
+python -m pip install pywebview[qt]==5.0.5
 
 # Build horus
 echo "Building horus"

@@ -695,77 +695,21 @@ class AppDelegate(metaclass=HorusSingleton):
         for process in multiprocessing.active_children():
             process.terminate()
 
-    # FIXME: REMOVE THIS
     def _menus(self):
         def newHorus():
             self.openWindow("Horus", forceNew=True)
 
-        def openPlugins():
-            pluginsURL = self.server.baseURL + "/plugins/"
-            pluginsURL = self.tokenize(pluginsURL)
-            pluginWindow = self.openWindow("Plugins", url=pluginsURL)
-
-            import json
-
-            internalInfo = json.dumps(
-                {
-                    "isDesktop": self.desktop,
-                    "mode": self.mode,
-                }
-            )
-
-            pluginWindow.evaluate_js(f"window.horusInternal = {internalInfo}")
-
-        def aboutHorus():
-            aboutURL = self.server.baseURL + "/about"
-            aboutURL = self.tokenize(aboutURL)
-            self.openWindow("About Horus", url=aboutURL)
-
-        def settings():
-            settingsURL = self.server.baseURL + "/settingsview"
-            settingsURL = self.tokenize(settingsURL)
-            self.openWindow("Settings", url=settingsURL)
-
         fileMenu = wm.Menu(
             "File",
-            [  # type: ignore
-                # wm.MenuAction("New...", None),
-                # wm.MenuAction("Open...", None),
-                # wm.MenuAction("Save project...", None),
-                # wm.MenuSeparator(),
-                wm.MenuAction(
+            [
+                wm.MenuAction(  # type: ignore
                     "New Window",
                     newHorus,
                 ),
-                wm.MenuAction(
-                    "About Horus",
-                    aboutHorus,
-                ),
             ],
         )
 
-        pluginsMenu = wm.Menu(
-            "Plugins",
-            [
-                wm.MenuAction(  # type: ignore
-                    "Manage...",
-                    openPlugins,
-                )
-            ],
-        )
-
-        def openRemotes():
-            self.openWindow("Remotes", url=self.server.baseURL + "/remotes")
-
-        settingsMenu = wm.Menu(
-            "Settings",
-            [  # type: ignore
-                wm.MenuAction("Settings", settings),
-                wm.MenuAction("Remotes", openRemotes),
-            ],
-        )
-
-        return [fileMenu, pluginsMenu, settingsMenu]
+        return [fileMenu]
 
     def _startAppMode(self):
         """
