@@ -3,6 +3,7 @@ import typing
 
 # Basic python imports
 import os
+import datetime
 
 # Flask login library which provides UserMixin
 import flask_login
@@ -69,6 +70,31 @@ class HorusUser(flask_login.UserMixin):
     If the user is an admin
     """
 
+    email: str
+    """
+    User email
+    """
+
+    id: int
+    """
+    User ID
+    """
+
+    registrationDate: datetime.datetime
+    """
+    Datetime when the user registered
+    """
+
+    lastLogin: datetime.datetime
+    """
+    Datetime of user's last login
+    """
+
+    group: int
+    """
+    User group
+    """
+
     def __init__(self, userDict: typing.Dict[str, typing.Any], appSupportDir: str) -> None:
         """
         :param userDict: The user dictionary from the database.
@@ -90,10 +116,10 @@ class HorusUser(flask_login.UserMixin):
         self.email = email
 
         self.activated = userDict.get("activated", False)
-        self.registrationDate = userDict.get("registration_date")
-        self.lastLogin = userDict.get("last_login")
+        self.registrationDate = typing.cast(datetime.datetime, userDict.get("registration_date"))
+        self.lastLogin = typing.cast(datetime.datetime, userDict.get("last_login"))
         self.admin = userDict.get("admin", False)
-        self.group = userDict.get("group")
+        self.group = userDict.get("group", 0)
 
         if self.email is None:
             raise Exception("User does not have an email")

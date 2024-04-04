@@ -62,8 +62,12 @@ export const config = {
         user: "horus@mail.com",
         password: "password",
       },
-      subject: "Horus account activation",
-      body: 'Welcome to Horus! To activate your account, click on the following link: <a href="%link%">Activate account</a>',
+      activateSubject: "Horus account activation",
+      activateBody:
+        "Welcome to Horus! To activate your account, click on the following link: <a href='%link%'>Activate account</a>",
+      resetSubject: "Horus account password reset",
+      resetBody:
+        "Reset your password on the following link: <a href='%link%'>Reset password</a>",
     },
 
     // Database configuration. Horus works with a SQLlite database.

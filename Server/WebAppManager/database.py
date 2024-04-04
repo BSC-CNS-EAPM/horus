@@ -180,8 +180,7 @@ class Database:
         formData["email"] = formData["email"].lower()
 
         # Check if the user already exists
-        if self.getUser(mail=formData["email"]) is not None:
-            raise UserError("User already exists")
+        self._verifyUserExistsAndRemoveIfActivation(formData["email"])
 
         # Add the registration date
         formData["registration_date"] = datetime.datetime.now()
@@ -217,6 +216,39 @@ class Database:
             message = "Check your email to activate your account."
 
         return message
+
+    def _verifyUserExistsAndRemoveIfActivation(self, email: str):
+        """
+        Verify if a user mail exists in the database. Will raise an error if it does.
+        When using "requireActivation", if the user is not activated
+        and more than 24h have passed. The user will be removed, and the registration
+        process can continue
+
+        Raises
+        ------
+        UserError on user existing
+        """
+
+        # Get the user mail
+        user = self.getUser(mail=email)
+
+        if user is None:
+            # The user does not exist
+            return
+
+        # If we require activation, veirfy that the user is activated
+        if self.webAppManager.userManagement.requireActivation:
+            if not user.activated and user.registrationDate:
+                elapsedSinceRegister = (
+                    datetime.datetime.now() - user.registrationDate
+                ).total_seconds()
+                # If 24h have passed without the user activating
+                if elapsedSinceRegister > (24 * 3600):
+                    # Delete the user and allow for registration
+                    self.deleteUser(email)
+                    return
+
+        raise UserError("User already exists")
 
     def resetPassword(self, mail: str) -> str:
         """
