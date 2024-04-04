@@ -587,7 +587,7 @@ class HorusServer:
                     return flask.jsonify(
                         {
                             "ok": False,
-                            "msg": "This function is not available on Web App mode.",
+                            "msg": "This function is not available.",
                         }
                     )
                 return func(*args, **kwargs)
