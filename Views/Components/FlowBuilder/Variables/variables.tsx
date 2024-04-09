@@ -593,10 +593,8 @@ function TextAreaVariableView(props: VariableViewProps) {
   );
 }
 
-function IntegerFloatVariableView(
-  props: VariableViewProps & { preventMessage?: boolean }
-) {
-  const { currentValue, variable, onChange, preventMessage } = props;
+function IntegerFloatVariableView(props: VariableViewProps) {
+  const { currentValue, variable, onChange } = props;
 
   const [numberMessage, setNumberMessage] = useState<string | null>(null);
 
@@ -657,9 +655,7 @@ function IntegerFloatVariableView(
 
   return (
     <div className="flex flex-col gap-2 justify-center text-center items-center w-full">
-      {preventMessage && numberMessage && (
-        <div className="text-red-500">{numberMessage}</div>
-      )}
+      {numberMessage && <div className="text-red-500">{numberMessage}</div>}
       <input
         className="plugin-variable-value"
         value={currentValue}

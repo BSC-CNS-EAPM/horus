@@ -406,3 +406,48 @@ def test_disabled_variables_output_list():
 
     assert list_with_disabled.value == expected
     assert test_block.outputs["var_list"] == expected
+
+
+def test_minimal_variable_is_minimal():
+    variable = PluginVariable(
+        id="test",
+        name="Test",
+        description="Test",
+        defaultValue=0,
+        type=VariableTypes.FLOAT,
+        disabled=True,
+        category="Test",
+        allowedValues=[0, 1, 2],
+    )
+
+    minimalVar = variable.toDict(minimal=True)
+    fullVar = variable.toDict()
+
+    assert minimalVar != fullVar
+    assert minimalVar.get("name") is None
+    assert minimalVar.get("description") is None
+    assert minimalVar.get("defaultValue") is None
+    assert minimalVar.get("disabled") is None
+    assert minimalVar.get("category") is None
+    assert minimalVar.get("allowedValues") is None
+
+
+def test_varDict_default_value_float_0():
+
+    # Test for an issue where values of 0
+    # would return the defaultValue instead
+    # of the actual (0) value
+    variable = PluginVariable(
+        id="test",
+        name="Test",
+        description="Test",
+        defaultValue=40,
+        type=VariableTypes.FLOAT,
+    )
+
+    variable.value = 0
+
+    minVar = variable.toDict()
+
+    assert minVar["value"] == 0
+    assert minVar["value"] != 40

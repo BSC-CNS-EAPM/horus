@@ -498,23 +498,18 @@ class PluginVariable:
         Convert the variable to a dictionary.
         """
 
-        if minimal:
-            varDict = {
-                "id": self.id,
-                "value": self.value if self.value else self.defaultValue,
-                "type": str(self.type),
-            }
-        else:
-            varDict = {
-                "name": self.name,
-                "id": self.id,
-                "category": self.category,
-                "description": self.description,
-                "type": str(self.type),
-                "value": self.value if self.value else self.defaultValue,
-                "allowedValues": self.allowedValues,
-                "disabled": self.disabled,
-            }
+        varDict = {
+            "id": self.id,
+            "value": self.value if self.value is not None else self.defaultValue,
+            "type": str(self.type),
+        }
+
+        if not minimal:
+            varDict["name"] = self.name
+            varDict["category"] = self.category
+            varDict["description"] = self.description
+            varDict["allowedValues"] = self.allowedValues
+            varDict["disabled"] = self.disabled
 
         return varDict
 
