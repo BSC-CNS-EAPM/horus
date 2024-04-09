@@ -185,6 +185,9 @@ class Extensions(metaclass=SingletonMeta):
         :param store: Whether to store the text as results or to open it inmediately.
         """
 
+        # Use formatted text
+        text = f"<pre>{text}</pre>"
+
         if self._flow is None:
             raise Exception("Could not run the ExtensionsAPI. No flow is currently running")
 

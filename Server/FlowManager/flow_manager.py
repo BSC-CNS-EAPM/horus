@@ -1025,20 +1025,6 @@ class Flow:
         # Update the elapsed time
         self.elapsed += (self.finishedTime - self.startedTime).total_seconds()
 
-    def _computeFinalTime(self):
-        """
-        Sets the finished time and the elapsed based on the started time
-        """
-        # Add the elapsed time
-        if self.startedTime is None:
-            return
-
-        # Set the finished time
-        self.finishedTime = datetime.datetime.now()
-
-        # Update the elapsed time
-        self.elapsed += (self.finishedTime - self.startedTime).total_seconds()
-
     def _computeSize(self) -> typing.Optional[int]:
         """
         Computes the size of the folder the flow is in
