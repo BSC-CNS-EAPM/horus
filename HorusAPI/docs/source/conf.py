@@ -7,7 +7,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "HorusAPI"
-copyright = "2023, BSC | Barcelona Supercomputing Center"
+copyright = "2024, BSC | Barcelona Supercomputing Center"
 author = "Barcelona Supercomputing Center"
 
 # HorusAPI source path
@@ -19,6 +19,10 @@ sys.path.append(os.path.abspath("../../../"))
 import HorusAPI
 
 release = HorusAPI.__version__
+
+# Remove "-release if present"
+if release.endswith("-release"):
+    release = release.replace("-release", "")
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

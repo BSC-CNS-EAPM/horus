@@ -30,8 +30,8 @@
     "clean-build": "rm -rf build",
     "build-horusapi": "sh Devtools/Compile/build_horusapi.sh",
     "build-debug": "sh Devtools/Compile/build_debug.sh",
-    "doc-clean": "rm -rf HorusAPI/docs/build/*",
-    "doc-build": "cd HorusAPI/docs && make html && cd ../.."
+    "docs-clean": "rm -rf HorusAPI/docs/build/*",
+    "docs-build": "sh Devtools/build_docs.sh"
   },
   "author": "BSC",
   "license": "MIT",
