@@ -563,7 +563,7 @@ class AppDelegate(metaclass=HorusSingleton):
         appSupportDir = os.path.abspath(appSupportDir)
 
         if not os.path.exists(appSupportDir):
-            os.mkdir(appSupportDir)
+            os.makedirs(appSupportDir)
 
         self.appSupportDir = appSupportDir
 
