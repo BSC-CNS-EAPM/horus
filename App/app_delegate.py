@@ -97,6 +97,12 @@ class HorusLogger:
         self.capturer = logging.getLogger("Capturer")
         self.capturer.setLevel(logging.NOTSET)
 
+        class FilterCapturer(logging.Filter):
+            def filter(self, record):
+                return not record.getMessage() == "\n"
+
+        self.capturer.addFilter(FilterCapturer())
+
         # Start a new log
         logname = "Horus-"
         if self.debug:
@@ -207,9 +213,7 @@ class HorusLogger:
                 Hook into the default stdout and stderr class
                 """
                 try:
-                    self.capturer.log(
-                        self.level, message, stack_info=self.level > logging.WARNING
-                    )
+                    self.capturer.log(self.level, message)
                     if not self.debug:
                         self.oldStdOutErr.write(message)
                 except BaseException:
@@ -434,6 +438,10 @@ class AppDelegate(metaclass=HorusSingleton):
         if self.platform == "darwin":
             os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
             os.environ["DISABLE_SPRING"] = "YES"
+
+            import multiprocess as mp
+
+            mp.set_start_method("forkserver")  # type: ignore
 
     def initializeServer(self):
         """
@@ -1141,8 +1149,19 @@ def launchApp():
     # If a flow was provided as an argument, it will run the flow instead of launching the app.
     runFlowInsteadOfLaunch(app)
 
-    # Start the app. This is a blocking process.
-    app.applicationDidFinishLaunching()
+    # Start the app
+    try:
+        # This is a blocking process.
+        app.applicationDidFinishLaunching()
 
-    # Execute after the app is terminated
-    app.applicationWillTerminate()
+        # Execute after the app is terminated
+        app.applicationWillTerminate()
+
+    except BaseException as exc:
+        import traceback
+
+        logging.getLogger("Horus").critical(
+            "%s", traceback.format_exc() if app.debug else str(exc)
+        )
+
+        sys.exit(1)
