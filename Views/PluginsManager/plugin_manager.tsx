@@ -506,7 +506,7 @@ function InstallingPluginView({
   onPluginInstall: () => void;
 }) {
   const [isInstalling, setIsInstalling] = useState(false);
-  const [text, setText] = useState("Select a plugin to install");
+  const [text, setText] = useState<string>("");
 
   const updateText = useCallback((data: any) => {
     let stringData = data.toString();
@@ -519,7 +519,9 @@ function InstallingPluginView({
     }
 
     // Update the state
-    setText(stringData);
+    setText((currentText) => {
+      return currentText + stringData + "\n";
+    });
   }, []);
 
   // Open new window for plugin installation
@@ -529,6 +531,7 @@ function InstallingPluginView({
     }
 
     setIsInstalling(true);
+    setText("");
 
     const header = {
       "Content-Type": "application/json",
@@ -547,33 +550,27 @@ function InstallingPluginView({
     if (!data.ok) {
       alert("Error installing plugin: " + data.msg);
     } else {
-      goBack();
+      onPluginInstall();
     }
   };
-
-  const goBack = useCallback(() => {
-    // Reload the plugins
-    onPluginInstall();
-    // Go back to the main view by clicking the "back" button
-    document.getElementById("back-arrow-plugins")?.click();
-  }, [onPluginInstall]);
 
   useEffect(() => {
     // When recieving a message from the server, log it to the console
     socket.on("installPluginDep", updateText);
-    socket.on("pluginChanges", goBack);
 
     return () => {
       socket.off("installPluginDep", updateText);
-      socket.off("pluginChanges", goBack);
     };
-  }, [goBack, updateText]);
+  }, [updateText]);
 
   return (
-    <div className="h-48 flex flex-col justify-center items-center gap-2">
+    <div className="flex flex-col justify-center items-center gap-2">
       <HorusContainer className="w-[25rem] h-[10rem] flex flex-col gap-2 justify-center items-center">
-        {isInstalling && <RotatingLines />}
-        <div>{text}</div>
+        {isInstalling ? (
+          <RotatingLines />
+        ) : (
+          <div>Select a plugin to install</div>
+        )}
         {!isInstalling && (
           <HorusFileExplorer
             onFileConfirm={(file) => {
@@ -586,6 +583,11 @@ function InstallingPluginView({
           </HorusFileExplorer>
         )}
       </HorusContainer>
+      {text && (
+        <HorusContainer className="overflow-scroll lg:w-[1000px] w-[400px]">
+          <pre>{text}</pre>
+        </HorusContainer>
+      )}
     </div>
   );
 }
