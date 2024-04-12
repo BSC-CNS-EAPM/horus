@@ -177,19 +177,20 @@ export function BlockView(props: BlockViewProps) {
                   <div className="plugin-description">
                     {props.block.description}
                   </div>
-                  {props.block.type === BlockTypes.SLURM && (
-                    <div className="remote-block-cloud">
-                      {SlurmOutputModal}
-                      <ServerIcon /> Slurm Block - {props.block.status}
-                      <div style={{ position: "absolute", right: "15px" }}>
-                        <SlurmLoggingButton
-                          onClick={
-                            blockState.blockViewHooks.toggleSlurmOutputModal
-                          }
-                        />
+                  {props.block.type === BlockTypes.SLURM &&
+                    props.block.isPlaced && (
+                      <div className="remote-block-cloud">
+                        {SlurmOutputModal}
+                        <ServerIcon /> Slurm Block - {props.block.status}
+                        <div style={{ position: "absolute", right: "15px" }}>
+                          <SlurmLoggingButton
+                            onClick={
+                              blockState.blockViewHooks.toggleSlurmOutputModal
+                            }
+                          />
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
                   {(props.block.type === BlockTypes.SLURM ||
                     window.horusSettings["allowRemotesOnNonSlurm"]?.value) &&
                     props.block.isPlaced && (
