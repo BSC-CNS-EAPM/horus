@@ -441,7 +441,10 @@ class AppDelegate(metaclass=HorusSingleton):
 
             import multiprocess as mp
 
-            mp.set_start_method("forkserver")  # type: ignore
+            try:
+                mp.set_start_method("forkserver")  # type: ignore
+            except RuntimeError:
+                pass
 
     def initializeServer(self):
         """
