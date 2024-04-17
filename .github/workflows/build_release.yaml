@@ -5,7 +5,7 @@ on:
   push:
     tags:
       - "*"
-  
+
 jobs:
   build:
     permissions:
@@ -38,6 +38,8 @@ jobs:
         run: singularity run --bind .:/app docker://chdominguez/horus_rocky
       - name: Build Horus - Ubuntu 22.04
         run: singularity run --bind .:/app docker://chdominguez/horus_ubuntu
+      - name: Build Horus - CentOS 7
+        run: singularity run --bind .:/app docker://chdominguez/horus_centos
       - name: Build Horus - Linux Universal
         run: singularity run --bind .:/app docker://chdominguez/horus_universal
       - name: Release

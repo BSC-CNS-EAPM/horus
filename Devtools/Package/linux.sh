@@ -29,7 +29,7 @@ if [ -f "/etc/debian_version" ]
             sh Devtools/Package/linux_deb.sh
         elif [ $osName = "trusty" ]
           then
-          osName="Linux-Universal"
+          osName="Other-Debian"
         else
           echo "Unsupported Ubuntu version"
           exit
@@ -41,12 +41,21 @@ if [ -f "/etc/debian_version" ]
 
 elif [ -f "/etc/redhat-release" ]
   then
-    osName="Rocky"
+
+    osName=$(cat /etc/os-release | grep "ID" | awk -F'=' '{print $2}')
+
+    if [ $osName = "rocky" ]
+    then
+      osName="Rocky"
+    else [ $osName = "centos" ]
+      osName="CentOS"
+    fi
+
     sh Devtools/Package/linux_rpm.sh
 
 else
-  echo "Unsupported Linux distribution"
-  exit
+  echo "Other Linux distribution"
+  osName="Other"
 fi
 
 # Create a new folder called Horus-$version-Linux-$osName
@@ -56,7 +65,7 @@ mkdir -p "dist/Horus-$version-$osName"
 if [ $osName = "Ubuntu22" ]
   then
     mv dist/*.deb "dist/Horus-$version-$osName"
-else [ $osName = "Linux-Universal" ]
+else
     mv dist/Horus "dist/Horus-$version-$osName"
 fi
 

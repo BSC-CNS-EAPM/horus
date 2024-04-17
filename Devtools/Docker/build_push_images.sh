@@ -31,3 +31,10 @@ docker build -t horus_universal -f Devtools/Docker/ubuntu14.dockerfile .
 # Push Linux Universal
 docker tag horus_universal chdominguez/horus_universal
 docker push chdominguez/horus_universal
+
+# Build CentOS7
+docker build -t horus_centos -f Devtools/Docker/centos7.dockerfile .
+
+# Push CentOS7
+docker tag horus_centos chdominguez/horus_centos
+docker push chdominguez/horus_centos

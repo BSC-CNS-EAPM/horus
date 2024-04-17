@@ -108,6 +108,8 @@ jobs:
       #   with:
       #     name: Horus-${{ env.version }}-Ubuntu22-GTK
       #     path: dist/*Ubuntu22.tar.gz
+      - name: Build Horus - CentOS 7
+        run: singularity run --bind .:/app docker://chdominguez/horus_centos
       - name: Build Horus - Linux Universal
         run: singularity run --bind .:/app docker://chdominguez/horus_universal
       # - name: Upload Linux Universal artifact
