@@ -83,8 +83,9 @@ when the plugin is loaded.
 
 .. note::
 
-    Aditionally, preinst.sh and postinst.sh files can be provided in the plugin folder to declare pre-install and post-install scripts. These will execute before and after the plugin install process, respectively. Those scripts allow
-    to perform custom actions like copying files, setting environment variables...
+    Aditionally, preinst.sh and postinst.sh files can be provided in the plugin folder to declare pre-install and post-install scripts. These will execute before and after the plugin install process, respectively. 
+    Moreover, prerm.sh and postrm.sh can be provided to perform the same functionality when uninstalling the plugin.
+    Those scripts allow to perform custom actions like copying files, installing environments and more during the installation process.
 
 Code organization
 -----------------

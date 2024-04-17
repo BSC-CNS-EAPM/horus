@@ -28,6 +28,7 @@ import webview.menu as wm
 import requests
 from flask_socketio import SocketIO
 from Server import HorusServer
+from Server.PluginManager import callPopen
 from HorusAPI import HorusSingleton
 
 
@@ -376,7 +377,7 @@ class AppDelegate(metaclass=HorusSingleton):
             self._triedToStartServer += 1
 
             msg = "Server not initialized. "
-            if cython.compiled:
+            if cython.compiled:  # type: ignore
                 msg += "Please report this issue to the developers."
             else:
                 msg += "Ignore this warning if you are running tests."
@@ -946,29 +947,8 @@ class AppDelegate(metaclass=HorusSingleton):
         :param command: The command to execute
         """
 
-        def runCommand(command: str, socketio: SocketIO) -> typing.Optional[subprocess.Popen]:
-            # Run a command in the os terminal and
-            # capture the output and error in the same variable
-
-            with subprocess.Popen(
-                command,
-                shell=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                universal_newlines=True,
-            ) as process:
-                if process.stdout is not None:
-                    for line in process.stdout:
-                        socketio.emit("printTerm", line)
-                if process.stderr is not None:
-                    for line in process.stderr:
-                        socketio.emit("printTerm", line)
-                return process
-
-        process = runCommand(command, socketio)
-        if process:
-            thread = threading.Thread(target=process.wait)
-            thread.start()
+        thread = threading.Thread(target=callPopen, args=[[command]])
+        thread.start()
 
 
 def parseArgs() -> typing.Dict[str, typing.Any]:
@@ -976,7 +956,7 @@ def parseArgs() -> typing.Dict[str, typing.Any]:
     Parse the arguments to the AppDelegate
     """
 
-    debugReachable = not cython.compiled
+    debugReachable = not cython.compiled  # type: ignore
 
     # If the password was provided along with the debug flag,
     # enter debug mode in production

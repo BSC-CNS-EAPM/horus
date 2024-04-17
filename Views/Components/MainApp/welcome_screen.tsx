@@ -33,15 +33,20 @@ type SplashModal = {
   header?: React.ReactNode;
   body: React.ReactNode;
   footer?: React.ReactNode;
+  allowBlurClose?: boolean;
 };
 
 export default function SplashScreen() {
   const [showModal, setShowModal] = useState<boolean>(false);
   const [modalContent, setModalContent] = useState<SplashModal | null>(null);
 
-  const updateModalContent = (modal: SplashModal) => {
-    setModalContent(modal);
-    setShowModal(true);
+  const updateModalContent = (modal: SplashModal | null) => {
+    if (modal) {
+      setModalContent(modal);
+      setShowModal(true);
+    } else {
+      setShowModal(false);
+    }
   };
 
   return (
@@ -92,10 +97,11 @@ function ModalView(props: {
 }) {
   return (
     <HorusModal
+      id="home-modal"
       show={props.isOpen}
       header={props.modal.header}
       footer={props.modal.footer}
-      onHide={props.onHide}
+      onHide={props.modal.allowBlurClose ?? true ? props.onHide : () => {}}
       size="xl"
       noCentered
     >
@@ -206,7 +212,7 @@ function OpenFlow() {
 }
 
 type ButtonOpensModalProps = {
-  setModalContent: (modal: SplashModal) => void;
+  setModalContent: (modal: SplashModal | null) => void;
 };
 
 function ManagePlugins(props: ButtonOpensModalProps) {
@@ -221,11 +227,18 @@ function ManagePlugins(props: ButtonOpensModalProps) {
       </a>
     );
 
-    const body = <PluginManager />;
+    const body = (
+      <PluginManager
+        closePluginManager={() => {
+          props.setModalContent(null);
+        }}
+      />
+    );
 
     props.setModalContent({
       body: body,
       footer: footer,
+      allowBlurClose: false,
     });
   };
 

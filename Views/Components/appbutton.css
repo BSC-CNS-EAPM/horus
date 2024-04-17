@@ -85,6 +85,16 @@
   background: white;
 }
 
+.app-button:disabled {
+  cursor: not-allowed !important;
+  background: lightgray;
+  opacity: 50%;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
 /* Change the font size of the app-button if the screen space is low */
 @media (max-width: 900px) {
   .app-button {

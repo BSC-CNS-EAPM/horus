@@ -63,6 +63,7 @@ function debounce(func: any, timeout = 300) {
 }
 
 interface HorusModalProps {
+  id?: string;
   show: boolean;
   onHide?: () => void;
   header?: React.ReactNode;
@@ -92,6 +93,7 @@ function HorusModal(props: HorusModalProps) {
       centered={props.noCentered ? false : true}
     >
       <div
+        id={props.id}
         style={{
           overflow: "hidden",
         }}

@@ -251,9 +251,9 @@ class PluginManager(metaclass=HorusSingleton):
 
         try:
             print("Checking plugin...")
-            self._preinstallDependencies(tmpInstallDir)
+            self._preInstallPlugin(tmpInstallDir)
             loadedPlugin = self._loadPlugin(tmpInstallDir, appendToLoaded=False)
-            self._postinstallDependencies(tmpInstallDir)
+            self._postInstallPlugin(tmpInstallDir)
 
             if loadedPlugin is None:
                 raise Exception(
@@ -268,7 +268,11 @@ class PluginManager(metaclass=HorusSingleton):
             if not os.path.exists(pluginFinalPath) and not loadedPlugin in self.loadedPlugins:
                 print("Saving new plugin to its folder...")
                 shutil.move(tmpInstallDir, pluginFinalPath)
-                print("Plugin installed")
+                print(
+                    "Plugin installed."
+                    + " You can start working with the blocks in the flow manager."
+                    + " For extensions to work, a restart of Horus is needed."
+                )
                 self.loadedPlugins.append(loadedPlugin)
             else:
                 # If we are installing the same plugin, upgrade it only if the version is higher
@@ -386,7 +390,9 @@ class PluginManager(metaclass=HorusSingleton):
         pluginPath = os.path.join(self.pluginsDir, plugin._path)
 
         try:
+            self._preRemovePlugin(pluginPath)
             shutil.rmtree(pluginPath)
+            self._postRemovePlugin(pluginPath)
         except Exception as exc:
             raise Exception(f"{exc}. Try restarting the app") from exc
 
@@ -700,65 +706,41 @@ class PluginManager(metaclass=HorusSingleton):
                     print(e)
                     raise e
 
-    def _preinstallDependencies(self, pluginDir: str):
-        if os.path.isfile(os.path.join(pluginDir, "preinst.sh")):
+    def _preInstallPlugin(self, pluginDir: str):
+        preInstPath = os.path.join(pluginDir, "preinst.sh")
+        if os.path.isfile(preInstPath):
             print("Executing pre-install script")
-            with subprocess.Popen(
-                ["sh", os.path.join(str(pluginDir), "preinst.sh")],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                stdin=subprocess.PIPE,
-                cwd=pluginDir,
-            ) as p:
-                # Print the output
-                if p.stdout is None:
-                    raise Exception("Could not get the output of the pre-install script.")
+            try:
+                callPopen(["sh", preInstPath], cwd=pluginDir)
+            except Exception:
+                raise Exception("Error running pre-install script")
 
-                for line in p.stdout:
-                    strippedOut = line.decode("utf-8").strip()
-                    if strippedOut != "":
-                        print(strippedOut)
-                # Print the error
-                if p.stderr:
-                    for line in p.stderr:
-                        strippedErr = line.decode("utf-8").strip()
-                        if strippedErr != "":
-                            print(strippedErr)
-            # Wait for the process to finish
-            p.wait()
-            # Check the return code
-            if p.returncode != 0 and p.returncode is not None:
-                raise Exception("Pre-install script failed")
+    def _postInstallPlugin(self, pluginDir: str):
+        postInstPath = os.path.join(str(pluginDir), "postinst.sh")
+        if os.path.isfile(postInstPath):
+            print("Executing post-install script")
+            try:
+                callPopen(["sh", postInstPath], cwd=pluginDir)
+            except Exception:
+                raise Exception("Error running post-install script")
 
-    def _postinstallDependencies(self, pluginDir: str):
-        if os.path.isfile(os.path.join(str(pluginDir), "postinst.sh")):
-            print("Executing pos-tinstall script")
-            with subprocess.Popen(
-                ["sh", os.path.join(str(pluginDir), "postinst.sh")],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                stdin=subprocess.PIPE,
-                cwd=pluginDir,
-            ) as p:
-                # Print the output
-                if p.stdout is None:
-                    raise Exception("Could not get the output of the post-install script.")
+    def _preRemovePlugin(self, pluginDir: str):
+        preRMPath = os.path.join(str(pluginDir), "prerm.sh")
+        if os.path.isfile(preRMPath):
+            print("Executing pre-remove script")
+            try:
+                callPopen(["sh", preRMPath], cwd=pluginDir)
+            except Exception:
+                raise Exception("Error running pre-remove script")
 
-                for line in p.stdout:
-                    strippedOut = line.decode("utf-8").strip()
-                    if strippedOut != "":
-                        print(strippedOut)
-                # Print the error
-                if p.stderr:
-                    for line in p.stderr:
-                        strippedErr = line.decode("utf-8").strip()
-                        if strippedErr != "":
-                            print(strippedErr)
-                # Wait for the process to finish
-                p.wait()
-                # Check the return code
-                if p.returncode != 0 and p.returncode is not None:
-                    raise Exception("Post-install script failed")
+    def _postRemovePlugin(self, pluginDir: str):
+        postRMPath = os.path.join(str(pluginDir), "postrm.sh")
+        if os.path.isfile(postRMPath):
+            print("Executing post-remove script")
+            try:
+                callPopen(["sh", postRMPath], cwd=pluginDir)
+            except Exception:
+                raise Exception("Error running post-remove script")
 
     def _installDepInternal(self, dep: str, depsDir: str):
         """
@@ -890,48 +872,27 @@ class PluginManager(metaclass=HorusSingleton):
         else:
             noDependencies = False
 
-        with subprocess.Popen(
-            [
-                interpreter,
-                "-m",
-                "pip",
-                "install",
-                dep,
-                "--target",
-                depsDir,
-                "--upgrade",
-                "--no-input",
-                *(["--no-deps"] if noDependencies else []),
-            ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            stdin=subprocess.PIPE,
-            env=env,
-        ) as p:
-            # Print the output
+        # The command to install dependencies with pip
+        command = [
+            interpreter,
+            "-m",
+            "pip",
+            "install",
+            dep,
+            "--target",
+            depsDir,
+            "--upgrade",
+            "--no-input",
+            *(["--no-deps"] if noDependencies else []),
+        ]
 
-            if p.stdout is None:
-                raise Exception("Could not get the output of the pip install command.")
-
-            for line in p.stdout:
-                strippedOut = line.decode("utf-8").strip()
-                if strippedOut != "":
-                    print(strippedOut)
-
-            # Print the error
-            if p.stderr:
-                for line in p.stderr:
-                    strippedErr = line.decode("utf-8").strip()
-                    if strippedErr != "":
-                        print(strippedErr)
-
-            # Wait for the process to finish
-            p.wait()
-
-            # Check the return code
-            if p.returncode != 0 and p.returncode is not None:
-                print(f"Dependency {dep} could not be installed.")
-                raise Exception(f"Dependency {dep} could not be installed.")
+        try:
+            callPopen(command, env=env)
+        except Exception as exc:
+            msg = f"Dependency {dep} could not be installed: {str(exc)}"
+            print(msg)
+            logging.getLogger("Horus").error(msg)
+            raise Exception(msg)
 
     def getPlugins(self):
         """
@@ -1593,3 +1554,39 @@ class PluginDeps:
 
         # If everything went well, return the outputs
         return result["outputs"]
+
+
+def callPopen(command: list[str], cwd: str = ".", env: typing.Optional[dict] = None):
+    """
+    Calls subprocess.Popen with a context manager and prints the STDOUT and STDERR
+
+    Raises an Exception if command fails
+
+    Params
+    ------
+    - command: list[str]: a list of strings indicating the command and its arguments
+    - cwd: str: The current working directory. Default = "."
+    - env: dict: A dictionary containing environment variables for the command. Default = None
+    """
+    with subprocess.Popen(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        stdin=subprocess.DEVNULL,
+        cwd=cwd,
+        text=True,
+        env=env,
+    ) as p:
+        # Print the output
+        if p.stdout is None:
+            raise Exception(f"Could not get the output of {command}.")
+
+        for line in p.stdout:
+            print(line, end="")
+
+        # Wait for the process to finish
+        p.wait()
+
+        # Check the return code
+        if p.returncode != 0 and p.returncode is not None:
+            raise Exception(f"{command} failed")

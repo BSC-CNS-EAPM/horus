@@ -212,6 +212,14 @@ function PluginCard(props: PluginCardProps) {
     }
 
     setIsDeleting(true);
+    // Disable all pointer events on modal
+    const modal = document.getElementById("home-modal") as HTMLDivElement;
+    const buttons = modal.querySelectorAll("button");
+
+    buttons.forEach((button) => {
+      button.disabled = true;
+    });
+    modal.style.cursor = "wait !important";
 
     const body = JSON.stringify({
       name: plugin.name,
@@ -231,19 +239,23 @@ function PluginCard(props: PluginCardProps) {
 
     const data = await response.json();
 
+    buttons.forEach((button) => {
+      button.disabled = false;
+    });
+    modal.style.cursor = "default";
+
     if (!data.ok) {
       alert("Error deleting plugin: " + data.msg);
     } else {
       props.deletePlugin(plugin.id);
     }
-
-    setIsDeleting(false);
     setShowDeletingView(false);
+    setIsDeleting(false);
   };
 
   if (showDeletingView) {
     return (
-      <div className="p-2 card w-full flex flex-col gap-2 justify-center items-center fade-in-animation red-container animated-gradient">
+      <div className="p-2 card w-full flex flex-col gap-2 justify-center items-center red-container fade-in-animation text-white font-semibold">
         <RotatingLines />
         Removing {plugin.name}
       </div>
@@ -252,9 +264,9 @@ function PluginCard(props: PluginCardProps) {
 
   return (
     <div
-      className={`card plugin-card animated-gradient ${
-        isDeleting ? "slide-left-exit-animation" : null
-      }`}
+      className={`card ${
+        error ? "plugin-card-error" : "plugin-card"
+      } animated-gradient ${isDeleting ? "slide-left-exit-animation" : null}`}
       onClick={() => {
         if (isDeleting) return;
         !error && plugin.config.length > 0;
@@ -263,10 +275,12 @@ function PluginCard(props: PluginCardProps) {
       <div className="card-body d-flex justify-content-between align-items-start">
         <div>
           <div className="flex flex-row items-baseline gap-2">
-            <div className="text-xl font-semibold">{plugin.name}</div> -
-            {!error && (
-              <div className="card-subtitle">{plugin.description}</div>
-            )}
+            <div>
+              <span className="text-xl font-semibold">{plugin.name}</span>
+              {!error && (
+                <span className="card-subtitle"> - {plugin.description}</span>
+              )}
+            </div>
           </div>
           {!error ? (
             <>
@@ -333,7 +347,11 @@ type PluginList = {
   errors: HorusPlugin[];
 };
 
-export function PluginManager() {
+export function PluginManager({
+  closePluginManager,
+}: {
+  closePluginManager?: () => void;
+}) {
   const [subView, setSubView] = useState<React.ReactNode>(null);
   const [hideSubView, setHideSubView] = useState<boolean>(true);
 
@@ -468,6 +486,12 @@ export function PluginManager() {
             {window.horusInternal.isDesktop && (
               <AppButton text="Open Horus folder" action={openPluginsFolder} />
             )}
+            <AppButton
+              text="Close"
+              action={() => {
+                closePluginManager?.();
+              }}
+            />
             <SearchComponent
               placeholder="Search plugins..."
               onChange={(e) => {
@@ -509,18 +533,9 @@ function InstallingPluginView({
   const [text, setText] = useState<string>("");
 
   const updateText = useCallback((data: any) => {
-    let stringData = data.toString();
-
-    // Strip the string
-    stringData = stringData.replace(/(\r\n|\n|\r)/gm, "");
-
-    if (stringData === "" || stringData === " ") {
-      return;
-    }
-
     // Update the state
     setText((currentText) => {
-      return currentText + stringData + "\n";
+      return currentText + data.toString();
     });
   }, []);
 
@@ -562,6 +577,23 @@ function InstallingPluginView({
       socket.off("installPluginDep", updateText);
     };
   }, [updateText]);
+
+  useEffect(() => {
+    // Disable all pointer events on modal
+    const modal = document.getElementById("home-modal") as HTMLDivElement;
+    const buttons = modal.querySelectorAll("button");
+    if (isInstalling) {
+      buttons.forEach((button) => {
+        button.disabled = true;
+      });
+      modal.style.cursor = "wait !important";
+    } else {
+      buttons.forEach((button) => {
+        button.disabled = false;
+      });
+      modal.style.cursor = "default";
+    }
+  }, [isInstalling]);
 
   return (
     <div className="flex flex-col justify-center items-center gap-2">

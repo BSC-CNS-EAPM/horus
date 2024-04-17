@@ -4,4 +4,5 @@ from Server.PluginManager.plugin_manager import (
     PrintCapturer,
     PluginDeps,
     PrintSocketCapturer,
+    callPopen,
 )  # noqa

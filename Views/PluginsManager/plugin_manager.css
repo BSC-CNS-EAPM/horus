@@ -29,10 +29,19 @@
   margin-top: auto;
 }
 
+.card {
+  word-break: break-word;
+}
+
 .plugin-card {
   color: white;
   width: 100%;
   background: var(--gradient-blue);
+}
+
+.plugin-card-error {
+  color: black;
+  width: 100%;
 }
 
 .plugin-manager-root {

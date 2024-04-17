@@ -210,7 +210,9 @@ def test_install_dep_internal_success(mocker):
     dep_to_install = "dep"
     deps_dir = "/path/to/dependencies"
 
-    with pytest.raises(Exception, match="'Mock' object is not iterable"):
+    with pytest.raises(
+        Exception, match="Dependency dep could not be installed: 'Mock' object is not iterable"
+    ):
         pluginManager._installDepInternal(dep_to_install, deps_dir)
 
     # Check the arguments of the last call to subprocess.Popen
@@ -228,7 +230,7 @@ def test_install_dep_internal_success(mocker):
     ]
     assert last_call_kwargs["stdout"] == subprocess.PIPE
     assert last_call_kwargs["stderr"] == subprocess.STDOUT
-    assert last_call_kwargs["stdin"] == subprocess.PIPE
+    assert last_call_kwargs["stdin"] == subprocess.DEVNULL
 
     # Verify that subprocess.Popen was called twice
     assert subprocess.Popen.call_count == 2  # type: ignore
@@ -310,7 +312,7 @@ def test_install_dep_internal_frozen_app(mocker):
     ]
     assert last_call_kwargs["stdout"] == subprocess.PIPE
     assert last_call_kwargs["stderr"] == subprocess.STDOUT
-    assert last_call_kwargs["stdin"] == subprocess.PIPE
+    assert last_call_kwargs["stdin"] == subprocess.DEVNULL
 
     # Verify that subprocess.Popen was called exactly twice
     assert subprocess.Popen.call_count == 2  # type: ignore
@@ -388,14 +390,14 @@ def test_preinstall(mocker):
         f.write("echo 'preinstallation script was run'")
 
     with pytest.raises(Exception):
-        pluginManager._preinstallDependencies(pluginDir)
+        pluginManager._preInstallPlugin(pluginDir)
     last_call_args, last_call_kwargs = subprocess.Popen.call_args  # type: ignore
     assert last_call_args[0] == [
         "sh",
         "Tests/TestPluginManager/preinst.sh",
     ]
     os.remove(pluginPath)
-    pluginManager._preinstallDependencies(pluginDir)
+    pluginManager._preInstallPlugin(pluginDir)
 
     assert subprocess.Popen.call_count == 1  # type: ignore
 
@@ -426,14 +428,91 @@ def test_postinstall(mocker):
     with open(pluginPath, "w") as f:
         f.write("echo 'postinstalation script was run'")
     with pytest.raises(Exception):
-        pluginManager._postinstallDependencies(pluginDir)
+        pluginManager._postInstallPlugin(pluginDir)
     last_call_args, last_call_kwargs = subprocess.Popen.call_args  # type: ignore
     assert last_call_args[0] == [
         "sh",
         "Tests/TestPluginManager/postinst.sh",
     ]
     os.remove(pluginPath)
-    pluginManager._postinstallDependencies(pluginDir)
+    pluginManager._postInstallPlugin(pluginDir)
+
+    assert subprocess.Popen.call_count == 1  # type: ignore
+
+    del pluginManager
+
+
+def test_preremove(mocker):
+    # Create an instance of MyClass
+    pluginManager = PluginManager("AppSupport")
+    pluginManager.appSupportDir = "AppSupport"
+
+    from App import AppDelegate
+
+    # Set the app delegate to be on "Server mode"
+    AppDelegate().mode = "server"
+    AppDelegate().desktop = False
+
+    # Mock the subprocess.Popen context manager
+    mock_popen = mocker.Mock()
+    mock_popen.returncode = 0
+    mocker.patch("subprocess.Popen", return_value=mock_popen)
+    mock_popen.__enter__ = mocker.Mock(return_value=mock_popen)
+    mock_popen.__exit__ = mocker.Mock(return_value=None)
+
+    pluginDir = "Tests/TestPluginManager"
+    pluginPath = "Tests/TestPluginManager/prerm.sh"
+
+    with open(pluginPath, "w") as f:
+        f.write("echo 'pre remove script was run'")
+
+    with pytest.raises(Exception):
+        pluginManager._preRemovePlugin(pluginDir)
+    last_call_args, last_call_kwargs = subprocess.Popen.call_args  # type: ignore
+    assert last_call_args[0] == [
+        "sh",
+        "Tests/TestPluginManager/prerm.sh",
+    ]
+    os.remove(pluginPath)
+    pluginManager._preRemovePlugin(pluginDir)
+
+    assert subprocess.Popen.call_count == 1  # type: ignore
+
+    del pluginManager
+
+
+def test_posremove(mocker):
+    # Create an instance of MyClass
+    pluginManager = PluginManager("AppSupport")
+    pluginManager.appSupportDir = "AppSupport"
+
+    from App import AppDelegate
+
+    # Set the app delegate to be on "Server mode"
+    AppDelegate().mode = "server"
+    AppDelegate().desktop = False
+
+    # Mock the subprocess.Popen context manager
+    mock_popen = mocker.Mock()
+    mock_popen.returncode = 0
+    mocker.patch("subprocess.Popen", return_value=mock_popen)
+    mock_popen.__enter__ = mocker.Mock(return_value=mock_popen)
+    mock_popen.__exit__ = mocker.Mock(return_value=None)
+
+    pluginDir = "Tests/TestPluginManager"
+    pluginPath = "Tests/TestPluginManager/postrm.sh"
+
+    with open(pluginPath, "w") as f:
+        f.write("echo 'postrm script was run'")
+    with pytest.raises(Exception):
+        pluginManager._postRemovePlugin(pluginDir)
+    last_call_args, last_call_kwargs = subprocess.Popen.call_args  # type: ignore
+    assert last_call_args[0] == [
+        "sh",
+        "Tests/TestPluginManager/postrm.sh",
+    ]
+    os.remove(pluginPath)
+    pluginManager._postRemovePlugin(pluginDir)
 
     assert subprocess.Popen.call_count == 1  # type: ignore
 
