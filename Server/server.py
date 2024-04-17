@@ -30,6 +30,7 @@ import socket
 import cython
 
 # Multiprocess module, a fork of multiprocessing with enhancements
+import eventlet.wsgi
 from multiprocess import Process, Semaphore  # type: ignore pylint: disable=no-name-in-module
 import multiprocess.process as mp
 import multiprocessing  # For the number of CPUs
@@ -1737,25 +1738,13 @@ class HorusServer:
         """
 
         # Instantiate the SocketIO class with the server and the async_mode
-        try:
-            self.socketio = HorusSocket(
-                self.server,
-                self.baseURL,
-                cors_allowed_origins=self.origins,
-                async_mode="threading" if self.debug else "eventlet",
-                manage_session=False,
-            )
-        except ValueError as valerr:
-            logging.getLogger("Horus").warning(
-                "Could not start socketio server: %s. Forcing eventlet", valerr
-            )
-            self.socketio = HorusSocket(
-                self.server,
-                self.baseURL,
-                cors_allowed_origins=self.origins,
-                async_mode="eventlet",
-                manage_session=False,
-            )
+        self.socketio = HorusSocket(
+            self.server,
+            self.baseURL,
+            cors_allowed_origins=self.origins,
+            async_mode="eventlet",
+            manage_session=False,
+        )
 
         # Add a new Flask request so that background processes can emit
         @self.server.route("/internal/backgroundsocketio/", methods=["POST"])
@@ -2569,10 +2558,6 @@ class HorusServer:
             "log_output": self.debug,
         }
 
-        # Add allow_unsafe_werkzeug argument if in debug mode
-        if self.debug and not cython.compiled:
-            runArgs["allow_unsafe_werkzeug"] = self.debug
-
         # Start the server if not on web app mode
         self.socketio.run(self.server, **runArgs)
 
@@ -2718,6 +2703,16 @@ class HorusSocket(SocketIO):
 
         # Add the socketio routes
         self._socketIORoutes()
+
+    def run(self, server, **runArgs):
+
+        def hook_get_logger(*args):
+            return logging.getLogger("eventlet")
+
+        # Inject the Horus logger as the eventlet logger
+        eventlet.wsgi.get_logger = hook_get_logger
+
+        super().run(server, **runArgs)
 
     def _replaceEmit(self):
         """
