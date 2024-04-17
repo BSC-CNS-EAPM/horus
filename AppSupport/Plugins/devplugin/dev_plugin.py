@@ -441,3 +441,14 @@ testCustomVariableInputBlock = InputBlock(
 )
 
 plugin.addBlock(testCustomVariableInputBlock)
+
+
+def checkPluginPathAction(block: PluginBlock):
+    print(block.pluginDir)
+
+
+pluginPathActionBlock = PluginBlock(
+    id="pluginPath", name="Plugin path", description="Plugin path", action=checkPluginPathAction
+)
+
+plugin.addBlock(pluginPathActionBlock)

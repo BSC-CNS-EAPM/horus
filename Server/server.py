@@ -1116,6 +1116,9 @@ class HorusServer:
                     "ok": True,
                 }
             except Exception as exc:
+
+                logging.getLogger("Horus").error("Could not execute flow: %s", str(exc))
+
                 success = {
                     "ok": False,
                     "msg": str(exc),

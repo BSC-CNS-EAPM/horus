@@ -1051,6 +1051,9 @@ class PluginManager(metaclass=HorusSingleton):
         # Update the block with the remote configuration
         block._setRemote(rAPI)  # pylint: disable=protected-access
 
+        # Set the block plugin path
+        block.pluginDir = plugin._path
+
         # If its a slurm block, check if the job has finished
         if isinstance(block, SlurmBlock):
             # If we are unpausing a flow that sent a slurm calculation,

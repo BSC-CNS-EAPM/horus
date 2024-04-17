@@ -524,3 +524,28 @@ def test_flow_elapsed_time_stop():
     finally:
         # Restore the flow by copying the .bak file to the original file
         os.system(f"mv {path}.bak {path}")
+
+
+def test_block_plugin_dir_inside_action(plugin_manager):
+    path = os.path.join(os.path.dirname(__file__), "test_flow.flow")
+
+    # Backup the flow
+    os.system(f"cp {path} {path}.bak")
+
+    try:
+        flow = Flow.read(path)
+
+        # Get the first block of the flow
+        block1 = flow.blocks[0]
+
+        flow.run(placedID=1)
+        flow.stop()
+
+        # Verify that the block has been updated with the plugin dir during the execution
+        assert hasattr(block1, "pluginDir")
+        assert block1.pluginDir is not None
+        assert block1.pluginDir == "AppSupport/DefaultPlugins/Horus"
+
+    finally:
+        # Restore the flow by copying the .bak file to the original file
+        os.system(f"mv {path}.bak {path}")

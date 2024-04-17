@@ -943,6 +943,12 @@ class PluginBlock:
     - blocks: The list of blocks in the flow.
     """
 
+    pluginDir: str
+    """
+    The path in the local machine to the plugin installation. Useful for finding scripts and tools
+    embedded with the plugin.
+    """
+
     def __init__(  # pylint: disable=dangerous-default-value
         self,
         name: str,
