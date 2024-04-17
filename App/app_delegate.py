@@ -437,15 +437,18 @@ class AppDelegate(metaclass=HorusSingleton):
         # If we are on macOS, set the enviornment to disable some thread safety
         # This is needed for subprocessing the blocks
         if self.platform == "darwin":
+            os.putenv("OBJC_DISABLE_INITIALIZE_FORK_SAFETY", "YES")
+            os.putenv("DISABLE_SPRING", "YES")
             os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
             os.environ["DISABLE_SPRING"] = "YES"
 
-            import multiprocess as mp
+        # Always use fork for multiprocesses, as flows need this to work properly
+        import multiprocess as mp
 
-            try:
-                mp.set_start_method("forkserver")  # type: ignore
-            except RuntimeError:
-                pass
+        try:
+            mp.set_start_method("fork")  # type: ignore
+        except RuntimeError:  # If it was already set, then pass
+            pass
 
     def initializeServer(self):
         """
@@ -1147,4 +1150,5 @@ def launchApp():
             "%s", traceback.format_exc() if app.debug else str(exc)
         )
 
-        sys.exit(1)
+        # Re-raise the exception, this is needed for flask auto-reload to work
+        raise exc

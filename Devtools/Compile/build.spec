@@ -204,6 +204,9 @@ binaries = []
 
 debug = False
 
+# Runtime hook in order to fix macOS thread security
+runtime_hooks = ["Devtools/Compile/macos-hook.py"]
+
 # Compile the app
 a = Analysis(  # type: ignore pylint: disable=undefined-variable
     entry_point,
@@ -214,7 +217,7 @@ a = Analysis(  # type: ignore pylint: disable=undefined-variable
     hiddenimports=imports,
     hookspath=[],
     hooksconfig={},
-    runtime_hooks=[],
+    runtime_hooks=runtime_hooks,
     # Exclude the uncompiled Server and App files
     excludes=exclude_folders,
     win_no_prefer_redirects=False,
