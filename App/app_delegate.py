@@ -13,6 +13,7 @@ import webbrowser
 import logging
 import datetime
 import io
+import argparse
 
 # Import type annotations
 import typing
@@ -954,73 +955,117 @@ class AppDelegate(metaclass=HorusSingleton):
         thread.start()
 
 
-def parseArgs() -> typing.Dict[str, typing.Any]:
+def parseArgs() -> tuple[dict, dict]:
     """
     Parse the arguments to the AppDelegate
     """
 
     debugReachable = not cython.compiled  # type: ignore
 
+    class HorusParser(argparse.ArgumentParser):
+        def error(self, message: str):
+            self.print_help()
+            args = {"prog": self.prog, "message": message}
+            self.exit(2, ("\n%(prog)s: error: %(message)s\n") % args)
+
+    parser = HorusParser(description="Launch options for Horus", add_help=False)
+    parser.add_argument("-H", "--help", action="help", help="Show this help message and exit.")
+    parser.add_argument(
+        "--debug", "-d", action="store_true", help="Force the server to run in debug mode."
+    )
+    parser.add_argument(
+        "--password", help="Password for entering debug mode in the compiled app."
+    )
+    parser.add_argument(
+        "--force-production",
+        action="store_true",
+        help="Force production mode. For development only.",
+    )
+    parser.add_argument(
+        "--url",
+        "-u",
+        help="Debug URL. An URL to open instead of the default Horus interface. For development only.",
+    )
+    parser.add_argument("--browser", "-b", action="store_true", help="Run in browser mode.")
+    parser.add_argument("--server", "-s", action="store_true", help="Run in server mode.")
+    parser.add_argument("--webapp", "-w", action="store_true", help="Run in webapp mode.")
+    parser.add_argument(
+        "--port",
+        "-p",
+        type=int,
+        help="Set a specific port for the server. Defaults to a random port.",
+    )
+    parser.add_argument(
+        "--host", "-h", help="Set a specific host for the server. Defaults to 'localhost'."
+    )
+    parser.add_argument(
+        "--flow",
+        "-f",
+        metavar="/path/to/flow",
+        help="Run a flow instead of the app. Requires flow path and block index.",
+    )
+
+    parser.add_argument(
+        "--index",
+        "-i",
+        metavar="placedID",
+        type=int,
+        help="Block placedID to run when the --flow option is provided.",
+    )
+
+    # Parse known arguments
+    args, unknown = parser.parse_known_args()
+
     # If the password was provided along with the debug flag,
     # enter debug mode in production
     debugPassword = "horus_debug"
-    if "--password" in sys.argv and not debugReachable:
-        index = sys.argv.index("--password")
-        try:
-            password = sys.argv[index + 1]
-            # Check if the password is correct
-            if password == debugPassword:
-                print("Entering debug mode in production")
-                debugReachable = True
-        except IndexError:
-            # Keep quiet if no password was provided
-            pass
+    if args.password and not debugReachable:
+        # Check if the password is correct
+        if args.password == debugPassword:
+            print("Entering debug mode in production")
+            debugReachable = True
 
     # Check for the --debug flag (-d) (Only development and in production with password)
     # Forces the server to run in debug mode
     debug = False
     debugURL = None
-    if ("--debug" in sys.argv or "-d" in sys.argv) and debugReachable:
+    if args.debug and debugReachable:
         debug = True
 
         # Check for the --force-production flag
-        if "--force-production" in sys.argv:
+        if args.force_production in sys.argv:
             debug = False
 
         # Check for the --url (-u) flag
-        if "--url" in sys.argv or "-u" in sys.argv:
-            index = sys.argv.index("--url") if "--url" in sys.argv else sys.argv.index("-u")
-            try:
-                debugURL = sys.argv[index + 1]
-            except IndexError:
+        if args.url:
+            debugURL = args.url
+            if debugURL is None or debugURL == "":
                 print("No debug URL provided. Usage: -d -u <url>")
                 sys.exit(1)
 
     # Parse the mode of the app
     mode: str = "app"  # Default mode is App / Desktop
 
-    # Check for the --browser (-b) flag
-    if "--browser" in sys.argv or "-b" in sys.argv or os.getenv("HORUS_MODE") == "browser":
+    # Determine mode
+    if args.browser:
         mode = "browser"
-
-    # Check for the --server (-s) flag
-    if "--server" in sys.argv or "-s" in sys.argv or os.getenv("HORUS_MODE") == "server":
+    elif args.server:
         mode = "server"
-
-    # Check for the --webapp (-w) flag
-    if "--webapp" in sys.argv or "-w" in sys.argv or os.getenv("HORUS_MODE") == "webapp":
+    elif args.webapp:
         mode = "webapp"
+    else:
+        mode = "app"
 
     # Check for the --port (-p) flag to force a port on the app
     port = None
     envPort = os.getenv("HORUS_PORT")
-    if "--port" in sys.argv or "-p" in sys.argv:
-        index = sys.argv.index("--port") if "--port" in sys.argv else sys.argv.index("-p")
-        try:
-            port = int(sys.argv[index + 1])
-        except IndexError:
+    if args.port:
+        port = args.port
+        if port is None or port == "":
             print("No port provided. Usage: -p <port>")
             sys.exit(1)
+        try:
+            port = int(port)
         except ValueError:
             print("Invalid port provided. Usage: -p <integer>")
             sys.exit(1)
@@ -1028,24 +1073,37 @@ def parseArgs() -> typing.Dict[str, typing.Any]:
         try:
             port = int(envPort)
         except ValueError:
-            print("Invalid port provided. Usage: -p <integer>")
+            print("Invalid environment port provided. Usege: export HORUS_PORT=<integer>")
             sys.exit(1)
 
     # Check for the --host (-h) flag to force a host on the app
     host = None
     envHost = os.getenv("HORUS_HOST")
-    if "--host" in sys.argv or "-h" in sys.argv:
-        index = sys.argv.index("--host") if "--host" in sys.argv else sys.argv.index("-h")
-        try:
-            host = sys.argv[index + 1]
-        except IndexError:
+    if args.host:
+        host = args.host
+        if host is None or host == "":
             print("No host provided. Usage: -h <host>")
             sys.exit(1)
     elif envHost is not None:
         host = envHost
 
+    # Check for the --flow (-f) flag to run a flow instead of the app
+    # The -f flag should be followed by the path to the flow and the
+    # intex of the block to run -i <index>
+    flowPath = None
+    blockIndex = None
+    if args.flow:
+        flowPath = args.flow
+        if not os.path.exists(flowPath):
+            print(f"Flow path {flowPath} does not exist")
+            sys.exit(1)
+        if not args.index:
+            print(f"No block index provided. Usage: -f {flowPath} -i <block index>")
+            sys.exit(1)
+        blockIndex = args.index
+
     # Parse the arguments
-    args = {
+    argsDict = {
         "debug": debug,
         "mode": mode,
         "debugURL": debugURL,
@@ -1053,62 +1111,45 @@ def parseArgs() -> typing.Dict[str, typing.Any]:
         "port": port,
     }
 
-    return args
+    flowArgs = {
+        "flowPath": flowPath,
+        "blockIndex": blockIndex,
+    }
+
+    return argsDict, flowArgs
 
 
-def runFlowInsteadOfLaunch(app: AppDelegate):
+def runFlowInsteadOfLaunch(app: AppDelegate, args: dict):
     """
     If a flow was provided as an argument, it will run the flow instead of launching the app.
     """
 
-    # Check for the --flow (-f) flag to run a flow instead of the app
-    # The -f flag should be followed by the path to the flow and the
-    # intex of the block to run -i <index>
-    if "--flow" in sys.argv or "-f" in sys.argv:
-        index = sys.argv.index("--flow") if "--flow" in sys.argv else sys.argv.index("-f")
-        try:
-            flowPath = sys.argv[index + 1]
-        except IndexError:
-            print("No flow path provided. Usage: -f <flow path>")
-            sys.exit(1)
+    flowPath = args.get("flowPath")
+    blockIndex = args.get("blockIndex")
 
-        if not os.path.exists(flowPath):
-            print(f"Flow path {flowPath} does not exist")
-            sys.exit(1)
+    if flowPath is None or blockIndex is None:
+        return
 
-        # Get the index of the block to run
-        blockIndex = None
-        if "-i" in sys.argv:
-            index = sys.argv.index("-i")
-            try:
-                blockIndex = int(sys.argv[index + 1])
-            except IndexError:
-                print("No block index provided. Usage: -i <block index>")
-                sys.exit(1)
-            except ValueError:
-                print("Invalid block index provided. Usage: -i <block index>")
-                sys.exit(1)
+    if app.server.flowManager is None:
+        raise Exception(
+            "Flow manager not initialized. This is a bug with Horus, please report it."
+        )
 
-        if app.server.flowManager is None:
-            raise Exception(
-                "Flow manager not initialized. This is a bug with Horus, please report it."
-            )
+    # Open the flow
+    flow = app.server.flowManager.openFlowFromPath(flowPath)
 
-        # Open the flow
-        flow = app.server.flowManager.openFlowFromPath(flowPath)
+    # Assign the global HorusSettings instance to the flow
+    # TODO: Read for the users settings instead!
+    flow.horusSettings = app.server.settingsManager
 
-        # Assign the global HorusSettings instance to the flow
-        # TODO: Read for the users settings instead!
-        flow.horusSettings = app.server.settingsManager
+    # Run the flow
+    try:
+        flow.run(placedID=blockIndex, resetRemoteBlock=True)
+    except Exception as error:
+        print(f"Error running flow: {error}")
 
-        # Run the flow
-        try:
-            flow.run(placedID=blockIndex, resetRemoteBlock=True)
-        except Exception as error:
-            print(f"Error running flow: {error}")
-
-        # Exit
-        sys.exit(0)
+    # Exit
+    sys.exit(0)
 
 
 def launchApp():
@@ -1116,10 +1157,10 @@ def launchApp():
     Launches the app.
     """
 
-    args = parseArgs()
+    appDelegateArgs, flowArgs = parseArgs()
 
     # Prepare the app delegate
-    app = AppDelegate(**args)
+    app = AppDelegate(**appDelegateArgs)
 
     # Initialize the server
     try:
@@ -1133,7 +1174,7 @@ def launchApp():
         sys.exit(1)
 
     # If a flow was provided as an argument, it will run the flow instead of launching the app.
-    runFlowInsteadOfLaunch(app)
+    runFlowInsteadOfLaunch(app, flowArgs)
 
     # Start the app
     try:
