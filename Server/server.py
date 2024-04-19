@@ -66,7 +66,7 @@ from Server.RemotesManager import RemotesManager
 from Server.PluginManager import PluginManager
 
 # Server explorer
-from Server.FileExplorer import FileExplorer
+from Server.FileExplorer import FileExplorer, UserFileExplorer
 
 # User management for WebApp mode
 from Server.WebAppManager import WebAppManager, UserError
@@ -344,7 +344,7 @@ class HorusServer:
 
         guiDir = None
         # Development path
-        if not cython.compiled:
+        if not cython.compiled:  # type: ignore
             guiDir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "GUI"))
         # Frozen executable path
         else:
@@ -731,7 +731,7 @@ class HorusServer:
 
                 # If we are on webapp mode, update the relative path to the user's folder
                 # All flows are stored in individual user folders
-                if self.webAppManager is not None:
+                if self._isForUser:
                     currentPath = flowData["path"]
 
                     # If the flow has no path (is new)
@@ -753,9 +753,15 @@ class HorusServer:
                         flowData["path"] = os.path.join(sanitizedName, sanitizedName + ".flow")
 
                     # Finally, update the path to the user's directory
-                    flowData["path"] = currentUser.getUserPath(flowData["path"])[0]
+                    flowData["path"] = str(
+                        UserFileExplorer(flowData["path"], currentUser).getAbsolutePath()
+                    )
 
                 flow = self.flowManager.saveFlow(flowData, molstarState)
+
+                if self._isForUser:
+                    # Clear back the full path in webapp mode
+                    flow.path = str(UserFileExplorer(flow.path, currentUser).getRelativePath())
 
                 # Emit the saved flow to connected rooms
                 self.socketio.emit("flow", flow.encode(minimal=False), to=flow.savedID)
@@ -829,11 +835,10 @@ class HorusServer:
 
                 # If we are in webapp mode, remove the part of the paths that is not
                 # accessible by the user (otside its directory)
-                if self.webAppManager is not None:
-                    highestBoundary = os.path.abspath(currentUser.flowsDir)
+                if self._isForUser:
                     for flow in flows:
-                        flow.path = (
-                            flow.path.replace(highestBoundary, "") if flow.path else flow.path
+                        flow.path = str(
+                            UserFileExplorer(flow.path, currentUser).getRelativePath()
                         )
 
                 # Convert the flows to JSON
@@ -880,14 +885,14 @@ class HorusServer:
                 savedID = data.get("savedID", None)
                 path = data.get("path", None)
                 if path is not None:
-
                     # If we are on webapp mode, update the path to the user's directory
-                    if self.webAppManager is not None:
+                    if self._isForUser:
                         # Update the path to the user's directory
-                        path, _ = currentUser.getUserPath(path)
+                        path = str(UserFileExplorer(path, currentUser).getAbsolutePath())
 
                     # Load the flow from the path
                     flow = self.flowManager.openFlowFromPath(path, socket=self.socketio)
+
                 else:
                     if savedID is None:
                         raise Exception(  # pylint: disable=broad-exception-raised
@@ -895,16 +900,15 @@ class HorusServer:
                         )
                     flow = self.flowManager.loadPredefinedFlow(savedID)
 
-                # Get the flow JSON
-                flowJson = flow.encode(minimal=False)
-
                 # Get the molstarStte zip file
                 molstarState = flow.getMolstarState()
 
                 # On webapp mode, remove the full path
-                if self.webAppManager is not None:
-                    _, highestBoundary = currentUser.getUserPath(path)
-                    flow.path = flow.path.replace(highestBoundary, "") if flow.path else flow.path
+                if self._isForUser:
+                    flow.path = str(UserFileExplorer(path, currentUser).getRelativePath())
+
+                # Get the flow JSON
+                flowJson = flow.encode(minimal=False)
 
                 success = {"ok": True, "flow": flowJson}
                 if molstarState is not None:
@@ -957,9 +961,9 @@ class HorusServer:
             try:
 
                 # If we are on webapp mode, update the path to the user's directory
-                if self.webAppManager is not None:
+                if self._isForUser:
                     # Update the path to the user's directory
-                    flowPath, _ = currentUser.getUserPath(flowPath)
+                    flowPath = str(UserFileExplorer(flowPath, currentUser).getAbsolutePath())
 
                 # Open the flow
                 flow = self.flowManager.openFlowFromPath(flowPath)
@@ -1083,8 +1087,9 @@ class HorusServer:
                 # Get the flow data
                 flowPath = data["flowPath"]
 
-                if self.webAppManager is not None:
-                    flowPath, _ = currentUser.getUserPath(flowPath)
+                if self._isForUser:
+                    relativePath = flowPath
+                    flowPath = str(UserFileExplorer(flowPath, currentUser).getAbsolutePath())
 
                 placedID = data["placedID"]
                 resetRemoteBlock = data.get("resetRemote", False)
@@ -1107,6 +1112,10 @@ class HorusServer:
                 # into the database for the current user
                 if self.webAppManager is not None and self.webAppManager.db is not None:
                     self.webAppManager.db.registerFlowForUser(currentUser, flow)
+
+                # On webapp mode, skip the paths fo the flow
+                # during the endoing process for security
+                flow._skipPath = relativePath if self._isForUser else None
 
                 # Run the flow
                 self.flowManager.runFlow(
@@ -1141,14 +1150,18 @@ class HorusServer:
             try:
 
                 # Convert the flow to the user's directory
-                if self.webAppManager is not None:
-                    flowPath, _ = currentUser.getUserPath(flowPath)
+                if self._isForUser:
+                    relativePath = flowPath
+                    flowPath = str(UserFileExplorer(flowPath, currentUser).getAbsolutePath())
 
                 stoppedFlow = self.flowManager.stopFlow(flowPath)
 
                 # Update the flow in the database
                 if self.webAppManager is not None and self.webAppManager.db is not None:
                     self.webAppManager.db.updateFlowForUser(stoppedFlow)
+
+                # Obfuscate the path in webapp mode
+                stoppedFlow._skipPath = relativePath if self._isForUser else None
 
                 self.socketio.emit(
                     "flow", stoppedFlow.encode(minimal=False), to=stoppedFlow.savedID
@@ -1298,51 +1311,33 @@ class HorusServer:
         @self.server.route("/api/filepicker", methods=["POST"])
         @self.verifyLogin
         def filePicker():
+            try:
+                jsonData = request.get_json()
+                path = jsonData.get("path")
+                flowContextPath = jsonData.get("flowContextPath")
+                extensions = jsonData.get("extensions")
+                openFolder = jsonData.get("openFolder", False)
 
-            jsonData = request.get_json()
-            path = jsonData.get("path")
-            flowContextPath = jsonData.get("flowContextPath")
-            extensions = jsonData.get("extensions")
-            openFolder = jsonData.get("openFolder", False)
+                # Read the path with the FileExplorer class
+                if self._isForUser:
+                    fileExplorer = UserFileExplorer(
+                        path, currentUser, relativeTo=os.path.dirname(flowContextPath)
+                    )
+                else:
+                    fileExplorer = FileExplorer(path)
 
-            if extensions is not None and extensions == ["*"]:
-                extensions = None
-
-            # Handle webapp mode
-            if self.webAppManager is not None:
-
-                if flowContextPath is None:
-                    return {"ok": False, "msg": "Internal server error. Try again later."}
-                # If a flow context path was provided,
-                # set the highest boundary to that flow folder
-                path, highestBoundary = currentUser.flowContextUserPath(flowContextPath, path)
-
-            else:
-                highestBoundary = "/"
-                if path is None:
-                    path = os.getcwd()
-
-            if not os.path.exists(path):
-                success = {
-                    "ok": False,
-                    "msg": "Path does not exist",
-                }
-            elif not os.path.isdir(path):
-                success = {
-                    "ok": False,
-                    "msg": "Path is not a directory",
-                }
-            else:
-                fileExplorer = FileExplorer(path, highestBoundary)
-                directoryContents = fileExplorer.listDirectory(
-                    extensions, openFolder, relative=self.webAppManager is not None
-                )
+                # Get the contents and the folder chain for the frontend
+                directoryContents = fileExplorer.listDirectory(extensions, openFolder)
                 folderChain = fileExplorer.folderChain()
+
+                # Return the data
                 success = {
                     "ok": True,
-                    "folderChain": folderChain,
-                    "contents": directoryContents,
+                    "folderChain": fileExplorer.parseFiles(folderChain),
+                    "contents": fileExplorer.parseFiles(directoryContents),
                 }
+            except Exception as exc:
+                success = {"ok": False, "msg": str(exc)}
             return flask.jsonify(success)
 
         @self.server.route("/api/filepicker/createfolder", methods=["POST"])
@@ -1353,18 +1348,23 @@ class HorusServer:
             path = jsonData.get("path", os.getcwd())
             folderName = jsonData.get("folderName", None)
             flowContextPath = jsonData.get("flowContextPath")
-
-            if self.webAppManager is not None:
-                if flowContextPath is None:
-                    return {"ok": False, "msg": "Internal server error. Try again later."}
-                # If a flow context path was provided,
-                # set the highest boundary to that flow folder
-                path, highestBoundary = currentUser.flowContextUserPath(flowContextPath, path)
-
-            if folderName is None:
-                return flask.jsonify({"ok": False, "msg": "No folder name provided"})
-
             try:
+
+                if path is None:
+                    raise Exception("No path provided")
+
+                if self._isForUser:
+                    if flowContextPath is None:
+                        return {"ok": False, "msg": "Internal server error. Try again later."}
+                    # If a flow context path was provided,
+                    # set the highest boundary to that flow folder
+                    path = UserFileExplorer(
+                        path, currentUser, relativeTo=os.path.dirname(flowContextPath)
+                    ).getAbsolutePath()
+
+                if folderName is None:
+                    return flask.jsonify({"ok": False, "msg": "No folder name provided"})
+
                 os.makedirs(os.path.join(path, folderName))
                 return flask.jsonify({"ok": True})
             except Exception as exc:
@@ -1378,20 +1378,20 @@ class HorusServer:
             flowContextPath = request.form.get("flowContextPath", None)
             files = request.files
 
-            if path is None:
-                return flask.jsonify({"ok": False, "msg": "No path provided"})
-
-            if files is None:
-                return flask.jsonify({"ok": False, "msg": "No file provided"})
-
-            if self.webAppManager is not None:
-                if flowContextPath is None or flowContextPath == "":
-                    return {"ok": False, "msg": "Internal server error. Try again later."}
-                # If a flow context path was provided,
-                # set the highest boundary to that flow folder
-                path, highestBoundary = currentUser.flowContextUserPath(flowContextPath, path)
-
             try:
+                if path is None or files is None:
+                    raise Exception("No path/files provided")
+
+                if self._isForUser:
+
+                    if flowContextPath is None or flowContextPath == "":
+                        return {"ok": False, "msg": "Internal server error. Try again later."}
+
+                    # If a flow context path was provided,
+                    # set the highest boundary to that flow folder
+                    path = UserFileExplorer(
+                        path, currentUser, relativeTo=os.path.dirname(flowContextPath)
+                    ).getAbsolutePath()
 
                 if not os.path.exists(path):
                     os.makedirs(path)
@@ -1414,40 +1414,42 @@ class HorusServer:
             path = jsonData.get("path", None)
             flowContextPath = jsonData.get("flowContextPath", None)
 
-            if path is None:
-                return flask.jsonify({"ok": False, "msg": "No path provided"})
-
-            if self.webAppManager is not None:
-                if flowContextPath is None or flowContextPath == "":
-                    return {"ok": False, "msg": "Internal server error. Try again later."}
-                # If a flow context path was provided,
-                # set the highest boundary to that flow folder
-                path, highestBoundary = currentUser.flowContextUserPath(flowContextPath, path)
-
-            if os.path.isdir(path):
-                # Zip the folder
-                import tempfile
-                import zipfile
-
-                tempDir = tempfile.mkdtemp()
-                tempZip = os.path.join(tempDir, "download.zip")
-
-                with zipfile.ZipFile(tempZip, "w") as zipf:
-                    for root, _, files in os.walk(path):
-                        for file in files:
-                            zipf.write(
-                                os.path.join(root, file),
-                                os.path.relpath(os.path.join(root, file), path),
-                            )
-
-                path = tempZip
-
-            downloadName = os.path.basename(path)
-            import mimetypes
-
-            mimetype = mimetypes.guess_type(path)[0]
-
             try:
+                if path is None:
+                    raise Exception("No path provided")
+
+                if self._isForUser:
+                    if flowContextPath is None or flowContextPath == "":
+                        raise Exception("Internal server error. Try again later.")
+                    # If a flow context path was provided,
+                    # set the highest boundary to that flow folder
+                    path = UserFileExplorer(
+                        path, currentUser, relativeTo=os.path.dirname(flowContextPath)
+                    ).getAbsolutePath()
+
+                if os.path.isdir(path):
+                    # Zip the folder
+                    import tempfile
+                    import zipfile
+
+                    tempDir = tempfile.mkdtemp()
+                    tempZip = os.path.join(tempDir, "download.zip")
+
+                    with zipfile.ZipFile(tempZip, "w") as zipf:
+                        for root, _, files in os.walk(path):
+                            for file in files:
+                                zipf.write(
+                                    os.path.join(root, file),
+                                    os.path.relpath(os.path.join(root, file), path),
+                                )
+
+                    path = tempZip
+
+                downloadName = os.path.basename(path)
+                import mimetypes
+
+                mimetype = mimetypes.guess_type(path)[0]
+
                 return flask.send_file(
                     path,
                     download_name=downloadName,
@@ -1465,17 +1467,19 @@ class HorusServer:
             path = data.get("path", None)
             flowContextPath = data.get("flowContextPath", None)
 
-            if path is None:
-                return flask.jsonify({"ok": False, "msg": "No path provided"})
-
-            if self.webAppManager is not None:
-                if flowContextPath is None or flowContextPath == "":
-                    return {"ok": False, "msg": "Internal server error. Try again later."}
-                # If a flow context path was provided,
-                # set the highest boundary to that flow folder
-                path, highestBoundary = currentUser.flowContextUserPath(flowContextPath, path)
-
             try:
+                if path is None:
+                    raise Exception("No path provided")
+
+                if self._isForUser:
+                    if flowContextPath is None or flowContextPath == "":
+                        raise Exception("Internal server error. Try again later.")
+                    # If a flow context path was provided,
+                    # set the highest boundary to that flow folder
+                    path = UserFileExplorer(
+                        path, currentUser, relativeTo=os.path.dirname(flowContextPath)
+                    ).getAbsolutePath()
+
                 if os.path.isdir(path):
                     shutil.rmtree(path)
                 else:
@@ -1493,8 +1497,8 @@ class HorusServer:
 
                 selFolder = AppDelegate().openFolderSelectDialog()
             else:  # Implement folder picker for web/server mode
-                logging.getLogger("Horus").critical(
-                    "WARNING: Folder picker must call Chonky explorer instead of /api/openfolder"
+                logging.getLogger("Horus").error(
+                    "Folder picker must call Chonky explorer instead of /api/openfolder"
                 )
                 selFolder = "/deprecated/method/"
 
@@ -2343,16 +2347,18 @@ class HorusServer:
                 for flowDir in flowDirectories:
                     flowPath = os.path.join(currentUser.flowsDir, flowDir, flowDir + ".flow")
                     if os.path.exists(flowPath):
-                        flowInstances.append(self.flowManager.openFlowFromPath(flowPath))
+                        try:
+                            flowInstances.append(self.flowManager.openFlowFromPath(flowPath))
+                        except Exception as exc:
+                            logging.getLogger("Horus").error(
+                                "Could not open user flow at %s: %s", flowPath, str(exc)
+                            )
+                            continue
 
                 # If we are in webapp mode, remove the part of the paths that is not
                 # accessible by the user (otside its directory)
-                if self.webAppManager is not None:
-                    highestBoundary = os.path.abspath(currentUser.flowsDir)
-                    for flow in flowInstances:
-                        flow.path = (
-                            flow.path.replace(highestBoundary, "") if flow.path else flow.path
-                        )
+                for flow in flowInstances:
+                    flow.path = str(UserFileExplorer(flow.path, currentUser).getRelativePath())
 
                 # Convert the flows to JSON
                 flows = [flow.encode() for flow in flowInstances]
@@ -2389,7 +2395,7 @@ class HorusServer:
                     return flask.jsonify({"ok": False, "msg": "No path provided"})
 
                 # Convert the path to the user's directory
-                flowPath, _ = currentUser.getUserPath(flowPath)
+                flowPath = str(UserFileExplorer(flowPath, currentUser).getAbsolutePath())
 
                 # Load the flow from the data
                 flow = self.flowManager.openFlowFromPath(flowPath)
@@ -2425,11 +2431,17 @@ class HorusServer:
 
                     if flowPath is None:
                         return flask.jsonify({"ok": False, "msg": "No data provided"})
+
                     # Convert the path to the user's directory
-                    flowPath, _ = currentUser.getUserPath(flowPath)
+                    relativePath = flowPath
+                    flowPath = str(UserFileExplorer(flowPath, currentUser).getAbsolutePath())
 
                     # Open the flow
                     flow = self.flowManager.openFlowFromPath(flowPath)
+
+                    # Obfuscate the path
+                    flow._skipPath = relativePath
+                    flow.write()
 
                     # Compress the flow
                     tarFile = self.flowManager.compressFlow(flow)

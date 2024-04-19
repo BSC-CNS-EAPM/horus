@@ -150,43 +150,6 @@ class HorusUser(flask_login.UserMixin):
 
         return super().get_id()
 
-    def getUserPath(
-        self, path: typing.Union[None, str], overrideBoundary: typing.Optional[str] = None
-    ) -> tuple[str, str]:
-        """
-        Converts a relative path from the
-        webapp mode into the full path
-
-        :param path: The relative path
-        :return: A tuple with the full path and the highest boundary
-        """
-
-        if overrideBoundary is not None:
-            highestBoundary = os.path.abspath(overrideBoundary)
-        else:
-            highestBoundary = os.path.abspath(self.flowsDir)
-
-        if path is None:
-            path = highestBoundary
-        else:
-
-            # If the path is already the absolute path, which includes the highest boundary
-            # then we just return the path
-            if os.path.exists(path) and os.path.isabs(path) and path.startswith(self.flowsDir):
-                return path, highestBoundary
-
-            # Prevent the path starting from /
-            # This can happen as the filepicker api will send
-            # to the frontend as absolute path the real relative path
-            # of the user directory
-            while path.startswith("/"):
-                path = path[1:]
-
-            if not path.startswith(highestBoundary):
-                path = os.path.join(highestBoundary, path)
-
-        return path, highestBoundary
-
     @classmethod
     def demoUser(cls) -> "HorusUser":
         """
@@ -238,42 +201,6 @@ class HorusUser(flask_login.UserMixin):
         anonyUser.anonymous = True
 
         return anonyUser
-
-    def flowContextUserPath(
-        self, flowContextPath: str, path: typing.Optional[str] = None
-    ) -> typing.Tuple[str, str]:
-        """
-        Returns the highest boundary and relative path respect to the current flow
-
-        Parameters
-        ----------
-        flowContextPath: str
-            Path to the current flow
-        path: str
-            A path to be openen under the current flow directory.
-            If none provided, the flow dir will be opened
-
-        Returns
-        -------
-        A tuple with
-            relativePath: str
-                The ralative path respect the flow context
-            highestBoundary: str
-                The highest boundary path (abspath to the flow context)
-        """
-
-        flowContextBoundary = os.path.dirname(flowContextPath)
-
-        if not os.path.exists(flowContextBoundary):
-            # If the path does not exist, means that we are opening
-            # the flow directly to the flow directory
-            # and we need to add the user flows to the path
-            if flowContextBoundary.startswith("/"):
-                flowContextBoundary = flowContextBoundary[1:]
-
-            flowContextBoundary = os.path.join(self.flowsDir, flowContextBoundary)
-
-        return self.getUserPath(path or flowContextBoundary, overrideBoundary=flowContextBoundary)
 
     def toDict(self) -> dict[str, typing.Any]:
         """

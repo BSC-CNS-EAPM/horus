@@ -11,7 +11,6 @@ import uuid
 import datetime
 import logging
 import multiprocessing
-import subprocess
 import time
 import zipfile
 import tarfile
@@ -31,7 +30,7 @@ from Server.RemotesManager import RemotesManager
 # Import the settings manager
 from Server.SettingsManager import SettingsManager
 
-# Import file epxlorer for folder size
+# Import file explorer for folder size
 from Server.FileExplorer import FileExplorer
 
 # Internal, development types
@@ -180,7 +179,7 @@ class Flow:
     For example, any MolstarAPI action that needs to be executed on JS side
     """
 
-    size: typing.Optional[int] = None
+    size: typing.Optional[float] = None
     """
     The size of the folder that the flow is in (MB)
     """
@@ -429,6 +428,13 @@ class Flow:
 
         return blocks
 
+    _skipPath: typing.Union[str, None] = None
+    """
+    Override the fow path with this value
+
+    Only used in webapp mode
+    """
+
     def encode(self, minimal: bool = True) -> typing.Dict[str, typing.Any]:
         """
         Encodes the flow to a JSON object
@@ -452,7 +458,7 @@ class Flow:
         flow = {
             "name": self.name,
             "savedID": self.savedID,
-            "path": self.path,
+            "path": self.path if self._skipPath is None else self._skipPath,
             "remote": self.remote,
             "currentExecuting": self.currentExecuting,
             "status": self.status.value,
@@ -1025,7 +1031,7 @@ class Flow:
         # Update the elapsed time
         self.elapsed += (self.finishedTime - self.startedTime).total_seconds()
 
-    def _computeSize(self) -> typing.Optional[int]:
+    def _computeSize(self) -> typing.Optional[float]:
         """
         Computes the size of the folder the flow is in
 
@@ -1039,7 +1045,7 @@ class Flow:
         # Get the folder of the flow
         folder = os.path.dirname(self.path)
 
-        return FileExplorer.computeFolderSize(folder)
+        return FileExplorer.computePathSize(folder)
 
     def stop(self, message: str = "The flow was stopped.", fail: bool = False):
         """

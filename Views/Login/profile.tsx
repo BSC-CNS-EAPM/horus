@@ -115,9 +115,10 @@ export default function Profile() {
                 {userData.quota.maxFlows ?? "Unlimited"}
               </div>
               <div className="plugin-block mb-2">
-                <span className="font-bold">Used space:</span>{" "}
-                {userData.quota.usedSpace} /{" "}
-                {userData.quota.maxSpace ?? "Unlimited"} MB
+                <UsedSpace
+                  used={userData.quota?.usedSpace}
+                  maximum={userData.quota?.maxSpace}
+                />
               </div>
               <div className="plugin-block mb-2">
                 <span className="font-bold">Computation hours:</span>{" "}
@@ -166,5 +167,29 @@ export default function Profile() {
         </>
       )}
     </div>
+  );
+}
+
+function UsedSpace({ used, maximum }: { used?: number; maximum?: number }) {
+  const parsedSpace = (space: number | undefined) => {
+    if (space) {
+      // The space are MB, but if higher than 1000, then it's GB
+      if (space > 1000) {
+        return <span>{(space / 1000).toFixed(2)} GB</span>;
+      } else if (space < 1) {
+        return <span>{(space * 1000).toFixed(2)} KB</span>;
+      } else {
+        return <span>{space.toFixed(2) ?? 0} MB</span>;
+      }
+    }
+
+    return "Unknown";
+  };
+
+  return (
+    <>
+      <span className="font-bold">Used space:</span> {parsedSpace(used)} /{" "}
+      {maximum ? parsedSpace(maximum) : "Unlimited"}
+    </>
   );
 }

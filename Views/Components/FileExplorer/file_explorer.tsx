@@ -1,4 +1,4 @@
-import { setChonkyDefaults, ChonkyActions } from "chonky";
+import { setChonkyDefaults, ChonkyActions, FileArray } from "chonky";
 import { ChonkyIconFA } from "chonky-icon-fontawesome";
 import { horusPost } from "../../Utils/utils";
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
@@ -32,8 +32,8 @@ function useServerExplorer(
   setOpen: (open: boolean) => void,
   extensions?: string[]
 ) {
-  const [files, setFiles] = useState([]);
-  const [folderChain, setFolderChain] = useState(null);
+  const [files, setFiles] = useState<FileArray>([null]);
+  const [folderChain, setFolderChain] = useState<FileArray>([null]);
   const [selectedFile, setSelectedFile] = useState(null);
   const [actionFilesActive, setActionFilesActive] = useState({
     status: false,
@@ -46,55 +46,69 @@ function useServerExplorer(
 
   const currentPath = useRef(null);
 
-  const fetchFolders = useCallback(async () => {
-    const header = {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
-    };
-    if (window.horusInternal.webApp && !flowContext?.path) {
-      alert("Save the flow before selecting files");
-      setOpen(false);
-      return;
-    }
+  const fetchFolders = useCallback(
+    async (openPath?: string) => {
+      const header = {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+      };
+      if (window.horusInternal.webApp && !flowContext?.path) {
+        alert("Save the flow before selecting files");
+        setOpen(false);
+        return;
+      }
 
-    console.log("fetching folders at: ", flowContext?.path);
+      let currentFiles: typeof files = files;
+      let currentFolderChain: typeof folderChain = folderChain;
 
-    const body = JSON.stringify({
-      path: currentPath.current,
-      extensions: extensions,
-      openFolder: openFolder,
-      flowContextPath: flowContext?.path,
-    });
+      setFiles((f) => {
+        currentFiles = f;
+        return [null];
+      });
+      setFolderChain((c) => {
+        currentFolderChain = c;
+        return [null];
+      });
 
-    const response = await horusPost("/api/filepicker", header, body);
+      const body = JSON.stringify({
+        path: openPath ?? currentPath.current,
+        extensions: extensions,
+        openFolder: openFolder,
+        flowContextPath: flowContext?.path,
+      });
 
-    const data = await response.json();
+      const response = await horusPost("/api/filepicker", header, body);
 
-    if (!data.ok) {
-      alert(data.msg);
-      setOpen(false);
-      return;
-    }
+      const data = await response.json();
 
-    setFiles(data.contents);
-    setFolderChain(data.folderChain);
+      if (!data.ok) {
+        alert(data.msg);
+        setFiles(currentFiles);
+        setFolderChain(currentFolderChain);
+        return;
+      }
 
-    // If the selected path is null, set it to the current path if we are on folder mode
-    if (!selectedFile && openFolder) {
-      setSelectedFile(data.folderChain[data.folderChain.length - 1].fullpath);
-    }
+      setFiles(data.contents);
+      setFolderChain(data.folderChain);
 
-    if (!currentPath.current) {
-      currentPath.current =
-        data.folderChain[data.folderChain.length - 1].fullpath;
-    }
-  }, [extensions, openFolder, selectedFile, flowContext, setOpen]);
+      // If the selected path is null, set it to the current path if we are on folder mode
+      if (!selectedFile && openFolder) {
+        setSelectedFile(data.folderChain[data.folderChain.length - 1].path);
+      }
+
+      if (!currentPath.current) {
+        currentPath.current =
+          data.folderChain[data.folderChain.length - 1].path;
+      }
+    },
+    [extensions, openFolder, selectedFile, flowContext, setOpen]
+  );
 
   const handleFileAction = (action: any) => {
     // If the action is double clickinga folder, open it
     if (action.id === "open_files") {
       if (action.payload.targetFile.isDir) {
-        currentPath.current = action.payload.targetFile.fullpath;
+        currentPath.current = action.payload.targetFile.path;
         fetchFolders();
       }
     }
@@ -104,16 +118,16 @@ function useServerExplorer(
       // If open folder mode is enable, select only folders
       if (openFolder) {
         if (action.payload.file.isDir) {
-          setSelectedFile(action.payload.file.fullpath);
-          onFileSelect(action.payload.file.fullpath);
+          setSelectedFile(action.payload.file.path);
+          onFileSelect(action.payload.file.path);
         }
       }
 
       // If open folder mode is disabled, select only files
       else {
         if (!action.payload.file.isDir) {
-          setSelectedFile(action.payload.file.fullpath);
-          onFileSelect(action.payload.file.fullpath);
+          setSelectedFile(action.payload.file.path);
+          onFileSelect(action.payload.file.path);
         }
       }
     }
@@ -121,8 +135,8 @@ function useServerExplorer(
     // If the action is opening a file, call the onFileConfirm function
     if (action.id === "open_files") {
       if (!action.payload.targetFile.isDir) {
-        setSelectedFile(action.payload.targetFile.fullpath);
-        onFileConfirm(action.payload.targetFile.fullpath);
+        setSelectedFile(action.payload.targetFile.path);
+        onFileConfirm(action.payload.targetFile.path);
       }
     }
 
@@ -221,14 +235,10 @@ function useServerExplorer(
         return;
       }
 
-      console.log("Generating post");
-
       const formData = new FormData();
       formData.append("files", files[i]!);
       formData.append("path", currentPath.current!);
       formData.append("flowContextPath", flowContext?.path ?? "");
-
-      console.log("Posting upload files");
 
       // Check if its size is more than the maximum allowed
       setActionFilesActive({
@@ -263,7 +273,7 @@ function useServerExplorer(
     async (
       filePaths: [
         {
-          fullpath: string;
+          path: string;
         }
       ]
     ) => {
@@ -278,12 +288,12 @@ function useServerExplorer(
         setActionFilesActive({
           status: true,
           progress: (i / filePaths.length) * 100,
-          file: filePath.fullpath,
+          file: filePath.path,
           text: "Downloading files...",
         });
 
         const body = JSON.stringify({
-          path: filePath.fullpath,
+          path: filePath.path,
           flowContextPath: flowContext?.path,
         });
 
@@ -305,7 +315,7 @@ function useServerExplorer(
         // If the response is not a JSON, continue
         const data = await response.blob();
         // Get the name of the file (last part of the path)
-        const fileName = filePath.fullpath.split("/").pop();
+        const fileName = filePath.path.split("/").pop();
 
         saveBlob(data, fileName ?? "downloaded_file");
       }
@@ -318,7 +328,7 @@ function useServerExplorer(
     async (
       filePaths: [
         {
-          fullpath: string;
+          path: string;
         }
       ]
     ) => {
@@ -333,12 +343,12 @@ function useServerExplorer(
         setActionFilesActive({
           status: true,
           progress: (i / filePaths.length) * 100,
-          file: filePath.fullpath,
+          file: filePath.path,
           text: "Deleting files...",
         });
 
         const body = JSON.stringify({
-          path: filePath.fullpath,
+          path: filePath.path,
           flowContextPath: flowContext?.path,
         });
 
@@ -376,6 +386,7 @@ function useServerExplorer(
 }
 
 export type FileExplorerProps = {
+  openAtPath?: string;
   children?: React.ReactNode;
   openFolder?: boolean;
   onFileSelect?: (file: any) => void;
@@ -421,6 +432,8 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
     fileProps?.allowedExtensions
   );
 
+  const [goToPath, setGoToPath] = useState<string>("");
+
   const chonkyActions = [
     ChonkyActions.UploadFiles,
     ChonkyActions.DownloadFiles,
@@ -434,19 +447,41 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
     } else {
       // Reset the selected file
       setSelectedFile(null);
-      setFolderChain(null);
+      setFolderChain([null]);
     }
-  }, [open, fetchFolders, setSelectedFile, setFolderChain]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   return (
     <HorusModal show={open} onHide={() => setOpen(false)} size="xl">
       <div className="w-full flex flex-col gap-2 p-4">
-        <div className="text-3xl text-bold">
-          {fileProps
-            ? openFolder
-              ? "Select a folder"
-              : "Select a file"
-            : "Browse"}
+        <div className="flex flex-row justify-between flex-wrap">
+          <div className="text-3xl text-bold">
+            {fileProps
+              ? openFolder
+                ? "Select a folder"
+                : "Select a file"
+              : "Browse"}
+          </div>
+          {!window.horusInternal?.webApp && (
+            <div className="flex flex-row gap-2">
+              <input
+                className="app-button"
+                placeholder="Input a folder path..."
+                value={goToPath}
+                onChange={(e) => {
+                  setGoToPath(e.target.value);
+                }}
+              />
+              <AppButton
+                action={() => {
+                  goToPath && fetchFolders(goToPath);
+                }}
+              >
+                Go
+              </AppButton>
+            </div>
+          )}
         </div>
         <div
           className="w-full"
@@ -460,6 +495,8 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
             files={files}
             folderChain={folderChain}
             onFileAction={handleFileAction}
+            doubleClickDelay={1000}
+            disableDragAndDrop
           >
             {isUploading.status ? (
               <div className="h-full flex flex-col gap-2 justify-center items-center">

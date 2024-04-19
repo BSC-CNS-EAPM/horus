@@ -541,7 +541,7 @@ class Database:
         return {
             "currentFlows": len(os.listdir(user.flowsDir)),
             "maxFlows": quotas["maxFlows"],
-            "usedSpace": FileExplorer.computeFolderSize(user.flowsDir),
+            "usedSpace": FileExplorer.computePathSize(user.flowsDir),
             "maxSpace": quotas["maxStorage"],
             "usedHours": sum([flow["time"] for flow in userFlows]),
             "maxHours": quotas["maxTime"],
@@ -571,7 +571,7 @@ class Database:
         # For so, check the actual size of the folder instead
         # of the DB data
         if quotas["maxStorage"] is not None:
-            if FileExplorer.computeFolderSize(user.flowsDir) >= quotas["maxStorage"]:
+            if FileExplorer.computePathSize(user.flowsDir) >= quotas["maxStorage"]:
                 return True
 
         # If the user has reached the maximum time

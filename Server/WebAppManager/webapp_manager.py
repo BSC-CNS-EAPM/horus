@@ -435,7 +435,7 @@ class FileManagement:
 
     def __init__(self, rawFileManager: dict[str, Any]) -> None:
         self.allowUpload = rawFileManager.get("allowUpload", False)
-        self.maxUploadSize = rawFileManager.get("maxUploadSize", False)
+        self.maxUploadSize = rawFileManager.get("maxUploadSize", 2)
         self.allowDownload = rawFileManager.get("allowDownload", False)
         self.allowDelete = rawFileManager.get("allowDelete", False)
         self.allowNewFolder = rawFileManager.get("allowNewFolder", False)

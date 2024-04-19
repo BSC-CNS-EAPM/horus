@@ -197,8 +197,10 @@ function FlowSize({ size }: { size: number | undefined; status: FlowStatus }) {
     // The size are MB, but if higher than 1000, then it's GB
     if (size > 1000) {
       return <div>{(size / 1000).toFixed(2)} GB</div>;
+    } else if (size < 1) {
+      return <div>{(size * 1000).toFixed(2)} KB</div>;
     } else {
-      return <div>{size ?? 0} MB</div>;
+      return <div>{size.toFixed(2) ?? 0} MB</div>;
     }
   }
 
