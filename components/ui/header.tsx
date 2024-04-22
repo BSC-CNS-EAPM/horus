@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 
 import Link from "next/link";
-import { HorusLogo, BSCLogo } from "./logo";
+import { HorusLogo, BSCLogo, EAPMLogo } from "./logo";
 import Dropdown from "@/components/utils/dropdown";
 import MobileMenu from "./mobile-menu";
 
@@ -34,8 +34,10 @@ export default function Header() {
           <h1 className="absolute mx-auto w-full text-center text-2xl font-bold">
             Horus
           </h1>
-          <BSCLogo />
-          <MobileMenu />
+          <div className="flex flex-row gap-4 items-center justify-center">
+            <EAPMLogo />
+            <BSCLogo />
+          </div>
         </div>
       </div>
     </header>
