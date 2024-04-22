@@ -80,11 +80,14 @@ class HorusLogger:
         """
         # If there are more than 5 logs inside the logs folder,
         # delete the oldest one
-        logs = os.listdir(self.logDir)
-        if len(logs) > 5:
-            logs = [os.path.join(self.logDir, log) for log in logs]
-            oldestLog = min(logs, key=os.path.getctime)
-            os.remove(os.path.join(self.logDir, oldestLog))
+        try:
+            logs = os.listdir(self.logDir)
+            if len(logs) > 5:
+                logs = [os.path.join(self.logDir, log) for log in logs]
+                oldestLog = min(logs, key=os.path.getctime)
+                os.remove(os.path.join(self.logDir, oldestLog))
+        except Exception as exc:
+            logging.getLogger("Horus").error("Could not clean oldest log files: %s", str(exc))
 
     def _initLogger(self):
         """
