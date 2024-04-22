@@ -30,7 +30,8 @@ export default function FeaturesBlocks() {
           {/* Items */}
           <div className="max-w-sm mx-auto grid gap-6 md:grid-cols-2 lg:grid-cols-4 items-start md:max-w-2xl lg:max-w-none">
             {/* 1st item */}
-            <div className="border border-primary relative flex flex-col items-center p-6 bg-white rounded shadow-xl hover:scale-110 transition-all duration-500 cursor-pointer ">
+            <a className="border border-primary relative flex flex-col items-center p-6 bg-white rounded shadow-xl hover:scale-110 transition-all duration-500 cursor-pointer "
+              href="https://www.bsc.es/research-and-development/software-and-apps/software-list/horus/downloads">
               <Image src={AppleLogo} height={50} width={50} alt="macos" />
               <h4 className="text-xl font-bold leading-snug tracking-tight mb-1">
                 macOS Intel
@@ -38,10 +39,12 @@ export default function FeaturesBlocks() {
               <p className="text-gray-600 text-center">
                 Download Horus for Intel Macs
               </p>
-            </div>
+            </a>
 
             {/* 2nd item */}
-            <div className="border border-primary relative flex flex-col items-center p-6 bg-white rounded shadow-xl hover:scale-110 transition-all duration-500 cursor-pointer">
+            <a className="border border-primary relative flex flex-col items-center p-6 bg-white rounded shadow-xl hover:scale-110 transition-all duration-500 cursor-pointer"
+              href="https://www.bsc.es/research-and-development/software-and-apps/software-list/horus/downloads">
+
               <Image src={AppleLogo} height={50} width={50} alt="macos" />
               <h4 className="text-xl font-bold leading-snug tracking-tight mb-1">
                 macOS Apple Silicon
@@ -49,10 +52,12 @@ export default function FeaturesBlocks() {
               <p className="text-gray-600 text-center">
                 Download Horus for Apple Silicon Macs
               </p>
-            </div>
+            </a>
 
             {/* 3rd item */}
-            <div className="border border-primary relative flex flex-col items-center p-6 bg-white rounded shadow-xl hover:scale-110 transition-all duration-500 cursor-pointer">
+            <a className="border border-primary relative flex flex-col items-center p-6 bg-white rounded shadow-xl hover:scale-110 transition-all duration-500 cursor-pointer"
+              href="https://www.bsc.es/research-and-development/software-and-apps/software-list/horus/downloads">
+
               <Image src={UbuntuLogo} height={60} width={60} alt="ubuntu" />
               <h4 className="text-xl font-bold leading-snug tracking-tight mb-1">
                 Ubuntu 22.04
@@ -60,10 +65,12 @@ export default function FeaturesBlocks() {
               <p className="text-gray-600 text-center">
                 Download Horus for Ubuntu 22.04
               </p>
-            </div>
+            </a>
 
             {/* 4th item */}
-            <div className="border border-primary relative flex flex-col items-center p-6 bg-white rounded shadow-xl hover:scale-110 transition-all duration-500 cursor-pointer">
+            <a className="border border-primary relative flex flex-col items-center p-6 bg-white rounded shadow-xl hover:scale-110 transition-all duration-500 cursor-pointer"
+              href="https://www.bsc.es/research-and-development/software-and-apps/software-list/horus/downloads">
+
               <Image src={LinuxLogo} height={50} width={50} alt="linux" />
               <h4 className="text-xl font-bold leading-snug tracking-tight mb-1">
                 Linux universal
@@ -71,7 +78,7 @@ export default function FeaturesBlocks() {
               <p className="text-gray-600 text-center">
                 Download Horus for general Linux
               </p>
-            </div>
+            </a>
           </div>
         </div>
       </div>
