@@ -1150,9 +1150,13 @@ class Flow:
                 self.socket.emit("printTerm", message, to=self.savedID)
 
             self.terminalOutput.append(message)
+
             # Prevent printing flow prints to the terminal in roder to not
-            # saturate the terminal on WebAppMode
-            # super().write(message)
+            # saturate the terminal on WebAppMode (only in not debug mode)
+            from App import AppDelegate
+
+            if AppDelegate().debug:
+                super().write(message)
 
 
 class FlowManager:
