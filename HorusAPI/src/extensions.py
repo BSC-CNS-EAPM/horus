@@ -186,7 +186,7 @@ class Extensions(metaclass=SingletonMeta):
         """
 
         # Use formatted text
-        text = f"<pre>{text}</pre>"
+        text = "<pre>{}</pre>".format(text)
 
         if self._flow is None:
             raise Exception("Could not run the ExtensionsAPI. No flow is currently running")
