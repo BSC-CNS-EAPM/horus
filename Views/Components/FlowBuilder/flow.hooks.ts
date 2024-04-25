@@ -424,7 +424,7 @@ export function useFlowBuilder() {
   const serverPickerFlow = useCallback(() => {
     return {
       openFolder: false,
-      allowedExtensions: ["flow"],
+      allowedExtensions: [".flow"],
       onFileSelect: () => {},
       onFileConfirm: (path: string) => {
         setServerFilePickerOpen(false);

@@ -204,7 +204,11 @@ class FileExplorer:
                 continue
 
             # Skip files that are not part of the allowedExtensions
-            if allowedExtensions is not None and not "".join(file.suffixes) in allowedExtensions:
+            if (
+                allowedExtensions is not None
+                and not "".join(file.suffixes) in allowedExtensions
+                and not file.is_dir()
+            ):
                 continue
 
             # Initialize and append a file
