@@ -65,7 +65,7 @@ def test_plugins_deps_dir_creation(mocker):
     # Mock os.path and sys._MEIPASS
     mocker.patch("os.path.join", side_effect=lambda *args: "/".join(args))
     mocker.patch("os.path.exists", side_effect=lambda x: False)  # Mock directory not existing
-    mocker.patch("os.mkdir")  # Mock the os.mkdir function
+    mocker.patch("os.makedirs")  # Mock the os.mkdir function
 
     # Call the _pluginsDepsDir method
     pluginManager._pluginsDepsDir()
@@ -74,9 +74,9 @@ def test_plugins_deps_dir_creation(mocker):
     assert pluginManager.defaultPluginsDir == "/path/to/app_support/DefaultPlugins"
     assert pluginManager.pluginsDir == "/path/to/app_support/Plugins"
 
-    os.mkdir.assert_has_calls(
+    os.makedirs.assert_has_calls(
         [
-            mocker.call("/path/to/app_support/Plugins"),
+            mocker.call("/path/to/app_support/Plugins", exist_ok=True),
         ]
     )
 
