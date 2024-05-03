@@ -108,10 +108,13 @@ class PluginManager(metaclass=HorusSingleton):
             # We are not in a bundle, use the AppSupport/DefaultPlugins directory
             self.defaultPluginsDir = os.path.join(self.appSupportDir, "DefaultPlugins")
 
+        if not os.path.exists(self.defaultPluginsDir):
+            os.makedirs(self.defaultPluginsDir, exist_ok=True)
+
         # Defines the plugins directory, which should be in the AppSupport directory
         self.pluginsDir = os.path.join(self.appSupportDir, "Plugins")
         if not os.path.exists(self.pluginsDir):
-            os.mkdir(self.pluginsDir)
+            os.makedirs(self.pluginsDir, exist_ok=True)
 
         # Defines the dependencies directory, which should
         # be in the AppSupport directory

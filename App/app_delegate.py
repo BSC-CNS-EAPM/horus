@@ -579,6 +579,10 @@ class AppDelegate(metaclass=HorusSingleton):
             # (Development)
             appSupportDir = os.path.join("AppSupport")
 
+        # If a specific AppSupport directory was specified as an environment variable, use that instead
+        if os.getenv("HORUS_APP_SUPPORT_DIR") is not None:
+            appSupportDir = str(os.getenv("HORUS_APP_SUPPORT_DIR"))
+
         appSupportDir = os.path.abspath(appSupportDir)
 
         if not os.path.exists(appSupportDir):

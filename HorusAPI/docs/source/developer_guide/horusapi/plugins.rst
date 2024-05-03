@@ -173,6 +173,15 @@ run the following command in your terminal:
         # macOS
         /Users/<username>/Library/Application\ Support/com.bsc.horus/Plugins/MyPlugin/main.py
 
+.. note::
+
+    You can also modify the AppSupport directory of an Horus instance by setting the environment variable HORUS_APP_SUPPORT_DIR.
+    
+    .. code-block:: bash
+
+        export HORUS_APP_SUPPORT_DIR="/my/app/support/dir/folder"
+
+
 Distributing plugins
 ====================
 
