@@ -42,7 +42,7 @@ if [ -f "/etc/debian_version" ]
 elif [ -f "/etc/redhat-release" ]
   then
 
-    osName=$(cat /etc/os-release | grep "ID" | awk -F'=' '{print $2}')
+    osName=$(cat /etc/os-release | grep "^ID=" | awk -F'=' '{print $2}' | tr -d '"')
 
     if [ $osName = "rocky" ]
     then
