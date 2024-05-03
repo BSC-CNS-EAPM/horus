@@ -4,11 +4,6 @@ from HorusAPI import Plugin
 def createPlugin():
     plugin = Plugin(id="horus")
 
-    from Blocks.Structure import strucBlock  # type: ignore
-
-    # Add the structure to the plugin
-    plugin.addBlock(strucBlock)
-
     from Blocks.Smiles import smilesBlock  # type: ignore
 
     # Add the smiles block to the plugin
@@ -24,10 +19,11 @@ def createPlugin():
     # Add the folder block to the plugin
     plugin.addBlock(folderBlock)
 
-    from Blocks.AddPDB import addPDBBlock  # type: ignore
+    # Add the addMolecule block to plugin
+    from Blocks.AddMolecule import addMoleculeBlock  # type: ignore
 
     # Add the addPDB block to the plugin
-    plugin.addBlock(addPDBBlock)
+    plugin.addBlock(addMoleculeBlock)
 
     from Blocks.GetPDB import getPDBBlock  # type: ignore
 
@@ -88,6 +84,18 @@ def createPlugin():
 
     # Add the print block to the plugin
     plugin.addBlock(textAreaBlock)
+
+    from Blocks.Structure_MultipleStructure import strucBlock, multStrucBlock  # type: ignore
+
+    # Add the Structure block to the plugin
+    plugin.addBlock(strucBlock)
+
+    # Add the multipleStructure block to the plugin
+    plugin.addBlock(multStrucBlock)
+
+    from Blocks.Box import boxBlock  # type: ignore
+
+    plugin.addBlock(boxBlock)
 
     # Add the "Page loader" extension
     from Extensions.PageLoader import htmlLoader  # type: ignore

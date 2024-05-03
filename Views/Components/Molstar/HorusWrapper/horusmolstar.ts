@@ -1,88 +1,115 @@
-/**
- * Copyright (c) 2019 mol* contributors, licensed under MIT, See LICENSE file for more info.
- *
- * @author David Sehnal <david.sehnal@gmail.com>
- */
-
-import * as ReactDOM from "react-dom";
-import {
-  Canvas3DProps,
-  DefaultCanvas3DParams,
-} from "molstar/lib/mol-canvas3d/canvas3d";
+// Mol* imports
 import { AnimateModelIndex } from "molstar/lib/mol-plugin-state/animation/built-in/model-index";
 import { createStructureRepresentationParams } from "molstar/lib/mol-plugin-state/helpers/structure-representation-params";
-import {
-  PluginStateObject,
-  PluginStateObject as PSO,
-} from "molstar/lib/mol-plugin-state/objects";
+import { PluginStateObject } from "molstar/lib/mol-plugin-state/objects";
 import { StateTransforms } from "molstar/lib/mol-plugin-state/transforms";
 import { createPluginUI } from "molstar/lib/mol-plugin-ui/react18";
 import { PluginUIContext } from "molstar/lib/mol-plugin-ui/context";
 import { DefaultPluginUISpec } from "molstar/lib/mol-plugin-ui/spec";
-import {
-  CreateVolumeStreamingInfo,
-  InitVolumeStreaming,
-} from "molstar/lib/mol-plugin/behavior/dynamic/volume-streaming/transformers";
+import { OpenFiles } from "molstar/lib/mol-plugin-state/actions/file";
 import { PluginCommands } from "molstar/lib/mol-plugin/commands";
 import { MolScriptBuilder as MS } from "molstar/lib/mol-script/language/builder";
-import {
-  StateBuilder,
-  StateObject,
-  StateSelection,
-} from "molstar/lib/mol-state";
 import { Asset } from "molstar/lib/mol-util/assets";
 import { Color } from "molstar/lib/mol-util/color";
 import { ColorNames } from "molstar/lib/mol-util/color/names";
-import { RxEventHelper } from "molstar/lib/mol-util/rx-event-helper";
-import { EvolutionaryConservation } from "./annotation";
 import { PluginConfig } from "molstar/lib/mol-plugin/config";
-import {
-  LoadParams,
-  ModelInfo,
-  RepresentationStyle,
-  StateElements,
-  SupportedFormats,
-} from "./helpers";
-import { volumeStreamingControls } from "./ui/controls";
 import { Script } from "molstar/lib/mol-script/script";
 import { StructureSelection } from "molstar/lib/mol-model/structure/query";
 import {
   Structure,
   StructureElement,
   StructureProperties,
-  to_mmCIF,
+  Unit,
 } from "molstar/lib/mol-model/structure";
 import { Loci } from "molstar/lib/mol-model/structure/structure/element/loci";
 import { addSphereTo } from "./sphere";
 import { DockingSphereRepresentationProvider } from "./sphere";
+import { addBoxTo } from "./box";
+import { DockingBoxRepresentationProvider } from "./box";
+import { ObjectKeys } from "molstar/lib/mol-util/type-helpers";
+import { PluginSpec } from "molstar/lib/mol-plugin/spec";
+import { StructureRef } from "molstar/lib/mol-plugin-state/manager/structure/hierarchy-state";
+import { Vec3 } from "molstar/lib/mol-math/linear-algebra";
 
 // Import the molviewspec library
 import { loadMVS } from "molstar/lib/extensions/mvs/load";
 import { MVSData } from "molstar/lib/extensions/mvs/mvs-data";
 import { MolViewSpec } from "molstar/lib/extensions/mvs/behavior";
-import { ObjectKeys } from "molstar/lib/mol-util/type-helpers";
-import { PluginSpec } from "molstar/lib/mol-plugin/spec";
-import { StructureRef } from "molstar/lib/mol-plugin-state/manager/structure/hierarchy-state";
+import { StateObjectSelector } from "molstar/lib/mol-state";
+import { BuiltInTrajectoryFormats } from "molstar/lib/mol-plugin-state/formats/trajectory";
 
-class HorusMolstar {
-  static VERSION_MAJOR = 5;
-  static VERSION_MINOR = 5;
+// Definition of useful types
+export type AtomInfo = {
+  name: string;
+  residue: number;
+  chainID: string;
+  atom_index: number;
+  auth_comp_id: string;
+  auth_atom_id: string;
+  type: string;
+  x: number;
+  y: number;
+  z: number;
+  label: string;
+  structureID?: string;
+};
 
-  private _ev = RxEventHelper.create();
+export type MolInfo = {
+  id: string;
+  label: string;
+  fileContents: string;
+  fileName: string;
+  format: string;
+};
 
-  readonly events = {
-    modelInfo: this._ev<ModelInfo>(),
-  };
+export type MolstarClickEventDetail = {
+  x: number;
+  y: number;
+  z: number;
+  atom: AtomInfo | null;
+};
 
-  // @ts-ignore
-  plugin: PluginUIContext;
+export type MolstarStateEventDetail = {
+  updating: boolean;
+};
 
-  // @ts-ignore
+export enum StateElements {
+  root = "-=root=-",
+
+  Model = "model",
+  ModelProps = "model-props",
+  Assembly = "assembly",
+
+  VolumeStreaming = "volume-streaming",
+
+  Sequence = "sequence",
+  SequenceVisual = "sequence-visual",
+  Het = "het",
+  HetVisual = "het-visual",
+  Het3DSNFG = "het-3dsnfg",
+  Water = "water",
+  WaterVisual = "water-visual",
+
+  HetGroupFocus = "het-group-focus",
+  HetGroupFocusGroup = "het-group-focus-group",
+
+  Selection = "selection",
+  SelectionGroup = "selection-group",
+}
+
+// Mol* events
+export enum MolstarEvents {
+  COORDINATES = "molstar-coordinates",
+  STATE = "molstar-state-event",
+}
+
+export default class HorusMolstar {
+  plugin: PluginUIContext | null = null;
   target: HTMLDivElement;
 
-  async init(target: HTMLDivElement) {
+  constructor(target: HTMLDivElement) {
     this.target = target;
-    await this.initPlugin();
+    this.initPlugin();
   }
 
   private async initPlugin() {
@@ -117,8 +144,7 @@ class HorusMolstar {
     const renderer = this.plugin?.canvas3d?.props?.renderer;
 
     if (!renderer) {
-      alert("Failed to load Mol*");
-      return;
+      throw new Error("Failed to initialize Mol*. Is WebGL available?");
     }
 
     PluginCommands.Canvas3D.SetSettings(this.plugin, {
@@ -133,725 +159,596 @@ class HorusMolstar {
     this.plugin.representation.structure.registry.add(
       DockingSphereRepresentationProvider
     );
+    this.plugin.representation.structure.registry.add(
+      DockingBoxRepresentationProvider
+    );
     this.plugin.behaviors.layout.leftPanelTabName.next("data");
 
-    // Add the coordinates event listener
-    this.coordinatesListener();
+    // Add the molstar events
+    this.molstarEvents();
   }
 
-  private coordinatesListener() {
-    this.plugin.behaviors.interaction.click.subscribe((e) => {
-      if (e.position != undefined) {
-        const x = e.position[0].toFixed(1);
-        const y = e.position[1].toFixed(1);
-        const z = e.position[2].toFixed(1);
+  private molstarEvents() {
+    this.plugin!.behaviors.interaction.click.subscribe((e) => {
+      // Get the position of the click
+      if (e.position) {
+        const x: number = Number(e.position[0]?.toFixed(1) ?? 0);
+        const y: number = Number(e.position[1]?.toFixed(1) ?? 0);
+        const z: number = Number(e.position[2]?.toFixed(1) ?? 0);
 
-        const detail = {
+        const detail: MolstarClickEventDetail = {
           x: Number(x),
           y: Number(y),
           z: Number(z),
+          // If the item we clicked can be interacted, extract its information
+          atom: StructureElement.Loci.is(e.current.loci)
+            ? this.extractAtomInfoFromLoci(e.current.loci)
+            : null,
         };
 
-        if (StructureElement.Loci.is(e.current.loci)) {
-          const loc = StructureElement.Location.create();
-          StructureElement.Loci.getFirstLocation(e.current.loci, loc);
-          // auth_seq_id  : UniProt coordinate space
-          // label_seq_id : PDB coordinate space
-          const resID = StructureProperties.residue.label_seq_id(loc);
-          const sourceIndex = StructureProperties.atom.sourceIndex(loc);
-          const auth_comp_id = StructureProperties.atom.auth_comp_id(loc);
-          const auth_atom_id = StructureProperties.atom.auth_atom_id(loc);
-          const chainID = StructureProperties.chain.label_asym_id(loc);
-          const type = StructureProperties.atom.type_symbol(loc);
-          const x = StructureProperties.atom.x(loc);
-          const y = StructureProperties.atom.y(loc);
-          const z = StructureProperties.atom.z(loc);
-
-          let molInfo = this.extractFromLoci(e.current.loci);
-
-          molInfo = {
-            ...molInfo,
-            structure: molInfo.name,
-          };
-
-          const atomInfo = {
-            name: `${auth_comp_id}:${resID} - ${molInfo.name}`,
-            residue: resID,
-            chainID: chainID,
-            atom_index: sourceIndex,
-            auth_comp_id: auth_comp_id,
-            auth_atom_id: auth_atom_id,
-            type: type,
-            x: x,
-            y: y,
-            z: z,
-            structure_label: molInfo.name,
-            structure: molInfo,
-          };
-          detail["atom"] = atomInfo;
-        }
-
         // Send the values through a custom event "molstar-coordinates"
-        const event = new CustomEvent("molstar-coordinates", {
+        const event = new CustomEvent(MolstarEvents.COORDINATES, {
           detail: detail,
         });
 
         window.dispatchEvent(event);
       }
-      e = undefined;
+    });
+
+    this.plugin!.behaviors.state.isUpdating.subscribe((e) => {
+      // Send the values through a custom event "molstar-state-event"
+
+      const detail: MolstarStateEventDetail = {
+        updating: e,
+      };
+
+      const event = new CustomEvent(MolstarEvents.STATE, {
+        detail: detail,
+      });
+      window.dispatchEvent(event);
     });
   }
 
-  latestSnapshot: any;
+  /**
+   * A temporary storage for a snapshot of the current state of the view.
+   *
+   * This is used to save the state before redisposing or unloading the 3D canvas,
+   * allowing the state to be restored later if needed.
+   *
+   * @type {Blobl | null}
+   */
+  private latestSnapshot: Blob | null = null;
 
-  // Reset molstar to a new state
-  async reset() {
+  /**
+   * Resets the plugin to its initial state.
+   *
+   * This method initializes the plugin again, effectively resetting it to
+   * a clean state. This can be useful when you need to start fresh or clear
+   * all existing data.
+   *
+   * @throws {Error} If the plugin initialization fails.
+   */
+  public async reset() {
     await this.initPlugin();
   }
 
-  // Method to unload the 3D canvas
-  async unload() {
+  /**
+   * Unloads the current 3D canvas and saves a temporary snapshot of the state.
+   *
+   * This method saves the current state in `latestSnapshot` before disposing
+   * of the plugin, allowing you to restore it later if needed. It then disposes
+   * of the plugin to free up resources. You can reload this istate using the refresh() method
+   *
+   * @returns {Promise<void>} A promise that resolves when the operation is complete.
+   * @throws {Error} If there's an issue with disposing of the plugin or saving the snapshot.
+   */
+  public async unloadWithState() {
     // Save the state
     this.latestSnapshot = await this.snapshot.get();
 
+    if (!this.plugin) {
+      throw new Error("Plugin is not initialized");
+    }
+
     // Remove the plugin
-    this.plugin?.dispose();
+    this.plugin.dispose();
   }
 
-  async redispose() {
+  /**
+   * Refreshes the view by re-initializing the plugin and restoring the state.
+   *
+   * This method is useful when you need to reset the 3D canvas but then
+   * restore it to a previous state. It re-initializes the plugin and sets
+   * the state to the latest snapshot stored in `latestSnapshot`.
+   *
+   * @returns {Promise<void>} A promise that resolves when the re-initialization
+   *                          and state restoration are complete.
+   * @throws {Error} If there's an issue with initializing the plugin or restoring the snapshot.
+   */
+  public async refresh() {
     // Init the plugin
     await this.initPlugin();
 
     // Load the state
-    this.snapshot.set(this.latestSnapshot);
+    this.latestSnapshot && this.snapshot.set(this.latestSnapshot);
   }
 
+  /**
+   * Retrieves the current state of the plugin.
+   *
+   * @returns {any} The current state data of the plugin. The exact structure
+   *                of the state depends on the implementation of the `plugin`.
+   *                This could be an object, an array, or any other data type.
+   *
+   * @throws {Error} If `plugin` is undefined or if there's an issue accessing
+   *                 the state data.
+   */
   get state() {
+    if (!this.plugin) {
+      throw new Error("Plugin is not initialized");
+    }
     return this.plugin.state.data;
   }
 
-  private download(
-    b: StateBuilder.To<PSO.Root>,
-    url: string,
-    isBinary: boolean
-  ) {
-    return b.apply(StateTransforms.Data.Download, {
-      url: Asset.Url(url),
-      isBinary,
-    });
-  }
-
-  private model(
-    b: StateBuilder.To<PSO.Data.Binary | PSO.Data.String>,
-    format: SupportedFormats
-  ) {
-    const parsed =
-      format === "cif"
-        ? b
-            .apply(StateTransforms.Data.ParseCif)
-            .apply(StateTransforms.Model.TrajectoryFromMmCif)
-        : b.apply(StateTransforms.Model.TrajectoryFromPDB);
-
-    return parsed.apply(
-      StateTransforms.Model.ModelFromTrajectory,
-      { modelIndex: 0 },
-      { ref: StateElements.Model }
-    );
-  }
-
-  private structure(assemblyId: string) {
-    const model = this.state.build().to(StateElements.Model);
-    const props = {
-      type: assemblyId
-        ? {
-            name: "assembly" as const,
-            params: { id: assemblyId },
-          }
-        : {
-            name: "model" as const,
-            params: {},
-          },
-    };
-
-    const s = model.apply(StateTransforms.Model.StructureFromModel, props, {
-      ref: StateElements.Assembly,
-    });
-
-    s.apply(
-      StateTransforms.Model.StructureComplexElement,
-      { type: "atomic-sequence" },
-      { ref: StateElements.Sequence }
-    );
-    s.apply(
-      StateTransforms.Model.StructureComplexElement,
-      { type: "atomic-het" },
-      { ref: StateElements.Het }
-    );
-    s.apply(
-      StateTransforms.Model.StructureComplexElement,
-      { type: "water" },
-      { ref: StateElements.Water }
-    );
-
-    return s;
-  }
-
-  private visual(_style?: RepresentationStyle, partial?: boolean) {
-    const structure = this.getObj<PluginStateObject.Molecule.Structure>(
-      StateElements.Assembly
-    );
-    if (!structure) return;
-
-    const style = _style || {};
-
-    const update = this.state.build();
-
-    if (!partial || (partial && style.sequence)) {
-      const root = update.to(StateElements.Sequence);
-      if (style.sequence && style.sequence.hide) {
-        root.delete(StateElements.SequenceVisual);
-      } else {
-        root.applyOrUpdate(
-          StateElements.SequenceVisual,
-          StateTransforms.Representation.StructureRepresentation3D,
-          createStructureRepresentationParams(this.plugin, structure, {
-            type: (style.sequence && style.sequence.kind) || "cartoon",
-            color: (style.sequence && style.sequence.coloring) || "unit-index",
-          })
-        );
-      }
-    }
-
-    if (!partial || (partial && style.hetGroups)) {
-      const root = update.to(StateElements.Het);
-      if (style.hetGroups && style.hetGroups.hide) {
-        root.delete(StateElements.HetVisual);
-      } else {
-        if (style.hetGroups && style.hetGroups.hide) {
-          root.delete(StateElements.HetVisual);
-        } else {
-          root.applyOrUpdate(
-            StateElements.HetVisual,
-            StateTransforms.Representation.StructureRepresentation3D,
-            createStructureRepresentationParams(this.plugin, structure, {
-              type:
-                (style.hetGroups && style.hetGroups.kind) || "ball-and-stick",
-              // color: style.hetGroups && style.hetGroups.coloring,
-            })
-          );
-        }
-      }
-    }
-
-    if (!partial || (partial && style.snfg3d)) {
-      const root = update.to(StateElements.Het);
-      if (style.hetGroups && style.hetGroups.hide) {
-        root.delete(StateElements.HetVisual);
-      } else {
-        if (style.snfg3d && style.snfg3d.hide) {
-          root.delete(StateElements.Het3DSNFG);
-        } else {
-          root.applyOrUpdate(
-            StateElements.Het3DSNFG,
-            StateTransforms.Representation.StructureRepresentation3D,
-            createStructureRepresentationParams(this.plugin, structure, {
-              type: "carbohydrate",
-            })
-          );
-        }
-      }
-    }
-
-    if (!partial || (partial && style.water)) {
-      const root = update.to(StateElements.Water);
-      if (style.water && style.water.hide) {
-        root.delete(StateElements.WaterVisual);
-      } else {
-        root.applyOrUpdate(
-          StateElements.WaterVisual,
-          StateTransforms.Representation.StructureRepresentation3D,
-          createStructureRepresentationParams(this.plugin, structure, {
-            type: (style.water && style.water.kind) || "ball-and-stick",
-            typeParams: { alpha: 0.51 },
-            // color: style.water && style.water.coloring
-          })
-        );
-      }
-    }
-
-    return update;
-  }
-
-  private getObj<T extends StateObject>(ref: string): T["data"] {
-    const state = this.state;
-    const cell = state.select(ref)[0];
-    if (!cell || !cell.obj) return void 0;
-    return (cell.obj as T).data;
-  }
-
-  private async doInfo(checkPreferredAssembly: boolean) {
-    const model = this.getObj<PluginStateObject.Molecule.Model>("model");
-    if (!model) return;
-
-    const info = await ModelInfo.get(
-      this.plugin,
-      model,
-      checkPreferredAssembly
-    );
-    this.events.modelInfo.next(info);
-    return info;
-  }
-
-  private applyState(tree: StateBuilder) {
-    return PluginCommands.State.Update(this.plugin, {
-      state: this.plugin.state.data,
-      tree,
-    });
-  }
-
-  private emptyLoadedParams: LoadParams = {
-    url: "",
-    format: "cif",
-    isBinary: false,
-    assemblyId: "",
-  };
-  private loadedParams: LoadParams = {
-    url: "",
-    format: "cif",
-    isBinary: false,
-    assemblyId: "",
-  };
-  async load({
-    url,
-    format = "cif",
-    assemblyId = "",
-    isBinary = false,
-    representationStyle,
-  }: LoadParams) {
-    let loadType: "full" | "update" = "full";
-
-    const state = this.plugin.state.data;
-
-    if (this.loadedParams.url !== url || this.loadedParams.format !== format) {
-      loadType = "full";
-    } else if (this.loadedParams.url === url) {
-      if (state.select(StateElements.Assembly).length > 0) loadType = "update";
-    }
-
-    if (loadType === "full") {
-      await PluginCommands.State.RemoveObject(this.plugin, {
-        state,
-        ref: state.tree.root.ref,
-      });
-      const modelTree = this.model(
-        this.download(state.build().toRoot(), url, isBinary),
-        format
+  /**
+   * Sets the background color of the 3D canvas.
+   *
+   * This method updates the background color of the plugin's 3D canvas to a specified
+   * hexadecimal color. If the plugin or the canvas3d property is not defined, it
+   * does nothing.
+   *
+   * @param {string} hexColor The desired background color in hexadecimal format (e.g., "#FFFFFF").
+   *
+   * @returns {Promise<void>} A promise that resolves when the background color is set.
+   *
+   * @throws {Error} If an invalid hex color string is provided or if there is an error
+   *                 updating the 3D canvas settings.
+   */
+  public async setBackground(hexColor: string): Promise<void> {
+    if (!this.plugin?.canvas3d) {
+      throw new Error(
+        "3D canvas is not available. Cannot set background color."
       );
-      await this.applyState(modelTree);
-      const info = await this.doInfo(true);
-      const asmId =
-        (assemblyId === "preferred" && info && info.preferredAssemblyId) ||
-        assemblyId;
-      const structureTree = this.structure(asmId);
-      await this.applyState(structureTree);
-    } else {
-      const tree = state.build();
-      const info = await this.doInfo(true);
-      const asmId =
-        (assemblyId === "preferred" && info && info.preferredAssemblyId) ||
-        assemblyId;
-      const props = {
-        type: assemblyId
-          ? {
-              name: "assembly" as const,
-              params: { id: asmId },
-            }
-          : {
-              name: "model" as const,
-              params: {},
-            },
-      };
-      tree
-        .to(StateElements.Assembly)
-        .update(StateTransforms.Model.StructureFromModel, (p) => ({
-          ...p,
-          ...props,
-        }));
-      await this.applyState(tree);
     }
 
-    await this.updateStyle(representationStyle);
+    try {
+      const renderer = this.plugin.canvas3d.props.renderer;
 
-    this.loadedParams = { url, format, assemblyId };
-  }
-
-  async updateStyle(style?: RepresentationStyle, partial?: boolean) {
-    const tree = this.visual(style, partial);
-    if (!tree) return;
-    await PluginCommands.State.Update(this.plugin, {
-      state: this.plugin.state.data,
-      tree,
-    });
-  }
-
-  async setBackground(color: number) {
-    if (!this.plugin.canvas3d) return;
-    const renderer = this.plugin.canvas3d.props.renderer;
-    await PluginCommands.Canvas3D.SetSettings(this.plugin, {
-      settings: { renderer: { ...renderer, backgroundColor: Color(color) } },
-    });
-  }
-
-  async toggleSpin() {
-    if (!this.plugin.canvas3d) return;
-    const trackball = this.plugin.canvas3d.props.trackball;
-    await PluginCommands.Canvas3D.SetSettings(this.plugin, {
-      settings: {
-        trackball: {
-          ...trackball,
-          animate:
-            trackball.animate.name === "spin"
-              ? { name: "off", params: {} }
-              : { name: "spin", params: { speed: 1 } },
+      await PluginCommands.Canvas3D.SetSettings(this.plugin, {
+        settings: {
+          renderer: {
+            ...renderer,
+            backgroundColor: Color.fromHexStyle(hexColor),
+          },
         },
-      },
-    });
-  }
-
-  viewport = {
-    setSettings: (settings?: Canvas3DProps) => {
-      PluginCommands.Canvas3D.SetSettings(this.plugin, {
-        settings: settings || DefaultCanvas3DParams,
       });
-    },
-  };
-
-  camera = {
-    toggleSpin: () => this.toggleSpin(),
-    resetPosition: () => PluginCommands.Camera.Reset(this.plugin, {}),
-  };
-
-  private animateModelIndexTargetFps() {
-    return Math.max(1, this.animate.modelIndex.targetFps | 0);
-  }
-
-  animate = {
-    modelIndex: {
-      targetFps: 8,
-      onceForward: () => {
-        this.plugin.managers.animation.play(AnimateModelIndex, {
-          duration: {
-            name: "computed",
-            params: { targetFps: this.animateModelIndexTargetFps() },
-          },
-          mode: { name: "once", params: { direction: "forward" } },
-        });
-      },
-      onceBackward: () => {
-        this.plugin.managers.animation.play(AnimateModelIndex, {
-          duration: {
-            name: "computed",
-            params: { targetFps: this.animateModelIndexTargetFps() },
-          },
-          mode: { name: "once", params: { direction: "backward" } },
-        });
-      },
-      palindrome: () => {
-        this.plugin.managers.animation.play(AnimateModelIndex, {
-          duration: {
-            name: "computed",
-            params: { targetFps: this.animateModelIndexTargetFps() },
-          },
-          mode: { name: "palindrome", params: {} },
-        });
-      },
-      loop: () => {
-        this.plugin.managers.animation.play(AnimateModelIndex, {
-          duration: {
-            name: "computed",
-            params: { targetFps: this.animateModelIndexTargetFps() },
-          },
-          mode: { name: "loop", params: { direction: "forward" } },
-        });
-      },
-      stop: () => this.plugin.managers.animation.stop(),
-    },
-  };
-
-  coloring = {
-    evolutionaryConservation: async (params?: {
-      sequence?: boolean;
-      het?: boolean;
-      keepStyle?: boolean;
-    }) => {
-      if (!params || !params.keepStyle) {
-        await this.updateStyle({ sequence: { kind: "spacefill" } }, true);
-      }
-
-      const state = this.state;
-      const tree = state.build();
-      const colorTheme = {
-        name: EvolutionaryConservation.propertyProvider.descriptor.name,
-        params:
-          this.plugin.representation.structure.themes.colorThemeRegistry.get(
-            EvolutionaryConservation.propertyProvider.descriptor.name
-          ).defaultValues,
-      };
-
-      if (!params || !!params.sequence) {
-        tree
-          .to(StateElements.SequenceVisual)
-          .update(
-            StateTransforms.Representation.StructureRepresentation3D,
-            (old) => ({ ...old, colorTheme })
-          );
-      }
-      if (params && !!params.het) {
-        tree
-          .to(StateElements.HetVisual)
-          .update(
-            StateTransforms.Representation.StructureRepresentation3D,
-            (old) => ({ ...old, colorTheme })
-          );
-      }
-
-      await PluginCommands.State.Update(this.plugin, { state, tree });
-    },
-  };
-
-  private experimentalDataElement?: Element = void 0;
-  experimentalData = {
-    init: async (parent: Element) => {
-      const asm = this.state.select(StateElements.Assembly)[0].obj!;
-      const params = InitVolumeStreaming.createDefaultParams(asm, this.plugin);
-      params.options.behaviorRef = StateElements.VolumeStreaming;
-      params.defaultView = "box";
-      params.options.channelParams["fo-fc(+ve)"] = { wireframe: true };
-      params.options.channelParams["fo-fc(-ve)"] = { wireframe: true };
-      await this.plugin.runTask(
-        this.state.applyAction(
-          InitVolumeStreaming,
-          params,
-          StateElements.Assembly
-        )
+    } catch (error) {
+      throw new Error(
+        `Failed to set background color: ${
+          error instanceof Error ? error.message : String(error)
+        }`
       );
-      this.experimentalDataElement = parent;
-      volumeStreamingControls(this.plugin, parent);
-    },
-    remove: () => {
-      const r = this.state.select(
-        StateSelection.Generators.ofTransformer(CreateVolumeStreamingInfo)
-      )[0];
-      if (!r) return;
-      PluginCommands.State.RemoveObject(this.plugin, {
-        state: this.state,
-        ref: r.transform.ref,
+    }
+  }
+
+  /**
+   * Sets the spinning animation of the 3D canvas.
+   *
+   * If set to 0, the spin will be removed from the canvas
+   * For other numbers, it starts the spin animation with a default speed of 1.
+   * If the plugin or the canvas3d property is not defined, it does nothing.
+   *
+   * @param {number} [speed=1] The speed of the spin animation. Defaults to 1 if not provided.
+   *
+   * @returns {Promise<void>} A promise that resolves once the spin setting is set.
+   *
+   * @throws {Error} If there's an error setting the 3D canvas settings.
+   */
+  private async setSpin(speed: number = 1): Promise<void> {
+    if (!this.plugin?.canvas3d) {
+      throw new Error("3D canvas is not available. Cannot set spin.");
+    }
+
+    try {
+      const trackball = this.plugin.canvas3d.props.trackball;
+
+      const newAnimation =
+        speed === 0
+          ? { name: "off", params: {} }
+          : { name: "spin", params: { speed: speed } };
+
+      await PluginCommands.Canvas3D.SetSettings(this.plugin, {
+        settings: {
+          trackball: {
+            ...trackball,
+            // @ts-ignore
+            animate: newAnimation,
+          },
+        },
       });
-      if (this.experimentalDataElement) {
-        ReactDOM.unmountComponentAtNode(this.experimentalDataElement);
-        this.experimentalDataElement = void 0;
-      }
+    } catch (error) {
+      throw new Error(
+        `Failed to toggle spin: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
+  }
+
+  /**
+   * Public property to interact with camera operations.
+   */
+  public camera = {
+    /**
+     * Sets the spin on or off based on the speed parameter.
+     *
+     * @param {number} speed The speed of the spin animation.
+     *
+     * @returns {Promise<void>} A promise that resolves once the spin setting is applied.
+     */
+    setSpin: async (speed: number) => {
+      await this.setSpin(speed);
+    },
+
+    /**
+     * Resets the camera position to its default state.
+     *
+     * @returns {Promise<void>} A promise that resolves once the camera is reset.
+     */
+    resetPosition: async () => {
+      await PluginCommands.Camera.Reset(this.plugin!, {});
     },
   };
 
+  /**
+   * Serializes the current plugin session to a Blob in the "molx" format.
+   *
+   * This method erases previous session snapshots and creates a new session snapshot,
+   * serializing it to a Blob. The "molx" format is essentially a ZIP file that contains
+   * the state of the Mol* environment, including the canvas, camera, component manager,
+   * and other interactive elements.
+   *
+   * @returns {Promise<Blob>} A promise that resolves to a Blob representing the serialized session.
+   *
+   * @throws {Error} If there's an error during serialization or clearing snapshots.
+   */
   private async getSession(): Promise<Blob> {
-    // Erase previous session snapshots
-    this.plugin.managers.snapshot.clear();
+    if (!this.plugin) {
+      throw new Error("Plugin is not initialized. Cannot get session.");
+    }
 
-    const molxSession = await this.plugin.managers.snapshot.serialize({
-      type: "molx",
-      params: {
-        data: true,
-        componentManager: true,
-        canvas3d: true,
-        interactivity: true,
-        camera: true,
-      },
-    });
+    try {
+      // Erase previous session snapshots
+      this.plugin.managers.snapshot.clear();
 
-    // The molx format is basically a zip file
-    // but for storing the molstar state in the flow, we need to convert it to a string
-    // Therefore we will read the bytes of the zip file and convert it to a hex string
-    // const textSession = await blobToHex(molxSession);
+      // Serialize the current session to the "molx" format
+      const molxSession = await this.plugin.managers.snapshot.serialize({
+        type: "molx",
+        params: {
+          data: true,
+          componentManager: true,
+          canvas3d: true,
+          interactivity: true,
+          camera: true,
+        },
+      });
 
-    return molxSession;
+      // The molx format is a ZIP file that can store the Mol* state
+      // The Blob returned contains the serialized session in "molx" format
+      return molxSession;
+    } catch (error) {
+      throw new Error(
+        `Failed to get session: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
   }
 
-  private async legacySession(session) {
-    // If the session object is empty, return
-    if (Object.keys(session).length === 0) {
-      return;
-    }
+  /**
+   * Loads a session from a given input, either as a string or a Blob.
+   *
+   * @param session The session data to load. It can be a string representing a hex-encoded session
+   *                or a Blob representing a legacy session.
+   *
+   * @returns {Promise<void>} A promise that resolves when the session is loaded.
+   *
+   * @throws {Error} If an error occurs during session loading.
+   */
+  private async loadSession(session: string | Blob): Promise<void> {
+    try {
+      let file: File;
 
-    const assets = session["assets.json"];
-    const assetData = Object.create(null);
-
-    for (const [k, v] of Object.entries(session)) {
-      if (k === "session" || k === "assets.json") continue;
-      const name = k.substring(k.indexOf("/") + 1);
-      assetData[name] = v;
-    }
-
-    if (assets) {
-      for (const [id, asset] of assets) {
-        this.plugin.managers.asset.set(
-          asset,
-          new File([assetData[id]], asset.name)
-        );
+      if (typeof session === "string") {
+        // Convert the session string to a binary Blob
+        const b = hexToBlob(session);
+        file = new File([b], "session.molx", {
+          type: "application/zip",
+        });
+      } else {
+        // Treat it as a Blob for a legacy session
+        file = new File([session], "session.molx", {
+          type: "application/zip",
+        });
       }
-    }
 
-    const snapshot = session.session;
-    await this.plugin.managers.snapshot.setStateSnapshot(snapshot);
+      // Load the session
+      await PluginCommands.State.Snapshots.OpenFile(this.plugin!, { file });
+    } catch (error) {
+      throw new Error(
+        `Failed to load session: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
   }
 
-  private async loadSession(session) {
-    // If the session is an object instead of a string, load it as a legacy session
-    if (typeof session !== "string") {
-      this.legacySession(session);
-      return;
-    }
-
-    // Convert the session string to a binary zip file
-    // Create a new file
-    const blob = hexToBlob(session);
-
-    const file = new File([blob], "session.molx", {
-      type: "application/zip",
-    });
-
-    // Load the session
-    await PluginCommands.State.Snapshots.OpenFile(this.plugin, { file: file });
-  }
-
-  snapshot = {
-    get: async () => {
+  /**
+   * An object that provides methods for getting and setting session snapshots.
+   *
+   * This property allows you to retrieve the current session as a Blob and set
+   * a session from a string or Blob. It is useful for saving and loading Mol* sessions.
+   */
+  public snapshot = {
+    /**
+     * Gets the current session as a Blob.
+     *
+     * This method retrieves the current Mol* session as a Blob in "molx" format.
+     * It can be used to save the current state or to transfer it elsewhere for
+     * later use.
+     *
+     * @returns {Promise<Blob>} A promise that resolves with a Blob representing the serialized session.
+     *
+     * @throws {Error} If an error occurs while retrieving the session.
+     */
+    get: async (): Promise<Blob> => {
       return await this.getSession();
     },
-    set: async (snapshot: string) => {
+
+    /**
+     * Sets a session from a given string or Blob.
+     *
+     * This method loads a session from either a hex-encoded string or a Blob.
+     * It can be used to restore a previously saved session, allowing the user
+     * to return to a specific state in Mol*.
+     *
+     * @param {string | Blob} snapshot The session data to set, either as a string (binary hex encoded) or a Blob.
+     *
+     * @returns {Promise<void>} A promise that resolves when the session is loaded.
+     *
+     * @throws {Error} If an error occurs while loading the session.
+     */
+    set: async (snapshot: string | Blob): Promise<void> => {
       await this.loadSession(snapshot);
     },
   };
 
-  getStructureKeyFromLabel(structureLabel: string): string {
-    const structures = this.listStructures();
-    let structureKey = null;
-    structures.some((structure) => {
-      if (structure.name === structureLabel) {
-        structureKey = structure.id;
-        return true;
+  /**
+   * Retrieves a structure reference from a given model ID.
+   *
+   * This method searches through the list of structures to find one whose model
+   * has the specified ID. If a matching structure is found, it is returned.
+   * Otherwise, it returns `null`.
+   *
+   * @param {string} modelID The unique identifier of the model to find.
+   *
+   * @returns {StructureRef | null} The structure reference corresponding to the given model ID,
+   *                                or `null` if no matching structure is found.
+   *
+   * @throws {Error} If the `structures()` method or its return value is invalid.
+   */
+  private getStructureFromModelID(modelID: string): StructureRef | null {
+    try {
+      return (
+        this.structures().find((s) => s.model?.cell.obj?.data.id === modelID) ??
+        null
+      );
+    } catch (error) {
+      throw new Error(
+        `Failed to get structure from model ID '${modelID}': ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
+  }
+
+  /**
+   * Retrieves the structure ID (suitable for focusing) associated with a given structure reference.
+   *
+   * This method scans through all cells in the current state, looking for those
+   * with a "Structure" property whose object type matches "Structure". If a
+   * matching cell is found, its key is returned. If no matching cell is found,
+   * the method returns `null`.
+   *
+   * @param {StructureRef} structure The structure reference to find the associated model ID.
+   *
+   * @returns {string | null} The key corresponding to the first cell with a "Structure" property,
+   *                          or `null` if no matching cell is found.
+   *
+   * @throws {Error} If there's an error while accessing the state cells or their properties.
+   */
+  private getStructureIDFromStructureRef(
+    structure: StructureRef
+  ): string | null {
+    try {
+      // Find the first cell with a "Structure" type that matches the given structure reference
+      return (
+        Array.from(this.state.cells.entries()).find(([, value]) => {
+          return (
+            value.obj?.type?.name === "Structure" &&
+            value.sourceRef === structure.cell.sourceRef
+          );
+        })?.[0] ?? null
+      ); // Retrieve the key if found, otherwise return null
+    } catch (error) {
+      throw new Error(
+        `Error finding model ID from structure: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
+  }
+
+  /**
+   * Retrieves the first structure reference that matches the given label.
+   *
+   * This method searches through the list of structures to find the first structure
+   * whose cell object has a matching label. If multiple structures have the same label,
+   * this method may not return the one you expect. If no structure matches the given label,
+   * the method returns `null`.
+   *
+   * @param {string} structureLabel The label to search for.
+   * @param {boolean} [first=true] Wether to find the first or the latest structure
+   *
+   * @returns {StructureRef | null} The first structure reference that matches the given label,
+   *                                or `null` if no matching structure is found.
+   *
+   * @throws {Error} If there's an error while accessing the structures or their properties.
+   */
+  private getStructureObjectFromLabel(
+    structureLabel: string,
+    first: boolean = true
+  ): StructureRef | null {
+    try {
+      const structures = this.structures();
+
+      if (!first) {
+        structures.reverse();
       }
-    });
 
-    return structureKey;
+      return (
+        structures.find(
+          (s) =>
+            this.getLabelFromStructureRef(s.cell.sourceRef!) === structureLabel
+        ) ?? null
+      );
+    } catch (error) {
+      throw new Error(
+        `Failed to get structure from label '${structureLabel}': ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
   }
 
-  // Find the first cell to have a "Structure" property cell.obj.type.name
-  findFirstCellKeyWithStructureProp(parentKey: string): string | null {
-    // From all the cells of the state, get the ones that have a "Structure" property
-    const cellsArray = Array.from(this.state.cells.entries());
-    let structureKey: null | string = null;
-    cellsArray.some((cell) => {
-      const [key, value] = cell;
-      if (value.obj.type.name === "Structure") {
-        if (value.sourceRef !== parentKey) {
-          return false;
-        } else {
-          structureKey = key;
-          return true;
-        }
-      }
-    });
-
-    return structureKey;
-  }
-
-  getStructureObjectFromLabel(structureLabel: string): StructureRef {
-    const structureKey = this.getStructureKeyFromLabel(structureLabel);
-    const structure = this.structures().filter(
-      (structure) => structure.cell.sourceRef === structureKey
-    )[0];
-
-    return structure;
-  }
-
-  async focus(
+  /**
+   * Focuses on a specified structure, residue, and chain within a 3D visualization environment.
+   *
+   * If no `structureLabel` is provided, the method focuses on the first structure available.
+   * If no `residueNumber` is specified, the entire structure is focused. If a specific `residueNumber`
+   * and `chain` are provided, the focus is centered on that particular residue within the given chain.
+   *
+   * @param {string} [structureLabel] The label of the structure to focus on. If not provided, the first available structure is used.
+   * @param {number} [residueNumber] The residue number to focus on. If not provided, the entire structure is focused.
+   * @param {string} [chain] The chain ID within the structure to focus on. If not provided, the first available chain is used.
+   * @param {number} [surroundRadius=0] The radius to focus around the specified residue. Defaults to 0.
+   *
+   * @returns {Promise<string>} A promise that resolves with a message describing the focus action taken.
+   *
+   * @throws {Error} If an unexpected error occurs during the focusing process.
+   */
+  public async focus(
     structureLabel?: string,
     residueNumber?: number,
     chain?: string,
     surroundRadius: number = 0
-  ) {
+  ): Promise<string> {
     let message = "";
 
-    // If no structure label is specified, focus the first structure
     const structures = this.listStructures();
+
+    // If no structure label is specified, focus on the first available structure
     if (!structureLabel) {
       if (structures.length === 0) {
         return "No structures loaded";
       }
-      structureLabel = structures[0].name;
-      message = "No structure specified, focusing " + structureLabel + ".";
+      structureLabel = structures[0]!.label;
+      message = `No structure specified, focusing on '${structureLabel}'.`;
     } else {
-      // Verify that the structure exists
-      const structureKey = this.getStructureKeyFromLabel(structureLabel);
-      if (structureKey === null) {
-        message = "No structure with label " + structureLabel + " found.";
-        const structureList = structures.map((structure) => structure.name);
-        message += " Available structures: " + structureList.join(", ");
+      // Validate the existence of the specified structure
+      const structureRef = this.getStructureObjectFromLabel(structureLabel);
+      if (!structureRef) {
+        message = `No structure with label '${structureLabel}' found.`;
+        const structureList = structures.map((s) => s.label);
+        message += ` Available structures: ${structureList.join(", ")}`;
         return message;
       }
     }
 
-    // Get the structure object from the structure label
-    const structureObject = this.getStructureObjectFromLabel(structureLabel);
+    const structureRef = this.getStructureObjectFromLabel(structureLabel);
 
-    // If no residue number is specified, just focus the structure
+    if (!structureRef) {
+      throw new Error(
+        `Could not find structure with label '${structureLabel}'`
+      );
+    }
+
+    // If no residue number is specified, focus on the entire structure
     if (!residueNumber) {
-      message += " No residue specified, focusing whole structure";
-      const sphere = structureObject.cell.obj.data.boundary.sphere;
-      const radius = Math.max(sphere.radius, 5);
-      const snapshot = this.plugin.canvas3d!.camera.getFocus(
-        sphere.center,
+      message += " No residue specified, focusing on the whole structure.";
+      const boundary = structureRef.cell.obj?.data.boundary.sphere ?? {
+        radius: 5,
+        center: Vec3.zero(),
+      };
+      const radius = Math.max(boundary.radius, 5);
+
+      const snapshot = this.plugin!.canvas3d!.camera.getFocus(
+        boundary.center,
         radius
       );
-      PluginCommands.Camera.SetSnapshot(this.plugin, {
+      await PluginCommands.Camera.SetSnapshot(this.plugin!, {
         snapshot,
         durationMs: 250,
       });
-    } else {
-      // Focus the residue
-      // If no chain was provided, use the first chain of the provided structure
-      const chains = this.listChains(structureLabel);
-      if (!chain) {
-        if (chains.length === 0) {
-          message += " No chains found in " + structureLabel;
-          return message;
-        }
 
-        chain = chains[0].chainID;
-        message += " Chain not specified, using '" + chain + "'.";
-      } else {
-        // Check if the chain exists
-        if (!chains.some((c) => c.chainID === chain)) {
-          message += " Chain " + chain + " not found in " + structureLabel;
-          message +=
-            " Available chains: " +
-            chains.map((chain) => `'${chain.chainID}'`).join(", ");
-          return message;
-        }
-      }
-
-      message += await this.focusSpecificResidue(
-        residueNumber,
-        structureObject,
-        chain,
-        surroundRadius
-      );
+      return message;
     }
+
+    // If a residue number is specified, focus on the specified chain and residue
+    const chains = this.listChains(structureLabel);
+    if (!chain) {
+      if (chains.length === 0) {
+        return `No chains found in structure '${structureLabel}'.`;
+      }
+      chain = chains[0]!.chainID;
+      message += ` Chain not specified, focusing on '${chain}'.`;
+    } else {
+      // Validate the existence of the specified chain
+      if (!chains.some((c) => c.chainID === chain)) {
+        message += ` Chain '${chain}' not found in structure '${structureLabel}'.`;
+        message += ` Available chains: ${chains
+          .map((c) => `'${c.chainID}'`)
+          .join(", ")}`;
+        return message;
+      }
+    }
+
+    message += await this.focusSpecificResidue(
+      residueNumber,
+      structureRef,
+      chain,
+      surroundRadius
+    );
 
     return message;
   }
 
+  /**
+   * Focuses on a specific residue within a given structure and chain in a 3D visualization.
+   *
+   * This method creates a selection of the specified residue within the provided structure
+   * and optionally focuses on the surrounding area based on the `surroundRadius`. If focusing
+   * on the residue fails, it defaults to focusing on the entire structure.
+   *
+   * @param {number} residueID The residue number to focus on.
+   * @param {StructureRef} structureObject The reference to the structure containing the residue.
+   * @param {string} chain The ID of the chain containing the residue.
+   * @param {number} [surroundRadius=0] The radius to include additional surrounding atoms.
+   *
+   * @returns {Promise<string>} A promise that resolves to a message indicating the focus action taken.
+   *
+   * @throws {Error} If an unexpected error occurs while building or updating the state.
+   */
   private async focusSpecificResidue(
     residueID: number,
     structureObject: StructureRef,
@@ -869,7 +766,7 @@ class HorusMolstar {
 
     // Get the residue from the provided resdiue number
     // We define a filter group. This will tell Mol* to filter the structure and only keep the residues that match the filter
-    const filterGroups = {
+    const filterGroups: any = {
       "residue-test": MS.core.rel.eq([
         MS.struct.atomProperty.macromolecular.auth_seq_id(),
         residueID,
@@ -894,15 +791,13 @@ class HorusMolstar {
     ]);
 
     // Select the model where we will place the new focus group
-    const modelKey = this.findFirstCellKeyWithStructureProp(
-      structureObject.cell.sourceRef
-    );
+    const modelKey = this.getStructureIDFromStructureRef(structureObject);
 
     if (!modelKey) {
       return " Internal error: No suitable model found";
     }
 
-    const model = this.state.select(modelKey)[0]
+    const model = this.state.select(modelKey)[0]!
       .obj as PluginStateObject.Molecule.Structure;
 
     // Now we will add, under the desired structure tree, a new model for the selection
@@ -929,7 +824,7 @@ class HorusMolstar {
     // We assing the ball-and-stick representation to the selection, so we can see the residue's atoms
     filteredResidueInner.apply(
       StateTransforms.Representation.StructureRepresentation3D,
-      createStructureRepresentationParams(this.plugin, model.data, {
+      createStructureRepresentationParams(this.plugin!, model.data, {
         type: "ball-and-stick",
       })
     );
@@ -951,7 +846,7 @@ class HorusMolstar {
         })
         .apply(
           StateTransforms.Representation.StructureRepresentation3D,
-          createStructureRepresentationParams(this.plugin, model.data, {
+          createStructureRepresentationParams(this.plugin!, model.data, {
             type: "ball-and-stick",
           })
         );
@@ -963,14 +858,14 @@ class HorusMolstar {
       // Now we will update the Mol* state to apply the changes we made
       // This will add to the state tree the new selection and the new representation
       // (basically everithing inside the 'update' object)
-      await PluginCommands.State.Update(this.plugin, {
+      await PluginCommands.State.Update(this.plugin!, {
         state: this.state,
         tree: update,
       });
 
       // Get the bounding sphere of the selection, this will be useful to center the camera
       boundingSphere = (
-        this.state.select(StateElements.SelectionGroup)[0]
+        this.state.select(StateElements.SelectionGroup)[0]!
           .obj as PluginStateObject.Molecule.Structure
       ).data.boundary.sphere;
     } catch {
@@ -987,7 +882,7 @@ class HorusMolstar {
       newUpdate.delete(StateElements.Selection);
 
       // Update the state
-      await PluginCommands.State.Update(this.plugin, {
+      await PluginCommands.State.Update(this.plugin!, {
         state: this.state,
         tree: newUpdate,
       });
@@ -1000,13 +895,13 @@ class HorusMolstar {
     // Now we will change the camera perspective to focus the bounding sphere, which happens to be
     // centered around the desired residue
     const radius = Math.max(boundingSphere.radius, 5);
-    const snapshot = this.plugin.canvas3d!.camera.getFocus(
+    const snapshot = this.plugin!.canvas3d!.camera.getFocus(
       boundingSphere.center,
       radius
     );
 
     // Finally, we will animate the camera to the new position
-    PluginCommands.Camera.SetSnapshot(this.plugin, {
+    PluginCommands.Camera.SetSnapshot(this.plugin!, {
       snapshot,
       durationMs: 250,
     });
@@ -1014,51 +909,121 @@ class HorusMolstar {
     return message;
   }
 
-  // Loaded PDBfiles in the form of a string
-  loadedPDBs: { [key: string]: string } = {};
+  /**
+   * Loads a molecule file into the plugin and applies default presets for visualization.
+   *
+   * This method reads the provided file, parses it as a molecule data asset, and applies
+   * default presets for visualization. It supports optional configuration options such as
+   * specifying a label for the loaded molecule.
+   *
+   * @param {File} file The molecule file to load.
+   * @param {object} [options] Additional configuration options.
+   * @param {string} [options.label] The label to assign to the loaded molecule.
+   *
+   * @returns {Promise<void>} A promise that resolves once the molecule file is loaded and presets are applied.
+   *
+   * @throws {Error} If an error occurs during file parsing or preset application, or if the plugin is not initialized.
+   */
+  public async loadMoleculeFile(
+    file: File,
+    options?: {
+      label?: string;
+    }
+  ): Promise<void> {
+    if (!this.plugin) {
+      throw new Error("Plugin is not initialized. Cannot load molecule file.");
+    }
 
-  async loadPDBString(pdbString, label) {
+    try {
+      const parseFileAsAsset = Asset.File(file);
+
+      const ext = file.name.split(".").pop();
+      const isAllowed = BuiltInTrajectoryFormats.find(
+        (format) => format[0] === ext
+      );
+
+      if (isAllowed) {
+        // Read the file and parse it as a molecule data asset
+        const data = await this.plugin.builders.data.readFile({
+          file: parseFileAsAsset,
+          label: options?.label ?? void 0,
+        });
+
+        // Parse the trajectory data and apply default presets for visualization
+        const trajectory =
+          // @ts-ignore -> Ignore the extension
+          await this.plugin!.builders.structure.parseTrajectory(data.data, ext);
+
+        await this.plugin.builders.structure.hierarchy.applyPreset(
+          trajectory,
+          "default"
+        );
+      } else {
+        // Use the old method of dropping a file into molstar
+        // Using "drag and drop action" to upload a structure
+
+        console.warn(
+          `When loading ${ext} files, setting the label is not supported.`
+        );
+
+        await this.plugin.runTask(
+          this.plugin.state.data.applyAction(OpenFiles, {
+            files: [parseFileAsAsset],
+            format: { name: "auto", params: {} },
+            visuals: true,
+          })
+        );
+      }
+    } catch (error) {
+      console.error(
+        `Failed to load molecule file: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
+  }
+
+  async loadPDBString(pdbString: string, label: string) {
+    console.warn(
+      "loadPDBString will be soon deprecated use loadMoleculeString instead."
+    );
+
     // Parse the data from the string
-    pdbString = this.parsePDB(pdbString);
+    pdbString = parsePDB(pdbString);
     // Load the parsed data
-    const data = await this.plugin.builders.data.rawData({
+    const data = await this.plugin!.builders.data.rawData({
       data: pdbString,
       label: label,
     });
-    const trajectory = await this.plugin.builders.structure.parseTrajectory(
+    const trajectory = await this.plugin!.builders.structure.parseTrajectory(
       data,
       "pdb"
     );
-    const model = await this.plugin.builders.structure.createModel(trajectory);
-    const structure = await this.plugin.builders.structure.createStructure(
+    const model = await this.plugin!.builders.structure.createModel(trajectory);
+    const structure = await this.plugin!.builders.structure.createStructure(
       model
     );
 
-    const structureObject = {
-      structure: structure,
-      label: label,
-    };
-
     const components = {
-      polymer: await this.plugin.builders.structure.tryCreateComponentStatic(
+      polymer: await this.plugin!.builders.structure.tryCreateComponentStatic(
         structure,
         "polymer"
       ),
-      ligand: await this.plugin.builders.structure.tryCreateComponentStatic(
+      ligand: await this.plugin!.builders.structure.tryCreateComponentStatic(
         structure,
         "ligand"
       ),
-      water: await this.plugin.builders.structure.tryCreateComponentStatic(
+      water: await this.plugin!.builders.structure.tryCreateComponentStatic(
         structure,
         "water"
       ),
     };
 
-    var proteinColorType = "polymer-id";
-    var ligandColorType = "element-symbol";
+    const proteinColorType = "polymer-id";
+    const ligandColorType = "element-symbol";
 
-    const builder = this.plugin.builders.structure.representation;
-    const update = this.plugin.build();
+    const builder = this.plugin!.builders.structure.representation;
+    const update = this.plugin!.build();
     if (components.polymer)
       builder.buildRepresentation(
         update,
@@ -1090,126 +1055,284 @@ class HorusMolstar {
         { tag: "water" }
       );
     await update.commit();
-
-    // If the label exists, add a number to the end of it
-    if (label in this.loadedPDBs) {
-      let i = 1;
-      while (label + i in this.loadedPDBs) {
-        i++;
-      }
-      label = label + i;
-    }
-
-    // Add the structure to the state
-    const newStructure = {
-      pdbString: pdbString,
-      name: label,
-    };
-
-    // Add the structure to the state
-    this.loadedPDBs[label] = pdbString;
   }
 
-  private structureToCIF(loci: Loci) {
-    const name = loci.structure.label;
-    const structure = loci.structure;
-    return to_mmCIF(name, structure);
-  }
-
-  private extractFromLoci(loci: Loci): MolInfo {
-    // Define the default label
-    // This is the label that apears on top of the state tree,
-    // which the one that the user can modify
-    let label = "Unknown";
-    try {
-      label = loci.structure.units[0].model.sourceData.name;
-    } catch {
-      label = loci.structure.model.label;
+  /**
+   * Generates a selection Loci for a given structure based on a predefined script.
+   *
+   * This method creates an atom group selection based on a specific condition,
+   * such as matching a particular chain label. It returns the selection in the
+   * form of a Loci, which can be used to identify specific atoms or regions within
+   * the structure.
+   *
+   * @param {Structure} structure The structure to generate the Loci for.
+   *
+   * @returns {Loci} The generated Loci representing the selection within the structure.
+   *
+   * @throws {Error} If there's an error creating the selection or converting it to a Loci.
+   */
+  private getLociForStructure(structure: Structure): Loci {
+    if (!structure) {
+      throw new Error("Structure is not provided. Cannot generate Loci.");
     }
 
-    // Internal label
-    // This label is inherent of the structure data that was
-    // used to load the molecule on Mol*
-    const internalLabel = loci.structure.model.label;
-
-    let sourceData;
-    let type;
     try {
-      sourceData =
-        loci.structure.model.sourceData.data["source"].data.lines.data;
-      type = "pdb";
+      const selection = Script.getStructureSelection(
+        (Q) =>
+          Q.struct.generator.atomGroups({
+            "chain-test": Q.core.rel.eq(["B", Q.ammp("label_asym_id")]),
+          }),
+        structure
+      );
+
+      const loci = StructureSelection.toLociWithSourceUnits(selection);
+
+      return loci;
     } catch (error) {
-      sourceData = this.structureToCIF(loci);
-      type = "cif";
+      throw new Error(
+        `Failed to generate Loci for structure: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
+  }
+
+  private extractAtomInfo(
+    loc: StructureElement.Location<Unit>,
+    structureID?: string
+  ): AtomInfo {
+    // auth_seq_id  : UniProt coordinate space
+    // label_seq_id : PDB coordinate space
+    const resID = StructureProperties.residue.label_seq_id(loc);
+    const sourceIndex = StructureProperties.atom.sourceIndex(loc);
+    let auth_comp_id = StructureProperties.atom.auth_comp_id(loc);
+    const auth_atom_id = StructureProperties.atom.auth_atom_id(loc);
+    const chainID = StructureProperties.chain.label_asym_id(loc);
+    const type = StructureProperties.atom.type_symbol(loc);
+    const x = StructureProperties.atom.x(loc);
+    const y = StructureProperties.atom.y(loc);
+    const z = StructureProperties.atom.z(loc);
+    const label = structureID
+      ? this.getLabelFromStructureRef(structureID)
+      : StructureProperties.unit.model_label(loc);
+
+    // If auth_comp_id has 2 characters instead of 3, then add a space
+    // before it
+    if (auth_comp_id.length === 2) {
+      auth_comp_id = " " + auth_comp_id;
     }
 
-    const structureInfo: MolInfo = {
-      name: label,
-      internalLabel: internalLabel,
-      structure: sourceData,
+    // Define the information about the clicked element
+    return {
+      name: `${auth_comp_id}:${resID} - ${label}`,
+      residue: resID,
+      chainID: chainID,
+      atom_index: sourceIndex,
+      auth_comp_id: auth_comp_id,
+      auth_atom_id: auth_atom_id,
       type: type,
-      id: loci.structure.model.id,
+      x: x,
+      y: y,
+      z: z,
+      label: label,
+      structureID: structureID,
     };
-
-    return structureInfo;
   }
 
-  private getLociForStructure(structure: Structure) {
-    const selection = Script.getStructureSelection(
-      (Q) =>
-        Q.struct.generator.atomGroups({
-          "chain-test": Q.core.rel.eq(["B", Q.ammp("label_asym_id")]),
-        }),
-      structure
-    );
-
-    const loci = StructureSelection.toLociWithSourceUnits(selection);
-
-    return loci;
+  private extractAtomInfoFromLoci(loci: StructureElement.Loci) {
+    // Get the location based on the clicked element
+    const loc = StructureElement.Location.create();
+    StructureElement.Loci.getFirstLocation(loci, loc);
+    return this.extractAtomInfo(loc);
   }
 
-  private structures() {
+  /**
+   * Retrieves the list of current structures in the plugin's structure hierarchy.
+   *
+   * This method accesses the current structures in the Mol* plugin's structure hierarchy
+   * through the plugin's managers. It can be used to get an array of structure references
+   * currently managed by the plugin.
+   *
+   * @returns {StructureRef[]} An array of structures currently in the plugin's hierarchy.
+   *
+   * @throws {Error} If the plugin is not initialized or if the structure hierarchy is unavailable.
+   */
+  private structures(): StructureRef[] {
+    if (!this.plugin || !this.plugin.managers.structure.hierarchy.current) {
+      throw new Error(
+        "Plugin is not properly initialized. Cannot retrieve structures."
+      );
+    }
+
     return this.plugin.managers.structure.hierarchy.current.structures;
   }
 
-  /*
-   * List all the structures in the current hierarchy
-   * @returns {Array} - List of structures
-   */
-  listStructures(): MolInfo[] {
-    const structures = this.structures();
-    if (!structures) return;
+  //Get all root SourceRef in the current hierarchy in a listed manner
+  // private getStructureRoots() {
+  //   const rootKeys = [];
+  //   for (let key of this.plugin.state.data.cells.keys()) {
+  //     if (this.plugin.state.data.cells.get(key)["sourceRef"] === "-=root=-") {
+  //       rootKeys.push(key);
+  //     }
+  //   }
+  //   return rootKeys;
+  // }
 
-    const molList = [];
-    for (const structure of structures) {
-      const data = structure.cell.obj.data;
-      const loci = this.getLociForStructure(data);
-      const molInfo = this.extractFromLoci(loci);
-      molInfo["id"] = structure.cell.sourceRef;
-      molList.push(molInfo);
+  /**
+   * Recursively finds the root source reference from a given structure source reference.
+   *
+   * This method traverses the state tree to find the root source reference,
+   * starting from a given child structure reference. It continues recursively
+   * until it finds the root source, which is indicated by `"-=root=-"`.
+   *
+   * @param {string} structureSourceRef The source reference of the child structure.
+   *
+   * @returns {string} The root source reference associated with the given structure source reference.
+   *
+   * @throws {Error} If the `structureSourceRef` is not found or if there's an unexpected error during traversal.
+   */
+  private getStructureRootIDFromStructureSourceRef(
+    structureSourceRef: string
+  ): string {
+    if (!this.plugin || !this.plugin.state || !this.plugin.state.data) {
+      throw new Error(
+        "Plugin state is not initialized. Cannot find the structure root."
+      );
+    }
+
+    const currentRef =
+      this.plugin.state.data.cells.get(structureSourceRef)?.sourceRef;
+
+    if (!currentRef) {
+      throw new Error(
+        `Unexpected error while finding the structure root. Cell '${structureSourceRef}' not found.`
+      );
+    }
+
+    if (currentRef === "-=root=-") {
+      // If the current reference is the root, return the original structure source reference
+      return structureSourceRef;
+    }
+
+    // Otherwise, continue recursively to find the root source reference
+    return this.getStructureRootIDFromStructureSourceRef(currentRef);
+  }
+
+  /**
+   * Retrieves a file's contents as a hexadecimal string from a given root reference.
+   *
+   * This method takes a root reference, retrieves the associated file from the state,
+   * and converts its contents into a hexadecimal string. It also extracts the file name
+   * and its format based on the file extension.
+   *
+   * @param {string} rootRef The root reference to the file in the plugin's state data.
+   *
+   * @returns {{ fileContents: string; fileName: string; format: string }} An object containing the hexadecimal representation of the file's contents,
+   *                                                                      the file name, and the file's format (extension).
+   *
+   * @throws {Error} If the root reference is invalid, the file cannot be found, or an unexpected error occurs during conversion.
+   */
+  private getFileAsHexStringFromRootRef(rootRef: string): {
+    fileContents: string;
+    fileName: string;
+    format: string;
+  } {
+    const fileName =
+      this.plugin!.state.data.cells.get(rootRef)!.params!.values.file.name;
+    let fileContents = "";
+    if (fileName.endsWith(".bcif")) {
+      const uint8Arr = this.plugin!.state.data.cells.get(rootRef)?.obj?.data;
+      fileContents = uint8Arr.toString(16);
+    } else {
+      const data = this.plugin!.state.data.cells.get(rootRef)?.obj?.data;
+      fileContents = data.toString(16);
+    }
+
+    return {
+      fileContents,
+      fileName,
+      format: fileName.split(".").pop() ?? "unknown", // Default to 'unknown' if no extension found
+    };
+  }
+
+  // Will search iteratibely until finding the actual label of the structure (the one on the root)
+  private getLabelFromStructureRef(refID: string) {
+    return this.plugin!.state.data.cells.get(
+      this.getStructureRootIDFromStructureSourceRef(refID)
+    )!.obj!.label;
+  }
+
+  /**
+   * Lists information about all current structures in the Mol* plugin.
+   *
+   * This method retrieves all the current structures from the plugin's hierarchy,
+   * and creates a list of `MolInfo` objects containing information about each structure,
+   * including its ID, label, and hexadecimal representation of its source file.
+   *
+   * @returns {MolInfo[]} An array of `MolInfo` objects representing the current structures.
+   *
+   * @throws {Error} If an unexpected error occurs while retrieving structures or their data.
+   */
+  public listStructures(): MolInfo[] {
+    const structures = this.structures();
+
+    const molList: MolInfo[] = [];
+
+    try {
+      for (const structure of structures) {
+        const rootRef = this.getStructureRootIDFromStructureSourceRef(
+          structure.cell.sourceRef!
+        );
+
+        const molInfo: MolInfo = {
+          id: structure.cell.sourceRef!,
+          label: this.getLabelFromStructureRef(rootRef),
+          ...this.getFileAsHexStringFromRootRef(rootRef),
+        };
+
+        molList.push(molInfo);
+      }
+    } catch (error) {
+      alert(
+        `Failed to list structures: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
     }
 
     return molList;
   }
 
+  /**
+   * Extracts residue information from a given structure reference.
+   *
+   * This method iterates through all atoms in a structure and collects residue-related
+   * information based on the specified filter criteria. The `get` parameter allows you to
+   * choose which type of residues to retrieve, and the `unique` parameter determines
+   * whether to include only unique residues.
+   *
+   * @param {StructureRef} structureRef The reference to the structure from which residues will be extracted.
+   * @param {"all" | "hetero" | "standard" | "chain"} [get="all"] Determines which residues to retrieve:
+   *                                                             - "all": retrieves all residues except waters.
+   *                                                             - "hetero": retrieves only hetero atoms.
+   *                                                             - "standard": retrieves only standard residues.
+   *                                                             - "chain": retrieves one residue per chain.
+   * @param {boolean} [unique=true] If true, only unique residues will be included in the result.
+   *
+   * @returns {AtomInfo[]} An array of `AtomInfo` objects representing the extracted residues.
+   *
+   * @throws {Error} If there's an error accessing the structure or extracting residue information.
+   */
   private getResiduesFromStructure(
-    structure: Structure,
+    structureRef: StructureRef,
     get?: "all" | "hetero" | "standard" | "chain",
     unique: boolean = true
   ): AtomInfo[] {
-    const loci = this.getLociForStructure(structure);
-    let molInfo = this.extractFromLoci(loci);
-
-    molInfo = {
-      ...molInfo,
-      structure: molInfo.name,
-    };
-
-    const resInfo = [];
-    Structure.eachAtomicHierarchyElement(structure, {
+    const resInfo: AtomInfo[] = [];
+    Structure.eachAtomicHierarchyElement(structureRef.cell.obj!.data, {
       atom: (loc) => {
         // auth_comp_id is the 3 letter code for the residue like "ALA", "GLY", etc.
-        let auth_comp_id = StructureProperties.atom.auth_comp_id(loc);
+        const auth_comp_id = StructureProperties.atom.auth_comp_id(loc);
 
         // Skip waters
         if (auth_comp_id === "HOH") return;
@@ -1218,32 +1341,16 @@ class HorusMolstar {
         else if (get === "standard" && !standardResidues.includes(auth_comp_id))
           return;
 
-        // resID is the residue number (1, 2, 3, etc.)
-        const resID = StructureProperties.residue.label_seq_id(loc);
-
-        // Source index is the index of the atom in the structure
-        const sourceIndex = StructureProperties.atom.sourceIndex(loc);
-        const auth_atom_id = StructureProperties.atom.auth_atom_id(loc);
-        const chainID = StructureProperties.chain.label_asym_id(loc);
-        const type = StructureProperties.atom.type_symbol(loc);
-        const x = StructureProperties.atom.x(loc);
-        const y = StructureProperties.atom.y(loc);
-        const z = StructureProperties.atom.z(loc);
-
-        // If auth_comp_id has 2 characters instead of 3, then add a space
-        // before it
-        if (auth_comp_id.length === 2) {
-          auth_comp_id = " " + auth_comp_id;
-        }
+        const res = this.extractAtomInfo(loc, structureRef.cell.sourceRef);
 
         // If the molInfo.ID and the current auth_comp_id are already in the
         // heteroInfo array, then don't add it again
         if (unique) {
           for (const info of resInfo) {
             if (
-              info.structure.id === molInfo.id &&
+              info.structureID === res.structureID &&
               info.auth_comp_id === auth_comp_id &&
-              info.residue === resID
+              info.residue === res.residue
             ) {
               return;
             }
@@ -1253,7 +1360,7 @@ class HorusMolstar {
         // For standard residues, we need to add the residue one time per atom
         if (get == "standard") {
           for (const info of resInfo) {
-            if (info.residue === resID) {
+            if (info.residue === res.residue) {
               return;
             }
           }
@@ -1261,222 +1368,159 @@ class HorusMolstar {
 
         if (get == "chain") {
           for (const info of resInfo) {
-            if (info.chainID === chainID) {
+            if (info.chainID === res.chainID) {
               return;
             }
           }
         }
-
-        const atomInfo: AtomInfo = {
-          name: `${auth_comp_id}:${resID} - ${molInfo.name}`,
-          residue: resID,
-          chainID: chainID,
-          atom_index: sourceIndex,
-          auth_comp_id: auth_comp_id,
-          auth_atom_id: auth_atom_id,
-          type: type,
-          x: x,
-          y: y,
-          z: z,
-          structure_label: molInfo.name,
-          structure: molInfo,
-        };
-
-        resInfo.push(atomInfo);
+        resInfo.push(res);
       },
     });
 
     return resInfo;
   }
 
-  /*
-   * List the hetero residues in the current loaded structures
-   * @param {String} label - The label of the structure (optional)
-   * @returns {Array} - List of hetero residues
+  /**
+   * Lists the hetero residues in the currently loaded structures.
+   *
+   * This method retrieves all hetero residues from the loaded structures. If a `label` is provided,
+   * it returns hetero residues from the specified structure; otherwise, it lists hetero residues
+   * from all current structures.
+   *
+   * @param {string} [label] The label of the structure to list hetero residues from (optional).
+   *
+   * @returns {Array} An array of hetero residues from the specified or all structures.
    */
-  listHeteroRes(label?: string) {
-    let structures = [];
-    if (label) {
-      // Get the structure object from the label
-      const structure = this.getStructureObjectFromLabel(label);
-      structures.push(structure);
-    } else {
-      structures = this.structures();
+
+  public listHeteroRes(label?: string): AtomInfo[] {
+    // Determine which structures to list based on the provided label
+    const structuresToList = label
+      ? (() => {
+          const structure = this.getStructureObjectFromLabel(label);
+          return structure ? [structure] : []; // Return an empty array if no valid structure
+        })()
+      : this.structures();
+
+    if (label && structuresToList.length === 0) {
+      throw new Error(`No structure with label '${label}'`);
     }
 
-    if (!structures || structures.length === 0) return [];
-
-    const heteroList = [];
-    for (const structure of structures) {
-      const data = structure.cell.obj.data;
-      const residues = this.getResiduesFromStructure(data, "hetero");
-      heteroList.push(...residues);
-    }
-
-    return heteroList;
-  }
-
-  /*
-   * List the standard residues in the current loaded structures
-   * @param {String} label - The label of the structure (optional)
-   * @returns {Array} - List of standard residues
-   */
-  listStdRes(label?: string) {
-    let structures = [];
-    if (label) {
-      // Get the structure object from the label
-      const structure = this.getStructureObjectFromLabel(label);
-      structures.push(structure);
-    } else {
-      structures = this.structures();
-    }
-
-    if (!structures || structures.length === 0) return [];
-
-    const stdList = [];
-    for (const structure of structures) {
-      const data = structure.cell.obj.data;
-      const residues = this.getResiduesFromStructure(data, "standard", false);
-      stdList.push(...residues);
-    }
-
-    return stdList;
-  }
-
-  /*
-   * List the chains in the current loaded structures
-   * @returns {Array} - List of chains
-   */
-  listChains(structureLabel?: string): AtomInfo[] {
-    let structures = [];
-    if (structureLabel) {
-      structures.push(this.getStructureObjectFromLabel(structureLabel));
-    } else {
-      structures = this.structures();
-    }
-
-    const chainList: AtomInfo[] = [];
-    for (const structure of structures) {
-      if (!structure) continue;
-
-      const data = structure.cell.obj.data;
-      const chains = this.getResiduesFromStructure(data, "chain");
-      chainList.push(...chains);
-    }
-
-    return chainList;
-  }
-
-  /*
-   * Get the structures selected
-   * @returns {Array} - List of structures
-   */
-  getSelectedStructures() {
-    const selections = Array.from(
-      this.plugin.managers.structure.selection.entries.values()
+    // Map each structure to its list of hetero residues
+    return structuresToList.flatMap((s) =>
+      this.getResiduesFromStructure(s, "hetero")
     );
-    const selectionList = [];
-    for (const { structure } of selections) {
-      if (!structure) continue;
+  }
 
-      const loci = this.getLociForStructure(structure);
-      let molInfo = this.extractFromLoci(loci);
+  /**
+   * Lists the standard residues in the currently loaded structures.
+   *
+   * This method retrieves all standard residues from the loaded structures. If a `label` is provided,
+   * it returns standard residues from the specified structure; otherwise, it lists standard residues
+   * from all current structures.
+   *
+   * @param {string} [label] The label of the structure to list standard residues from (optional).
+   *
+   * @returns {Array} An array of standard residues from the specified or all structures.
+   */
 
-      molInfo = {
-        ...molInfo,
-        structure: null,
-      };
+  public listStandardRes(label?: string): AtomInfo[] {
+    // Determine which structures to list based on the provided label
+    const structuresToList = label
+      ? (() => {
+          const structure = this.getStructureObjectFromLabel(label);
+          return structure ? [structure] : []; // Return an empty array if no valid structure
+        })()
+      : this.structures();
 
-      Structure.eachAtomicHierarchyElement(structure, {
-        atom: (loc) => {
-          const resID = StructureProperties.residue.label_seq_id(loc);
-          const sourceIndex = StructureProperties.atom.sourceIndex(loc);
-          const auth_comp_id = StructureProperties.atom.auth_comp_id(loc);
-          const auth_atom_id = StructureProperties.atom.auth_atom_id(loc);
-          const chainID = StructureProperties.chain.label_asym_id(loc);
-          const type = StructureProperties.atom.type_symbol(loc);
-          const x = StructureProperties.atom.x(loc);
-          const y = StructureProperties.atom.y(loc);
-          const z = StructureProperties.atom.z(loc);
-
-          const atomInfo = {
-            name: `${auth_comp_id}:${resID} - ${molInfo.name}`,
-            residue: resID,
-            chainID: chainID,
-            atom_index: sourceIndex,
-            auth_comp_id: auth_comp_id,
-            auth_atom_id: auth_atom_id,
-            type: type,
-            x: x,
-            y: y,
-            z: z,
-            structure_label: molInfo.name,
-            structure: molInfo,
-          };
-
-          selectionList.push(atomInfo);
-        },
-      });
+    if (label && structuresToList.length === 0) {
+      throw new Error(`No structure with label '${label}'`);
     }
 
-    return selectionList;
+    // Map each structure to its list of hetero residues
+    return structuresToList.flatMap((s) =>
+      this.getResiduesFromStructure(s, "standard", false)
+    );
   }
 
-  private parsePDB(pdbString) {
-    const wantedLines = [
-      "ATOM",
-      "HETATM",
-      "ANISOU",
-      "TER",
-      "ENDMDL",
-      "CONNECT",
-      "MASTER",
-      "END",
-    ];
-    const lines = pdbString.split("\n");
+  /**
+   * Lists the chains in the currently loaded structures.
+   *
+   * This method retrieves all chains from the loaded structures. If a `label` is provided,
+   * it returns chains from the specified structure; otherwise, it lists chains
+   * from all current structures.
+   *
+   * @param {string} [label] The label of the structure to list chains from (optional).
+   *
+   * @returns {Array} An array of chains from the specified or all structures.
+   */
 
-    // Loop over the lines and only keep the lines that start with the 'wantedLines' strings
-    const filteredLines = lines.filter((line) => {
-      for (const wantedLine of wantedLines) {
-        if (line.startsWith(wantedLine)) return true;
-      }
-      return false;
-    });
+  public listChains(label?: string): AtomInfo[] {
+    // Determine which structures to list based on the provided label
+    const structuresToList = label
+      ? (() => {
+          const structure = this.getStructureObjectFromLabel(label);
+          return structure ? [structure] : []; // Return an empty array if no valid structure
+        })()
+      : this.structures();
 
-    // Join the lines back into a string
-    const filteredPDB = filteredLines.join("\n");
+    if (label && structuresToList.length === 0) {
+      throw new Error(`No structure with label '${label}'`);
+    }
 
-    return filteredPDB;
+    // Map each structure to its list of hetero residues
+    return structuresToList.flatMap((s) =>
+      this.getResiduesFromStructure(s, "chain")
+    );
   }
 
+  /**
+   * Creates an empty structure node with a specified name.
+   *
+   * This method creates a structure node containing only a minimal set of data,
+   * simulating an empty structure. It uses a simple PDB data string to construct
+   * the structure and assigns it a label based on `nodeName`.
+   *
+   * @param {string} nodeName The name to assign to the created node.
+   *
+   * @returns {Promise<Structure>} A promise that resolves with the created empty structure node.
+   *
+   * @throws {Error} If an error occurs during the node creation process.
+   */
   private async createEmptyNode(nodeName: string) {
-    const fakeData = {
+    // Use fake data to create a node
+    const data = await this.plugin!.builders.data.rawData({
       data: "HETATM 1  H   H   A   1       0.000   0.000   0.000  1.00  0.00           H",
       label: nodeName,
-    };
-
-    // We will create an empty node
-    const data = await this.plugin.builders.data.rawData(fakeData);
-
-    const trajectory = await this.plugin.builders.structure.parseTrajectory(
+    });
+    const trajectory = await this.plugin!.builders.structure.parseTrajectory(
       data,
       "pdb"
     );
-
-    const model = await this.plugin.builders.structure.createModel(trajectory);
-
-    const structure = await this.plugin.builders.structure.createStructure(
-      model
-    );
-
-    return structure;
+    const model = await this.plugin!.builders.structure.createModel(trajectory);
+    return await this.plugin!.builders.structure.createStructure(model);
   }
 
-  /*
-   * Add a sphere to the current structure
-   * @returns {String} - The ref of the sphere
+  /**
+   * Adds a sphere to the current structure at a specified position and with a given radius.
+   *
+   * This method adds a 3D sphere to the Mol* structure at the specified `position`, with the given `radius`.
+   * It can also delete a previous sphere if a `deletePrevious` reference is provided. The `opacity` and `color`
+   * of the sphere can be customized.
+   *
+   * @param {object} position The position where the sphere should be added.
+   * @param {number} position.x The x-coordinate of the sphere's position.
+   * @param {number} position.y The y-coordinate of the sphere's position.
+   * @param {number} position.z The z-coordinate of the sphere's position.
+   * @param {number} radius The radius of the sphere.
+   * @param {number} [opacity=0.3] The opacity of the sphere (optional, defaults to 0.3).
+   * @param {Color} [color] The color of the sphere (optional).
+   * @param {SphereRef} [deletePrevious] A reference to a sphere to delete before adding the new one (optional).
+   *
+   * @returns {Promise<SphereRef>} A promise that resolves with a `SphereRef` for the newly added sphere.
+   *
+   * @throws {Error} If there is an issue adding the sphere to the structure or if the structure is invalid.
    */
-  async addSphere(
+  public async addSphere(
     position: {
       x: number;
       y: number;
@@ -1487,84 +1531,191 @@ class HorusMolstar {
     color?: Color,
     deletePrevious?: SphereRef
   ): Promise<SphereRef> {
-    if (deletePrevious) {
-      // Remove the previous sphere
-      const builder = this.plugin.state.data.build();
-      builder.delete(deletePrevious.ref);
-      builder.commit();
-    }
+    deletePrevious && this.removeShape(deletePrevious.ref);
 
-    let structureFirst = this.structures()[0];
-    let structure: any = null;
-    if (!structureFirst) {
-      structure = await this.createEmptyNode("Sphere");
-    } else {
-      const structureRef = structureFirst.cell.transform.ref;
-      structure = this.plugin.state.data.cells.get(structureRef);
-    }
+    // Get the first structure or null if no structures exist
+    const structureFirst = this.structures()[0];
+
+    // Determine the structure to use based on the existence of structureFirst
+    const structureRef = structureFirst?.cell.transform.ref;
+    const structure = structureRef
+      ? this.plugin!.state.data.cells.get(structureRef)
+      : await this.createEmptyNode("Sphere");
 
     if (!structure) {
-      alert(
-        "Failed to get a valid structure from Mol*. Could not add the sphere"
+      throw new Error(
+        "Failed to add sphere to mosltar. Could not get a valid structure to place it."
       );
     }
 
-    const colorToUse = deletePrevious?.color || color || randomColor();
-
-    let sphere: SphereRef = {
+    const sphere: SphereRef = {
       x: position.x,
       y: position.y,
       z: position.z,
       radius: radius,
-      color: colorToUse,
-      alpha: opacity || 0.3,
+      color: deletePrevious?.color ?? color ?? randomColor(),
+      alpha: opacity ?? 0.3,
       ref: "",
     };
 
-    const sphereRef = await addSphereTo(this.plugin, structure, sphere);
-
-    sphere.ref = sphereRef;
+    // @ts-ignore
+    sphere.ref = await addSphereTo(this.plugin!, structure, sphere);
 
     return sphere;
   }
 
-  async removeSphere(ref: string) {
-    const builder = this.plugin.state.data.build();
+  /**
+   * Adds a 3D box to the current structure with specified vertices, radius scale, and radial segments.
+   *
+   * This method creates and adds a box to the Mol* structure. It allows for the specification
+   * of a set of positions (defining box vertices), a radius scale, and radial segments. Additionally,
+   * it can remove a previous box if a `deletePrevious` reference is provided. Opacity and color
+   * can be customized.
+   *
+   * @param {object} position The position of the box vertices.
+   * @param {number} position.x0 - x-coordinate of the first vertex.
+   * @param {number} position.y0 - y-coordinate of the first vertex.
+   * @param {number} position.z0 - z-coordinate of the first vertex.
+   * @param {number} position.x1 - x-coordinate of the second vertex.
+   * @param {number} position.y1 - y-coordinate of the second vertex.
+   * @param {number} position.z1 - z-coordinate of the second vertex.
+   * @param {number} position.x2 - x-coordinate of the third vertex.
+   * @param {number} position.y2 - y-coordinate of the third vertex.
+   * @param {number} position.z2 - z-coordinate of the third vertex.
+   * @param {number} position.x3 - x-coordinate of the fourth vertex.
+   * @param {number} position.y3 - y-coordinate of the fourth vertex.
+   * @param {number} position.z3 - z-coordinate of the fourth vertex.
+   * @param {number} radiusScale The scale of the box's radius.
+   * @param {number} radialSegments The number of radial segments for the box.
+   * @param {number} [opacity=0.3] The opacity of the box (optional, defaults to 0.3).
+   * @param {Color} [color] The color of the box (optional).
+   * @param {BoxRef} [deletePrevious] A reference to a box to delete before adding the new one (optional).
+   *
+   * @returns {Promise<BoxRef>} A promise that resolves with a `BoxRef` for the newly added box.
+   *
+   * @throws {Error} If there's an issue creating or adding the box, or if the structure is invalid.
+   */
+
+  public async addBox(
+    position: {
+      x0: number;
+      y0: number;
+      z0: number;
+      x1: number;
+      y1: number;
+      z1: number;
+      x2: number;
+      y2: number;
+      z2: number;
+      x3: number;
+      y3: number;
+      z3: number;
+    },
+    radiusScale: number,
+    radialSegments: number,
+    opacity?: number,
+    color?: Color,
+    deletePrevious?: BoxRef
+  ): Promise<BoxRef> {
+    deletePrevious && this.removeShape(deletePrevious.ref);
+
+    // Get the first structure or null if no structures exist
+    const structureFirst = this.structures()[0];
+
+    // Determine the structure to use based on the existence of structureFirst
+    const structureRef = structureFirst?.cell.transform.ref;
+    const structure = structureRef
+      ? this.plugin!.state.data.cells.get(structureRef)
+      : await this.createEmptyNode("Box");
+
+    if (!structure) {
+      throw new Error(
+        "Failed to add sphere to mosltar. Could not get a valid structure to place it."
+      );
+    }
+
+    const box: BoxRef = {
+      x0: position.x0,
+      y0: position.y0,
+      z0: position.z0,
+      x1: position.x1 / 2,
+      y1: position.y1,
+      z1: position.z1,
+      x2: position.x2,
+      y2: position.y2 / 2,
+      z2: position.z2,
+      x3: position.x3,
+      y3: position.y3,
+      z3: position.z3 / 2,
+      radiusScale: radiusScale,
+      radialSegments: radialSegments,
+      color: deletePrevious?.color ?? color ?? randomColor(),
+      alpha: opacity ?? 0.3,
+      ref: "",
+    };
+
+    // @ts-ignore
+    box.ref = await addBoxTo(this.plugin!, structure, box);
+
+    return box;
+  }
+
+  /**
+   * Removes a shape from the Mol* structure by its reference.
+   *
+   * This method deletes a shape from the plugin's state data based on the given reference.
+   * It builds a state update to remove the specified shape and then commits the change.
+   *
+   * @param {string} ref The reference ID of the shape to be removed.
+   *
+   * @returns {Promise<void>} A promise that resolves once the shape is removed.
+   *
+   * @throws {Error} If there's an issue removing the shape or committing the change.
+   */
+  public async removeShape(ref: string) {
+    const builder = this.plugin!.state.data.build();
     builder.delete(ref);
     builder.commit();
   }
 
-  // Create a new internal variable to store added representations
-  private addedReprs: Array<any> = [];
-
-  /*
-   * Adds representations to already present structures, if null, adds to all structures
-   * @param {Structure} structure - The structure to add the representation to
-   * @param {String} representation - The representation to apply:
-   *  - "cartoon"
-   * - "ball-and-stick"
+  /**
+   * An internal array to store references to programatically added representations.
+   *
+   * This variable is used to keep track of representations added to the Mol* structure
+   * during the course of various operations. It can be used to manage, update, or delete
+   * specific representations as needed.
+   *
+   * @type {Array<StateObjectSelector>} An array of references to added representations.
    */
-  async addStructureRepresentation(
-    structure: StructureRef | null,
+  private addedReprs: Array<StateObjectSelector> = [];
+
+  /**
+   * Adds a specified representation to existing structures, or all structures if `structure` is null.
+   *
+   * This method applies a given representation ("cartoon" or "ball-and-stick") to one or more structures.
+   * If a `structure` is provided, the representation is applied to it; otherwise, it is applied to all
+   * existing structures. The method also handles hidden structures and restores the camera position after
+   * updating the representations.
+   *
+   * @param {StructureRef | "all"} structure The structure to add the representation to, or `null` to add to all structures.
+   * @param {"cartoon" | "ball-and-stick"} representation The type of representation to apply.
+   *
+   * @returns {Promise<void>} A promise that resolves once the representations are added and committed.
+   */
+
+  public async addStructureRepresentation(
+    structure: StructureRef | "all",
     representation: "cartoon" | "ball-and-stick"
   ) {
-    let structures: StructureRef[] | null = null;
-    if (!structure) {
-      // Get the structures
-      structures = this.structures();
-    } else {
-      structures = [structure];
-    }
-
-    if (!structures) return;
+    const structures = structure === "all" ? this.structures() : [structure];
 
     // Get the builder
-    const builder = this.plugin.builders.structure.representation;
-    const update = this.plugin.build();
+    const builder = this.plugin!.builders.structure.representation;
+    const update = this.plugin!.build();
 
     const reprTag = `internal-representation`;
 
-    const snapshot = await this.plugin.canvas3d.camera.getSnapshot();
+    const snapshot = await this.plugin!.canvas3d?.camera.getSnapshot();
 
     // Loop over the structures
     for (const structure of structures) {
@@ -1588,15 +1739,20 @@ class HorusMolstar {
     await update.commit();
 
     // Restore the camera
-    this.plugin.canvas3d.requestCameraReset({ snapshot, durationMs: 0 });
+    this.plugin!.canvas3d?.requestCameraReset({ snapshot, durationMs: 0 });
   }
 
-  /*
-   * Removes representations from already present structures, if null, removes from all structures
-   * @param {Structure} structure - The structure to remove the representation from
+  /**
+   * Removes all previously added internal representations from structures.
+   *
+   * This method removes representations that were previously added to structures.
+   * It iterates over the `addedReprs` list, deleting each representation, and then commits
+   * the changes to the plugin's state. This can be used to clear or reset representations in Mol*.
+   *
+   * @returns {Promise<void>} A promise that resolves once the representations are deleted and committed.
    */
-  async deleteStructureRepresentations() {
-    const builder = await this.plugin.state.data.build();
+  public async deleteStructureRepresentations() {
+    const builder = await this.plugin!.state.data.build();
 
     // Loop over the added reps
     for (const repr of this.addedReprs) {
@@ -1606,8 +1762,34 @@ class HorusMolstar {
     await builder.commit();
   }
 
-  actionsQueue = [];
-  async applyAction(action: any) {
+  /**
+   * A queue to store pending actions.
+   *
+   * This queue is used to manage actions to be applied in sequence. It holds pending actions
+   * until they can be processed, ensuring they are executed in the correct order.
+   *
+   * @type {Array<{ id: string, type: string, data: any }>}
+   */
+  actionsQueue: Array<{ id: string; type: string; data: any }> = [];
+
+  /**
+   * Applies a specified action in the correct order, ensuring that pending actions are processed sequentially.
+   *
+   * This method accepts an action with a type and associated data, assigns it a unique ID,
+   * and pushes it to the `actionsQueue`. It waits until the action is at the front of the queue
+   * before processing it. The method then handles various action types and applies the appropriate
+   * logic. If an error occurs, it alerts the user, and once the action is processed, it is removed
+   * from the queue.
+   *
+   * @param {object} action The action to be applied.
+   * @param {string} action.type The type of the action.
+   * @param {any} action.data The data associated with the action.
+   *
+   * @returns {Promise<void>} A promise that resolves when the action is applied and processed.
+   *
+   * @throws {Error} If there is an issue with the action or its application.
+   */
+  public async applyAction(action: any) {
     const { type, data } = action;
 
     // Assing an ID to the action
@@ -1616,63 +1798,72 @@ class HorusMolstar {
     this.actionsQueue.push(action);
 
     // Wait till the action is the first in the queue
-    while (this.actionsQueue[0].id !== action.id) {
+    while (this.actionsQueue[0]?.id !== action.id) {
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
 
     try {
       switch (type) {
         case "addPDB":
+          // Add PDB will be soon deprecated, use addMolecule Instead
           const label = data.label ? data.label : "PDB";
           const pdb = data.pdb;
 
           // If the PDB data is empty, throw an error
           if (!pdb || pdb === "") {
-            throw "The PDB data is empty";
+            throw new Error("The PDB data is empty");
           }
 
           await this.loadPDBString(pdb, label);
           break;
+
+        case "addMolecule":
+          await this.loadMoleculeFile(
+            new File([hexToBlob(data.molContent)], data.fileName),
+            {
+              label: data.label,
+            }
+          );
+          break;
         case "loadMVJS":
-          const session = data.session;
-          const replaceExisting = data.replaceExisting;
-          await this.loadMolViewSpecSession(session, replaceExisting);
+          await this.loadMolViewSpecSession(data.session, data.replaceExisting);
           break;
         case "focus":
-          const residue = data.residue;
-          const structureLabel = data.structureLabel;
-          const chain = data.chain;
-          const nearRadius = data.nearRadius;
-          await this.focus(structureLabel, residue, chain, nearRadius);
+          await this.focus(
+            data.structureLabel,
+            data.residue,
+            data.chain,
+            data.nearRadius
+          );
+          break;
+        case "addBox":
+          await this.addBox(
+            data.position,
+            data.radiousScale,
+            data.radialSegments,
+            data.opacity ?? 1,
+            data.color ? Color.fromHexStyle(data.color) : randomColor()
+          );
           break;
         case "addSphere":
-          const position = data.position;
-          const radius = data.radius;
-          const opacity = data.opacity;
-
-          let sphereColor = data.color;
-          if (!sphereColor) {
-            sphereColor = "#ff0000";
-          }
-          // Convert the hex string color to a Color object
-          const parsedSphereColor = Color(Color.fromHexStyle(sphereColor));
-
-          await this.addSphere(position, radius, opacity, parsedSphereColor);
+          await this.addSphere(
+            data.position,
+            data.radius,
+            data.opacity,
+            data.color ? Color.fromHexStyle(data.color) : randomColor()
+          );
           break;
         case "setBackgroundColor":
-          const color = data.color;
-
-          // Convert the hex string color to a Color object
-          const parsedColor = Color(Color.fromHexStyle(color));
-
-          await this.setBackground(parsedColor);
+          await this.setBackground(data.color);
           break;
-        case "toggleSpin":
-          await this.toggleSpin();
+        case "setSpin":
+          await this.setSpin(data.speed);
           break;
         case "reset":
           await this.reset();
           break;
+        default:
+          throw new Error(`Unknown action type: ${type}`);
       }
     } catch (error) {
       alert(
@@ -1687,14 +1878,27 @@ class HorusMolstar {
     }
   }
 
-  async loadMolViewSpecSession(
+  /**
+   * Loads a Mol* session from a serialized MolViewSpec (MVS) session string.
+   *
+   * This method takes a serialized MolViewSpec session string and loads it into
+   * the Mol* plugin. If `replaceExisting` is `true`, the existing session is replaced
+   * with the new one; otherwise, it is merged or added to the current session.
+   *
+   * @param {string} session The serialized MolViewSpec session string.
+   * @param {boolean} [replaceExisting=false] Whether to replace the existing session with the new one (optional, defaults to `false`).
+   *
+   * @returns {Promise<void>} A promise that resolves once the session is loaded.
+   *
+   */
+  private async loadMolViewSpecSession(
     session: string,
     replaceExisting: boolean = false
   ) {
     const parsedData = MVSData.fromMVSJ(session);
 
     // Loads the session
-    await loadMVS(this.plugin, parsedData, {
+    await loadMVS(this.plugin!, parsedData, {
       replaceExisting: replaceExisting,
     });
   }
@@ -1732,13 +1936,33 @@ const standardResidues = [
 ];
 
 // Gets a random color from ColorNames enum
-const randomColor = () => {
+function randomColor(): Color {
   const colors = Object.values(ColorNames);
   const randomIndex = Math.floor(Math.random() * colors.length);
-  return colors[randomIndex];
+  return colors[randomIndex]!;
+}
+
+export type BoxRef = {
+  x0: number;
+  y0: number;
+  z0: number;
+  x1: number;
+  y1: number;
+  z1: number;
+  x2: number;
+  y2: number;
+  z2: number;
+  x3: number;
+  y3: number;
+  z3: number;
+  radiusScale: number;
+  radialSegments: number;
+  color: Color;
+  alpha: number;
+  ref: string;
 };
 
-type SphereRef = {
+export type SphereRef = {
   x: number;
   y: number;
   z: number;
@@ -1748,62 +1972,50 @@ type SphereRef = {
   ref: string;
 };
 
-export default HorusMolstar;
-
-export { SphereRef };
-
-async function blobToHex(blob) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-
-    reader.onloadend = () => {
-      if (reader.readyState === FileReader.DONE) {
-        const arrayBuffer = reader.result;
-        const byteArray = new Uint8Array(arrayBuffer as ArrayBuffer);
-
-        // Convert byteArray to hex string
-        const hexArray = Array.from(byteArray, (byte) =>
-          byte.toString(16).padStart(2, "0")
-        );
-        const hexString = hexArray.join("");
-
-        resolve(hexString);
-      }
-    };
-
-    reader.onerror = reject;
-
-    // Read the Blob as an ArrayBuffer
-    reader.readAsArrayBuffer(blob);
-  });
-}
-
-function hexToBlob(hexString) {
+/**
+ * Converts a hexadecimal string into a Blob.
+ *
+ * This function takes a hexadecimal string, converts it into an array of bytes,
+ * and then creates a Blob from those bytes. It is useful for converting hexadecimal
+ * data into binary data that can be used in various applications, such as file storage
+ * or network transmission.
+ *
+ * @param {string} hexString The hexadecimal string to convert.
+ *
+ * @returns {Blob} A Blob containing the binary representation of the hexadecimal string.
+ *
+ * @throws {Error} If the hexadecimal string contains invalid characters or is not a valid hex format.
+ */
+function hexToBlob(hexString: string) {
   const bytePairs = hexString.match(/.{1,2}/g) || [];
   const byteArray = bytePairs.map((byte) => parseInt(byte, 16));
 
   return new Blob([new Uint8Array(byteArray)]);
 }
 
-export type MolInfo = {
-  id: string;
-  name: string;
-  internalLabel: string;
-  structure: string;
-  type: string;
-};
+function parsePDB(pdbString: string) {
+  const wantedLines = [
+    "ATOM",
+    "HETATM",
+    "ANISOU",
+    "TER",
+    "ENDMDL",
+    "CONNECT",
+    "MASTER",
+    "END",
+  ];
+  const lines = pdbString.split("\n");
 
-export type AtomInfo = {
-  name: string;
-  residue: number;
-  chainID: string;
-  atom_index: number;
-  auth_comp_id: string;
-  auth_atom_id: string;
-  type: string;
-  x: number;
-  y: number;
-  z: number;
-  structure_label: string;
-  structure: MolInfo;
-};
+  // Loop over the lines and only keep the lines that start with the 'wantedLines' strings
+  const filteredLines = lines.filter((line) => {
+    for (const wantedLine of wantedLines) {
+      if (line.startsWith(wantedLine)) return true;
+    }
+    return false;
+  });
+
+  // Join the lines back into a string
+  const filteredPDB = filteredLines.join("\n");
+
+  return filteredPDB;
+}

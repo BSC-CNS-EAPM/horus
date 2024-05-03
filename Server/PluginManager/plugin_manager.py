@@ -480,7 +480,7 @@ class PluginManager(metaclass=HorusSingleton):
             import traceback
 
             logging.getLogger("Horus").error("Error loading plugin: %s", e)
-            logging.getLogger("Horus").debug("Traceback: %s", traceback.format_exc())
+            logging.getLogger("Horus").error("Traceback: %s", traceback.format_exc())
             raise e
 
         # Check that the plugin is not already loaded
@@ -1073,10 +1073,15 @@ class PluginManager(metaclass=HorusSingleton):
         startTime = datetime.datetime.now().timestamp()
         try:
             with PluginDeps(plugin._path):
+                outputs = block()
                 # Execute the block
-                outputs = PluginDeps.subprocessBlock(block)
-        except Exception as exc:
-            errorMSG = str(exc)
+                # outputs = PluginDeps.subprocessBlock(block)
+        except Exception:  # pylint: disable=broad-exception-caught
+
+            # Get the full traceback
+            import traceback
+
+            errorMSG = traceback.format_exc()
             error = True
         finally:
             # Calculate the final time
@@ -1517,10 +1522,6 @@ class PluginDeps:
 
             # Block error
             error = None
-
-            # Re-connect the remote
-            # As paramiko is not fork-safe, we need to reconnect the remote
-            forkedBlock.remote._remote.connect()
 
             # Try to execute the block
             try:

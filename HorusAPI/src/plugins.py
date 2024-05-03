@@ -307,16 +307,28 @@ class VariableTypes(str, Enum):
     - On the desktop: Will render as a system folder picker.
     """
 
-    STRUCTURE = "structure"
+    MULTIPLE_STRUCTURE = "multiple_structure"
     """
-    A molecular structure to be selected from Mol*.
+    Multiple molecular structures to be selected from Mol*.
 
-    Will render as a dropdown with the list of loaded structures.
-    The type of the variable will be a dictionary with the following keys:
+    Will render as a list of checkboxes with the list of loaded structures.
+    The type of the variable will be a list of dicts with the following data:
     - id: The ID of the structure.
     - name: The name of the structure.
     - type: The type of the structure (CIF, PDB...).
-    - structure: The structure object (CIF, PDB... string)
+    - structure: The structure file contents (CIF, PDB... string)
+    """
+
+    STRUCTURE = "structure"
+    """
+    A single molecular structure to be selected from Mol*.
+
+    Will render as a list of radio buttons with the list of loaded structures.
+    The type of the variable will be a dict with the following data:
+    - id: The ID of the structure.
+    - name: The name of the structure.
+    - type: The type of the structure (CIF, PDB...).
+    - structure: The structure file contents (CIF, PDB... string)
     """
 
     HETERORES = "heterores"
@@ -369,7 +381,7 @@ class VariableTypes(str, Enum):
     - structure: The structure object variable where the atom is located.
     This last variable contains the properties of the STRUCTURE variable.
     """
-
+    BOX = "box"
     SPHERE = "sphere"
     """
     A sphere to be rendered in Mol*.

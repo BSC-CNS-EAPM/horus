@@ -228,7 +228,7 @@ def molviewSpecAciton(block: PluginBlock):
     # Basic MolstarAPI
     mol.reset()
     mol.addSphere(0, 0, 0, 5, color="#0000ff", opacity=1)
-    mol.toggleSpin()
+    mol.setSpin()
     mol.setBackgroundColor("#ffffff")
     mol.focusResidue(1, nearRadius=5)
 

@@ -136,7 +136,7 @@ export default function getCommands(): {
           return "No structures found";
         }
 
-        const names = strucList.map((struc) => struc.name);
+        const names = strucList.map((struc) => struc.label);
 
         // Parse as a string with \n as a separator
         const strucListString = names.join("\n");
@@ -149,7 +149,7 @@ export default function getCommands(): {
       fn: async (...args: string[]) => {
         // The structure label is the first argument (if provided)
         // The user can just type listchains <structure label> and the structure label will be the first argument
-        let structureLabel = args[0];
+        const structureLabel = args[0];
 
         const molstar = window.molstar;
         const chainList = molstar.listChains(structureLabel);
@@ -165,7 +165,7 @@ export default function getCommands(): {
         // Parse as a string with \n as a separator
         const chainsString = chainList
           .map((chain) => {
-            return `${chain.structure_label}: ${chain.chainID}`;
+            return `${chain.label}: ${chain.chainID}`;
           })
           .join("\n");
         return chainsString;

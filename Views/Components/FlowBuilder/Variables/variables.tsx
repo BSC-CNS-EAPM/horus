@@ -1,12 +1,5 @@
 // React
-import {
-  useEffect,
-  useState,
-  useRef,
-  useMemo,
-  ChangeEvent,
-  useCallback,
-} from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 
 // SMILES variable
 // @ts-ignore - JSME is not typed
@@ -24,10 +17,7 @@ import {
 import AppButton from "../../appbutton";
 import Slider from "rc-slider";
 import HorusSwitch from "../../Switch/switch";
-import { SearchComponent } from "../../Toolbar/toolbar";
 import { HorusFileExplorer } from "../../FileExplorer/file_explorer";
-import { AtomInfo, SphereRef } from "../../Molstar/HorusWrapper/horusmolstar";
-import { Color } from "molstar/lib/mol-util/color";
 import LockIcon from "../../Toolbar/Icons/Lock";
 
 // Utility function to open an extension
@@ -39,6 +29,19 @@ import CrossIcon from "../../Toolbar/Icons/Cross";
 import { createPortal } from "react-dom";
 import { FlowBuilderIDs } from "../flow.view";
 import { BlurredModal } from "../../reusable";
+
+// Mol* variables components
+import {
+  AtomView,
+  BoxVariableView,
+  ChainView,
+  HeteroResView,
+  MultipleStructureVariableView,
+  ResidueView,
+  SphereVariableView,
+  StandardResView,
+  StructureVariableView,
+} from "./molstar_variables";
 
 type PluginVariableViewProps = {
   variable: PluginVariable;
@@ -428,6 +431,15 @@ function VariableRenderer(props: {
         />
       );
 
+    case PluginVariableTypes.MULTIPLE_STRUCTURE:
+      return (
+        <MultipleStructureVariableView
+          currentValue={currentValue}
+          variable={props.variable}
+          onChange={handleVariableChangeInternal}
+        />
+      );
+
     case PluginVariableTypes.HETERORES:
       return (
         <HeteroResView
@@ -439,7 +451,7 @@ function VariableRenderer(props: {
 
     case PluginVariableTypes.STDRES:
       return (
-        <StdResView
+        <StandardResView
           currentValue={currentValue}
           onChange={handleVariableChangeInternal}
           variable={props.variable}
@@ -472,7 +484,14 @@ function VariableRenderer(props: {
           variable={props.variable}
         />
       );
-
+    case PluginVariableTypes.BOX:
+      return (
+        <BoxVariableView
+          currentValue={currentValue}
+          onChange={handleVariableChangeInternal}
+          variable={props.variable}
+        />
+      );
     case PluginVariableTypes.SPHERE:
       return (
         <SphereVariableView
@@ -500,73 +519,11 @@ function VariableRenderer(props: {
   }
 }
 
-type VariableViewProps = {
+export type VariableViewProps = {
   variable: PluginVariable;
   currentValue: any;
   onChange: (value: any) => void;
 };
-
-function StructureVariableView(props: VariableViewProps) {
-  const { currentValue, onChange } = props;
-
-  const [structures, setStructures] = useState<any[]>([]);
-
-  const loadMolstarStructures = useCallback(() => {
-    const molstar = window.molstar;
-    const structList = molstar?.listStructures();
-
-    if (!structList) return;
-
-    setStructures(structList);
-
-    // Set the first structure as the default value if none was selected
-    if (!currentValue) {
-      onChange(structList[0]);
-    }
-  }, [currentValue, onChange]);
-
-  useEffect(() => {
-    // Load the structures on placing the block and select the first, or if the variable comes with a value, the value
-    loadMolstarStructures();
-  }, [loadMolstarStructures]);
-
-  return (
-    <div onMouseDown={loadMolstarStructures} className="plugin-variable-value">
-      {structures.length === 0 ? (
-        <div
-          role="placeholder"
-          className="text-center"
-          style={{
-            color: "darkgray",
-          }}
-        >
-          No structures loaded
-        </div>
-      ) : (
-        <select
-          className="plugin-variable-value p-0"
-          defaultValue=""
-          value={currentValue?.name}
-          defaultChecked={true}
-          onChange={(e) => {
-            // Get the selected structure
-            const selectedStructure = structures.find(
-              (structure) => structure.name === e.target.value
-            );
-
-            onChange(selectedStructure);
-          }}
-        >
-          {structures.map((structure, index) => (
-            <option key={index} value={structure.name} className="p-0 m-0">
-              {structure.name}
-            </option>
-          ))}
-        </select>
-      )}
-    </div>
-  );
-}
 
 function StringVariableView(props: VariableViewProps) {
   return (
@@ -1058,729 +1015,6 @@ function SmilesVariableView(props: VariableViewProps) {
   );
 }
 
-function ResidueView(props: VariableViewProps) {
-  const { currentValue, onChange } = props;
-
-  const [atom, setAtom] = useState<any>(null);
-  const [active, setActive] = useState(false);
-
-  const handleResidueClick = (e: Event) => {
-    const atomInfo = (e as CustomEvent)?.detail?.atom;
-
-    if (!atomInfo) return;
-
-    setAtom(atomInfo);
-    onChange(atomInfo);
-
-    window.molstar?.plugin.managers.interactivity.lociSelects.deselectAll();
-  };
-
-  useEffect(() => {
-    if (window.molstar) {
-      window.molstar.plugin.selectionMode = active;
-      // Set the granularity to element
-      window.molstar.plugin.managers.interactivity.setProps({
-        granularity: "residue",
-      });
-      // Unselect selected residues
-      window.molstar.plugin.managers.interactivity.lociSelects.deselectAll();
-      if (active) {
-        // Show structures in cartoon
-        window.molstar.addStructureRepresentation(null, "cartoon");
-      } else {
-        // Show structures in default
-        window.molstar.deleteStructureRepresentations();
-      }
-    }
-
-    if (active) {
-      window.addEventListener("molstar-coordinates", handleResidueClick);
-    }
-
-    return () => {
-      window.removeEventListener("molstar-coordinates", handleResidueClick);
-    };
-  }, [active]);
-
-  useEffect(() => {
-    if (currentValue) {
-      setAtom(currentValue);
-    }
-  }, [currentValue]);
-
-  return (
-    <div
-      onClick={() => setActive(!active)}
-      className={`w-full h-full max-h-28 overflow-auto border-2 rounded-xl ${
-        active && "bg-green-200 border-green-200"
-      }`}
-    >
-      {!atom ? (
-        <div className="text-center cut-text">Click to select residue</div>
-      ) : (
-        <div className="text-center cut-text">{atom.name}</div>
-      )}
-    </div>
-  );
-}
-
-function AtomView(props: VariableViewProps) {
-  const { currentValue, onChange } = props;
-
-  const [atom, setAtom] = useState<any>(null);
-  const [active, setActive] = useState<boolean>(false);
-
-  const handleAtomClick = (e: Event) => {
-    const atomInfo = (e as CustomEvent)?.detail?.atom;
-
-    if (!atomInfo) return;
-
-    setAtom(atomInfo);
-    onChange(atomInfo);
-
-    // Deselect all atoms once one is selected, because we only want to select one at a time
-    window.molstar?.plugin.managers.interactivity.lociSelects.deselectAll();
-  };
-
-  useEffect(() => {
-    if (window.molstar) {
-      window.molstar.plugin.selectionMode = active;
-      // Set the granularity to element
-      window.molstar.plugin.managers.interactivity.setProps({
-        granularity: "element",
-      });
-      // Unselect selected residues
-      window.molstar.plugin.managers.interactivity.lociSelects.deselectAll();
-      if (active) {
-        // Show structures in ball and stick
-        window.molstar.addStructureRepresentation(null, "ball-and-stick");
-      } else {
-        // Show structures in default
-        window.molstar.deleteStructureRepresentations();
-      }
-    }
-
-    if (active) {
-      window.addEventListener("molstar-coordinates", handleAtomClick);
-    }
-
-    return () => {
-      window.removeEventListener("molstar-coordinates", handleAtomClick);
-    };
-  }, [active]);
-
-  useEffect(() => {
-    if (currentValue) {
-      setAtom(currentValue);
-    }
-  }, [currentValue]);
-
-  return (
-    <div
-      onClick={() => setActive(!active)}
-      className={`w-full h-full max-h-28 overflow-auto border-2 rounded-xl ${
-        active && "bg-green-200 border-green-200"
-      }`}
-    >
-      {!atom ? (
-        <div className="text-center px-1 cut-text">Click to select atom</div>
-      ) : (
-        <div className="text-center px-1 cut-text">
-          {atom.auth_atom_id} - {atom.atom_index} - {atom.name}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ChainView(props: VariableViewProps) {
-  const { currentValue, onChange } = props;
-
-  const [chains, setChains] = useState<AtomInfo[]>([]);
-
-  const loadMolstarChains = async () => {
-    const molstar = window.molstar;
-    const chains = await molstar?.listChains();
-    setChains(chains ?? []);
-  };
-
-  useEffect(() => {
-    loadMolstarChains();
-  }, []);
-
-  return (
-    <div onMouseDown={loadMolstarChains} className="plugin-variable-value">
-      {chains.length === 0 ? (
-        <div
-          role="placeholder"
-          className="text-center"
-          style={{
-            color: "darkgray",
-          }}
-        >
-          No chains found
-        </div>
-      ) : (
-        <>
-          {chains.map((chain, index) => (
-            <div
-              key={index}
-              className="flex flex-row items-center justify-between"
-              style={{
-                paddingInline: "0.5rem",
-              }}
-            >
-              <input
-                id={`${props.variable.id}-${index}`}
-                style={{ width: "1rem" }}
-                type="checkbox"
-                value={`${chain.chainID} - ${chain.structure_label}`}
-                checked={
-                  currentValue &&
-                  currentValue.find((val: any) => {
-                    return (
-                      val.chainID === chain.chainID &&
-                      val.structure_label === chain.structure_label
-                    );
-                  }) !== undefined
-                }
-                onChange={(e) => {
-                  const newValue = chain;
-
-                  if (!currentValue) {
-                    onChange([newValue]);
-                    return;
-                  }
-
-                  let updatedValues = [...currentValue];
-
-                  if (e.target.checked) {
-                    updatedValues.push(newValue);
-                  } else {
-                    updatedValues = updatedValues.filter(
-                      (val) => val.name !== newValue.name
-                    );
-                  }
-
-                  onChange(updatedValues);
-                }}
-              />
-              <div className="ml-2">
-                {chain.chainID} - {chain.structure_label}
-              </div>
-            </div>
-          ))}
-        </>
-      )}
-    </div>
-  );
-}
-
-function StdResView(props: VariableViewProps) {
-  const { currentValue, variable, onChange } = props;
-
-  const [stdRes, setStdRes] = useState<any[]>([]);
-  const [filteredStdRes, setFilteredStdRes] = useState<any[]>([]);
-
-  const filterResidues = (event: ChangeEvent<HTMLInputElement>) => {
-    const filterValue = event.target.value;
-    const filteredResidues = stdRes.filter((residue) =>
-      residue.name.toLowerCase().includes(filterValue.toLowerCase())
-    );
-
-    setFilteredStdRes(filteredResidues);
-  };
-
-  const loadMolstarStdRes = async () => {
-    const molstar = window.molstar;
-    const residues = await molstar?.listStdRes();
-
-    setStdRes(residues ?? []);
-    setFilteredStdRes(residues ?? []);
-  };
-
-  useEffect(() => {
-    loadMolstarStdRes();
-
-    if (!currentValue) {
-      onChange([]);
-    }
-  }, []);
-
-  return (
-    <div onMouseDown={loadMolstarStdRes} className="w-60 plugin-variable-value">
-      {stdRes.length === 0 ? (
-        <div
-          role="placeholder"
-          className="text-center"
-          style={{
-            color: "darkgray",
-          }}
-        >
-          No residues found
-        </div>
-      ) : (
-        <div className="w-full overflow-auto max-h-28 min-h-12">
-          <SearchComponent
-            placeholder="Search for a residue"
-            onChange={filterResidues}
-            showIcon={false}
-          />
-          {filteredStdRes.length > 0 ? (
-            filteredStdRes.map((stdRes, index) => (
-              <div
-                key={
-                  stdRes.name +
-                  stdRes.residue +
-                  stdRes.chainID +
-                  stdRes.structure.id
-                }
-                className="flex flex-row items-center justify-between"
-                style={{
-                  gap: "1rem",
-                  textAlign: "left",
-                  paddingInline: "0.5rem",
-                }}
-              >
-                <input
-                  id={`${variable.id}-${index}`}
-                  style={{ width: "1rem" }}
-                  type="checkbox"
-                  checked={
-                    currentValue &&
-                    currentValue.find(
-                      (val: any) => val.name === stdRes.name
-                    ) !== undefined
-                  }
-                  onChange={(e) =>
-                    onChange(
-                      e.target.checked
-                        ? [...(currentValue || []), stdRes]
-                        : (currentValue || []).filter(
-                            (res: any) => res.name !== stdRes.name
-                          )
-                    )
-                  }
-                />
-                <div className="w-full">{stdRes.name}</div>
-              </div>
-            ))
-          ) : (
-            <div className="text-center">No residues found</div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function HeteroResView(props: VariableViewProps) {
-  const { currentValue, variable, onChange } = props;
-
-  const [heteroRes, setHeteroRes] = useState<any[]>([]);
-
-  const [filteredHeteroRes, setFilteredHeteroRes] = useState<any[]>([]);
-
-  const filterHeteroRes = (event: ChangeEvent<HTMLInputElement>) => {
-    const filterValue = event.target.value;
-    const filteredResidues = heteroRes.filter((residue) =>
-      residue.name.toLowerCase().includes(filterValue.toLowerCase())
-    );
-
-    setFilteredHeteroRes(filteredResidues);
-  };
-
-  const loadMolstarHeteroRes = async () => {
-    const molstar = window.molstar;
-    const residues = await molstar?.listHeteroRes();
-
-    setHeteroRes(residues ?? []);
-    setFilteredHeteroRes(residues ?? []);
-  };
-
-  useEffect(() => {
-    loadMolstarHeteroRes();
-  }, []);
-
-  return (
-    <div onMouseDown={loadMolstarHeteroRes} className="plugin-variable-value">
-      {heteroRes.length === 0 ? (
-        <div
-          role="placeholder"
-          className="text-center"
-          style={{
-            color: "darkgray",
-          }}
-        >
-          No hetero atoms found
-        </div>
-      ) : (
-        <div className="w-full overflow-auto max-h-28 min-h-12">
-          <SearchComponent
-            placeholder="Search for a residue"
-            onChange={filterHeteroRes}
-            showIcon={false}
-          />
-          {filteredHeteroRes.map((hRes, index) => (
-            <div
-              key={index}
-              className="flex flex-row items-center justify-between"
-              style={{
-                paddingInline: "0.5rem",
-              }}
-            >
-              <input
-                id={`${variable.id}-${index}`}
-                style={{ width: "1rem" }}
-                type="checkbox"
-                checked={
-                  currentValue &&
-                  currentValue.find((val: any) => val.name === hRes.name) !==
-                    undefined
-                }
-                onChange={(e) => {
-                  const newValue = hRes;
-                  const structure = hRes.structure?.name;
-                  if (structure) {
-                    newValue.structure = structure;
-                  }
-
-                  if (!currentValue) {
-                    onChange([newValue]);
-                    return;
-                  }
-
-                  let updatedValues = [...currentValue];
-
-                  if (e.target.checked) {
-                    updatedValues.push(newValue);
-                  } else {
-                    updatedValues = updatedValues.filter(
-                      (val) => val.name !== newValue.name
-                    );
-                  }
-                  onChange(updatedValues);
-                }}
-              />
-              <div className="ml-2">{hRes.name}</div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SphereVariableView(props: VariableViewProps) {
-  const { currentValue, variable, onChange } = props;
-
-  const sphereRef = useRef<SphereRef | null>(currentValue?.ref ?? null);
-
-  const [active, setActive] = useState(false);
-  const [activeColor, setActiveColor] = useState(
-    sphereRef.current ? Color.toHexStyle(sphereRef.current.color) : "#a5d6a7"
-  );
-  const mounted = useRef(false);
-
-  const parseNumberOrNegative = (value: string) => {
-    // If the field is empty, return "",
-    // if the value is "-", return "-",
-    // if the value is a number, return the number
-    // If the value does not qualify for a number (contains characters), return ""
-    // Allow also for decimals
-
-    if (value === "") {
-      return "";
-    }
-
-    if (value === "-") {
-      return "-";
-    }
-
-    // If the last character is a dot, return the value
-    if (value[value.length - 1] === ".") {
-      return value;
-    }
-
-    const parsedValue = Number(value);
-
-    if (isNaN(parsedValue)) {
-      return "";
-    } else {
-      return value;
-    }
-  };
-
-  const handleChange = useCallback(
-    async (
-      position: {
-        x: number | string;
-        y: number | string;
-        z: number | string;
-      },
-      radius: number | string
-    ) => {
-      const molstar = window.molstar;
-
-      if (!molstar) return;
-
-      if (!mounted.current) {
-        return;
-      }
-
-      const parsedSphereNumbers = {
-        x: Number(position.x),
-        y: Number(position.y),
-        z: Number(position.z),
-      };
-
-      const ref = await molstar.addSphere(
-        parsedSphereNumbers,
-        Number(radius),
-        0.3,
-        undefined,
-        sphereRef.current ?? undefined
-      );
-
-      sphereRef.current = ref;
-
-      setActiveColor(Color.toHexStyle(ref.color));
-
-      const sphereData = {
-        center: {
-          x: position.x,
-          y: position.y,
-          z: position.z,
-        },
-        radius: radius,
-        ref: ref,
-      };
-
-      onChange(sphereData);
-
-      window.molstar?.plugin.managers.interactivity.lociSelects.deselectAll();
-    },
-    [onChange]
-  );
-
-  // When unmounting, remove the sphere
-  useEffect(() => {
-    return () => {
-      if (window.molstar && sphereRef?.current?.ref) {
-        window.molstar.removeSphere(sphereRef.current.ref);
-      }
-    };
-  }, []);
-
-  const handleCoordinates = useCallback(
-    (e: Event) => {
-      if (active) {
-        const data = (e as CustomEvent).detail;
-
-        handleChange(
-          {
-            x: data.x,
-            y: data.y,
-            z: data.z,
-          },
-          currentValue?.radius ?? 10
-        );
-      }
-    },
-    [active, currentValue, handleChange]
-  );
-
-  // Place the sphere in the center of the screen
-  useEffect(() => {
-    if (window.molstar) {
-      window.molstar.plugin.selectionMode = active;
-      // Unselect selected residues
-      window.molstar.plugin.managers.interactivity.lociSelects.deselectAll();
-    }
-
-    // Listen for the "molstar-coordinates" event
-    window.addEventListener("molstar-coordinates", handleCoordinates);
-    return () => {
-      window.removeEventListener("molstar-coordinates", handleCoordinates);
-    };
-  }, [active, handleCoordinates]);
-
-  const handleNewlyPlaced = useCallback(async () => {
-    const sphereData: any = {
-      center: {
-        x: 0,
-        y: 0,
-        z: 0,
-      },
-      radius: 10,
-      ref: null,
-    };
-
-    if (window.molstar) {
-      const ref = await window.molstar.addSphere(
-        sphereData.center,
-        sphereData.radius,
-        0.3,
-        undefined,
-        undefined
-      );
-      sphereRef.current = ref;
-      setActiveColor(Color.toHexStyle(ref.color));
-
-      sphereData.ref = ref;
-    }
-
-    onChange(sphereData);
-  }, [onChange]);
-
-  useEffect(() => {
-    // Set the initial value in case it's not set
-    if (!currentValue && !mounted.current) {
-      handleNewlyPlaced();
-    }
-    mounted.current = true;
-  });
-
-  return (
-    <div
-      className="flex flex-col p-2 gap-2"
-      style={{
-        padding: "0 !important",
-      }}
-    >
-      <div className="flex flex-row gap-2">
-        <div className="flex flex-row gap-2">
-          <span
-            className="font-semibold"
-            style={{
-              color: "darkgray",
-            }}
-          >
-            X:
-          </span>
-          <input
-            id={`${variable.id}-x`}
-            className="plugin-variable-value text-black"
-            value={currentValue?.center?.x ?? ""}
-            onChange={(e) => {
-              handleChange(
-                {
-                  x: parseNumberOrNegative(e.target.value),
-                  y: currentValue.center.y,
-                  z: currentValue.center.z,
-                },
-                currentValue.radius
-              );
-            }}
-          />
-        </div>
-        <div className="flex flex-row gap-2">
-          <span
-            className="font-semibold"
-            style={{
-              color: "darkgray",
-            }}
-          >
-            Y:
-          </span>
-          <input
-            id={`${variable.id}-y`}
-            className="plugin-variable-value text-black"
-            value={currentValue?.center?.y ?? 0}
-            onChange={(e) => {
-              handleChange(
-                {
-                  x: currentValue.center.x,
-                  y: parseNumberOrNegative(e.target.value),
-                  z: currentValue.center.z,
-                },
-                currentValue.radius
-              );
-            }}
-          />
-        </div>
-        <div className="flex flex-row gap-2">
-          <span
-            className="font-semibold"
-            style={{
-              color: "darkgray",
-            }}
-          >
-            Z:
-          </span>
-          <input
-            id={`${variable.id}-z`}
-            className="plugin-variable-value text-black"
-            value={currentValue?.center?.z ?? 0}
-            onChange={(e) => {
-              handleChange(
-                {
-                  x: currentValue.center.x,
-                  y: currentValue.center.y,
-                  z: parseNumberOrNegative(e.target.value),
-                },
-                currentValue.radius
-              );
-            }}
-          />
-        </div>
-        <div className="flex flex-row gap-2">
-          <span
-            className="font-semibold"
-            style={{
-              color: "darkgray",
-            }}
-          >
-            R:
-          </span>
-          <input
-            id={`${variable.id}-radius`}
-            className="plugin-variable-value text-black"
-            value={currentValue?.radius ?? ""}
-            onChange={(e) => {
-              const newRadius = parseNumberOrNegative(e.target.value);
-              handleChange(
-                {
-                  x: currentValue.center.x,
-                  y: currentValue.center.y,
-                  z: currentValue.center.z,
-                },
-                newRadius
-              );
-            }}
-          />
-        </div>
-      </div>
-      <div
-        onClick={() => setActive(!active)}
-        className={`w-full h-full max-h-28 overflow-auto border-2 rounded-xl cursor-default ${
-          active && "bg-green-200 border-green-200"
-        }`}
-      >
-        {active ? (
-          <div className="text-center px-1 cut-text">Click on Mol*</div>
-        ) : (
-          <div className="text-center px-1 cut-text">
-            {sphereRef.current ? (
-              <div className="flex flex-row items-center justify-center gap-2">
-                Placed sphere
-                <div
-                  className="w-4 h-4 rounded-full"
-                  style={{
-                    backgroundColor: activeColor,
-                  }}
-                ></div>
-              </div>
-            ) : (
-              "Enable Mol* selection"
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 function CustomVariableRenderer(props: {
   variable: CustomVariable;
   onChange: (value: any) => void;
@@ -1809,6 +1043,7 @@ function CustomVariableRenderer(props: {
     return () => {
       loadPage(undefined, undefined, props.variable.placedID);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

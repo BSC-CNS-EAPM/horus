@@ -15,14 +15,9 @@ import { ErrorBoundary } from "../reusable";
 export default function Molstar() {
   const parent = createRef<HTMLDivElement>();
 
-  const loadMolstar = async () => {
-    const molstar = new HorusMolstar();
-    await molstar.init(parent.current!);
-    window.molstar = molstar;
-  };
-
   useEffect(() => {
-    loadMolstar();
+    window.molstar = new HorusMolstar(parent.current!);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

@@ -294,7 +294,7 @@ def test_background_molstar_api(flow_appDelegate):
         # Verify that the pending action is "addPDB"
         action = flow.pendingActions[0]
 
-        assert action["type"] == "addPDB"
+        assert action["type"] == "addMolecule"
     finally:
         # Restore the flow by copying the .bak file to the original file
         os.system(f"mv {path}.bak {path}")
@@ -365,6 +365,9 @@ def test_molview_flow(flow_appDelegate):
 
     try:
         flow.run(placedID=1)
+
+        for block in flow.blocks:
+            print(block._runErrorMessage)
 
         # Check that the flow has been updated
         assert flow.status == Flow.FlowStatus.FINISHED

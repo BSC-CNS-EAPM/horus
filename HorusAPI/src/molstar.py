@@ -2,7 +2,8 @@
 The MolstarAPI module
 """
 
-# Logging
+# Basic utilities
+import os
 import logging
 
 # Import types only in development
@@ -60,10 +61,38 @@ class MolstarAPI(metaclass=SingletonMeta):
         :param pdb: The PDB as a read string
         :param label: The label of the structure to be shown in the scene
         """
+        # addPDB is deprecated
+        msg = "addPDB is deprecated. Please use addMolecule instead."
+        logging.getLogger("Horus").warning(msg)
+        print(msg)
 
         data = {"type": "addPDB", "data": {"pdb": pdb, "label": label}}
 
         self._emitAction("loadPDB", data)
+
+    def addMolecule(self, filePath: str, label: typing.Optional[str] = None) -> None:
+        """
+        Adds the given Molecule file to Mol*
+
+        :param filePath: The path to the molecule file
+        :param label: The label for the molecule. Optional. Defaults to the filename
+        """
+
+        with open(filePath, "rb") as fopen:
+            molecule = fopen.read().hex()
+
+        fileName = os.path.basename(filePath)
+
+        data = {
+            "type": "addMolecule",
+            "data": {
+                "fileName": fileName,
+                "molContent": molecule,
+                "label": label if label else fileName,
+            },
+        }
+
+        self._emitAction("loadMolecule", data)
 
     def loadMVJS(self, mvjs: typing.Dict[str, typing.Any], replaceExisting: bool = False) -> None:
         """
@@ -152,6 +181,78 @@ class MolstarAPI(metaclass=SingletonMeta):
 
         self._emitAction("addSphere", data)
 
+    def addBox(
+        self,
+        center: list[float],
+        sides: list[float] = [1, 1, 1],
+        lineSize: float = 1,
+        color: typing.Optional[str] = None,
+        opacity: float = 1,
+    ) -> None:
+        """
+        Adds a box to the scene.
+
+        :param center: The x, y and z coordinates of the center of the box as a list of [x, y ,z]
+        :param sides: The a, b and c lengths of the box as a list of [a, b ,c]. Defaults to [1, 1, 1]
+        :param lineSize: The width of the lines. Defaults to 1.
+        :param color: The color of the box as an RGB hex string (i.e. #0000FF) Defaults to random color.
+        :param opacity: The opacity of the box (0.0 - 1.0). Defaults to 1.
+        """
+
+        if (
+            not isinstance(center, list)
+            or len(center) != 3
+            or not all(isinstance(x, float) for x in center)
+        ):
+            raise ValueError(
+                f"Center must be a 3 dimensional float list of the form [x, y, z]. Got value '{center}'"
+            )
+
+        if (
+            not isinstance(sides, list)
+            or len(sides) != 3
+            or not all(isinstance(x, float) for x in sides)
+        ):
+            raise ValueError(
+                f"Sides must be a 3 dimensional float list of the form [a, b, c]. Got value '{center}'"
+            )
+
+        position = {
+            "x0": center[0],
+            "y0": center[1],
+            "z0": center[2],
+            "x1": sides[0],
+            "y1": 0,
+            "z1": 0,
+            "x2": 0,
+            "y2": sides[1],
+            "z2": 0,
+            "x3": 0,
+            "y3": 0,
+            "z3": sides[2],
+        }
+
+        # Convert the color to a hex string without the #
+        # The TS molstar class will use the default color if None is given
+        if color is not None:
+            if not color.startswith("#"):
+                color = "#" + color
+        else:
+            color = "#0000FF"
+
+        data = {
+            "type": "addBox",
+            "data": {
+                "position": position,
+                "radiusScale": lineSize,
+                "radialSegments": 5,
+                "color": color,
+                "opacity": opacity,
+            },
+        }
+
+        self._emitAction("addBox", data)
+
     def setBackgroundColor(self, color: str) -> None:
         """
         Sets the background color of the scene
@@ -167,14 +268,16 @@ class MolstarAPI(metaclass=SingletonMeta):
 
         self._emitAction("setBackgroundColor", data)
 
-    def toggleSpin(self) -> None:
+    def setSpin(self, speed: float = 1) -> None:
         """
-        Toggles the spin of the molecule
+        Sets the spin of the molecule.
+
+        :param speed: The rotation speed. Defaults to 1. To stop it, set the speed to 0
         """
 
-        data = {"type": "toggleSpin", "data": {}}
+        data = {"type": "setSpin", "data": {speed: speed}}
 
-        self._emitAction("toggleSpin", data)
+        self._emitAction("setSpin", data)
 
     def reset(self) -> None:
         """

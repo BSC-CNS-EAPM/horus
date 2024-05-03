@@ -11,7 +11,7 @@
         "strictBindCallApply": true,
         "noPropertyAccessFromIndexSignature": true,
         "noUncheckedIndexedAccess": true,
-        "exactOptionalPropertyTypes": true,
+        "exactOptionalPropertyTypes": false,
         // Linter Checks
         "noImplicitReturns": true,
         "noImplicitOverride": true,
