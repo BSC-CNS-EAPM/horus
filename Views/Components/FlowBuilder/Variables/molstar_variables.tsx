@@ -343,8 +343,8 @@ function SelectMultipleStructures({
           onChange(
             e.target.checked
               ? [...(currentValue ?? []), structure]
-              : (currentValue || []).filter(
-                  (res: any) => res.label !== structure.label
+              : (currentValue ?? []).filter(
+                  (s: MolInfo) => s.id !== structure.id
                 )
           )
         }
@@ -365,11 +365,9 @@ export function ChainView(props: VariableViewProps) {
   const { setCurrentFilter, filteredChains } = useChainFilters();
 
   useEffect(() => {
-    // Set the initial structures
-    const structures = filterStructures(window.molstar.listStructures());
-
-    if (!currentValue && structures.length > 0) {
-      onChange([structures[0]]);
+    // Set the initial chains
+    if (!currentValue && filteredChains.length > 0) {
+      onChange([filteredChains[0]]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -447,17 +445,19 @@ function SelectMultipleChains({
             );
           }) !== undefined
         }
-        onChange={(e) =>
-          onChange(
-            e.target.checked
-              ? [...(currentValue ?? []), chain]
-              : (currentValue || []).filter(
-                  (c: any) =>
-                    c.structureID !== chain.structureID &&
-                    c.chainID !== chain.chainID
-                )
-          )
-        }
+        onChange={(e) => {
+          const newValue = e.target.checked
+            ? [...(currentValue ?? []), chain]
+            : (currentValue ?? []).filter(
+                (c: AtomInfo) =>
+                  !(
+                    c.structureID === chain.structureID &&
+                    c.chainID === chain.chainID
+                  )
+              );
+          console.log("new value", newValue);
+          onChange(newValue);
+        }}
       />
       <div className="w-full grid grid-cols-[2rem,2fr] gap-2 items-center">
         <span>{chain.chainID}</span>
@@ -473,11 +473,8 @@ export function StandardResView(props: VariableViewProps) {
   const { setCurrentFilter, filteredResidues } = useResidueFilters("standard");
 
   useEffect(() => {
-    // Set the initial structures
-    const structures = filterStructures(window.molstar.listStructures());
-
-    if (!currentValue && structures.length > 0) {
-      onChange([structures[0]]);
+    if (!currentValue && filteredResidues.length > 0) {
+      onChange([filteredResidues[0]]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -532,11 +529,9 @@ export function HeteroResView(props: VariableViewProps) {
   const { setCurrentFilter, filteredResidues } = useResidueFilters("hetero");
 
   useEffect(() => {
-    // Set the initial structures
-    const structures = filterStructures(window.molstar.listStructures());
-
-    if (!currentValue && structures.length > 0) {
-      onChange([structures[0]]);
+    // Set the initial residues
+    if (!currentValue && filteredResidues.length > 0) {
+      onChange([filteredResidues[0]]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -622,9 +617,11 @@ function SelectMultipleResidues({
               ? [...(currentValue ?? []), residue]
               : (currentValue || []).filter(
                   (r: AtomInfo) =>
-                    r.structureID !== residue.structureID &&
-                    r.residue !== residue.residue &&
-                    r.chainID !== residue.chainID
+                    !(
+                      r.structureID === residue.structureID &&
+                      r.residue === residue.residue &&
+                      r.chainID === residue.chainID
+                    )
                 )
           )
         }
