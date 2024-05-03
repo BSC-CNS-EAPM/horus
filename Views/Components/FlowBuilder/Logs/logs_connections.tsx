@@ -91,7 +91,7 @@ export function SlurmOutputModalView(props: SlurmOutputModalViewProps) {
         }}
       >
         {block.stdOut ? (
-          <pre>{block.stdOut}</pre>
+          <pre className="pb-2">{block.stdOut}</pre>
         ) : (
           <span className="text-center w-full">No output during execution</span>
         )}
@@ -109,7 +109,7 @@ export function SlurmOutputModalView(props: SlurmOutputModalViewProps) {
         }}
       >
         {block.stdErr ? (
-          <pre>{block.stdErr}</pre>
+          <pre className="pb-2">{block.stdErr}</pre>
         ) : (
           <span className="text-center w-full">No errors during execution</span>
         )}
