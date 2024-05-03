@@ -1233,7 +1233,7 @@ export default class HorusMolstar {
    * @throws {Error} If the root reference is invalid, the file cannot be found, or an unexpected error occurs during conversion.
    */
   private getFileAsHexStringFromRootRef(rootRef: string): {
-    fileContents: string;
+    fileContents: string | null;
     fileName: string;
     format: string;
   } {
@@ -1256,7 +1256,7 @@ export default class HorusMolstar {
       };
     } catch (error) {
       return {
-        fileContents: "Unknown contents",
+        fileContents: null,
         fileName: "Unknown",
         format: "Unknown",
       };
@@ -1292,13 +1292,17 @@ export default class HorusMolstar {
           structure.cell.sourceRef!
         );
 
-        const molInfo: MolInfo = {
+        const molInfo = {
           id: structure.cell.sourceRef!,
           label: this.getLabelFromStructureRef(rootRef),
           ...this.getFileAsHexStringFromRootRef(rootRef),
+        } as MolInfo & {
+          fileContents: string | null;
         };
 
-        molList.push(molInfo);
+        if (molInfo.fileContents !== null) {
+          molList.push(molInfo);
+        }
       }
     } catch (error) {
       alert(

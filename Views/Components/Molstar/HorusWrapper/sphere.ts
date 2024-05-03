@@ -100,8 +100,8 @@ function DockingSphereVisual(
         structureGroup: StructureGroup,
         id: number
       ) => {
-        const { objectId } = pickingId;
-        if (objectId !== id) return EmptyLoci; // Return EmptyLoci if the call was not for us
+        // const { objectId } = pickingId;
+        // if (objectId !== id) return EmptyLoci; // Return EmptyLoci if the call was not for us
 
         // return DataLoci(
         //     // Identifying tag
@@ -132,10 +132,6 @@ function DockingSphereVisual(
         structureGroup: StructureGroup,
         apply: (interval: Interval) => boolean
       ) => {
-        if (loci.kind === "data-loci" && loci.tag === "sphere-data-loci") {
-          // This is a nasty hack that will highlight all spheres just to demonstrate what happens
-          return apply(Interval.ofBounds(0, 1));
-        }
         return false; // You can simply return false, the spheres will then be ignored by picking
       },
 
