@@ -1149,7 +1149,7 @@ class PluginBlock:
             return variable.value
 
     @property
-    def variables(self):
+    def variables(self) -> dict:
         """
         The variables assigned to the block.
 
@@ -1162,7 +1162,7 @@ class PluginBlock:
         return varsDict
 
     @property
-    def inputs(self):
+    def inputs(self) -> dict:
         """
         The inputs assigned to the block.
 
@@ -1186,7 +1186,7 @@ class PluginBlock:
         return varsDict
 
     @property
-    def outputs(self):
+    def outputs(self) -> dict:
         """
         The outputs assigned to the block.
 
@@ -1454,7 +1454,7 @@ class PluginBlock:
 
         return fullBlock
 
-    config: typing.Optional[dict] = {}
+    config: dict = {}
     """
     The configuration of the plugin that hosts this block.
     """
@@ -2051,7 +2051,7 @@ class Plugin:
         return self._configs
 
     @property
-    def config(self):
+    def config(self) -> dict:
         """
         A dictionary with the configs of the block
         """
