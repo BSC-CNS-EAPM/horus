@@ -573,15 +573,23 @@ class RemotesAPI:
 
         # Update the list of jobs for the flow
         # only if there is not a job for the same remote / block / jobID
-        for job in queue[self._flowSavedID]:
+        for index in range(len(queue[self._flowSavedID])):
+            
+            currentQueue = queue[self._flowSavedID][index]
+
             if (
-                job["remote"] == self.remoteName
-                and job["jobID"] == jobID
-                and job["blockPlacedID"] == self._blockPlacedID
+                currentQueue["remote"] == self.remoteName
+                and currentQueue["jobID"] == jobID
+                and currentQueue["blockPlacedID"] == self._blockPlacedID
             ):
                 logging.getLogger("Horus").error(
                     "Trying to append an already existing job to the internal job queue. This may result in errors."
                 )
+
+            # Remove any entry with the same blockPlacedID to only have 1 jobID per block
+            if currentQueue["blockPlacedID"] == self._blockPlacedID:
+                queue[self._flowSavedID].pop(index)
+
 
         queue[self._flowSavedID].append(
             {
