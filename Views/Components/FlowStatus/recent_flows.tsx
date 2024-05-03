@@ -8,6 +8,7 @@ import { horusGet } from "../../Utils/utils";
 import { FlowStatusView } from "./flow_status";
 import WorkingView from "../MainApp/working_view";
 import { Flow } from "../FlowBuilder/flow.types";
+import { FileData } from "chonky";
 
 type RecentUserFlowProps = {
   flows: Flow[];
@@ -112,9 +113,17 @@ export function PredefinedFlows(props: RecentUserFlowProps) {
 
 export function useGetRecentFlows(
   webAppFlows: boolean = false
-): [boolean, Flow[], Flow[], () => Promise<void>, (active: boolean) => void] {
+): [
+  boolean,
+  Flow[],
+  Flow[],
+  () => Promise<void>,
+  (active: boolean) => void,
+  FileData[]
+] {
   const [fetchingRecents, setFetchingRecents] = useState(true);
   const [recentFlows, setRecentFlows] = useState<Flow[]>([]);
+  const [otherDirectories, setOtherDirectories] = useState<FileData[]>([]);
   const [predefinedFlows, setPredefinedFlows] = useState<Flow[]>([]);
   const interval = useRef<Timer | null>(null);
 
@@ -147,6 +156,7 @@ export function useGetRecentFlows(
     });
 
     setRecentFlows(flows);
+    setOtherDirectories(recentFlowsData.otherDirectories ?? []);
   }, [webAppFlows]);
 
   const getFlows = useCallback(async () => {
@@ -209,5 +219,6 @@ export function useGetRecentFlows(
     predefinedFlows,
     getFlows,
     toggleInterval,
+    otherDirectories,
   ];
 }

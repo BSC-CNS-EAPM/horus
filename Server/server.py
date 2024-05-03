@@ -66,7 +66,7 @@ from Server.RemotesManager import RemotesManager
 from Server.PluginManager import PluginManager
 
 # Server explorer
-from Server.FileExplorer import FileExplorer, UserFileExplorer
+from Server.FileExplorer import FileExplorer, UserFileExplorer, File
 
 # User management for WebApp mode
 from Server.WebAppManager import WebAppManager, UserError
@@ -2342,10 +2342,14 @@ class HorusServer:
 
             try:
                 # Loop over the user's flow directory and return the .flow files
+                # For other folders, list them in "otherDirectories"
+                # so the users can download them
+                otherDirectories: typing.List[str] = []
                 flowInstances: typing.List["Flow"] = []
                 flowDirectories = os.listdir(currentUser.flowsDir)
                 for flowDir in flowDirectories:
-                    flowPath = os.path.join(currentUser.flowsDir, flowDir, flowDir + ".flow")
+                    dirPath = os.path.join(currentUser.flowsDir, flowDir)
+                    flowPath = os.path.join(dirPath, flowDir + ".flow")
                     if os.path.exists(flowPath):
                         try:
                             flowInstances.append(self.flowManager.openFlowFromPath(flowPath))
@@ -2353,17 +2357,42 @@ class HorusServer:
                             logging.getLogger("Horus").error(
                                 "Could not open user flow at %s: %s", flowPath, str(exc)
                             )
-                            continue
+                            otherDirectories.append(dirPath)
+                    else:
+                        otherDirectories.append(dirPath)
 
                 # If we are in webapp mode, remove the part of the paths that is not
                 # accessible by the user (otside its directory)
                 for flow in flowInstances:
                     flow.path = str(UserFileExplorer(flow.path, currentUser).getRelativePath())
 
+                # Parse the other files / directories
+                parsedOtherDirectories = []
+                for d in otherDirectories:
+                    try:
+                        file = File(d)
+                        if file.isDir:
+                            logging.getLogger("Horus").warning(
+                                f"There is an unrecognized folder listed as 'other files'. Users can only download regular files. "
+                                + f"Please compress the folder '{file.path}' in order to allow it to download."
+                            )
+                            continue
+                        file.getSize()
+                        fileDict = file.toDict()
+                        fileDict["path"] = str(
+                            UserFileExplorer(fileDict["path"], currentUser).getRelativePath()
+                        )
+
+                        parsedOtherDirectories.append(fileDict)
+                    except Exception as exc:
+                        logging.getLogger("Horus").error(
+                            f"Could not parse 'other files' for path '{d}': {str(exc)}"
+                        )
+
                 # Convert the flows to JSON
                 flows = [flow.encode() for flow in flowInstances]
 
-                success = {"ok": True, "flows": flows}
+                success = {"ok": True, "flows": flows, "otherDirectories": parsedOtherDirectories}
             except Exception as exc:  # pylint: disable=broad-exception-caught
                 success = {
                     "ok": False,
@@ -2481,6 +2510,46 @@ class HorusServer:
                 return flask.jsonify({"ok": False, "msg": str(exc)})
 
             return flask.jsonify({"ok": False, "msg": "Invalid request"})
+
+        @self.server.route("/users/downloadfile", methods=["GET"])
+        @self.verifyLogin
+        def downloadUserFile():
+            if self.webAppManager is None:
+                return flask.jsonify({"ok": False, "msg": "No user registration required"})
+            try:
+                # Get the file from the request
+                filePath = request.args.get("path", None)
+
+                if filePath is None:
+                    return flask.jsonify({"ok": False, "msg": "No data provided"})
+
+                # Convert the file from relative to full
+                realPath = str(UserFileExplorer(filePath, currentUser).getAbsolutePath())
+
+                # Return the flow as a blob
+                return flask.send_file(
+                    realPath,
+                    as_attachment=True,
+                    mimetype="application/octet-stream",
+                )
+            except Exception as exc:
+                return flask.jsonify({"ok": False, "msg": str(exc)})
+
+        @self.server.route("/users/deletefile", methods=["POST"])
+        @self.verifyLogin
+        def deleteUserFile():
+            if self.webAppManager is None:
+                return flask.jsonify({"ok": False, "msg": "No user registration required"})
+            try:
+                filePath = request.get_json().get("path", None)
+                if filePath is None:
+                    return flask.jsonify({"ok": False, "msg": "No data provided"})
+
+                realPath = str(UserFileExplorer(filePath, currentUser).getAbsolutePath())
+                os.remove(realPath)
+                return flask.jsonify({"ok": True})
+            except Exception as exc:
+                return flask.jsonify({"ok": False, "msg": str(exc)})
 
         @self.server.route("/users/admintools")
         @self.verifyLogin

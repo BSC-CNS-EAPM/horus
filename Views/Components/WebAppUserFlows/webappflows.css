@@ -4,6 +4,12 @@
   gap: 0.5rem;
 }
 
+.download-file-table {
+  display: grid;
+  grid-template-columns: repeat(6, auto);
+  gap: 0.5rem;
+}
+
 .header-row > div,
 .flow-row > div {
   padding: 0.5rem;

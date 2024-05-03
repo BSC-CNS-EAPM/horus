@@ -23,46 +23,182 @@ import { render, unmountComponentAtNode } from "react-dom";
 
 // Utils
 import { horusPost } from "../../Utils/utils";
+import { FileData } from "chonky";
 
 export default function WebAppUserFlows() {
   // Get the recent flows with the custom hook
-  const [, recentFlows, , getFlows] = useGetRecentFlows(true);
+  const [, recentFlows, , getFlows, , otherDirectories] =
+    useGetRecentFlows(true);
 
   if (recentFlows.length === 0) {
     return null;
   }
 
   return (
-    <HorusContainer
-      className="w-full flex flex-col justify-center items-center gap-2"
-      style={{
-        maxWidth: "1075px",
-        minWidth: "650px",
-      }}
-    >
-      <h1 className="text-xl font-semibold">Your Flows</h1>
-      <div className="flow-table w-full p-2 svg-container">
-        <div className="header-row">Name</div>
-        <div className="header-row">Date</div>
-        <div className="header-row">Size</div>
-        <div className="header-row">Duration</div>
-        <div className="header-row">Status</div>
-        <div className="header-row">Open</div>
-        <div className="header-row">Download</div>
-        <div className="header-row">Delete</div>
-        <hr className="p-0 m-0 w-full"></hr>
-        <hr className="p-0 m-0 w-full"></hr>
-        <hr className="p-0 m-0 w-full"></hr>
-        <hr className="p-0 m-0 w-full"></hr>
-        <hr className="p-0 m-0 w-full"></hr>
-        <hr className="p-0 m-0 w-full"></hr>
-        <hr className="p-0 m-0 w-full"></hr>
-        <hr className="p-0 m-0 w-full"></hr>
-        {recentFlows.map((flow) => (
-          <FlowRowView key={flow.savedID} flow={flow} getFlows={getFlows} />
-        ))}
+    <>
+      <HorusContainer
+        className="w-full flex flex-col justify-center items-center gap-2"
+        style={{
+          maxWidth: "1075px",
+          minWidth: "650px",
+        }}
+      >
+        <h1 className="text-xl font-semibold">Your Flows</h1>
+        <div className="flow-table w-full p-2 svg-container">
+          <div className="header-row">Name</div>
+          <div className="header-row">Date</div>
+          <div className="header-row">Size</div>
+          <div className="header-row">Duration</div>
+          <div className="header-row">Status</div>
+          <div className="header-row">Open</div>
+          <div className="header-row">Download</div>
+          <div className="header-row">Delete</div>
+          <hr className="p-0 m-0 w-full"></hr>
+          <hr className="p-0 m-0 w-full"></hr>
+          <hr className="p-0 m-0 w-full"></hr>
+          <hr className="p-0 m-0 w-full"></hr>
+          <hr className="p-0 m-0 w-full"></hr>
+          <hr className="p-0 m-0 w-full"></hr>
+          <hr className="p-0 m-0 w-full"></hr>
+          <hr className="p-0 m-0 w-full"></hr>
+          {recentFlows.map((flow) => (
+            <FlowRowView key={flow.savedID} flow={flow} getFlows={getFlows} />
+          ))}
+        </div>
+      </HorusContainer>
+      {otherDirectories.length > 0 && (
+        <HorusContainer
+          className="w-full flex flex-col justify-center items-center gap-2"
+          style={{
+            maxWidth: "1075px",
+            minWidth: "650px",
+          }}
+        >
+          <h1 className="text-xl font-semibold">Other files</h1>
+          <div className="download-file-table w-full p-2 svg-container">
+            <div className="header-row">Name</div>
+            <div className="header-row">Date</div>
+            <div className="header-row">Size</div>
+            <div className="header-row">Type</div>
+            <div className="header-row">Download</div>
+            <div className="header-row">Delete</div>
+            <hr className="p-0 m-0 w-full"></hr>
+            <hr className="p-0 m-0 w-full"></hr>
+            <hr className="p-0 m-0 w-full"></hr>
+            <hr className="p-0 m-0 w-full"></hr>
+            <hr className="p-0 m-0 w-full"></hr>
+            <hr className="p-0 m-0 w-full"></hr>
+            {otherDirectories.map((dir) => (
+              <OtherFileView key={dir.id} directory={dir} getFlows={getFlows} />
+            ))}
+          </div>
+        </HorusContainer>
+      )}
+    </>
+  );
+}
+
+function OtherFileView(props: {
+  directory: FileData;
+  getFlows: () => Promise<void>;
+}) {
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const downloadFile = async () => {
+    setIsDownloading(true);
+
+    try {
+      // Create a link to download the file
+      const link = document.createElement("a");
+      link.href = `/users/downloadfile?path=${props.directory["path"]}`;
+
+      // Add the link to the document
+      document.body.appendChild(link);
+
+      // Click the link
+      link.click();
+
+      // Remove the link from the document
+      document.body.removeChild(link);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const deleteFile = async () => {
+    setIsDeleting(true);
+
+    try {
+      const body = JSON.stringify({
+        path: props.directory["path"],
+      });
+
+      const response = await horusPost("/users/deletefile", null, body);
+
+      if (!response) {
+        setIsDeleting(false);
+        return;
+      }
+
+      const data = await response.json();
+
+      if (!data.ok) {
+        alert("Error deleting file: " + data.msg);
+      } else {
+        // Get the flows again
+        await props.getFlows();
+
+        setIsDeleting(false);
+      }
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  if (isDownloading || isDeleting) {
+    return (
+      <RotatingLines
+        size="25px"
+        style={{
+          // Center the loading icon
+          margin: "0 auto",
+        }}
+      />
+    );
+  }
+
+  return (
+    <>
+      <div>{props.directory.name}</div>
+      <div>{props.directory.modDate?.toString().split(".")[0] ?? "-"}</div>
+      <div>
+        <FlowSize size={props.directory.size} status={FlowStatus.FINISHED} />
       </div>
-    </HorusContainer>
+      <div>{props.directory.isDir ? "Folder" : props.directory.ext}</div>
+      <CloudDownload
+        className="cursor-pointer w-6 h-6"
+        style={{
+          color: "var(--pop-code)",
+        }}
+        onClick={downloadFile}
+      />
+      <TrashIcon
+        className="w-6 h-6 text-center cursor-pointer items-center justify-center"
+        onClick={() => {
+          if (
+            confirm(
+              "Do you want to delete this file? This action is irreversible."
+            )
+          ) {
+            deleteFile();
+          }
+        }}
+        style={{
+          color: "var(--danger-red)",
+        }}
+      />
+    </>
   );
 }
 
@@ -172,13 +308,15 @@ function FlowDownload({ flow }: { flow: Flow }) {
   }
 
   if (isDownloading) {
-    <RotatingLines
-      size="25px"
-      style={{
-        // Center the loading icon
-        margin: "0 auto",
-      }}
-    />;
+    return (
+      <RotatingLines
+        size="25px"
+        style={{
+          // Center the loading icon
+          margin: "0 auto",
+        }}
+      />
+    );
   }
 
   return (
@@ -193,7 +331,7 @@ function FlowDownload({ flow }: { flow: Flow }) {
 }
 
 function FlowSize({ size }: { size: number | undefined; status: FlowStatus }) {
-  if (size) {
+  if (size || size === 0) {
     // The size are MB, but if higher than 1000, then it's GB
     if (size > 1000) {
       return <div>{(size / 1000).toFixed(2)} GB</div>;
