@@ -739,7 +739,7 @@ class HorusServer:
                     # Create it by generating a
                     # container folder with the sanitized name. Then, the flow will be
                     # saved inside this folder
-                    if currentPath is None:
+                    if currentPath is None or currentPath == ".":
                         from pathvalidate import sanitize_filepath
 
                         sanitizedName = sanitize_filepath(flowData["name"], max_len=30)
