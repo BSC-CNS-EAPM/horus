@@ -1237,22 +1237,30 @@ export default class HorusMolstar {
     fileName: string;
     format: string;
   } {
-    const fileName =
-      this.plugin!.state.data.cells.get(rootRef)!.params!.values.file.name;
-    let fileContents = "";
-    if (fileName.endsWith(".bcif")) {
-      const uint8Arr = this.plugin!.state.data.cells.get(rootRef)?.obj?.data;
-      fileContents = uint8Arr.toString(16);
-    } else {
-      const data = this.plugin!.state.data.cells.get(rootRef)?.obj?.data;
-      fileContents = data.toString(16);
-    }
+    try {
+      const fileName =
+        this.plugin!.state.data.cells.get(rootRef)!.params!.values.file.name;
+      let fileContents = "";
+      if (fileName.endsWith(".bcif")) {
+        const uint8Arr = this.plugin!.state.data.cells.get(rootRef)?.obj?.data;
+        fileContents = uint8Arr.toString(16);
+      } else {
+        const data = this.plugin!.state.data.cells.get(rootRef)?.obj?.data;
+        fileContents = data.toString(16);
+      }
 
-    return {
-      fileContents,
-      fileName,
-      format: fileName.split(".").pop() ?? "unknown", // Default to 'unknown' if no extension found
-    };
+      return {
+        fileContents,
+        fileName,
+        format: fileName.split(".").pop() ?? "unknown", // Default to 'unknown' if no extension found
+      };
+    } catch (error) {
+      return {
+        fileContents: "Unknown contents",
+        fileName: "Unknown",
+        format: "Unknown",
+      };
+    }
   }
 
   // Will search iteratibely until finding the actual label of the structure (the one on the root)
