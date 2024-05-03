@@ -11,6 +11,17 @@ type IFrameLoaderProps = {
 };
 
 function IFrameLoader({ url, pagename, data }: IFrameLoaderProps) {
+  const fixedURL = () => {
+    let domain = window.location.href;
+
+    // Remove the final slash
+    if (domain.endsWith("/")) {
+      domain = domain.slice(0, -1);
+    }
+
+    return domain + url;
+  };
+
   const [loading, setLoading] = useState(true);
 
   const handleLoad = () => {
@@ -40,7 +51,9 @@ function IFrameLoader({ url, pagename, data }: IFrameLoaderProps) {
       <iframe
         id={`${url}-${pagename}`}
         sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-presentation allow-downloads allow-modals allow-top-navigation"
-        src={url}
+        // If the url does not start with the current domain, add It in order to prevent http / https errors
+        // Prevent double backslashes //
+        src={fixedURL()}
         style={{
           width: "100%",
           height: "100%",
