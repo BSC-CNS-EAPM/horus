@@ -111,7 +111,8 @@ function OtherFileView(props: {
     try {
       // Create a link to download the file
       const link = document.createElement("a");
-      link.href = `/users/downloadfile?path=${props.directory["path"]}`;
+      const safeURL = encodeURIComponent(props.directory["path"]);
+      link.href = `/users/downloadfile?path=${safeURL}`;
 
       // Add the link to the document
       document.body.appendChild(link);
@@ -283,12 +284,10 @@ function FlowDownload({ flow }: { flow: Flow }) {
         return;
       }
 
-      // Get the link from the response
-      const downloadPath = data.path;
-
       // Create a link to download the file
       const link = document.createElement("a");
-      link.href = `/users/downloadflow?path=${downloadPath}`;
+      const safeURL = encodeURIComponent(data.path);
+      link.href = `/users/downloadflow?path=${safeURL}`;
 
       // Add the link to the document
       document.body.appendChild(link);

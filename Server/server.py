@@ -2475,6 +2475,8 @@ class HorusServer:
                     # Compress the flow
                     tarFile = self.flowManager.compressFlow(flow)
 
+                    tarFile = str(UserFileExplorer(tarFile, currentUser).getRelativePath())
+
                     # Return the path of the tar file
                     return flask.jsonify({"ok": True, "path": tarFile})
 
@@ -2483,6 +2485,8 @@ class HorusServer:
 
                     # Get the tar file from the request
                     tarFile = request.args.get("path", None)
+
+                    tarFile = str(UserFileExplorer(tarFile, currentUser).getAbsolutePath())
 
                     if tarFile is None:
                         return flask.jsonify({"ok": False, "msg": "No data provided"})
