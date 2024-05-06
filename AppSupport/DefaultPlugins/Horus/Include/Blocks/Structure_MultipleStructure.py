@@ -147,6 +147,7 @@ def saveMultipleStructure(block: InputBlock):
 # Create the block "Structure"
 strucBlock = InputBlock(
     "Structure",
+    id="structure",
     description="Get one structure from the visualizer as a file.",
     action=saveStructure,
     variable=structureVariable,
@@ -157,6 +158,7 @@ strucBlock = InputBlock(
 # Create the block "Multiple Structures"
 multStrucBlock = InputBlock(
     "Multiple structures",
+    id="multiple_structures",
     description="Save one or more structures from the visualizer into a folder.",
     action=saveMultipleStructure,
     variable=multipleStructureVariable,
