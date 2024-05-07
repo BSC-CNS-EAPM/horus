@@ -27,7 +27,6 @@ import { loadPage } from "../../Toolbar/extensions_list";
 import "rc-slider/assets/index.css";
 import CrossIcon from "../../Toolbar/Icons/Cross";
 import { createPortal } from "react-dom";
-import { FlowBuilderIDs } from "../flow.view";
 import { BlurredModal } from "../../reusable";
 
 // Mol* variables components
@@ -42,6 +41,7 @@ import {
   StandardResView,
   StructureVariableView,
 } from "./molstar_variables";
+import { GLOBAL_IDS } from "../../../Utils/globals";
 
 type PluginVariableViewProps = {
   variable: PluginVariable;
@@ -1009,7 +1009,7 @@ function SmilesVariableView(props: VariableViewProps) {
               <AppButton action={() => setShowJsme(false)}>Close</AppButton>
             </div>
           </BlurredModal>,
-          document.getElementById(FlowBuilderIDs.FLOW_BUILDER_DIV)!
+          document.getElementById(GLOBAL_IDS.FLOW_BUILDER_DIV)!
         )}
     </div>
   );

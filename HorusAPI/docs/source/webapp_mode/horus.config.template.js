@@ -40,7 +40,7 @@ export const config = {
       maxStorage: 500,
       maxTime: 100,
     },
-    // This setting regulates the behaviour of the filepicker system for variables like "folder" or "file"
+    // This setting regulates the behaviour of the File Picker system for variables like "folder" or "file"
     fileManagement: {
       // Whether to allow users to upload files
       allowUpload: true,

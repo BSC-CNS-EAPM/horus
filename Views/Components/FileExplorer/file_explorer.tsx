@@ -1,3 +1,4 @@
+import { render } from "react-dom";
 import { setChonkyDefaults, ChonkyActions, FileArray } from "chonky";
 import { ChonkyIconFA } from "chonky-icon-fontawesome";
 import { horusPost } from "../../Utils/utils";
@@ -11,6 +12,8 @@ setChonkyDefaults({ iconComponent: ChonkyIconFA });
 
 import { FileBrowser, FileNavbar, FileToolbar, FileList } from "chonky";
 import { FlowContext } from "../FlowBuilder/flow.view";
+
+import { GLOBAL_IDS } from "../../Utils/globals";
 
 function saveBlob(blob: Blob, fileName: string) {
   const a = document.createElement("a") as HTMLAnchorElement;
@@ -34,7 +37,7 @@ function useServerExplorer(
 ) {
   const [files, setFiles] = useState<FileArray>([null]);
   const [folderChain, setFolderChain] = useState<FileArray>([null]);
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [actionFilesActive, setActionFilesActive] = useState({
     status: false,
     progress: 0,
@@ -389,9 +392,10 @@ export type FileExplorerProps = {
   openAtPath?: string;
   children?: React.ReactNode;
   openFolder?: boolean;
-  onFileSelect?: (file: any) => void;
-  onFileConfirm?: (file: any) => void;
+  onFileSelect?: (file: string) => void;
+  onFileConfirm?: (file: string) => void;
   allowedExtensions?: string[];
+  openDirectly?: boolean;
 };
 
 type ServerFileExplorerModalProps = {
@@ -535,7 +539,7 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
             <AppButton
               action={() => {
                 fileProps?.onFileConfirm
-                  ? fileProps.onFileConfirm(selectedFile)
+                  ? fileProps.onFileConfirm(selectedFile! as string)
                   : null;
                 setOpen(false);
               }}
@@ -551,6 +555,12 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
 
 function ServerFileExplorer(props: FileExplorerProps) {
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (props.openDirectly) {
+      setOpen(true);
+    }
+  }, [props.openDirectly]);
 
   return (
     <div>
@@ -614,6 +624,12 @@ function DesktopFileExplorer(props: FileExplorerProps) {
     props.allowedExtensions
   );
 
+  useEffect(() => {
+    if (props.openDirectly) {
+      openFilePicker();
+    }
+  }, [props.openDirectly, openFilePicker]);
+
   return (
     <div>
       <AppButton action={openFilePicker}>{props.children}</AppButton>
@@ -628,5 +644,28 @@ function HorusFileExplorer(props: FileExplorerProps) {
     return <ServerFileExplorer {...props} />;
   }
 }
+
+export type ExtensionsFilePickerOptions = Omit<
+  FileExplorerProps,
+  "openAtPath" | "children" | "openDirectly"
+>;
+
+function openExtensionFilePicker(options: ExtensionsFilePickerOptions) {
+  let globalFilePicker = document.getElementById(
+    GLOBAL_IDS.EXTENSIONS_FILEPICKER
+  );
+
+  if (globalFilePicker) {
+    globalFilePicker.remove();
+  }
+
+  globalFilePicker = document.createElement("div");
+  globalFilePicker.id = GLOBAL_IDS.EXTENSIONS_FILEPICKER;
+  document.body.appendChild(globalFilePicker);
+
+  render(<HorusFileExplorer {...options} openDirectly />, globalFilePicker);
+}
+
+window.horus.openExtensionFilePicker = openExtensionFilePicker;
 
 export { ServerFileExplorerModal, HorusFileExplorer };

@@ -1,6 +1,9 @@
 // React
 import { useEffect, useState } from "react";
 
+// TS
+import { GLOBAL_IDS } from "../../Utils/globals";
+
 // Spinner
 import RotatingLines from "../RotatingLines/rotatinglines";
 
@@ -12,6 +15,7 @@ type IFrameLoaderProps = {
 
 function IFrameLoader({ url, pagename, data }: IFrameLoaderProps) {
   const fixedURL = () => {
+    return url;
     let domain = window.location.href;
 
     // Remove the final slash
@@ -32,7 +36,7 @@ function IFrameLoader({ url, pagename, data }: IFrameLoaderProps) {
     window.extensionData = data;
 
     const iframe = document.getElementById(
-      `${url}-${pagename}`
+      GLOBAL_IDS.EXTENSIONS_IFRAME
     ) as HTMLIFrameElement;
     iframe.addEventListener("load", handleLoad);
     return () => {
@@ -49,7 +53,8 @@ function IFrameLoader({ url, pagename, data }: IFrameLoaderProps) {
         </div>
       )}
       <iframe
-        id={`${url}-${pagename}`}
+        // id={`${url}-${pagename}`}
+        id={GLOBAL_IDS.EXTENSIONS_IFRAME}
         sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-presentation allow-downloads allow-modals allow-top-navigation"
         // If the url does not start with the current domain, add It in order to prevent http / https errors
         // Prevent double backslashes //

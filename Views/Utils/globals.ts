@@ -1,7 +1,9 @@
 // Molstar wrapper
 import HorusMolstar from "../Components/Molstar/HorusWrapper/horusmolstar";
+
 // The settings object type
 import { HorusSettingsObject } from "../Settings/setting";
+import { ExtensionsFilePickerOptions } from "../Components/FileExplorer/file_explorer";
 
 // Terminal ref
 // @ts-ignore
@@ -47,10 +49,17 @@ declare global {
       setVariable?: (value: any) => void;
       getFlow?: () => any;
       setFlow?: (value: any) => void;
+      openExtensionFilePicker?: (options: ExtensionsFilePickerOptions) => void;
     };
     // Extension data for blocks
     extensionData: any;
   }
+}
+
+export enum GLOBAL_IDS {
+  FLOW_BUILDER_DIV = "flow-builder-div",
+  EXTENSIONS_IFRAME = "extensions-iframe",
+  EXTENSIONS_FILEPICKER = "extensions-filepicker",
 }
 
 // Define an empty window.horus object

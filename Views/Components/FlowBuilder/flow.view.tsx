@@ -3,6 +3,7 @@ import { DndContext, DragOverlay, pointerWithin } from "@dnd-kit/core";
 
 // Components
 import { BlockListSidebar } from "./Sidebar/block_list_view";
+import { GLOBAL_IDS } from "../../Utils/globals";
 
 // Import the flow reciver component
 import { FlowCanvas } from "./Canvas/canvas";
@@ -26,10 +27,6 @@ import { ConnectedArrows } from "./Connections/arrows";
 import { Xwrapper } from "react-xarrows";
 import { DroppableEntity, Flow } from "./flow.types";
 import { socket } from "../../Utils/socket";
-
-export enum FlowBuilderIDs {
-  FLOW_BUILDER_DIV = "flow-builder-div",
-}
 
 export const FlowContext = createContext<Flow | null>(null);
 
@@ -85,7 +82,7 @@ function FlowBuilderView() {
           >
             <div
               className="m-auto flex flex-row h-100 relative"
-              id={FlowBuilderIDs.FLOW_BUILDER_DIV}
+              id={GLOBAL_IDS.FLOW_BUILDER_DIV}
               style={style}
             >
               {/* The block list coming from the server */}

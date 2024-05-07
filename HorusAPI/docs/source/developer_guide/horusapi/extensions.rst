@@ -131,3 +131,36 @@ You can access the data in JavaScript as follows:
     // Get the data passed from the extension
     const data = window.parent.extensionData; // Remember that extensions run inside an iframe
     console.log(data.someData) // The object passed from the Extensions class
+
+Using the File Picker inside an Extension
+----------------------------------------
+
+You can call the Horus File Picker using the following JavaScript snippet:
+
+.. code-block:: javascript
+    
+    parent.horus.openExtensionFilePicker()
+
+This will open the Desktop / Server File Picker accordingly. You can provide custom options in order to select folders,
+allow only specific file extensions, or controlling what happens when the user selects a file:
+
+.. code-block:: typescript
+    
+    type options = {
+        openFolder?: boolean;
+        allowedExtensions?: string[];
+        onFileSelect?: (filePath: string) => void;
+        onFileConfirm?: (fielPath: string) => void;
+    }
+
+.. code-block:: javascript
+
+    // Example usage
+    parent.horus.openExtensionFilePicker(
+        {
+            onFileConfirm: (filePath) => {
+                console.log("Congrats! You have selected: ", filePath)
+            },
+            allowedExtensions: ["pdb", "mol2"]
+        }
+    )

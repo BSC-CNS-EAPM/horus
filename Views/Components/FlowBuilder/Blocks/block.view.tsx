@@ -21,7 +21,6 @@ import { SlurmOutputModalView } from "../Logs/logs_connections";
 
 // Typescript types
 import { Block, BlockTypes, ExtensionsToOpen } from "../flow.types";
-import { FlowBuilderIDs } from "../flow.view";
 
 // Block style
 import "./block.css";
@@ -37,6 +36,7 @@ import LogFileIcon from "../../Toolbar/Icons/LogFile";
 import CheckMark from "../../Toolbar/Icons/CheckMark";
 import ErrorIcon from "../../Toolbar/Icons/Error";
 import PlayIcon from "../../Toolbar/Icons/Play";
+import { GLOBAL_IDS } from "../../../Utils/globals";
 
 export function BlockView(props: BlockViewProps) {
   const blockState = useBlockView(props);
@@ -376,7 +376,7 @@ function FinishedCheck(props: { runError: boolean; runErrorMessage?: string }) {
                 </div>
               </div>
             </BlurredModal>,
-            document.getElementById(FlowBuilderIDs.FLOW_BUILDER_DIV)!
+            document.getElementById(GLOBAL_IDS.FLOW_BUILDER_DIV)!
           )}
         <div
           onClick={() => {
