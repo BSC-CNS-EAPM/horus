@@ -539,7 +539,7 @@ export default function HorusToolbar() {
             name: page.name,
             svgPath: <Chevron direction="right" stroke="none" />,
             onClick: () => {
-              loadPage(page.url, page.name);
+              loadPage(page);
             },
           } as ToolBarItemProps;
         }),
@@ -563,7 +563,7 @@ export default function HorusToolbar() {
 
 type HorusSearchProps = {
   pages: PluginPage[];
-  loadPage: (url: string, pagename: string) => void;
+  loadPage: (page: PluginPage) => void;
 };
 
 function HorusSearch(props: HorusSearchProps) {

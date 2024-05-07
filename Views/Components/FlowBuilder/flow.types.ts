@@ -98,6 +98,8 @@ export type VariableConnection = {
 
 export type ExtensionsToOpen = {
   title: string;
+  pluginID: string;
+  pageID: string;
   url: string;
   data: any;
 };

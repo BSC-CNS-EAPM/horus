@@ -6,6 +6,7 @@ import Molstar from "../Molstar/molstar";
 import HorusTerm from "../Console/console";
 import { FlowBuilderView } from "../FlowBuilder/flow.view";
 import HorusToolbar from "../Toolbar/toolbar";
+import { PluginPage } from "../FlowBuilder/flow.types";
 
 // Web-server tools
 import { socket } from "../../Utils/socket";
@@ -25,10 +26,7 @@ import HorusLogo from "../../../Resources/horus-full.png";
 import { ServerFileExplorerModal } from "../FileExplorer/file_explorer";
 
 type WorkingViewProps = {
-  extensionToOpen?: {
-    url: string;
-    name: string;
-  };
+  extensionToOpen?: PluginPage;
   flowToOpen?: {
     savedID: string;
     path: string;
@@ -56,8 +54,9 @@ export default function WorkingView(props: WorkingViewProps) {
     // Opening it from a block action yields a socket event
     const parsedEvent = event as CustomEvent;
 
-    const url: string | null = parsedEvent.detail?.url ?? null;
-    const pagename: string = parsedEvent.detail?.pagename;
+    const page: PluginPage = parsedEvent.detail?.page ?? {};
+    const url: string | null = page?.url ?? null;
+    const pagename: string = page?.name ?? "Unknown";
     const data: any = parsedEvent.detail?.data ?? null;
     const blockIDCustom: number = parsedEvent.detail?.blockIDCustom ?? -1;
 
@@ -82,14 +81,12 @@ export default function WorkingView(props: WorkingViewProps) {
     currentIframeBlockID.current = blockIDCustom;
 
     const key = url + "-" + pagename + Date.now().toString();
-    setIframeView(
-      <IFrameLoader key={key} url={url} pagename={pagename} data={data} />
-    );
+    setIframeView(<IFrameLoader key={key} page={page} data={data} />);
 
     // Make sure the panel is expanded too
     if (
-      iFrameRef.current?.getSize()! < 5 ||
-      iFrameRef.current?.getCollapsed()!
+      (iFrameRef.current && iFrameRef.current.getSize()! < 5) ||
+      (iFrameRef.current && iFrameRef.current.getCollapsed()!)
     ) {
       iFrameRef.current?.expand();
     }
@@ -132,8 +129,9 @@ export default function WorkingView(props: WorkingViewProps) {
       // Create a fake event with the required data
       const extensionEvent: any = {
         detail: {
-          pagename: props.extensionToOpen.name,
-          url: props.extensionToOpen.url,
+          page: props.extensionToOpen,
+          // pagename: props.extensionToOpen.name,
+          // url: props.extensionToOpen.url,
         },
       };
       handleIFrame(extensionEvent);
@@ -283,11 +281,13 @@ function MolstarPanel() {
     return () => {
       window.removeEventListener("toggleMolstar", toggleMolstar);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showMolstar, initialMolstarHidden]);
 
   useEffect(() => {
     // Handle the panel settings as are needed when mounting this view
     handlePanelSettings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [molstarPanelRef.current]);
 
   return (
@@ -308,7 +308,10 @@ function MolstarPanel() {
           }
         }
         onResize={() => {
-          if (molstarPanelRef?.current?.getSize()! > 0) {
+          if (
+            molstarPanelRef.current &&
+            molstarPanelRef.current.getSize()! > 0
+          ) {
             setShowMolstar(true);
           }
         }}

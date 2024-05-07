@@ -20,7 +20,8 @@ import {
 import { SlurmOutputModalView } from "../Logs/logs_connections";
 
 // Typescript types
-import { Block, BlockTypes, ExtensionsToOpen } from "../flow.types";
+import { Block, BlockTypes, ExtensionsToOpen, PluginPage } from "../flow.types";
+import { FlowBuilderIDs } from "../flow.view";
 
 // Block style
 import "./block.css";
@@ -283,10 +284,17 @@ function BlockExtensionsView(props: { block: Block }) {
 
   const openExtension = (extension: ExtensionsToOpen) => {
     // Emit an extension event to the iFrame
-    const { url, title: pagename, data } = extension;
+    const reconstructedPage: PluginPage = {
+      name: extension.title,
+      url: extension.url,
+      plugin: extension.pluginID,
+      id: extension.pageID,
+      description: "Block extension",
+      hidden: false,
+    };
 
     const event = new CustomEvent("loadExtension", {
-      detail: { url, pagename, data },
+      detail: { page: reconstructedPage, data: extension.data },
     });
 
     window.dispatchEvent(event);

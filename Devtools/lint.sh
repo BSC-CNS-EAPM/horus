@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Check for Typescript errors
-if bunx tsc --noEmit --skipLibCheck Views/**/*.ts Views/**/*.tsx; then
+if bunx tsc --noEmit --skipLibCheck Views/**/*.ts Views/**/*.tsx --jsx react-jsx; then
     echo "No TypeScript errors found."
 else
     echo "TypeScript errors found."

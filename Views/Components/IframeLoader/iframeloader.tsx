@@ -6,16 +6,16 @@ import { GLOBAL_IDS } from "../../Utils/globals";
 
 // Spinner
 import RotatingLines from "../RotatingLines/rotatinglines";
+import { PluginPage } from "../FlowBuilder/flow.types";
 
-type IFrameLoaderProps = {
-  pagename: string;
-  url: string;
-  data: any;
-};
-
-function IFrameLoader({ url, pagename, data }: IFrameLoaderProps) {
+function IFrameLoader({ page, data }: { page: PluginPage; data: any }) {
   const fixedURL = () => {
-    return url;
+
+    // Do not fix the url for the development page
+    if (page.id === "development" && page.plugin === "Horus") {
+      return page.url;
+    }
+
     let domain = window.location.href;
 
     // Remove the final slash
@@ -23,7 +23,7 @@ function IFrameLoader({ url, pagename, data }: IFrameLoaderProps) {
       domain = domain.slice(0, -1);
     }
 
-    return domain + url;
+    return domain + page.url;
   };
 
   const [loading, setLoading] = useState(true);
@@ -42,14 +42,14 @@ function IFrameLoader({ url, pagename, data }: IFrameLoaderProps) {
     return () => {
       iframe.removeEventListener("load", handleLoad);
     };
-  }, [url, pagename, data]);
+  }, [page, data]);
 
   return (
     <div id="iframe-loader" className="h-full w-full p-0 m-0">
       {loading && (
         <div className="flex flex-col items-center justify-center h-full">
           <RotatingLines size={"100px"} />
-          Loading {pagename}
+          Loading {page.name}
         </div>
       )}
       <iframe

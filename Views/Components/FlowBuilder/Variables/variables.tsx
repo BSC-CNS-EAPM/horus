@@ -1032,16 +1032,12 @@ function CustomVariableRenderer(props: {
 
   const openCustomPage = () => {
     setupWindowVariables();
-    loadPage(
-      props.variable.customPage.url,
-      props.variable.customPage.name,
-      props.variable.placedID
-    );
+    loadPage(props.variable.customPage, props.variable.placedID);
   };
 
   useEffect(() => {
     return () => {
-      loadPage(undefined, undefined, props.variable.placedID);
+      loadPage(undefined, props.variable.placedID);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

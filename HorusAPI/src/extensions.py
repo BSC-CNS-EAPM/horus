@@ -35,7 +35,7 @@ class Extensions(metaclass=SingletonMeta):
         if self.socketio is not None:
             # Check that the client is connected
             if self.socketio.isClientJoinedFlow(self._flow.savedID):
-                self.socketio.emit(action, data)
+                self.socketio.emit(action, data, to=self._flow.savedID)
 
     def open(
         self,
@@ -61,6 +61,8 @@ class Extensions(metaclass=SingletonMeta):
 
         extensionData = {
             "url": f"/plugins/pages/{pluginID}.{pageID}",
+            "pluginID": pluginID,
+            "pageID": pageID,
             "data": data,
             "title": title,
         }
@@ -90,6 +92,8 @@ class Extensions(metaclass=SingletonMeta):
 
         extensionData = {
             "url": f"/plugins/pages/{pluginID}.{pageID}",
+            "pluginID": pluginID,
+            "pageID": pageID,
             "data": data,
             "title": title,
         }

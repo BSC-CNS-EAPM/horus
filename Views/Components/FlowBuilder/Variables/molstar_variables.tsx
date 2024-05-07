@@ -455,7 +455,6 @@ function SelectMultipleChains({
                     c.chainID === chain.chainID
                   )
               );
-          console.log("new value", newValue);
           onChange(newValue);
         }}
       />

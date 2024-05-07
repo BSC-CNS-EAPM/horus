@@ -8,21 +8,17 @@ import { horusGet } from "../../Utils/utils";
 // Horus imports
 import { PluginPage } from "../FlowBuilder/flow.types";
 
-export const loadPage = async (
-  url?: string,
-  pagename?: string,
-  blockIDCustom?: number
-) => {
+export const loadPage = async (page?: PluginPage, blockIDCustom?: number) => {
   // Emit an event to the iframe
   const event = new CustomEvent("loadExtension", {
-    detail: { url, pagename, blockIDCustom },
+    detail: { page: page, blockIDCustom: blockIDCustom },
   });
   window.dispatchEvent(event);
 };
 
 type PluginPageViewProps = {
   pages: Array<PluginPage>;
-  overrideLoadPage?: (url: string, pagename: string) => void;
+  overrideLoadPage?: (page: PluginPage) => void;
 };
 
 export default function PluginPagesView(props: PluginPageViewProps) {
@@ -41,9 +37,9 @@ export default function PluginPagesView(props: PluginPageViewProps) {
             key={page.id}
             onClick={() => {
               if (props.overrideLoadPage) {
-                props.overrideLoadPage(page.url, page.name);
+                props.overrideLoadPage(page);
               } else {
-                loadPage(page.url, page.name);
+                loadPage(page);
               }
             }}
             className="predefined-flow"

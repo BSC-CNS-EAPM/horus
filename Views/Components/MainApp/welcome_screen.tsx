@@ -11,6 +11,10 @@ import RecentUserFlows, {
 import RotatingLines from "../RotatingLines/rotatinglines";
 import PluginPagesView, { usePluginPages } from "../Toolbar/extensions_list";
 import { HorusModal } from "../reusable";
+import WebAppUserFlows from "../WebAppUserFlows/WebAppUserFlows";
+
+// TS types
+import { PluginPage } from "../FlowBuilder/flow.types";
 
 // Icons
 import NewFlowIcon from "../Toolbar/Icons/New";
@@ -27,7 +31,6 @@ import { SettingsView } from "../../Settings/settings";
 import Login from "../Toolbar/Icons/Login";
 import UserIcon from "../Toolbar/Icons/User";
 import Profile from "../../Login/profile";
-import WebAppUserFlows from "../WebAppUserFlows/WebAppUserFlows";
 
 type SplashModal = {
   header?: React.ReactNode;
@@ -390,17 +393,10 @@ function ExploreExtensions() {
   // Filter the pages to have at max 10
   const pagesToShow = pages.filter((page) => !page.hidden).slice(0, 10);
 
-  const loadPage = (url: string, name: string) => {
+  const loadPage = (page: PluginPage) => {
     // Set the startWorking view
     const startWorkingEvent = new CustomEvent("start-working", {
-      detail: (
-        <WorkingView
-          extensionToOpen={{
-            url,
-            name,
-          }}
-        />
-      ),
+      detail: <WorkingView extensionToOpen={page} />,
     });
 
     window.dispatchEvent(startWorkingEvent);
