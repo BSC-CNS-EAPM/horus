@@ -371,7 +371,7 @@ function FinishedCheck(props: { runError: boolean; runErrorMessage?: string }) {
                   </div>
                   <hr className="my-4 p-0"></hr>
                 </div>
-                <pre className="h-full">{props.runErrorMessage}</pre>
+                <pre className="h-full select-all">{props.runErrorMessage}</pre>
                 <hr className="p-2"></hr>
                 <div className="flex items-center justify-center">
                   <AppButton
