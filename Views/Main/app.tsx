@@ -1,5 +1,5 @@
 // React
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 // Import the globals
 import "../Utils/globals";
@@ -13,6 +13,8 @@ import RotatingLines from "../Components/RotatingLines/rotatinglines";
 // Hooks
 import { fetchSettings } from "../Settings/settings";
 import { fetchDesktop } from "../Utils/utils";
+import HorusContainer from "../Components/HorusContainer/horus_container";
+import ErrorIcon from "../Components/Toolbar/Icons/Error";
 
 export function App() {
   const [workingView, setWorkingView] = useState<React.ReactNode>(
@@ -25,6 +27,9 @@ export function App() {
   );
 
   const [serverActive, setServerActive] = useState<boolean>(true);
+  const [disconnectTimeout, setDisconnectTimeout] = useState<Timer | null>(
+    null
+  );
 
   const getHorusSettings = async () => {
     // Store the settings in the window object
@@ -42,17 +47,29 @@ export function App() {
     setWorkingView(startWorking);
   };
 
+  const addDisconnectTimeout = useCallback(() => {
+    const timeout = setTimeout(() => {
+      setServerActive(false);
+    }, 15000); // 15-second delay
+
+    setDisconnectTimeout(timeout);
+  }, []);
+
+  const addConnectTimeout = useCallback(() => {
+    if (disconnectTimeout) {
+      clearTimeout(disconnectTimeout); // Cancel the timeout if reconnected within 30 seconds
+      setDisconnectTimeout(null);
+    }
+    setServerActive(true);
+  }, [disconnectTimeout]);
+
   useEffect(() => {
     // Fetch the settings
     getHorusSettings();
 
-    socket.on("disconnect", () => {
-      setServerActive(false);
-    });
+    socket.on("disconnect", addDisconnectTimeout);
 
-    socket.on("connect", () => {
-      setServerActive(true);
-    });
+    socket.on("connect", addConnectTimeout);
 
     window.addEventListener("start-working", (e) => {
       handleStartWorking(e as CustomEvent);
@@ -62,20 +79,35 @@ export function App() {
       window.removeEventListener("start-working", (e) => {
         handleStartWorking(e as CustomEvent);
       });
+
+      socket.off("disconnect", addDisconnectTimeout);
+      socket.off("connect", addConnectTimeout);
     };
-  }, []);
+  }, [addConnectTimeout, addDisconnectTimeout]);
 
   return (
     <>
-      <BlurredModal show={!serverActive} onHide={() => {}} zIndex={99999}>
-        <div className="flex flex-col gap-2 text-center justify-center items-center">
-          <div className="text-xl font-semibold">
-            Could not connect to the Horus server
+      <HorusContainer
+        className="zoom-in-animation"
+        style={{
+          display: serverActive ? "none" : "block",
+          position: "absolute",
+          bottom: "0.5rem",
+          right: "0.5rem",
+          zIndex: 99999,
+          padding: "1rem",
+          border: "1.5px solid red",
+        }}
+      >
+        <div className="flex flex-col gap-1 text-center justify-center items-center">
+          <div className="text-xl font-semibold">Horus is not responding</div>
+          <span></span>
+          <div className="flex flex-row gap-2 text-center justify-center items-center">
+            Changes will not be saved. Trying to reconnect...
+            <RotatingLines size="20px" />
           </div>
-          <RotatingLines />
-          <div>Trying to restablish connection...</div>
         </div>
-      </BlurredModal>
+      </HorusContainer>
       {workingView}
     </>
   );

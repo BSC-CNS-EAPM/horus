@@ -10,7 +10,6 @@ import { PluginPage } from "../FlowBuilder/flow.types";
 
 function IFrameLoader({ page, data }: { page: PluginPage; data: any }) {
   const fixedURL = () => {
-
     // Do not fix the url for the development page
     if (page.id === "development" && page.plugin === "Horus") {
       return page.url;
