@@ -573,10 +573,8 @@ class RemotesAPI:
 
         # Update the list of jobs for the flow
         # only if there is not a job for the same remote / block / jobID
-        for index in range(len(queue[self._flowSavedID])):
-
-            currentQueue = queue[self._flowSavedID][index]
-
+        remove_index = []
+        for index, currentQueue in enumerate(queue[self._flowSavedID]):
             if (
                 currentQueue["remote"] == self.remoteName
                 and currentQueue["jobID"] == jobID
@@ -588,7 +586,12 @@ class RemotesAPI:
 
             # Remove any entry with the same blockPlacedID to only have 1 jobID per block
             if currentQueue["blockPlacedID"] == self._blockPlacedID:
-                queue[self._flowSavedID].pop(index)
+                remove_index.append(index)
+                # queue[self._flowSavedID].pop(index)
+
+        queue[self._flowSavedID] = [
+            q for i, q in enumerate(queue[self._flowSavedID]) if i not in remove_index
+        ]
 
         queue[self._flowSavedID].append(
             {
