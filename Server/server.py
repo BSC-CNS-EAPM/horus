@@ -16,6 +16,7 @@ import hashlib
 import logging
 import typing
 import traceback
+import tarfile
 
 # Decorators
 from functools import wraps
@@ -1321,7 +1322,11 @@ class HorusServer:
                 # Read the path with the FileExplorer class
                 if self._isForUser:
                     fileExplorer = UserFileExplorer(
-                        path, currentUser, relativeTo=os.path.dirname(flowContextPath)
+                        path,
+                        currentUser,
+                        relativeTo=os.path.join(
+                            currentUser.flowsDir, os.path.dirname(flowContextPath)
+                        ),
                     )
                 else:
                     fileExplorer = FileExplorer(path)
@@ -2345,6 +2350,7 @@ class HorusServer:
                 # For other folders, list them in "otherDirectories"
                 # so the users can download them
                 otherDirectories: typing.List[str] = []
+                corruptedFlows: typing.List[dict] = []
                 flowInstances: typing.List["Flow"] = []
                 flowDirectories = os.listdir(currentUser.flowsDir)
                 for flowDir in flowDirectories:
@@ -2357,7 +2363,14 @@ class HorusServer:
                             logging.getLogger("Horus").error(
                                 "Could not open user flow at %s: %s", flowPath, str(exc)
                             )
-                            otherDirectories.append(dirPath)
+
+                            # Instantiate the folder as a file
+                            containerFlow = File(dirPath)
+                            containerFlow.getSize()
+                            containerFlowDict = containerFlow.toDict()
+                            containerFlowDict["reason"] = str(exc)
+
+                            corruptedFlows.append(containerFlowDict)
                     else:
                         otherDirectories.append(dirPath)
 
@@ -2371,12 +2384,12 @@ class HorusServer:
                 for d in otherDirectories:
                     try:
                         file = File(d)
-                        if file.isDir:
-                            logging.getLogger("Horus").warning(
-                                f"There is an unrecognized folder listed as 'other files'. Users can only download regular files. "
-                                + f"Please compress the folder '{file.path}' in order to allow it to download."
-                            )
-                            continue
+                        # if file.isDir:
+                        #     logging.getLogger("Horus").warning(
+                        #         f"There is an unrecognized folder listed as 'other files'. Users can only download regular files. "
+                        #         + f"Please compress the folder '{file.path}' in order to allow it to download."
+                        #     )
+                        #     continue
                         file.getSize()
                         fileDict = file.toDict()
                         fileDict["path"] = str(
@@ -2392,7 +2405,12 @@ class HorusServer:
                 # Convert the flows to JSON
                 flows = [flow.encode() for flow in flowInstances]
 
-                success = {"ok": True, "flows": flows, "otherDirectories": parsedOtherDirectories}
+                success = {
+                    "ok": True,
+                    "flows": flows,
+                    "otherDirectories": parsedOtherDirectories,
+                    "corruptedFlows": corruptedFlows,
+                }
             except Exception as exc:  # pylint: disable=broad-exception-caught
                 success = {
                     "ok": False,
@@ -2530,6 +2548,33 @@ class HorusServer:
                 # Convert the file from relative to full
                 realPath = str(UserFileExplorer(filePath, currentUser).getAbsolutePath())
 
+                # If its a directory, compress it
+                tarPath = None
+                if os.path.isdir(realPath):
+                    tarPath = realPath + ".tar.gz"
+                    with tarfile.open(tarPath, "w") as tar:
+                        tar.add(realPath, arcname=os.path.basename(realPath))
+
+                    realPath = tarPath
+
+                # Delete the tarfile after the download
+                @flask.after_this_request
+                def removeFile(response):
+
+                    if tarPath is None:
+                        return response
+
+                    try:
+                        os.remove(tarPath)
+                    except Exception as exc:
+                        logging.getLogger("Horus").error(
+                            "Error removing file {%s}: {%s}",
+                            tarPath,
+                            str(exc),
+                        )
+
+                    return response
+
                 # Return the flow as a blob
                 return flask.send_file(
                     realPath,
@@ -2550,7 +2595,10 @@ class HorusServer:
                     return flask.jsonify({"ok": False, "msg": "No data provided"})
 
                 realPath = str(UserFileExplorer(filePath, currentUser).getAbsolutePath())
-                os.remove(realPath)
+                if os.path.isdir(realPath):
+                    shutil.rmtree(realPath)
+                else:
+                    os.remove(realPath)
                 return flask.jsonify({"ok": True})
             except Exception as exc:
                 return flask.jsonify({"ok": False, "msg": str(exc)})

@@ -111,6 +111,10 @@ export function PredefinedFlows(props: RecentUserFlowProps) {
   );
 }
 
+export type CorruptedFlow = FileData & {
+  reason: string;
+};
+
 export function useGetRecentFlows(
   webAppFlows: boolean = false
 ): [
@@ -119,11 +123,13 @@ export function useGetRecentFlows(
   Flow[],
   () => Promise<void>,
   (active: boolean) => void,
-  FileData[]
+  FileData[],
+  CorruptedFlow[]
 ] {
   const [fetchingRecents, setFetchingRecents] = useState(true);
   const [recentFlows, setRecentFlows] = useState<Flow[]>([]);
   const [otherDirectories, setOtherDirectories] = useState<FileData[]>([]);
+  const [corruptedFlows, setCorruptedFlows] = useState<CorruptedFlow[]>([]);
   const [predefinedFlows, setPredefinedFlows] = useState<Flow[]>([]);
   const interval = useRef<Timer | null>(null);
 
@@ -157,6 +163,7 @@ export function useGetRecentFlows(
 
     setRecentFlows(flows);
     setOtherDirectories(recentFlowsData.otherDirectories ?? []);
+    setCorruptedFlows(recentFlowsData.corruptedFlows ?? []);
   }, [webAppFlows]);
 
   const getFlows = useCallback(async () => {
@@ -220,5 +227,6 @@ export function useGetRecentFlows(
     getFlows,
     toggleInterval,
     otherDirectories,
+    corruptedFlows,
   ];
 }

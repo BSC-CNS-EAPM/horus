@@ -288,19 +288,19 @@ class Flow:
 
         # Get the flow size and time
         self.size = flow.get("size", None)
-        self.startedTime = flow.get("startedTime", None)
-        self.finishedTime = flow.get("finishedTime", None)
+        startedTime = flow.get("startedTime", None)
+        finishedTime = flow.get("finishedTime", None)
         self.elapsed = flow.get("elapsed", 0)
 
         if self.elapsed < 0:
             self.elapsed = 0
 
         # Convert the times to datetime
-        if self.startedTime is not None:
-            self.startedTime = datetime.datetime.fromtimestamp(self.startedTime)
+        if startedTime is not None:
+            self.startedTime = datetime.datetime.fromtimestamp(startedTime)
 
-        if self.finishedTime is not None:
-            self.finishedTime = datetime.datetime.fromtimestamp(self.finishedTime)
+        if finishedTime is not None:
+            self.finishedTime = datetime.datetime.fromtimestamp(finishedTime)
 
         # Set the flow status
         status = flow.get("status", "IDLE")
@@ -327,7 +327,7 @@ class Flow:
 
             if blockID is None:
                 raise Exception(  # pylint: disable=broad-exception-raised
-                    "Corrupted flow. A block does not have an ID."
+                    "A block does not have an ID."
                 )
 
             # Get the block class
@@ -353,7 +353,7 @@ class Flow:
                     break
             if not found:
                 raise Exception(  # pylint: disable=broad-exception-raised
-                    f"Corrupted flow. '{block.name}' is connected " + "to a non-existing block."
+                    f"'{block.name}' is connected " + "to a non-existing block."
                 )
 
         # Check that the blocks are connected to existing blocks
@@ -379,8 +379,7 @@ class Flow:
 
             if not found:
                 raise Exception(  # pylint: disable=broad-exception-raised
-                    "Corrupted flow. A variable origin is not valid."
-                    + f"Variable ID '{originVarID}' of block '{var.origin.blockID}'"
+                    f"Variable ID '{originVarID}' of block '{var.origin.blockID}'"
                     + "has changed."
                 )
 
@@ -398,8 +397,7 @@ class Flow:
 
             if not found:
                 raise Exception(  # pylint: disable=broad-exception-raised
-                    "Corrupted flow. Variable destination is not valid. "
-                    + f"Variable ID '{destinationVarID}' of block "
+                    f"Variable ID '{destinationVarID}' of block "
                     + f"'{var.destination.blockID}' has changed."
                 )
 

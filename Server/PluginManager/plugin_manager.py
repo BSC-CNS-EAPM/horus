@@ -920,6 +920,13 @@ class PluginManager(metaclass=HorusSingleton):
         return {"plugins": listedPlugins, "errors": errorPlugins}
 
     def _getBlocksFromList(self, plugin: Plugin, blockList: typing.List[PluginBlock]):
+
+        def sortByName(block: PluginBlock):
+            return block.name
+
+        # Sort the blocks
+        blockList.sort(key=sortByName)
+
         newBlocks: list[dict[str, typing.Any]] = []
         for b in blockList:
             newBlock = b._toDict()
