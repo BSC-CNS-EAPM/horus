@@ -915,14 +915,10 @@ class RemotesAPI:
         if jobs is None:
             return None
 
-        jobIDS: t.List[int] = []
         for job in jobs:
             # Get the jobID
             if job["blockPlacedID"] == blockPlacedID:
-                jobID = job["jobID"]
-                jobIDS.append(jobID)
-
-        return jobIDS
+                return job["jobID"]
 
     def getJobStatus(self, jobID: int):
         """
@@ -950,11 +946,6 @@ class RemotesAPI:
 
         # Get the list of jobs for the flow
         jobs = queue.get(savedFlowID, [])
-
-        # If the job ID is set, filter the jobs
-        # So we update only one job
-        if jobID is not None:
-            jobs = [j for j in jobs if j["jobID"] == jobID]
 
         for job, index in zip(jobs, range(len(jobs))):
             # If a jobID is provided, skip the other jobs
