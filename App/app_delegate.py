@@ -57,6 +57,11 @@ class HorusLogger:
     The root logger
     """
 
+    latestLogFile: str
+    """
+    The path to the current (and latest) log file
+    """
+
     def __init__(self, appSupportDir: str, debug: bool = False) -> None:
         # Define the logs folder
         self.logDir = os.path.join(appSupportDir, "logs")
@@ -116,13 +121,21 @@ class HorusLogger:
             date = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
             logname += date
         logFile = os.path.join(self.logDir, f"{logname}.log")
-        latestLogFile = os.path.join(self.logDir, "latest.log")
+
+        if os.path.exists(logFile):
+            os.remove(logFile)
+
+        # Generate emtpy file
+        with open(logFile, "w", encoding="utf-8") as f:
+            f.write("")
+
+        self.latestLogFile = os.path.join(self.logDir, "latest.log")
 
         # Generate a symlink to the latest log as "latest.log"
-        if os.path.exists(latestLogFile):
-            os.remove(latestLogFile)
+        if os.path.exists(self.latestLogFile):
+            os.remove(self.latestLogFile)
 
-        os.symlink(logFile, latestLogFile)
+        os.symlink(logFile, self.latestLogFile)
 
         # Create the file handler
         fh = logging.FileHandler(logFile)  # pylint: disable=invalid-name

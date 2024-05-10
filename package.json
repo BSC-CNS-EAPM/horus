@@ -46,6 +46,7 @@
     "@dnd-kit/sortable": "7.0.2",
     "@headlessui/react": "1.7.14",
     "@heroicons/react": "2.0.18",
+    "@melloware/react-logviewer": "^5.0.6",
     "bootstrap": "5.2.3",
     "chonky": "2.3.2",
     "chonky-icon-fontawesome": "2.3.2",

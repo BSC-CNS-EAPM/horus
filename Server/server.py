@@ -1681,11 +1681,12 @@ class HorusServer:
             except Exception as exc:
                 return flask.jsonify({"ok": False, "msg": str(exc)})
 
-        # Development
-        if self.settingsManager.getSetting("developmentMode").value:
+        # Plugin reloading. Allowed on development mode or for admins in WebApp mode
+        @self.server.route("/api/plugins/reload", methods=["GET"])
+        def reloadPlugins():
 
-            @self.server.route("/api/plugins/reload", methods=["GET"])
-            def reloadPlugins():
+            if self.settingsManager.getSetting("developmentMode").value or currentUser.admin:
+
                 # Reload the plugin manager
                 self.pluginManager.reloadPlugins()
 
@@ -1697,6 +1698,8 @@ class HorusServer:
                 self.socketio.emit("pluginChanges")
 
                 return flask.jsonify({"ok": True})
+
+            return flask.jsonify({"ok": False, "msg": "Not allowed"})
 
         # View routes
         @self.server.route("/")
@@ -2643,28 +2646,28 @@ class HorusServer:
 
                 # Parse the user to get only the fields that can be modified
                 userID = user.get("id", None)
-                newQuota = {
-                    "maxFlows": user.get("maxFlows", None),
-                    "maxStorage": user.get("maxStorage", None),
-                    "maxTime": user.get("maxTime", None),
-                }
 
-                # If any of the data is None, raise
-                if any(
-                    x is None
-                    for x in [
-                        userID,
-                        newQuota["maxFlows"],
-                        newQuota["maxStorage"],
-                        newQuota["maxTime"],
-                    ]
-                ):
-                    raise Exception("Missing data")
+                if userID is None or user is None:
+                    raise ValueError("Missing data")
 
-                self.webAppManager.db.updateUserQuotas(userID, newQuota)
+                self.webAppManager.db.updateUser(userID, user)
                 return flask.jsonify({"ok": True})
             except Exception as exc:
                 return flask.jsonify({"ok": False, "msg": str(exc)})
+
+        # Socket for the logs
+        @self.server.route("/users/admintools/getlogs")
+        @self.verifyLogin
+        @self.verifyAdmin
+        def getLogs():
+            # Gets the logs as txt response
+
+            from App import AppDelegate
+
+            with open(AppDelegate().logger.latestLogFile, "r", encoding="utf-8") as logs:
+                readLogs = logs.read()
+
+            return readLogs
 
         @self.server.route("/tos")
         def tos():

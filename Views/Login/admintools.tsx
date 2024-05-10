@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { horusGet, horusPost } from "../Utils/utils";
-import { BlurredModal } from "../Components/reusable";
+import { BlurredModal, HorusModal } from "../Components/reusable";
 import { createPortal } from "react-dom";
+import { LazyLog } from "@melloware/react-logviewer";
 import Logo from "../Components/logo";
 import HorusContainer from "../Components/HorusContainer/horus_container";
+import AppButton from "../Components/appbutton";
 
 type Database = {
   users: UsersDatabase[];
@@ -35,6 +37,9 @@ type FlowsDatabase = {
 export function AdminTools() {
   const [database, setDatabase] = useState<Database | null>(null);
   const [showUsers, setShowUsers] = useState<boolean>(true);
+  const [logsModal, setLogsModal] = useState(false);
+  const [logs, setLogs] = useState("");
+  const [logsInterval, setLogsInterval] = useState<Timer | null>(null);
 
   const getDatabase = async () => {
     const response = await horusGet("/users/admintools/data");
@@ -53,8 +58,47 @@ export function AdminTools() {
 
   const appName = "Admin Tools";
 
+  const reloadPlugins = () => {
+    horusGet("/api/plugins/reload");
+  };
+
+  const getLogs = async () => {
+    const timer = setInterval(async () => {
+      const response = await horusGet("/users/admintools/getlogs");
+      const logsText = await response.text();
+      setLogs(logsText);
+    }, 5000);
+    setLogsInterval(timer);
+    setLogsModal(true);
+  };
+
   return (
     <>
+      <HorusModal
+        size="xl"
+        noCentered
+        onHide={() => {
+          if (logsInterval) {
+            clearInterval(logsInterval);
+            setLogsInterval(null);
+          }
+          setLogsModal(false);
+          setLogs("");
+        }}
+        show={logsModal}
+      >
+        <div className="w-full h-[90vh]">
+          <LazyLog
+            caseInsensitive
+            enableHotKeys
+            enableSearch
+            extraLines={1}
+            selectableLines
+            follow
+            text={logs}
+          />
+        </div>
+      </HorusModal>
       <HorusContainer
         className="sticky-app-header flex flex-row flex-wrap items-center justify-between px-2 w-full bg-white"
         style={{
@@ -78,39 +122,52 @@ export function AdminTools() {
       <div className="flex flex-col justify-center items-center">
         <div className="flex flex-row flex-wrap gap-2 justify-between w-full">
           <div
-            className="flex flex-row gap-2"
+            className="flex flex-row gap-2 justify-between w-full items-center"
             style={{
               margin: "1rem",
             }}
           >
-            <h3
-              className="flow-title"
-              style={{
-                cursor: "pointer",
-                opacity: showUsers ? 1 : 0.5,
-              }}
-              onClick={() => setShowUsers(true)}
-            >
-              Users Database
-            </h3>
-            <h3
-              className="flow-title"
-              style={{
-                cursor: "pointer",
-                opacity: !showUsers ? 1 : 0.5,
-              }}
-              onClick={() => setShowUsers(false)}
-            >
-              Flows Database
-            </h3>
+            <div className="flex flex-row gap-2">
+              <h3
+                className="flow-title"
+                style={{
+                  cursor: "pointer",
+                  opacity: showUsers ? 1 : 0.5,
+                }}
+                onClick={() => setShowUsers(true)}
+              >
+                Users Database
+              </h3>
+              <h3
+                className="flow-title"
+                style={{
+                  cursor: "pointer",
+                  opacity: !showUsers ? 1 : 0.5,
+                }}
+                onClick={() => setShowUsers(false)}
+              >
+                Flows Database
+              </h3>
+            </div>
+            <div className="flex flex-row gap-2 items-center">
+              <AppButton action={getLogs}>View logs</AppButton>
+              <AppButton action={reloadPlugins}>Reload plugins</AppButton>
+            </div>
           </div>
         </div>
-        {database &&
-          (showUsers ? (
-            <UsersTableView users={database.users} />
-          ) : (
-            <FlowsTableView flows={database.flows} />
-          ))}
+        {database && (
+          <div
+            style={{
+              width: "95%",
+            }}
+          >
+            {showUsers ? (
+              <UsersTableView users={database.users} />
+            ) : (
+              <FlowsTableView flows={database.flows} />
+            )}
+          </div>
+        )}
       </div>
     </>
   );
@@ -166,7 +223,7 @@ function UsersTableView({ users }: { users: UsersDatabase[] }) {
             <th>Max Flows</th>
             <th>Max Storage</th>
             <th>Max horus</th>
-            <th>Apply quota</th>
+            <th>Apply changes</th>
           </tr>
         </thead>
         <tbody>
@@ -231,12 +288,12 @@ function RowUserView({
   setModalContent: (content: React.ReactNode) => void;
   setModalOpened: (opened: boolean) => void;
 }) {
-  const [newUserQuota, setNewUserQuota] = useState<UsersDatabase>({
+  const [newUser, setNewUser] = useState<UsersDatabase>({
     ...user,
   });
 
-  const updateUserQuota = async () => {
-    const newQuotaToSend = JSON.stringify(newUserQuota);
+  const updateUser = async () => {
+    const newQuotaToSend = JSON.stringify(newUser);
 
     const response = await horusPost(
       `/users/admintools/modifyuser`,
@@ -251,29 +308,51 @@ function RowUserView({
 
     const data = await response.json();
 
-    if (data.error) {
+    if (!data.ok) {
       alert(data.msg);
-      return;
+    } else {
+      alert("User updated!");
     }
-
-    alert("User quota updated!");
   };
 
   return (
     <tr>
-      <td>{user.id}</td>
-      <td>{user.email}</td>
+      <td>{newUser.id}</td>
+      <td>{newUser.email}</td>
       <td>
         <div className="w-[150px] overflow-x-scroll">
-          {user.registration_date}
+          {newUser.registration_date}
         </div>
       </td>
       <td>
-        <div className="w-[150px] overflow-x-scroll">{user.last_login}</div>
+        <div className="w-[150px] overflow-x-scroll">{newUser.last_login}</div>
       </td>
-      <td>{user.activated ? "Yes" : "No"}</td>
-      <td>{user.group ?? "None"}</td>
-      <td>{user.admin ? "Yes" : "No"}</td>
+      <td>
+        <input
+          checked={newUser.activated}
+          type="checkbox"
+          onChange={(e) => {
+            console.log(e.target.checked);
+            setNewUser({
+              ...newUser,
+              activated: e.target.checked,
+            });
+          }}
+        ></input>
+      </td>
+      <td>{newUser.group ?? "None"}</td>
+      <td>
+        <input
+          checked={newUser.admin}
+          type="checkbox"
+          onChange={(e) => {
+            setNewUser({
+              ...newUser,
+              admin: e.target.checked,
+            });
+          }}
+        ></input>
+      </td>
       <td>
         <button
           className="app-button"
@@ -282,8 +361,8 @@ function RowUserView({
               <pre>
                 {
                   // For each field, show the value
-                  Object.keys(user).map((key) => {
-                    return `${key}: ${user[key]}\n`;
+                  Object.keys(newUser).map((key) => {
+                    return `${key}: ${newUser[key]}\n`;
                   })
                 }
               </pre>
@@ -297,10 +376,10 @@ function RowUserView({
       <td>
         <input
           type="number"
-          value={newUserQuota.maxFlows}
+          value={newUser.maxFlows}
           onChange={(e) => {
-            setNewUserQuota({
-              ...user,
+            setNewUser({
+              ...newUser,
               maxFlows: parseInt(e.target.value),
             });
           }}
@@ -309,10 +388,10 @@ function RowUserView({
       <td>
         <input
           type="number"
-          value={newUserQuota.maxStorage}
+          value={newUser.maxStorage}
           onChange={(e) => {
-            setNewUserQuota({
-              ...user,
+            setNewUser({
+              ...newUser,
               maxStorage: parseInt(e.target.value),
             });
           }}
@@ -321,10 +400,10 @@ function RowUserView({
       <td>
         <input
           type="number"
-          value={newUserQuota.maxTime}
+          value={newUser.maxTime}
           onChange={(e) => {
-            setNewUserQuota({
-              ...user,
+            setNewUser({
+              ...newUser,
               maxTime: parseInt(e.target.value),
             });
           }}
@@ -334,7 +413,7 @@ function RowUserView({
         <button
           className="app-button"
           onClick={() => {
-            updateUserQuota();
+            updateUser();
           }}
         >
           Apply

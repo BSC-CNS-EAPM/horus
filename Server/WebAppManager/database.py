@@ -701,17 +701,24 @@ class Database:
 
         return database
 
-    def updateUserQuotas(self, userID: int, quotas: typing.Dict[str, typing.Any]):
+    def updateUser(self, userID: int, values: typing.Dict[str, typing.Any]):
         """
-        Updates the quotas of a user in the database
+        Updates a user in the database
+
+        :param: userID -> The ID of the user
+        :param: values -> A dictionary with the form {column: value} to update the database
         """
+
+        # Set the allowed "udpatable columns
+        allowedColumns = ["activated", "group", "admin", "maxFlows", "maxStorage", "maxTime"]
+        parsedValues = {k: v for k, v in values.items() if k in allowedColumns}
 
         with self.engine.connect() as connection:
             connection.execute(
-                self.users.update().where(self.users.c.id == userID).values(quotas)
+                self.users.update().where(self.users.c.id == userID).values(parsedValues)
             )
             connection.commit()
 
             logging.getLogger("Horus").info(
-                "Successfully updated quotas for user: %s with %s", userID, quotas
+                "Successfully updated user: %s with %s", userID, parsedValues
             )
