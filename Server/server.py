@@ -740,7 +740,7 @@ class HorusServer:
                     # Create it by generating a
                     # container folder with the sanitized name. Then, the flow will be
                     # saved inside this folder
-                    if currentPath is None or currentPath == ".":
+                    if currentPath is None:
                         from pathvalidate import sanitize_filepath
 
                         sanitizedName = sanitize_filepath(flowData["name"], max_len=30)
@@ -905,7 +905,7 @@ class HorusServer:
                 molstarState = flow.getMolstarState()
 
                 # On webapp mode, remove the full path
-                if self._isForUser:
+                if self._isForUser and flow.path:
                     flow.path = str(UserFileExplorer(path, currentUser).getRelativePath())
 
                 # Get the flow JSON
@@ -1318,15 +1318,20 @@ class HorusServer:
                 flowContextPath = jsonData.get("flowContextPath")
                 extensions = jsonData.get("extensions")
                 openFolder = jsonData.get("openFolder", False)
+                obfuscate = jsonData.get("obfuscate", True)
 
                 # Read the path with the FileExplorer class
                 if self._isForUser:
+
+                    # If the flow context path is none, then use the users flow dir
+                    relativeTo = (
+                        os.path.join(currentUser.flowsDir, os.path.dirname(flowContextPath))
+                        if flowContextPath
+                        else currentUser.flowsDir
+                    )
+
                     fileExplorer = UserFileExplorer(
-                        path,
-                        currentUser,
-                        relativeTo=os.path.join(
-                            currentUser.flowsDir, os.path.dirname(flowContextPath)
-                        ),
+                        path, currentUser, relativeTo=relativeTo, obfuscate=obfuscate
                     )
                 else:
                     fileExplorer = FileExplorer(path)

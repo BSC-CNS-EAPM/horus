@@ -33,7 +33,12 @@ function useServerExplorer(
   onFileSelect: (file: any) => void,
   onFileConfirm: (file: any) => void,
   setOpen: (open: boolean) => void,
-  extensions?: string[]
+  extensions?: string[],
+  // If this is true (or defined) means that an extension
+  // Wants to get a path. Due to how this work
+  // We need to append the user paths directory
+  // in this specific case. (Server will do that)
+  openDirectly?: boolean
 ) {
   const [files, setFiles] = useState<FileArray>([null]);
   const [folderChain, setFolderChain] = useState<FileArray>([null]);
@@ -55,7 +60,8 @@ function useServerExplorer(
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
       };
-      if (window.horusInternal.webApp && !flowContext?.path) {
+
+      if (window.horusInternal.webApp && !flowContext?.path && !openDirectly) {
         alert("Save the flow before selecting files");
         setOpen(false);
         return;
@@ -78,6 +84,7 @@ function useServerExplorer(
         extensions: extensions,
         openFolder: openFolder,
         flowContextPath: flowContext?.path,
+        obfuscate: !openDirectly,
       });
 
       const response = await horusPost("/api/filepicker", header, body);
@@ -433,7 +440,8 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
         },
     onFileConfirm,
     setOpen,
-    fileProps?.allowedExtensions
+    fileProps?.allowedExtensions,
+    fileProps?.openDirectly
   );
 
   const [goToPath, setGoToPath] = useState<string>("");

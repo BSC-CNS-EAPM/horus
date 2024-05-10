@@ -196,6 +196,12 @@ class FileExplorer:
         if allowedExtensions == ["*"]:
             allowedExtensions = None
 
+        # Parse the allowed extensions to add a leading dot if they do not have it
+        if allowedExtensions is not None:
+            allowedExtensions = [
+                f".{a}" if not a.startswith(".") else a for a in allowedExtensions
+            ]
+
         dirList: typing.List[File] = []
         for file in self.path.iterdir():
 
@@ -315,19 +321,29 @@ class UserFileExplorer(FileExplorer):
     Convert all paths as relatives to this one
     """
 
+    obfuscate: bool
+    """
+    Wether to parse the files or keep the full path
+
+    This will make the property "relativeTo" unused
+    """
+
     def __init__(
         self,
         path: typing.Union["pathlib.Path", str, None],
         user: "HorusUser",
         relativeTo: typing.Optional[str] = None,
+        obfuscate: bool = True,
     ) -> None:
         """
         :param: user: HorusUser -> The user instance
         :param: relativeTo: Optional[str] -> Will convert all paths as relative to this path, defaults to User's flow dir
+        :param: obfuscate: bool = True -> Will make use of the relativeTo parameter. If set to "False" full paths will be return on WebApp mode
         """
 
         self.user = user
         self.relativeTo = pathlib.Path(relativeTo) if relativeTo else self.userPathBoundary
+        self.obfuscate = obfuscate
 
         # if not self.relativeTo.is_dir():
         #     raise PathIsNotDirectory(self.relativeTo)
@@ -397,7 +413,8 @@ class UserFileExplorer(FileExplorer):
             elif f.path == self.userPathBoundary:
                 f.path = pathlib.Path("../")
             elif self.userPathBoundary in f.path.resolve().parents:
-                f.path = self._getRelativePathOf(f.path)
+                if self.obfuscate:
+                    f.path = self._getRelativePathOf(f.path)
             else:
                 continue
 
