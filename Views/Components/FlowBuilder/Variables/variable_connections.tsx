@@ -204,6 +204,13 @@ function OutputVariableBallConnector({
     setNodeRef(ref.current);
   }, [ref]);
 
+  const arrowAppareance = window.horusSettings["arrowLook"]?.value ?? "Curved";
+  const path =
+    arrowAppareance === "Curved" || arrowAppareance === "Extra curved"
+      ? "smooth"
+      : "grid";
+  const curveness = arrowAppareance === "Extra curved" ? 1 : 0.35;
+
   return (
     <div
       id={id}
@@ -220,7 +227,8 @@ function OutputVariableBallConnector({
             dashness={{ animation: -2 }}
             color={"var(--pop-code)"}
             headShape={"circle"}
-            path="grid"
+            path={path}
+            curveness={curveness}
           />
         ) : (
           <Chevron direction="right" />

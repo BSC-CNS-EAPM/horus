@@ -28,9 +28,11 @@ declare global {
 
 export default function LoginRegister() {
   const [fetchedSettings, setFetchedSettings] = useState<boolean>(false);
-  const [view, _setView] = useState<"login" | "register">("login");
+  const [view, _setView] = useState<"login" | "register" | "reset">("login");
   const [fadeIn, setFadeIn] = useState<boolean>(false);
-  const [currentView, setCurrentView] = useState<"login" | "register">("login");
+  const [currentView, setCurrentView] = useState<
+    "login" | "register" | "reset"
+  >("login");
   const [messages, setMessages] = useState<{
     ok: boolean;
     msg: string;
@@ -40,7 +42,7 @@ export default function LoginRegister() {
   });
 
   const setView = useCallback(
-    (newView: "login" | "register", resetMessage: boolean = true) => {
+    (newView: "login" | "register" | "reset", resetMessage: boolean = true) => {
       _setView(newView);
       if (resetMessage) {
         setMessages({ ok: false, msg: "" });
@@ -90,6 +92,19 @@ export default function LoginRegister() {
     startup();
   }, [startup]);
 
+  const getCurrentView = useCallback(() => {
+    switch (currentView) {
+      case "login":
+        return <Login setView={setView} setMessages={setMessages} />;
+      case "register":
+        return <Register setView={setView} setMessages={setMessages} />;
+      case "reset":
+        return <Reset setView={setView} setMessages={setMessages} />;
+      default:
+        return <div>Error</div>;
+    }
+  }, [currentView]);
+
   if (!fetchedSettings) {
     return (
       <div className="grid place-items-center h-screen bg-transparent">
@@ -119,12 +134,9 @@ export default function LoginRegister() {
           transition: "opacity 0.5s",
         }}
       >
-        {currentView === "login" ? (
-          <Login setView={setView} setMessages={setMessages} />
-        ) : (
-          <Register setView={setView} setMessages={setMessages} />
-        )}
+        {getCurrentView()}
       </div>
+      <p className="mt-5 mb-3 text-muted">&copy; 2024 - Horus</p>
     </div>
   );
 }
@@ -133,7 +145,7 @@ function Login({
   setView,
   setMessages,
 }: {
-  setView: (newView: "login" | "register") => void;
+  setView: (newView: "login" | "register" | "reset") => void;
   setMessages: React.Dispatch<
     React.SetStateAction<{
       ok: boolean;
@@ -250,9 +262,14 @@ function Login({
           </button>
         </div>
         {loginAttempts > 0 && (
-          <a href="/forgot-password" className="reset-password">
+          <button
+            onClick={() => {
+              setView("reset");
+            }}
+            className="reset-password"
+          >
             <p>Forgot password...</p>
-          </a>
+          </button>
         )}
         <div className="h-8"></div>
         <p>Don't have an account?</p>
@@ -272,7 +289,6 @@ function Login({
             Try a demo
           </a>
         )}
-        <p className="mt-5 mb-3 text-muted">&copy; 2024 - Horus</p>
       </div>
     </div>
   );
@@ -509,7 +525,88 @@ function Register({
       >
         Go back
       </button>
-      <p className="mt-5 mb-3 text-muted">&copy; 2024 - Horus</p>
+    </div>
+  );
+}
+
+function Reset({
+  setMessages,
+  setView,
+}: {
+  setView: (newView: "login" | "register", resetMessage?: boolean) => void;
+  setMessages: React.Dispatch<
+    React.SetStateAction<{
+      ok: boolean;
+      msg: string;
+    }>
+  >;
+}) {
+  const [email, setEmail] = useState("");
+
+  const resetPassword = async () => {
+    const body = JSON.stringify({
+      email,
+    });
+
+    const response = await horusPost("/users/reset", null, body);
+
+    if (!response) {
+      alert("An error occurred. Try again later.");
+      return;
+    }
+
+    const data = await response.json();
+
+    if (data.ok) {
+      setMessages({
+        msg:
+          data.msg ?? "An email has ben sent in order to reset the password.",
+        ok: true,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      window.location.href = "/users/login";
+    } else {
+      setMessages({
+        msg: data.msg ?? "An error occurred. Try again later.",
+        ok: false,
+      });
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-2 items-center">
+      <div className="w-[350px] flex flex-col gap-2">
+        <div className="form-floating">
+          <input
+            required
+            type="email"
+            className="form-control"
+            id="email"
+            name="email"
+            placeholder="Email"
+            value={email}
+            onChange={(event) => {
+              setEmail(event.target.value);
+            }}
+          />
+          <label htmlFor="email">Email</label>
+        </div>
+
+        <button
+          className="nbd-btn w-100 animated-gradient"
+          onClick={resetPassword}
+        >
+          Reset password
+        </button>
+      </div>
+      <button
+        className="nbd-btn animated-gradient w-100"
+        onClick={() => {
+          setView("login");
+        }}
+      >
+        Go back
+      </button>
     </div>
   );
 }

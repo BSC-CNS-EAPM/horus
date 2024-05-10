@@ -608,17 +608,22 @@ class HorusServer:
 
         @wraps(func)
         def wrapper(*args, **kwargs):
+            # Only on webapp
             if self.webAppManager is not None:
-                if self.webAppManager.db is not None and self.webAppManager.db.hasReachedQuota(
-                    currentUser
-                ):
-                    return flask.jsonify(
-                        {
-                            "ok": False,
-                            "msg": "You have reached your quota. "
-                            + "Please remove some flows to continue.",
-                        }
-                    )
+                # If we require registration
+                if self.webAppManager.userManagement.requireRegistration:
+                    if (
+                        self.webAppManager.db is not None
+                        and self.webAppManager.db.hasReachedQuota(currentUser)
+                    ):
+                        return flask.jsonify(
+                            {
+                                "ok": False,
+                                "msg": "You have reached your quota. "
+                                + "Please remove some flows to continue.",
+                            }
+                        )
+                # For anonymous users
                 else:
                     aq = self.webAppManager.userManagement.anonymousQuotas
 
@@ -636,6 +641,7 @@ class HorusServer:
                                 "msg": "You have reached the maximum number of flows.",
                             }
                         )
+
             return func(*args, **kwargs)
 
         return wrapper
@@ -2288,19 +2294,20 @@ class HorusServer:
                     except Exception:
                         return flask.render_template("Login/reset.html", mail=None)
 
-                if not currentUser or not currentUser.is_authenticated or currentUser.isDemo:
-                    return flask.jsonify({"ok": False, "msg": "Invalid user. Please log in."})
-                try:
-                    self.webAppManager.db.resetPassword(currentUser.email)
-                    return flask.jsonify(
-                        {"ok": True, "msg": "An email has been sent to reset your password"}
-                    )
-                except Exception as exc:
-                    return flask.jsonify({"ok": False, "msg": str(exc)})
-
             if request.method == "POST":
                 # Get the token and verify the mail
                 data = request.get_json()
+
+                email = data.get("email")
+
+                if email is not None:
+                    try:
+                        self.webAppManager.db.resetPassword(email)
+                        return flask.jsonify(
+                            {"ok": True, "msg": "An email has been sent to reset your password"}
+                        )
+                    except Exception as exc:
+                        return flask.jsonify({"ok": False, "msg": str(exc)})
 
                 token = data.get("token", None)
                 newPassword = data.get("newPassword", None)

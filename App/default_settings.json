@@ -16,6 +16,14 @@
     "type": "boolean",
     "allowedValues": []
   },
+  "arrowLook": {
+    "name": "Arrow appareance",
+    "description": "Choose how the connections between blocks should look like.",
+    "category": "Flow",
+    "value": "Curved",
+    "type": "string[]",
+    "allowedValues": ["Straight", "Curved", "Extra curved"]
+  },
   "allowRemotesOnNonSlurm": {
     "name": "Non-slurm remotes",
     "description": "Enable or disable remotes on non-slurm clusters. Sometimes regular blocks might need to access a remote cluster. Enable this setting to allow for regular blocks to access remotes.",

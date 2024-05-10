@@ -172,7 +172,7 @@ export default function Profile() {
 
 function UsedSpace({ used, maximum }: { used?: number; maximum?: number }) {
   const parsedSpace = (space: number | undefined) => {
-    if (space) {
+    if (space || space === 0) {
       // The space are MB, but if higher than 1000, then it's GB
       if (space > 1000) {
         return <span>{(space / 1000).toFixed(2)} GB</span>;

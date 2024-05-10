@@ -49,6 +49,13 @@ export function ConnectedArrows(props: ConnectedArrows) {
     });
   }, []);
 
+  const arrowAppareance = window.horusSettings["arrowLook"]?.value ?? "Curved";
+  const path =
+    arrowAppareance === "Curved" || arrowAppareance === "Extra curved"
+      ? "smooth"
+      : "grid";
+  const curveness = arrowAppareance === "Extra curved" ? 1 : 0.35;
+
   return (
     <div
       style={
@@ -88,10 +95,11 @@ export function ConnectedArrows(props: ConnectedArrows) {
         key={start + end}
         startAnchor={["right", "top", "bottom"]}
         showHead={false}
-        path="grid"
+        path={path}
         color={
           props.connection.isCyclic ? "var(--waring-orange)" : "var(--pop-code)"
         }
+        curveness={curveness}
         labels={{
           middle: props.connection.isCyclic ? (
             <CyclesView

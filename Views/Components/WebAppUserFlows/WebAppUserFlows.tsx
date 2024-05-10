@@ -320,7 +320,9 @@ function OtherFileView(props: {
       <div>
         <FlowSize size={props.directory.size} status={FlowStatus.FINISHED} />
       </div>
-      <div>{props.directory.isDir ? "Folder" : props.directory.ext}</div>
+      <div>
+        {props.directory.isDir ? "Folder" : props.directory.ext ?? "Unknown"}
+      </div>
       <CloudDownload
         className="cursor-pointer w-6 h-6"
         style={{
