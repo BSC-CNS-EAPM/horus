@@ -2081,7 +2081,7 @@ class Plugin:
         # If the attribute is a PluginConfig, add it to the list
         # Only add the config if it is not already in the list
         if isinstance(config, PluginConfig):
-            config.id = f"{self.id}.config.{config.name}".replace(" ", "_").lower()
+            config.id = f"{self.id}.config.{config.id}".replace(" ", "_").lower()
             try:
                 self._getConfig(config.id)
             except Exception:
