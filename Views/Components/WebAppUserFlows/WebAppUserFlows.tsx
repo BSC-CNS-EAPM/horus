@@ -34,42 +34,40 @@ export default function WebAppUserFlows() {
   const [, recentFlows, , getFlows, , otherDirectories, corruptedFlows] =
     useGetRecentFlows(true);
 
-  if (recentFlows.length === 0) {
-    return null;
-  }
-
   return (
     <>
-      <HorusContainer
-        className="w-full flex flex-col justify-center items-center gap-2"
-        style={{
-          maxWidth: "1075px",
-          minWidth: "650px",
-        }}
-      >
-        <h1 className="text-xl font-semibold">Your Flows</h1>
-        <div className="flow-table w-full p-2 svg-container">
-          <div className="header-row">Name</div>
-          <div className="header-row">Date</div>
-          <div className="header-row">Size</div>
-          <div className="header-row">Duration</div>
-          <div className="header-row">Status</div>
-          <div className="header-row">Open</div>
-          <div className="header-row">Download</div>
-          <div className="header-row">Delete</div>
-          <hr className="p-0 m-0 w-full"></hr>
-          <hr className="p-0 m-0 w-full"></hr>
-          <hr className="p-0 m-0 w-full"></hr>
-          <hr className="p-0 m-0 w-full"></hr>
-          <hr className="p-0 m-0 w-full"></hr>
-          <hr className="p-0 m-0 w-full"></hr>
-          <hr className="p-0 m-0 w-full"></hr>
-          <hr className="p-0 m-0 w-full"></hr>
-          {recentFlows.map((flow) => (
-            <FlowRowView key={flow.savedID} flow={flow} getFlows={getFlows} />
-          ))}
-        </div>
-      </HorusContainer>
+      {recentFlows.length > 0 && (
+        <HorusContainer
+          className="w-full flex flex-col justify-center items-center gap-2"
+          style={{
+            maxWidth: "1075px",
+            minWidth: "650px",
+          }}
+        >
+          <h1 className="text-xl font-semibold">Your Flows</h1>
+          <div className="flow-table w-full p-2 svg-container">
+            <div className="header-row">Name</div>
+            <div className="header-row">Date</div>
+            <div className="header-row">Size</div>
+            <div className="header-row">Duration</div>
+            <div className="header-row">Status</div>
+            <div className="header-row">Open</div>
+            <div className="header-row">Download</div>
+            <div className="header-row">Delete</div>
+            <hr className="p-0 m-0 w-full"></hr>
+            <hr className="p-0 m-0 w-full"></hr>
+            <hr className="p-0 m-0 w-full"></hr>
+            <hr className="p-0 m-0 w-full"></hr>
+            <hr className="p-0 m-0 w-full"></hr>
+            <hr className="p-0 m-0 w-full"></hr>
+            <hr className="p-0 m-0 w-full"></hr>
+            <hr className="p-0 m-0 w-full"></hr>
+            {recentFlows.map((flow) => (
+              <FlowRowView key={flow.savedID} flow={flow} getFlows={getFlows} />
+            ))}
+          </div>
+        </HorusContainer>
+      )}
       {corruptedFlows.length > 0 && (
         <HorusContainer
           className="w-full flex flex-col justify-center items-center gap-2"
