@@ -1,18 +1,18 @@
-// React
-import { useRef } from "react";
-
 // Import the css file
+import { forwardRef } from "react";
 import "./horus_container.css";
 
 type HorusContainerProps = React.HTMLProps<HTMLDivElement>;
 
-export default function HorusContainer(props: HorusContainerProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+const HorusContainer = forwardRef(_HorusContainer);
 
+export default HorusContainer;
+
+function _HorusContainer(props: HorusContainerProps, ref: any) {
   return (
     <div
       {...props}
-      ref={containerRef}
+      ref={ref}
       className={`${props.className} horus-container animated-gradient`}
     >
       {props.children}

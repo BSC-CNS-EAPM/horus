@@ -1,5 +1,5 @@
 // React
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 // Import the globals
 import "../Utils/globals";
@@ -7,14 +7,12 @@ import "../Utils/globals";
 // Horus components
 import SplashScreen from "../Components/MainApp/welcome_screen";
 import { socket } from "../Utils/socket";
-import { BlurredModal } from "../Components/reusable";
 import RotatingLines from "../Components/RotatingLines/rotatinglines";
 
 // Hooks
 import { fetchSettings } from "../Settings/settings";
 import { fetchDesktop } from "../Utils/utils";
 import HorusContainer from "../Components/HorusContainer/horus_container";
-import ErrorIcon from "../Components/Toolbar/Icons/Error";
 
 export function App() {
   const [workingView, setWorkingView] = useState<React.ReactNode>(
@@ -26,10 +24,8 @@ export function App() {
     </div>
   );
 
-  const [serverActive, setServerActive] = useState<boolean>(true);
-  const [disconnectTimeout, setDisconnectTimeout] = useState<Timer | null>(
-    null
-  );
+  const notRespondingContainer = useRef<HTMLDivElement>(null);
+  const disconnectTimeout = useRef<Timer | null>(null);
 
   const getHorusSettings = async () => {
     // Store the settings in the window object
@@ -47,21 +43,32 @@ export function App() {
     setWorkingView(startWorking);
   };
 
-  const addDisconnectTimeout = useCallback(() => {
-    const timeout = setTimeout(() => {
-      setServerActive(false);
-    }, 15000); // 15-second delay
+  const displayServerInactive = useCallback(
+    (show: boolean = true) => {
+      if (notRespondingContainer.current) {
+        if (show) {
+          notRespondingContainer.current.style.display = "block";
+        } else {
+          notRespondingContainer.current.style.display = "none";
+        }
+      }
+    },
+    [notRespondingContainer.current]
+  );
 
-    setDisconnectTimeout(timeout);
+  const addDisconnectTimeout = useCallback(() => {
+    disconnectTimeout.current = setTimeout(() => {
+      displayServerInactive();
+    }, 15000); // 15-second delay
   }, []);
 
   const addConnectTimeout = useCallback(() => {
-    if (disconnectTimeout) {
-      clearTimeout(disconnectTimeout); // Cancel the timeout if reconnected within 30 seconds
-      setDisconnectTimeout(null);
+    if (disconnectTimeout.current) {
+      clearTimeout(disconnectTimeout.current); // Cancel the timeout if reconnected within 30 seconds
+      disconnectTimeout.current = null;
     }
-    setServerActive(true);
-  }, [disconnectTimeout]);
+    displayServerInactive(false);
+  }, [disconnectTimeout.current]);
 
   useEffect(() => {
     // Fetch the settings
@@ -89,8 +96,9 @@ export function App() {
     <>
       <HorusContainer
         className="zoom-in-animation"
+        ref={notRespondingContainer}
         style={{
-          display: serverActive ? "none" : "block",
+          display: "none",
           position: "absolute",
           bottom: "0.5rem",
           right: "0.5rem",
