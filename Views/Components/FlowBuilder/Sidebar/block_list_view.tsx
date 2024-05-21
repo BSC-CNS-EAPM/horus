@@ -63,9 +63,6 @@ export function BlockListSidebar() {
     });
 
     sidebarBlockList.current = blockList;
-
-    alert("Plugins reloaded!");
-
     setLoadingBlocks(false);
   }
 
@@ -141,6 +138,7 @@ export function BlockListSidebar() {
                   className="m-0"
                   action={async () => {
                     await horusGet("/api/plugins/reload");
+                    alert("Plugins reloaded!");
                     fetchBlocks();
                   }}
                 >
