@@ -361,7 +361,8 @@ function VariableRenderer(props: {
     case PluginVariableTypes.STRING_LIST:
     case PluginVariableTypes.NUMBER_LIST:
       // If the current value is not set, set i to the first allowed value
-      if (!currentValue && variableToRender.allowedValues) {
+      // CAUTION WITH VALUES LIKE "0" or 0, they will cause infinite re-renders
+      if (!currentValue === null && variableToRender.allowedValues) {
         handleVariableChangeInternal(variableToRender.allowedValues[0]);
       }
 
