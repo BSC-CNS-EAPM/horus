@@ -313,7 +313,7 @@ const redoEvent = () => {
   window.dispatchEvent(event);
 };
 
-const saveEvent = () => {
+export const saveEvent = () => {
   // Emit a save event
   const event = new CustomEvent("saveFlow");
   window.dispatchEvent(event);

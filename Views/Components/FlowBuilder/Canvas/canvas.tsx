@@ -17,6 +17,7 @@ import StopIcon from "../../Toolbar/Icons/Stop";
 import SaveIcon from "../../Toolbar/Icons/Save";
 import { FlowStatusView } from "../../FlowStatus/flow_status";
 import { FlowElapsed } from "../../FlowStatus/flow_elapsed";
+import { saveEvent } from "../../Toolbar/toolbar";
 
 type FlowCanvasProps = {
   flowHooks: FlowHooks;
@@ -185,9 +186,11 @@ function FlowTopBar(props: { flowHooks: FlowHooks }) {
             <FlowStatusView status={props.flowHooks.flow.status} />
           ) : (
             <div
+              onClick={saveEvent}
               className="flex flex-row gap-2"
               style={{
                 color: "orange",
+                cursor: "pointer",
               }}
             >
               <SaveIcon />
