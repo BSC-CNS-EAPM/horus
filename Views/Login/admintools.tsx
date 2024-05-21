@@ -60,6 +60,7 @@ export function AdminTools() {
 
   const reloadPlugins = () => {
     horusGet("/api/plugins/reload");
+    alert("Plugins reloaded!");
   };
 
   const getLogs = async () => {

@@ -388,6 +388,7 @@ export function PluginManager({
 
   const reloadPlugins = async () => {
     await horusGet("/api/plugins/reload");
+    alert("Plugins reloaded!");
     fetchData();
   };
 

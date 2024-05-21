@@ -64,6 +64,8 @@ export function BlockListSidebar() {
 
     sidebarBlockList.current = blockList;
 
+    alert("Plugins reloaded!");
+
     setLoadingBlocks(false);
   }
 
