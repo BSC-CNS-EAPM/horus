@@ -245,10 +245,26 @@ function UsersTableView({ users }: { users: UsersDatabase[] }) {
             }
           }}
         >
-          Previous
+          Back
         </button>
-        <div className="app-button">
-          {currentPage + 1} / {totalPages}
+        <div className="flex flex-row gap-1 items-center">
+          <input
+            value={currentPage + 1}
+            style={{
+              WebkitAppearance: "none",
+              margin: 0,
+              MozAppearance: "none",
+            }}
+            className="app-button w-8 text-center"
+            onChange={(e) => {
+              try {
+                setCurrentPage(Number(e.target.value) - 1);
+              } catch (error) {
+                console.error(error);
+              }
+            }}
+          ></input>
+          of {totalPages}
         </div>
         <button
           className="app-button"
@@ -288,9 +304,11 @@ function RowUserView({
   setModalContent: (content: React.ReactNode) => void;
   setModalOpened: (opened: boolean) => void;
 }) {
-  const [newUser, setNewUser] = useState<UsersDatabase>({
-    ...user,
-  });
+  const [newUser, setNewUser] = useState<UsersDatabase>(user);
+
+  useEffect(() => {
+    setNewUser(user);
+  }, [user]);
 
   const updateUser = async () => {
     const newQuotaToSend = JSON.stringify(newUser);
@@ -472,10 +490,26 @@ function FlowsTableView({ flows }: { flows: FlowsDatabase[] }) {
             }
           }}
         >
-          Previous
+          Back
         </button>
-        <div className="app-button">
-          {currentPage + 1} / {totalPages}
+        <div className="flex flex-row gap-1 items-center">
+          <input
+            value={currentPage + 1}
+            style={{
+              WebkitAppearance: "none",
+              margin: 0,
+              MozAppearance: "none",
+            }}
+            className="app-button w-8 text-center"
+            onChange={(e) => {
+              try {
+                setCurrentPage(Number(e.target.value) - 1);
+              } catch (error) {
+                console.error(error);
+              }
+            }}
+          ></input>
+          of {totalPages}
         </div>
         <button
           className="app-button"
