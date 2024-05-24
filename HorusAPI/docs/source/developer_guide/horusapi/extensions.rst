@@ -150,7 +150,7 @@ allow only specific file extensions, or controlling what happens when the user s
         openFolder?: boolean;
         allowedExtensions?: string[];
         onFileSelect?: (filePath: string) => void;
-        onFileConfirm?: (fielPath: string) => void;
+        onFileConfirm?: (filePath: string) => void;
     }
 
 .. code-block:: javascript

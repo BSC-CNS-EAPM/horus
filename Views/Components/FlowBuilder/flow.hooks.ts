@@ -145,6 +145,7 @@ function newFlowObject(): Flow {
     blocks: [],
     terminalOutput: [],
     pendingActions: [],
+    elapsed: 0,
   };
 }
 
@@ -1073,7 +1074,12 @@ export function useFlowBuilder() {
     };
 
     // Update the state
-    handleBlockChanges([newDestinationBlock, newOriginBlock]);
+    handleBlockChanges(
+      [newDestinationBlock, newOriginBlock],
+      false,
+      true,
+      false
+    );
   };
 
   function checkCyclicFlow(origin: Block, destination: Block) {
@@ -1208,7 +1214,12 @@ export function useFlowBuilder() {
     };
 
     // Update the state
-    handleBlockChanges([newDestinationBlock, newOriginBlock]);
+    handleBlockChanges(
+      [newDestinationBlock, newOriginBlock],
+      false,
+      true,
+      false
+    );
   }
 
   const loadSocketFlow = useCallback(
@@ -1648,7 +1659,7 @@ export function useFlowBuilder() {
       selectedRemote: selectedRemote,
     };
 
-    handleBlockChanges([newBlock]);
+    handleBlockChanges([newBlock], false, true, false);
   }
 
   useEffect(() => {
