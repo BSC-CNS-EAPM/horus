@@ -547,7 +547,7 @@ class Database:
             "maxHours": quotas["maxTime"],
         }
 
-    def hasReachedQuota(self, user: "HorusUser") -> bool:
+    def hasReachedQuota(self, user: "HorusUser") -> tuple[bool, str]:
         """
         Checks if the user has reached the quotas
         """
@@ -564,23 +564,26 @@ class Database:
         if quotas["maxFlows"] is not None:
             # Check within the user directory also for the
             # number of simulations (directories)
-            if len(os.listdir(user.flowsDir)) >= quotas["maxFlows"]:
-                return True
+            if len(os.listdir(user.flowsDir)) > quotas["maxFlows"]:
+                return True, f"You have reached your limit of flows ({quotas['maxFlows']})"
 
         # If the user has reached the maximum storage
         # For so, check the actual size of the folder instead
         # of the DB data
         if quotas["maxStorage"] is not None:
             if FileExplorer.computePathSize(user.flowsDir) >= quotas["maxStorage"]:
-                return True
+                return True, f"You have reached your storage quota of {quotas['maxStorage']} MB"
 
         # If the user has reached the maximum time
         # This has to come from the DB
         if quotas["maxTime"] is not None:
             if sum([flow["time"] for flow in userFlows]) >= quotas["maxTime"]:
-                return True
+                return (
+                    True,
+                    f"You have reached your limit of computational time of {quotas['maxTime']} hours",
+                )
 
-        return False
+        return False, ""
 
     def registerFlowForUser(self, user: "HorusUser", flow: "Flow"):
         """

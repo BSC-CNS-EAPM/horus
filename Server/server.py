@@ -612,17 +612,15 @@ class HorusServer:
             if self.webAppManager is not None:
                 # If we require registration
                 if self.webAppManager.userManagement.requireRegistration:
-                    if (
-                        self.webAppManager.db is not None
-                        and self.webAppManager.db.hasReachedQuota(currentUser)
-                    ):
-                        return flask.jsonify(
-                            {
-                                "ok": False,
-                                "msg": "You have reached your quota. "
-                                + "Please remove some flows to continue.",
-                            }
-                        )
+                    if self.webAppManager.db is not None:
+                        quotaReached, reason = self.webAppManager.db.hasReachedQuota(currentUser)
+                        if quotaReached:
+                            return flask.jsonify(
+                                {
+                                    "ok": False,
+                                    "msg": reason,
+                                }
+                            )
                 # For anonymous users
                 else:
                     aq = self.webAppManager.userManagement.anonymousQuotas
