@@ -90,7 +90,7 @@ class HorusUser(flask_login.UserMixin):
     Datetime of user's last login
     """
 
-    group: int
+    group: str
     """
     User group
     """

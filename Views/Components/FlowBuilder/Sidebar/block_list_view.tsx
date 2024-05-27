@@ -40,26 +40,23 @@ export function BlockListSidebar() {
   async function fetchBlocks() {
     setLoadingBlocks(true);
 
-    const response = await horusGet("/api/plugins/list");
+    const response = await horusGet("/api/plugins/listblocks");
 
     const data = await response.json();
 
-    const plugins: Array<HorusPlugin> = data.plugins;
+    const unparsedBlocks: Array<Block> = data.blocks;
 
     // Parse the data into the blockList
     const blockList: Array<Block> = [];
-    plugins.forEach((plugin: HorusPlugin) => {
-      plugin.blocks.forEach((block: Block) => {
-        const newBlock: Block = {
-          ...block,
-          plugin: plugin,
-          isPlaced: false,
-          position: { x: 0, y: 0 },
-          variableConnections: [],
-          variableConnectionsReference: [],
-        };
-        blockList.push(newBlock);
-      });
+    unparsedBlocks.forEach((block: Block) => {
+      const newBlock: Block = {
+        ...block,
+        isPlaced: false,
+        position: { x: 0, y: 0 },
+        variableConnections: [],
+        variableConnectionsReference: [],
+      };
+      blockList.push(newBlock);
     });
 
     sidebarBlockList.current = blockList;

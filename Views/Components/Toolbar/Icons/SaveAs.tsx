@@ -11,7 +11,7 @@ export default function SaveAsIcon(props: IconProps) {
       stroke="currentColor"
       {...props}
     >
-      <g clip-path="url(#clip0_360_6463)">
+      <g clipPath="url(#clip0_360_6463)">
         <path
           d="M18 21L22 17L20.6 15.6L19 17.2V13.025H17V17.2L15.4 15.6L14 17L18 21ZM14 24V22H22V24H14ZM4 20V2H13L19 8V11.025H17V9H12V4H6V18H12V20H4Z"
           fill="currentColor"

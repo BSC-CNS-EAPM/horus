@@ -6,6 +6,7 @@ import os
 import shutil
 import atexit
 import datetime
+import typing
 
 # Loggin
 import logging
@@ -15,6 +16,9 @@ import json
 
 # socket for knowing the external ip adress
 import socket
+
+# flask_login for the current login
+import flask_login
 
 # Mail server
 import smtplib
@@ -32,6 +36,17 @@ from HorusAPI import VariableTypes
 
 # Database
 from .database import Database
+
+# Current user
+if typing.TYPE_CHECKING:
+
+    from Server.FlowManager import Flow
+    from .user import HorusUser
+
+    # Cast the flask_login UserMixin to the HorusUser class
+    currentUser = typing.cast(HorusUser, flask_login.current_user)
+else:
+    currentUser = flask_login.current_user
 
 
 class ExtraField:
@@ -519,6 +534,11 @@ class UserManagement:
     Control how the FilePicker works in WebApp mode
     """
 
+    disableAdminTools: bool
+    """
+    Wether admin tools should be present or not.
+    """
+
     def __init__(
         self,
         rawUserManagement: Dict[str, Any],
@@ -538,6 +558,7 @@ class UserManagement:
         self.requireActivation = rawUserManagement.get("requireActivation", False)
         self.allowDemoUser = rawUserManagement.get("allowDemoUser", False)
         self.deleteInterval = rawUserManagement.get("deleteInterval", 0)
+        self.disableAdminTools = rawUserManagement.get("disableAdminTools", False)
 
         if self.requireActivation and not self.requireRegistration:
             raise ValueError(
@@ -641,6 +662,74 @@ class WebAppCORS:
         self.origins = rawCORS.get("origins", "*")
 
 
+class UserGroupsManager:
+    """
+    Modify, read and filter blocks/extensions depending on the webapp groups
+    """
+
+    def __init__(self, db: Database) -> None:
+        self.db = db
+
+    def getBlocksForUser(self) -> list:
+        """
+        Returns the block list for a specific user
+
+        :params:
+        userID: int -> The user ID
+        """
+
+        from App import AppDelegate
+
+        allBlocks = AppDelegate().server.pluginManager.getBlocks()
+
+        allowedBlocksForUser = self.db.getBlocksFromGroup(currentUser.group)
+
+        return [block for block in allBlocks if block["id"] in allowedBlocksForUser]
+
+    def getPagesForUser(self) -> list:
+        """
+        Returns the block list for a specific user
+
+        :params:
+        userID: int -> The user ID
+        """
+
+        from App import AppDelegate
+
+        allPages = AppDelegate().server.pluginManager.getPages()
+
+        allowedPagesForUser = self.db.getExtensionsFromGroup(currentUser.group)
+
+        return [page for page in allPages if page["id"] in allowedPagesForUser]
+
+    def verifyFlowCanBeExecuted(self, flow: "Flow"):
+        """
+        Verifies that the flow blocks are all available for the user.
+
+        Raises a ValueError if it is not
+        """
+
+        flowIDs = [b.id for b in flow.blocks]
+        allowedBlocks = self.db.getBlocksFromGroup(currentUser.group)
+
+        # Verify that all blocks in the flow are allowed for the user
+        for blockID in flowIDs:
+            if blockID not in allowedBlocks:
+                raise ValueError(f"Cannot execute flow: '{blockID}' is not allowed.")
+
+    def verifyExtensionCanBeExecuted(self, extensionID: str):
+        """
+        Verifies that the requested extension is available for the user.
+
+        Raises a ValueError if it is not
+        """
+
+        allowedExtensions = self.db.getExtensionsFromGroup(currentUser.group)
+
+        if extensionID not in allowedExtensions:
+            raise ValueError(f"Cannot execute extension: '{extensionID}' is not allowed.")
+
+
 class WebAppManager:
     """
     Loads the horus.config.js file which contains information about the server setup
@@ -699,6 +788,12 @@ class WebAppManager:
     SQL interface for the user management system
     """
 
+    # User blocks
+    userGroupsManager: UserGroupsManager
+    """
+    Manage groups and available blocks
+    """
+
     # Config file path
     HORUS_CONFIG_FILE = "horus.config.json"
 
@@ -736,7 +831,7 @@ class WebAppManager:
         rawCORS = self.rawConfig.get("cors", {})
         self.cors = WebAppCORS(rawCORS)
 
-    def startDatabase(self) -> None:
+    def startDatabase(self):
         """
         Creates the user database
         """
@@ -753,3 +848,6 @@ class WebAppManager:
 
         # Create the database
         self.db = Database(self)
+
+        # Start the Group manager class
+        self.userGroupsManager = UserGroupsManager(self.db)

@@ -8,6 +8,9 @@ import logging
 import os
 import datetime
 
+# json for serialization
+import json
+
 # Werkzeug utilities
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -91,7 +94,12 @@ class Database:
             sqlalchemy.Column("registration_date", sqlalchemy.DateTime),
             sqlalchemy.Column("last_login", sqlalchemy.DateTime),
             sqlalchemy.Column("admin", sqlalchemy.Boolean),
-            sqlalchemy.Column("group", sqlalchemy.Integer),
+            sqlalchemy.Column(
+                "group",
+                sqlalchemy.String,
+                sqlalchemy.ForeignKey("groups.group"),
+                default="default",
+            ),
             sqlalchemy.Column(
                 "maxStorage",
                 sqlalchemy.Integer,
@@ -146,8 +154,28 @@ class Database:
             sqlalchemy.Column("deleted", sqlalchemy.Boolean, default=False),
         )
 
+        # Create another table with the blocks-per-group
+        self.groups = sqlalchemy.Table(
+            "groups",
+            self.metadata,
+            # Each flow has a unique ID
+            sqlalchemy.Column(
+                "group",
+                sqlalchemy.String,
+                unique=True,
+                primary_key=True,
+            ),
+            # Serialized block IDs that are from the group
+            sqlalchemy.Column("blocks", sqlalchemy.String, nullable=True, default=None),
+            # Serialized extensions that are from the group
+            sqlalchemy.Column("extensions", sqlalchemy.String, nullable=True, default=None),
+        )
+
         # Create the tables
         self.metadata.create_all(self.engine)
+
+        # Create automatically the default group
+        self.createGroup("default")
 
         logging.getLogger("Horus").info("Database loaded at %s", self.dbConfig.path)
 
@@ -702,6 +730,14 @@ class Database:
 
             database["flows"] = dictResult
 
+            result = connection.execute(self.groups.select()).fetchall()
+            dictResult = []
+
+            for row in result:
+                dictResult.append(row._asdict())
+
+            database["groups"] = dictResult
+
         return database
 
     def updateUser(self, userID: int, values: typing.Dict[str, typing.Any]):
@@ -725,3 +761,181 @@ class Database:
             logging.getLogger("Horus").info(
                 "Successfully updated user: %s with %s", userID, parsedValues
             )
+
+    def createGroup(self, group: str):
+        """
+        Createas a group in the database
+
+        :param: group -> The name of the group
+        """
+
+        group = sanitizeStringForDatabase(group).lower()
+
+        # Insert the group into the database
+        with self.engine.connect() as connection:
+            # Skip if the group is already in the database
+            if connection.execute(
+                self.groups.select().where(self.groups.c.group == group)
+            ).fetchone():
+                return
+
+            connection.execute(
+                self.groups.insert().values(
+                    group=group,
+                )
+            )
+            connection.commit()
+
+    def deleteGroup(self, group: str):
+        """
+        Createas a group in the database
+
+        :param: group -> The name of the group
+        """
+
+        group = sanitizeStringForDatabase(group).lower()
+
+        if group == "default":
+            raise ValueError("Cannot remove the 'default' group.")
+
+        with self.engine.connect() as connection:
+            # Delete the group
+            connection.execute(self.groups.delete().where(self.groups.c.group == group))
+
+            # Update users to the "default" group where they were in the deleted group
+            connection.execute(
+                self.users.update().where(self.users.c.group == group).values(group="default")
+            )
+            connection.commit()
+
+        logging.getLogger("Horus").info(
+            f"Successfully removed group '{group}' and assigned 'default' to users."
+        )
+
+    def setBlocksToGroup(self, blockID: list[str], group: str):
+        """
+        Updates a user in the database
+
+        :param: blockID -> The ID of the block
+        :param: group -> The ID of the group
+        """
+
+        blockID = [sanitizeStringForDatabase(b) for b in blockID]
+        group = sanitizeStringForDatabase(group)
+
+        # Serialize the string
+        if len(blockID) == 0:
+            serializedBlocks = None
+        else:
+            serializedBlocks = json.dumps(blockID)
+
+        with self.engine.connect() as connection:
+            connection.execute(
+                self.groups.update()
+                .where(self.groups.c.group == group)
+                .values(blocks=serializedBlocks)
+            )
+            connection.commit()
+
+            logging.getLogger("Horus").info(
+                "Successfully modified group '%s' with blocks '%s'", group, serializedBlocks
+            )
+
+    def setExtensionsToGroup(self, extensionsID: list[str], group: str):
+        """
+        Updates the group extensions in the database
+
+        :param: blockID -> The ID of the extension
+        :param: group -> The ID of the group
+        """
+
+        extensionsID = [sanitizeStringForDatabase(e) for e in extensionsID]
+        group = sanitizeStringForDatabase(group)
+
+        # Serialize the string
+        if len(extensionsID) == 0:
+            serializedExtensions = None
+        else:
+            serializedExtensions = json.dumps(extensionsID)
+
+        with self.engine.connect() as connection:
+            connection.execute(
+                self.groups.update()
+                .where(self.groups.c.group == group)
+                .values(extensions=serializedExtensions)
+            )
+            connection.commit()
+
+            logging.getLogger("Horus").info(
+                "Successfully modified group '%s' extensions with '%s'",
+                group,
+                serializedExtensions,
+            )
+
+    def getBlocksFromGroup(self, group: str) -> list[str]:
+        """
+        Retrieves the list of block IDs for a given group from the database
+
+        :param group: The ID of the group
+        :return: List of block IDs
+        """
+        group = sanitizeStringForDatabase(group)
+
+        with self.engine.connect() as connection:
+            stmt = sqlalchemy.select(self.groups.c.blocks).where(self.groups.c.group == group)
+            result = connection.execute(stmt).scalar()
+
+        if result is None:
+            blocks = []
+        else:
+            try:
+                blocks = json.loads(result)
+            except json.JSONDecodeError as e:
+                logging.getLogger("Horus").error(
+                    "Failed to decode blocks for group %s: %s", group, str(e)
+                )
+                blocks = []
+
+        return blocks
+
+    def getExtensionsFromGroup(self, group: str) -> list[str]:
+        """
+        Retrieves the list of extensions IDs for a given group from the database
+
+        :param group: The ID of the group
+        :return: List of extension IDs
+        """
+        group = sanitizeStringForDatabase(group)
+
+        with self.engine.connect() as connection:
+            stmt = sqlalchemy.select(self.groups.c.extensions).where(self.groups.c.group == group)
+            result = connection.execute(stmt).scalar()
+
+        if result is None:
+            extensions = []
+        else:
+            try:
+                extensions = json.loads(result)
+            except json.JSONDecodeError as e:
+                logging.getLogger("Horus").error(
+                    "Failed to decode blocks for group %s: %s", group, str(e)
+                )
+                extensions = []
+
+        return extensions
+
+
+def sanitizeStringForDatabase(string: str) -> str:
+    """
+    Sanizites a string (no spaces, no commas...)
+    """
+
+    string = string.replace(" ", "_")
+    # string = string.replace(".", "_")
+    # string = string.replace(",", "_")
+    string = string.replace("'", "_")
+    string = string.replace('"', "_")
+    string = string.replace("\\", "_")
+    string = string.replace("/", "_")
+
+    return string

@@ -68,7 +68,7 @@ export default function SplashScreen() {
             {window.horusInternal.webApp?.allowRemotes !== false && (
               <ManageRemotes setModalContent={updateModalContent} />
             )}
-            <Settings setModalContent={updateModalContent} />
+            <ManageSettings setModalContent={updateModalContent} />
           </div>
           <div className="vertical-splash-separator" />
           <div className="flex flex-row flex-wrap gap-2 justify-center">
@@ -272,7 +272,7 @@ function ManageRemotes(props: ButtonOpensModalProps) {
     </HorusContainer>
   );
 }
-function Settings(props: ButtonOpensModalProps) {
+function ManageSettings(props: ButtonOpensModalProps) {
   const setModalContent = () => {
     const body = <SettingsView />;
 

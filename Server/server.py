@@ -202,8 +202,15 @@ class HorusServer:
         localIp = None
         if self.host == "0.0.0.0":
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.connect(("8.8.8.8", 80))
-            localIp = s.getsockname()[0]
+            try:
+                s.connect(("8.8.8.8", 80))
+                localIp = s.getsockname()[0]
+            except OSError:
+                logging.getLogger("Horus").error(
+                    "Could not get external URL for host '0.0.0.0'. Defaulting to 'localhost'"
+                )
+                localIp = "localhost"
+
             self.baseURL = f"http://{localIp}:{self.port}"
 
         # Check that the baseURL is not in use
@@ -1066,19 +1073,34 @@ class HorusServer:
         @self.verifyLogin
         def listPlugins():
             plugins = self.pluginManager.getPlugins()
+
             return flask.jsonify(plugins)
 
         @self.server.route("/api/plugins/listblocks", methods=["GET"])
         @self.verifyLogin
         def listblocks():
-            plugins = self.pluginManager.getBlocks()
-            return flask.jsonify(plugins)
+
+            # Filter the blocks based on the user
+            # Admins have access to all
+            if self._isForUser and self.webAppManager is not None and not currentUser.admin:
+                blocks = self.webAppManager.userGroupsManager.getBlocksForUser()
+            else:
+                blocks = self.pluginManager.getBlocks()
+
+            return flask.jsonify({"blocks": blocks})
 
         @self.server.route("/api/plugins/listpages", methods=["GET"])
         @self.verifyLogin
         def listpages():
-            pages = self.pluginManager.getPages()
-            return flask.jsonify(pages)
+
+            # Filter the pages based on the user
+            # Admins have access to all
+            if self._isForUser and self.webAppManager is not None and not currentUser.admin:
+                pages = self.webAppManager.userGroupsManager.getPagesForUser()
+            else:
+                pages = self.pluginManager.getPages()
+
+            return flask.jsonify({"pages": pages})
 
         @self.server.route("/api/plugins/executeflow", methods=["POST"])
         @self.verifyLogin
@@ -1121,6 +1143,10 @@ class HorusServer:
                 # On webapp mode, skip the paths fo the flow
                 # during the endoing process for security
                 flow._skipPath = relativePath if self._isForUser else None
+
+                # Before running the flow, check that the blocks are available for the user
+                if self._isForUser and self.webAppManager is not None and not currentUser.admin:
+                    self.webAppManager.userGroupsManager.verifyFlowCanBeExecuted(flow)
 
                 # Run the flow
                 self.flowManager.runFlow(
@@ -1827,6 +1853,17 @@ class HorusServer:
             @wraps(func)
             def wrapper(*args, **kwargs):
                 try:
+
+                    # Verify that the user has access to this extension
+                    if (
+                        self._isForUser
+                        and self.webAppManager is not None
+                        and not currentUser.admin
+                    ):
+                        self.webAppManager.userGroupsManager.verifyExtensionCanBeExecuted(
+                            page._pageInfo["id"]
+                        )
+
                     with PluginDeps(page._pageInfo["pluginDir"]):
                         result = PluginDeps.subprocessCall(endPoint.function, *args, **kwargs)
                     return result
@@ -1857,11 +1894,34 @@ class HorusServer:
                 # Create a route for the html
                 @newBluePrint.route(url)
                 def sendHtml():
+                    if (
+                        self._isForUser
+                        and self.webAppManager is not None
+                        and not currentUser.admin
+                    ):
+                        try:
+                            self.webAppManager.userGroupsManager.verifyExtensionCanBeExecuted(
+                                page._pageInfo["id"]
+                            )
+                        except ValueError:
+                            return flask.redirect("/")
+
                     return flask.render_template(os.path.basename(htmlPath))
 
                 # Create a route for the static files
                 @newBluePrint.route(url + "<path:filename>")
                 def sendStatic(filename):
+                    if (
+                        self._isForUser
+                        and self.webAppManager is not None
+                        and not currentUser.admin
+                    ):
+                        try:
+                            self.webAppManager.userGroupsManager.verifyExtensionCanBeExecuted(
+                                page._pageInfo["id"]
+                            )
+                        except ValueError:
+                            return flask.redirect("/")
                     return flask.send_from_directory(os.path.dirname(htmlPath), filename)
 
                 # Add the required endpoints
@@ -2243,6 +2303,10 @@ class HorusServer:
 
                     userDict = currentUser.toDict()
 
+                    # If its admin, set it to false when the AdminTools are disabled too
+                    if currentUser.admin and self.webAppManager.userManagement.disableAdminTools:
+                        userDict["admin"] = False
+
                     # Fetch the quota for the user too
                     try:
                         userDict["quota"] = (
@@ -2616,63 +2680,168 @@ class HorusServer:
             except Exception as exc:
                 return flask.jsonify({"ok": False, "msg": str(exc)})
 
-        @self.server.route("/users/admintools")
-        @self.verifyLogin
-        @self.verifyAdmin
-        def adminTools():
-            return flask.render_template("Login/admintools.html")
+        # Add the admin tools only when not disabled
+        if self.webAppManager and not self.webAppManager.userManagement.disableAdminTools:
 
-        @self.server.route("/users/admintools/data", methods=["GET"])
-        @self.verifyLogin
-        @self.verifyAdmin
-        def adminData():
+            @self.server.route("/users/admintools")
+            @self.verifyLogin
+            @self.verifyAdmin
+            def adminTools():
+                return flask.render_template("Login/admintools.html")
 
-            if not self.webAppManager or self.webAppManager.db is None:
-                return flask.jsonify({"ok": False, "msg": "No user registration required"})
+            @self.server.route("/users/admintools/settings")
+            @self.verifyLogin
+            @self.verifyAdmin
+            def adminSettings():
+                # Fetch all the settings that were not available in the regular settings view
 
-            # Return the database info
-            return flask.jsonify(self.webAppManager.db.dumpDatabase())
+                settings = self.settingsManager.listUnsafeSettings()
 
-        @self.server.route("/users/admintools/modifyuser", methods=["POST"])
-        @self.verifyLogin
-        @self.verifyAdmin
-        def modifyUserAdminTools():
+                return flask.jsonify({"ok": True, "settings": settings})
 
-            if not self.webAppManager or self.webAppManager.db is None:
-                return flask.jsonify({"ok": False, "msg": "No user registration required"})
+            @self.server.route("/users/admintools/saveSettings", methods=["POST"])
+            @self.verifyLogin
+            @self.verifyAdmin
+            def saveAdminSettings():
+                data = request.get_json()
 
-            # Update the user
-            user = request.get_json()
+                if data is None:
+                    return flask.jsonify({"ok": False, "msg": "Missing data"})
 
-            if user is None:
-                return flask.jsonify({"ok": False, "msg": "No user provided"})
+                settings = data.get("settings", None)
 
-            try:
+                if settings is None:
+                    return flask.jsonify({"ok": False, "msg": "Missing settings"})
 
-                # Parse the user to get only the fields that can be modified
-                userID = user.get("id", None)
+                try:
+                    self.settingsManager.saveSettings(settings, allowUnsafe=True)
+                    return flask.jsonify({"ok": True})
+                except Exception as exc:
+                    return flask.jsonify({"ok": False, "msg": str(exc)})
 
-                if userID is None or user is None:
-                    raise ValueError("Missing data")
+            @self.server.route("/users/admintools/add_group", methods=["POST"])
+            @self.verifyLogin
+            @self.verifyAdmin
+            def addGroup():
+                try:
+                    if not self.webAppManager or self.webAppManager.db is None:
+                        return flask.jsonify(
+                            {"ok": False, "msg": "No user registration required"}
+                        )
 
-                self.webAppManager.db.updateUser(userID, user)
-                return flask.jsonify({"ok": True})
-            except Exception as exc:
-                return flask.jsonify({"ok": False, "msg": str(exc)})
+                    group = request.get_json().get("group")
 
-        # Socket for the logs
-        @self.server.route("/users/admintools/getlogs")
-        @self.verifyLogin
-        @self.verifyAdmin
-        def getLogs():
-            # Gets the logs as txt response
+                    if group is None:
+                        raise Exception("No group provided")
 
-            from App import AppDelegate
+                    self.webAppManager.db.createGroup(group)
 
-            with open(AppDelegate().logger.latestLogFile, "r", encoding="utf-8") as logs:
-                readLogs = logs.read()
+                    return flask.jsonify({"ok": True})
+                except Exception as exc:
+                    return flask.jsonify({"ok": False, "msg": str(exc)})
 
-            return readLogs
+            @self.server.route("/users/admintools/modify_group", methods=["POST", "DELETE"])
+            @self.verifyLogin
+            @self.verifyAdmin
+            def modifyGroup():
+                try:
+                    if not self.webAppManager or self.webAppManager.db is None:
+                        return flask.jsonify(
+                            {"ok": False, "msg": "No user registration required"}
+                        )
+
+                    if request.method == "POST":
+
+                        group = request.get_json().get("group")
+                        pageIDs = request.get_json().get("pages")
+                        blockIDs = request.get_json().get("blockIDs")
+
+                        if group is None:
+                            raise Exception("No group provided")
+
+                        if blockIDs is None and pageIDs is None:
+                            raise Exception("No blockIDs or pagesIDs provided")
+
+                        if blockIDs is not None:
+                            self.webAppManager.db.setBlocksToGroup(blockIDs, group)
+                            return flask.jsonify(
+                                {
+                                    "ok": True,
+                                    "msg": f"Modified group '{group}' with blocks '{blockIDs}'",
+                                }
+                            )
+
+                        if pageIDs is not None:
+                            self.webAppManager.db.setExtensionsToGroup(pageIDs, group)
+                            return flask.jsonify(
+                                {
+                                    "ok": True,
+                                    "msg": f"Modified group '{group}' with extensions '{pageIDs}'",
+                                }
+                            )
+
+                    if request.method == "DELETE":
+                        group = request.get_json().get("group")
+                        if group is None:
+                            raise Exception("No group provided")
+
+                        self.webAppManager.db.deleteGroup(group)
+
+                        return flask.jsonify({"ok": True, "msg": f"Removed group '{group}'"})
+
+                    raise ValueError("Method not supported")
+
+                except Exception as exc:
+                    return flask.jsonify({"ok": False, "msg": str(exc)})
+
+            @self.server.route("/users/admintools/data", methods=["GET"])
+            @self.verifyLogin
+            @self.verifyAdmin
+            def adminData():
+
+                if not self.webAppManager or self.webAppManager.db is None:
+                    return flask.jsonify({"ok": False, "msg": "No user registration required"})
+
+                # Return the database info
+                return flask.jsonify(self.webAppManager.db.dumpDatabase())
+
+            @self.server.route("/users/admintools/modifyuser", methods=["POST"])
+            @self.verifyLogin
+            @self.verifyAdmin
+            def modifyUserAdminTools():
+
+                if not self.webAppManager or self.webAppManager.db is None:
+                    return flask.jsonify({"ok": False, "msg": "No user registration required"})
+
+                # Update the user
+                user = request.get_json()
+
+                if user is None:
+                    return flask.jsonify({"ok": False, "msg": "No user provided"})
+
+                try:
+
+                    # Parse the user to get only the fields that can be modified
+                    userID = user.get("id", None)
+
+                    if userID is None or user is None:
+                        raise ValueError("Missing data")
+
+                    self.webAppManager.db.updateUser(userID, user)
+                    return flask.jsonify({"ok": True})
+                except Exception as exc:
+                    return flask.jsonify({"ok": False, "msg": str(exc)})
+
+            # Socket for the logs
+            @self.server.route("/users/admintools/getlogs")
+            @self.verifyLogin
+            @self.verifyAdmin
+            def getLogs():
+                # Gets the logs as txt response
+                from App import AppDelegate
+
+                with open(AppDelegate().logger.latestLogFile, "r", encoding="utf-8") as logs:
+                    return logs.read()
 
         @self.server.route("/tos")
         def tos():

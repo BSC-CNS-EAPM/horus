@@ -1,15 +1,49 @@
-import { useEffect, useMemo, useState } from "react";
-import { horusGet, horusPost } from "../Utils/utils";
-import { BlurredModal, HorusModal } from "../Components/reusable";
-import { createPortal } from "react-dom";
+// React imports
+import {
+  ReactNode,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
+// 3rd party libraries
 import { LazyLog } from "@melloware/react-logviewer";
-import Logo from "../Components/logo";
+import { AgGridReact } from "ag-grid-react";
+
+// Horus utils
+import { fetchDesktop, horusDelete, horusGet, horusPost } from "../Utils/utils";
+
+// Horus components
 import HorusContainer from "../Components/HorusContainer/horus_container";
+import RotatingLines from "../Components/RotatingLines/rotatinglines";
 import AppButton from "../Components/appbutton";
+import { HorusModal } from "../Components/reusable";
+import { SettingsView, fetchSettings } from "../Settings/settings";
+import { PluginManager } from "../PluginsManager/plugin_manager";
+import { SearchComponent } from "../Components/Toolbar/toolbar";
+import { HorusTable } from "../Components/TablePlot/horustable";
+
+// Icons
+import Logo from "../Components/logo";
+import UserIcon from "../Components/Toolbar/Icons/User";
+import PluginsIcon from "../Components/Toolbar/Icons/Plugins";
+import SettingsIcon from "../Components/Toolbar/Icons/Settings";
+import CenterView from "../Components/Toolbar/Icons/CenterView";
+import NewFlowIcon from "../Components/Toolbar/Icons/New";
+import LogFile from "../Components/Toolbar/Icons/LogFile";
+import TrashIcon from "../Components/Toolbar/Icons/Trash";
+
+// Types
+import { Block, PluginPage } from "../Components/FlowBuilder/flow.types";
 
 type Database = {
   users: UsersDatabase[];
   flows: FlowsDatabase[];
+  groups: GroupsDatabase[];
 };
 
 type UsersDatabase = {
@@ -26,6 +60,12 @@ type UsersDatabase = {
   [key: string]: any;
 };
 
+type GroupsDatabase = {
+  group: string;
+  blocks: string;
+  extensions: string;
+};
+
 type FlowsDatabase = {
   deleted: boolean;
   flow_id: string;
@@ -34,12 +74,58 @@ type FlowsDatabase = {
   time: number;
 };
 
+type AdminContextType = {
+  setCurrentView: (v: ReactNode) => void;
+  showModalWithView: (v: ReactNode) => void;
+};
+
+const AdminContext = createContext<AdminContextType | null>(null);
+
 export function AdminTools() {
+  const [showModal, setShowModal] = useState(false);
+  const [modalContents, setModalContents] = useState<ReactNode>(null);
+  const [currentView, _setCurrentView] = useState<ReactNode>(
+    <UsersTableView />
+  );
+
+  const setCurrentView = (v: ReactNode) => {
+    _setCurrentView(v);
+  };
+
+  const showModalWithView = (v: ReactNode) => {
+    setModalContents(v);
+    setShowModal(true);
+  };
+
+  useEffect(() => {
+    // Fetch horus internal
+    fetchDesktop();
+    fetchSettings();
+  }, []);
+
+  return (
+    <AdminContext.Provider value={{ setCurrentView, showModalWithView }}>
+      <TopBar />
+      <div className="flex flex-row gap-0 w-available admin-current-view">
+        <Sidebar />
+        <div className="overflow-y-scroll w-full">{currentView}</div>
+      </div>
+      <HorusModal
+        size="xl"
+        noCentered
+        onHide={() => {
+          setShowModal(false);
+        }}
+        show={showModal}
+      >
+        {modalContents}
+      </HorusModal>
+    </AdminContext.Provider>
+  );
+}
+
+function UsersTableView() {
   const [database, setDatabase] = useState<Database | null>(null);
-  const [showUsers, setShowUsers] = useState<boolean>(true);
-  const [logsModal, setLogsModal] = useState(false);
-  const [logs, setLogs] = useState("");
-  const [logsInterval, setLogsInterval] = useState<Timer | null>(null);
 
   const getDatabase = async () => {
     const response = await horusGet("/users/admintools/data");
@@ -56,262 +142,31 @@ export function AdminTools() {
     getDatabase();
   }, []);
 
-  const appName = "Admin Tools";
+  if (!database) {
+    return <_Loading />;
+  }
 
-  const reloadPlugins = () => {
-    horusGet("/api/plugins/reload");
-    alert("Plugins reloaded!");
-  };
-
-  const getLogs = async () => {
-    const timer = setInterval(async () => {
-      const response = await horusGet("/users/admintools/getlogs");
-      const logsText = await response.text();
-      setLogs(logsText);
-    }, 5000);
-    setLogsInterval(timer);
-    setLogsModal(true);
-  };
+  const availableGroups = database.groups.map((g) => g.group);
 
   return (
-    <>
-      <HorusModal
-        size="xl"
-        noCentered
-        onHide={() => {
-          if (logsInterval) {
-            clearInterval(logsInterval);
-            setLogsInterval(null);
-          }
-          setLogsModal(false);
-          setLogs("");
-        }}
-        show={logsModal}
-      >
-        <div className="w-full h-[90vh]">
-          <LazyLog
-            caseInsensitive
-            enableHotKeys
-            enableSearch
-            extraLines={1}
-            selectableLines
-            follow
-            text={logs}
-          />
-        </div>
-      </HorusModal>
-      <HorusContainer
-        className="sticky-app-header flex flex-row flex-wrap items-center justify-between px-2 w-full bg-white"
-        style={{
-          position: "sticky",
-          zIndex: 200,
-          top: "0",
-          borderTop: "none",
-          borderLeft: "none",
-          borderRight: "none",
-          borderRadius: "0",
-          width: "100%",
-        }}
-      >
-        <div>
-          <Logo className="h-16" />
-        </div>
-        <div className="flex justify-center items-center w-full font-semibold absolute mx-auto">
-          {appName}
-        </div>
-      </HorusContainer>
-      <div className="flex flex-col justify-center items-center">
-        <div className="flex flex-row flex-wrap gap-2 justify-between w-full">
-          <div
-            className="flex flex-row gap-2 justify-between w-full items-center"
-            style={{
-              margin: "1rem",
-            }}
-          >
-            <div className="flex flex-row gap-2">
-              <h3
-                className="flow-title"
-                style={{
-                  cursor: "pointer",
-                  opacity: showUsers ? 1 : 0.5,
-                }}
-                onClick={() => setShowUsers(true)}
-              >
-                Users Database
-              </h3>
-              <h3
-                className="flow-title"
-                style={{
-                  cursor: "pointer",
-                  opacity: !showUsers ? 1 : 0.5,
-                }}
-                onClick={() => setShowUsers(false)}
-              >
-                Flows Database
-              </h3>
-            </div>
-            <div className="flex flex-row gap-2 items-center">
-              <AppButton action={getLogs}>View logs</AppButton>
-              <AppButton action={reloadPlugins}>Reload plugins</AppButton>
-            </div>
-          </div>
-        </div>
-        {database && (
-          <div
-            style={{
-              width: "95%",
-            }}
-          >
-            {showUsers ? (
-              <UsersTableView users={database.users} />
-            ) : (
-              <FlowsTableView flows={database.flows} />
-            )}
-          </div>
-        )}
-      </div>
-    </>
+    <_UserTable
+      users={database.users}
+      groups={availableGroups}
+      getDatabase={getDatabase}
+    />
   );
 }
 
-function UsersTableView({ users }: { users: UsersDatabase[] }) {
-  const [modalContent, setModalContent] = useState<React.ReactNode>(null);
-  const [modalOpened, setModalOpened] = useState<boolean>(false);
-  const [currentPage, setCurrentPage] = useState<number>(0);
-
-  // Compute the current page users
-  const usersPerPage = 10;
-  const currentUsers = useMemo(() => {
-    return users.slice(
-      currentPage * usersPerPage,
-      (currentPage + 1) * usersPerPage
-    );
-  }, [users, currentPage]);
-
-  const totalPages = useMemo(() => {
-    return Math.floor(users.length / usersPerPage) + 1;
-  }, [users]);
-
-  // Attach the modal to the body
-  useEffect(() => {
-    const modal = document.createElement("div");
-    modal.id = "modal-moredata";
-    document.body.appendChild(modal);
-    return () => {
-      document.body.removeChild(modal);
-    };
-  }, []);
-
-  return (
-    <div
-      style={{
-        maxWidth: "100vw",
-        overflowX: "auto",
-      }}
-    >
-      <table className="styled-table">
-        <thead>
-          <tr>
-            <th>User ID</th>
-
-            <th>Email</th>
-            <th>Registration date</th>
-            <th>Last login</th>
-            <th>Activated</th>
-            <th>Group</th>
-            <th>Admin</th>
-            <th>Other data</th>
-            <th>Max Flows</th>
-            <th>Max Storage</th>
-            <th>Max horus</th>
-            <th>Apply changes</th>
-          </tr>
-        </thead>
-        <tbody>
-          {currentUsers.map((user) => (
-            <RowUserView
-              user={user}
-              setModalContent={setModalContent}
-              setModalOpened={setModalOpened}
-            />
-          ))}
-        </tbody>
-      </table>
-      <div className="flex flex-row gap-2 m-2">
-        <button
-          className="app-button"
-          onClick={() => {
-            if (currentPage > 0) {
-              setCurrentPage(currentPage - 1);
-            }
-          }}
-        >
-          Back
-        </button>
-        <div className="flex flex-row gap-1 items-center">
-          <input
-            value={currentPage + 1}
-            style={{
-              WebkitAppearance: "none",
-              margin: 0,
-              MozAppearance: "none",
-            }}
-            className="app-button w-8 text-center"
-            onChange={(e) => {
-              try {
-                setCurrentPage(Number(e.target.value) - 1);
-              } catch (error) {
-                console.error(error);
-              }
-            }}
-          ></input>
-          of {totalPages}
-        </div>
-        <button
-          className="app-button"
-          onClick={() => {
-            if (currentPage < Math.floor(users.length / usersPerPage)) {
-              setCurrentPage(currentPage + 1);
-            }
-          }}
-        >
-          Next
-        </button>
-      </div>
-      {modalOpened &&
-        createPortal(
-          <div className="m-2">
-            <BlurredModal
-              show={modalOpened}
-              onHide={() => {
-                setModalOpened(false);
-              }}
-            >
-              {modalContent}
-            </BlurredModal>
-          </div>,
-          document.getElementById("modal-moredata") as HTMLDivElement
-        )}
-    </div>
-  );
-}
-
-function RowUserView({
-  user,
-  setModalContent,
-  setModalOpened,
+function _UserTable({
+  users,
+  groups,
+  getDatabase,
 }: {
-  user: UsersDatabase;
-  setModalContent: (content: React.ReactNode) => void;
-  setModalOpened: (opened: boolean) => void;
+  users: UsersDatabase[];
+  groups: string[];
+  getDatabase: () => void;
 }) {
-  const [newUser, setNewUser] = useState<UsersDatabase>(user);
-
-  useEffect(() => {
-    setNewUser(user);
-  }, [user]);
-
-  const updateUser = async () => {
+  const updateUser = async (newUser: UsersDatabase) => {
     const newQuotaToSend = JSON.stringify(newUser);
 
     const response = await horusPost(
@@ -329,200 +184,848 @@ function RowUserView({
 
     if (!data.ok) {
       alert(data.msg);
-    } else {
-      alert("User updated!");
+      getDatabase();
     }
   };
 
-  return (
-    <tr>
-      <td>{newUser.id}</td>
-      <td>{newUser.email}</td>
-      <td>
-        <div className="w-[150px] overflow-x-scroll">
-          {newUser.registration_date}
-        </div>
-      </td>
-      <td>
-        <div className="w-[150px] overflow-x-scroll">{newUser.last_login}</div>
-      </td>
-      <td>
-        <input
-          checked={newUser.activated}
-          type="checkbox"
-          onChange={(e) => {
-            console.log(e.target.checked);
-            setNewUser({
-              ...newUser,
-              activated: e.target.checked,
-            });
-          }}
-        ></input>
-      </td>
-      <td>{newUser.group ?? "None"}</td>
-      <td>
-        <input
-          checked={newUser.admin}
-          type="checkbox"
-          onChange={(e) => {
-            setNewUser({
-              ...newUser,
-              admin: e.target.checked,
-            });
-          }}
-        ></input>
-      </td>
-      <td>
-        <button
-          className="app-button"
-          onClick={() => {
-            setModalContent(
-              <pre>
-                {
-                  // For each field, show the value
-                  Object.keys(newUser).map((key) => {
-                    return `${key}: ${newUser[key]}\n`;
-                  })
+  const columns = useMemo((): any[] => {
+    const editableColumns = [
+      "activated",
+      "group",
+      "admin",
+      "maxFlows",
+      "maxStorage",
+      "maxTime",
+    ];
+
+    const sampleUser = users[0]!;
+
+    return Object.keys(sampleUser).map((k) => {
+      return {
+        field: k,
+        filter: true,
+        editable: editableColumns.includes(k),
+        cellEditor: k === "group" ? "agSelectCellEditor" : undefined,
+        cellEditorParams:
+          k === "group"
+            ? {
+                values: groups,
+              }
+            : undefined,
+        valueFormatter:
+          k === "group"
+            ? (params: any) => {
+                if (!params.value) {
+                  return "default";
                 }
-              </pre>
-            );
-            setModalOpened(true);
-          }}
-        >
-          View
-        </button>
-      </td>
-      <td>
-        <input
-          type="number"
-          value={newUser.maxFlows}
-          onChange={(e) => {
-            setNewUser({
-              ...newUser,
-              maxFlows: parseInt(e.target.value),
-            });
-          }}
-        />
-      </td>
-      <td>
-        <input
-          type="number"
-          value={newUser.maxStorage}
-          onChange={(e) => {
-            setNewUser({
-              ...newUser,
-              maxStorage: parseInt(e.target.value),
-            });
-          }}
-        />
-      </td>
-      <td>
-        <input
-          type="number"
-          value={newUser.maxTime}
-          onChange={(e) => {
-            setNewUser({
-              ...newUser,
-              maxTime: parseInt(e.target.value),
-            });
-          }}
-        />
-      </td>
-      <td>
-        <button
-          className="app-button"
-          onClick={() => {
-            updateUser();
-          }}
-        >
-          Apply
-        </button>
-      </td>
-    </tr>
+
+                return params.value;
+              }
+            : undefined,
+      };
+    });
+  }, [users, groups]);
+
+  const editCell = (e: any) => {
+    // Only update if its different
+    if (!e.newValue || e.newValue === e.oldValue) {
+      return;
+    }
+
+    updateUser(e.data);
+  };
+
+  const tableRef = useRef<AgGridReact | null>(null);
+
+  return (
+    <HorusTable
+      ref={tableRef}
+      columnDefs={columns}
+      rows={users}
+      onCellEdit={editCell}
+    />
   );
 }
 
-function FlowsTableView({ flows }: { flows: FlowsDatabase[] }) {
-  const [currentPage, setCurrentPage] = useState<number>(0);
+function FlowsTableView() {
+  const [database, setDatabase] = useState<Database | null>(null);
 
-  // Compute the current page users
-  const flowsPerPage = 10;
-  const currentFlows = useMemo(() => {
-    return flows.slice(
-      currentPage * flowsPerPage,
-      (currentPage + 1) * flowsPerPage
-    );
-  }, [flows, currentPage]);
+  const getDatabase = async () => {
+    const response = await horusGet("/users/admintools/data");
+    if (!response) {
+      alert("An error occurred. Try again later.");
+      return;
+    }
+    const data = await response.json();
 
-  const totalPages = useMemo(() => {
-    return Math.floor(flows.length / flowsPerPage) + 1;
-  }, [flows]);
+    setDatabase(data);
+  };
+
+  useEffect(() => {
+    // Get the database
+    getDatabase();
+  }, []);
+
+  const cols = useMemo(() => {
+    if (!database) {
+      return [];
+    }
+
+    const sampleFlow = database.flows[0]!;
+
+    return Object.keys(sampleFlow).map((f) => {
+      return {
+        field: f,
+        filter: true,
+        flex: 1,
+      };
+    });
+  }, [database]);
+
+  if (!database) {
+    return <_Loading />;
+  }
+
+  return <HorusTable columnDefs={cols} rows={database.flows} />;
+}
+
+function HorusLogs() {
+  const logsInterval = useRef<Timer | null>(null);
+  const [logs, setLogs] = useState<string>("Loading...");
+
+  const getLogs = async () => {
+    const response = await horusGet("/users/admintools/getlogs");
+    const logsText = await response.text();
+    setLogs(logsText);
+
+    // Clean the previous interval
+    logsInterval.current && clearInterval(logsInterval.current);
+    logsInterval.current = null;
+
+    logsInterval.current = setInterval(async () => {
+      const response = await horusGet("/users/admintools/getlogs");
+      const logsText = await response.text();
+      setLogs(logsText);
+    }, 10000);
+  };
+
+  useEffect(() => {
+    // Get the first logs
+    getLogs();
+
+    return () => {
+      logsInterval.current && clearInterval(logsInterval.current);
+      logsInterval.current = null;
+    };
+  }, []);
 
   return (
-    <div>
-      <table className="styled-table">
-        <thead>
-          <tr>
-            <th>Flow ID</th>
-            <th>User ID</th>
-            <th>Size</th>
-            <th>Time</th>
-            <th>Deleted</th>
-          </tr>
-        </thead>
-        <tbody>
-          {currentFlows.map((flow) => (
-            <tr>
-              <td>{flow.flow_id}</td>
-              <td>{flow.id}</td>
-              <td>{flow.size}</td>
-              <td>{flow.time}</td>
-              <td>{flow.deleted ? "Yes" : "No"}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="flex flex-row gap-2 mt-2">
-        <button
-          className="app-button"
-          onClick={() => {
-            if (currentPage > 0) {
-              setCurrentPage(currentPage - 1);
-            }
-          }}
-        >
-          Back
-        </button>
-        <div className="flex flex-row gap-1 items-center">
-          <input
-            value={currentPage + 1}
-            style={{
-              WebkitAppearance: "none",
-              margin: 0,
-              MozAppearance: "none",
-            }}
-            className="app-button w-8 text-center"
-            onChange={(e) => {
-              try {
-                setCurrentPage(Number(e.target.value) - 1);
-              } catch (error) {
-                console.error(error);
-              }
-            }}
-          ></input>
-          of {totalPages}
-        </div>
-        <button
-          className="app-button"
-          onClick={() => {
-            if (currentPage < Math.floor(flows.length / flowsPerPage)) {
-              setCurrentPage(currentPage + 1);
-            }
-          }}
-        >
-          Next
-        </button>
+    <div className="w-full h-[90vh]">
+      <LazyLog
+        caseInsensitive
+        enableHotKeys
+        enableSearch
+        extraLines={1}
+        selectableLines
+        follow
+        text={logs}
+      />
+    </div>
+  );
+}
+
+function Sidebar() {
+  return (
+    <div className="border-r-2">
+      <div className="h-full w-56 flex flex-col gap-2 my-2 mx-2">
+        <ManageUsers />
+        <ManageGroups />
+        <ManageFlows />
+        <ManageLogs />
+        <ManagePlugins />
+        <ManageSettings />
       </div>
+    </div>
+  );
+}
+
+function ManageUsers() {
+  const adminContext = useContext(AdminContext);
+
+  return (
+    <HorusContainer
+      className="zoom-on-hover"
+      onClick={() => {
+        adminContext?.setCurrentView(<UsersTableView />);
+      }}
+    >
+      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full cursor-default w-[150px]">
+        <UserIcon className="w-6 h-6 icon" />
+        Users
+      </div>
+    </HorusContainer>
+  );
+}
+
+function ManageLogs() {
+  const adminContext = useContext(AdminContext);
+
+  return (
+    <HorusContainer
+      className="zoom-on-hover"
+      onClick={() => {
+        adminContext?.setCurrentView(<HorusLogs />);
+      }}
+    >
+      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full cursor-default w-[150px]">
+        <LogFile className="w-6 h-6 icon" />
+        Logs
+      </div>
+    </HorusContainer>
+  );
+}
+
+function ManageFlows() {
+  const adminContext = useContext(AdminContext);
+
+  return (
+    <HorusContainer
+      className="zoom-on-hover"
+      onClick={() => {
+        adminContext?.setCurrentView(<FlowsTableView />);
+      }}
+    >
+      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full cursor-default w-[150px]">
+        <NewFlowIcon className="w-6 h-6 icon" />
+        Flows
+      </div>
+    </HorusContainer>
+  );
+}
+
+function TopBar() {
+  const appName = "Admin Tools";
+
+  return (
+    <HorusContainer
+      className="sticky-app-header flex flex-row flex-wrap items-center justify-between px-2 w-full bg-white"
+      style={{
+        position: "sticky",
+        zIndex: 200,
+        top: "0",
+        borderTop: "none",
+        borderLeft: "none",
+        borderRight: "none",
+        borderRadius: "0",
+        width: "100%",
+        height: "5rem",
+      }}
+    >
+      <div>
+        <Logo className="h-16" />
+      </div>
+      <div className="flex justify-center items-center w-full font-semibold absolute mx-auto">
+        {appName}
+      </div>
+    </HorusContainer>
+  );
+}
+
+function ManagePlugins() {
+  const adminContext = useContext(AdminContext);
+
+  return (
+    <HorusContainer
+      className="zoom-on-hover"
+      onClick={() => {
+        // Set the developmentMode to true artifically in order to show the "reload plugins" button
+        // @ts-ignore
+        window.horusSettings["developmentMode"] = {
+          value: true,
+        };
+
+        adminContext?.setCurrentView(<PluginManager />);
+      }}
+    >
+      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full cursor-default w-[150px]">
+        <PluginsIcon className="w-6 h-6 icon" />
+        Plugins
+      </div>
+    </HorusContainer>
+  );
+}
+
+function ManageSettings() {
+  const adminContext = useContext(AdminContext);
+
+  return (
+    <HorusContainer
+      className="zoom-on-hover"
+      onClick={() => {
+        adminContext?.setCurrentView(<SettingsView forAdmin={true} />);
+      }}
+    >
+      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full cursor-default w-[150px]">
+        <SettingsIcon className="w-6 h-6 icon" />
+        App settings
+      </div>
+    </HorusContainer>
+  );
+}
+
+function ManageGroups() {
+  const adminContext = useContext(AdminContext);
+
+  return (
+    <HorusContainer
+      className="zoom-on-hover"
+      onClick={() => {
+        adminContext?.setCurrentView(<GroupDatabaseView />);
+      }}
+    >
+      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full cursor-default w-[150px]">
+        <CenterView className="w-6 h-6 icon" />
+        Group settings
+      </div>
+    </HorusContainer>
+  );
+}
+
+function GroupDatabaseView() {
+  const [database, setDatabase] = useState<Database | null>(null);
+  const [creatingGroup, setCreatingGroup] = useState(false);
+  const [createGroupText, setCreateGroupText] = useState("");
+
+  const getDatabase = async () => {
+    const response = await horusGet("/users/admintools/data");
+    if (!response) {
+      alert("An error occurred. Try again later.");
+      return;
+    }
+    const data = await response.json();
+
+    setDatabase(data);
+  };
+
+  const createGroup = async (g: string) => {
+    setCreatingGroup(true);
+    try {
+      const response = await horusPost(
+        "/users/admintools/add_group",
+        null,
+        JSON.stringify({ group: g })
+      );
+
+      const data = await response.json();
+
+      if (data.ok) {
+        getDatabase();
+      } else {
+        alert(data.msg);
+      }
+    } finally {
+      setCreatingGroup(false);
+    }
+  };
+
+  const deleteGroup = async (g: string) => {
+    const response = await horusDelete({
+      url: "/users/admintools/modify_group",
+      body: { group: g },
+    });
+
+    const data = await response.json();
+
+    if (data.ok) {
+      alert(data.msg);
+      getDatabase();
+    } else {
+      alert(data.msg);
+    }
+  };
+
+  useEffect(() => {
+    getDatabase();
+  }, []);
+
+  const columns = useCallback(() => {
+    if (!database || database.groups.length < 1) {
+      return [];
+    }
+    const sampleGroup = database.groups[0]!;
+    const groupsCols: any[] = Object.keys(sampleGroup).map((c) => {
+      return {
+        field: c,
+        flex: 1,
+        filter: true,
+        valueFormatter:
+          c !== "group"
+            ? (params: any) => {
+                if (!params.value) {
+                  return "None";
+                }
+
+                const parsed = JSON.parse(params.value);
+
+                if (parsed) {
+                  return `${parsed.lenght}`;
+                }
+
+                return params.value;
+              }
+            : undefined,
+        cellRenderer:
+          c !== "group"
+            ? (params: any) => {
+                if (params.colDef.field === "blocks") {
+                  return (
+                    <div className="flex w-full h-full items-center justify-start">
+                      <ModifyGroupBlocks
+                        group={params.data.group}
+                        blocks={params.value}
+                        getDatabase={getDatabase}
+                      />
+                    </div>
+                  );
+                } else {
+                  return (
+                    <div className="flex w-full h-full items-center justify-start">
+                      <ModifyGroupPages
+                        group={params.data.group}
+                        pages={params.value}
+                        getDatabase={getDatabase}
+                      />
+                    </div>
+                  );
+                }
+              }
+            : undefined,
+      };
+    });
+    //  Add the delete column
+    groupsCols.push({
+      field: "Delete",
+      cellRenderer: (params: any) => {
+        return (
+          <div
+            className="w-full h-full flex justify-center items-center"
+            onClick={() => {
+              deleteGroup(params.data.group);
+            }}
+          >
+            <TrashIcon style={{ color: "red" }} />
+          </div>
+        );
+      },
+    });
+
+    return groupsCols;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [database]);
+
+  if (!database || creatingGroup) {
+    return <_Loading />;
+  }
+
+  return (
+    <div className="flex flex-row admin-current-view">
+      <div className="flex flex-col gap-2 w-full">
+        <div className="flex flex-row gap-2 px-2 pt-2 w-full">
+          <input
+            placeholder="Input a new group name..."
+            className="plugin-variable-value border-2 rounded-md"
+            value={createGroupText}
+            onChange={(e) => {
+              setCreateGroupText(e.target.value);
+            }}
+          />
+          <AppButton
+            className="flex text-center items-center justify-center"
+            action={() => {
+              createGroup(createGroupText);
+            }}
+          >
+            Create
+          </AppButton>
+        </div>
+        <HorusTable columnDefs={columns()} rows={database.groups} />
+      </div>
+    </div>
+  );
+}
+
+function ModifyGroupBlocks({
+  group,
+  blocks,
+  getDatabase,
+}: {
+  group: string;
+  blocks: string;
+  getDatabase: () => void;
+}) {
+  const [showModal, setShowModal] = useState(false);
+
+  const currentBlocks = blocks ? JSON.parse(blocks) : [];
+
+  return (
+    <>
+      <div
+        className="w-full"
+        onClick={() => {
+          setShowModal(true);
+        }}
+      >
+        {currentBlocks.length} blocks
+      </div>
+      <HorusModal
+        noCentered
+        show={showModal}
+        onHide={() => {
+          setShowModal(false);
+        }}
+      >
+        <BlockViewModify
+          group={group}
+          blocks={blocks}
+          getDatabase={getDatabase}
+        />
+      </HorusModal>
+    </>
+  );
+}
+
+export function BlockViewModify(props: {
+  group: string;
+  blocks: string;
+  getDatabase: () => void;
+}) {
+  const { group, blocks, getDatabase } = props;
+
+  const [editedBlocks, setEditedBlocks] = useState<Block[]>([]);
+  const [filteredBlocks, setFilteredBlocks] = useState<Block[]>([]);
+  const [currentFilter, setCurrentFilter] = useState("");
+
+  const [allBlocks, setAllBlocks] = useState<Block[]>([]);
+
+  const getBlocks = async () => {
+    const response = await horusGet("/api/plugins/listblocks");
+
+    const data = await response.json();
+
+    setAllBlocks(data.blocks);
+  };
+
+  useEffect(() => {
+    getBlocks();
+  }, []);
+
+  const modifyGroup = useCallback(async () => {
+    const response = await horusPost(
+      "/users/admintools/modify_group",
+      null,
+      JSON.stringify({
+        group,
+        blockIDs: editedBlocks.map((b) => b.id),
+      })
+    );
+
+    const data = await response.json();
+
+    if (!data.ok) {
+      alert(data.msg);
+    } else {
+      getDatabase();
+    }
+  }, [editedBlocks, group, getDatabase]);
+
+  useEffect(() => {
+    setFilteredBlocks(allBlocks.filter((b) => b.id.includes(currentFilter)));
+  }, [currentFilter, allBlocks]);
+
+  useEffect(() => {
+    const parsedBlocks: string[] | null = JSON.parse(blocks);
+
+    if (parsedBlocks) {
+      const presentBlocks: Block[] = allBlocks.filter((b) => {
+        return parsedBlocks.find((p) => {
+          return p === b.id;
+        });
+      });
+
+      setEditedBlocks(presentBlocks);
+    } else {
+      setEditedBlocks([]);
+    }
+  }, [blocks, allBlocks]);
+
+  return (
+    <div className="plugin-variable-value p-4">
+      <div className="flex flex-row gap-2 w-full">
+        <SearchComponent
+          className="w-full"
+          placeholder="Search for a block"
+          onChange={(e) => {
+            setCurrentFilter(e.target.value);
+          }}
+          showIcon={false}
+        />
+        <AppButton
+          action={() => {
+            // Create an array of filtered blocks that are not already in the set
+            const blocksToAdd = filteredBlocks.filter(
+              (f) => !editedBlocks.find((e) => e.id === f.id)
+            );
+
+            // Concatenate the unique filtered blocks to the current edited blocks
+            setEditedBlocks([...editedBlocks, ...blocksToAdd]);
+          }}
+        >
+          All
+        </AppButton>
+        <AppButton
+          action={() => {
+            setEditedBlocks((editedBlocks) => {
+              return editedBlocks.filter(
+                (b) => !filteredBlocks.find((f) => f.id === b.id)
+              );
+            });
+          }}
+        >
+          None
+        </AppButton>
+        <AppButton action={modifyGroup}>Apply</AppButton>
+      </div>
+      {filteredBlocks.length === 0 ? (
+        <div>No blocks</div>
+      ) : (
+        <div className="w-full overflow-auto min-h-12 mt-2">
+          {filteredBlocks.map((filteredB) => (
+            <div
+              key={filteredB.id}
+              className="flex flex-row items-center justify-between border-t-2"
+              style={{
+                gap: "1rem",
+                textAlign: "left",
+                paddingInline: "0.5rem",
+              }}
+            >
+              <input
+                style={{ width: "1rem" }}
+                type="checkbox"
+                checked={
+                  editedBlocks?.find((b) => b.id === filteredB.id) !== undefined
+                }
+                onChange={(e) =>
+                  setEditedBlocks(
+                    e.target.checked
+                      ? [...(editedBlocks ?? []), filteredB]
+                      : (editedBlocks ?? []).filter(
+                          (blo: Block) => blo.id !== filteredB.id
+                        )
+                  )
+                }
+              />
+              <div className="w-full gap-2 items-start py-1">
+                {filteredB.id}{" "}
+                <span className="text-xs text-muted">
+                  {filteredB.description}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ModifyGroupPages({
+  group,
+  pages,
+  getDatabase,
+}: {
+  group: string;
+  pages: string;
+  getDatabase: () => void;
+}) {
+  const [showModal, setShowModal] = useState(false);
+  const currentPages = pages ? JSON.parse(pages) : [];
+
+  return (
+    <>
+      <div
+        className="w-full"
+        onClick={() => {
+          setShowModal(true);
+        }}
+      >
+        {currentPages.length} extensions
+      </div>
+      <HorusModal
+        noCentered
+        show={showModal}
+        onHide={() => {
+          setShowModal(false);
+        }}
+      >
+        <ExtensionViewModify
+          group={group}
+          pages={pages}
+          getDatabase={getDatabase}
+        />
+      </HorusModal>
+    </>
+  );
+}
+
+export function ExtensionViewModify(props: {
+  group: string;
+  pages: string;
+  getDatabase: () => void;
+}) {
+  const { group, pages, getDatabase } = props;
+  const [allPages, setAllPages] = useState<PluginPage[]>([]);
+
+  const getPages = async () => {
+    const response = await horusGet("/api/plugins/listpages");
+
+    const data = await response.json();
+
+    setAllPages(data.pages);
+  };
+
+  useEffect(() => {
+    getPages();
+  }, []);
+  const [editedPages, setEditedPages] = useState<PluginPage[]>([]);
+  const [filteredPages, setFilteredPages] = useState<PluginPage[]>([]);
+  const [currentFilter, setCurrentFilter] = useState("");
+
+  const modifyGroup = useCallback(async () => {
+    const response = await horusPost(
+      "/users/admintools/modify_group",
+      null,
+      JSON.stringify({
+        group,
+        pages: editedPages.map((b) => b.id),
+      })
+    );
+
+    const data = await response.json();
+
+    if (!data.ok) {
+      alert(data.msg);
+    } else {
+      getDatabase();
+    }
+  }, [editedPages, group, getDatabase]);
+
+  useEffect(() => {
+    setFilteredPages(allPages.filter((b) => b.id.includes(currentFilter)));
+  }, [currentFilter, allPages]);
+
+  useEffect(() => {
+    const parsedPages: string[] | null = JSON.parse(pages);
+
+    if (parsedPages) {
+      const presentPages: PluginPage[] = allPages.filter((b) => {
+        return parsedPages.find((p) => {
+          return p === b.id;
+        });
+      });
+
+      setEditedPages(presentPages);
+    } else {
+      setEditedPages([]);
+    }
+  }, [pages, allPages]);
+
+  return (
+    <div className="plugin-variable-value p-4">
+      <div className="flex flex-row gap-2 w-full">
+        <SearchComponent
+          className="w-full"
+          placeholder="Search for an extension"
+          onChange={(e) => {
+            setCurrentFilter(e.target.value);
+          }}
+          showIcon={false}
+        />
+        <AppButton
+          action={() => {
+            // Create an array of filtered blocks that are not already in the set
+            const blocksToAdd = filteredPages.filter(
+              (f) => !editedPages.find((e) => e.id === f.id)
+            );
+
+            // Concatenate the unique filtered blocks to the current edited blocks
+            setEditedPages([...editedPages, ...blocksToAdd]);
+          }}
+        >
+          All
+        </AppButton>
+        <AppButton
+          action={() => {
+            setEditedPages((editedPages) => {
+              return editedPages.filter(
+                (b) => !filteredPages.find((f) => f.id === b.id)
+              );
+            });
+          }}
+        >
+          None
+        </AppButton>
+        <AppButton action={modifyGroup}>Apply</AppButton>
+      </div>
+      {filteredPages.length === 0 ? (
+        <div>No blocks</div>
+      ) : (
+        <div className="w-full overflow-auto min-h-12 mt-2">
+          {filteredPages.map((filteredP) => (
+            <div
+              key={filteredP.id}
+              className="flex flex-row items-center justify-between border-t-2"
+              style={{
+                gap: "1rem",
+                textAlign: "left",
+                paddingInline: "0.5rem",
+              }}
+            >
+              <input
+                style={{ width: "1rem" }}
+                type="checkbox"
+                checked={
+                  editedPages?.find((b) => b.id === filteredP.id) !== undefined
+                }
+                onChange={(e) =>
+                  setEditedPages(
+                    e.target.checked
+                      ? [...(editedPages ?? []), filteredP]
+                      : (editedPages ?? []).filter(
+                          (blo: PluginPage) => blo.id !== filteredP.id
+                        )
+                  )
+                }
+              />
+              <div className="w-full gap-2 items-start py-1">
+                {filteredP.id}{" "}
+                <span className="text-xs text-muted">
+                  {filteredP.description}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function _Loading() {
+  return (
+    <div className="flex flex-col justify-center items-center m-auto h-full">
+      <RotatingLines />
+      Loading...
     </div>
   );
 }

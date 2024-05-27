@@ -25,6 +25,9 @@ export const config = {
     requireRegistration: true,
     // If user registration is required, you may require them to confirm their email before using the app
     requireActivation: true,
+    // AdminTools is a panel available to WebApp administrators (available at Profile -> AdminTools). If you want to disable this panel entirely,
+    // set this option to true
+    disableAdminTools: false,
     // If user registration is required, you may allow them to use the app in demo mode. Which means they can use the app without registering
     // But they cannot send any flow and their session is removed after they leave the page
     allowDemoUser: true,

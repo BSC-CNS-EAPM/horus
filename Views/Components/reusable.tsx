@@ -52,7 +52,7 @@ const HorusPopover = (props: HorusPopoverProps) => {
 };
 
 function debounce(func: any, timeout = 300) {
-  let timer: NodeJS.Timeout;
+  let timer: Timer;
   return (...args: any[]) => {
     clearTimeout(timer);
     timer = setTimeout(() => {

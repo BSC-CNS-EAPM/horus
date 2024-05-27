@@ -7,9 +7,7 @@ import { AdminTools } from "./admintools.tsx";
 // Import CSS
 import "bootstrap/dist/css/bootstrap.css";
 import "../CSS/main.css";
-import "../CSS/colors.css";
-import "../CSS/animations.css";
-import "../CSS/font.css";
+import "./admintools.css";
 
 import "../Components/FlowBuilder/Blocks/block.css";
 import "../PluginsManager/plugin_manager.css";

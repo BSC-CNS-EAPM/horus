@@ -394,13 +394,32 @@ class SettingsManager:
 
         settingsDict: typing.Dict[str, dict] = {}
         for settingID, setting in self.settings.items():
-            if setting.desktopOnly and AppDelegate().safeMode and not AppDelegate().debug:
+            if setting.desktopOnly and AppDelegate().safeMode:
                 continue
             settingsDict[settingID] = setting.toDict()
 
         return settingsDict
 
-    def saveSettings(self, newSettings: typing.List[typing.Dict[str, str]]):
+    def listUnsafeSettings(self) -> typing.Dict[str, dict]:
+        """
+        Returns the list of unsafe settings as a JSON object
+        """
+
+        # Reload the settings
+        self._loadSettings()
+
+        from App import AppDelegate
+
+        settingsDict: typing.Dict[str, dict] = {}
+        for settingID, setting in self.settings.items():
+            if setting.desktopOnly and AppDelegate().safeMode:
+                settingsDict[settingID] = setting.toDict()
+
+        return settingsDict
+
+    def saveSettings(
+        self, newSettings: typing.List[typing.Dict[str, str]], allowUnsafe: bool = False
+    ):
         """
         Parses the settings recived from the user and stores them
 
@@ -415,7 +434,7 @@ class SettingsManager:
             setting = self.getSetting(newSetting["id"])
 
             # Update the setting only if it is not desktop only or if the app is not in safe mode
-            if setting.desktopOnly and AppDelegate().safeMode and not AppDelegate().debug:
+            if setting.desktopOnly and AppDelegate().safeMode and not allowUnsafe:
                 logging.getLogger("Horus").warning(
                     "Trying to update an unsfe setting '%s' in WebApp mode. Skipping...",
                     setting.id,

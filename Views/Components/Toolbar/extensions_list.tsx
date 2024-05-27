@@ -66,10 +66,11 @@ export function usePluginPages() {
       return;
     }
 
-    const data: [PluginPage] = await response.json();
+    const data = await response.json();
+    const pagesData: [PluginPage] = data.pages;
 
     // Skip hidden pages
-    const filteredPages = data.filter((page) => !page.hidden);
+    const filteredPages = pagesData.filter((page) => !page.hidden);
 
     // Order the pages alphabetically
     filteredPages.sort((a, b) => a.name.localeCompare(b.name));
