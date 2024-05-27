@@ -204,8 +204,8 @@ class Database:
         Registers a user in the database with the given form data
         """
 
-        # Always lowercase the email
-        formData["email"] = formData["email"].lower()
+        # Always lowercase the email, and sanitize it
+        formData["email"] = sanitizeStringForDatabase(formData["email"].lower())
 
         # Check if the user already exists
         self._verifyUserExistsAndRemoveIfActivation(formData["email"])
@@ -413,7 +413,7 @@ class Database:
         """
 
         # Always lowercase the email
-        mail = mail.lower()
+        mail = sanitizeStringForDatabase(mail.lower())
 
         # Get the user
         dbUser: typing.Optional[sqlalchemy.engine.row.Row[typing.Any]] = None
@@ -931,8 +931,7 @@ def sanitizeStringForDatabase(string: str) -> str:
     """
 
     string = string.replace(" ", "_")
-    # string = string.replace(".", "_")
-    # string = string.replace(",", "_")
+    string = string.replace(",", "_")
     string = string.replace("'", "_")
     string = string.replace('"', "_")
     string = string.replace("\\", "_")
