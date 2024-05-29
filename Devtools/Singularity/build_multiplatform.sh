@@ -6,8 +6,6 @@
 #SBATCH --mem-per-cpu=1000
 #SBATCH --nodes=1
 #SBATCH --time=01:00:00
-#SBATCH --qos=short
-#SBATCH --partition=short
 
 # Clean the build folder using the singularity image
 echo "Running bun run clean-all using Node from Rocky image..."
