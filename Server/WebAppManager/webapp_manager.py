@@ -132,6 +132,11 @@ class DefaultQuotas:
     The maximum number of flows for the user
     """
 
+    maxTemplates: int
+    """
+    The maximum number of templates for the user
+    """
+
     maxTime: int
     """
     The maximum computational hours for the user
@@ -145,6 +150,7 @@ class DefaultQuotas:
     def __init__(self, rawDefaultQuotas: Dict[str, Any]) -> None:
         self.maxStorage = rawDefaultQuotas.get("maxStorage", 100)
         self.maxFlows = rawDefaultQuotas.get("maxFlows", 10)
+        self.maxTemplates = rawDefaultQuotas.get("maxTemplates", 10)
         self.maxTime = rawDefaultQuotas.get("maxTime", 10)
         self.resetTime = rawDefaultQuotas.get("resetTime", 30)
 
@@ -466,6 +472,11 @@ class AnonymousQuotas:
     The maximum quantity of flows per user
     """
 
+    maxTemplates: int = 10
+    """
+    The maximum quantity of templates per user
+    """
+
     maxStorage: int = 500
     """
     The maximum storage per user
@@ -478,6 +489,7 @@ class AnonymousQuotas:
 
     def __init__(self, rawAnonymousQuotas: dict[str, Any]) -> None:
         self.maxFlows = rawAnonymousQuotas.get("maxFlows", 10)
+        self.maxTemplates = rawAnonymousQuotas.get("maxTemplates", 10)
         self.maxStorage = rawAnonymousQuotas.get("maxStorage", 500)
         self.maxTime = rawAnonymousQuotas.get("maxTime", 100)
 

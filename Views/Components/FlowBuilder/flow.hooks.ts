@@ -325,7 +325,11 @@ export function useFlowBuilder() {
 
   const loadFlow = useCallback(
     async (
-      openRecent: { savedID: string | null; path: string } | null = null
+      openRecent: {
+        savedID: string | null;
+        path: string;
+        template?: boolean;
+      } | null = null
     ) => {
       // If the flow is already loading, exit early
       if (isLoadingFlow.current) {
@@ -369,13 +373,14 @@ export function useFlowBuilder() {
             Accept: "application/json",
           };
 
-          if (openRecent.path === undefined) {
+          if (openRecent.path === undefined || openRecent.template) {
             isDefaultFlow = true;
           }
 
           const body = JSON.stringify({
             savedID: openRecent.savedID,
             path: openRecent.path,
+            template: openRecent.template,
           });
           const response = await horusPost("/api/openrecentflow", header, body);
           data = await response.json();
@@ -550,7 +555,7 @@ export function useFlowBuilder() {
         }
 
         if (!savedFlow.ok) {
-          alert(savedFlow.msg);
+          savedFlow?.msg && alert(savedFlow.msg);
           return null;
         }
 
@@ -628,7 +633,7 @@ export function useFlowBuilder() {
         // Join the room with the new savedID
         socket.emit("joinFlow", savedFlow.savedID);
 
-        setSaved(true);
+        (!flowToSave?.template || saved) && setSaved(true);
 
         return savedFlow as Flow;
       } finally {
@@ -637,7 +642,7 @@ export function useFlowBuilder() {
         setFlowLoading(false);
       }
     },
-    [serializeFlow, handleFlowChange]
+    [serializeFlow, handleFlowChange, saved]
   );
 
   const serverPickerFolder = useCallback(() => {
@@ -1377,7 +1382,7 @@ export function useFlowBuilder() {
   }, [flow, past, future, handleFlowChange]);
 
   const handleOpenFlow = useCallback(
-    (e: CustomEvent<{ savedID: string; path: string }>) => {
+    (e: CustomEvent<{ savedID: string; path: string; template: boolean }>) => {
       const hasPath = e.detail.path !== undefined;
       const hasSavedID = e.detail.savedID !== undefined;
       if (!window.horusInternal.isDesktop && !hasPath && !hasSavedID) {
@@ -1401,7 +1406,8 @@ export function useFlowBuilder() {
         return await handleSave(flowToSave);
       } else if (
         !window.horusInternal.isDesktop &&
-        (flowToSave?.path === null || !flow.path)
+        (flowToSave?.path === null || !flow.path) &&
+        !flowToSave?.template
       ) {
         if (comesFromExecuteBlock === true) {
           // Alert the user that the flow needs to be saved first
@@ -1438,6 +1444,17 @@ export function useFlowBuilder() {
 
       newUnsavedFlow.name = newName;
     }
+
+    await preHandleSave(false, newUnsavedFlow);
+  }, [flow, preHandleSave]);
+
+  const handleSaveTemplate = useCallback(async () => {
+    const newUnsavedFlow: Flow = {
+      ...flow,
+      savedID: null,
+      path: null,
+      template: true,
+    };
 
     await preHandleSave(false, newUnsavedFlow);
   }, [flow, preHandleSave]);
@@ -1690,6 +1707,7 @@ export function useFlowBuilder() {
     // @ts-ignore
     window.removeEventListener("saveFlow", preHandleSave);
     window.removeEventListener("saveFlowAs", handleSaveAs);
+    window.removeEventListener("saveTemplate", handleSaveTemplate);
     window.removeEventListener("centerView", centerView);
 
     window.removeEventListener("undo", handleUndo);
@@ -1700,6 +1718,7 @@ export function useFlowBuilder() {
     handleOpenFlow,
     preHandleSave,
     handleSaveAs,
+    handleSaveTemplate,
     centerView,
     handleUndo,
     handleRedo,
@@ -1724,6 +1743,9 @@ export function useFlowBuilder() {
     // Add an event listener to save a flow when the "Save As.." button is clicked in the toolbar
     window.addEventListener("saveFlowAs", handleSaveAs);
 
+    // Add an event listener to save a flow as a template
+    window.addEventListener("saveTemplate", handleSaveTemplate);
+
     // Add an event listener for the center view button
     window.addEventListener("centerView", centerView);
 
@@ -1736,6 +1758,7 @@ export function useFlowBuilder() {
     handleOpenFlow,
     preHandleSave,
     handleSaveAs,
+    handleSaveTemplate,
     centerView,
   ]);
 

@@ -11,6 +11,7 @@ import RotatingLines from "../RotatingLines/rotatinglines";
 import SplashScreen from "../MainApp/welcome_screen";
 import RecentUserFlows, {
   PredefinedFlows,
+  openFlow,
   useGetRecentFlows,
 } from "../FlowStatus/recent_flows";
 import PluginPagesView, { loadPage, usePluginPages } from "./extensions_list";
@@ -30,6 +31,7 @@ import BackArrow from "./Icons/Undo";
 import ForwardArrow from "./Icons/Redo";
 import CenterView from "./Icons/CenterView";
 import ConsoleIcon from "./Icons/Console";
+import TemplateIcon from "./Icons/Template";
 
 // Horus web-server utils
 import { horusGet } from "../../Utils/utils";
@@ -37,8 +39,9 @@ import { horusGet } from "../../Utils/utils";
 // Styles
 import "../appbutton.css";
 import "./toolbar.css";
-import { Flow, PluginPage } from "../FlowBuilder/flow.types";
 
+// Types
+import { Flow, PluginPage } from "../FlowBuilder/flow.types";
 interface ToolBarItemProps {
   name: string;
   hidden?: boolean;
@@ -258,6 +261,11 @@ const handleKeyDown = (event: KeyboardEvent) => {
     event.preventDefault();
     toggleConsole();
   }
+  // Open flow
+  if (event.code === "KeyO" && isModifierKeyPressed) {
+    event.preventDefault();
+    openFlowEvent();
+  }
   // Toggle Molstar
   if (event.code === "KeyM" && isModifierKeyPressed && isShiftKeyPressed) {
     event.preventDefault();
@@ -327,10 +335,22 @@ const newFlowEvent = () => {
   window.dispatchEvent(newFlowEvent);
 };
 
+const openFlowEvent = () => {
+  const event = new CustomEvent("openFlow", {
+    detail: {},
+  });
+  window.dispatchEvent(event);
+};
+
 const saveAsEvent = () => {
   // Emit a save event
   const event = new CustomEvent("saveFlowAs");
   window.dispatchEvent(event);
+};
+
+const saveTemplate = () => {
+  // Open a modal in the document showing the tempaltes view
+  window.dispatchEvent(new CustomEvent("saveTemplate"));
 };
 
 const fileExplorerEvent = () => {
@@ -417,14 +437,12 @@ export default function HorusToolbar() {
           name: "Open",
           hidden: window.horusInternal.mode === "webapp",
           svgPath: <OpenFlowIcon />,
+          keyShortcut: `${modifierKeyLogo}O`,
           onClick: () => {
             // Emit an event "openFlow"
             // This event will be captured by the flowReciever component
             // and will open the flow
-            const event = new CustomEvent("openFlow", {
-              detail: {},
-            });
-            window.dispatchEvent(event);
+            openFlowEvent();
           },
         },
         {
@@ -441,6 +459,13 @@ export default function HorusToolbar() {
           svgPath: <SaveAsIcon />,
           onClick: () => {
             saveAsEvent();
+          },
+        },
+        {
+          name: "Save template",
+          svgPath: <TemplateIcon />,
+          onClick: () => {
+            saveTemplate();
           },
         },
         {
@@ -570,7 +595,12 @@ function HorusSearch(props: HorusSearchProps) {
     Flow[]
   >([]);
   const [recentFilteredFlows, setRecentFilteredFlows] = useState<Flow[]>([]);
+
+  const [filteredTemplates, setFilteredTemplates] = useState<Flow[]>([]);
+
   const [filteredPages, setFilteredPages] = useState<PluginPage[]>(props.pages);
+
+  const [filterTerm, setFilterTerm] = useState("");
 
   const webAppMode = window.horusInternal.mode === "webapp";
 
@@ -579,16 +609,18 @@ function HorusSearch(props: HorusSearchProps) {
     fetchingRecents,
     recentFlows,
     predefinedFlows,
+    templates,
     getFlows,
     toggleInterval,
   ] = useGetRecentFlows(webAppMode);
 
-  const filterSearch = (event: ChangeEvent<HTMLInputElement>) => {
-    const value = event.target?.value;
+  useEffect(() => {
+    const value = filterTerm;
 
     if (value === "" || value === undefined) {
       setPredefinedFilteredFlows(predefinedFlows);
       setRecentFilteredFlows(recentFlows);
+      setFilteredTemplates(templates);
       setFilteredPages(props.pages);
       return;
     }
@@ -615,6 +647,12 @@ function HorusSearch(props: HorusSearchProps) {
 
     setRecentFilteredFlows(filteredRecentFlows);
 
+    const filteredTemp = templates.filter((flow) => {
+      return flow.name.toLowerCase().includes(value.toLowerCase());
+    });
+
+    setFilteredTemplates(filteredTemp);
+
     const filteredPages: PluginPage[] = props.pages.filter(
       (page: PluginPage) => {
         return (
@@ -626,19 +664,7 @@ function HorusSearch(props: HorusSearchProps) {
     );
 
     setFilteredPages(filteredPages);
-  };
-
-  useEffect(() => {
-    setPredefinedFilteredFlows(predefinedFlows);
-  }, [predefinedFlows]);
-
-  useEffect(() => {
-    setRecentFilteredFlows(recentFlows);
-  }, [recentFlows]);
-
-  useEffect(() => {
-    setFilteredPages(props.pages);
-  }, [props.pages]);
+  }, [filterTerm, predefinedFlows, recentFlows, templates, props.pages]);
 
   const [isOnFocus, setIsOnFocus] = useState(false);
 
@@ -669,10 +695,30 @@ function HorusSearch(props: HorusSearchProps) {
     );
   }
 
+  function TemplatesView() {
+    return (
+      <div className="flex flex-col gap-1">
+        {filteredTemplates?.map((flow) => (
+          <div
+            key={flow.savedID}
+            onClick={() => {
+              openFlow(flow);
+            }}
+            className="predefined-flow"
+          >
+            <div className="predefined-flow-name">{flow.name}</div>
+            <div className="predefined-flow-plugin">Template</div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   const hasContent =
     recentFilteredFlows.length > 0 ||
     predefinedFilteredFlows.length > 0 ||
-    filteredPages.length > 0;
+    filteredPages.length > 0 ||
+    filteredTemplates.length > 0;
 
   return (
     <div
@@ -686,7 +732,12 @@ function HorusSearch(props: HorusSearchProps) {
         }, 100);
       }}
     >
-      <SearchComponent placeholder="Search Horus..." onChange={filterSearch} />
+      <SearchComponent
+        placeholder="Search Horus..."
+        onChange={(e) => {
+          setFilterTerm(e.target.value);
+        }}
+      />
       {isOnFocus && (
         <div
           className="flex flex-col gap-2 absolute p-2 mt-3 origin-top-right rounded-xl bg-white toolbar-menu overflow-y-scroll zoom-out-animation"
@@ -712,6 +763,14 @@ function HorusSearch(props: HorusSearchProps) {
                 Preset flows
               </div>
               <PredefinedFlows flows={predefinedFilteredFlows} />
+            </div>
+          )}
+          {filteredTemplates.length > 0 && (
+            <div className="plugin-variable">
+              <div className="predefined-flow-name font-semibold">
+                Templates
+              </div>
+              <TemplatesView />
             </div>
           )}
           {filteredPages.length > 0 && (

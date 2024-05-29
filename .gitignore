@@ -222,3 +222,6 @@ horus_anonym
 .coverage
 *.db
 logo.png
+
+# Templates
+AppSupport/templates

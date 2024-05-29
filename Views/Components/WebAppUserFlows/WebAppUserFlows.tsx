@@ -32,7 +32,7 @@ import { FileData } from "chonky";
 
 export default function WebAppUserFlows() {
   // Get the recent flows with the custom hook
-  const [, recentFlows, , getFlows, , otherDirectories, corruptedFlows] =
+  const [, recentFlows, , , getFlows, , otherDirectories, corruptedFlows] =
     useGetRecentFlows(true);
 
   return (
@@ -211,10 +211,7 @@ function CorruptedFlowView(props: {
       <div>{props.corruptedFlow.name}</div>
       <div>{props.corruptedFlow.modDate?.toString().split(".")[0] ?? "-"}</div>
       <div>
-        <FlowSize
-          size={props.corruptedFlow.size}
-          status={FlowStatus.FINISHED}
-        />
+        <FlowSize size={props.corruptedFlow.size} />
       </div>
       <div>{props.corruptedFlow.reason}</div>
       <CloudDownload
@@ -319,7 +316,7 @@ function OtherFileView(props: {
       <div>{props.directory.name}</div>
       <div>{props.directory.modDate?.toString().split(".")[0] ?? "-"}</div>
       <div>
-        <FlowSize size={props.directory.size} status={FlowStatus.FINISHED} />
+        <FlowSize size={props.directory.size} />
       </div>
       <div>
         {props.directory.isDir ? "Folder" : props.directory.ext ?? "Unknown"}
@@ -361,7 +358,7 @@ function FlowRowView({
     <>
       <div className="text-center">{flow.name}</div>
       <div className="text-center">{flow.date}</div>
-      <FlowSize size={flow.size} status={flow.status} />
+      <FlowSize size={flow.size} />
       <FlowElapsed
         startedTime={flow.startedTime}
         finishedTime={flow.finishedTime}
@@ -533,7 +530,7 @@ function FlowClone({
   return <CopyIcon className="cursor-pointer w-6 h-6" onClick={cloneFlow} />;
 }
 
-function FlowSize({ size }: { size: number | undefined; status: FlowStatus }) {
+function FlowSize({ size }: { size?: number }) {
   if (size || size === 0) {
     // The size are MB, but if higher than 1000, then it's GB
     if (size > 1000) {

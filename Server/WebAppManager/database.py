@@ -115,6 +115,13 @@ class Database:
                 ),
             ),
             sqlalchemy.Column(
+                "maxTemplates",
+                sqlalchemy.Integer,
+                default=(
+                    self.dbConfig.defaultQuotas.maxTemplates if self.dbConfig.defaultQuotas else 0
+                ),
+            ),
+            sqlalchemy.Column(
                 "maxTime",
                 sqlalchemy.Integer,
                 default=self.dbConfig.defaultQuotas.maxTime if self.dbConfig.defaultQuotas else 0,
@@ -504,7 +511,7 @@ class Database:
             # specific field, so we set it to None
             result = result._asdict()
 
-            for key in ["maxStorage", "maxFlows", "maxTime"]:
+            for key in ["maxStorage", "maxFlows", "maxTemplates", "maxTime"]:
                 if result[key] == 0:
                     result[key] = None
 
@@ -551,8 +558,10 @@ class Database:
         {
             "currentFlows": 0,
             "maxFlows": 0,
+            "currentTemplates": 0,
+            "maxTemplates": 0,
             "usedSpace": 0,
-            "maxFlows": 0,
+            "maxSpace": 0,
             "usedHours": 0,
             "maxHours": 0
         }
@@ -569,15 +578,24 @@ class Database:
         return {
             "currentFlows": len(os.listdir(user.flowsDir)),
             "maxFlows": quotas["maxFlows"],
+            "currentTemplates": len(os.listdir(os.path.join(user.appSupportDir, "templates"))),
+            "maxTemplates": quotas["maxTemplates"],
             "usedSpace": FileExplorer.computePathSize(user.flowsDir),
             "maxSpace": quotas["maxStorage"],
             "usedHours": sum([flow["time"] for flow in userFlows]),
             "maxHours": quotas["maxTime"],
         }
 
-    def hasReachedQuota(self, user: "HorusUser") -> tuple[bool, str]:
+    def hasReachedQuota(
+        self, user: "HorusUser", verify: typing.Optional[list[str]] = None
+    ) -> tuple[bool, str]:
         """
         Checks if the user has reached the quotas
+
+        :params:
+        user: HorusUser -> The user to verify
+        verify: list[str] -> A list of the cutoas to verify, by default, all of them. The list has to be
+        of the form ["maxFlows", "maxTemplates"]...
         """
 
         # Get the user quotas
@@ -586,25 +604,42 @@ class Database:
         # Get all the flows of the user
         userFlows = self._getUserFlows(user.id)
 
+        # Set all to verify when verify is not provided
+        if verify is None:
+            verify = ["maxFlows", "maxTemplates", "maxStorage", "maxTime"]
+
         # If the user has reached the maximum number of flows
         # Use always the quantity of folders instead of the database,
         # as a flow can be removed manually by an admin
-        if quotas["maxFlows"] is not None:
+        if "maxFlows" in verify and quotas["maxFlows"] is not None:
             # Check within the user directory also for the
             # number of simulations (directories)
-            if len(os.listdir(user.flowsDir)) > quotas["maxFlows"]:
+            if len(os.listdir(user.flowsDir)) >= quotas["maxFlows"]:
                 return True, f"You have reached your limit of flows ({quotas['maxFlows']})"
+
+        # If the user has reached the maximum number of templates
+        if "maxTemplates" in verify and quotas["maxTemplates"] is not None:
+            # Check within the user directory also for the
+            # number of simulations (directories)
+            if (
+                len(os.listdir(os.path.join(user.appSupportDir, "templates")))
+                >= quotas["maxTemplates"]
+            ):
+                return (
+                    True,
+                    f"You have reached your limit of templates ({quotas['maxTemplates']})",
+                )
 
         # If the user has reached the maximum storage
         # For so, check the actual size of the folder instead
         # of the DB data
-        if quotas["maxStorage"] is not None:
+        if "maxStorage" in verify and quotas["maxStorage"] is not None:
             if FileExplorer.computePathSize(user.flowsDir) >= quotas["maxStorage"]:
                 return True, f"You have reached your storage quota of {quotas['maxStorage']} MB"
 
         # If the user has reached the maximum time
         # This has to come from the DB
-        if quotas["maxTime"] is not None:
+        if "maxTime" in verify and quotas["maxTime"] is not None:
             if sum([flow["time"] for flow in userFlows]) >= quotas["maxTime"]:
                 return (
                     True,
@@ -749,7 +784,15 @@ class Database:
         """
 
         # Set the allowed "udpatable columns
-        allowedColumns = ["activated", "group", "admin", "maxFlows", "maxStorage", "maxTime"]
+        allowedColumns = [
+            "activated",
+            "group",
+            "admin",
+            "maxFlows",
+            "maxTemplates",
+            "maxStorage",
+            "maxTime",
+        ]
         parsedValues = {k: v for k, v in values.items() if k in allowedColumns}
 
         with self.engine.connect() as connection:

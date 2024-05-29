@@ -22,6 +22,7 @@ export const openFlow = (flow: Flow) => {
         flowToOpen={{
           savedID: flow.savedID!,
           path: flow.path!,
+          template: flow.template,
         }}
       />
     ),
@@ -121,6 +122,7 @@ export function useGetRecentFlows(
   boolean,
   Flow[],
   Flow[],
+  Flow[],
   () => Promise<void>,
   (active: boolean) => void,
   FileData[],
@@ -131,6 +133,7 @@ export function useGetRecentFlows(
   const [otherDirectories, setOtherDirectories] = useState<FileData[]>([]);
   const [corruptedFlows, setCorruptedFlows] = useState<CorruptedFlow[]>([]);
   const [predefinedFlows, setPredefinedFlows] = useState<Flow[]>([]);
+  const [templates, setTemplates] = useState<Flow[]>([]);
   const interval = useRef<Timer | null>(null);
 
   const internalGetRecentFlows = useCallback(async () => {
@@ -166,6 +169,16 @@ export function useGetRecentFlows(
     setCorruptedFlows(recentFlowsData.corruptedFlows ?? []);
   }, [webAppFlows]);
 
+  const getTemplates = useCallback(async () => {
+    const response = await horusGet("/api/templates");
+
+    const data = await response.json();
+
+    if (data.ok) {
+      setTemplates((data?.templates as Flow[]) ?? []);
+    }
+  }, []);
+
   const getFlows = useCallback(async () => {
     setFetchingRecents(true);
 
@@ -187,8 +200,11 @@ export function useGetRecentFlows(
     // Fetch the recent flows
     internalGetRecentFlows();
 
+    // Fetch the templates
+    getTemplates();
+
     setFetchingRecents(false);
-  }, [internalGetRecentFlows]);
+  }, [internalGetRecentFlows, getTemplates]);
 
   // Toggle the interval
   const toggleInterval = useCallback(
@@ -224,6 +240,7 @@ export function useGetRecentFlows(
     fetchingRecents,
     recentFlows,
     predefinedFlows,
+    templates,
     getFlows,
     toggleInterval,
     otherDirectories,

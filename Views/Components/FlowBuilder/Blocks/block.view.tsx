@@ -21,7 +21,6 @@ import { SlurmOutputModalView } from "../Logs/logs_connections";
 
 // Typescript types
 import { Block, BlockTypes, ExtensionsToOpen, PluginPage } from "../flow.types";
-import { FlowBuilderIDs } from "../flow.view";
 
 // Block style
 import "./block.css";
@@ -541,11 +540,7 @@ function DeleteBlockButton({ block, onClick }: DeleteBlockButtonProps) {
   );
 }
 
-function PlayBlockButton({
-  isRunning,
-  runError,
-  onClick,
-}: PlayBlockButtonProps) {
+function PlayBlockButton({ isRunning, onClick }: PlayBlockButtonProps) {
   const [executeDescription, setExecuteDescription] = useState("Execute block");
   const isModifierPressed = useRef(false);
 

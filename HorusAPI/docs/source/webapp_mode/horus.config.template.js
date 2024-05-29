@@ -40,6 +40,7 @@ export const config = {
     // in any case to webapps that have the requireRegistration set to true, as demo users cannot send calculations.
     anonymousQuotas: {
       maxFlows: 10,
+      maxTemplates: 10,
       maxStorage: 500,
       maxTime: 100,
     },
@@ -83,6 +84,8 @@ export const config = {
         maxStorage: 100,
         // Number of flows
         maxFlows: 10,
+        // Number of templates
+        maxTemplates: 10,
         // Max computation hours
         maxTime: 100,
         // When to reset the computation hours (in days or "null" to never reset)

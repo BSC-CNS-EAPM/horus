@@ -194,6 +194,7 @@ function _UserTable({
       "group",
       "admin",
       "maxFlows",
+      "maxTemplates",
       "maxStorage",
       "maxTime",
     ];

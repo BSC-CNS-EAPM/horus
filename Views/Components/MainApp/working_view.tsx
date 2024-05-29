@@ -30,6 +30,7 @@ type WorkingViewProps = {
   flowToOpen?: {
     savedID: string;
     path: string;
+    template?: boolean;
   };
 };
 
@@ -151,6 +152,7 @@ export default function WorkingView(props: WorkingViewProps) {
           detail: {
             savedID: props.flowToOpen.savedID,
             path: props.flowToOpen.path,
+            template: props.flowToOpen.template,
           },
         });
       }

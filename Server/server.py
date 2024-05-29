@@ -56,7 +56,7 @@ import webview
 from HorusAPI import TempFile
 
 # Flow manager
-from Server.FlowManager import FlowManager, OverwriteException
+from Server.FlowManager import FlowManager, OverwriteException, NoPathSelected
 
 # Settings manager
 from Server.SettingsManager import SettingsManager
@@ -521,9 +521,10 @@ class HorusServer:
         @wraps(func)
         # @flask_login.fresh_login_required
         def wrapper(*args, **kwargs):
+
             # If we are on webapp mode, and we require users to be logged in
             # this wrapper will prevent access to the route if the user is not logged in
-            if not currentUser.admin:
+            if self.mode == "webapp" and not currentUser.admin:
                 return flask.jsonify(
                     {"ok": False, "msg": "You do not have permission to perform this action."}
                 )
@@ -607,48 +608,57 @@ class HorusServer:
         return wrapper
 
     # Wrapper for preventing flow execution if the user has reached the quota
-    def verifyQuotas(self, func):
+    def verifyQuotas(self, verify: typing.Optional[list[str]] = None):
         """
         In webapp mode, this wrapper will prevent access to the route if the user has
         reached the quota. If the user has reached the quota, it will return a JSON
         response with an error message.
+
+        :params:
+        verify: list[str] -> Select special items to verify. ["maxFlows", "maxTemplates", "maxStorage", "maxTime"]
         """
 
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            # Only on webapp
-            if self.webAppManager is not None:
-                # If we require registration
-                if self.webAppManager.userManagement.requireRegistration:
-                    if self.webAppManager.db is not None:
-                        quotaReached, reason = self.webAppManager.db.hasReachedQuota(currentUser)
-                        if quotaReached:
+        def wrapper(func):
+            @wraps(func)
+            def wrapperFunc(*args, **kwargs):
+
+                # Only on webapp
+                if self.webAppManager is not None:
+                    # If we require registration
+                    if self.webAppManager.userManagement.requireRegistration:
+                        if self.webAppManager.db is not None:
+                            quotaReached, reason = self.webAppManager.db.hasReachedQuota(
+                                currentUser, verify=verify
+                            )
+                            if quotaReached:
+                                return flask.jsonify(
+                                    {
+                                        "ok": False,
+                                        "msg": reason,
+                                    }
+                                )
+                    # For anonymous users
+                    else:
+                        aq = self.webAppManager.userManagement.anonymousQuotas
+
+                        if aq is None:
+                            return flask.jsonify(
+                                {"ok": False, "msg": "Internal server error. Try again later."}
+                            )
+
+                        # Verify that the anonymous user has no more than 10 flows
+                        flowsCount = os.listdir(currentUser.flowsDir)
+                        if len(flowsCount) >= aq.maxFlows:
                             return flask.jsonify(
                                 {
                                     "ok": False,
-                                    "msg": reason,
+                                    "msg": "You have reached the maximum number of flows.",
                                 }
                             )
-                # For anonymous users
-                else:
-                    aq = self.webAppManager.userManagement.anonymousQuotas
 
-                    if aq is None:
-                        return flask.jsonify(
-                            {"ok": False, "msg": "Internal server error. Try again later."}
-                        )
+                return func(*args, **kwargs)
 
-                    # Verify that the anonymous user has no more than 10 flows
-                    flowsCount = os.listdir(currentUser.flowsDir)
-                    if len(flowsCount) >= aq.maxFlows:
-                        return flask.jsonify(
-                            {
-                                "ok": False,
-                                "msg": "You have reached the maximum number of flows.",
-                            }
-                        )
-
-            return func(*args, **kwargs)
+            return wrapperFunc
 
         return wrapper
 
@@ -698,7 +708,7 @@ class HorusServer:
         @self.server.route("/api/saveflow", methods=["POST"])
         @self.verifyLogin
         @self.stopDemoUser
-        @self.verifyQuotas
+        @self.verifyQuotas(verify=["maxStorage"])
         def saveFlow():
 
             # The client here sends a form data with two values:
@@ -740,6 +750,13 @@ class HorusServer:
                 molstarState.stream.seek(0)
                 molstarState = molstarState.stream.read()
 
+            # Get if the user wants to store this flow as a template
+            saveAsTemplate = flowData.get("template", False)
+
+            # Sanitize the flow name when its none
+            if flowData["name"] is None or flowData["name"] == "":
+                flowData["name"] = "Unnamed flow"
+
             try:
 
                 # If we are on webapp mode, update the relative path to the user's folder
@@ -759,8 +776,9 @@ class HorusServer:
                         sanitizedName = sanitizedName.replace(" ", "_")
 
                         # Create the folder
-                        finalPath = os.path.join(currentUser.flowsDir, sanitizedName)
-                        os.makedirs(finalPath, exist_ok=True)
+                        if not saveAsTemplate:
+                            finalPath = os.path.join(currentUser.flowsDir, sanitizedName)
+                            os.makedirs(finalPath, exist_ok=True)
 
                         # Update the path
                         flowData["path"] = os.path.join(sanitizedName, sanitizedName + ".flow")
@@ -770,7 +788,20 @@ class HorusServer:
                         UserFileExplorer(flowData["path"], currentUser).getAbsolutePath()
                     )
 
-                flow = self.flowManager.saveFlow(flowData, molstarState)
+                if saveAsTemplate:
+                    # Verify the maxTemplates
+                    @self.verifyQuotas(verify=["maxTemplates"])
+                    def getTemplate():
+                        return self.flowManager.saveAsTemplate(flowData)
+
+                    flow = getTemplate()
+                else:
+
+                    @self.verifyQuotas(verify=["maxFlows"])
+                    def getFlow():
+                        return self.flowManager.saveFlow(flowData, molstarState)
+
+                    flow = getFlow()
 
                 if self._isForUser:
                     # Clear back the full path in webapp mode
@@ -785,6 +816,7 @@ class HorusServer:
                     "savedID": flow.savedID,
                     "path": flow.path,
                     "overwrite": False,
+                    "template": saveAsTemplate,
                 }
             except OverwriteException as ovexc:
                 success = {
@@ -793,6 +825,10 @@ class HorusServer:
                     "path": ovexc.path,
                     "overwrite": True,
                     "desktop": self.desktop,
+                }
+            except NoPathSelected:
+                success = {
+                    "ok": False,
                 }
             except Exception as exc:  # pylint: disable=broad-exception-caught
                 success = {
@@ -865,6 +901,48 @@ class HorusServer:
                 }
             return flask.jsonify(success)
 
+        @self.server.route("/api/templates", methods=["GET", "DELETE"])
+        @self.verifyLogin
+        def templateFlows():
+            try:
+                if request.method == "GET":
+                    flows = self.flowManager.listTemplates()
+
+                    # Convert the flows to JSON
+                    parsedTemplates = []
+                    for flow in flows:
+                        enc = flow.encode()
+                        enc["template"] = True
+                        enc["path"] = None
+                        parsedTemplates.append(enc)
+
+                    success = {"ok": True, "templates": parsedTemplates}
+
+                elif request.method == "DELETE":
+                    data = request.get_json()
+
+                    templateID = data.get("templateID")
+
+                    if not templateID:
+                        raise ValueError("No templateID provided")
+
+                    # Get the template
+                    template = self.flowManager.getTemplateByID(templateID)
+
+                    # Delete the file
+                    if os.path.exists(template.path):
+                        os.remove(template.path)
+
+                    success = {"ok": True}
+                else:
+                    raise ValueError("Invalid method")
+            except Exception as exc:  # pylint: disable=broad-exception-caught
+                success = {
+                    "ok": False,
+                    "msg": str(exc),
+                }
+            return flask.jsonify(success)
+
         @self.server.route("/api/cleanrecents", methods=["GET"])
         @self.verifyLogin
         def cleanRecents():
@@ -911,7 +989,13 @@ class HorusServer:
                         raise Exception(  # pylint: disable=broad-exception-raised
                             "No savedID provided"
                         )
-                    flow = self.flowManager.loadPredefinedFlow(savedID)
+
+                    template = data.get("template", False)
+
+                    if template:
+                        flow = self.flowManager.loadTemplateFlow(savedID)
+                    else:
+                        flow = self.flowManager.loadPredefinedFlow(savedID)
 
                 # Get the molstarStte zip file
                 molstarState = flow.getMolstarState()
@@ -1106,7 +1190,7 @@ class HorusServer:
         @self.server.route("/api/plugins/executeflow", methods=["POST"])
         @self.verifyLogin
         @self.stopDemoUser
-        @self.verifyQuotas
+        @self.verifyQuotas(verify=["maxTime"])
         def executeFlow():
             # Get the request data
             data = request.get_json()
@@ -1227,6 +1311,7 @@ class HorusServer:
 
         @self.server.route("/api/plugins/config", methods=["POST"])
         @self.verifyLogin
+        @self.verifyAdmin
         def pluginConfig():
             data = request.get_json()
             # Save the config
@@ -2540,7 +2625,7 @@ class HorusServer:
 
         @self.server.route("/users/clone_flow", methods=["POST"])
         @self.verifyLogin
-        @self.verifyQuotas
+        @self.verifyQuotas(verify=["maxStorage", "maxFlows"])
         def cloneUserFlow():
             """
             Clones a flow from the user's flows in web app mode
