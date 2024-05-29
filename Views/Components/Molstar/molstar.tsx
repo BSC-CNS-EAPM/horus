@@ -7,16 +7,16 @@ import { useEffect, createRef } from "react";
 import "./horus_molstar.scss";
 
 // Horus Molstar wrapper
-import HorusMolstar from "./HorusWrapper/horusmolstar";
+import HorusMolstar, { MolstarInitOptions } from "./HorusWrapper/horusmolstar";
 
 // Error boundary (currently does not do anything)
 import { ErrorBoundary } from "../reusable";
 
-export default function Molstar() {
+export default function Molstar({ options }: { options?: MolstarInitOptions }) {
   const parent = createRef<HTMLDivElement>();
 
   useEffect(() => {
-    window.molstar = new HorusMolstar(parent.current!);
+    window.molstar = new HorusMolstar(parent.current!, options);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

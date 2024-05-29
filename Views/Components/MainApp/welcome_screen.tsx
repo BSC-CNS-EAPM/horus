@@ -33,6 +33,7 @@ import UserIcon from "../Toolbar/Icons/User";
 
 // Import the horus logo
 import Logo from "../logo";
+import MolStarIcon from "../Toolbar/Icons/MolStar";
 
 type SplashModal = {
   header?: React.ReactNode;
@@ -62,6 +63,7 @@ export default function SplashScreen() {
           <div className="flex gap-2 p-2 flex-wrap justify-center flex-direction-splash-buttons">
             <CreateNewFlow />
             {!window.horusInternal.webApp && <OpenFlow />}
+            <OpenMolstar />
             <ManageTemplates setModalContent={updateModalContent} />
             {!window.horusInternal.webApp && (
               <ManagePlugins setModalContent={updateModalContent} />
@@ -183,6 +185,26 @@ function CreateNewFlow() {
       <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full cursor-default w-[150px]">
         <NewFlowIcon className="w-6 h-6 icon" />
         New flow
+      </div>
+    </HorusContainer>
+  );
+}
+
+function OpenMolstar() {
+  const handleOpenMolstar = () => {
+    // Set the startWorking view
+    const startWorkingEvent = new CustomEvent("start-working", {
+      detail: <WorkingView molstar={true} />,
+    });
+
+    window.dispatchEvent(startWorkingEvent);
+  };
+
+  return (
+    <HorusContainer onClick={handleOpenMolstar} className="zoom-on-hover">
+      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full cursor-default w-[150px]">
+        <MolStarIcon className="w-6 h-6 icon" />
+        Viewer
       </div>
     </HorusContainer>
   );

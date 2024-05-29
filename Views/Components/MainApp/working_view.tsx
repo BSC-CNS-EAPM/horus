@@ -32,6 +32,7 @@ type WorkingViewProps = {
     path: string;
     template?: boolean;
   };
+  molstar?: boolean;
 };
 
 export default function WorkingView(props: WorkingViewProps) {
@@ -201,7 +202,7 @@ export default function WorkingView(props: WorkingViewProps) {
               )}
             </PanelGroup>
           </Panel>
-          <MolstarPanel />
+          <MolstarPanel expand={props.molstar} />
         </PanelGroup>
         <div className={showConsole ? "block" : "hidden"}>{term.current}</div>
       </div>
@@ -216,7 +217,7 @@ export default function WorkingView(props: WorkingViewProps) {
   );
 }
 
-function MolstarPanel() {
+function MolstarPanel({ expand }: { expand?: boolean }) {
   const [showMolstar, setShowMolstar] = useState<boolean>(true);
   const [initialMolstarHidden, setInitialMolstarHidden] =
     useState<boolean>(true);
@@ -292,6 +293,17 @@ function MolstarPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [molstarPanelRef.current]);
 
+  useEffect(() => {
+    if (expand) {
+      setTimeout(() => {
+        toggleMolstar();
+        molstarPanelRef.current?.expand();
+        molstarPanelRef.current?.resize(100);
+      }, 100);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <>
       <ResizeHandle onDragging={handleMolstarDrag} />
@@ -326,7 +338,7 @@ function MolstarPanel() {
               display: isDragging ? "none" : "block",
             }}
           >
-            <Molstar />
+            <Molstar options={{ showControls: expand }} />
           </div>
         </div>
       </Panel>

@@ -103,16 +103,19 @@ export enum MolstarEvents {
   STATE = "molstar-state-event",
 }
 
+export type MolstarInitOptions = {
+  showControls?: boolean;
+};
 export default class HorusMolstar {
   plugin: PluginUIContext | null = null;
   target: HTMLDivElement;
 
-  constructor(target: HTMLDivElement) {
+  constructor(target: HTMLDivElement, options?: MolstarInitOptions) {
     this.target = target;
-    this.initPlugin();
+    this.initPlugin(options);
   }
 
-  private async initPlugin() {
+  private async initPlugin(options?: MolstarInitOptions) {
     const ExtensionMap = {
       // @ts-ignore
       mvs: PluginSpec.Behavior(MolViewSpec),
@@ -133,7 +136,7 @@ export default class HorusMolstar {
       layout: {
         initial: {
           isExpanded: true,
-          showControls: false,
+          showControls: options?.showControls ?? false,
         },
       },
       components: {
