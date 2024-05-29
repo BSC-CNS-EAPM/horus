@@ -123,7 +123,13 @@ export function TemplatesView() {
               <hr className="p-0 m-0 w-full"></hr>
               <hr className="p-0 m-0 w-full"></hr>
               {templates.map((t) => {
-                return <Template flow={t} getTemplates={getTemplates} />;
+                return (
+                  <Template
+                    key={t.savedID}
+                    flow={t}
+                    getTemplates={getTemplates}
+                  />
+                );
               })}
             </div>
           )}

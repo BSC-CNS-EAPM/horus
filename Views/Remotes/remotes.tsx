@@ -33,11 +33,7 @@ export default function ConfigRemotes() {
     const response = await horusGet("/api/remotes/list");
     const fetchedRemotes = await response.json();
 
-    if (!fetchedRemotes.ok) {
-      alert(fetchedRemotes.msg);
-    } else {
-      setRemotes(fetchedRemotes);
-    }
+    setRemotes(fetchedRemotes);
 
     setFetchingRemotes(false);
   };
