@@ -1428,6 +1428,17 @@ export function useFlowBuilder() {
       path: null,
     };
 
+    // If we are on WebApp, ask the user for a new name
+    if (window.horusInternal.mode === "webapp") {
+      const newName = prompt("New flow name...");
+
+      if (!newName) {
+        return;
+      }
+
+      newUnsavedFlow.name = newName;
+    }
+
     await preHandleSave(false, newUnsavedFlow);
   }, [flow, preHandleSave]);
 

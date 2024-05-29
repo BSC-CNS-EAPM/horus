@@ -13,6 +13,7 @@ import { FlowElapsed } from "../FlowStatus/flow_elapsed";
 // Icons
 import TrashIcon from "../Toolbar/Icons/Trash";
 import OpenFlowIcon from "../Toolbar/Icons/Open";
+import CopyIcon from "../Toolbar/Icons/Copy";
 
 // Types
 import { Flow, FlowStatus } from "../FlowBuilder/flow.types";
@@ -52,8 +53,10 @@ export default function WebAppUserFlows() {
             <div className="header-row">Duration</div>
             <div className="header-row">Status</div>
             <div className="header-row">Open</div>
+            <div className="header-row">Clone</div>
             <div className="header-row">Download</div>
             <div className="header-row">Delete</div>
+            <hr className="p-0 m-0 w-full"></hr>
             <hr className="p-0 m-0 w-full"></hr>
             <hr className="p-0 m-0 w-full"></hr>
             <hr className="p-0 m-0 w-full"></hr>
@@ -364,7 +367,7 @@ function FlowRowView({
         finishedTime={flow.finishedTime}
         elapsed={flow.elapsed}
       />
-      <div className="text-center flex items-center justify-center">
+      <div className="text-center flex justify-center items-baseline">
         <FlowStatusView status={flow.status} />
       </div>
       <OpenFlowIcon
@@ -373,6 +376,7 @@ function FlowRowView({
           openFlow(flow);
         }}
       />
+      <FlowClone flow={flow} getFlows={getFlows} />
       <FlowDownload flow={flow} />
       <DeleteFlow flow={flow} getFlows={getFlows} />
     </>
@@ -471,6 +475,62 @@ function FlowDownload({ flow }: { flow: Flow }) {
       onClick={downloadFlow}
     />
   );
+}
+
+function FlowClone({
+  flow,
+  getFlows,
+}: {
+  flow: Flow;
+  getFlows: () => Promise<void>;
+}) {
+  const [isCloning, setIsCloning] = useState(false);
+
+  const cloneFlow = async () => {
+    setIsCloning(true);
+
+    try {
+      // Generate the tar file
+      const body = JSON.stringify({
+        path: flow.path,
+      });
+
+      const response = await horusPost("/users/clone_flow", null, body);
+
+      if (!response) {
+        return;
+      }
+
+      const data = await response.json();
+
+      if (!data.ok) {
+        alert("Error cloning flow: " + data.msg);
+        return;
+      }
+
+      getFlows();
+    } finally {
+      setIsCloning(false);
+    }
+  };
+
+  if (flow.status === FlowStatus.RUNNING || flow.status === FlowStatus.QUEUED) {
+    return <div>-</div>;
+  }
+
+  if (isCloning) {
+    return (
+      <RotatingLines
+        size="25px"
+        style={{
+          // Center the loading icon
+          margin: "0 auto",
+        }}
+      />
+    );
+  }
+
+  return <CopyIcon className="cursor-pointer w-6 h-6" onClick={cloneFlow} />;
 }
 
 function FlowSize({ size }: { size: number | undefined; status: FlowStatus }) {
@@ -586,6 +646,15 @@ function _DeleteFlowModal({
           ) : (
             <>
               <button
+                className="app-button btn-secondary"
+                onClick={() => {
+                  unmountComponentAtNode(modal);
+                  modal.remove();
+                }}
+              >
+                Cancel
+              </button>
+              <button
                 className="app-button btn-danger"
                 style={{
                   color: "var(--danger-red)",
@@ -595,15 +664,6 @@ function _DeleteFlowModal({
                 }}
               >
                 Delete
-              </button>
-              <button
-                className="app-button btn-secondary"
-                onClick={() => {
-                  unmountComponentAtNode(modal);
-                  modal.remove();
-                }}
-              >
-                Cancel
               </button>
             </>
           )}

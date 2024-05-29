@@ -17,6 +17,7 @@ import logging
 import typing
 import traceback
 import tarfile
+import datetime
 
 # Decorators
 from functools import wraps
@@ -2532,6 +2533,64 @@ class HorusServer:
 
                 if self.webAppManager.db is not None:
                     self.webAppManager.db.removeFlowForUser(flow)
+
+                return flask.jsonify({"ok": True})
+            except Exception as exc:
+                return flask.jsonify({"ok": False, "msg": str(exc)})
+
+        @self.server.route("/users/clone_flow", methods=["POST"])
+        @self.verifyLogin
+        @self.verifyQuotas
+        def cloneUserFlow():
+            """
+            Clones a flow from the user's flows in web app mode
+            """
+
+            if self.webAppManager is None:
+                return flask.jsonify({"ok": False, "msg": "No user registration required"})
+
+            # Get the flow data
+            data = request.get_json()
+
+            if data is None:
+                return flask.jsonify({"ok": False, "msg": "No data provided"})
+
+            # Remove the flow from the database and the user's directory
+            try:
+                flowPath = data.get("path", None)
+
+                if flowPath is None:
+                    return flask.jsonify({"ok": False, "msg": "No path provided"})
+
+                # Convert the path to the user's directory
+                flowPath = str(UserFileExplorer(flowPath, currentUser).getAbsolutePath())
+
+                # Load the flow from the data
+                flow = self.flowManager.openFlowFromPath(flowPath)
+
+                # Delete the container folder of the flow
+                if os.path.exists(flow.path):
+
+                    # Use date as unique identifier
+                    uniqueCloned = f"cloned_{datetime.datetime.now().timestamp()}"
+                    newFolderName = os.path.join(currentUser.flowsDir, uniqueCloned)
+                    newFolder = shutil.copytree(os.path.dirname(flow.path), newFolderName)
+
+                    # Now rename the flow file to "_cloned" in order for horus to recognize it
+                    oldFlowFileName = os.path.splitext(os.path.basename(flow.path))[0]
+                    newFlow = os.path.join(newFolder, uniqueCloned + ".flow")
+                    newFlow = shutil.copyfile(flow.path, newFlow)
+
+                    # Update the new flow name
+                    newFlowInstance = self.flowManager.openFlowFromPath(newFlow)
+                    newFlowInstance.date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    newFlowInstance.write()
+
+                    # Delete the old .flow in the newly cloned folder
+                    oldFlow = os.path.join(newFolder, oldFlowFileName + ".flow")
+                    os.remove(oldFlow)
+                else:
+                    return flask.jsonify({"ok": False, "msg": "Flow path does not exist"})
 
                 return flask.jsonify({"ok": True})
             except Exception as exc:

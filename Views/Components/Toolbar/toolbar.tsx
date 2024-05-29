@@ -437,7 +437,6 @@ export default function HorusToolbar() {
         },
         {
           name: "Save as...",
-          hidden: window.horusInternal.mode === "webapp",
           keyShortcut: `${modifierKeyLogo}${shiftKeyLogo}S`,
           svgPath: <SaveAsIcon />,
           onClick: () => {
