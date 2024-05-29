@@ -31,8 +31,10 @@ export default function ConfigRemotes() {
 
     setFetchingRemotes(true);
     const response = await horusGet("/api/remotes/list");
-    const fetchedRemotes: typeof remotes = await response.json();
+    const fetchedRemotes = await response.json();
+
     setRemotes(fetchedRemotes);
+
     setFetchingRemotes(false);
   };
 
@@ -125,7 +127,7 @@ function RemoteListView(props: RemoteListProps) {
     );
   }
 
-  if (remotes.length === 0) {
+  if (!remotes || remotes.length === 0) {
     return (
       <div className="w-fit h-fit p-2 m-2 flex flex-col justify-center items-center">
         No remotes found

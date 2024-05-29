@@ -10,8 +10,13 @@ import RecentUserFlows, {
 } from "../FlowStatus/recent_flows";
 import RotatingLines from "../RotatingLines/rotatinglines";
 import PluginPagesView, { usePluginPages } from "../Toolbar/extensions_list";
-import { HorusModal } from "../reusable";
 import WebAppUserFlows from "../WebAppUserFlows/WebAppUserFlows";
+import ConfigRemotes from "../../Remotes/remotes";
+import Profile from "../../Login/profile";
+import { HorusModal } from "../reusable";
+import { PluginManager } from "../../PluginsManager/plugin_manager";
+import { TemplatesView } from "../Templates/templates";
+import { SettingsView } from "../../Settings/settings";
 
 // TS types
 import { PluginPage } from "../FlowBuilder/flow.types";
@@ -22,15 +27,13 @@ import PluginsIcon from "../Toolbar/Icons/Plugins";
 import SettingsIcon from "../Toolbar/Icons/Settings";
 import ServerIcon from "../Toolbar/Icons/Server";
 import OpenFlowIcon from "../Toolbar/Icons/Open";
+import TemplateIcon from "../Toolbar/Icons/Template";
+import Login from "../Toolbar/Icons/Login";
+import UserIcon from "../Toolbar/Icons/User";
 
 // Import the horus logo
 import Logo from "../logo";
-import { PluginManager } from "../../PluginsManager/plugin_manager";
-import ConfigRemotes from "../../Remotes/remotes";
-import { SettingsView } from "../../Settings/settings";
-import Login from "../Toolbar/Icons/Login";
-import UserIcon from "../Toolbar/Icons/User";
-import Profile from "../../Login/profile";
+import MolStarIcon from "../Toolbar/Icons/MolStar";
 
 type SplashModal = {
   header?: React.ReactNode;
@@ -59,16 +62,16 @@ export default function SplashScreen() {
         <div className="flex flex-row flex-wrap justify-center items-center w-full gap-8 zoom-in-animation text-white">
           <div className="flex gap-2 p-2 flex-wrap justify-center flex-direction-splash-buttons">
             <CreateNewFlow />
+            {!window.horusInternal.webApp && <OpenFlow />}
+            <OpenMolstar />
+            <ManageTemplates setModalContent={updateModalContent} />
             {!window.horusInternal.webApp && (
-              <>
-                <OpenFlow />
-                <ManagePlugins setModalContent={updateModalContent} />
-              </>
+              <ManagePlugins setModalContent={updateModalContent} />
             )}
             {window.horusInternal.webApp?.allowRemotes !== false && (
               <ManageRemotes setModalContent={updateModalContent} />
             )}
-            <Settings setModalContent={updateModalContent} />
+            <ManageSettings setModalContent={updateModalContent} />
           </div>
           <div className="vertical-splash-separator" />
           <div className="flex flex-row flex-wrap gap-2 justify-center">
@@ -187,6 +190,26 @@ function CreateNewFlow() {
   );
 }
 
+function OpenMolstar() {
+  const handleOpenMolstar = () => {
+    // Set the startWorking view
+    const startWorkingEvent = new CustomEvent("start-working", {
+      detail: <WorkingView molstar={true} />,
+    });
+
+    window.dispatchEvent(startWorkingEvent);
+  };
+
+  return (
+    <HorusContainer onClick={handleOpenMolstar} className="zoom-on-hover">
+      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full cursor-default w-[150px]">
+        <MolStarIcon className="w-6 h-6 icon" />
+        Viewer
+      </div>
+    </HorusContainer>
+  );
+}
+
 function OpenFlow() {
   const handleOpenFlow = () => {
     // Set the startWorking view
@@ -217,6 +240,23 @@ function OpenFlow() {
 type ButtonOpensModalProps = {
   setModalContent: (modal: SplashModal | null) => void;
 };
+
+function ManageTemplates(props: ButtonOpensModalProps) {
+  const setModalContent = () => {
+    props.setModalContent({
+      body: <TemplatesView />,
+    });
+  };
+
+  return (
+    <HorusContainer className="zoom-on-hover" onClick={setModalContent}>
+      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full cursor-default w-[150px]">
+        <TemplateIcon className="w-6 h-6 icon" />
+        Templates
+      </div>
+    </HorusContainer>
+  );
+}
 
 function ManagePlugins(props: ButtonOpensModalProps) {
   const setModalContent = () => {
@@ -254,6 +294,7 @@ function ManagePlugins(props: ButtonOpensModalProps) {
     </HorusContainer>
   );
 }
+
 function ManageRemotes(props: ButtonOpensModalProps) {
   const setModalContent = () => {
     const body = <ConfigRemotes />;
@@ -272,7 +313,7 @@ function ManageRemotes(props: ButtonOpensModalProps) {
     </HorusContainer>
   );
 }
-function Settings(props: ButtonOpensModalProps) {
+function ManageSettings(props: ButtonOpensModalProps) {
   const setModalContent = () => {
     const body = <SettingsView />;
 
@@ -296,7 +337,7 @@ function Settings(props: ButtonOpensModalProps) {
 // section of the webapp
 function PredefinedFlowsSplash() {
   // Get the predefined flows with the custom hook
-  const [fetchingRecents, , predefinedFlows, , toggleInterval] =
+  const [fetchingRecents, , predefinedFlows, , , toggleInterval] =
     useGetRecentFlows();
 
   useEffect(() => {

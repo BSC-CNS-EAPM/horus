@@ -90,7 +90,7 @@ class HorusUser(flask_login.UserMixin):
     Datetime of user's last login
     """
 
-    group: int
+    group: str
     """
     User group
     """
@@ -126,7 +126,7 @@ class HorusUser(flask_login.UserMixin):
 
         # Generate the user support directory
         self.appSupportDir = os.path.abspath(
-            os.path.join(appSupportDir, self.email.split("@")[0])
+            os.path.join(appSupportDir, f"{self.id}_{self.email.replace('@', '.at.')}")
         )
         self.flowsDir = os.path.join(self.appSupportDir, "flows")
 

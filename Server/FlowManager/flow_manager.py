@@ -39,6 +39,12 @@ if typing.TYPE_CHECKING:
     from Server.server import HorusSocket
 
 
+class NoPathSelected(Exception):
+    """
+    No path was selected during the save process
+    """
+
+
 class LoopException(Exception):
     """
     Custom loop exception
@@ -1181,6 +1187,11 @@ class FlowManager:
     Internal use only.
     """
 
+    _templatesDir: str
+    """
+    The user's templates directory.
+    """
+
     @property
     def areThereRunningFlows(self):
         """
@@ -1195,6 +1206,14 @@ class FlowManager:
         # Assign the app support dir and the recent flows path
         self.appSupportDir = appSupportDir
         self._recentFlowsPath = os.path.join(appSupportDir, "recent_flows.json")
+
+        # Assign the templates path
+        self._templatesDir = os.path.join(appSupportDir, "templates")
+
+        # Create the templates folder if it does not exist
+        if not os.path.exists(self._templatesDir):
+            # Same for the templates directory
+            os.makedirs(self._templatesDir, exist_ok=True)
 
         # Read the recent flows file
         self.readRecentsFlows()
@@ -1369,7 +1388,11 @@ class FlowManager:
         self._recentsWriter()
 
     def _saveFlowInternal(
-        self, flow: Flow, overwrite=False, molstarState: typing.Optional[bytes] = None
+        self,
+        flow: Flow,
+        overwrite=False,
+        molstarState: typing.Optional[bytes] = None,
+        addToRecents: bool = True,
     ):
         """
         Saves a flow to a file. (overwrites if already exists)
@@ -1411,7 +1434,8 @@ class FlowManager:
             flow.write(molstarState)
 
         # Add the flow to the recent flows list
-        self._addToRecentFlows(flow)
+        if addToRecents:
+            self._addToRecentFlows(flow)
 
         # Return the saved flow
         return flow
@@ -1420,6 +1444,7 @@ class FlowManager:
         self,
         flow: typing.Dict[str, typing.Any],
         molstarState: typing.Optional[bytes] = None,
+        addToRecenets: bool = True,
     ):
         """
         Saves the flow to a file.
@@ -1452,14 +1477,16 @@ class FlowManager:
 
                 # Check if the user selected a path
                 if not flowPath:
-                    raise Exception("No path selected.")  # pylint: disable=broad-exception-raised
+                    raise NoPathSelected(
+                        "No path selected."
+                    )  # pylint: disable=broad-exception-raised
 
                 # Append the extension if not present
                 if not flowPath.endswith(".flow"):
                     flowPath += ".flow"
                 flowInstance.path = flowPath
 
-        return self._saveFlowInternal(flowInstance, overwrite, molstarState)
+        return self._saveFlowInternal(flowInstance, overwrite, molstarState, addToRecenets)
 
     def openFlowFromPath(
         self,
@@ -1519,7 +1546,7 @@ class FlowManager:
                 if isinstance(flowPath, tuple):
                     flowPath = flowPath[0]
                 return self.openFlowFromPath(str(flowPath), socket=socket)
-            raise Exception("No path selected.")  # pylint: disable=broad-exception-raised
+            raise NoPathSelected("No path selected.")  # pylint: disable=broad-exception-raised
         else:
             # WIP implement server user folders
             raise Exception(  # pylint: disable=broad-exception-raised
@@ -1759,3 +1786,93 @@ class FlowManager:
             tar.add(flowDir, arcname=os.path.basename(flowDir))
 
         return tarPath
+
+    def saveAsTemplate(self, flow: typing.Dict[str, typing.Any]):
+        """
+        Saves the given flow into the templates folder
+        """
+
+        # Just set the flow path to the templates folder
+        from pathvalidate import sanitize_filepath
+
+        sanitizedName = sanitize_filepath(flow["name"], max_len=30)
+        sanitizedName = sanitizedName.replace(" ", "_")
+
+        templatePath = os.path.join(self._templatesDir, sanitizedName + ".flow")
+
+        # If the template exists, raise an overwrite exception
+        if os.path.exists(templatePath):
+            readTemplate = self.openFlowFromPath(templatePath)
+            raise Exception(
+                f"Trying to overwrite a template. Please remove the template '{readTemplate.name}' before saving this one."
+            )
+
+        flow["path"] = templatePath
+        flow["savedID"] = None
+
+        # Save the flow
+        savedTemplate = self.saveFlow(flow, molstarState=None, addToRecenets=False)
+
+        # Set as "preset"
+        savedTemplate.path = None  # type: ignore
+        savedTemplate.savedID = None  # type: ignore
+
+        return savedTemplate
+
+    def loadTemplateFlow(self, templateID: str):
+        """
+        Loads the given flow template by providing its ID
+        """
+
+        loadedTemplate = self.getTemplateByID(templateID)
+
+        # Replace the savedID and the flow path so
+        # the forntend can save it to another location
+        loadedTemplate.savedID = None  # type: ignore
+        loadedTemplate.path = None  # type: ignore
+
+        return loadedTemplate
+
+    def getTemplateByID(self, templateID: str):
+        """
+        Finds a template in the templates dir given its ID
+        """
+
+        templateFlows = self.listTemplates()
+        loadedTemplate = None
+        for tFlow in templateFlows:
+            if tFlow.savedID == templateID:
+                loadedTemplate = tFlow
+                break
+        if not loadedTemplate:
+            raise Exception("Template not found.")  # pylint: disable=broad-exception-raised
+
+        return loadedTemplate
+
+    def listTemplates(self) -> list[Flow]:
+        """
+        List the user's templates folder
+        """
+
+        templates: list[Flow] = []
+        for f in os.listdir(self._templatesDir):
+            if f.endswith(".flow"):
+                filePath = os.path.join(self._templatesDir, f)
+
+                # Read the flow file to get the name of the flow
+                try:
+                    templates.append(Flow.read(filePath))
+                except Exception as exc:
+                    logging.getLogger("Horus").error(
+                        "Error reading template flow %s: %s", filePath, exc
+                    )
+                    continue
+
+        # Sort them alphabetically
+        def sortByName(template: Flow):
+            return template.name
+
+        # Sort the blocks
+        templates.sort(key=sortByName)
+
+        return templates

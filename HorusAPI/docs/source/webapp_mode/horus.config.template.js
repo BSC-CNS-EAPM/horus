@@ -25,6 +25,9 @@ export const config = {
     requireRegistration: true,
     // If user registration is required, you may require them to confirm their email before using the app
     requireActivation: true,
+    // AdminTools is a panel available to WebApp administrators (available at Profile -> AdminTools). If you want to disable this panel entirely,
+    // set this option to true
+    disableAdminTools: false,
     // If user registration is required, you may allow them to use the app in demo mode. Which means they can use the app without registering
     // But they cannot send any flow and their session is removed after they leave the page
     allowDemoUser: true,
@@ -37,6 +40,7 @@ export const config = {
     // in any case to webapps that have the requireRegistration set to true, as demo users cannot send calculations.
     anonymousQuotas: {
       maxFlows: 10,
+      maxTemplates: 10,
       maxStorage: 500,
       maxTime: 100,
     },
@@ -80,6 +84,8 @@ export const config = {
         maxStorage: 100,
         // Number of flows
         maxFlows: 10,
+        // Number of templates
+        maxTemplates: 10,
         // Max computation hours
         maxTime: 100,
         // When to reset the computation hours (in days or "null" to never reset)

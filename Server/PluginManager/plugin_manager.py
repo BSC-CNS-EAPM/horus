@@ -930,7 +930,7 @@ class PluginManager(metaclass=HorusSingleton):
         newBlocks: list[dict[str, typing.Any]] = []
         for b in blockList:
             newBlock = b._toDict()
-            newBlock["plugin"] = plugin.info["name"]
+            newBlock["plugin"] = {"name": plugin.info["name"], "id": plugin.id}
             # newBlock = {
             #     "id": b.id,
             #     "plugin": plugin.info["name"],

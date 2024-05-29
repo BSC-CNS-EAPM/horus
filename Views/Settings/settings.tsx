@@ -21,8 +21,15 @@ import { HorusSettingsObject } from "./setting";
 // Import the css
 import "../Components/FlowBuilder/Blocks/block.css";
 
-export async function fetchSettings(): Promise<HorusSettingsObject | null> {
-  const response = await horusGet("/api/settings");
+export async function fetchSettings(
+  forAdmin?: boolean
+): Promise<HorusSettingsObject | null> {
+  let response;
+  if (forAdmin) {
+    response = await horusGet("/users/admintools/settings");
+  } else {
+    response = await horusGet("/api/settings");
+  }
 
   const data = await response.json();
 
@@ -63,10 +70,11 @@ function parseSettingsIntoPluginVariable(
       defaultValue: settings[settingID]?.defaultValue ?? null,
       type: settings[settingID]?.type ?? PluginVariableTypes.ANY,
       allowedValues: settings[settingID]?.allowedValues ?? [],
+      disabled: false,
     };
   });
 }
-function useSettings() {
+function useSettings(forAdmin?: boolean) {
   const [settings, setSettings] = useState<PluginVariable[] | null>(null);
   const [groupedSettings, setGroupedSettings] = useState<
     Record<string, PluginVariable[]>
@@ -74,7 +82,7 @@ function useSettings() {
   const [hasChanges, setHasChanges] = useState<boolean>(false);
 
   async function getSettings() {
-    const settings = await fetchSettings();
+    const settings = await fetchSettings(forAdmin);
     const parsedSettings = parseSettingsIntoPluginVariable(settings);
 
     // Group settings by .category
@@ -125,7 +133,16 @@ function useSettings() {
       settings: settings,
     });
 
-    const response = await horusPost("/api/saveSettings", header, body);
+    let response;
+    if (forAdmin) {
+      response = await horusPost(
+        "/users/admintools/saveSettings",
+        header,
+        body
+      );
+    } else {
+      response = await horusPost("/api/saveSettings", header, body);
+    }
 
     const data = await response.json();
 
@@ -170,7 +187,7 @@ function useSettings() {
   };
 }
 
-function SettingsView() {
+function SettingsView({ forAdmin }: { forAdmin?: boolean }) {
   const {
     groupedSettings,
     hasChanges,
@@ -178,7 +195,7 @@ function SettingsView() {
     saveSettings,
     onSettingChange,
     restoreSettings,
-  } = useSettings();
+  } = useSettings(forAdmin);
 
   const getGroupedSettings = () => {
     const groupedViews: Record<string, React.ReactNode[]> = {};

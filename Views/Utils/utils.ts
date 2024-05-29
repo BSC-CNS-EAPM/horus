@@ -14,7 +14,7 @@ async function horusGet(
   const controller = new AbortController();
   const signal = controller.signal;
 
-  let timeoutId: NodeJS.Timeout | null = null;
+  let timeoutId: Timer | null = null;
 
   if (timeout) {
     timeoutId = setTimeout(() => {
@@ -66,7 +66,7 @@ async function horusPost(
   const controller = new AbortController();
   const signal = controller.signal;
 
-  let timeoutId: NodeJS.Timeout | null = null;
+  let timeoutId: Timer | null = null;
 
   if (timeout) {
     timeoutId = setTimeout(() => {
@@ -91,6 +91,65 @@ async function horusPost(
     return response;
   } catch (error) {
     timeoutId && clearTimeout(timeoutId);
+    throw new Error("Timeout");
+  }
+}
+type HorusDeleteParams = {
+  url: string;
+  headers?: Record<string, string>;
+  body?: any;
+  shemsu?: string;
+  timeout?: number | null;
+};
+
+async function horusDelete({
+  url,
+  headers = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  },
+  body = null,
+  shemsu,
+  timeout = null,
+}: HorusDeleteParams): Promise<Response> {
+  /* Send a delete request to the server
+   * @param {object} params - An object containing the parameters
+   * @param {string} params.url - The URL to send the request to
+   * @param {object} params.headers - The headers to send with the request
+   * @param {object} params.body - The body to send with the request
+   * @param {string} [params.shemsu] - An optional shemsu token
+   * @param {number} [params.timeout] - An optional timeout duration in seconds
+   * */
+
+  const controller = new AbortController();
+  const signal = controller.signal;
+
+  let timeoutId: Timer | null = null;
+
+  if (timeout) {
+    timeoutId = setTimeout(() => {
+      controller.abort();
+    }, timeout * 1000);
+  }
+
+  const fetchPromise = fetch(url, {
+    method: "DELETE",
+    headers: {
+      shemsu: shemsu || getShemsuToken(),
+      socketiosid:
+        (window as any).socketiosid || (parent as any).socketiosid || null,
+      ...headers,
+    },
+    body: body ? JSON.stringify(body) : null,
+    signal,
+  });
+
+  try {
+    const response = await fetchPromise;
+    if (timeoutId) clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    if (timeoutId) clearTimeout(timeoutId);
     throw new Error("Timeout");
   }
 }
@@ -144,6 +203,7 @@ const fetchInternals = async () => {
     window.horusInternal = {
       isDesktop: false,
       mode: "server",
+      debug: false,
     };
   }
 };
@@ -164,6 +224,7 @@ export {
   horusGetSettings,
   horusGet,
   horusPost,
+  horusDelete,
   getVersion,
   openWindow,
   fetchInternals as fetchDesktop,

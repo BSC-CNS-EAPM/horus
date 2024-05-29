@@ -371,7 +371,10 @@ export function PluginManager({
       setFilteredPluginList(data);
 
       // Set the development mode
-      const devMode = window.horusSettings["developmentMode"]?.value;
+      const key = "developmentMode";
+
+      const devMode =
+        key in window.horusSettings ? window.horusSettings[key].value : false;
 
       setDevelopmentMode(devMode || false);
     } catch (error) {

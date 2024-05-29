@@ -8,9 +8,11 @@ import LockIcon from "../Components/Toolbar/Icons/Lock";
 
 type UserQuota = {
   currentFlows: number;
+  currentTemplates: number;
   usedSpace: number;
   usedHours: number;
   maxFlows: number;
+  maxTemplates: number;
   maxSpace: number;
   maxHours: number;
 };
@@ -113,6 +115,11 @@ export default function Profile() {
                 <span className="font-bold">Flows:</span>{" "}
                 {userData.quota.currentFlows} /{" "}
                 {userData.quota.maxFlows ?? "Unlimited"}
+              </div>
+              <div className="plugin-block mb-2">
+                <span className="font-bold">Templates:</span>{" "}
+                {userData.quota.currentTemplates} /{" "}
+                {userData.quota.maxTemplates ?? "Unlimited"}
               </div>
               <div className="plugin-block mb-2">
                 <UsedSpace

@@ -1,6 +1,6 @@
 .flow-table {
   display: grid;
-  grid-template-columns: repeat(8, auto);
+  grid-template-columns: repeat(9, auto);
   gap: 0.5rem;
 }
 

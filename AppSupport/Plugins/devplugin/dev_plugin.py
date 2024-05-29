@@ -358,6 +358,14 @@ slurmBlockTest = SlurmBlock(
 
 plugin.addBlock(slurmBlockTest)
 
+extension_input_variable = PluginVariable(
+    id="extensions_input", name="Input", description="Input", type=VariableTypes.STRING
+)
+
+extension_output_variable = PluginVariable(
+    id="extensions_output", name="output", description="output", type=VariableTypes.STRING
+)
+
 
 def testExtensionsShortcuts(block: PluginBlock):
     text = "Hello this is some text"
@@ -388,12 +396,16 @@ def testExtensionsShortcuts(block: PluginBlock):
 
     Extensions().loadImage("google.png", title="Goolge image")
 
+    block.setOutput(extension_output_variable.id, block.inputs[extension_input_variable.id])
+
 
 testExtensionsShortcutsBlock = PluginBlock(
     name="Test extensions shortcuts",
     description="Tests extensions shortcuts",
     action=testExtensionsShortcuts,
     id="test_extensions_shorcuts",
+    inputs=[extension_input_variable],
+    outputs=[extension_output_variable],
 )
 
 plugin.addBlock(testExtensionsShortcutsBlock)

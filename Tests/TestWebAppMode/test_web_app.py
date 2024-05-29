@@ -90,12 +90,19 @@ def test_extra_field_optional_fields():
 
 
 def test_default_quotas_valid_input():
-    raw_data = {"maxStorage": 200, "maxFlows": 15, "maxTime": 20, "resetTime": 30}
+    raw_data = {
+        "maxStorage": 200,
+        "maxFlows": 15,
+        "maxTemplates": 15,
+        "maxTime": 20,
+        "resetTime": 30,
+    }
     default_quotas = DefaultQuotas(raw_data)
     assert default_quotas.maxStorage == 200
     assert default_quotas.maxFlows == 15
     assert default_quotas.maxTime == 20
     assert default_quotas.resetTime == 30
+    assert default_quotas.maxTemplates == 15
 
 
 def test_default_quotas_missing_fields():
@@ -114,6 +121,7 @@ def test_default_quotas_optional_fields():
     assert default_quotas.maxFlows == 15
     assert default_quotas.maxTime == 10  # Default value
     assert default_quotas.resetTime == 30  # Default value
+    assert default_quotas.maxTemplates == 10  # Default value
 
 
 def test_auth_valid_input():
@@ -234,7 +242,13 @@ def test_database_valid_input():
             {"id": "field1", "name": "field1", "type": "string"},
             {"id": "field1", "name": "field2", "type": "integer"},
         ],
-        "defaultQuotas": {"maxStorage": 200, "maxFlows": 15, "maxTime": 20, "resetTime": 30},
+        "defaultQuotas": {
+            "maxStorage": 200,
+            "maxFlows": 15,
+            "maxTemplates": 15,
+            "maxTime": 20,
+            "resetTime": 30,
+        },
     }
     database = DatabaseConfig(raw_data)
     assert database.path == "users.db"
@@ -243,6 +257,7 @@ def test_database_valid_input():
     assert cast(DefaultQuotas, database.defaultQuotas).maxFlows == 15
     assert cast(DefaultQuotas, database.defaultQuotas).maxTime == 20
     assert cast(DefaultQuotas, database.defaultQuotas).resetTime == 30
+    assert cast(DefaultQuotas, database.defaultQuotas).maxTemplates == 15
 
 
 def test_database_missing_fields():
@@ -297,7 +312,13 @@ def test_scret_key_database():
             {"id": "field1", "name": "field1", "type": "string"},
             {"id": "field1", "name": "field2", "type": "integer"},
         ],
-        "defaultQuotas": {"maxStorage": 200, "maxFlows": 15, "maxTime": 20, "resetTime": 30},
+        "defaultQuotas": {
+            "maxStorage": 200,
+            "maxFlows": 15,
+            "maxTemplates": 15,
+            "maxTime": 20,
+            "resetTime": 30,
+        },
     }
 
     db = DatabaseConfig(raw_database)
@@ -312,7 +333,13 @@ def test_no_scret_key_database():
             {"id": "field1", "name": "field1", "type": "string"},
             {"id": "field1", "name": "field2", "type": "integer"},
         ],
-        "defaultQuotas": {"maxStorage": 200, "maxFlows": 15, "maxTime": 20, "resetTime": 30},
+        "defaultQuotas": {
+            "maxStorage": 200,
+            "maxFlows": 15,
+            "maxTemplates": 15,
+            "maxTime": 20,
+            "resetTime": 30,
+        },
     }
 
     db = DatabaseConfig(raw_database)
@@ -353,11 +380,17 @@ def test_file_management_initialization_empty():
 
 
 def test_anonymous_quotas_initialization():
-    raw_anonymous_quotas = {"maxFlows": 20, "maxStorage": 1000, "maxTime": 200}
+    raw_anonymous_quotas = {
+        "maxFlows": 20,
+        "maxStorage": 1000,
+        "maxTemplates": 15,
+        "maxTime": 200,
+    }
     quotas = AnonymousQuotas(raw_anonymous_quotas)
     assert quotas.maxFlows == 20
     assert quotas.maxStorage == 1000
     assert quotas.maxTime == 200
+    assert quotas.maxTemplates == 15
 
 
 def test_user_management_registration_activation_requirement():

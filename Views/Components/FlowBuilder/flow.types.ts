@@ -269,6 +269,11 @@ export type Flow = {
    * Total seconds accumulated for all the runs of the flow
    */
   elapsed: number;
+
+  /**
+   * True when the user wants to store the flow as a preset
+   */
+  template?: boolean;
 };
 
 export enum DraggableEntity {
