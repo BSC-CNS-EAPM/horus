@@ -299,7 +299,7 @@ function MolstarPanel({ expand }: { expand?: boolean }) {
         toggleMolstar();
         molstarPanelRef.current?.expand();
         molstarPanelRef.current?.resize(100);
-      }, 100);
+      }, 500);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
