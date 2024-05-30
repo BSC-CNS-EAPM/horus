@@ -2881,7 +2881,9 @@ class HorusServer:
                     return flask.jsonify({"ok": False, "msg": "Missing settings"})
 
                 try:
-                    self.settingsManager.saveSettings(settings, allowUnsafe=True)
+                    # Use the app support dir of the GLOBAL app
+                    settingsManager = SettingsManager(self.appSupportDir)
+                    settingsManager.saveSettings(settings, allowUnsafe=True)
                     return flask.jsonify({"ok": True})
                 except Exception as exc:
                     return flask.jsonify({"ok": False, "msg": str(exc)})
