@@ -268,7 +268,7 @@ function Login({
             className="nbd-btn w-100 animated-gradient"
             onClick={login}
           >
-            {disableLogin ? "Loging in..." : "Sign in"}
+            {disableLogin ? "Logging in..." : "Sign in"}
           </button>
         </div>
         {loginAttempts > 0 && (
