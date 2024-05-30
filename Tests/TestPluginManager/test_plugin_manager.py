@@ -1,4 +1,5 @@
 from Server.PluginManager import PluginManager
+from Server.RemotesManager import RemotesManager
 from HorusAPI import Plugin
 import os
 import sys
@@ -585,9 +586,11 @@ def test_test_plugin_config_update():
 
     plugin = pluginManager._checkPlugin(pluginDir)
 
-    configPath = pluginManager._pluginConfigPath(plugin)
+    remotes = RemotesManager("AppSupport").listRemotes(includeLocal=True)
 
-    plugin._updateConfigs(configPath)
+    for remote in remotes:
+        configPath = pluginManager._pluginConfigPath(plugin, remote["name"])
+        plugin._updateConfigs(configPath)
 
 
 def test_test_plugin_saveconfig():
@@ -603,9 +606,12 @@ def test_test_plugin_saveconfig():
 
     configBlock._updateVariables({"myVariable": "newConfig"})
 
-    newConfig = {"newConfig": [configBlock._toDict()]}
+    newConfig = [configBlock._toDict()]
 
-    pluginManager.saveConfig(newConfig)
+    remotes = RemotesManager("AppSupport").listRemotes(includeLocal=True)
+
+    for remote in remotes:
+        pluginManager.saveConfig(newConfig, remote["name"])
 
     # Reload the plugin
     pluginManager._loadPlugin(pluginDir)
@@ -619,9 +625,10 @@ def test_test_plugin_saveconfig():
     # Reset the config
     configBlock._updateVariables({"myVariable": "DEFAULTVALUE"})
 
-    newConfig = {"newConfig": [configBlock._toDict()]}
+    newConfig = [configBlock._toDict()]
 
-    pluginManager.saveConfig(newConfig)
+    for remote in remotes:
+        pluginManager.saveConfig(newConfig, remote["name"])
 
     # Reload the plugin
     pluginManager._loadPlugin(pluginDir)

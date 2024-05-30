@@ -296,20 +296,27 @@ class PluginManager(metaclass=HorusSingleton):
                 if newVersionIsHigher:
                     print(f"Upgrading plugin {loadedPlugin.info['name']}...")
 
-                    # Backup the plugin configuration to the new plugin folder
-                    currentConfigPath = self._pluginConfigPath(
-                        self._getPluginByID(loadedPlugin.id)
-                    )
-                    newConfigPath = self._pluginConfigPath(loadedPlugin)
+                    for config in RemotesManager(self.appSupportDir).listRemotes(
+                        includeLocal=True
+                    ):
+                        remoteName = config.get("name")
+                        if not remoteName:
+                            continue
 
-                    # Read the current config if it exists, and update the new plugin config
-                    if os.path.exists(currentConfigPath):
-                        print("Backing up plugin configuration...")
-                        with open(currentConfigPath, "r", encoding="utf-8") as f:
-                            currentConfig = json.load(f)
+                        # Backup the plugin configuration to the new plugin folder
+                        currentConfigPath = self._pluginConfigPath(
+                            self._getPluginByID(loadedPlugin.id), remoteName
+                        )
+                        newConfigPath = self._pluginConfigPath(loadedPlugin, remoteName)
 
-                        # Update the new plugin config
-                        loadedPlugin._saveConfig(newConfigPath, currentConfig)
+                        # Read the current config if it exists, and update the new plugin config
+                        if os.path.exists(currentConfigPath):
+                            print(f"Backing up plugin configuration for remote '{remoteName}'")
+                            with open(currentConfigPath, "r", encoding="utf-8") as f:
+                                currentConfig = json.load(f)
+
+                            # Update the new plugin config
+                            loadedPlugin._saveConfig(newConfigPath, currentConfig)
 
                     # Remove the old plugin
                     self.loadedPlugins.remove(self._getPluginByID(loadedPlugin.id))
@@ -496,33 +503,9 @@ class PluginManager(metaclass=HorusSingleton):
                 #     + "In order to update it, uninstall it first."
                 # )
 
-        # Create the config folder
-        # configDir = os.path.join(pluginPath, "config")
-        configDir = os.path.dirname(self._pluginConfigPath(plugin))
-
-        # Create it only if the plugin needs configs
-        if not os.path.exists(configDir):
-            try:
-                os.makedirs(configDir)
-            # Except a read-only filesystem
-            except OSError as ose:
-                logging.getLogger("Horus").warning(
-                    "Could not create config folder for plugin %s. "
-                    + "The filesystem is read-only.",
-                    plugin.info["name"],
-                )
-
-                raise Exception(
-                    f"Could not create config folder for plugin {plugin.info['name']}. "
-                    + "The filesystem is read-only."
-                ) from ose
-
         # Add the plugin to the loaded plugins
         if appendToLoaded:
             self.loadedPlugins.append(plugin)
-
-        # Init the plugin config
-        self._initConfig(plugin)
 
         # Return the plugin in case its needed
         return plugin
@@ -897,20 +880,36 @@ class PluginManager(metaclass=HorusSingleton):
             logging.getLogger("Horus").error(msg)
             raise Exception(msg)
 
-    def getPlugins(self):
+    def getPlugins(self) -> dict:
         """
         Returns a list of all the loaded plugins (blocks + configs).
         """
         self._initializePlugins()
         listedPlugins = []
         errorPlugins = []
+
+        # Get the remote list for listing the configurations
+        # THIS INDICATES THAT PER-REMOTE-CONFIGURATION OF PLUGINS
+        # IS NOT AVAILABLE ON WEBAPP MODE
+        remoteList = RemotesManager(self.appSupportDir).listRemotes(includeLocal=True)
+
         for p in self.loadedPlugins:
             info = p.info
             info["actions"] = str(len(p.actions) if p.actions else 0)
             info["views"] = str(len(p.views))
             info["id"] = p.id
             info["blocks"] = self._getBlocksFromList(p, p.blocks)
-            info["config"] = p._configToDict()  # pylint: disable=protected-access
+            info["config"] = []
+            # Config per remotes
+            if len(p._configs) > 0:
+                for remote in remoteList:
+                    p._updateConfigs(self._pluginConfigPath(p, remote["name"]))
+                    info["config"].append(
+                        {
+                            "remote": remote["name"],
+                            "config": p._configToDict(),  # pylint: disable=protected-access
+                        }
+                    )
             listedPlugins.append(info)
         for ep in self.errorPlugins:
             info = ep.info
@@ -1018,15 +1017,14 @@ class PluginManager(metaclass=HorusSingleton):
         # Find the plugin
         plugin = self._getPluginByID(block.id.split(".")[0])
 
-        # Read the config file for the block
-        configPath = self._pluginConfigPath(plugin)
+        # Read the config file for the block and the selected remote
+        configPath = self._pluginConfigPath(plugin, block.selectedRemote)
 
-        if os.path.exists(configPath):
-            # Set the plugin config to execute the block
-            plugin._updateConfigs(configPath)  # pylint: disable=protected-access
+        # Set the plugin config to execute the block
+        plugin._updateConfigs(configPath)  # pylint: disable=protected-access
 
-            # Set the block config to execute the block
-            block.config = plugin.config
+        # Set the block config to execute the block
+        block.config = plugin.config
 
         try:
             remoteManager = RemotesManager(currentUser.appSupportDir)
@@ -1194,23 +1192,23 @@ class PluginManager(metaclass=HorusSingleton):
     #         blocks += block.getSubBlocks()
     #     return blocks
 
-    def _initConfig(self, plugin: Plugin):
-        """
-        Initializes the config file for the plugins.
-        """
+    # def _initConfig(self, plugin: Plugin, remote: str):
+    #     """
+    #     Initializes the config file for the plugins.
+    #     """
 
-        configPath = self._pluginConfigPath(plugin)
+    #     configPath = self._pluginConfigPath(plugin)
 
-        # If the config file does not exist, create it
-        if not os.path.exists(configPath):
-            plugin._createConfig(configPath)
-        else:
-            # If the config file exists, read it
-            plugin._updateConfigs(configPath)
+    #     # If the config file does not exist, create it
+    #     if not os.path.exists(configPath):
+    #         plugin._createConfig(configPath)
+    #     else:
+    #         # If the config file exists, read it
+    #         plugin._updateConfigs(configPath)
 
-    def _pluginConfigPath(self, plugin: Plugin):
+    def _pluginConfigPath(self, plugin: Plugin, remote: str):
         """
-        Returns the path of the config file for a plugin.
+        Returns the path of the config file for a plugin given its specific remote.
         """
 
         # # Find the plugin folder
@@ -1219,23 +1217,39 @@ class PluginManager(metaclass=HorusSingleton):
 
         configDir = os.path.join(plugin._path, "config")
 
+        # Create it only if the plugin needs configs
+        if not os.path.exists(configDir):
+            try:
+                os.makedirs(configDir)
+            # Except a read-only filesystem
+            except OSError as ose:
+                logging.getLogger("Horus").warning(
+                    "Could not create config folder for plugin %s. "
+                    + "The filesystem is read-only.",
+                    plugin.info["name"],
+                )
+
+                raise Exception(
+                    f"Could not create config folder for plugin {plugin.info['name']}. "
+                    + "The filesystem is read-only."
+                ) from ose
+
         # If the config folder is inside a default plugin (read-only)
         # move it to the user's app support dir
         if plugin.info["default"]:
             configDir = os.path.join(self.pluginsDir, plugin.id, "config")
 
         # Find the block config file
-        pluginConfigFile = os.path.join(configDir, f"{plugin.id}.json")
+        pluginConfigFile = os.path.join(configDir, f"{plugin.id}_{remote}.json")
 
         return pluginConfigFile
 
-    def saveConfig(self, config: typing.Dict[str, typing.Any]):
+    def saveConfig(self, newConfig: list, remote: str):
         """
-        Saves the config to the config file.
+        Saves the config to the config file specific for the remote.
         """
 
         # Loop through the newConfig array
-        newConfig = config["newConfig"]
         output = ""
         for config in newConfig:
             # Get the ID of the config block
@@ -1250,7 +1264,7 @@ class PluginManager(metaclass=HorusSingleton):
             # block = plugin.getBlock(blockID)
 
             # Get the path of the config file
-            configDir = self._pluginConfigPath(plugin)
+            configDir = self._pluginConfigPath(plugin, remote)
 
             valuesToSave = {}
             for variable in config["variables"]:
@@ -1277,7 +1291,9 @@ class PluginManager(metaclass=HorusSingleton):
                 output += buf.getvalue()
 
         # Reload the plugins
-        self.reloadPlugins()
+        # NOT NECESSARY ANYMORE BECAUSE CONFIGURATION GETS LOADED WHEN THE BLOCK
+        # RUNS PER-REMOTE
+        # self.reloadPlugins()
 
         # Return the output to print in horusterm
         return output

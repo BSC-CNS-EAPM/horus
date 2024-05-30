@@ -96,14 +96,14 @@ export function VariableModalView(props: VariableModalViewProps) {
 
     // Add a section for the inputs
     groupedViews["Block inputs"] = [
-      <div className="flex flex-row gap-2 flex-wrap">
+      <div className="flex flex-col gap-2 flex-wrap">
         <InputView groups={block.inputs} />
       </div>,
     ];
 
     // And for the outputs
     groupedViews["Block outputs"] = [
-      <div className="flex flex-row gap-2 flex-wrap">
+      <div className="flex flex-col gap-2 flex-wrap">
         {block.outputs.map((variable, index) => (
           <SimpleVariableView
             key={

@@ -2051,6 +2051,7 @@ class Plugin:
     def _getConfig(self, id: str):
         """
         Returns a config by its ID.
+        Values are not accurate as per-remote configuration is not implemented here
 
         :param id: The ID of the config.
         """
@@ -2096,6 +2097,12 @@ class Plugin:
         Updates the values of the configs of the block.
         From the config JSON file.
         """
+
+        if len(self._configs) == 0:
+            return
+
+        if not os.path.exists(configPath):
+            self._createConfig(configPath)
 
         # Read the config file
         with open(configPath, "r", encoding="utf-8") as configFile:

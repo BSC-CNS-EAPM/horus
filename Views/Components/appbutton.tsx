@@ -8,6 +8,7 @@ type AppButtonProps = {
   style?: React.CSSProperties;
   children?: React.ReactNode;
   className?: string;
+  disabled?: boolean;
 };
 
 // Create a component called AppButton
@@ -18,6 +19,7 @@ function AppButton(props: AppButtonProps) {
     <div>
       {/* Create a button with the text and the action */}
       <button
+        disabled={props.disabled}
         id={props.id}
         className={className}
         onClick={props.action}

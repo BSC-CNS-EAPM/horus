@@ -6,7 +6,10 @@ export type HorusPlugin = {
   author: string;
   dependencies: Array<string>;
   blocks: Array<Block>;
-  config: Array<Block>;
+  config: Array<{
+    remote: string;
+    config: Array<Block>;
+  }>;
   default: boolean;
 };
 

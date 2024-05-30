@@ -119,7 +119,10 @@ class HorusUser(flask_login.UserMixin):
         self.registrationDate = typing.cast(datetime.datetime, userDict.get("registration_date"))
         self.lastLogin = typing.cast(datetime.datetime, userDict.get("last_login"))
         self.admin = userDict.get("admin", False)
-        self.group = userDict.get("group", 0)
+        self.group = userDict.get("group", "default")
+
+        if self.group is None:
+            self.group = "default"
 
         if self.email is None:
             raise Exception("User does not have an email")

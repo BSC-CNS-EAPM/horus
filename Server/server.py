@@ -1157,9 +1157,11 @@ class HorusServer:
         @self.server.route("/api/plugins/list", methods=["GET"])
         @self.verifyLogin
         def listPlugins():
-            plugins = self.pluginManager.getPlugins()
-
-            return flask.jsonify(plugins)
+            try:
+                plugins = self.pluginManager.getPlugins()
+                return flask.jsonify({"ok": True, "plugins": plugins})
+            except Exception as e:
+                return flask.jsonify({"ok": False, "msg": str(e)})
 
         @self.server.route("/api/plugins/listblocks", methods=["GET"])
         @self.verifyLogin
@@ -1314,9 +1316,17 @@ class HorusServer:
         @self.verifyAdmin
         def pluginConfig():
             data = request.get_json()
-            # Save the config
+            config = data.get("config")
+            remote = data.get("remote")
             try:
-                output = self.pluginManager.saveConfig(data)
+                if config is None:
+                    raise ValueError("Missing configuration")
+
+                if remote is None:
+                    raise ValueError("Missing remote")
+
+                # Save the config
+                output = self.pluginManager.saveConfig(config, remote)
                 self.socketio.emit("printTerm", output)
                 success = {
                     "ok": True,

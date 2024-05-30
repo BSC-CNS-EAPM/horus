@@ -1,5 +1,5 @@
 // React imports
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 
 // Web-server imports
 import { socket } from "../Utils/socket";
@@ -13,23 +13,37 @@ import AppButton from "../Components/appbutton";
 import RotatingLines from "../Components/RotatingLines/rotatinglines";
 import HorusContainer from "../Components/HorusContainer/horus_container";
 import BackArrowIcon from "../Components/Toolbar/Icons/BackArrow";
+import SidebarView from "../Components/SidebarView/sidebar_view";
 
 // TS Types
-import { HorusPlugin, Block } from "../Components/FlowBuilder/flow.types";
+import {
+  HorusPlugin,
+  Block,
+  PluginVariable,
+} from "../Components/FlowBuilder/flow.types";
 
 // Styles
 import "./plugin_manager.css";
 import "../CSS/colors.css";
 import "../CSS/animations.css";
 
-interface PluginConfigViewProps {
-  configBlocks: Block[];
-}
+type ConfigBlockType = Array<{
+  remote: string;
+  config: Block[];
+}>;
+
+type PluginConfigViewProps = {
+  configBlocks: ConfigBlockType;
+};
 
 function PluginConfigView(props: PluginConfigViewProps) {
   // Create a state to store the modified config
   const [tempChanges, setTempChanges] = useState<Block[]>([]);
   const [hasChanges, setHasChanges] = useState<boolean>(false);
+  const [selectedRemote, setSelectedRemote] = useState(
+    props.configBlocks[0]?.remote ?? "Error getting configuration"
+  );
+  const [saving, setSaving] = useState(false);
 
   const { configBlocks } = props;
 
@@ -55,8 +69,14 @@ function PluginConfigView(props: PluginConfigViewProps) {
       }
     } else {
       // Find the block that has the variable
-      for (let i = 0; i < configBlocks.length; i++) {
-        const variable = configBlocks[i]!.variables.find(
+      const configBlock = configBlocks.find((c) => c.remote === selectedRemote);
+
+      if (!configBlock) {
+        return;
+      }
+
+      for (let i = 0; i < configBlock.config.length; i++) {
+        const variable = configBlock.config[i]!.variables.find(
           (variable) => variable.id === changeID
         );
         if (variable) {
@@ -69,7 +89,7 @@ function PluginConfigView(props: PluginConfigViewProps) {
           }
 
           // If the variable exists, push the block to the tempChanges array
-          updatedChanges.push(configBlocks[i]!);
+          updatedChanges.push(configBlock.config[i]!);
           break;
         }
       }
@@ -79,56 +99,143 @@ function PluginConfigView(props: PluginConfigViewProps) {
   };
 
   const handleSave = async () => {
-    // Replace the config blocks with the tempChanges
-    const newConfig = [...configBlocks];
-    for (let i = 0; i < tempChanges.length; i++) {
-      const blockIndex = newConfig.findIndex(
-        (block) => block.id === tempChanges[i]!.id
-      )!;
-      newConfig[blockIndex] = tempChanges[i]!;
+    setSaving(true);
+
+    try {
+      // Replace the config blocks with the tempChanges
+      const configBlock = configBlocks.find((c) => c.remote === selectedRemote);
+
+      if (!configBlock) {
+        return;
+      }
+
+      const newConfig = [...configBlock?.config];
+      for (let i = 0; i < tempChanges.length; i++) {
+        const blockIndex = newConfig.findIndex(
+          (block) => block.id === tempChanges[i]!.id
+        )!;
+        newConfig[blockIndex] = tempChanges[i]!;
+      }
+
+      // Send the changes to the server
+      const header = {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      };
+
+      const body = JSON.stringify({
+        config: newConfig,
+        remote: selectedRemote,
+      });
+
+      const response = await horusPost("/api/plugins/config", header, body);
+      const data = await response.json();
+
+      if (!data.ok) {
+        alert(data.msg);
+        return;
+      }
+      setHasChanges(false);
+    } finally {
+      setSaving(false);
     }
+  };
 
-    // Send the changes to the server
-    const header = {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    };
+  const currentVariables = configBlocks.find(
+    (c) => c.remote === selectedRemote
+  );
 
-    const body = JSON.stringify({
-      newConfig: newConfig,
+  const availRemotes = configBlocks.map((c) => c.remote);
+
+  const getGroupedVariables = () => {
+    // Group the variables by category
+    const groupedVariables: Record<string, PluginVariable[]> = {};
+
+    currentVariables?.config.forEach((b) => {
+      return b.variables.forEach((variable) => {
+        if (!groupedVariables[variable.category]) {
+          groupedVariables[variable.category] = [];
+        }
+        groupedVariables[variable.category]!.push(variable);
+      });
     });
 
-    const response = await horusPost("/api/plugins/config", header, body);
-    const data = await response.json();
+    const groupedViews: Record<string, React.ReactNode[]> = {};
 
-    if (!data.ok) {
-      alert(data.msg);
-      return;
+    for (const [category, gVariables] of Object.entries(groupedVariables)) {
+      const variableViews = gVariables.map((gVar) => {
+        return (
+          <PluginVariableView
+            key={gVar.id}
+            variable={gVar}
+            onChange={handleModifyConfig}
+            customClass="w-fit"
+          />
+        );
+      });
+      groupedViews[category] = [
+        <div className="flex flex-col gap-2 flex-wrap">{variableViews}</div>,
+      ];
     }
-    setHasChanges(false);
+
+    return groupedViews;
   };
 
   return (
     <div className="flex flex-col gap-2 justify-center items-center w-full">
-      <div className="flex flex-row gap-2 flex-wrap w-full">
-        {/* Map the config blocks and place a <PluginVariable/> component */}
-        {configBlocks.map((block) => {
-          return block.variables.map((variable) => {
-            return (
-              <PluginVariableView
-                key={variable.id}
-                variable={variable}
-                onChange={handleModifyConfig}
-              />
-            );
-          });
-        })}
+      <div
+        className="plugin-variable"
+        // Override some of the plugin-variable
+        style={{
+          display: "flex",
+          flexDirection: "row",
+          justifyContent: "space-between",
+          fontSize: "1rem",
+          width: "calc(100% - 1rem)",
+        }}
+      >
+        <div className="flex flex-row w-fukk justify-start gap-2 items-center">
+          <span className="plugin-variable-name">Remote:</span>
+          <select
+            onChange={(e) => {
+              if (hasChanges) {
+                alert("You have unsaved changes for the current remote.");
+                return;
+              }
+              setTempChanges([]);
+              setHasChanges(false);
+              setSelectedRemote(e.target.value);
+            }}
+            value={selectedRemote}
+          >
+            {availRemotes.map((a) => {
+              return (
+                <option key={a} value={a}>
+                  {a}
+                </option>
+              );
+            })}
+          </select>
+        </div>
+        {currentVariables && (
+          <AppButton
+            disabled={saving}
+            text={saving ? "Saving..." : "Save"}
+            action={handleSave}
+            className={`${hasChanges ? "bg-orange-300" : ""}`}
+          />
+        )}
       </div>
-      <AppButton
-        text="Save"
-        action={handleSave}
-        className={hasChanges ? "bg-orange-300" : ""}
-      />
+      <div className="flex flex-col gap-2 flex-wrap w-full">
+        {/* Map the config blocks and place a <PluginVariable/> component */}
+        {currentVariables ? (
+          <SidebarView key={selectedRemote} views={getGroupedVariables()} />
+        ) : (
+          <div className="w-full text-center text-red-600">
+            Error reading remote configuration
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -367,8 +474,13 @@ export function PluginManager({
       const response = await horusGet("/api/plugins/list");
       const data = await response.json();
 
-      setPluginList(data);
-      setFilteredPluginList(data);
+      if (!data.ok) {
+        alert(data.msg);
+        return;
+      }
+
+      setPluginList(data.plugins);
+      setFilteredPluginList(data.plugins);
 
       // Set the development mode
       const key = "developmentMode";
@@ -390,6 +502,7 @@ export function PluginManager({
   };
 
   const reloadPlugins = async () => {
+    setLoading(true);
     await horusGet("/api/plugins/reload");
     alert("Plugins reloaded!");
     fetchData();

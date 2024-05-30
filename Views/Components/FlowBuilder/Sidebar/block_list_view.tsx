@@ -134,6 +134,7 @@ export function BlockListSidebar() {
                 <AppButton
                   className="m-0"
                   action={async () => {
+                    setLoadingBlocks(true);
                     await horusGet("/api/plugins/reload");
                     alert("Plugins reloaded!");
                     fetchBlocks();

@@ -11,6 +11,7 @@ from HorusAPI import (
     MolstarAPI,
     PluginPage,
     CustomVariable,
+    PluginConfig,
 )
 
 
@@ -464,3 +465,46 @@ pluginPathActionBlock = PluginBlock(
 )
 
 plugin.addBlock(pluginPathActionBlock)
+
+
+# Configs
+
+config_catego_1 = PluginVariable(
+    id="config_1",
+    name="Config 1",
+    description="Configuration number 1",
+    type=VariableTypes.STRING,
+    category="Special",
+)
+
+config_catego_2 = PluginVariable(
+    id="config_2",
+    name="Config 2",
+    description="Configuration number 2",
+    type=VariableTypes.STRING,
+    category="Necessary",
+)
+
+test_config = PluginConfig(
+    id="test_config",
+    name="Test config",
+    description="Description configuration",
+    variables=[config_catego_1, config_catego_2],
+)
+
+plugin.addConfig(test_config)
+
+
+def test_config_action(block: PluginBlock):
+    print("Selected remote: ", block.selectedRemote)
+    print("Block config:", block.config)
+
+
+test_config_block = PluginBlock(
+    id="Test_config_block",
+    name="Test config block",
+    description="Test config block",
+    action=test_config_action,
+)
+
+plugin.addBlock(test_config_block)

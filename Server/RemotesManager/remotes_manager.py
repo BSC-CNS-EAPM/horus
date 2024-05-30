@@ -1130,6 +1130,9 @@ class RemotesManager:
         if newConfig.get("name") is None:
             raise Exception("The name of the remote is required")
 
+        # Fix the name of the remote to not have special characters
+        newConfig["name"] = newConfig["name"].replace(" ", "_")
+
         if newConfig.get("username") is None:
             raise Exception("The user of the remote is required")
 
@@ -1184,7 +1187,7 @@ class RemotesManager:
         with open(remotesPath, "w", encoding="utf-8") as file:
             json.dump(remotesConfig, file)
 
-    def listRemotes(self, includeLocal: bool = False):
+    def listRemotes(self, includeLocal: bool = False) -> list[dict[str, t.Any]]:
         """
         Loads the ssh configuration file and returns the list of remotes
         """
