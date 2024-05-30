@@ -194,9 +194,10 @@ function PluginConfigView(props: PluginConfigViewProps) {
           width: "calc(100% - 1rem)",
         }}
       >
-        <div className="flex flex-row w-fukk justify-start gap-2 items-center">
+        <div className="flex flex-row w-full justify-start gap-2 items-center">
           <span className="plugin-variable-name">Remote:</span>
           <select
+            className="w-full"
             onChange={(e) => {
               if (hasChanges) {
                 alert("You have unsaved changes for the current remote.");
