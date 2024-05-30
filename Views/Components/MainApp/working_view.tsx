@@ -1,5 +1,5 @@
 // React imports
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 // Horus imports
 import Molstar from "../Molstar/molstar";
@@ -219,18 +219,19 @@ export default function WorkingView(props: WorkingViewProps) {
 
 function MolstarPanel({ expand }: { expand?: boolean }) {
   const [showMolstar, setShowMolstar] = useState<boolean>(true);
-  const [initialMolstarHidden, setInitialMolstarHidden] =
-    useState<boolean>(true);
+  const [initialMolstarHidden, setInitialMolstarHidden] = useState<boolean>(
+    window.horusSettings["molstarHidden"]?.value && !expand
+  );
 
   const [isDragging, setIsDragging] = useState<boolean>(false);
 
   // Panels ref
   const molstarPanelRef = useRef<ImperativePanelHandle | null>(null);
 
-  const toggleMolstar = () => {
+  const toggleMolstar = useCallback(() => {
     if (initialMolstarHidden) {
       setInitialMolstarHidden(false);
-      molstarPanelRef.current?.resize(100);
+      molstarPanelRef.current?.resize(30);
     }
 
     if (!showMolstar) {
@@ -240,26 +241,7 @@ function MolstarPanel({ expand }: { expand?: boolean }) {
       molstarPanelRef.current?.collapse();
       setShowMolstar(false);
     }
-  };
-
-  const handlePanelSettings = () => {
-    // Get the "molstarHidden" setting
-    const molstarHidden = window.horusSettings["molstarHidden"]?.value;
-
-    if (molstarHidden) {
-      // Hide the molstar panel
-      molstarPanelRef.current?.collapse();
-
-      setInitialMolstarHidden(true);
-      setShowMolstar(false);
-    } else {
-      // Show the molstar panel
-      setInitialMolstarHidden(false);
-      setShowMolstar(true);
-      // Hide the molstar panel
-      molstarPanelRef.current?.expand();
-    }
-  };
+  }, [initialMolstarHidden, showMolstar]);
 
   const handleMolstarDrag = (dragging: boolean) => {
     setIsDragging(dragging);
@@ -287,23 +269,6 @@ function MolstarPanel({ expand }: { expand?: boolean }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showMolstar, initialMolstarHidden]);
 
-  useEffect(() => {
-    // Handle the panel settings as are needed when mounting this view
-    handlePanelSettings();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [molstarPanelRef.current]);
-
-  useEffect(() => {
-    if (expand) {
-      setTimeout(() => {
-        toggleMolstar();
-        molstarPanelRef.current?.expand();
-        molstarPanelRef.current?.resize(100);
-      }, 500);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   return (
     <>
       <ResizeHandle onDragging={handleMolstarDrag} />
@@ -312,7 +277,7 @@ function MolstarPanel({ expand }: { expand?: boolean }) {
         id="molstar-panel"
         order={2}
         collapsible={true}
-        defaultSize={0}
+        defaultSize={expand ? 100 : initialMolstarHidden ? 0 : 30}
         minSize={30}
         ref={molstarPanelRef}
         onCollapse={
