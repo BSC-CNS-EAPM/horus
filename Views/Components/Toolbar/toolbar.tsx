@@ -470,7 +470,9 @@ export default function HorusToolbar() {
         },
         {
           name: "File explorer",
-          hidden: window.horusInternal.mode !== "server",
+          hidden:
+            window.horusInternal.mode !== "server" &&
+            window.horusInternal.mode !== "webapp",
           svgPath: <CreateFolderIcon />,
           onClick: () => {
             fileExplorerEvent();
