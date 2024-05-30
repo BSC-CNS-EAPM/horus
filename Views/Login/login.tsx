@@ -154,6 +154,7 @@ function Login({
   >;
 }) {
   const [loginAttempts, setLoginAttempts] = useState<number>(0);
+  const [disableLogin, setDisableLogin] = useState(false);
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -193,37 +194,45 @@ function Login({
   }, []);
 
   const login = async (event: any) => {
-    event.preventDefault();
+    setDisableLogin(true);
 
-    const email = (document.getElementById("email")! as HTMLInputElement).value;
-    const password = (document.getElementById("password")! as HTMLInputElement)
-      .value;
-
-    const body = JSON.stringify({
-      email: email,
-      password: password,
-    });
-
-    let response;
     try {
-      response = await (await horusPost("/users/login", null, body)).json();
-    } catch (error) {
-      window.location.href = "/"; // or the redirect URL
-      return;
-    }
+      event.preventDefault();
 
-    if (!response.ok) {
-      setLoginAttempts(1);
-    }
+      const email = (document.getElementById("email")! as HTMLInputElement)
+        .value;
+      const password = (
+        document.getElementById("password")! as HTMLInputElement
+      ).value;
 
-    setMessages({
-      ok: response.ok,
-      msg: response.msg,
-    });
+      const body = JSON.stringify({
+        email: email,
+        password: password,
+      });
 
-    // Redirect to / if the login was successful
-    if (response.ok) {
-      window.location.href = "/";
+      let response;
+      try {
+        response = await (await horusPost("/users/login", null, body)).json();
+      } catch (error) {
+        window.location.href = "/"; // or the redirect URL
+        return;
+      }
+
+      if (!response.ok) {
+        setLoginAttempts(1);
+      }
+
+      setMessages({
+        ok: response.ok,
+        msg: response.msg,
+      });
+
+      // Redirect to / if the login was successful
+      if (response.ok) {
+        window.location.href = "/";
+      }
+    } finally {
+      setDisableLogin(false);
     }
   };
 
@@ -254,11 +263,12 @@ function Login({
             <label htmlFor="password">Password</label>
           </div>
           <button
+            disabled={disableLogin}
             id="signInButton"
             className="nbd-btn w-100 animated-gradient"
             onClick={login}
           >
-            Sign in
+            {disableLogin ? "Loging in..." : "Sign in"}
           </button>
         </div>
         {loginAttempts > 0 && (
@@ -323,57 +333,63 @@ function Register({
   const [captcha, setCaptcha] = useState<string>("");
   const [hasTos, setHasTos] = useState<boolean>(false);
   const [tosAccepted, setTosAccepted] = useState<boolean>(false);
+  const [registerDisabled, setRegisterDisabled] = useState(false);
 
   const register = async () => {
-    // Verify the captcha
-    if (!validateCaptcha(captcha)) {
-      setMessages({ ok: false, msg: "Captcha is invalid" });
-      return;
-    }
-
-    const parsedFields: StrippedField = {};
-
-    parsedFields["email"] = requiredFields.email;
-    parsedFields["password"] = requiredFields.password;
-
-    // If the email or password is missing, alert the user
-    if (!parsedFields["email"] || !parsedFields["password"]) {
-      setMessages(
-        parsedFields["email"]
-          ? { ok: false, msg: "Password is required" }
-          : { ok: false, msg: "Email is required" }
-      );
-      return;
-    }
-
-    for (const [key, value] of Object.entries(extraFieldsValues)) {
-      parsedFields[key] = value;
-    }
-
-    // If some field does not have a value, alert the user
-    for (const f of extraFieldsList) {
-      if (!parsedFields[f.id]) {
-        setMessages({ ok: false, msg: `${f.name} is required` });
+    setRegisterDisabled(true);
+    try {
+      // Verify the captcha
+      if (!validateCaptcha(captcha)) {
+        setMessages({ ok: false, msg: "Captcha is invalid" });
         return;
       }
-    }
 
-    const body = JSON.stringify({
-      fields: parsedFields,
-    });
+      const parsedFields: StrippedField = {};
 
-    const response = await await horusPost("/users/register", null, body);
+      parsedFields["email"] = requiredFields.email;
+      parsedFields["password"] = requiredFields.password;
 
-    const data = await response.json();
+      // If the email or password is missing, alert the user
+      if (!parsedFields["email"] || !parsedFields["password"]) {
+        setMessages(
+          parsedFields["email"]
+            ? { ok: false, msg: "Password is required" }
+            : { ok: false, msg: "Email is required" }
+        );
+        return;
+      }
 
-    setMessages({
-      ok: data.ok,
-      msg: data.msg,
-    });
+      for (const [key, value] of Object.entries(extraFieldsValues)) {
+        parsedFields[key] = value;
+      }
 
-    if (data.ok) {
-      // Redirect to login
-      setView("login", false);
+      // If some field does not have a value, alert the user
+      for (const f of extraFieldsList) {
+        if (!parsedFields[f.id]) {
+          setMessages({ ok: false, msg: `${f.name} is required` });
+          return;
+        }
+      }
+
+      const body = JSON.stringify({
+        fields: parsedFields,
+      });
+
+      const response = await await horusPost("/users/register", null, body);
+
+      const data = await response.json();
+
+      setMessages({
+        ok: data.ok,
+        msg: data.msg,
+      });
+
+      if (data.ok) {
+        // Redirect to login
+        setView("login", false);
+      }
+    } finally {
+      setRegisterDisabled(false);
     }
   };
 
@@ -511,9 +527,9 @@ function Register({
         <button
           className="nbd-btn w-100 animated-gradient"
           onClick={register}
-          disabled={hasTos && !tosAccepted}
+          disabled={registerDisabled || (hasTos && !tosAccepted)}
         >
-          Register
+          {registerDisabled ? "Registering..." : "Register"}
         </button>
       </div>
       <div className="mt-4">Already have an account?</div>

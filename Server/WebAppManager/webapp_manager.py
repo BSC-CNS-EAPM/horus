@@ -348,7 +348,10 @@ class MailServer:
 
                 logging.getLogger("Horus").debug("Sent email to %s", to)
         except Exception as e:
-            raise Exception(f"Error sending activation email to {to}: {e}") from e
+            logging.getLogger("Horus").error(
+                "Error sending activation email to %s: %s", to, str(e)
+            )
+            raise Exception("Internal server error") from e
 
     def sendActivationMail(self, to: str, secretKey: str) -> None:
         """

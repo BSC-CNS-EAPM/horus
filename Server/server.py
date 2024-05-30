@@ -2238,6 +2238,12 @@ class HorusServer:
 
                 # Login the user
                 try:
+
+                    # Wait artificially 2 seconds in order to prevent brute-force attacks
+                    import time
+
+                    time.sleep(2)
+
                     user = db.loginUser(email, password)
 
                     loggedIn = _loginUserInternal(user)
@@ -2422,11 +2428,18 @@ class HorusServer:
 
             if (
                 self.webAppManager is None
-                or self.webAppManager.userManagement.mailServer is None
                 or not self.webAppManager.userManagement.requireRegistration
                 or self.webAppManager.db is None
             ):
                 raise Exception("No user registration required")
+
+            if self.webAppManager.userManagement.mailServer is None:
+                logging.getLogger("Horus").error(
+                    "Cannot reset user passwords without a MailServer."
+                    + " To enable this functionality, set 'requireActivation'"
+                    + " to true and configure the Mail in the horus.config.json file"
+                )
+                raise Exception("Please contact support in order to recover your password")
 
             if request.method == "GET":
 
