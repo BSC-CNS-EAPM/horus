@@ -305,6 +305,7 @@ function BlockExtensionsView(props: { block: Block }) {
       style={{
         transform: "translateY(-2rem)",
         position: "absolute",
+        pointerEvents: "all",
       }}
     >
       {block.extensionsToOpen.map((extension, index) => {
