@@ -41,7 +41,6 @@ export default function WorkingView(props: WorkingViewProps) {
   const [iframeView, setIframeView] = useState<React.ReactNode | null>(null);
   const [showIFrame, setShowIFrame] = useState(false);
   const [showConsole, setShowConsole] = useState(false);
-  const [showFileExplorer, setShowFileExplorer] = useState(false);
 
   const handleMainView = (event: Event) => {
     const mainView = (event as CustomEvent).detail;
@@ -99,23 +98,17 @@ export default function WorkingView(props: WorkingViewProps) {
     setShowConsole((currentShowConsole) => !currentShowConsole);
   };
 
-  const toggleFileExplorer = () => {
-    setShowFileExplorer((currentShowFileExplorer) => !currentShowFileExplorer);
-  };
-
   useEffect(() => {
     // Event listeners
     window.addEventListener("mainView", handleMainView);
     window.addEventListener("loadExtension", handleIFrame);
     window.addEventListener("toggleConsole", toggleConsole);
-    window.addEventListener("toggleFileExplorer", toggleFileExplorer);
     socket.on("openExtension", handleIFrame);
 
     return () => {
       window.removeEventListener("mainView", handleMainView);
       window.removeEventListener("loadExtension", handleIFrame);
       window.removeEventListener("toggleConsole", toggleConsole);
-      window.removeEventListener("toggleFileExplorer", toggleFileExplorer);
       socket.off("openExtension", handleIFrame);
     };
   }, []);
@@ -206,13 +199,6 @@ export default function WorkingView(props: WorkingViewProps) {
         </PanelGroup>
         <div className={showConsole ? "block" : "hidden"}>{term.current}</div>
       </div>
-      {/* Used for the fileExplorer event */}
-      {!window.horusInternal.isDesktop && showFileExplorer && (
-        <ServerFileExplorerModal
-          open={showFileExplorer}
-          setOpen={setShowFileExplorer}
-        />
-      )}
     </div>
   );
 }

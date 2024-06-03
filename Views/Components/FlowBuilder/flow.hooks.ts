@@ -1698,6 +1698,12 @@ export function useFlowBuilder() {
     };
   }, [loadSocketFlow]);
 
+  const [showFileExplorer, setShowFileExplorer] = useState(false);
+
+  const toggleFileExplorer = () => {
+    setShowFileExplorer((currentShowFileExplorer) => !currentShowFileExplorer);
+  };
+
   // Remove the event listeners
   const removeListeners = useCallback(() => {
     window.removeEventListener("newFlow", handleNewFlow);
@@ -1712,7 +1718,7 @@ export function useFlowBuilder() {
 
     window.removeEventListener("undo", handleUndo);
     window.removeEventListener("redo", handleRedo);
-    // window.removeEventListener("wheel", handleMouseWheel);
+    window.removeEventListener("toggleFileExplorer", toggleFileExplorer);
   }, [
     handleNewFlow,
     handleOpenFlow,
@@ -1749,8 +1755,8 @@ export function useFlowBuilder() {
     // Add an event listener for the center view button
     window.addEventListener("centerView", centerView);
 
-    // Event for the wheel mouse event
-    // window.addEventListener("wheel", handleMouseWheel);
+    // Event for the fileExplorer
+    window.addEventListener("toggleFileExplorer", toggleFileExplorer);
   }, [
     handleUndo,
     handleRedo,
@@ -1836,8 +1842,12 @@ export function useFlowBuilder() {
     },
     misc: {
       fileProps,
+      // File explorer for opening / saving .flows
       serverFilePickerOpen,
       setServerFilePickerOpen,
+      // This second file explorer is only for browsing, uploading, removing files...
+      showFileExplorer,
+      setShowFileExplorer,
     },
   };
 }

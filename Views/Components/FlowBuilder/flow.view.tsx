@@ -170,6 +170,14 @@ function FlowBuilderView() {
             open={flowBuilderState.misc.serverFilePickerOpen}
             setOpen={flowBuilderState.misc.setServerFilePickerOpen}
           />
+          {/* Used for the fileExplorer event */}
+          {!window.horusInternal.isDesktop &&
+            flowBuilderState.misc.showFileExplorer && (
+              <ServerFileExplorerModal
+                open={flowBuilderState.misc.showFileExplorer}
+                setOpen={flowBuilderState.misc.setShowFileExplorer}
+              />
+            )}
         </div>
       </FlowContext.Provider>
       {debugFlow && <DebugFlow flowBuilder={flowBuilderState} />}
