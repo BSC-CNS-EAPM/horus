@@ -357,6 +357,12 @@ class UserFileExplorer(FileExplorer):
             if self.relativeTo.name == path.name:
                 path = self.userPathBoundary.joinpath(path)
             else:
+                if not self.relativeTo.is_absolute():
+                    # If the relative to is not absolute either, assume its
+                    # a flow directory, and convert the path to aboslute
+                    self.relativeTo = self.userPathBoundary.joinpath(self.relativeTo)
+
+                # Generate the full absolute path
                 path = self.relativeTo.joinpath(path)
 
         super().__init__(path)

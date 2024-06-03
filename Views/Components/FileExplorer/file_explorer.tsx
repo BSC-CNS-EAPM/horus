@@ -62,7 +62,7 @@ function useServerExplorer(
       };
 
       if (window.horusInternal.webApp && !flowContext?.path && !openDirectly) {
-        alert("Save the flow before selecting files");
+        alert("Save or open a flow before selecting files.");
         setOpen(false);
         return;
       }
@@ -111,7 +111,16 @@ function useServerExplorer(
           data.folderChain[data.folderChain.length - 1].path;
       }
     },
-    [extensions, openFolder, selectedFile, flowContext, setOpen]
+    [
+      extensions,
+      openFolder,
+      selectedFile,
+      flowContext,
+      setOpen,
+      folderChain,
+      openDirectly,
+      files,
+    ]
   );
 
   const handleFileAction = (action: any) => {
@@ -199,7 +208,7 @@ function useServerExplorer(
     }
 
     fetchFolders();
-  }, [currentPath, fetchFolders]);
+  }, [currentPath, fetchFolders, flowContext?.path]);
 
   const resetActionFiles = useCallback(() => {
     setActionFilesActive({
@@ -277,7 +286,7 @@ function useServerExplorer(
     fetchFolders();
 
     resetActionFiles();
-  }, [currentPath, fetchFolders, resetActionFiles]);
+  }, [currentPath, fetchFolders, resetActionFiles, flowContext?.path]);
 
   const downloadFiles = useCallback(
     async (
@@ -331,7 +340,7 @@ function useServerExplorer(
       }
       resetActionFiles();
     },
-    [resetActionFiles]
+    [resetActionFiles, flowContext?.path]
   );
 
   const deleteFiles = useCallback(
@@ -378,7 +387,7 @@ function useServerExplorer(
 
       resetActionFiles();
     },
-    [resetActionFiles]
+    [resetActionFiles, flowContext?.path]
   );
 
   return {
