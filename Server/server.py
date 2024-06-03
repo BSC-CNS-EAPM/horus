@@ -41,7 +41,7 @@ import threading  # For background socketio thread
 # Flask
 import flask
 import jinja2
-from flask import Flask, request
+from flask import Flask, request, Response
 from flask_socketio import SocketIO, join_room, leave_room
 from flask_cors import CORS
 import flask_login
@@ -794,14 +794,20 @@ class HorusServer:
                     def getTemplate():
                         return self.flowManager.saveAsTemplate(flowData)
 
-                    flow = getTemplate()
+                    verifiedFlow = getTemplate()
                 else:
 
                     @self.verifyQuotas(verify=["maxFlows"])
                     def getFlow():
                         return self.flowManager.saveFlow(flowData, molstarState)
 
-                    flow = getFlow()
+                    verifiedFlow = getFlow()
+
+                # If the check of maxFlwos or maxTemplates failed, a response is sent instead
+                if isinstance(verifiedFlow, Response):
+                    return verifiedFlow
+                else:
+                    flow = verifiedFlow
 
                 if self._isForUser:
                     # Clear back the full path in webapp mode
