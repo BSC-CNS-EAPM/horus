@@ -321,7 +321,12 @@ function PluginCard(props: PluginCardProps) {
 
     setIsDeleting(true);
     // Disable all pointer events on modal
-    const modal = document.getElementById("home-modal") as HTMLDivElement;
+    const modal = document.getElementById("home-modal");
+
+    if (!modal) {
+      return;
+    }
+
     const buttons = modal.querySelectorAll("button");
 
     buttons.forEach((button) => {
@@ -698,7 +703,12 @@ function InstallingPluginView({
 
   useEffect(() => {
     // Disable all pointer events on modal
-    const modal = document.getElementById("home-modal") as HTMLDivElement;
+    const modal = document.getElementById("home-modal");
+
+    if (!modal) {
+      return;
+    }
+
     const buttons = modal.querySelectorAll("button");
     if (isInstalling) {
       buttons.forEach((button) => {
@@ -723,6 +733,7 @@ function InstallingPluginView({
         )}
         {!isInstalling && (
           <HorusFileExplorer
+            openDirectly
             onFileConfirm={(file) => {
               installPlugin(file);
             }}
