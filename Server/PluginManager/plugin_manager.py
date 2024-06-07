@@ -1242,6 +1242,10 @@ class PluginManager(metaclass=HorusSingleton):
         # Find the block config file
         pluginConfigFile = os.path.join(configDir, f"{plugin.id}_{remote}.json")
 
+        # Create the path if it does not exist
+        if not os.path.exists(pluginConfigFile):
+            os.makedirs(os.path.dirname(pluginConfigFile), exist_ok=True)
+
         return pluginConfigFile
 
     def saveConfig(self, newConfig: list, remote: str):
