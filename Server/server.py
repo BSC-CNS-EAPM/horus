@@ -46,6 +46,9 @@ from flask_socketio import SocketIO, join_room, leave_room
 from flask_cors import CORS
 import flask_login
 
+# Werkzeug secure filenames
+from werkzeug.utils import secure_filename
+
 # Requests
 import requests
 
@@ -1540,8 +1543,10 @@ class HorusServer:
 
                 for file in files.values():
                     if file.filename:
+                        # Generate a secure filename
+                        filename = secure_filename(file.filename)
                         file.stream.seek(0)
-                        file.save(os.path.join(path, file.filename))
+                        file.save(os.path.join(path, filename))
 
                 return flask.jsonify({"ok": True})
             except Exception as exc:

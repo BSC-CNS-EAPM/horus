@@ -110,6 +110,7 @@ datas.append((builtAPIfolder, "HorusAPI"))
 
 # Required modules
 imports = [
+    "werkzeug.utils",
     "webview",
     "flask",
     "requests",
