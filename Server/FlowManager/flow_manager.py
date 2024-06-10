@@ -1162,6 +1162,16 @@ class Flow:
             if AppDelegate().debug:
                 super().write(message)
 
+    def _generateID(self) -> str:
+        """
+        Generates a unique identifier using the UUID version 4 algorithm.
+
+        Returns:
+            str: A randomly generated UUID string.
+        """
+
+        return str(uuid.uuid4())
+
 
 class FlowManager:
     """
@@ -1412,7 +1422,7 @@ class FlowManager:
 
         # Create a new savedID if it doesn't exist
         if not flow.savedID:
-            flow.savedID = str(uuid.uuid4())
+            flow.savedID = flow._generateID()
 
         # If we are overwriting a flow, check if the user wants to overwrite it
         from App import AppDelegate  # pylint: disable=import-outside-toplevel

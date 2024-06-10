@@ -2703,6 +2703,8 @@ class HorusServer:
                     # Update the new flow name
                     newFlowInstance = self.flowManager.openFlowFromPath(newFlow)
                     newFlowInstance.date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    # Generate a new ID
+                    newFlowInstance.savedID = newFlowInstance._generateID()
                     newFlowInstance.write()
 
                     # Delete the old .flow in the newly cloned folder
