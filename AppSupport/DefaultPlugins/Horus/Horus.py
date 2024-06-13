@@ -105,6 +105,10 @@ def createPlugin():
 
     plugin.addBlock(pythonCodeBlock)
 
+    from Blocks.VariableMerger import mergeVariablesBlock  # type: ignore
+
+    plugin.addBlock(mergeVariablesBlock)
+
     # Add the "Page loader" extension
     from Extensions.PageLoader import htmlLoader  # type: ignore
 
