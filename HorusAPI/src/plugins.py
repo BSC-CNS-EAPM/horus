@@ -407,13 +407,28 @@ class VariableTypes(str, Enum):
     """
 
     LIST = "list"
+    """
+    VariableList will be automatically converted to a list of variables.
+
+    Will render as a table with an input field and an add button. 
+    """
 
     _LIST = "_list"
     """
     DO NOT USE IN PluginVariable class.
-    VariableList will be automatically converted to a list of variables.
+    """
 
-    Will render as a table with an input field and an add button. 
+    OBJECT = "object"
+    """
+    An object variable. This will be rendered as a code editor.
+    The resulting value will be a python dictionary.
+    Must be JSON serializable.
+    """
+
+    PYTHON = "python"
+    """
+    A python code variable. This will be rendered as a code editor.
+    The resulting value will be a python code snippet as a string.
     """
 
     CUSTOM = "custom"

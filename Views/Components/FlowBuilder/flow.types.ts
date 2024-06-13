@@ -49,6 +49,8 @@ export enum PluginVariableTypes {
   GROUP = "group",
   LIST = "list",
   _LIST = "_list",
+  OBJECT = "object",
+  PYTHON = "python",
   CUSTOM = "custom",
 }
 

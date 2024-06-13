@@ -41,6 +41,11 @@ import {
   StandardResView,
   StructureVariableView,
 } from "./molstar_variables";
+
+// Code editor variables
+import { ObjectVariableView, PythonVariableView } from "./editor_variables";
+
+// Types
 import { GLOBAL_IDS } from "../../../Utils/globals";
 
 type PluginVariableViewProps = {
@@ -320,7 +325,6 @@ function VariableRenderer(props: {
       />
     );
   }
-
   switch (variableToRender.type) {
     case PluginVariableTypes.STRING:
     case PluginVariableTypes.ANY:
@@ -510,7 +514,22 @@ function VariableRenderer(props: {
           variable={props.variable}
         />
       );
-
+    case PluginVariableTypes.OBJECT:
+      return (
+        <ObjectVariableView
+          currentValue={currentValue}
+          onChange={handleVariableChangeInternal}
+          variable={props.variable}
+        />
+      );
+    case PluginVariableTypes.PYTHON:
+      return (
+        <PythonVariableView
+          currentValue={currentValue}
+          onChange={handleVariableChangeInternal}
+          variable={props.variable}
+        />
+      );
     default:
       return (
         <div className="red-containerp-2 m-2">

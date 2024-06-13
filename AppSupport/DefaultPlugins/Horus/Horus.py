@@ -97,6 +97,14 @@ def createPlugin():
 
     plugin.addBlock(boxBlock)
 
+    from Blocks.Object import objectBlock  # type: ignore
+
+    plugin.addBlock(objectBlock)
+
+    from Blocks.PythonBlock import pythonCodeBlock  # type: ignore
+
+    plugin.addBlock(pythonCodeBlock)
+
     # Add the "Page loader" extension
     from Extensions.PageLoader import htmlLoader  # type: ignore
 
