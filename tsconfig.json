@@ -32,7 +32,8 @@
         "suppressExcessPropertyErrors": false,
         "suppressImplicitAnyIndexErrors": false,
         "noStrictGenericChecks": false,
-        "jsx": "react-jsx"
+        "jsx": "react-jsx",
+        "target": "ES5"
     },
     "include": [
         "Views/**/*"

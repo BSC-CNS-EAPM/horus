@@ -2,6 +2,10 @@
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 
+// Polyfills
+import "core-js/stable";
+import "regenerator-runtime/runtime";
+
 import { App } from "./app";
 
 // Import CSS

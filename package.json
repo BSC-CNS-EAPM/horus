@@ -3,18 +3,20 @@
   "version": "0.0.1",
   "description": "Molecular visualizer from EAPM group at BSC",
   "source": "Views/Main/index.html",
+  "browserslist": "Safari >= 9",
   "scripts": {
     "test": "python -m pytest Tests/ -vv -W ignore::DeprecationWarning",
-    "develop": "python Horus.py -s -d",
+    "dev": "python Horus.py -s -d -h 0.0.0.0 -p 3000",
     "webapp": "python Horus.py -d -w",
     "buildparcel": "parcel build Views/**/*.html --dist-dir GUI --no-scope-hoist && cp -r Views/Favicon/ GUI/Favicon && cp Resources/horus.png GUI/Favicon/logo.png",
-    "devparcel:main": "parcel --port 3001 --host 0.0.0.0",
-    "devparcel:login": "parcel Views/Login/login.html --port 3001 --host 0.0.0.0",
-    "devparcel:about": "parcel Views/About/index.html --port 3001 --host 0.0.0.0",
-    "devparcel:browsermode": "parcel Views/BrowserMode/index.html --port 3001 --host 0.0.0.0",
-    "devparcel:pluginsmanager": "parcel Views/PluginsManager/index.html --port 3001 --host 0.0.0.0",
-    "devparcel:remoteserver": "parcel Views/Remotes/index.html --port 3001 --host 0.0.0.0",
-    "devparcel:settings": "parcel Views/Settings/index.html --port 3001 --host 0.0.0.0",
+    "devparcel:main": "parcel --port 3001 --host 0.0.0.0 --no-cache Views/Main/index.html",
+    "devparcel:login": "parcel Views/Login/login.html --port 3001 --host 0.0.0.0 --no-cache",
+    "devparcel:about": "parcel Views/About/index.html --port 3001 --host 0.0.0.0 --no-cache",
+    "devparcel:browsermode": "parcel Views/BrowserMode/index.html --port 3001 --host 0.0.0.0 --no-cache",
+    "devparcel:pluginsmanager": "parcel Views/PluginsManager/index.html --port 3001 --host 0.0.0.0 --no-cache",
+    "devparcel:remoteserver": "parcel Views/Remotes/index.html --port 3001 --host 0.0.0.0 --no-cache",
+    "devparcel:settings": "parcel Views/Settings/index.html --port 3001 --host 0.0.0.0 --no-cache",
+    "devparcel:admintools": "parcel Views/Login/admintools.html --port 3001 --host 0.0.0.0 --no-cache",
     "build": "bun run buildparcel && sh Devtools/Compile/build_horus.sh",
     "distribute": "run-script-os",
     "distribute:linux": "./Devtools/Package/linux.sh",
@@ -77,6 +79,11 @@
     "socket.io-client": "4.6.1"
   },
   "devDependencies": {
+    "@babel/cli": "^7.24.7",
+    "@babel/core": "^7.24.7",
+    "@babel/preset-env": "^7.24.7",
+    "@babel/preset-typescript": "^7.24.7",
+    "@parcel/babel-preset-env": "^2.12.0",
     "@parcel/packager-raw-url": "2.11.0",
     "@parcel/transformer-sass": "2.11.0",
     "@parcel/transformer-webmanifest": "2.11.0",
@@ -85,6 +92,7 @@
     "@typescript-eslint/eslint-plugin": "5.62.0",
     "autoprefixer": "10.4.14",
     "buffer": "5.7.1",
+    "core-js": "^3.37.1",
     "eslint": "8.48.0",
     "eslint-config-airbnb": "19.0.4",
     "eslint-config-prettier": "9.1.0",
@@ -105,6 +113,7 @@
     "postcss": "8.4.23",
     "prettier": "2.8.8",
     "process": "0.11.10",
+    "regenerator-runtime": "^0.14.1",
     "run-script-os": "1.1.6",
     "string_decoder": "1.3.0",
     "tailwindcss": "3.3.2",
@@ -112,5 +121,8 @@
   },
   "@parcel/resolver-default": {
     "packageExports": true
-  }
+  },
+  "trustedDependencies": [
+    "core-js"
+  ]
 }
