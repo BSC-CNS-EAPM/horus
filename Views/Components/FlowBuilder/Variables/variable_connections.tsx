@@ -263,33 +263,47 @@ export function PlacedBlockVariables(props: PlacedBlockVariablesProps) {
     (input) => input.id === block.selectedInputGroup
   );
 
-  if (!visibleInputs) return null;
-
   return (
-    <div className="flex flex-row gap-1 variable-ball-group variable-ball-group-shown half-variable-connector-container cursor-auto justify-between">
-      <div className="flex flex-col gap-1 h-full">
-        {visibleInputs.variables.map((variable, index) => (
-          <VariableInputConnectView
-            key={index}
-            variable={variable}
+    <div className="flex flex-row gap-1 cursor-auto max-w-[350px]">
+      {visibleInputs && (
+        <div
+          className="flex flex-col gap-1 h-full"
+          style={{
+            maxWidth: block.outputs.length > 0 ? "173px" : "100%",
+          }}
+        >
+          {visibleInputs.variables.map((variable, index) => (
+            <VariableInputConnectView
+              key={index}
+              variable={variable}
+              block={block}
+              connectingVariable={props.blockHooks.connectingVariable}
+            />
+          ))}
+          <VariableInputSelector
             block={block}
-            connectingVariable={props.blockHooks.connectingVariable}
+            handleSelectedInputGroupChange={
+              props.handleSelectedInputGroupChange
+            }
           />
-        ))}
-        <VariableInputSelector
-          block={block}
-          handleSelectedInputGroupChange={props.handleSelectedInputGroupChange}
-        />
-      </div>
-      <div className="flex flex-col gap-1 h-full">
-        {block.outputs.map((output, index) => (
-          <OutputVariableBallConnector
-            key={index}
-            block={block}
-            variable={output}
-          />
-        ))}
-      </div>
+        </div>
+      )}
+      {block.outputs.length > 0 && (
+        <div
+          className="flex flex-col gap-1 h-full flex-1"
+          style={{
+            maxWidth: visibleInputs ? "173px" : "100%",
+          }}
+        >
+          {block.outputs.map((output, index) => (
+            <OutputVariableBallConnector
+              key={index}
+              block={block}
+              variable={output}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

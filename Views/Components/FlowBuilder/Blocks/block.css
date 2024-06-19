@@ -361,12 +361,6 @@
   }
 }
 
-.half-variable-connector-container > * {
-  flex-grow: 1;
-  width: 50%;
-  max-width: 171px;
-}
-
 .variable-squared {
   background-color: var(--grey-white);
   z-index: 99;
