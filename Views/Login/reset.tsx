@@ -106,7 +106,7 @@ export default function Reset() {
         />
       </div>
       <button
-        className="nbd-btn animated-gradient w-100 cursor-pointer text-white"
+        className="bsc-btn animated-gradient w-100 cursor-pointer text-white"
         onClick={sendResetPassword}
       >
         Reset password

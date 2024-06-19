@@ -18,9 +18,6 @@ import argparse
 # Import type annotations
 import typing
 
-# Compilation variables (cython.compiled)
-import cython
-
 # PyWebview
 import webview
 import webview.menu as wm
@@ -394,7 +391,7 @@ class AppDelegate(metaclass=HorusSingleton):
             self._triedToStartServer += 1
 
             msg = "Server not initialized. "
-            if cython.compiled:  # type: ignore
+            if hasattr(sys, "_MEIPASS"):
                 msg += "Please report this issue to the developers."
             else:
                 msg += "Ignore this warning if you are running tests."
@@ -787,7 +784,7 @@ class AppDelegate(metaclass=HorusSingleton):
             windowOptions.height = 250
             windowOptions.confirm_close = True  # pylint: disable=invalid-name
             windowOptions.resizable = False
-            windowOptions.on_top = True  # pylint: disable=invalid-name
+            # windowOptions.on_top = True  # pylint: disable=invalid-name
         else:
             windowOptions.width = 1200
             windowOptions.height = 800
@@ -980,7 +977,7 @@ def parseArgs() -> tuple[dict, dict]:
     Parse the arguments to the AppDelegate
     """
 
-    debugReachable = not cython.compiled  # type: ignore
+    debugReachable = not hasattr(sys, "_MEIPASS")
 
     class HorusParser(argparse.ArgumentParser):
         def error(self, message: str):

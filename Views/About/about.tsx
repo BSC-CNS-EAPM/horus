@@ -68,7 +68,7 @@ export default function About() {
       <div className="flex flex-col gap-2 justify-center items-center">
         <img
           src={HorusLogo}
-          alt="Nostrum Logo"
+          alt="Horus Logo"
           className="object-fit"
           width={100}
         />

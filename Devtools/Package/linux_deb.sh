@@ -307,7 +307,7 @@ cp -r dist/Horus/* dist/linux/usr/local/bin/Horus/
 cat > dist/linux/usr/local/bin/Horus/horus.desktop << EOF
 [Desktop Entry]
 Name=Horus
-Comment=Horus is the GUI software provided by Nostrum Biodiscovery.
+Comment=Horus is the biomolecular workflow manager provided by the BSC.
 Exec=/usr/local/bin/Horus/Horus
 Icon=/usr/local/bin/Horus/horus.png
 Terminal=true

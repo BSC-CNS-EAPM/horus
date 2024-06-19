@@ -91,7 +91,7 @@ with open("src/__init__.py", "a") as f:
 setuptools.setup(
     name="HorusAPI",
     version=version,
-    author="Nostrum Biodiscovery",
+    author="Barcelona Supercomputing Center",
     author_email="christian.dominguez@bsc.es",
     description=f"Horus API package for building plugins. Version: {version}",
     long_description="Horus API",

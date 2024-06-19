@@ -13,7 +13,7 @@
 
 .horus-switch__track {
   @apply absolute left-0 inline-flex items-center justify-center h-[38px] w-[74px] rounded-full border border-transparent;
-  background: var(--bg-grey-nostrum);
+  background: var(--bg-grey-bsc);
 }
 
 .horus-switch:disabled {

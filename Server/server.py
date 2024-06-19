@@ -28,9 +28,6 @@ import random
 # Socket for checking available ports
 import socket
 
-# Ctyhon
-import cython
-
 # Multiprocess module, a fork of multiprocessing with enhancements
 import eventlet.wsgi
 from multiprocess import Process, Semaphore  # type: ignore pylint: disable=no-name-in-module
@@ -351,28 +348,19 @@ class HorusServer:
 
     def _guiDir(self):
         """
-        Checks for the GUI directory
+        Find the GUI directory
         """
 
-        guiDir = None
-        # Development path
-        if not cython.compiled:  # type: ignore
-            guiDir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "GUI"))
-        # Frozen executable path
+        if hasattr(sys, "_MEIPASS"):
+            bundle_dir = sys._MEIPASS  # type: ignore pylint: disable=protected-access
+            gui_dir = os.path.join(bundle_dir, "GUI")
         else:
-            try:
-                bundleDir = sys._MEIPASS  # type: ignore pylint: disable=protected-access
-                guiDir = os.path.abspath(os.path.join(bundleDir, "GUI"))
-            except AttributeError as attre:
-                raise Exception(  # pylint: disable=broad-exception-raised
-                    "App not frozen and GUI directory not found."
-                    + " Did you forget to build the View?"
-                ) from attre
+            gui_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "GUI"))
 
-        if guiDir is None or not os.path.exists(guiDir):
+        if not os.path.exists(gui_dir):
             raise FileNotFoundError("GUI directory not found")
 
-        return guiDir
+        return gui_dir
 
     def _setupLoginManager(self, server):
         """

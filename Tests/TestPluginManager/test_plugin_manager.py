@@ -28,7 +28,7 @@ def test_checkPlugin():
 {
   "name": "TestPlugin",
   "description": "The test plugin for Horus",
-  "author": "Nostrum Biodiscovery",
+  "author": "BSC",
   "version": "0.0.1",
   "pluginFile": "test_plugin.py",
   "dependencies": []
@@ -49,7 +49,7 @@ def test_checkPlugin():
     assert isinstance(plugin, Plugin)
     assert plugin.info["name"] == "TestPlugin"
     assert plugin.info["version"] == "0.0.1"
-    assert plugin.info["author"] == "Nostrum Biodiscovery"
+    assert plugin.info["author"] == "BSC"
     assert plugin.info["description"] == "The test plugin for Horus"
     assert plugin.info["dependencies"] == []
 
@@ -156,7 +156,7 @@ def test_install_plugin_load_failure(mocker):
 {
   "name": "TestPlugin",
   "description": "The Test plugin for Horus",
-  "author": "Nostrum Biodiscovery",
+  "author": "BSC",
   "version": "0.0.1",
   "pluginFile": "test_plugin.py",
   "dependencies": []

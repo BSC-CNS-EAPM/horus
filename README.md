@@ -27,7 +27,7 @@ Horus is an innovative multi-platform GUI which empowers scientists in areas suc
 
 ## Windows
 
-Unfortunately, a Windows version cannot be provided at the moment. However, you can run the web version of the application by clicking [here](app.nostrumbiodiscovery.com).
+Unfortunately, a Windows version cannot be provided at the moment. However, you can run the web version of the application by clicking [here](horus.bsc.es).
 
 # Development dependencies
 

@@ -23,13 +23,13 @@
     --light-green: #a5d6a7;
     --light-blue: #90caf9;
 
-    /* NBD Colors */
+    /* BSC Colors */
     --warm-white: #f8fafa;
     --digital-black: #00091e;
-    --grey-nostrum: #586061;
+    --grey-bsc: #586061;
     --digital-blue: #001b60;
     --tech-blue: #00467c;
-    --nbd-teal: #026d7c;
+    --bsc-teal: #026d7c;
     --vintage-code: #00a9ae;
     --pop-code: #00cfbf;
     --flash-green: #00ffcc;
@@ -67,7 +67,7 @@
 
     --gradient-gray: linear-gradient(
       145deg,
-      var(--grey-nostrum) 1%,
+      var(--grey-bsc) 1%,
       var(--tech-gray) 30%,
       var(--tech-black) 100%
     );
@@ -120,13 +120,13 @@
     --light-green: #a5d6a7;
     --light-blue: #90caf9;
 
-    /* NBD Colors */
+    /* BSC Colors */
     --warm-white: #f8fafa;
     --digital-black: #00091e;
-    --grey-nostrum: #586061;
+    --grey-bsc: #586061;
     --digital-blue: #001b60;
     --tech-blue: #00467c;
-    --nbd-teal: #026d7c;
+    --bsc-teal: #026d7c;
     --vintage-code: #00a9ae;
     --pop-code: #00cfbf;
     --flash-green: #00ffcc;

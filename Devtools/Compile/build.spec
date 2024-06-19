@@ -70,15 +70,20 @@ version = version.replace("_", "-")
 APP_INFO["APP_VERSION"] = version
 
 # Update the Horus plugin version to the same as the HorusAPI version
-with open("AppSupport/DefaultPlugins/Horus/plugin.meta", "r", encoding="utf-8") as f:
-    pluginMetaHorusBackup = f.readlines()
+horus_meta_path = "AppSupport/DefaultPlugins/Horus/plugin.meta"
+horus_meta_path_bak = "horus_plugin.meta.bak"
+shutil.copy(
+    horus_meta_path,
+    horus_meta_path_bak,
+)
 
-with open("AppSupport/DefaultPlugins/Horus/plugin.meta", "w", encoding="utf-8") as f:
-    for line in pluginMetaHorusBackup:
+# Update the Horus plugin version to the same as the HorusAPI version
+horus_meta = open(horus_meta_path, "r", encoding="utf-8").readlines()
+with open(horus_meta_path, "w", encoding="utf-8") as f:
+    for line in horus_meta:
         if "version" in line:
-            f.write(f'\t"version": "{version}",\n')
-        else:
-            f.write(line)
+            line = f'\t"version": "{version}",\n'
+        f.write(line)
 
 # Default settings
 default_settings = os.path.join(currentDir, "App", "default_settings.json")
@@ -110,6 +115,7 @@ datas.append((builtAPIfolder, "HorusAPI"))
 
 # Required modules
 imports = [
+    "xml.dom",
     "werkzeug.utils",
     "webview",
     "flask",
@@ -154,21 +160,16 @@ imports += [
     "email",
     "email.mime",
     "email.mime.text",
-    "email.mime.*",
     "apscheduler",
 ]
-
-# Import biopython for the Horus default plugin
-imports += ["Bio", "Bio.PDB", "numpy", "scipy", "scipy.spatial"]
 
 # Imports that are not included by default but needed
 imports += [
     "cmath",  # Needed for NBDSuite
-    "syscolors",  # Needed for NBDSuite
     "xdrlib",  # Needed for AdaptivePELE (NBDSuite)
     "fileinput",  # Needed for BSC Plugins
     "logging.config",  # Needed for BSC Plugins
-    "colorsys",  # Needed for BSC Plugins
+    "colorsys",  # Needed for BSC Plugins / NBDSuite
     "cProfile",  # Needed for BSC Plugins
     "timeit",  # Needed for BSC Plugins
     "zope",  # Needed for BSC Plugins
@@ -177,16 +178,11 @@ imports += [
 ]
 
 # Check that all the modules are installed in the environment
-currentModule = ""
-try:
-    for module in imports:
-        currentModule = module
-        imp.find_module(module)
-except ImportError as e:
+for module in imports:
     try:
-        __import__(currentModule)
+        __import__(module)
     except ImportError:
-        print(f"Error importing module: {e}. Cannot compile.")
+        print(f"Error importing module: {module}")
         sys.exit(1)
 
 # If we are on el8 linux, include QT5 libraries
@@ -206,7 +202,9 @@ binaries = []
 debug = False
 
 # Runtime hook in order to fix macOS thread security
-runtime_hooks = ["Devtools/Compile/macos-hook.py"]
+runtime_hooks = []
+if sys.platform == "darwin":
+    runtime_hooks.append("Devtools/Compile/macos-hook.py")
 
 # Compile the app
 a = Analysis(  # type: ignore pylint: disable=undefined-variable
@@ -292,6 +290,4 @@ if sys.platform == "linux":
 
 
 # Restore the original plugin.meta file
-with open("AppSupport/DefaultPlugins/Horus/plugin.meta", "w", encoding="utf-8") as f:
-    for line in pluginMetaHorusBackup:
-        f.write(line)
+shutil.copy(horus_meta_path_bak, horus_meta_path)

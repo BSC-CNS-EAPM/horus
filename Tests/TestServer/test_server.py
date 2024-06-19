@@ -65,7 +65,7 @@ def test_gui_dir_debug_mode_parcel_not_running(mocker):
     gui_dir = server._guiDir()
 
     # Assert that the GUI directory is constructed as expected
-    assert gui_dir == "/path/to/your_executable/../GUI"
+    assert gui_dir == "/path/to/your_executable/GUI"
 
 
 def test_gui_dir_frozen_executable(mocker):
@@ -93,7 +93,7 @@ def test_gui_dir_frozen_executable(mocker):
     gui_dir = server._guiDir()
 
     # Assert that the GUI directory is constructed as expected for a frozen executable
-    assert gui_dir == "/path/to/your_executable/../GUI"
+    assert gui_dir == "/path/to/your_executable/GUI"
 
 
 def test_gui_dir_not_frozen_executable(mocker):

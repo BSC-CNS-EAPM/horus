@@ -151,18 +151,18 @@ export default function Profile() {
           <div className="flex flex-col gap-2 mb-4">
             <a
               href="/users/logout"
-              className="nbd-btn animated-gradient w-100 cursor-pointer text-white"
+              className="bsc-btn animated-gradient w-100 cursor-pointer text-white"
             >
               Logout
             </a>
             <button
-              className="nbd-btn animated-gradient w-100 cursor-pointer text-white"
+              className="bsc-btn animated-gradient w-100 cursor-pointer text-white"
               onClick={resetPassword}
             >
               Reset password
             </button>
             <button
-              className="nbd-btn animated-gradient w-100 cursor-pointer font-bold"
+              className="bsc-btn animated-gradient w-100 cursor-pointer font-bold"
               onClick={deleteAccount}
               style={{
                 color: "red",

@@ -225,3 +225,7 @@ logo.png
 
 # Templates
 AppSupport/templates
+
+*.bak
+
+Tests/TestPluginManager/Plugins/config/

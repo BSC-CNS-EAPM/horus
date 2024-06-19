@@ -265,7 +265,7 @@ function Login({
           <button
             disabled={disableLogin}
             id="signInButton"
-            className="nbd-btn w-100 animated-gradient"
+            className="bsc-btn w-100 animated-gradient"
             onClick={login}
           >
             {disableLogin ? "Logging in..." : "Sign in"}
@@ -284,7 +284,7 @@ function Login({
         <div className="h-8"></div>
         <p>Don't have an account?</p>
         <button
-          className="nbd-btn animated-gradient w-100 cursor-pointer"
+          className="bsc-btn animated-gradient w-100 cursor-pointer"
           onClick={() => {
             setView("register");
           }}
@@ -294,7 +294,7 @@ function Login({
         {window.horusInternal?.webApp?.allowDemoUser && (
           <a
             href="/users/demo"
-            className="nbd-btn animated-gradient w-100 cursor-pointer text-white"
+            className="bsc-btn animated-gradient w-100 cursor-pointer text-white"
           >
             Try a demo
           </a>
@@ -525,7 +525,7 @@ function Register({
           </div>
         </div>
         <button
-          className="nbd-btn w-100 animated-gradient"
+          className="bsc-btn w-100 animated-gradient"
           onClick={register}
           disabled={registerDisabled || (hasTos && !tosAccepted)}
         >
@@ -534,7 +534,7 @@ function Register({
       </div>
       <div className="mt-4">Already have an account?</div>
       <button
-        className="nbd-btn animated-gradient w-100"
+        className="bsc-btn animated-gradient w-100"
         onClick={() => {
           setView("login");
         }}
@@ -609,14 +609,14 @@ function Reset({
         </div>
 
         <button
-          className="nbd-btn w-100 animated-gradient"
+          className="bsc-btn w-100 animated-gradient"
           onClick={resetPassword}
         >
           Reset password
         </button>
       </div>
       <button
-        className="nbd-btn animated-gradient w-100"
+        className="bsc-btn animated-gradient w-100"
         onClick={() => {
           setView("login");
         }}
