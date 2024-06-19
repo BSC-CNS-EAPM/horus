@@ -231,6 +231,13 @@ function VariableListView(props: VariableViewProps) {
     );
   };
 
+  // If the currentValue is not an array and not null, set it to an empty array
+  if (!Array.isArray(currentValue) && currentValue !== null) {
+    onChange([]);
+
+    return null;
+  }
+
   return (
     <div className="flex flex-col w-full">
       <div className="flex flex-row gap-2 justify-center my-2 mb-2">
@@ -844,6 +851,13 @@ function ListView(props: VariableViewProps) {
     onChange(newValues);
   };
 
+  // If the currentValue is not an array and not null, set it to an empty array
+  if (!Array.isArray(currentValue) && currentValue !== null) {
+    onChange([]);
+
+    return null;
+  }
+
   return (
     <div className="flex flex-col w-full min-w-full flex-auto">
       <div className="flex flex-row gap-2 justify-center">
@@ -965,6 +979,13 @@ function SmilesVariableView(props: VariableViewProps) {
 
   const jsmeHeight = 500;
   const jsmeContainerRef = useRef<HTMLDivElement>(null);
+
+  // If the currentValue is not an array and not null, reset it
+  if (!Array.isArray(currentValue) && currentValue !== null) {
+    onChange([]);
+
+    return null;
+  }
 
   return (
     <div className="flex flex-col gap-2 p-2 max-h-60 w-full justify-center items-center">
