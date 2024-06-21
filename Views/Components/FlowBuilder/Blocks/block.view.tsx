@@ -88,22 +88,20 @@ export function BlockView(props: BlockViewProps) {
           } ${props.block.runError && "plugin-block-failed"}`}
         >
           <div className={`flex flex-row justify-between gap-2`}>
-            <div className="flex flex-row gap-2 items-start">
-              <div
-                className="block-name"
-                style={{
-                  transform: props.block.isPlaced ? "translateY(-2px)" : "",
-                }}
-              >
-                {props.block.name}
-                {props.block.isPlaced &&
-                  window.horusSettings["showPlacedID"]?.value && (
-                    <span className="text-gray-400" style={{}}>
-                      {" "}
-                      {props.block.placedID}
-                    </span>
-                  )}
-              </div>
+            <div
+              className="block-name break-word flex flex-row gap-2 items-start"
+              style={{
+                transform: props.block.isPlaced ? "translateY(-2px)" : "",
+              }}
+            >
+              <BreakLongBlockNames name={props.block.name} />
+              {props.block.isPlaced &&
+                window.horusSettings["showPlacedID"]?.value && (
+                  <span className="text-gray-400" style={{}}>
+                    {" "}
+                    {props.block.placedID}
+                  </span>
+                )}
             </div>
             <div className="flex flex-row gap-1 items-start cursor-auto">
               {/* Play button to execute the block */}
@@ -620,4 +618,17 @@ function InputRunningSpinner(props: { isRunning: boolean }) {
     );
   }
   return null;
+}
+
+function BreakLongBlockNames(props: { name: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (container) {
+      container.innerHTML = container.innerHTML.replace(/_/g, "_<wbr>");
+    }
+  }, [props.name]);
+
+  return <div ref={containerRef}>{props.name}</div>;
 }

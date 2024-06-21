@@ -131,9 +131,9 @@ export function VariableModalView(props: VariableModalViewProps) {
     >
       <div className="flex flex-col h-full">
         <div className="sticky top-0 z-10">
-          <div className="variables-modal-title-search">
+          <div className="variables-modal-title-search gap-2 justify-between">
             <div
-              className="font-semibold text-3xl"
+              className="font-semibold text-3xl break-all"
               style={{
                 color: "var(--digital-grey-IV)",
               }}

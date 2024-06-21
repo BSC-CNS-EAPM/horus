@@ -134,7 +134,7 @@ export function SlurmOutputModalView(props: SlurmOutputModalViewProps) {
         <div className="sticky top-0 z-10">
           <div className="variables-modal-title-search">
             <div
-              className="font-semibold text-3xl"
+              className="font-semibold text-3xl break-all"
               style={{
                 color: "var(--digital-grey-IV)",
               }}
