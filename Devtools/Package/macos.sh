@@ -12,7 +12,9 @@ version=$(cat dist/Horus.app/Contents/MacOS/APP_INFO | grep "APP_VERSION" | awk 
 echo "Version: $version"
 
 # Get the architecture of the system (Intel or Apple Silicon)
-arch=$(uname -m)
+# Use the output of the python platform.machine() function
+# as the macOS build will be all made in Apple Silicon but using a Rosseta environment
+arch=$(python -c "import platform; print(platform.machine())")
 
 # Create the package directory inside dist/
 mkdir -p dist/Packages
