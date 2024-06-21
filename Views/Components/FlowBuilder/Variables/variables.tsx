@@ -1104,24 +1104,28 @@ export function InputView(props: { groups: VariableGroup[] }) {
   return (
     <div className="flex flex-col flex-wrap gap-2">
       {props.groups.map((group) => {
-        return (
-          <div
-            className="flex flex-col gap-2 rounded-xl p-2 shadow-md w-full flex-1"
-            style={{
-              border: "1px solid var(--pop-code)",
-            }}
-            key={group.id}
-          >
-            <div className="text-xl font-semibold">{group.name}</div>
-            <div>{group.description}</div>
-            <div className="flex flex-col gap-2 overflow-x-scroll h-full flex-wrap">
-              {group.variables.map((variable) => {
-                return <SimpleVariableView variable={variable} />;
-              })}
-            </div>
-          </div>
-        );
+        return <VariableGroupInfoView group={group} />;
       })}
+    </div>
+  );
+}
+
+export function VariableGroupInfoView({ group }: { group: VariableGroup }) {
+  return (
+    <div
+      className="flex flex-col gap-2 rounded-xl p-2 shadow-md w-full flex-1"
+      style={{
+        border: "1px solid var(--pop-code)",
+      }}
+      key={group.id}
+    >
+      <div className="text-xl font-semibold">{group.name}</div>
+      <div>{group.description}</div>
+      <div className="flex flex-col gap-2 overflow-x-scroll h-full flex-wrap">
+        {group.variables.map((variable) => {
+          return <SimpleVariableView variable={variable} />;
+        })}
+      </div>
     </div>
   );
 }

@@ -5,8 +5,13 @@ import { CSSProperties, useEffect, useRef, useState } from "react";
 import SidebarView from "../../SidebarView/sidebar_view";
 import AppButton from "../../appbutton";
 import { SearchComponent } from "../../Toolbar/toolbar";
-import { InputView, PluginVariableView, SimpleVariableView } from "./variables";
-import { BlurredModal } from "../../reusable";
+import {
+  InputView,
+  PluginVariableView,
+  SimpleVariableView,
+  VariableGroupInfoView,
+} from "./variables";
+import { BlurredModal, HorusPopover } from "../../reusable";
 import Xarrow from "react-xarrows";
 
 // TS types
@@ -269,6 +274,7 @@ export function PlacedBlockVariables(props: PlacedBlockVariablesProps) {
         <div
           className="flex flex-col gap-1 h-full"
           style={{
+            width: "100%",
             maxWidth: block.outputs.length > 0 ? "173px" : "100%",
           }}
         >
@@ -322,6 +328,12 @@ function VariableInputSelector({
     (input) => input.id === block.selectedInputGroup
   );
 
+  const selectedVariableInputGroup = block.inputs.find(
+    (i) => i.id === block.selectedInputGroup
+  );
+
+  if (!selectedVariableInputGroup) return null;
+
   return (
     <div className="flex flex-row gap-1 items-center justify-between text-center p-0 m-0">
       <AppButton
@@ -331,8 +343,25 @@ function VariableInputSelector({
       >
         <Chevron direction="left" />
       </AppButton>
-      <div className="app-button">
-        {selectedPageIndex + 1} / {block.inputs.length}
+      <div className="app-button w-full text-center justify-center align-center items-center">
+        <HorusPopover
+          trigger={
+            <span className="w-full">
+              {selectedPageIndex + 1} of {block.inputs.length}
+            </span>
+          }
+        >
+          <div
+            style={{
+              position: "absolute",
+              zIndex: Number.MAX_SAFE_INTEGER,
+              minWidth: "400px",
+              background: "white",
+            }}
+          >
+            <VariableGroupInfoView group={selectedVariableInputGroup} />
+          </div>
+        </HorusPopover>
       </div>
       <AppButton
         action={() => {
@@ -483,7 +512,7 @@ function VariableInputConnectView(props: VariableConnectViewProps) {
     <div
       ref={setNodeRef}
       id={id}
-      className="flex flex-row gap-1 align-center items-center variable-squared h-full"
+      className="flex flex-row gap-1 align-center items-center variable-squared h-full w-full"
     >
       <div className={classNameVariableBall} />
       <div className="cut-text">{props.variable.name}</div>

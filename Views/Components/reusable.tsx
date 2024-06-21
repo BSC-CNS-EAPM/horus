@@ -30,7 +30,7 @@ const HorusPopover = (props: HorusPopoverProps) => {
   };
 
   return (
-    <Popover className="relative">
+    <Popover className="relative w-full">
       <Popover.Group
         onMouseOver={disableHover ? () => {} : handleOpen}
         onMouseLeave={disableHover ? () => {} : handleClose}
