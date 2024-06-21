@@ -2,7 +2,11 @@
 App Delegate
 """
 
-import multiprocessing
+# Critical import. Necessary to make multithreading work
+# # properly.
+# import eventlet
+
+# eventlet.monkey_patch()
 
 # Basic imports
 import sys
@@ -22,11 +26,10 @@ import typing
 import webview
 import webview.menu as wm
 
+import multiprocess as mp
+
 # Server
-import requests
-from flask_socketio import SocketIO
 from Server import HorusServer
-from Server.PluginManager import callPopen
 from HorusAPI import HorusSingleton
 
 
@@ -83,7 +86,7 @@ class HorusLogger:
         # If there are more than 5 logs inside the logs folder,
         # delete the oldest one
         try:
-            logs = os.listdir(self.logDir)
+            logs = os.listdir(self.logDir)  # type: ignore
             if len(logs) > 5:
                 logs = [os.path.join(self.logDir, log) for log in logs]
                 oldestLog = min(logs, key=os.path.getctime)
@@ -105,7 +108,25 @@ class HorusLogger:
         self.capturer.setLevel(logging.NOTSET)
 
         class FilterCapturer(logging.Filter):
+            """
+            Filter class for the logging filter
+            """
+
             def filter(self, record):
+                """
+                Filter method for the logging filter.
+
+                This method is used to determine whether a log
+                record should be included in the log output.
+                It takes a log record as input and returns a boolean value.
+
+                Parameters:
+                    record (logging.LogRecord): The log record to be filtered.
+
+                Returns:
+                    bool: True if the log record should be included in
+                    the log output, False otherwise.
+                """
                 return not record.getMessage() == "\n"
 
         self.capturer.addFilter(FilterCapturer())
@@ -457,10 +478,8 @@ class AppDelegate(metaclass=HorusSingleton):
             os.environ["DISABLE_SPRING"] = "YES"
 
         # Always use fork for multiprocesses, as flows need this to work properly
-        import multiprocess as mp
-
         try:
-            mp.set_start_method("fork")  # type: ignore
+            mp.set_start_method("fork")  # pylint: disable=no-member # type: ignore
         except RuntimeError:  # If it was already set, then pass
             pass
 
@@ -589,7 +608,8 @@ class AppDelegate(metaclass=HorusSingleton):
             # (Development)
             appSupportDir = os.path.join("AppSupport")
 
-        # If a specific AppSupport directory was specified as an environment variable, use that instead
+        # If a specific AppSupport directory was specified as an
+        # environment variable, use that instead
         if os.getenv("HORUS_APP_SUPPORT_DIR") is not None:
             appSupportDir = str(os.getenv("HORUS_APP_SUPPORT_DIR"))
 
@@ -725,7 +745,7 @@ class AppDelegate(metaclass=HorusSingleton):
             self.server.flowManager.pauseAllFlows()
 
         # End all the child processes
-        for process in multiprocessing.active_children():
+        for process in mp.active_children():  # type: ignore # pylint: disable=no-member
             process.terminate()
 
     def _menus(self):
@@ -753,12 +773,12 @@ class AppDelegate(metaclass=HorusSingleton):
         self._startServerThread()
 
         # Wait for the server to start
-        while True:
-            try:
-                requests.get(self.server.baseURL, timeout=1)
-                break
-            except requests.exceptions.ConnectionError:
-                pass
+        # while True:
+        #     try:
+        #         requests.get(self.server.baseURL, timeout=1)
+        #         break
+        #     except requests.exceptions.ConnectionError:
+        #         pass
 
         def guiBacked() -> str:
             # Check in the args for the --gui=qt or --gui=gtk
@@ -961,16 +981,6 @@ class AppDelegate(metaclass=HorusSingleton):
         elif self.platform == "linux":
             subprocess.Popen(["xdg-open", path])
 
-    def executeCommand(self, command: str, socketio: SocketIO):
-        """
-        Executes a command in the OS terminal
-
-        :param command: The command to execute
-        """
-
-        thread = threading.Thread(target=callPopen, args=[[command]])
-        thread.start()
-
 
 def parseArgs() -> tuple[dict, dict]:
     """
@@ -980,6 +990,10 @@ def parseArgs() -> tuple[dict, dict]:
     debugReachable = not hasattr(sys, "_MEIPASS")
 
     class HorusParser(argparse.ArgumentParser):
+        """
+        Parser for the Horus app arguments
+        """
+
         def error(self, message: str):
             self.print_help()
             args = {"prog": self.prog, "message": message}
@@ -1001,7 +1015,8 @@ def parseArgs() -> tuple[dict, dict]:
     parser.add_argument(
         "--url",
         "-u",
-        help="Debug URL. An URL to open instead of the default Horus interface. For development only.",
+        help="Debug URL. An URL to open instead of the default Horus interface. "
+        "For development only.",
     )
     parser.add_argument("--browser", "-b", action="store_true", help="Run in browser mode.")
     parser.add_argument("--server", "-s", action="store_true", help="Run in server mode.")
@@ -1031,7 +1046,7 @@ def parseArgs() -> tuple[dict, dict]:
     )
 
     # Parse known arguments
-    args, unknown = parser.parse_known_args()
+    args, _ = parser.parse_known_args()
 
     # If the password was provided along with the debug flag,
     # enter debug mode in production

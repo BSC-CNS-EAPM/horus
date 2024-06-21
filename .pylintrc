@@ -28,4 +28,4 @@ max-line-length=98
 # C0413: import outside toplevel
 disable=W0718,W0719,E0401,C0415,W0622,C0302,W0212,C0114,R0903,R0902,R0912,R0915,R0913,C0411,C0413
       
-ignore-patterns=**/Tests/**/*.py
+ignore-patterns="Tests/"

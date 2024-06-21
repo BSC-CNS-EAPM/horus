@@ -37,3 +37,4 @@ dependencies:
       - flask-login==0.6.3
       - APScheduler==3.10.4
       - zope==5.9
+      - locust==2.29.0

@@ -3,11 +3,6 @@
 The HorusServer module
 """
 
-# Critical imports
-# import eventlet
-
-# eventlet.monkey_patch()
-
 # Tools
 import os
 import shutil
@@ -109,6 +104,11 @@ class HorusServer:
     _settingsManager: SettingsManager
     """
     Global settings manager class. Handle the app settings.
+    """
+
+    origins: typing.Union[str, list] = "*"
+    """
+    Origins for CORS
     """
 
     @property
@@ -352,15 +352,15 @@ class HorusServer:
         """
 
         if hasattr(sys, "_MEIPASS"):
-            bundle_dir = sys._MEIPASS  # type: ignore pylint: disable=protected-access
-            gui_dir = os.path.join(bundle_dir, "GUI")
+            bundleDir = sys._MEIPASS  # type: ignore pylint: disable=protected-access
+            guiDir = os.path.join(bundleDir, "GUI")
         else:
-            gui_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "GUI"))
+            guiDir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "GUI"))
 
-        if not os.path.exists(gui_dir):
+        if not os.path.exists(guiDir):
             raise FileNotFoundError("GUI directory not found")
 
-        return gui_dir
+        return guiDir
 
     def _setupLoginManager(self, server):
         """
@@ -1355,21 +1355,6 @@ class HorusServer:
                 }
             return flask.jsonify(success)
 
-        @self.server.route("/api/desktop/command", methods=["POST", "GET"])
-        @self.noWebApp
-        def executeCommand():
-            data = request.get_json()
-            from App import AppDelegate  # pylint: disable=import-outside-toplevel
-
-            try:
-                AppDelegate().executeCommand(data["command"], self.socketio)
-                return {"ok": True}
-            except Exception as exc:  # pylint: disable=broad-exception-caught
-                return {
-                    "ok": False,
-                    "msg": str(exc),
-                }
-
         @self.server.route("/api/desktop/openwindow", methods=["POST"])
         @self.noWebApp
         def openWindow():
@@ -1830,6 +1815,7 @@ class HorusServer:
         @self.server.route("/")
         @self.verifyLogin
         def index():
+
             # Get the query string
             shemsu = request.args.get("shemsu", None)
 
@@ -2584,7 +2570,7 @@ class HorusServer:
                         parsedOtherDirectories.append(fileDict)
                     except Exception as exc:
                         logging.getLogger("Horus").error(
-                            f"Could not parse 'other files' for path '{d}': {str(exc)}"
+                            "Could not parse 'other files' for path '%s': %s", d, str(exc)
                         )
 
                 # Convert the flows to JSON
@@ -3189,7 +3175,7 @@ class HorusSocket(SocketIO):
         # Add the socketio routes
         self._socketIORoutes()
 
-    def run(self, server, **runArgs):
+    def run(self, server, **runArgs):  # pylint: disable=arguments-differ
 
         def hook_get_logger(*args):
             return logging.getLogger("eventlet")
@@ -3261,10 +3247,8 @@ class HorusSocket(SocketIO):
                     timer = threading.Thread(target=sendRequest)
                     timer.start()
                     timer.join(1)
-                except requests.exceptions.RequestException:
-                    logging.getLogger("Horus").error(
-                        "Could not connect to server with requests to emit event %s", event
-                    )
+                except Exception as ex:
+                    logging.getLogger("Horus").error("Could not emit event %s: %s", event, ex)
 
                 # Exit the function
                 return
