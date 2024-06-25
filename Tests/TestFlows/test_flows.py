@@ -4,13 +4,19 @@ Test file for Flows
 
 import os
 import json
-
+import requests
+import sys
 import pytest
+import time
+from multiprocess import Process  # type: ignore pylint: disable=no-name-in-module
+import subprocess
 
 from Server.FlowManager.flow_manager import Flow, FlowManager
 from Server.PluginManager.plugin_manager import PluginManager
 from HorusAPI import PluginBlock as Block
 from App import AppDelegate
+
+from unittest.mock import patch
 
 
 @pytest.fixture
@@ -628,5 +634,98 @@ def test_block_variable_merger(plugin_manager):
         assert flow.terminalOutput[0] == "Received variable: ['1', '2', '3', '4']"
 
     finally:
+        # Restore the flow by copying the .bak file to the original file
+        os.system(f"mv {path}.bak {path}")
+
+
+# Test a flow run by sending a post request to a server
+def test_flow_run_flow_post_full_app(plugin_manager):
+
+    path = os.path.join(os.path.dirname(__file__), "test_flow.flow")
+
+    # Backup the flow
+    os.system(f"cp {path} {path}.bak")
+
+    # Must be in app / browser mode in order to test the multiprocessing component of flows
+    p = subprocess.Popen(
+        ["python", "Horus.py", "--host", "localhost", "--port", "3000"],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+
+    # Wait for the server to start
+    time.sleep(1)
+
+    baseURL = "http://localhost:3000"
+
+    # Check that the server is running
+    try:
+
+        flow = Flow.read(path)
+
+        originalTime = str(flow.startedTime)
+
+        # Send a request to the server
+        response = requests.post(
+            baseURL + "/api/plugins/executeflow",
+            json={
+                "flowPath": path,
+                "placedID": 2,
+                "resetFlow": False,
+            },
+            timeout=10,
+        )
+
+        if response.status_code != 200:
+            pytest.fail("Request failed with status code: " + str(response.status_code))
+
+        # Wait for the flow to finish
+        flowTries = 0
+        while flowTries < 5:
+            flow = Flow.read(path)
+
+            if flow.isActive:
+                flowTries += 1
+                time.sleep(1)
+            else:
+                break
+
+        # If the flow is queued, means that there was
+        # an error spawning the process of the flow and that the flow could not run
+        # (recurrent macOS error)
+        if flow.status == flow.FlowStatus.QUEUED:
+            pytest.fail(
+                "Flow was QUEUED and did not run. Verify that Horus can spawn correctly the processes of flows."
+            )
+
+        # Verify that the request was correctly processed and that
+        # the flow actually was set to be executed
+        assert str(flow.startedTime) != originalTime
+
+        # Verify that the flow is finished
+        assert flow.status == flow.FlowStatus.FINISHED
+
+    except requests.exceptions.ConnectionError:
+
+        if p.stdout:
+            output = p.stdout.read()
+
+            if (
+                "You must have either QT or GTK with Python extensions installed in order to use pywebview"
+                in output
+            ):
+                import warnings
+
+                warnings.warn("Please test this function in a Windowed computer")
+
+                # Pass the pytest
+                return
+
+        pytest.fail("Connection error")
+    finally:
+        # Kill the process
+        p.kill()
+
         # Restore the flow by copying the .bak file to the original file
         os.system(f"mv {path}.bak {path}")

@@ -22,11 +22,18 @@ import argparse
 # Import type annotations
 import typing
 
+# Wait till the server is ready
+import requests
+
 # PyWebview
 import webview
 import webview.menu as wm
 
-import multiprocess as mp
+# Multiprocessing
+if typing.TYPE_CHECKING:
+    import multiprocessing as mp
+else:
+    import multiprocess as mp
 
 # Server
 from Server import HorusServer
@@ -773,12 +780,15 @@ class AppDelegate(metaclass=HorusSingleton):
         self._startServerThread()
 
         # Wait for the server to start
-        # while True:
-        #     try:
-        #         requests.get(self.server.baseURL, timeout=1)
-        #         break
-        #     except requests.exceptions.ConnectionError:
-        #         pass
+        # For unknown reasons, if this piece of code is not here
+        # then the multiprocess module is not able to start new
+        # flow processes to run the flows
+        while True:
+            try:
+                requests.get(self.server.baseURL, timeout=1)
+                break
+            except requests.exceptions.ConnectionError:
+                pass
 
         def guiBacked() -> str:
             # Check in the args for the --gui=qt or --gui=gtk

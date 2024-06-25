@@ -24,10 +24,14 @@ import random
 import socket
 
 # Multiprocess module, a fork of multiprocessing with enhancements
-import eventlet.wsgi
-from multiprocess import Process, Semaphore  # type: ignore pylint: disable=no-name-in-module
-import multiprocess.process as mp
-import multiprocessing  # For the number of CPUs
+# Cast the multiprocess module as the multiprocessing module
+# in order to have type chekings / autocompletion
+if typing.TYPE_CHECKING:
+    import multiprocessing as mp
+    from multiprocessing.synchronize import Semaphore
+else:
+    import multiprocess as mp
+
 import threading  # For background socketio thread
 
 # Flask
@@ -37,9 +41,12 @@ from flask import Flask, request, Response
 from flask_socketio import SocketIO, join_room, leave_room
 from flask_cors import CORS
 import flask_login
+import eventlet.wsgi
+
 
 # Werkzeug secure filenames
 from werkzeug.utils import secure_filename
+from werkzeug.exceptions import HTTPException
 
 # Requests
 import requests
@@ -2104,6 +2111,32 @@ class HorusServer:
 
             return flask.render_template("Error/error.html")
 
+        @self.server.errorhandler(HTTPException)
+        def handleHTTPexception(e):
+            """
+            Return JSON instead of HTML for HTTP errors.
+            """
+
+            # start with the correct headers and status code from the error
+            response = e.get_response()
+
+            horusLogger = logging.getLogger("Horus")
+            horusLogger.error("%s Data: %s. Request: %s", e, str(request.data), str(request))
+
+            import json
+
+            # replace the body with JSON
+            response.data = json.dumps(
+                {
+                    "code": e.code,
+                    "name": e.name,
+                    "description": e.description,
+                    "data": str(request.data),
+                }
+            )
+            response.content_type = "application/json"
+            return response
+
         # For extreme cases, setup a broad exception handler
         @self.server.errorhandler(Exception)
         def exceptionHandler(error):
@@ -2116,7 +2149,17 @@ class HorusServer:
                 "%s. Data: %s. Request: %s", error, str(request.data), str(request)
             )
 
-            return flask.render_template("Error/error.html", errormsg=str(error))
+            return (
+                flask.jsonify(
+                    {
+                        "name": "Unhandled Horus Error",
+                        "description": error,
+                        "code": 500,
+                        "data": str(request.data),
+                    }
+                ),
+                500,
+            )
 
     def _favicons(self):
         @self.server.route("/favicon.ico")
@@ -3037,7 +3080,7 @@ class HorusServer:
     The maximum number of concurrent flows that the server can run
     """
 
-    _taskSemaphore: Semaphore
+    taskSemaphore: "Semaphore"
     """
     A semaphore to queue the background tasks
     according to the number of cores
@@ -3058,7 +3101,7 @@ class HorusServer:
             try:
                 maxConcurrentFlows = len(os.sched_getaffinity(0)) - 1  # type: ignore
             except AttributeError:
-                maxConcurrentFlows = multiprocessing.cpu_count() - 1
+                maxConcurrentFlows = mp.cpu_count() - 1
         else:
             # Read from the general settings the maximum number of concurrent flows
             maxConcurrentFlows = self.settingsManager.getSetting("maxConcurrentFlows").value
@@ -3066,7 +3109,7 @@ class HorusServer:
         # Make sure we have at least one flow, even on potato computers
         self._maxConcurrentFlows = maxConcurrentFlows if maxConcurrentFlows > 0 else 1
 
-        self.taskSemaphore = Semaphore(self._maxConcurrentFlows)
+        self.taskSemaphore = mp.Semaphore(self._maxConcurrentFlows)
         logging.getLogger("Horus").info(
             "Maximum number of concurrent flows: %s", maxConcurrentFlows
         )
@@ -3086,7 +3129,7 @@ class HorusServer:
                     func()
 
         # Start a new process for the flowRunner function
-        process = Process(  # pylint: disable=not-callable
+        process = mp.Process(  # pylint: disable=not-callable
             target=requestRunner, args=(request.environ, self.taskSemaphore)
         )
 

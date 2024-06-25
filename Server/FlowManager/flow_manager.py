@@ -10,7 +10,15 @@ import typing
 import uuid
 import datetime
 import logging
-import multiprocessing
+
+# Multiprocess module, a fork of multiprocessing with enhancements
+# Cast the multiprocess module as the multiprocessing module
+# in order to have type chekings / autocompletion
+if typing.TYPE_CHECKING:
+    import multiprocessing as mp
+else:
+    import multiprocess as mp
+
 import time
 import zipfile
 import tarfile
@@ -555,11 +563,15 @@ class Flow:
     def isActive(self):
         """
         Returns whether the flow is active or not in any form.
-        For example, if its PAUSED, or RUNNING, will return True.
+        For example, if its PAUSED, RUNNING or QUEUED, will return True.
         If FINISHED, ERROR, IDLE, STOPPED, will return False.
         """
 
-        return self.status in [self.FlowStatus.PAUSED, self.FlowStatus.RUNNING]
+        return self.status in [
+            self.FlowStatus.PAUSED,
+            self.FlowStatus.RUNNING,
+            self.FlowStatus.QUEUED,
+        ]
 
     def __eq__(self, other):
         if isinstance(other, Flow):
@@ -1584,7 +1596,7 @@ class FlowManager:
 
         return loadedFLow
 
-    _flowProcesses: typing.Dict[str, multiprocessing.Process] = {}
+    _flowProcesses: typing.Dict[str, mp.Process] = {}
     """
     The active running flows. The key is the flow path and the value is the process.
     """
