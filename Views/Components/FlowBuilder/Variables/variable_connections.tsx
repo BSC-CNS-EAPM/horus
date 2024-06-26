@@ -345,8 +345,9 @@ function VariableInputSelector({
       </AppButton>
       <div className="app-button w-full text-center justify-center align-center items-center">
         <HorusPopover
+          overrideClassName="w-full"
           trigger={
-            <span className="w-full">
+            <span>
               {selectedPageIndex + 1} of {block.inputs.length}
             </span>
           }

@@ -6,6 +6,7 @@ import Chevron from "./Toolbar/Icons/Chevron";
 type HorusPopoverProps = {
   trigger: React.ReactNode;
   children: React.ReactNode;
+  overrideClassName?: string;
 
   onOpen?: () => void;
   onClose?: () => void;
@@ -30,7 +31,9 @@ const HorusPopover = (props: HorusPopoverProps) => {
   };
 
   return (
-    <Popover className="relative w-full">
+    <Popover
+      className={props.overrideClassName ? props.overrideClassName : "relative"}
+    >
       <Popover.Group
         onMouseOver={disableHover ? () => {} : handleOpen}
         onMouseLeave={disableHover ? () => {} : handleClose}
