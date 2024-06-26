@@ -15,6 +15,8 @@ import json
 import shutil
 import datetime
 
+from packaging import version as version_module
+
 # Type for modules in PluginDeps context manager
 from types import ModuleType
 
@@ -284,11 +286,10 @@ class PluginManager(metaclass=HorusSingleton):
                     "version"
                 ]
 
-                # Parse the version strings
-                from packaging import version
-
-                newPluginVersion = version.parse(newPluginVersion)
-                currentInstalledPluginVersion = version.parse(currentInstalledPluginVersion)
+                newPluginVersion = version_module.parse(newPluginVersion)
+                currentInstalledPluginVersion = version_module.parse(
+                    currentInstalledPluginVersion
+                )
 
                 # Compare the versions
                 newVersionIsHigher = newPluginVersion > currentInstalledPluginVersion
@@ -540,13 +541,15 @@ class PluginManager(metaclass=HorusSingleton):
             except Exception as e:
                 raise Exception(f"Could not load plugin meta ({pluginMeta}): {e}") from e
 
-        # Dependencies for the plugin
-        depsDir = os.path.join(pluginDir, "deps")
+        # Dependencies for the plugin, there they will be installed
+        # inside a /lib/pythonX.X/site-packages folder
+        # (view the getFullPluginDepsDir function)
+        depsDir = getFullPluginDepsDir(pluginDir)
 
         # Create the deps folder
         if not os.path.exists(depsDir):
             try:
-                os.mkdir(depsDir)
+                os.makedirs(depsDir, exist_ok=True)
             # Except a read-only filesystem
             except OSError:
                 logging.getLogger("Horus").warning(
@@ -565,6 +568,22 @@ class PluginManager(metaclass=HorusSingleton):
 
         pluginPath = os.path.join(pluginDir, entryPoint)
 
+        with PluginDeps(pluginDir):
+
+            # Install dependencies if the deps dir exists
+            if depsDir is not None:
+                self._installDependencies(pluginMeta, pluginDir)
+
+            return PluginDeps.subprocessCall(
+                self._internalLoadPluginInModule, pluginPath, entryPoint
+            )
+
+    def _internalLoadPluginInModule(self, pluginPath: str, entryPoint: str) -> Plugin:
+        """
+        WARNING: This function MUST run in the subprocessCall of
+        PluginDeps in order to not mess the imported modules between plugins
+        """
+
         # Load the plugin file and obtain the plugin variable
         spec = importlib.util.spec_from_file_location("pluginFile", pluginPath)
         if spec is None:
@@ -573,13 +592,8 @@ class PluginManager(metaclass=HorusSingleton):
         # Read and load the python file
         pluginModule = importlib.util.module_from_spec(spec)
 
-        with PluginDeps(pluginDir):
-            # Install dependencies if the deps dir exists
-            if depsDir is not None:
-                self._installDependencies(pluginMeta, depsDir)
-
-            # Load the entry point
-            spec.loader.exec_module(pluginModule)  # type: ignore
+        # Load the entry point
+        spec.loader.exec_module(pluginModule)  # type: ignore
 
         # Check that the plugin variable exists
         if not hasattr(pluginModule, "plugin"):
@@ -611,27 +625,32 @@ class PluginManager(metaclass=HorusSingleton):
         # Return the loaded plugin instace
         return pluginModule.plugin
 
-    def _installDependencies(self, pluginMeta: typing.Dict[str, str], depsDir: str):
+    def _installDependencies(self, pluginMeta: typing.Dict[str, str], pluginPath: str):
         """
         Installs the dependencies of a plugin.
 
         :param plugin: The plugin meta info
-        :param depsDir: The path to the dependencies folder
+        :param pluginPath: The path to the plugin folder
         """
 
         dependencies = pluginMeta.get("dependencies", [])
         pluginName = pluginMeta.get("name", "Unknown")
-        listedDeps = os.listdir(depsDir)
+        fullDepsDir = getFullPluginDepsDir(pluginPath)
+
+        # Create a new working set that includes the custom directory
+        pluginWorkingSet = pkg_resources.WorkingSet(entries=[fullDepsDir])
 
         # Get the installed dependencies
-        installedDeps = {}
+        installedDeps = {pkg.key: pkg.version for pkg in pluginWorkingSet}
+
+        # Check for dependencies installed from git repositories
+        listedDeps = os.listdir(fullDepsDir)
         for idep in listedDeps:
             if ".dist-info" not in idep:
                 continue
 
-            # If the dependency was downloaded from a git repo, the name
-            # then is the url of the repo. Found inside direct_url.json
-            directUrlPath = os.path.join(depsDir, idep, "direct_url.json")
+            # Check for direct_url.json to identify git-based installations
+            directUrlPath = os.path.join(fullDepsDir, idep, "direct_url.json")
             if os.path.exists(directUrlPath):
                 with open(directUrlPath, "r", encoding="utf-8") as f:
                     directUrl = json.load(f)
@@ -645,52 +664,81 @@ class PluginManager(metaclass=HorusSingleton):
                     vcsInfo = directUrl.get("vcs_info", {}).get("vcs", None)
                     if vcsInfo is not None:
                         name = vcsInfo + "+" + name
-            else:
-                # Otherwise, the name is the first part of the .dist folder
-                name = idep.split("-")[0].lower()
 
-            version = idep.split("-")[1].split(".dist")[0]
+                    # Add the git dependency to the installed dependencies
+                    installedDeps[name.lower()] = directUrl.get("vcs_info", {}).get(
+                        "commit_id", "unknown"
+                    )
 
-            # Lowercase the name
-            name = name.lower()
-
-            # Add the dependency to the installed dependencies
-            installedDeps[name] = version
+        def versionSatisfies(
+            installedVer: version_module.Version, specs: typing.Tuple[str, str]
+        ) -> bool:
+            op = specs[0]
+            ver = specs[1]
+            specVersion = version_module.parse(ver)
+            if op == "==":
+                if installedVer != specVersion:
+                    return False
+            elif op == ">=":
+                if installedVer < specVersion:
+                    return False
+            elif op == "<=":
+                if installedVer > specVersion:
+                    return False
+            elif op == ">":
+                if installedVer <= specVersion:
+                    return False
+            elif op == "<":
+                if installedVer >= specVersion:
+                    return False
+            return True
 
         # Iterate through the required dependencies
+        depsToInstallStringList = []
+        currentString = None
         for dep in dependencies:
             parsedDep = dep.replace(" --no-deps", "")
-            name = parsedDep.split("==")[0].lower()
-            version = parsedDep.split("==")[1] if "==" in dep else None
-
-            # Condense the if statements to have better readability
-            exists = installedDeps.get(name, None)
-            doNotExist = exists is None
-            hasToUpgrade = exists != version and version is not None
-            hasToInstall = doNotExist or hasToUpgrade
-
-            if hasToInstall:
-                if doNotExist:
-                    print(f"Installing dependency {parsedDep} for plugin {pluginName}...")
-                elif hasToUpgrade:
-                    print(f"Upgrading dependency {parsedDep} for plugin {pluginName}...")
-
-                    # Remove the old dependency dist-info
-                    for depDir in listedDeps:
-                        if f"{name}-" in depDir:
-                            logging.getLogger("Horus").info(
-                                "Removing old dependency %s...", depDir
-                            )
-                            shutil.rmtree(os.path.join(depsDir, depDir))
-
-                    # Remove the actual package
-                    shutil.rmtree(os.path.join(depsDir, name))
-
+            versionSpecs = None
+            if not parsedDep.startswith("git+"):
                 try:
-                    self._installDepInternal(dep, depsDir)
-                except Exception as e:
-                    print(e)
-                    raise e
+                    requirement = pkg_resources.Requirement.parse(parsedDep)
+                    name = requirement.project_name.lower()
+                    versionSpecs = requirement.specs
+                except pkg_resources.RequirementParseError:
+                    logging.getLogger("Horus").error(
+                        "Invalid requirement specification: %s", parsedDep
+                    )
+                    continue
+
+            # Check if the dependency is installed and if the version matches
+            if name in installedDeps:
+                installedVersion = version_module.parse(installedDeps[name])
+                if versionSpecs and not versionSatisfies(installedVersion, versionSpecs[0]):
+                    print(
+                        f"Dependency '{name}' will be upgraded from version '{installedVersion}' "
+                        f"to '{''.join(versionSpecs[0])}' for plugin '{pluginName}'..."
+                    )
+                else:
+                    continue
+
+            if "--no-deps" in dep:
+                if currentString:
+                    depsToInstallStringList.append(currentString)
+                    currentString = None
+                depsToInstallStringList.append(dep)
+            else:
+                if currentString:
+                    currentString += " " + dep
+                else:
+                    currentString = dep
+
+        if currentString:
+            depsToInstallStringList.append(currentString)
+
+        # Install or upgrade the dependency
+        for stringDep in depsToInstallStringList:
+            print(f"Installing '{stringDep}' for plugin {pluginName}...")
+            self._installDepInternal(stringDep, pluginPath)
 
     def _preInstallPlugin(self, pluginDir: str):
         preInstPath = os.path.join(pluginDir, "preinst.sh")
@@ -698,8 +746,8 @@ class PluginManager(metaclass=HorusSingleton):
             print("Executing pre-install script")
             try:
                 callPopen(["sh", preInstPath], cwd=pluginDir)
-            except Exception:
-                raise Exception("Error running pre-install script")
+            except Exception as e:
+                raise Exception("Error running pre-install script") from e
 
     def _postInstallPlugin(self, pluginDir: str):
         postInstPath = os.path.join(str(pluginDir), "postinst.sh")
@@ -707,8 +755,8 @@ class PluginManager(metaclass=HorusSingleton):
             print("Executing post-install script")
             try:
                 callPopen(["sh", postInstPath], cwd=pluginDir)
-            except Exception:
-                raise Exception("Error running post-install script")
+            except Exception as e:
+                raise Exception("Error running post-install script") from e
 
     def _preRemovePlugin(self, pluginDir: str):
         preRMPath = os.path.join(str(pluginDir), "prerm.sh")
@@ -716,8 +764,8 @@ class PluginManager(metaclass=HorusSingleton):
             print("Executing pre-remove script")
             try:
                 callPopen(["sh", preRMPath], cwd=pluginDir)
-            except Exception:
-                raise Exception("Error running pre-remove script")
+            except Exception as e:
+                raise Exception("Error running pre-remove script") from e
 
     def _postRemovePlugin(self, pluginDir: str):
         postRMPath = os.path.join(str(pluginDir), "postrm.sh")
@@ -725,10 +773,10 @@ class PluginManager(metaclass=HorusSingleton):
             print("Executing post-remove script")
             try:
                 callPopen(["sh", postRMPath], cwd=pluginDir)
-            except Exception:
-                raise Exception("Error running post-remove script")
+            except Exception as e:
+                raise Exception("Error running post-remove script") from e
 
-    def _installDepInternal(self, dep: str, depsDir: str):
+    def _installDepInternal(self, dep: str, pluginPath: str):
         """
         Installs a dependency for a plugin.
 
@@ -847,7 +895,7 @@ class PluginManager(metaclass=HorusSingleton):
 
         # Define the environment variables to correctly run the external python interpreter
         env = {
-            "PYTHONPATH": depsDir,
+            "PYTHONPATH": getFullPluginDepsDir(pluginPath),
             "PATH": path,
         }
 
@@ -864,11 +912,12 @@ class PluginManager(metaclass=HorusSingleton):
             "-m",
             "pip",
             "install",
-            dep,
-            "--target",
-            depsDir,
+            *dep.split(" "),
+            "--prefix",
+            getFullPluginDepsDir(pluginPath, full=False),
             "--upgrade",
             "--no-input",
+            "--ignore-installed",
             *(["--no-deps"] if noDependencies else []),
         ]
 
@@ -878,7 +927,7 @@ class PluginManager(metaclass=HorusSingleton):
             msg = f"Dependency {dep} could not be installed: {str(exc)}"
             print(msg)
             logging.getLogger("Horus").error(msg)
-            raise Exception(msg)
+            raise Exception(msg) from exc
 
     def getPlugins(self) -> dict:
         """
@@ -1121,7 +1170,7 @@ class PluginManager(metaclass=HorusSingleton):
             "description": pg.description,
             "html": f"{p._path}/Pages/{pg.html}",
             "url": f"/plugins/pages/{pg.id}",
-            "deps": os.path.join(p._path, "deps"),
+            "deps": getFullPluginDepsDir(p._path),
             "pluginDir": p._path,
             "hidden": pg.hidden,
         }
@@ -1436,7 +1485,7 @@ class PluginDeps:
         """
         Adds the deps folder of the plugin to the python path.
         """
-        depsDir = os.path.join(self.pluginDir, "deps")
+        depsDir = getFullPluginDepsDir(self.pluginDir)
         includeDir = os.path.join(self.pluginDir, "Include")
         sys.path.insert(0, depsDir)
         sys.path.insert(0, includeDir)
@@ -1456,7 +1505,7 @@ class PluginDeps:
         """
         Removes the deps folder of the plugin from the python path.
         """
-        depsDir = os.path.join(self.pluginDir, "deps")
+        depsDir = getFullPluginDepsDir(self.pluginDir)
         includeDir = os.path.join(self.pluginDir, "Include")
 
         # Remove them also from the sys.modules
@@ -1624,3 +1673,36 @@ def callPopen(command: list[str], cwd: str = ".", env: typing.Optional[dict] = N
         # Check the return code
         if p.returncode != 0 and p.returncode is not None:
             raise Exception(f"{command} failed")
+
+
+def getFullPluginDepsDir(pluginPath: str, full=True) -> str:
+    """
+    Returns the true path to the dependencies directory for a given
+    plugin for appending to PYTHONPATH.
+
+    Args:
+        pluginPath (str): The path to the plugin directory.
+
+    Returns:
+        str: The path to the dependencies directory.
+
+    The dependencies directory is located at {pluginPath}/deps/lib/{pythonVersion}/site-packages,
+    where {pythonVersion} is the first three characters of the Python version.
+
+    This function creates the dependencies directory if it does not already exist.
+
+    Example:
+        >>> getPluginDepsDir("/path/to/plugin")
+        "/path/to/plugin/deps/lib/python3.9/site-packages"
+    """
+    # We need to return a path of the form {pluginPath}/lib/python{pythonVersion}/site-packages
+    depsDir = os.path.join(pluginPath, "deps")
+
+    if not full:
+        return depsDir
+
+    # Get the python version
+    pythonVersion = sys.version[:3]
+
+    # Return the path
+    return os.path.join(depsDir, "lib", "python" + str(pythonVersion), "site-packages")

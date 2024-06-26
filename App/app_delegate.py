@@ -256,6 +256,14 @@ class HorusLogger:
                 Hook into the default stdout and stderr class
                 """
                 try:
+
+                    # Remove empty lines
+                    if message.endswith("\n"):
+                        message = message[:-1]
+
+                    if message == "":
+                        return
+
                     self.capturer.log(self.level, message)
                     if not self.debug:
                         self.oldStdOutErr.write(message)

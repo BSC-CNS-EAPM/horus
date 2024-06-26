@@ -209,7 +209,7 @@ def test_install_dep_internal_success(mocker):
 
     # Call the _installDepInternal method
     dep_to_install = "dep"
-    deps_dir = "/path/to/dependencies"
+    deps_dir = "/path/to/"
 
     with pytest.raises(
         Exception, match="Dependency dep could not be installed: 'Mock' object is not iterable"
@@ -224,10 +224,11 @@ def test_install_dep_internal_success(mocker):
         "pip",
         "install",
         "dep",
-        "--target",
-        "/path/to/dependencies",
+        "--prefix",
+        "/path/to/deps",
         "--upgrade",
         "--no-input",
+        "--ignore-installed",
     ]
     assert last_call_kwargs["stdout"] == subprocess.PIPE
     assert last_call_kwargs["stderr"] == subprocess.STDOUT
@@ -293,7 +294,7 @@ def test_install_dep_internal_frozen_app(mocker):
 
         # Call the _installDepInternal method
         dep_to_install = "dep"
-        deps_dir = "/path/to/dependencies"
+        deps_dir = "/path/to/"
 
         with pytest.raises(Exception, match="'Mock' object is not iterable"):
             pluginManager._installDepInternal(dep_to_install, deps_dir)
@@ -306,10 +307,11 @@ def test_install_dep_internal_frozen_app(mocker):
         "pip",
         "install",
         "dep",
-        "--target",
-        "/path/to/dependencies",
+        "--prefix",
+        "/path/to/deps",
         "--upgrade",
         "--no-input",
+        "--ignore-installed",
     ]
     assert last_call_kwargs["stdout"] == subprocess.PIPE
     assert last_call_kwargs["stderr"] == subprocess.STDOUT
