@@ -1067,10 +1067,16 @@ class PluginManager(metaclass=HorusSingleton):
         plugin = self._getPluginByID(block.id.split(".")[0])
 
         # Read the config file for the block and the selected remote
-        configPath = self._pluginConfigPath(plugin, block.selectedRemote)
+        try:
+            configPath = self._pluginConfigPath(plugin, block.selectedRemote)
 
-        # Set the plugin config to execute the block
-        plugin._updateConfigs(configPath)  # pylint: disable=protected-access
+            # Set the plugin config to execute the block
+            plugin._updateConfigs(configPath)  # pylint: disable=protected-access
+
+        except Exception as exc:
+            logging.getLogger("Horus").error(
+                "Could not read config file for block %s. %s", block.id, str(exc)
+            )
 
         # Set the block config to execute the block
         block.config = plugin.config
@@ -1272,16 +1278,11 @@ class PluginManager(metaclass=HorusSingleton):
                 os.makedirs(configDir)
             # Except a read-only filesystem
             except OSError as ose:
-                logging.getLogger("Horus").warning(
-                    "Could not create config folder for plugin %s. "
-                    + "The filesystem is read-only.",
-                    plugin.info["name"],
-                )
+                error = f"Could not create config folder for plugin {plugin.info['name']}. "
+                error += "The filesystem is read-only."
+                logging.getLogger("Horus").warning(error)
 
-                raise Exception(
-                    f"Could not create config folder for plugin {plugin.info['name']}. "
-                    + "The filesystem is read-only."
-                ) from ose
+                raise Exception(error) from ose
 
         # If the config folder is inside a default plugin (read-only)
         # move it to the user's app support dir
