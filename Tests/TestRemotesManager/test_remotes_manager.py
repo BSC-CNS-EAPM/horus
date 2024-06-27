@@ -61,19 +61,28 @@ def mock_remotes_api_local():
 
 
 def test_transfer_to_local(mock_remotes_api_local):
-    source_path = "/path/to/local/file.txt"
-    destination_path = "/remote/path"
-    expected_path = "/remote/path/file.txt"
 
-    # Mocking internal transfer function
-    mock_remotes_api_local._internalTransferTo = MagicMock()
+    # Mock the subprocess.run function
+    with patch("subprocess.run", return_value=MagicMock(returncode=0)) as mock_run:
 
-    # Call the method
-    result = mock_remotes_api_local.transferTo(source_path, destination_path)
+        source_path = "/path/to/local/file.txt"
+        destination_path = "/remote/path"
+        expected_path = "/remote/path/file.txt"
 
-    # Assertions
-    assert result == expected_path
-    mock_remotes_api_local._internalTransferTo.assert_not_called()
+        # Mocking internal transfer function
+        mock_remotes_api_local._internalTransferTo = MagicMock()
+
+        # Call the method
+        result = mock_remotes_api_local.transferTo(source_path, destination_path)
+
+        # Assertions
+        assert result == expected_path
+        mock_remotes_api_local._internalTransferTo.assert_not_called()
+
+        # Assert that subprocess.run was called with the correct arguments
+        mock_run.assert_called_once_with(
+            ["cp", "-r", "/path/to/local/file.txt", "/remote/path"], check=True
+        )
 
 
 def test_transfer_from_local(mock_remotes_api_local):
@@ -81,15 +90,22 @@ def test_transfer_from_local(mock_remotes_api_local):
     destination_path = "/remote/path"
     expected_path = "/remote/path/file.txt"
 
-    # Mocking internal transfer function
-    mock_remotes_api_local._internalTransferFrom = MagicMock()
+    with patch("subprocess.run", return_value=MagicMock(returncode=0)) as mock_run:
 
-    # Call the method
-    result = mock_remotes_api_local.transferFrom(source_path, destination_path)
+        # Mocking internal transfer function
+        mock_remotes_api_local._internalTransferFrom = MagicMock()
 
-    # Assertions
-    assert result == expected_path
-    mock_remotes_api_local._internalTransferFrom.assert_not_called()
+        # Call the method
+        result = mock_remotes_api_local.transferFrom(source_path, destination_path)
+
+        # Assertions
+        assert result == expected_path
+        mock_remotes_api_local._internalTransferFrom.assert_not_called()
+
+        # Assert that subprocess.run was called with the correct arguments
+        mock_run.assert_called_once_with(
+            ["cp", "-r", "/path/to/local/file.txt", "/remote/path"], check=True
+        )
 
 
 @pytest.fixture

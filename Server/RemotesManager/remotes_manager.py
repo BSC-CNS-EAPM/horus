@@ -184,7 +184,7 @@ class RemotesAPI:
         """
         return self.command("echo $HOME")
 
-    def command(self, command: str) -> str:
+    def command(self, command: str) -> str:  # pylint: disable=method-hidden
         """
         Runs a command on the remote (or locally).
 
@@ -323,7 +323,7 @@ class RemotesAPI:
             raise Exception(f"The destination path cannot contain spaces: {destination}")
 
         if self.isLocal:
-            os.system(f"cp -r {source} {destination}")
+            subprocess.run(["cp", "-r", source, destination], check=True)
             return os.path.join(destination, os.path.basename(source))
 
         # Check if the source is a folder
@@ -394,7 +394,7 @@ class RemotesAPI:
             raise Exception(f"The destination path cannot contain spaces: {destination}")
 
         if self.isLocal:
-            os.system(f"cp -r {source} {destination}")
+            subprocess.run(["cp", "-r", source, destination], check=True)
             return os.path.join(destination, os.path.basename(source))
 
         logging.getLogger("Horus").info("Transferring data from %s to %s", source, destination)
@@ -443,13 +443,13 @@ class RemotesAPI:
             with tarfile.open(destination, "r:gz") as tar:
                 logging.getLogger("Horus").debug("Extracting to %s", container_local)
                 tar.extractall(path=container_local)
-            # os.system(f"cd {container_local} && tar -xzvf {zipPath}")
 
             # Remove the zip file
-            os.system(f"cd {container_local} && rm {destination}")
+            os.chdir(container_local)
+            subprocess.run(["rm", destination], check=True)
 
             # Change local dir back
-            os.system(f"cd {prevLocalDir}")
+            os.chdir(prevLocalDir)
 
             return os.path.join(container_local, folderName)
 
