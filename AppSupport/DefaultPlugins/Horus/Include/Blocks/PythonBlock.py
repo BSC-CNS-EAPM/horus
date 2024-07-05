@@ -13,6 +13,38 @@ codeVariable = PluginVariable(
     id="code",
     description="Write a Python script",
     type=VariableTypes.PYTHON,
+    defaultValue="""# The inputs of the block are in the 'inputs' variable
+print("inputs are", inputs)
+
+# The output of the block can be set
+# with the setOutput function
+setOutput("hello world!")""",
+)
+
+
+class EnvironmentVariable(PluginVariable):
+    """
+    Extracts the allowed values from the loaded plugins
+    """
+
+    def toDict(self, minimal: bool = False):
+        varDict = super().toDict(minimal)
+
+        # Replace the allowedValues with the existing plugins
+        from App import AppDelegate
+
+        pluginList = AppDelegate().server.pluginManager.loadedPlugins
+
+        varDict["allowedValues"] = [plugin.info["name"] for plugin in pluginList]
+
+        return varDict
+
+
+environmentVariable = EnvironmentVariable(
+    name="Plugin environment",
+    id="environment",
+    description="Select a Plugin to use its dependencies within the code.",
+    type=VariableTypes.STRING_LIST,
 )
 
 outputVariable = PluginVariable(
@@ -28,6 +60,7 @@ def executePython(block: PluginBlock):
     Converts a string into a Python script and runs it
     """
 
+    # Get the code
     pythonCode = block.variables[codeVariable.id]
 
     # Generate a easy variable to access the inputs
@@ -37,7 +70,26 @@ def executePython(block: PluginBlock):
     def setOutput(value):
         block.setOutput(outputVariable.id, value)
 
-    exec(pythonCode)
+    # Use the PluginDeps context
+    from Server.PluginManager import PluginDeps
+
+    # Get the environment
+    pluginName = block.variables[environmentVariable.id]
+
+    # Get the plugin path
+    from App import AppDelegate
+
+    pluginPath = None
+    for p in AppDelegate().server.pluginManager.loadedPlugins:
+        if p.info["name"] == pluginName:
+            pluginPath = p._path
+            break
+
+    if pluginPath is None:
+        raise Exception("Plugin not found")
+
+    with PluginDeps(pluginPath):
+        exec(pythonCode)
 
 
 # Create the block "Code"
@@ -46,7 +98,7 @@ pythonCodeBlock = PluginBlock(
     description=codeVariable.description,
     action=executePython,
     inputs=[inputVariable],
-    variables=[codeVariable],
+    variables=[environmentVariable, codeVariable],
     outputs=[outputVariable],
     id=codeVariable.id,
 )
