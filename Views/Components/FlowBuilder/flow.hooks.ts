@@ -32,6 +32,7 @@ import {
 import { FileExplorerProps } from "../FileExplorer/file_explorer";
 import { usePrompt } from "../HorusPrompt/horus_prompt";
 import { useAlert } from "../HorusPrompt/horus_alert";
+import { useConfirm } from "../HorusPrompt/horus_confirm";
 
 /**
  * An extended "PointerSensor" that prevent some
@@ -175,6 +176,7 @@ export function useFlowBuilder() {
   }, [flow]);
 
   const horusAlert = useAlert();
+  const horusConfirm = useConfirm();
 
   // Store the state of the placed blocks
   const placedIDCounter = useRef<number>(1);
@@ -371,13 +373,16 @@ export function useFlowBuilder() {
         return;
       }
 
+      if (
+        !saved &&
+        !(await horusConfirm(
+          "Current flow is not saved. Are you sure you want to open a new one?"
+        ))
+      ) {
+        return;
+      }
+
       isLoadingFlow.current = true;
-
-      // prettier-ignore
-      if (!saved && !confirm("Current flow is not saved. Are you sure you want to open a new one?")) {
-      return;
-    }
-
       setFlowText("Opening flow");
       setFlowLoading(true);
 
@@ -618,9 +623,9 @@ export function useFlowBuilder() {
         if (
           overwrite &&
           !desktop &&
-          !confirm(
+          !(await horusConfirm(
             "Flow with the same name already exists. Are you sure you want to overwrite the flow?"
-          )
+          ))
         ) {
           return null;
         }
@@ -1365,9 +1370,9 @@ export function useFlowBuilder() {
   const handleNewFlow = useCallback(async () => {
     if (
       !saved &&
-      !confirm(
+      !(await horusConfirm(
         "Current flow is not saved. Are you sure you want to create a new flow?"
-      )
+      ))
     ) {
       return;
     }
@@ -1716,7 +1721,9 @@ export function useFlowBuilder() {
   }
 
   async function stopFlow() {
-    if (!confirm("Are you sure you want to stop executing the flow?")) {
+    if (
+      !(await horusConfirm("Are you sure you want to stop executing the flow?"))
+    ) {
       return;
     }
 
@@ -1772,6 +1779,35 @@ export function useFlowBuilder() {
     setShowFileExplorer((currentShowFileExplorer) => !currentShowFileExplorer);
   };
 
+  const resetFlow = useCallback(async () => {
+    if (!flow.path) {
+      return;
+    }
+
+    if (!(await horusConfirm("Are you sure you want to reset the flow?"))) {
+      return;
+    }
+
+    const savedFlow = await preHandleSave();
+    if (!savedFlow) return;
+    try {
+      const body = JSON.stringify({
+        flowPath: flow.path,
+      });
+
+      const response = await horusPost("/api/resetflow", null, body);
+
+      const data = await response.json();
+
+      if (!data.ok) {
+        horusAlert(data.msg);
+      }
+    } catch (error) {
+      // @ts-ignore
+      horusAlert(error);
+    }
+  }, [flow.path, preHandleSave]);
+
   // Remove the event listeners
   const removeListeners = useCallback(() => {
     window.removeEventListener("newFlow", handleNewFlow);
@@ -1783,6 +1819,7 @@ export function useFlowBuilder() {
     window.removeEventListener("saveFlowAs", handleSaveAs);
     window.removeEventListener("saveTemplate", handleSaveTemplate);
     window.removeEventListener("centerView", centerView);
+    window.removeEventListener("resetFlow", resetFlow);
 
     window.removeEventListener("undo", handleUndo);
     window.removeEventListener("redo", handleRedo);
@@ -1794,6 +1831,7 @@ export function useFlowBuilder() {
     handleSaveAs,
     handleSaveTemplate,
     centerView,
+    resetFlow,
     handleUndo,
     handleRedo,
   ]);
@@ -1823,6 +1861,9 @@ export function useFlowBuilder() {
     // Add an event listener for the center view button
     window.addEventListener("centerView", centerView);
 
+    // Add an event listener for the reset flow button
+    window.addEventListener("resetFlow", resetFlow);
+
     // Event for the fileExplorer
     window.addEventListener("toggleFileExplorer", toggleFileExplorer);
   }, [
@@ -1834,6 +1875,7 @@ export function useFlowBuilder() {
     handleSaveAs,
     handleSaveTemplate,
     centerView,
+    resetFlow,
   ]);
 
   useEffect(() => {

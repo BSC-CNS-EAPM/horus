@@ -6,6 +6,7 @@ import "../Components/appbutton.css";
 import "../Components/FlowBuilder/Blocks/block.css";
 import LockIcon from "../Components/Toolbar/Icons/Lock";
 import { useAlert } from "../Components/HorusPrompt/horus_alert";
+import { useConfirm } from "../Components/HorusPrompt/horus_confirm";
 
 type UserQuota = {
   currentFlows: number;
@@ -45,6 +46,7 @@ export default function Profile() {
     setUserData(data.user);
   };
 
+  const horusConfirm = useConfirm();
   const horusAlert = useAlert();
 
   const resetPassword = async () => {
@@ -65,9 +67,9 @@ export default function Profile() {
 
   const deleteAccount = async () => {
     if (
-      !confirm(
+      !(await horusConfirm(
         "Are you sure you want to delete your account? This action is irreversible."
-      )
+      ))
     ) {
       return;
     }

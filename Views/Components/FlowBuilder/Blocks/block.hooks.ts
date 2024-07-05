@@ -108,7 +108,7 @@ export function useBlockView({
   };
 
   const handleVariableChange = (value: any, id: string, groupID?: string) => {
-    var hasChanged = false;
+    let hasChanged = false;
 
     const updateValue = (variable: PluginVariable) => {
       if (variable.id === id) {
@@ -137,7 +137,7 @@ export function useBlockView({
     }
   };
 
-  var style: CSSProperties = {
+  const style: CSSProperties = {
     top: 0,
     left: 0,
     cursor: "grab",

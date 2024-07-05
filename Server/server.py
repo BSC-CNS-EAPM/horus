@@ -1216,6 +1216,33 @@ class HorusServer:
                 pages = self.pluginManager.getPages()
 
             return flask.jsonify({"pages": pages})
+        
+        @self.server.route("/api/resetflow", methods=["POST"])
+        @self.verifyLogin
+        @self.stopDemoUser
+        def resetFlow():
+            try:
+                data = request.get_json()
+                flowPath = data.get("flowPath", None)
+
+                relativePath = flowPath
+                if self._isForUser:
+                    flowPath = str(UserFileExplorer(flowPath, currentUser).getAbsolutePath())
+
+                flow = self.flowManager.openFlowFromPath(flowPath)
+                flow.reset()
+
+                # Obfuscate the path in webapp mode
+                flow._skipPath = relativePath if self._isForUser else None
+                flow.write()
+
+                self.socketio.emit(
+                    "flow", flow.encode(minimal=False), to=flow.savedID
+                )
+
+                return flask.jsonify({"ok": True})
+            except Exception as exc:  # pylint: disable=broad-exception-caught
+                return flask.jsonify({"ok": False, "msg": str(exc)})
 
         @self.server.route("/api/plugins/executeflow", methods=["POST"])
         @self.verifyLogin

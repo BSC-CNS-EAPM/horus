@@ -729,7 +729,13 @@ function SmilesToolBox(props: {
   ];
 
   return (
-    <div className="flex flex-row w-full justify-between items-center gap-2 flex-wrap z-50 toolbar">
+    <div
+      className="flex flex-row w-full justify-between items-center gap-2 flex-wrap z-50"
+      style={{
+        padding: "5px",
+        borderBottom: "1px solid black",
+      }}
+    >
       <div className="flex flex-row flex-wrap gap-2">
         <ToolbarMenu
           name="New molecule"

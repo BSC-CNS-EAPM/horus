@@ -928,6 +928,30 @@ class Flow:
 
             self._runNextBlocks(nextPlacedID, resetRemoteBlock)
 
+    def reset(self):
+        """
+        Resets the state of the object by cleaning the run of all blocks, clearing the terminal output,
+        and resetting the pending actions. Also, it restores the elapsed time to 0.
+
+        This function does not take any parameters.
+
+        This function does not return any value.
+        """
+        for block in self.blocks:
+            block._cleanRun()
+
+        # Clear the terminal output
+        self.terminalOutput = []
+
+        # Clean the pending actions
+        self.pendingActions = []
+
+        # Clean the pending smiles actions
+        self.pendingSmilesActions = []
+
+        # Restore the time
+        self.elapsed = 0
+
     def run(
         self,
         placedID: typing.Optional[int] = None,
@@ -951,20 +975,7 @@ class Flow:
             placedID = self.currentExecuting
         elif resetFlow:
             # Set all blocks as not executed because a new run is starting
-            for block in self.blocks:
-                block._cleanRun()
-
-            # Clear the terminal output
-            self.terminalOutput = []
-
-            # Clean the pending actions
-            self.pendingActions = []
-
-            # Clean the pending smiles actions
-            self.pendingSmilesActions = []
-
-            # Restore the time
-            self.elapsed = 0
+            self.reset()
 
         if placedID is None:
 

@@ -18,7 +18,7 @@ export const useAlert = () => {
         return resolve;
       });
       setShowAlert(true);
-    }) as Promise<string | null>;
+    }) as Promise<undefined>;
   };
 
   useEffect(() => {

@@ -30,6 +30,7 @@ import { render, unmountComponentAtNode } from "react-dom";
 import { horusPost } from "../../Utils/utils";
 import { FileData } from "chonky";
 import { useAlert } from "../HorusPrompt/horus_alert";
+import { useConfirm } from "../HorusPrompt/horus_confirm";
 
 export default function WebAppUserFlows() {
   // Get the recent flows with the custom hook
@@ -143,6 +144,8 @@ function CorruptedFlowView(props: {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const horusConfirm = useConfirm();
+
   const downloadFile = async () => {
     setIsDownloading(true);
 
@@ -226,9 +229,9 @@ function CorruptedFlowView(props: {
       />
       <TrashIcon
         className="w-6 h-6 text-center cursor-pointer items-center justify-center"
-        onClick={() => {
+        onClick={async () => {
           if (
-            confirm(
+            await horusConfirm(
               "Do you want to delete this corrupted flow? This action is irreversible."
             )
           ) {
@@ -273,6 +276,7 @@ function OtherFileView(props: {
   };
 
   const horusAlert = useAlert();
+  const horusConfirm = useConfirm();
 
   const deleteFile = async () => {
     setIsDeleting(true);
@@ -335,9 +339,9 @@ function OtherFileView(props: {
       />
       <TrashIcon
         className="w-6 h-6 text-center cursor-pointer items-center justify-center"
-        onClick={() => {
+        onClick={async () => {
           if (
-            confirm(
+            await horusConfirm(
               "Do you want to delete this file? This action is irreversible."
             )
           ) {

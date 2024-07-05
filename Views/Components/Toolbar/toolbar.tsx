@@ -42,6 +42,8 @@ import "./toolbar.css";
 
 // Types
 import { Flow, PluginPage } from "../FlowBuilder/flow.types";
+import { useConfirm } from "../HorusPrompt/horus_confirm";
+import { useAlert } from "../HorusPrompt/horus_alert";
 interface ToolBarItemProps {
   name: string;
   hidden?: boolean;
@@ -364,27 +366,6 @@ const fileExplorerEvent = () => {
   window.dispatchEvent(event);
 };
 
-const cleanRecents = async () => {
-  if (!confirm("Are you sure you want to clean the recent flows?")) {
-    return;
-  }
-
-  // Emit a save event
-  const response = await horusGet("/api/cleanrecents");
-
-  if (!response) {
-    alert("Error cleaning recents");
-    return;
-  }
-
-  const data = await response.json();
-
-  if (!data.ok) {
-    alert("Error cleaning recents: " + data.msg);
-    return;
-  }
-};
-
 document.addEventListener("keydown", handleKeyDown);
 
 const hideExtensions = () => {
@@ -399,11 +380,14 @@ export default function HorusToolbar() {
 
   const pluginPages = usePluginPages();
 
+  const horusAlert = useAlert();
+  const horusConfirm = useConfirm();
+
   const menus: ToolBarMenuProps[] = [
     {
       name: "Home",
       link: "/",
-      onClick: () => {
+      onClick: async () => {
         // confirm the user if the flow is not saved
         const currentFlow: (Flow & { saved: boolean }) | null = window.horus
           .getFlow
@@ -412,9 +396,9 @@ export default function HorusToolbar() {
 
         if (currentFlow && !currentFlow.saved) {
           if (
-            !confirm(
+            !(await horusConfirm(
               "The current flow is not saved. Are you sure you want to continue?"
-            )
+            ))
           ) {
             return;
           }
@@ -487,8 +471,29 @@ export default function HorusToolbar() {
           name: "Clean recents",
           hidden: window.horusInternal.mode === "webapp",
           svgPath: <TrashLines />,
-          onClick: () => {
-            cleanRecents();
+          onClick: async () => {
+            if (
+              !(await horusConfirm(
+                "Are you sure you want to clean the recent flows?"
+              ))
+            ) {
+              return;
+            }
+
+            // Emit a save event
+            const response = await horusGet("/api/cleanrecents");
+
+            if (!response) {
+              await horusAlert("Error cleaning recents");
+              return;
+            }
+
+            const data = await response.json();
+
+            if (!data.ok) {
+              await horusAlert("Error cleaning recents: " + data.msg);
+              return;
+            }
           },
         },
       ],
@@ -538,6 +543,11 @@ export default function HorusToolbar() {
           // Set a keyShortcut to enable keyboard navigation.
           keyShortcut: `${modifierKeyLogo}K`,
         },
+      ],
+    },
+    {
+      name: "Flow",
+      items: [
         {
           name: "Center view",
           onClick: () => {
@@ -545,6 +555,14 @@ export default function HorusToolbar() {
             window.dispatchEvent(centerEvent);
           },
           svgPath: <CenterView />,
+        },
+        {
+          name: "Reset flow",
+          svgPath: <Chevron direction="right" />,
+          onClick: () => {
+            const centerEvent = new CustomEvent("resetFlow");
+            window.dispatchEvent(centerEvent);
+          },
         },
         {
           name: "Debug flow",
@@ -579,12 +597,7 @@ export default function HorusToolbar() {
   ];
 
   return (
-    <div
-      className="flex flex-row justify-between items-center"
-      style={{
-        padding: "5px",
-      }}
-    >
+    <div className="flex flex-row justify-between items-center toolbar">
       <div className="flex flex-row gap-1 ml-1 mr-1 h-full">
         {menus.map((menu, index) => (
           <ToolbarMenu key={index} {...menu} />

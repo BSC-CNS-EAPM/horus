@@ -27,6 +27,7 @@ import "./plugin_manager.css";
 import "../CSS/colors.css";
 import "../CSS/animations.css";
 import { useAlert } from "../Components/HorusPrompt/horus_alert";
+import { useConfirm } from "../Components/HorusPrompt/horus_confirm";
 
 type ConfigBlockType = Array<{
   remote: string;
@@ -319,10 +320,11 @@ function PluginCard(props: PluginCardProps) {
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [showDeletingView, setShowDeletingView] = useState<boolean>(false);
 
+  const horusConfirm = useConfirm();
   const horusAlert = useAlert();
 
   const deletePlugin = async () => {
-    if (!confirm("Are you sure you want to delete this plugin?")) {
+    if (!(await horusConfirm("Are you sure you want to delete this plugin?"))) {
       return;
     }
 

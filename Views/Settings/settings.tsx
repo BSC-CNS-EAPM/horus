@@ -21,6 +21,7 @@ import { HorusSettingsObject } from "./setting";
 // Import the css
 import "../Components/FlowBuilder/Blocks/block.css";
 import { useAlert } from "../Components/HorusPrompt/horus_alert";
+import { useConfirm } from "../Components/HorusPrompt/horus_confirm";
 
 export async function fetchSettings(
   forAdmin?: boolean
@@ -83,6 +84,7 @@ function useSettings(forAdmin?: boolean) {
   const [hasChanges, setHasChanges] = useState<boolean>(false);
 
   const horusAlert = useAlert();
+  const horusConfirm = useConfirm();
 
   async function getSettings() {
     const settings = await fetchSettings(forAdmin);
@@ -106,7 +108,11 @@ function useSettings(forAdmin?: boolean) {
   }
 
   async function restoreSettings() {
-    if (!confirm("Are you sure you want to restore the default settings?")) {
+    if (
+      !(await horusConfirm(
+        "Are you sure you want to restore the default settings?"
+      ))
+    ) {
       return;
     }
 
