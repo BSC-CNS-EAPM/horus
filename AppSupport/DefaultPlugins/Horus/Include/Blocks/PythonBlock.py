@@ -1,3 +1,4 @@
+from typing import Any, List
 from HorusAPI import PluginBlock, PluginVariable, VariableTypes
 
 
@@ -45,6 +46,7 @@ environmentVariable = EnvironmentVariable(
     id="environment",
     description="Select a Plugin to use its dependencies within the code.",
     type=VariableTypes.STRING_LIST,
+    defaultValue="Horus",
 )
 
 outputVariable = PluginVariable(
@@ -86,7 +88,7 @@ def executePython(block: PluginBlock):
             break
 
     if pluginPath is None:
-        raise Exception("Plugin not found")
+        raise Exception(f"Plugin '{pluginName}' not found")
 
     with PluginDeps(pluginPath):
         exec(pythonCode)
