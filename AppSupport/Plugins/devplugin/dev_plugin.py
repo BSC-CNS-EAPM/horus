@@ -9,6 +9,7 @@ from HorusAPI import (
     PluginVariable,
     Extensions,
     MolstarAPI,
+    SmilesAPI,
     PluginPage,
     CustomVariable,
     PluginConfig,
@@ -508,3 +509,45 @@ test_config_block = PluginBlock(
 )
 
 plugin.addBlock(test_config_block)
+
+
+def add_smiles_action(block: PluginBlock):
+
+    SmilesAPI().reset()
+
+    smiles = "CCCO a label"
+    SmilesAPI().addSmiles(smiles)
+
+    smiles = "CNC=OC"
+    SmilesAPI().addSmiles(smiles)
+
+    csv_contents = """smi,label,energy
+CCCO,a label,-0.5
+CNC=OC,other label,1.0
+"""
+
+    with open("smiles.csv", "w") as f:
+        f.write(csv_contents)
+
+    SmilesAPI().addCSV("smiles.csv")
+
+    SmilesAPI().addSmilesWithData(
+        [
+            {
+                "smi": "CN(CCCCO)CCNO",
+                "label": "superSmiles",
+                "group": "group 1",
+                "properties": {"energy": 0.5},
+            }
+        ]
+    )
+
+
+add_smiles_block = PluginBlock(
+    id="add_smiles_block",
+    name="Add smiles",
+    description="Add smiles",
+    action=add_smiles_action,
+)
+
+plugin.addBlock(add_smiles_block)

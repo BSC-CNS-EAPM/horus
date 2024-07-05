@@ -17,6 +17,14 @@
   transition: background 0.2s ease-in-out, border 0.2s ease-in-out;
   border: 1px solid transparent;
   border-radius: 5px;
+  margin-block: 1px;
+}
+
+.toolbar-item-disabled {
+  cursor: not-allowed !important;
+  background: var(--soft-grey);
+  cursor: not-allowed !important;
+  height: 98%;
 }
 
 .toolbar-item:hover {

@@ -63,6 +63,7 @@ print("====================================\n")
 ext_modules = [  # Compile the HorusAPI
     Extension("HorusAPI.plugins", ["src/plugins.py"]),
     Extension("HorusAPI.molstar", ["src/molstar.py"]),
+    Extension("HorusAPI.smiles", ["src/smiles.py"]),
     Extension("HorusAPI.utils", ["src/utils.py"]),
     Extension("HorusAPI.extensions", ["src/extensions.py"]),
     Extension(

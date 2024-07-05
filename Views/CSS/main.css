@@ -94,6 +94,12 @@ select:hover {
   flex: 0 0 10px;
   position: relative;
   background: var(--whitesmoke);
+
+  /* prevent selection of text */
+  user-select: none;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
 }
 
 .ResizeHandleOuter--vertical {

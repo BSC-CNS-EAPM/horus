@@ -16,7 +16,7 @@ bun i --no-save
 
 # Fix parcel with npm
 echo "Fixing parcel"
-npm i --save-dev --legacy-peer-deps --save-exact parcel@2.11.0
+npm i --save-dev --legacy-peer-deps --save-exact parcel@2.12.0
 
 # Reinstall the conda environment
 echo "Reinstalling the conda environment"

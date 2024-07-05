@@ -94,7 +94,7 @@ export function BlockView(props: BlockViewProps) {
                 transform: props.block.isPlaced ? "translateY(-2px)" : "",
               }}
             >
-              <BreakLongBlockNames name={props.block.name} />
+              <BreakLongUnderscoreNames name={props.block.name} />
               {props.block.isPlaced &&
                 window.horusSettings["showPlacedID"]?.value && (
                   <span className="text-gray-400" style={{}}>
@@ -620,7 +620,7 @@ function InputRunningSpinner(props: { isRunning: boolean }) {
   return null;
 }
 
-function BreakLongBlockNames(props: { name: string }) {
+export function BreakLongUnderscoreNames(props: { name: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -630,5 +630,5 @@ function BreakLongBlockNames(props: { name: string }) {
     }
   }, [props.name]);
 
-  return <div ref={containerRef}>{props.name}</div>;
+  return <span ref={containerRef}>{props.name}</span>;
 }

@@ -1536,7 +1536,7 @@ export function SphereVariableView(props: VariableViewProps) {
   );
 }
 
-function NotFoundView(props: { children: ReactNode }) {
+export function NotFoundView(props: { children: ReactNode }) {
   return (
     <div
       role="placeholder"

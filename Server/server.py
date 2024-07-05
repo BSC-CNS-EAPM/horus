@@ -748,6 +748,12 @@ class HorusServer:
                 molstarState.stream.seek(0)
                 molstarState = molstarState.stream.read()
 
+            # Get and parse the smilesState
+            smilesState = data.get("smilesState", None)
+
+            if smilesState is not None:
+                smilesState = flask.json.loads(smilesState)
+
             # Get if the user wants to store this flow as a template
             saveAsTemplate = flowData.get("template", False)
 
@@ -797,7 +803,7 @@ class HorusServer:
 
                     @self.verifyQuotas(verify=["maxFlows"])
                     def getFlow():
-                        return self.flowManager.saveFlow(flowData, molstarState)
+                        return self.flowManager.saveFlow(flowData, molstarState, smilesState)
 
                     verifiedFlow = getFlow()
 
@@ -859,7 +865,7 @@ class HorusServer:
                 # Get the flow JSON
                 flowJson = flow.encode(minimal=False)
 
-                # Get the molstarStte zip file
+                # Get the molstarState zip file
                 molstarState = flow.getMolstarState()
 
                 success = {"ok": True, "flow": flowJson}
@@ -868,6 +874,11 @@ class HorusServer:
                     molstarState = molstarState.hex()
 
                     success["molstarState"] = molstarState
+
+                # Get the smilesState json
+                smilesState = flow.getSmilesState()
+                if smilesState is not None:
+                    success["smilesState"] = smilesState
 
                 # Return both the flow and the molstar state as binary
                 # to be later retrieved by the client as a blob
@@ -1004,6 +1015,9 @@ class HorusServer:
                 # Get the molstarStte zip file
                 molstarState = flow.getMolstarState()
 
+                # Get the smilesState
+                smilesState = flow.getSmilesState()
+
                 # On webapp mode, remove the full path
                 if self._isForUser and flow.path:
                     flow.path = str(UserFileExplorer(path, currentUser).getRelativePath())
@@ -1017,6 +1031,9 @@ class HorusServer:
                     molstarState = molstarState.hex()
 
                     success["molstarState"] = molstarState
+
+                if smilesState is not None:
+                    success["smilesState"] = flask.json.dumps(smilesState)
 
                 # Return both the flow and the molstar state as binary
                 # to be later retrieved by the client as a blob
@@ -1035,6 +1052,7 @@ class HorusServer:
             # The client here sends a form data with two values:
             # - flowPath: The path to the flow
             # - molstarState: The molstar state as a zip file
+            # - smilesState: The smiles state as a zip file
 
             # Parse the request data
             request.get_data()
@@ -1051,14 +1069,19 @@ class HorusServer:
                 return flask.jsonify(success)
 
             file = request.files.get("molstarState", None)
+            smilesState = request.form.get("smilesState", None)
 
-            if file is None:
+            if file is None or smilesState is None:
                 success = {
                     "ok": False,
-                    "msg": "No molstar state provided",
+                    "msg": "No molstar or smiles state provided",
                 }
 
                 return flask.jsonify(success)
+
+            # Load the smiles state json
+            smilesState = flask.json.loads(smilesState)
+
             try:
 
                 # If we are on webapp mode, update the path to the user's directory
@@ -1073,7 +1096,8 @@ class HorusServer:
                 file.stream.seek(0)
                 molState = file.stream.read()
                 flow.pendingActions = []
-                flow.write(molState)
+                flow.pendingSmilesActions = []
+                flow.write(molState, smilesState)
 
                 success = {
                     "ok": True,

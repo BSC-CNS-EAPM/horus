@@ -1,6 +1,6 @@
 import { forwardRef } from "react";
 import { AgGridReact } from "ag-grid-react"; // React Data Grid Component
-import { AgGridEvent } from "ag-grid-community";
+import { AgGridEvent, GridOptions } from "ag-grid-community";
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-quartz.css";
 
@@ -11,6 +11,7 @@ type HorusTableProps = {
   onCellEdit?: (e: AgGridEvent) => void;
   getRowId?: (e: any) => any;
   sortable?: boolean;
+  gridProps?: GridOptions;
 };
 
 export const HorusTable = forwardRef((props: HorusTableProps, ref: any) => {
@@ -27,6 +28,7 @@ export const HorusTable = forwardRef((props: HorusTableProps, ref: any) => {
         onCellClicked={props.onCellClick}
         onCellEditingStopped={props.onCellEdit}
         getRowId={props.getRowId}
+        {...props.gridProps}
       />
     </div>
   );

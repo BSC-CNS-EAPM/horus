@@ -5,6 +5,7 @@ import Logo from "../Components/logo";
 import "../Components/appbutton.css";
 import "../Components/FlowBuilder/Blocks/block.css";
 import LockIcon from "../Components/Toolbar/Icons/Lock";
+import { useAlert } from "../Components/HorusPrompt/horus_alert";
 
 type UserQuota = {
   currentFlows: number;
@@ -44,17 +45,21 @@ export default function Profile() {
     setUserData(data.user);
   };
 
+  const horusAlert = useAlert();
+
   const resetPassword = async () => {
     const response = await horusGet("/users/reset");
     if (!response) {
-      alert("An error occurred. Try again later.");
+      await horusAlert("An error occurred. Try again later.");
     }
     const data = await response.json();
 
     if (data.ok) {
-      alert("An email has been sent to your email address with instructions");
+      await horusAlert(
+        "An email has been sent to your email address with instructions"
+      );
     } else {
-      alert(data.msg || "An error occurred. Try again later.");
+      await horusAlert(data.msg || "An error occurred. Try again later.");
     }
   };
 
@@ -69,15 +74,15 @@ export default function Profile() {
 
     const response = await horusGet("/users/delete");
     if (!response) {
-      alert("An error occurred. Try again later.");
+      await horusAlert("An error occurred. Try again later.");
     }
     const data = await response.json();
 
     if (data.ok) {
-      alert("Your account has been deleted");
+      await horusAlert("Your account has been deleted");
       window.location.href = "/users/login";
     } else {
-      alert(data.msg || "An error occurred. Try again later.");
+      await horusAlert(data.msg || "An error occurred. Try again later.");
     }
   };
 

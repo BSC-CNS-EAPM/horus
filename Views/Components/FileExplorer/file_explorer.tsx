@@ -14,6 +14,8 @@ import { FileBrowser, FileNavbar, FileToolbar, FileList } from "chonky";
 import { FlowContext } from "../FlowBuilder/flow.view";
 
 import { GLOBAL_IDS } from "../../Utils/globals";
+import { usePrompt } from "../HorusPrompt/horus_prompt";
+import { useAlert } from "../HorusPrompt/horus_alert";
 
 function saveBlob(blob: Blob, fileName: string) {
   const a = document.createElement("a") as HTMLAnchorElement;
@@ -54,6 +56,8 @@ function useServerExplorer(
 
   const currentPath = useRef(null);
 
+  const horusAlert = useAlert();
+
   const fetchFolders = useCallback(
     async (openPath?: string) => {
       const header = {
@@ -62,7 +66,7 @@ function useServerExplorer(
       };
 
       if (window.horusInternal.webApp && !flowContext?.path && !openDirectly) {
-        alert("Save or open a flow before selecting files.");
+        await horusAlert("Save or open a flow before selecting files.");
         setOpen(false);
         return;
       }
@@ -92,7 +96,7 @@ function useServerExplorer(
       const data = await response.json();
 
       if (!data.ok) {
-        alert(data.msg);
+        await horusAlert(data.msg);
         setFiles(currentFiles);
         setFolderChain(currentFolderChain);
         return;
@@ -176,9 +180,11 @@ function useServerExplorer(
     }
   };
 
+  const horusPrompt = usePrompt();
+
   const createFolder = useCallback(async () => {
     // Ask the user for the folder name
-    const folderName = prompt("Enter the folder name");
+    const folderName = await horusPrompt("Enter the folder name");
 
     if (!folderName) {
       return;
@@ -204,7 +210,7 @@ function useServerExplorer(
     const data = await response.json();
 
     if (!data.ok) {
-      alert(data.msg);
+      await horusAlert(data.msg);
     }
 
     fetchFolders();
@@ -246,7 +252,7 @@ function useServerExplorer(
       const fileSize = file.size / 1024 ** 2;
 
       if (fileSize > (window.horusInternal.webApp?.uploadSize ?? 50)) {
-        alert(
+        await horusAlert(
           `The filze size exceeds the maximum of ${
             window.horusInternal.webApp?.uploadSize ?? 2
           } MB`
@@ -278,7 +284,7 @@ function useServerExplorer(
       const data = await response.json();
 
       if (!data.ok) {
-        alert(data.msg);
+        await horusAlert(data.msg);
         break;
       }
     }
@@ -326,7 +332,7 @@ function useServerExplorer(
           const data = await response.json();
 
           if (!response.ok) {
-            alert(data.msg);
+            await horusAlert(data.msg);
             break;
           }
         }
@@ -380,7 +386,7 @@ function useServerExplorer(
         const data = await response.json();
 
         if (!data.ok) {
-          alert(data.msg);
+          await horusAlert(data.msg);
           break;
         }
       }

@@ -20,6 +20,7 @@ import OpenFlowIcon from "../Toolbar/Icons/Open";
 
 // CSS
 import "./templates.css";
+import { useAlert } from "../HorusPrompt/horus_alert";
 
 function useTemplates() {
   const [fetchingTemplates, setFetchingTemplates] = useState(false);
@@ -35,6 +36,8 @@ function useTemplates() {
     );
   }, [filterTerm, templates]);
 
+  const horusAlert = useAlert();
+
   const getTemplates = async () => {
     setFetchingTemplates(true);
     const response = await horusGet("/api/templates");
@@ -42,7 +45,7 @@ function useTemplates() {
     const data = await response.json();
 
     if (!data.ok) {
-      alert(data.msg);
+      await horusAlert(data.msg);
     } else {
       setTemplates((data?.templates as Flow[]) ?? []);
     }
@@ -203,6 +206,8 @@ function _DeleteTemplateModal({
   // Get the modal element
   const modal = document.getElementById("delete-flow-modal") as HTMLDivElement;
 
+  const horusAlert = useAlert();
+
   const removeFlow = async () => {
     setIsDeleting(true);
 
@@ -217,7 +222,7 @@ function _DeleteTemplateModal({
       const data = await response.json();
 
       if (!data.ok) {
-        alert("Error deleting template: " + data.msg);
+        await horusAlert("Error deleting template: " + data.msg);
       } else {
         // Get the flows again
         await getTemplates();

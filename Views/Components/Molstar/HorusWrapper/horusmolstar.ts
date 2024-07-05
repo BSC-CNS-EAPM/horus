@@ -37,6 +37,10 @@ import { MVSData } from "molstar/lib/extensions/mvs/mvs-data";
 import { MolViewSpec } from "molstar/lib/extensions/mvs/behavior";
 import { StateObjectSelector } from "molstar/lib/mol-state";
 import { BuiltInTrajectoryFormats } from "molstar/lib/mol-plugin-state/formats/trajectory";
+import { HorusMolstarViewportComponent } from "./ui/viewport";
+
+// Import the HorusSmilesManager
+import HorusSmilesManager from "../../Smiles/SmilesWrapper/horusSmiles";
 
 // Definition of useful types
 export type AtomInfo = {
@@ -52,6 +56,18 @@ export type AtomInfo = {
   z: number;
   label: string;
   structureID?: string;
+};
+
+export type BondInfo = {
+  aUnit: Unit;
+  bUnit: Unit;
+  aIndex: StructureElement.UnitIndex;
+  bIndex: StructureElement.UnitIndex;
+  type: string;
+  order: string;
+  key: string;
+  //Modified from original
+  strucrureRef: string;
 };
 
 export type MolInfo = {
@@ -113,6 +129,11 @@ export default class HorusMolstar {
   constructor(target: HTMLDivElement, options?: MolstarInitOptions) {
     this.target = target;
     this.initPlugin(options);
+
+    // Init also the Smiles2D manager, as it will be always coupled with Mol*
+    if (!window.smiles) {
+      window.smiles = new HorusSmilesManager();
+    }
   }
 
   private async initPlugin(options?: MolstarInitOptions) {
@@ -132,6 +153,7 @@ export default class HorusMolstar {
         [PluginConfig.Viewport.ShowExpand, false],
         [PluginConfig.Viewport.ShowControls, true],
         [PluginConfig.Viewport.ShowSelectionMode, true],
+        [PluginConfig.Viewport.ShowSettings, true],
       ],
       layout: {
         initial: {
@@ -140,7 +162,14 @@ export default class HorusMolstar {
         },
       },
       components: {
+        controls: {
+          right: "none",
+          bottom: "none",
+        },
         remoteState: "none",
+        viewport: {
+          view: HorusMolstarViewportComponent,
+        },
       },
     });
 
@@ -169,6 +198,7 @@ export default class HorusMolstar {
 
     // Add the molstar events
     this.molstarEvents();
+    // Add las structure loaded:
   }
 
   private molstarEvents() {
@@ -199,8 +229,12 @@ export default class HorusMolstar {
     });
 
     this.plugin!.behaviors.state.isUpdating.subscribe((e) => {
-      // Send the values through a custom event "molstar-state-event"
+      // Only send the event if the state finished updating
+      if (e) {
+        return;
+      }
 
+      // Send the values through a custom event "molstar-state-event"
       const detail: MolstarStateEventDetail = {
         updating: e,
       };
@@ -233,6 +267,11 @@ export default class HorusMolstar {
    */
   public async reset() {
     await this.initPlugin();
+
+    // reset the Smiles2D manager too
+    if (window.smiles) {
+      window.smiles.reset();
+    }
   }
 
   /**
@@ -927,6 +966,7 @@ export default class HorusMolstar {
    *
    * @throws {Error} If an error occurs during file parsing or preset application, or if the plugin is not initialized.
    */
+
   public async loadMoleculeFile(
     file: File,
     options?: {
@@ -1118,7 +1158,6 @@ export default class HorusMolstar {
     const label = structureID
       ? this.getLabelFromStructureRef(structureID)
       : StructureProperties.unit.model_label(loc);
-
     // If auth_comp_id has 2 characters instead of 3, then add a space
     // before it
     if (auth_comp_id.length === 2) {
@@ -1160,6 +1199,7 @@ export default class HorusMolstar {
    *
    * @throws {Error} If the plugin is not initialized or if the structure hierarchy is unavailable.
    */
+
   private structures(): StructureRef[] {
     if (!this.plugin || !this.plugin.managers.structure.hierarchy.current) {
       throw new Error(
@@ -1267,7 +1307,7 @@ export default class HorusMolstar {
   }
 
   // Will search iteratibely until finding the actual label of the structure (the one on the root)
-  private getLabelFromStructureRef(refID: string) {
+  public getLabelFromStructureRef(refID: string) {
     return this.plugin!.state.data.cells.get(
       this.getStructureRootIDFromStructureSourceRef(refID)
     )!.obj!.label;
@@ -1318,6 +1358,55 @@ export default class HorusMolstar {
     return molList;
   }
 
+  public listHeteroAtoms(label?: string): { [id: string]: AtomInfo[] } {
+    // Determine which structures to list based on the provided label
+    const structuresToList = label
+      ? (() => {
+          const structure = this.getStructureObjectFromLabel(label);
+          return structure ? [structure] : []; // Return an empty array if no valid structure
+        })()
+      : this.structures();
+
+    if (label && structuresToList.length === 0) {
+      throw new Error(`No structure with label '${label}'`);
+    }
+
+    const atoms: { [id: string]: AtomInfo[] } = {};
+    for (const s of structuresToList) {
+      atoms[s.cell.sourceRef!] = this.getAtomsFromStructure(s);
+    }
+
+    // Map each structure to its list of hetero atoms
+    return atoms;
+  }
+
+  /**
+   * Retrieves the information of all hetero atoms in the given structure.
+   *
+   * @param {StructureRef} structureRef - The reference to the structure from which to retrieve the atoms.
+   * @return {AtomInfo[]} An array of AtomInfo objects representing the hetero atoms in the structure.
+   */
+  private getAtomsFromStructure(structureRef: StructureRef): AtomInfo[] {
+    const resInfo: AtomInfo[] = [];
+
+    Structure.eachAtomicHierarchyElement(structureRef.cell.obj!.data, {
+      atom: (loc) => {
+        // auth_comp_id is the 3 letter code for the residue like "ALA", "GLY", etc.
+        const auth_comp_id = StructureProperties.atom.auth_comp_id(loc);
+
+        // Skip waters
+        if (auth_comp_id === "HOH") return;
+
+        if (standardResidues.includes(auth_comp_id)) return;
+
+        const res = this.extractAtomInfo(loc, structureRef.cell.sourceRef);
+        resInfo.push(res);
+      },
+    });
+
+    return resInfo;
+  }
+
   /**
    * Extracts residue information from a given structure reference.
    *
@@ -1338,6 +1427,7 @@ export default class HorusMolstar {
    *
    * @throws {Error} If there's an error accessing the structure or extracting residue information.
    */
+
   private getResiduesFromStructure(
     structureRef: StructureRef,
     get?: "all" | "hetero" | "standard" | "chain",

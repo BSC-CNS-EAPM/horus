@@ -26,6 +26,7 @@ import {
 import "./plugin_manager.css";
 import "../CSS/colors.css";
 import "../CSS/animations.css";
+import { useAlert } from "../Components/HorusPrompt/horus_alert";
 
 type ConfigBlockType = Array<{
   remote: string;
@@ -98,6 +99,8 @@ function PluginConfigView(props: PluginConfigViewProps) {
     setHasChanges(true);
   };
 
+  const horusAlert = useAlert();
+
   const handleSave = async () => {
     setSaving(true);
 
@@ -132,7 +135,7 @@ function PluginConfigView(props: PluginConfigViewProps) {
       const data = await response.json();
 
       if (!data.ok) {
-        alert(data.msg);
+        await horusAlert(data.msg);
         return;
       }
       setHasChanges(false);
@@ -198,9 +201,11 @@ function PluginConfigView(props: PluginConfigViewProps) {
           <span className="plugin-variable-name">Remote:</span>
           <select
             className="w-full"
-            onChange={(e) => {
+            onChange={async (e) => {
               if (hasChanges) {
-                alert("You have unsaved changes for the current remote.");
+                await horusAlert(
+                  "You have unsaved changes for the current remote."
+                );
                 return;
               }
               setTempChanges([]);
@@ -314,6 +319,8 @@ function PluginCard(props: PluginCardProps) {
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [showDeletingView, setShowDeletingView] = useState<boolean>(false);
 
+  const horusAlert = useAlert();
+
   const deletePlugin = async () => {
     if (!confirm("Are you sure you want to delete this plugin?")) {
       return;
@@ -358,7 +365,7 @@ function PluginCard(props: PluginCardProps) {
     modal.style.cursor = "default";
 
     if (!data.ok) {
-      alert("Error deleting plugin: " + data.msg);
+      await horusAlert("Error deleting plugin: " + data.msg);
     } else {
       props.deletePlugin(plugin.id);
     }
@@ -474,6 +481,8 @@ export function PluginManager({
   const [loading, setLoading] = useState<boolean>(true);
   const [developmentMode, setDevelopmentMode] = useState<boolean>(false);
 
+  const horusAlert = useAlert();
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -481,7 +490,7 @@ export function PluginManager({
       const data = await response.json();
 
       if (!data.ok) {
-        alert(data.msg);
+        await horusAlert(data.msg);
         return;
       }
 
@@ -496,7 +505,7 @@ export function PluginManager({
 
       setDevelopmentMode(devMode || false);
     } catch (error) {
-      alert(`Error fetching plugins: ${error}`);
+      await horusAlert(`Error fetching plugins: ${error}`);
     } finally {
       setLoading(false);
     }
@@ -510,7 +519,7 @@ export function PluginManager({
   const reloadPlugins = async () => {
     setLoading(true);
     await horusGet("/api/plugins/reload");
-    alert("Plugins reloaded!");
+    await horusAlert("Plugins reloaded!");
     fetchData();
   };
 
@@ -662,6 +671,8 @@ function InstallingPluginView({
     });
   }, []);
 
+  const horusAlert = useAlert();
+
   // Open new window for plugin installation
   const installPlugin = async (file: string) => {
     if (file === null || file === undefined) {
@@ -686,7 +697,7 @@ function InstallingPluginView({
     setIsInstalling(false);
 
     if (!data.ok) {
-      alert("Error installing plugin: " + data.msg);
+      await horusAlert("Error installing plugin: " + data.msg);
     } else {
       onPluginInstall();
     }

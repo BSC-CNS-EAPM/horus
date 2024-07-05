@@ -9,6 +9,7 @@ import { FlowStatusView } from "./flow_status";
 import WorkingView from "../MainApp/working_view";
 import { Flow } from "../FlowBuilder/flow.types";
 import { FileData } from "chonky";
+import { useAlert } from "../HorusPrompt/horus_alert";
 
 type RecentUserFlowProps = {
   flows: Flow[];
@@ -179,6 +180,8 @@ export function useGetRecentFlows(
     }
   }, []);
 
+  const horusAlert = useAlert();
+
   const getFlows = useCallback(async () => {
     setFetchingRecents(true);
 
@@ -191,7 +194,7 @@ export function useGetRecentFlows(
     const data = await responsePredefined.json();
 
     if (!responsePredefined.ok) {
-      alert("Error getting flows: " + data.msg);
+      await horusAlert("Error getting flows: " + data.msg);
       return;
     }
 

@@ -29,6 +29,7 @@ import { render, unmountComponentAtNode } from "react-dom";
 // Utils
 import { horusPost } from "../../Utils/utils";
 import { FileData } from "chonky";
+import { useAlert } from "../HorusPrompt/horus_alert";
 
 export default function WebAppUserFlows() {
   // Get the recent flows with the custom hook
@@ -164,6 +165,8 @@ function CorruptedFlowView(props: {
     }
   };
 
+  const horusAlert = useAlert();
+
   const deleteFile = async () => {
     setIsDeleting(true);
 
@@ -182,7 +185,7 @@ function CorruptedFlowView(props: {
       const data = await response.json();
 
       if (!data.ok) {
-        alert("Error deleting file: " + data.msg);
+        await horusAlert("Error deleting file: " + data.msg);
       } else {
         // Get the flows again
         await props.getFlows();
@@ -269,6 +272,8 @@ function OtherFileView(props: {
     }
   };
 
+  const horusAlert = useAlert();
+
   const deleteFile = async () => {
     setIsDeleting(true);
 
@@ -287,7 +292,7 @@ function OtherFileView(props: {
       const data = await response.json();
 
       if (!data.ok) {
-        alert("Error deleting file: " + data.msg);
+        await horusAlert("Error deleting file: " + data.msg);
       } else {
         // Get the flows again
         await props.getFlows();
@@ -407,6 +412,8 @@ function DeleteFlow({
 function FlowDownload({ flow }: { flow: Flow }) {
   const [isDownloading, setIsDownloading] = useState(false);
 
+  const horusAlert = useAlert();
+
   const downloadFlow = async () => {
     setIsDownloading(true);
 
@@ -425,7 +432,7 @@ function FlowDownload({ flow }: { flow: Flow }) {
       const data = await response.json();
 
       if (!data.ok) {
-        alert("Error downloading flow: " + data.msg);
+        await horusAlert("Error downloading flow: " + data.msg);
         return;
       }
 
@@ -483,6 +490,8 @@ function FlowClone({
 }) {
   const [isCloning, setIsCloning] = useState(false);
 
+  const horusAlert = useAlert();
+
   const cloneFlow = async () => {
     setIsCloning(true);
 
@@ -501,7 +510,7 @@ function FlowClone({
       const data = await response.json();
 
       if (!data.ok) {
-        alert("Error cloning flow: " + data.msg);
+        await horusAlert("Error cloning flow: " + data.msg);
         return;
       }
 
@@ -572,6 +581,8 @@ function _DeleteFlowModal({
   // Get the modal element
   const modal = document.getElementById("delete-flow-modal") as HTMLDivElement;
 
+  const horusAlert = useAlert();
+
   const removeFlow = async () => {
     setIsDeleting(true);
 
@@ -590,7 +601,7 @@ function _DeleteFlowModal({
       const data = await response.json();
 
       if (!data.ok) {
-        alert("Error deleting flow: " + data.msg);
+        await horusAlert("Error deleting flow: " + data.msg);
       } else {
         // Get the flows again
         await getFlows();

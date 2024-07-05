@@ -1,4 +1,8 @@
+// React
 import { useState } from "react";
+
+// Components
+import { BreakLongUnderscoreNames } from "../FlowBuilder/Blocks/block.view";
 
 // Styles
 import "./sidebar.css";
@@ -50,7 +54,7 @@ function SidebarLeft(props: {
     >
       {categories.map((category) => (
         <div
-          className={`sidebar-item animated-gradient ${
+          className={`break-word sidebar-item animated-gradient ${
             props.selectedCategory === category
               ? "sidebar-selected"
               : "sidebar-unselected"
@@ -58,7 +62,7 @@ function SidebarLeft(props: {
           onClick={() => handleClick(category)}
           key={category}
         >
-          {category}
+          <BreakLongUnderscoreNames name={category} />
         </div>
       ))}
     </div>

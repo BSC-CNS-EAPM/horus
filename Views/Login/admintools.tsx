@@ -39,6 +39,7 @@ import TrashIcon from "../Components/Toolbar/Icons/Trash";
 
 // Types
 import { Block, PluginPage } from "../Components/FlowBuilder/flow.types";
+import { useAlert } from "../Components/HorusPrompt/horus_alert";
 
 type Database = {
   users: UsersDatabase[];
@@ -127,10 +128,12 @@ export function AdminTools() {
 function UsersTableView() {
   const [database, setDatabase] = useState<Database | null>(null);
 
+  const horusAlert = useAlert();
+
   const getDatabase = async () => {
     const response = await horusGet("/users/admintools/data");
     if (!response) {
-      alert("An error occurred. Try again later.");
+      await horusAlert("An error occurred. Try again later.");
       return;
     }
     const data = await response.json();
@@ -166,6 +169,7 @@ function _UserTable({
   groups: string[];
   getDatabase: () => void;
 }) {
+  const horusAlert = useAlert();
   const updateUser = async (newUser: UsersDatabase) => {
     const newQuotaToSend = JSON.stringify(newUser);
 
@@ -176,14 +180,14 @@ function _UserTable({
     );
 
     if (!response) {
-      alert("An error occurred. Try again later.");
+      await horusAlert("An error occurred. Try again later.");
       return;
     }
 
     const data = await response.json();
 
     if (!data.ok) {
-      alert(data.msg);
+      await horusAlert(data.msg);
       getDatabase();
     }
   };
@@ -250,11 +254,12 @@ function _UserTable({
 
 function FlowsTableView() {
   const [database, setDatabase] = useState<Database | null>(null);
+  const horusAlert = useAlert();
 
   const getDatabase = async () => {
     const response = await horusGet("/users/admintools/data");
     if (!response) {
-      alert("An error occurred. Try again later.");
+      await horusAlert("An error occurred. Try again later.");
       return;
     }
     const data = await response.json();
@@ -496,11 +501,12 @@ function GroupDatabaseView() {
   const [database, setDatabase] = useState<Database | null>(null);
   const [creatingGroup, setCreatingGroup] = useState(false);
   const [createGroupText, setCreateGroupText] = useState("");
+  const horusAlert = useAlert();
 
   const getDatabase = async () => {
     const response = await horusGet("/users/admintools/data");
     if (!response) {
-      alert("An error occurred. Try again later.");
+      await horusAlert("An error occurred. Try again later.");
       return;
     }
     const data = await response.json();
@@ -522,7 +528,7 @@ function GroupDatabaseView() {
       if (data.ok) {
         getDatabase();
       } else {
-        alert(data.msg);
+        await horusAlert(data.msg);
       }
     } finally {
       setCreatingGroup(false);
@@ -538,10 +544,10 @@ function GroupDatabaseView() {
     const data = await response.json();
 
     if (data.ok) {
-      alert(data.msg);
+      await horusAlert(data.msg);
       getDatabase();
     } else {
-      alert(data.msg);
+      await horusAlert(data.msg);
     }
   };
 
@@ -719,6 +725,7 @@ export function BlockViewModify(props: {
   useEffect(() => {
     getBlocks();
   }, []);
+  const horusAlert = useAlert();
 
   const modifyGroup = useCallback(async () => {
     const response = await horusPost(
@@ -733,7 +740,7 @@ export function BlockViewModify(props: {
     const data = await response.json();
 
     if (!data.ok) {
-      alert(data.msg);
+      await horusAlert(data.msg);
     } else {
       getDatabase();
     }
@@ -901,6 +908,7 @@ export function ExtensionViewModify(props: {
   const [editedPages, setEditedPages] = useState<PluginPage[]>([]);
   const [filteredPages, setFilteredPages] = useState<PluginPage[]>([]);
   const [currentFilter, setCurrentFilter] = useState("");
+  const horusAlert = useAlert();
 
   const modifyGroup = useCallback(async () => {
     const response = await horusPost(
@@ -915,7 +923,7 @@ export function ExtensionViewModify(props: {
     const data = await response.json();
 
     if (!data.ok) {
-      alert(data.msg);
+      await horusAlert(data.msg);
     } else {
       getDatabase();
     }

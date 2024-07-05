@@ -5,6 +5,7 @@ import { horusGet } from "../Utils/utils";
 
 // @ts-ignore
 import HorusLogo from "../../Resources/horus.png";
+import { useAlert } from "../Components/HorusPrompt/horus_alert";
 
 type AppInfo = {
   APP_VERSION: string;
@@ -25,6 +26,8 @@ export default function About() {
     PYTHON_VERSION: "Unknown",
   } as AppInfo);
 
+  const horusAlert = useAlert();
+
   const getVersion = async () => {
     const response = await horusGet("/api/version");
     if (!response.ok) {
@@ -34,7 +37,7 @@ export default function About() {
     const data = await response.json();
 
     if (!data.ok) {
-      alert("Error getting application info: " + data.msg);
+      await horusAlert("Error getting application info: " + data.msg);
       return;
     }
 

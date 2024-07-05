@@ -306,6 +306,35 @@ def test_background_molstar_api(flow_appDelegate):
         os.system(f"mv {path}.bak {path}")
 
 
+def test_flow_smiles_manager(plugin_manager):
+    path = os.path.join(os.path.dirname(__file__), "test_flow_smiles_manager.flow")
+
+    # Backup the flow
+    os.system(f"cp {path} {path}.bak")
+
+    try:
+        flow = Flow.read(path)
+
+        flow.run(placedID=1)
+
+        # Check that the flow has been updated
+        assert flow.status == Flow.FlowStatus.FINISHED
+
+        # Verify that the pending smiles actions are there
+        assert len(flow.pendingSmilesActions) == 5
+
+        # Verify that the first action is the reset one
+        assert flow.pendingSmilesActions[0]["type"] == "reset"
+
+    finally:
+        # Restore the flow by copying the .bak file to the original file
+        os.system(f"mv {path}.bak {path}")
+
+        # Remove the smiles.csv file produced by the test
+        smilescsv = os.path.join(os.path.dirname(__file__), "smiles.csv")
+        os.system(f"rm {smilescsv}")
+
+
 def test_extensions_on_blocks(flow_appDelegate):
     path = os.path.join(os.path.dirname(__file__), "open_extension_test.flow")
 
@@ -655,7 +684,7 @@ def test_flow_run_flow_post_full_app(plugin_manager):
     )
 
     # Wait for the server to start
-    time.sleep(1)
+    time.sleep(5)
 
     baseURL = "http://localhost:3000"
 

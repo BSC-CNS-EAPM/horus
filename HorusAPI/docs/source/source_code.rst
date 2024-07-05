@@ -52,6 +52,11 @@ MolstarAPI
 .. autoclass:: src.molstar.MolstarAPI
    :members:
 
+SmilesAPI
+==========
+
+.. autoclass:: src.smiles.SmilesAPI
+   :members:
 
 ExtensionsAPI
 =============

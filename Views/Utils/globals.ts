@@ -1,5 +1,6 @@
 // Molstar wrapper
 import HorusMolstar from "../Components/Molstar/HorusWrapper/horusmolstar";
+import HorusSmilesManager from "../Components/Smiles/SmilesWrapper/horusSmiles";
 
 // The settings object type
 import { HorusSettingsObject } from "../Settings/setting";
@@ -38,6 +39,8 @@ declare global {
     horusSettings: HorusSettingsObject;
     // Molstar
     molstar: HorusMolstar;
+    // Smiles
+    smiles?: HorusSmilesManager;
     // Console
     horusTerm: {
       ref: React.RefObject<Terminal> | null;
@@ -51,6 +54,10 @@ declare global {
       setFlow?: (value: any) => void;
       openExtensionFilePicker?: (options: ExtensionsFilePickerOptions) => void;
     };
+    // JSME viewer
+    JSApplet: any;
+    // OpenBabel
+    obabel: any;
     // Extension data for blocks
     extensionData: any;
   }

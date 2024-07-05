@@ -83,6 +83,11 @@
   transition: background 0.2s ease-in-out;
   /* margin-bottom: 0.3rem; */
   background: white;
+
+  /* If the text does not fit, donot place it on a newline... */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .app-button:disabled {

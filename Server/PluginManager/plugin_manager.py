@@ -1609,6 +1609,7 @@ class PluginDeps:
             q.put(
                 {
                     "pendingActions": forkedBlock.flow.pendingActions,
+                    "pendingSmilesActions": forkedBlock.flow.pendingSmilesActions,
                     "terminalOutput": forkedBlock.flow.terminalOutput,
                     "block": forkedBlock._minimalEncode(),
                     "outputs": outputs,
@@ -1631,6 +1632,10 @@ class PluginDeps:
         # Update the pending actions of the block
         block.flow.pendingActions.clear()
         block.flow.pendingActions.extend(result["pendingActions"])
+
+        # Update the pending smiles actions of the block
+        block.flow.pendingSmilesActions.clear()
+        block.flow.pendingSmilesActions.extend(result["pendingSmilesActions"])
 
         # If there was an error, raise it
         if result["error"] is not None:

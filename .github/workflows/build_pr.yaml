@@ -48,7 +48,7 @@ jobs:
           bun i
       - name: Install parcel binaries
         run: |
-          npm install --save-dev --save-exact --legacy-peer-deps parcel@2.11.0
+          npm install --save-dev --save-exact --legacy-peer-deps parcel@2.12.0
       - name: Build GUI
         run: |
           bun run buildparcel

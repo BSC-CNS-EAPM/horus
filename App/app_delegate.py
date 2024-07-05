@@ -256,6 +256,8 @@ class HorusLogger:
                 Hook into the default stdout and stderr class
                 """
                 try:
+                    if not self.debug:
+                        self.oldStdOutErr.write(message)
 
                     # Remove empty lines
                     if message.endswith("\n"):
@@ -265,8 +267,7 @@ class HorusLogger:
                         return
 
                     self.capturer.log(self.level, message)
-                    if not self.debug:
-                        self.oldStdOutErr.write(message)
+
                 except BaseException:
                     pass
 
@@ -1096,6 +1097,7 @@ def parseArgs() -> tuple[dict, dict]:
     # Parse the mode of the app
     mode: str = "app"  # Default mode is App / Desktop
 
+    envMode = os.getenv("HORUS_MODE")
     # Determine mode
     if args.browser:
         mode = "browser"
@@ -1104,7 +1106,8 @@ def parseArgs() -> tuple[dict, dict]:
     elif args.webapp:
         mode = "webapp"
     else:
-        mode = "app"
+        if envMode is not None:
+            mode = envMode
 
     # Check for the --port (-p) flag to force a port on the app
     port = None

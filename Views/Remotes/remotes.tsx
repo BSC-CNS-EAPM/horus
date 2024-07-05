@@ -17,6 +17,7 @@ import { Remote } from "./remote";
 // CSS
 import "../Components/FlowBuilder/Blocks/block.css";
 import "../PluginsManager/plugin_manager.css";
+import { useAlert } from "../Components/HorusPrompt/horus_alert";
 
 export default function ConfigRemotes() {
   const [fetchingRemotes, setFetchingRemotes] = useState<boolean>(false);
@@ -162,6 +163,8 @@ interface RemoteViewProps {
 function RemoteView(props: RemoteViewProps) {
   const remote = props.remote;
 
+  const horusAlert = useAlert();
+
   const handleDelete = async () => {
     const data = {
       name: remote.name,
@@ -177,7 +180,7 @@ function RemoteView(props: RemoteViewProps) {
     const response = await horusPost("/api/remotes/delete", header, body);
 
     if (!response.ok) {
-      alert("Failed to delete remote");
+      await horusAlert("Failed to delete remote");
     } else {
       props.updateList();
     }
@@ -244,6 +247,8 @@ function DetailedRemote(props: DetailedRemoteViewProps) {
     props.remote ?? null
   );
 
+  const horusAlert = useAlert();
+
   const handleSubmit = async () => {
     const header = {
       "Content-Type": "application/json",
@@ -257,7 +262,7 @@ function DetailedRemote(props: DetailedRemoteViewProps) {
     const data = await response.json();
 
     if (!data.ok) {
-      alert("Failed to configure remote: " + data.msg);
+      await horusAlert("Failed to configure remote: " + data.msg);
       return;
     }
 

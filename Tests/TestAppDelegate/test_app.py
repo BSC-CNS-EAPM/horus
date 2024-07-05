@@ -36,7 +36,7 @@ def test_launch_app_not_compiled():
     process.start()
 
     # Wait for the server to start
-    time.sleep(1)
+    time.sleep(5)
 
     baseURL = "http://localhost:3000"
 

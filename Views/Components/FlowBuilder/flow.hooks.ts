@@ -30,6 +30,8 @@ import {
   VariableConnection,
 } from "./flow.types";
 import { FileExplorerProps } from "../FileExplorer/file_explorer";
+import { usePrompt } from "../HorusPrompt/horus_prompt";
+import { useAlert } from "../HorusPrompt/horus_alert";
 
 /**
  * An extended "PointerSensor" that prevent some
@@ -145,6 +147,7 @@ function newFlowObject(): Flow {
     blocks: [],
     terminalOutput: [],
     pendingActions: [],
+    pendingSmilesActions: [],
     elapsed: 0,
   };
 }
@@ -170,6 +173,8 @@ export function useFlowBuilder() {
 
     return connections;
   }, [flow]);
+
+  const horusAlert = useAlert();
 
   // Store the state of the placed blocks
   const placedIDCounter = useRef<number>(1);
@@ -235,15 +240,25 @@ export function useFlowBuilder() {
   const updateMolstarState = useCallback(async () => {
     // Check that the flow has a valid path and
     // that Mol* is mounted
-    if (!flow.path || !window.molstar) {
+    if (!flow.path) {
       return;
     }
 
     try {
-      const molstarState = await window.molstar.snapshot.get();
+      // Save the mol* and smiles state
       const formData = new FormData();
       formData.append("flowPath", flow.path);
-      formData.append("molstarState", molstarState, "molstarState.molx");
+
+      if (window.molstar) {
+        const molstarState = await window.molstar.snapshot.get();
+        formData.append("molstarState", molstarState, "molstarState.molx");
+      }
+
+      if (window.smiles) {
+        const smilesState = await window.smiles.saveState();
+        formData.append("smilesState", JSON.stringify(smilesState));
+      }
+
       const headers = {
         Accept: "application/json",
       };
@@ -266,10 +281,11 @@ export function useFlowBuilder() {
         return {
           ...currentFlow,
           pendingActions: [],
+          pendingSmilesActions: [],
         };
       });
     } catch (e) {
-      alert("Error updating mol* state: " + e);
+      await horusAlert("Error updating mol* state: " + e);
     }
   }, [flow.path]);
 
@@ -302,10 +318,29 @@ export function useFlowBuilder() {
       }
 
       // Apply any pending MolstarAPI actions if present
-      if (openedFlow.pendingActions && openedFlow.pendingActions.length > 0) {
-        for (const action of openedFlow.pendingActions) {
-          await window.molstar?.applyAction(action);
+      let hasToUpdate = false;
+      if (window.molstar) {
+        if (openedFlow.pendingActions && openedFlow.pendingActions.length > 0) {
+          hasToUpdate = true;
+          for (const action of openedFlow.pendingActions) {
+            await window.molstar?.applyAction(action);
+          }
         }
+      }
+
+      if (window.smiles) {
+        if (
+          openedFlow.pendingSmilesActions &&
+          openedFlow.pendingSmilesActions.length > 0
+        ) {
+          hasToUpdate = true;
+          for (const action of openedFlow.pendingSmilesActions) {
+            await window.smiles?.applyAction(action);
+          }
+        }
+      }
+
+      if (hasToUpdate) {
         // Save the mol* state after applying the actions
         await updateMolstarState();
       }
@@ -356,11 +391,13 @@ export function useFlowBuilder() {
           flow: Flow | null;
           msg: string;
           molstarState: string | null;
+          smilesState: string | null;
         } = {
           ok: false,
           flow: null,
           msg: "Early error opening flow",
           molstarState: null,
+          smilesState: null,
         };
 
         // If a default flow is being opened, some variables need to be set
@@ -390,7 +427,7 @@ export function useFlowBuilder() {
         }
 
         if (!data.ok) {
-          alert(data.msg);
+          await horusAlert(data.msg);
           return;
         }
 
@@ -402,10 +439,13 @@ export function useFlowBuilder() {
 
         // Set the molstar state at the beggining in case blocks need structures
         // If it has the new molstar state, open it
-        if (window.molstar) {
-          if (data.molstarState) {
-            await window.molstar.snapshot.set(data.molstarState);
-          }
+        if (window.molstar && data.molstarState) {
+          await window.molstar.snapshot.set(data.molstarState);
+        }
+
+        // If smiles state, open it
+        if (window.smiles && data.smilesState) {
+          await window.smiles.restoreState(JSON.parse(data.smilesState));
         }
 
         await internalLoadFlow(openedFlow);
@@ -525,11 +565,17 @@ export function useFlowBuilder() {
         const body = new FormData();
         body.append("flowData", JSON.stringify(saveContents));
 
-        // Append the molstar state if present
+        // Append the molstar and smiles state if present
         let molstarState: Blob | null = null;
+        let smilesState: string | null = null;
         if (window.molstar) {
           molstarState = await window.molstar!.snapshot.get();
           body.append("molstarState", molstarState, "molstarState.zip");
+        }
+
+        if (window.smiles) {
+          smilesState = JSON.stringify(window.smiles.saveState());
+          body.append("smilesState", smilesState);
         }
 
         // Set the headers so that flask correctly accepts the form data
@@ -550,12 +596,12 @@ export function useFlowBuilder() {
         let savedFlow = await response.json();
 
         if (!savedFlow) {
-          alert("No response from the server");
+          await horusAlert("No response from the server");
           return null;
         }
 
         if (!savedFlow.ok) {
-          savedFlow?.msg && alert(savedFlow.msg);
+          savedFlow?.msg && (await horusAlert(savedFlow.msg));
           return null;
         }
 
@@ -602,6 +648,11 @@ export function useFlowBuilder() {
             );
           }
 
+          // Append the smiles state if present
+          if (smilesState) {
+            overwriteBody.append("smilesState", smilesState);
+          }
+
           // Send the request again
           const overwriteResponse = await horusPost(
             "/api/saveflow",
@@ -614,7 +665,7 @@ export function useFlowBuilder() {
           savedFlow = await overwriteResponse.json();
 
           if (!savedFlow.ok) {
-            alert(savedFlow.msg);
+            await horusAlert(savedFlow.msg);
             return null;
           }
         }
@@ -866,12 +917,12 @@ export function useFlowBuilder() {
     };
   };
 
-  const handleDelete = (block: Block) => {
+  const handleDelete = async (block: Block) => {
     // Check first if the block to delete is connected to a variable wich also
     // has a cyclic connection
     for (const variableConnection of block.variableConnections) {
       if (variableConnection.isCyclic) {
-        alert("Remove the cyclic connection first");
+        await horusAlert("Remove the cyclic connection first");
         return;
       }
     }
@@ -889,7 +940,7 @@ export function useFlowBuilder() {
       const cyclic = checkCyclicFlow(block, connectedBlock);
 
       if (cyclic) {
-        alert("Remove the cyclic connection first");
+        await horusAlert("Remove the cyclic connection first");
         return;
       }
     }
@@ -1027,7 +1078,7 @@ export function useFlowBuilder() {
     handleBlockChanges(updatedBlocks);
   };
 
-  const unconnectVariables = (connection: VariableConnection) => {
+  const unconnectVariables = async (connection: VariableConnection) => {
     // First find the real blocks from the placedBlocks array
 
     const [originBlock, destinationBlock] = findBlocks([
@@ -1044,7 +1095,7 @@ export function useFlowBuilder() {
     const cyclic = checkCyclicFlow(originBlock, destinationBlock);
 
     if (cyclic && !connection.isCyclic) {
-      alert("Remove the cyclic connection first");
+      await horusAlert("Remove the cyclic connection first");
       return;
     }
 
@@ -1262,13 +1313,28 @@ export function useFlowBuilder() {
         const applyActions = async () => {
           // Check for any pending actions if the flow has finished
           if (recivedFlow.status !== FlowStatus.RUNNING) {
+            let hasToUpdate = false;
             if (
               recivedFlow.pendingActions &&
               recivedFlow.pendingActions.length > 0
             ) {
+              hasToUpdate = true;
               for (const action of recivedFlow.pendingActions) {
                 await window.molstar?.applyAction(action);
               }
+            }
+
+            if (
+              recivedFlow.pendingSmilesActions &&
+              recivedFlow.pendingSmilesActions.length > 0
+            ) {
+              hasToUpdate = true;
+              for (const action of recivedFlow.pendingSmilesActions) {
+                await window.smiles?.applyAction(action);
+              }
+            }
+
+            if (hasToUpdate) {
               // Save the mol* state after applying the actions
               await updateMolstarState();
             }
@@ -1288,7 +1354,7 @@ export function useFlowBuilder() {
     const data = await response.json();
 
     if (!data.ok) {
-      alert(data.msg);
+      await horusAlert(data.msg);
       return;
     }
 
@@ -1411,7 +1477,7 @@ export function useFlowBuilder() {
       ) {
         if (comesFromExecuteBlock === true) {
           // Alert the user that the flow needs to be saved first
-          alert(
+          await horusAlert(
             "The flow needs to be saved first. Please select a folder to save the flow"
           );
         }
@@ -1427,6 +1493,8 @@ export function useFlowBuilder() {
     [handleSave, serverPickerFolder, flow.path]
   );
 
+  const horusPrompt = usePrompt();
+
   const handleSaveAs = useCallback(async () => {
     const newUnsavedFlow: Flow = {
       ...flow,
@@ -1436,7 +1504,7 @@ export function useFlowBuilder() {
 
     // If we are on WebApp, ask the user for a new name
     if (window.horusInternal.mode === "webapp") {
-      const newName = prompt("New flow name...");
+      const newName = await horusPrompt("New flow name...");
 
       if (!newName) {
         return;
@@ -1446,7 +1514,7 @@ export function useFlowBuilder() {
     }
 
     await preHandleSave(false, newUnsavedFlow);
-  }, [flow, preHandleSave]);
+  }, [flow, preHandleSave, horusPrompt]);
 
   const handleSaveTemplate = useCallback(async () => {
     const newUnsavedFlow: Flow = {
@@ -1634,7 +1702,7 @@ export function useFlowBuilder() {
       const result = await response.json();
 
       if (!result.ok) {
-        alert(result.msg);
+        await horusAlert(result.msg);
         setFlow({
           ...flow,
           status: FlowStatus.ERROR,
@@ -1671,7 +1739,7 @@ export function useFlowBuilder() {
     const data = await response.json();
 
     if (!data.ok) {
-      alert(data.msg);
+      await horusAlert(data.msg);
     }
   }
 

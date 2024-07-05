@@ -1,9 +1,5 @@
 // React
-import { useEffect, useState, useRef, useMemo } from "react";
-
-// SMILES variable
-// @ts-ignore - JSME is not typed
-import { Jsme } from "jsme-react";
+import { useEffect, useState, useMemo } from "react";
 
 // Horus TS types
 import {
@@ -26,8 +22,6 @@ import { loadPage } from "../../Toolbar/extensions_list";
 // Styles
 import "rc-slider/assets/index.css";
 import CrossIcon from "../../Toolbar/Icons/Cross";
-import { createPortal } from "react-dom";
-import { BlurredModal } from "../../reusable";
 
 // Mol* variables components
 import {
@@ -45,8 +39,8 @@ import {
 // Code editor variables
 import { ObjectVariableView, PythonVariableView } from "./editor_variables";
 
-// Types
-import { GLOBAL_IDS } from "../../../Utils/globals";
+// Smiles
+import { SmilesVariableView } from "./smiles_variables";
 
 type PluginVariableViewProps = {
   variable: PluginVariable;
@@ -920,138 +914,6 @@ function ListView(props: VariableViewProps) {
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-function SmilesVariableView(props: VariableViewProps) {
-  const { currentValue, onChange }: { currentValue: string[]; onChange: any } =
-    props;
-
-  const [showJsme, setShowJsme] = useState(false);
-  const [currentSmiles, setCurrentSmiles] = useState<string | null>(
-    currentValue ? currentValue[0] ?? null : null
-  );
-
-  const handleChange = (value: string) => {
-    // Split the value by newlines
-    const splitValue = value.split("\n");
-
-    setCurrentSmiles(splitValue[0] ?? null);
-    onChange(splitValue);
-  };
-
-  const handleDrop = (e: React.DragEvent<HTMLTextAreaElement>) => {
-    e.preventDefault();
-    const file = e.dataTransfer?.files[0] ?? null;
-
-    if (!file) {
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const contents = (e.target?.result as string) ?? "";
-      handleChange(contents);
-    };
-    reader.readAsText(file);
-    handleDragEnd(e);
-  };
-
-  const defaultTextAreaClassName = "plugin-variable-value";
-
-  const [textAreaClassName, setTextAreaClassName] = useState(
-    defaultTextAreaClassName
-  );
-
-  const handleDragEnd = (e: React.DragEvent<HTMLTextAreaElement>) => {
-    e.preventDefault();
-    setTextAreaClassName(defaultTextAreaClassName);
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLTextAreaElement>) => {
-    e.preventDefault();
-    setTextAreaClassName(`${defaultTextAreaClassName} bg-green-200`);
-  };
-
-  const containerID = `${props.variable.id}-${props.variable.placedID}-jsmediv`;
-  const jsmeRef = useRef<any>(null);
-
-  const jsmeHeight = 500;
-  const jsmeContainerRef = useRef<HTMLDivElement>(null);
-
-  // If the currentValue is not an array and not null, reset it
-  if (!Array.isArray(currentValue) && currentValue !== null) {
-    onChange([]);
-
-    return null;
-  }
-
-  return (
-    <div className="flex flex-col gap-2 p-2 max-h-60 w-full justify-center items-center">
-      <textarea
-        placeholder="Write a SMILES or drop a file"
-        className={textAreaClassName}
-        value={currentValue ? currentValue.join("\n") : ""}
-        onChange={(e) => handleChange(e.target.value)}
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragEnd}
-        onDragEnd={handleDragEnd}
-      >
-        {currentValue}
-      </textarea>
-      {currentSmiles && currentSmiles !== "" && (
-        <AppButton
-          action={() => {
-            setShowJsme(!showJsme);
-          }}
-        >
-          Show 2D structure
-        </AppButton>
-      )}
-      {showJsme &&
-        createPortal(
-          <BlurredModal
-            show={true}
-            onHide={() => {
-              setShowJsme(false);
-            }}
-            maxContentSize={{
-              height: "h-[50%]",
-              width: "h-[50%]",
-            }}
-          >
-            <div className="w-full h-full text-black flex flex-col justify-center items-center">
-              <select
-                className="w-full"
-                onChange={(e) => {
-                  setCurrentSmiles(e.target.value);
-                }}
-              >
-                {currentValue.map((smi) => {
-                  return <option value={smi}>{smi}</option>;
-                })}
-              </select>
-              <div
-                className="overflow-hidden flex justify-center items-center h-full"
-                ref={jsmeContainerRef}
-                id={containerID}
-              >
-                <Jsme
-                  ref={jsmeRef}
-                  key="jsme"
-                  width={`${jsmeHeight}px`}
-                  height={`${jsmeHeight}px`}
-                  smiles={currentSmiles}
-                  options="depict"
-                />
-              </div>
-              <AppButton action={() => setShowJsme(false)}>Close</AppButton>
-            </div>
-          </BlurredModal>,
-          document.getElementById(GLOBAL_IDS.FLOW_BUILDER_DIV)!
-        )}
     </div>
   );
 }

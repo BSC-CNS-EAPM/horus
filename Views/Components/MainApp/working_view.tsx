@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
 // Horus imports
+import { SmilesGrid } from "../Smiles/SmilesGrid";
 import Molstar from "../Molstar/molstar";
 import HorusTerm from "../Console/console";
 import { FlowBuilderView } from "../FlowBuilder/flow.view";
@@ -23,7 +24,6 @@ import ResizeHandle from "../Panels/resize_handle";
 // Molstar image logo
 // @ts-ignore
 import HorusLogo from "../../../Resources/horus-full.png";
-import { ServerFileExplorerModal } from "../FileExplorer/file_explorer";
 
 type WorkingViewProps = {
   extensionToOpen?: PluginPage;
@@ -166,7 +166,7 @@ export default function WorkingView(props: WorkingViewProps) {
       <HorusToolbar />
       <div className="flex flex-col w-full h-full">
         <PanelGroup direction="vertical">
-          <Panel collapsible={true}>
+          <Panel collapsible={true} className="select-none">
             <PanelGroup direction="horizontal">
               <Panel
                 ref={mainPanelRef}
@@ -213,6 +213,7 @@ function MolstarPanel({ expand }: { expand?: boolean }) {
 
   // Panels ref
   const molstarPanelRef = useRef<ImperativePanelHandle | null>(null);
+  const smilesPanelRef = useRef<ImperativePanelHandle | null>(null);
 
   const toggleMolstar = useCallback(() => {
     if (initialMolstarHidden) {
@@ -255,11 +256,30 @@ function MolstarPanel({ expand }: { expand?: boolean }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showMolstar, initialMolstarHidden]);
 
+  // Add an event listener for the toggleSmilesGrid event
+  useEffect(() => {
+    const toggleSmilesEventListener = () => {
+      if (smilesPanelRef.current) {
+        if (smilesPanelRef.current.getCollapsed()) {
+          smilesPanelRef.current.expand();
+        } else {
+          smilesPanelRef.current.collapse();
+        }
+      }
+    };
+
+    window.addEventListener("toggleSmilesGrid", toggleSmilesEventListener);
+
+    return () => {
+      window.removeEventListener("toggleSmilesGrid", toggleSmilesEventListener);
+    };
+  }, []);
+
   return (
     <>
       <ResizeHandle onDragging={handleMolstarDrag} />
       <Panel
-        className="bg-white"
+        className="bg-white select-none"
         id="molstar-panel"
         order={2}
         collapsible={true}
@@ -281,17 +301,30 @@ function MolstarPanel({ expand }: { expand?: boolean }) {
           }
         }}
       >
-        <div className="w-full h-full">
-          {isDragging && <MolstarResizing />}
-          <div
-            className="w-full h-full"
-            style={{
-              display: isDragging ? "none" : "block",
-            }}
+        <PanelGroup direction="horizontal">
+          <Panel minSize={30} collapsible={true}>
+            <div className="w-full h-full">
+              {isDragging && <MolstarResizing />}
+              <div
+                className="w-full h-full"
+                style={{
+                  display: isDragging ? "none" : "block",
+                }}
+              >
+                <Molstar options={{ showControls: expand }} />
+              </div>
+            </div>
+          </Panel>
+          <ResizeHandle horizontal onDragging={handleMolstarDrag} />
+          <Panel
+            collapsible={true}
+            minSize={15}
+            ref={smilesPanelRef}
+            defaultSize={0}
           >
-            <Molstar options={{ showControls: expand }} />
-          </div>
-        </div>
+            <SmilesGrid />
+          </Panel>
+        </PanelGroup>
       </Panel>
     </>
   );

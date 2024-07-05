@@ -55,4 +55,10 @@ Usage
 
     horusapi/molstar.rst
 
+.. toctree::
+    :caption: SmilesAPI
+    :maxdepth: 2
+
+    horusapi/smiles.rst
+
 .. |Product| replace:: HorusAPI

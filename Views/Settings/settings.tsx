@@ -20,6 +20,7 @@ import { HorusSettingsObject } from "./setting";
 
 // Import the css
 import "../Components/FlowBuilder/Blocks/block.css";
+import { useAlert } from "../Components/HorusPrompt/horus_alert";
 
 export async function fetchSettings(
   forAdmin?: boolean
@@ -81,6 +82,8 @@ function useSettings(forAdmin?: boolean) {
   >({});
   const [hasChanges, setHasChanges] = useState<boolean>(false);
 
+  const horusAlert = useAlert();
+
   async function getSettings() {
     const settings = await fetchSettings(forAdmin);
     const parsedSettings = parseSettingsIntoPluginVariable(settings);
@@ -112,7 +115,7 @@ function useSettings(forAdmin?: boolean) {
     const data = await response.json();
 
     if (!data.ok) {
-      alert("Error restoring settings");
+      await horusAlert("Error restoring settings");
       return;
     }
 
@@ -147,7 +150,7 @@ function useSettings(forAdmin?: boolean) {
     const data = await response.json();
 
     if (!data.ok) {
-      alert("Error saving settings");
+      await horusAlert("Error saving settings");
     } else {
       // Update the settings
       await getSettings();

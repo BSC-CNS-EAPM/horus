@@ -193,6 +193,13 @@ class Flow:
     For example, any MolstarAPI action that needs to be executed on JS side
     """
 
+    pendingSmilesActions: typing.List[typing.Dict[str, typing.Any]] = []
+    """
+    A list of pending actions to be sent to the frontend when the flow is opened
+
+    For example, any SmilesAPI action that needs to be executed on JS side
+    """
+
     size: typing.Optional[float] = None
     """
     The size of the folder that the flow is in (MB)
@@ -215,6 +222,7 @@ class Flow:
 
     FLOW_FILE: str = "flow.json"
     MOLSTAR_STATE_FILE: str = "molstarState.molx"
+    SMILES_STATE_FILE: str = "smilesState.json"
 
     class FlowStatus(Enum):
         """
@@ -299,6 +307,7 @@ class Flow:
         self.date = flow.get("date", None)
         self.terminalOutput = flow.get("terminalOutput", [])
         self.pendingActions = flow.get("pendingActions", [])
+        self.pendingSmilesActions = flow.get("pendingSmilesActions", [])
 
         # Get the flow size and time
         self.size = flow.get("size", None)
@@ -482,11 +491,14 @@ class Flow:
             "blocks": blocksJSON,
             "terminalOutput": self.terminalOutput,
             "pendingActions": self.pendingActions,
+            "pendingSmilesActions": self.pendingSmilesActions,
         }
 
         return flow
 
-    def write(self, molState: typing.Optional[bytes] = None) -> typing.Dict[str, typing.Any]:
+    def write(
+        self, molState: typing.Optional[bytes] = None, smilesState: typing.Optional[dict] = None
+    ) -> typing.Dict[str, typing.Any]:
         """
         Writes the flow to the file
 
@@ -506,6 +518,12 @@ class Flow:
         else:
             molstarStateBytes = molState
 
+        # Get the current smiles state, if any
+        if smilesState is None:
+            smilesStateDict = self.getSmilesState()
+        else:
+            smilesStateDict = smilesState
+
         # Remove the current file
         if os.path.exists(self.path):
             os.remove(self.path)
@@ -518,6 +536,10 @@ class Flow:
             # Store again the molstar state
             if molstarStateBytes is not None:
                 zipFile.writestr(self.MOLSTAR_STATE_FILE, molstarStateBytes)
+
+            # Store again the smiles state
+            if smilesStateDict is not None:
+                zipFile.writestr(self.SMILES_STATE_FILE, json.dumps(smilesStateDict, indent=4))
 
         # Send the flow to the frontend on write
         if self._socket is not None:
@@ -556,6 +578,18 @@ class Flow:
             with zipfile.ZipFile(self.path, "r") as zipFile:
                 with zipFile.open(self.MOLSTAR_STATE_FILE) as file:
                     return file.read()
+        except Exception:
+            return None
+
+    def getSmilesState(self) -> typing.Optional[dict]:
+        """
+        Gets the smiles state json file from the flow zip
+        """
+
+        try:
+            with zipfile.ZipFile(self.path, "r") as zipFile:
+                with zipFile.open(self.SMILES_STATE_FILE) as file:
+                    return json.load(file)
         except Exception:
             return None
 
@@ -926,6 +960,9 @@ class Flow:
             # Clean the pending actions
             self.pendingActions = []
 
+            # Clean the pending smiles actions
+            self.pendingSmilesActions = []
+
             # Restore the time
             self.elapsed = 0
 
@@ -985,6 +1022,13 @@ class Flow:
         molAPI = MolstarAPI()
 
         molAPI._flow = self
+
+        # Update the SmilesAPI with the current flow
+        from HorusAPI import SmilesAPI
+
+        smilesAPI = SmilesAPI()
+
+        smilesAPI._flow = self
 
         # Update the ExtensionsAPI with the current flow
         from HorusAPI import Extensions
@@ -1414,6 +1458,7 @@ class FlowManager:
         flow: Flow,
         overwrite=False,
         molstarState: typing.Optional[bytes] = None,
+        smilesState: typing.Optional[dict] = None,
         addToRecents: bool = True,
     ):
         """
@@ -1453,7 +1498,7 @@ class FlowManager:
                 "Trying to save empty flow. Please save flows that contain placed blocks."
             )
         else:
-            flow.write(molstarState)
+            flow.write(molstarState, smilesState)
 
         # Add the flow to the recent flows list
         if addToRecents:
@@ -1466,6 +1511,7 @@ class FlowManager:
         self,
         flow: typing.Dict[str, typing.Any],
         molstarState: typing.Optional[bytes] = None,
+        smilesState: typing.Optional[dict] = None,
         addToRecenets: bool = True,
     ):
         """
@@ -1508,7 +1554,9 @@ class FlowManager:
                     flowPath += ".flow"
                 flowInstance.path = flowPath
 
-        return self._saveFlowInternal(flowInstance, overwrite, molstarState, addToRecenets)
+        return self._saveFlowInternal(
+            flowInstance, overwrite, molstarState, smilesState, addToRecenets
+        )
 
     def openFlowFromPath(
         self,

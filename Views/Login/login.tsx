@@ -16,6 +16,7 @@ import {
   validateCaptcha,
   // @ts-ignore
 } from "react-simple-captcha";
+import { useAlert } from "../Components/HorusPrompt/horus_alert";
 
 declare global {
   interface Window {
@@ -393,12 +394,14 @@ function Register({
     }
   };
 
+  const horusAlert = useAlert();
+
   const getFields = async () => {
     const response = await horusGet("/users/fields");
     const json = await response.json();
 
     if (!response.ok) {
-      alert("Error fetching fields");
+      await horusAlert("Error fetching fields");
       return;
     }
 
@@ -558,6 +561,7 @@ function Reset({
   >;
 }) {
   const [email, setEmail] = useState("");
+  const horusAlert = useAlert();
 
   const resetPassword = async () => {
     const body = JSON.stringify({
@@ -567,7 +571,7 @@ function Reset({
     const response = await horusPost("/users/reset", null, body);
 
     if (!response) {
-      alert("An error occurred. Try again later.");
+      await horusAlert("An error occurred. Try again later.");
       return;
     }
 

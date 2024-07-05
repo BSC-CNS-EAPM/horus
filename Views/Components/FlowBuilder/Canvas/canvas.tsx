@@ -111,6 +111,11 @@ function CanvasZoom({ flowHooks }: { flowHooks: FlowHooks }) {
 function FlowTopBar(props: { flowHooks: FlowHooks }) {
   const { flow } = props.flowHooks;
 
+  const hasPendingActions = flow.pendingActions.length > 0;
+  const hasPendingSmilesActions = flow.pendingSmilesActions.length > 0;
+
+  const hasActions = hasPendingActions || hasPendingSmilesActions;
+
   return (
     <div className="flex flex-row top-bar-flow-reciver gap-2">
       <input
@@ -198,7 +203,7 @@ function FlowTopBar(props: { flowHooks: FlowHooks }) {
             </div>
           )}
         </div>
-        {props.flowHooks.flow.pendingActions.length > 0 && (
+        {hasActions && (
           <div
             className="text-xs text-green-500 text-center"
             style={{

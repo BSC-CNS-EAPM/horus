@@ -19,6 +19,7 @@ import { horusGet } from "../../../Utils/utils";
 
 // CSS
 import "../Blocks/block.css";
+import { useAlert } from "../../HorusPrompt/horus_alert";
 
 /**
  * Renders the block list view component, which displays a list of draggable blocks that can be added to the flow builder canvas.
@@ -112,6 +113,8 @@ export function BlockListSidebar() {
     };
   }, []);
 
+  const horusAlert = useAlert();
+
   // Render
   return (
     <div className="block-sidebar overflow-y-scroll h-full">
@@ -136,7 +139,7 @@ export function BlockListSidebar() {
                   action={async () => {
                     setLoadingBlocks(true);
                     await horusGet("/api/plugins/reload");
-                    alert("Plugins reloaded!");
+                    await horusAlert("Plugins reloaded!");
                     fetchBlocks();
                   }}
                 >

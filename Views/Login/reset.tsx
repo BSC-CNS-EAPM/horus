@@ -3,6 +3,7 @@ import { fetchDesktop, horusPost } from "../Utils/utils";
 import Logo from "../Components/logo";
 import "../Components/appbutton.css";
 import "../Components/FlowBuilder/Blocks/block.css";
+import { useAlert } from "../Components/HorusPrompt/horus_alert";
 
 declare global {
   interface Window {
@@ -16,6 +17,7 @@ export default function Reset() {
     text: string;
     type: "error" | "success";
   }>(null);
+  const horusAlert = useAlert();
 
   const sendResetPassword = async () => {
     // Send the token to the server
@@ -23,7 +25,7 @@ export default function Reset() {
     const token = new URLSearchParams(window.location.search).get("token");
 
     if (!token) {
-      alert("Invalid token");
+      await horusAlert("Invalid token");
       return;
     }
 
@@ -35,7 +37,7 @@ export default function Reset() {
     const response = await horusPost("/users/reset", null, body);
 
     if (!response) {
-      alert("An error occurred. Try again later.");
+      await horusAlert("An error occurred. Try again later.");
       return;
     }
 

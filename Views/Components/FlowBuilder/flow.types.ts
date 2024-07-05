@@ -254,6 +254,10 @@ export type Flow = {
    * The Mol* pending tasks
    */
   pendingActions: Array<any>;
+  /**
+   * The Smiles pending tasks
+   */
+  pendingSmilesActions: Array<any>;
 
   /**
    * The flow size

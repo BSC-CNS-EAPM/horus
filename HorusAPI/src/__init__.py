@@ -16,6 +16,7 @@ from .plugins import (
 
 # Export the Molstar API
 from .molstar import MolstarAPI
+from .smiles import SmilesAPI
 
 # Export the extensions API
 from .extensions import Extensions
@@ -40,6 +41,7 @@ __all__ = [
     "PluginConfig",
     "PluginEndpoint",
     "MolstarAPI",
+    "SmilesAPI",
     "Extensions",
     "HorusSingleton",
     "TempFile",

@@ -4,11 +4,12 @@ import "./appbutton.css";
 type AppButtonProps = {
   id?: string;
   text?: string;
-  action: () => void;
+  action?: () => void;
   style?: React.CSSProperties;
   children?: React.ReactNode;
   className?: string;
   disabled?: boolean;
+  type?: HTMLButtonElement["type"];
 };
 
 // Create a component called AppButton
@@ -19,10 +20,11 @@ function AppButton(props: AppButtonProps) {
     <div>
       {/* Create a button with the text and the action */}
       <button
+        type={props.type}
         disabled={props.disabled}
         id={props.id}
         className={className}
-        onClick={props.action}
+        onClick={() => props.action && props.action()}
         style={props.style}
       >
         {props?.text}

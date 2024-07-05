@@ -50,6 +50,7 @@ interface ToolBarItemProps {
   onClick?: () => void;
   keyShortcut?: string;
   children?: React.ReactNode;
+  disabled?: boolean;
 }
 
 // Define the logos for the shortcuts
@@ -90,7 +91,9 @@ function ToolBarItem(props: ToolBarItemProps) {
     <div
       onMouseOver={handleMouseOver}
       onMouseLeave={handleMouseLeave}
-      className="toolbar-item"
+      className={
+        "toolbar-item" + (props.disabled ? " toolbar-item-disabled" : "")
+      }
       onClick={async () => {
         props.onClick?.();
       }}
@@ -111,7 +114,7 @@ function ToolBarItem(props: ToolBarItemProps) {
   );
 }
 
-interface ToolBarMenuProps {
+export interface ToolBarMenuProps {
   name: string;
   hidden?: boolean;
   svgPath?: React.ReactNode;
@@ -119,9 +122,10 @@ interface ToolBarMenuProps {
   link?: string;
   onClick?: () => void;
   children?: React.ReactNode;
+  disabled?: boolean;
 }
 
-function ToolbarMenu(props: ToolBarMenuProps) {
+export function ToolbarMenu(props: ToolBarMenuProps) {
   if (props.hidden) {
     return <></>;
   }
@@ -145,9 +149,10 @@ function ToolbarMenu(props: ToolBarMenuProps) {
             leaveTo="transform opacity-0 scale-95"
           >
             <Menu.Items
-              className="absolute p-md-2 mt-2 w-56 origin-top-left rounded-xl bg-white toolbar-menu outline-none overflow-y-scroll"
+              className="absolute p-md-2 mt-3 w-56 origin-top-left rounded-xl bg-white toolbar-menu outline-none overflow-y-scroll"
               style={{
                 maxHeight: "calc(100vh - 4rem)",
+                width: "auto",
               }}
             >
               {/* // Here the items will be rendered */}
@@ -574,7 +579,12 @@ export default function HorusToolbar() {
   ];
 
   return (
-    <div className="flex flex-row justify-between toolbar">
+    <div
+      className="flex flex-row justify-between items-center"
+      style={{
+        padding: "5px",
+      }}
+    >
       <div className="flex flex-row gap-1 ml-1 mr-1 h-full">
         {menus.map((menu, index) => (
           <ToolbarMenu key={index} {...menu} />
