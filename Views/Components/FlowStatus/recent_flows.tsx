@@ -201,10 +201,10 @@ export function useGetRecentFlows(
     setPredefinedFlows(data.flows);
 
     // Fetch the recent flows
-    internalGetRecentFlows();
+    await internalGetRecentFlows();
 
     // Fetch the templates
-    getTemplates();
+    await getTemplates();
 
     setFetchingRecents(false);
   }, [internalGetRecentFlows, getTemplates]);

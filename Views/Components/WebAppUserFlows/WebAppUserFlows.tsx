@@ -23,7 +23,7 @@ import "./webappflows.css";
 import CloudDownload from "../Toolbar/Icons/CloudDownload";
 
 // React
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { render, unmountComponentAtNode } from "react-dom";
 
 // Utils
@@ -34,8 +34,39 @@ import { useConfirm } from "../HorusPrompt/horus_confirm";
 
 export default function WebAppUserFlows() {
   // Get the recent flows with the custom hook
-  const [, recentFlows, , , getFlows, , otherDirectories, corruptedFlows] =
-    useGetRecentFlows(true);
+  const [
+    fetchingRecents,
+    recentFlows,
+    ,
+    ,
+    getFlows,
+    ,
+    otherDirectories,
+    corruptedFlows,
+  ] = useGetRecentFlows(true);
+
+  const [hasFetchedInitally, setHasFetchedInitally] = useState(false);
+
+  useEffect(() => {
+    if (recentFlows) {
+      setHasFetchedInitally(true);
+    }
+  }, [recentFlows]);
+
+  if (fetchingRecents && !hasFetchedInitally) {
+    return (
+      <HorusContainer
+        className="w-full flex flex-row justify-center items-center gap-2"
+        style={{
+          maxWidth: "1075px",
+          minWidth: "650px",
+        }}
+      >
+        <RotatingLines />
+        <h1 className="text-xl font-semibold">Loading user flows...</h1>
+      </HorusContainer>
+    );
+  }
 
   return (
     <>

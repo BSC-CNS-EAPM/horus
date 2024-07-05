@@ -233,7 +233,7 @@ function _UserTable({
 
   const editCell = (e: any) => {
     // Only update if its different
-    if (!e.newValue || e.newValue === e.oldValue) {
+    if (e.newValue === undefined || e.newValue === e.oldValue) {
       return;
     }
 

@@ -1133,7 +1133,8 @@ class HorusServer:
             return flask.jsonify(internalSettings)
 
         @self.server.route("/api/plugins/install", methods=["POST"])
-        @self.noWebApp
+        @self.verifyLogin
+        @self.verifyAdmin
         def installPlugin():
             data = request.get_json()
 
@@ -1152,7 +1153,8 @@ class HorusServer:
             return flask.jsonify(success)
 
         @self.server.route("/api/plugins/uninstall", methods=["POST"])
-        @self.noWebApp
+        @self.verifyLogin
+        @self.verifyAdmin
         def uninstallPlugin():
             data = request.get_json()
             pluginName = data.get("name", None)
@@ -1216,7 +1218,7 @@ class HorusServer:
                 pages = self.pluginManager.getPages()
 
             return flask.jsonify({"pages": pages})
-        
+
         @self.server.route("/api/resetflow", methods=["POST"])
         @self.verifyLogin
         @self.stopDemoUser
@@ -1236,9 +1238,7 @@ class HorusServer:
                 flow._skipPath = relativePath if self._isForUser else None
                 flow.write()
 
-                self.socketio.emit(
-                    "flow", flow.encode(minimal=False), to=flow.savedID
-                )
+                self.socketio.emit("flow", flow.encode(minimal=False), to=flow.savedID)
 
                 return flask.jsonify({"ok": True})
             except Exception as exc:  # pylint: disable=broad-exception-caught
