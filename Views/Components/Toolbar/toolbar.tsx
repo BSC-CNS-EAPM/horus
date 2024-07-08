@@ -53,6 +53,7 @@ interface ToolBarItemProps {
   keyShortcut?: string;
   children?: React.ReactNode;
   disabled?: boolean;
+  isMain?: boolean;
 }
 
 // Define the logos for the shortcuts
@@ -100,8 +101,11 @@ function ToolBarItem(props: ToolBarItemProps) {
         props.onClick?.();
       }}
     >
-      {props.svgPath && (
-        <MenuIcon active={active || isOpen} svgPath={props.svgPath} />
+      {!props.isMain && (
+        <MenuIcon
+          active={active || isOpen}
+          svgPath={props.svgPath ?? <Chevron direction="right" stroke="none" />}
+        />
       )}
       <div className="cut-text">{props.name}</div>
       {props.children}
@@ -135,11 +139,11 @@ export function ToolbarMenu(props: ToolBarMenuProps) {
   return (
     <div className="h-full">
       {props.link || props.onClick ? (
-        <ToolBarItem {...props} />
+        <ToolBarItem {...props} isMain={true} />
       ) : (
         <Menu>
           <Menu.Button className={"h-full"}>
-            <ToolBarItem {...props} />
+            <ToolBarItem {...props} isMain={true} />
           </Menu.Button>
           <Transition
             as={Fragment}
@@ -558,7 +562,6 @@ export default function HorusToolbar() {
         },
         {
           name: "Reset flow",
-          svgPath: <Chevron direction="right" />,
           onClick: () => {
             const centerEvent = new CustomEvent("resetFlow");
             window.dispatchEvent(centerEvent);

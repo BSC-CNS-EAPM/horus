@@ -1712,40 +1712,35 @@ class HorusServer:
         @self.verifyLogin
         @self.stopDemoUser
         def saveFile():
-            # Get from the request the data to save
-            data = request.get_json()
-
-            contents = data.get("contents", None)
-            filename = data.get("filename", "File")
-
-            if contents is None:
-                return flask.jsonify({"ok": False, "msg": "No data to save"})
-
-            if self.desktop:
-                # Select the path where to save the file
-                from App import AppDelegate  # pylint: disable=import-outside-toplevel
-
-                selFile = AppDelegate().saveFileSelectDialog(filename)
-
-                # If the user cancelled the dialog, return
-                if selFile is None:
-                    return flask.jsonify({"ok": False, "msg": "User cancelled"})
-
-                # Save the file
-                with open(selFile, "w", encoding="utf-8") as file:
-                    file.write(contents)
-
-                return flask.jsonify({"ok": True})
-            else:
-                # If we are in server mode, download the file
-                tmpFile = TempFile(filename)
-                tmpFile.write(contents)
-                return flask.send_file(
-                    tmpFile.path,
-                    as_attachment=True,
-                    download_name="protein.pdb",
-                    mimetype="application/octet-stream",
+            # If we are in server mode, return error, the file should have been downloaded
+            # directly from the frontend
+            if not self.desktop:
+                return flask.jsonify(
+                    {"ok": False, "msg": "This function only works in desktop mode"}
                 )
+
+            # Try to get the file from the request
+            request.get_data()
+            file = request.files.get("file", None)
+
+            if file is None:
+                return flask.jsonify({"ok": False, "msg": "No file to save"})
+
+            filename = file.filename or "file"
+
+            # Select the path where to save the file
+            from App import AppDelegate  # pylint: disable=import-outside-toplevel
+
+            selFile = AppDelegate().saveFileSelectDialog(filename)
+
+            # If the user cancelled the dialog, return
+            if selFile is None:
+                return flask.jsonify({"ok": False, "msg": "User cancelled path selection"})
+
+            # Save the file
+            file.save(selFile)
+
+            return flask.jsonify({"ok": True})
 
         @self.server.route("/api/remotes/list", methods=["GET"])
         @self.allowRemotes

@@ -1,14 +1,16 @@
+import { ColDef, IRowNode, SelectionChangedEvent } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { useEffect, useMemo, useRef } from "react";
 import { HorusTable } from "../TablePlot/horustable";
 import { SmilesView } from "./SmilesComponent";
+import { NoPreviewSmilesView } from "./SmilesGrid";
 import { HorusSmilesType } from "./SmilesWrapper/horusSmiles";
-import { ColDef, IRowNode, SelectionChangedEvent } from "ag-grid-community";
 
 export function SmilesList(props: {
   availableSmiles: HorusSmilesType[];
   updateExistingSmiles: (smiles: HorusSmilesType) => void;
   onClickEdit: (smiles: HorusSmilesType) => void;
+  previewSmiles: boolean;
 }) {
   const { availableSmiles, updateExistingSmiles, onClickEdit } = props;
 
@@ -29,23 +31,40 @@ export function SmilesList(props: {
         filter: false,
         sortable: false,
         cellStyle: { padding: "0px" },
+        refData: {
+          smi: "smi",
+        },
         cellRenderer: (params: any) => {
           const data = params.data as HorusSmilesType;
+
+          if (props.previewSmiles) {
+            return (
+              <SmilesView
+                width={"180px"}
+                height={"50px"}
+                smiles={data.smi}
+                removePolygon={true}
+                containerProps={{
+                  onClick: () => {
+                    if (data.structureRef) return;
+                    onClickEdit(data);
+                  },
+                }}
+                options={{
+                  depict: true,
+                  zoom: false,
+                }}
+              ></SmilesView>
+            );
+          }
+
           return (
-            <SmilesView
-              width={"180px"}
-              height={"50px"}
-              smiles={data.smi}
-              containerProps={{
-                onClick: () => {
-                  onClickEdit(data);
-                },
+            <NoPreviewSmilesView
+              smiles={data}
+              onClickEdit={() => {
+                data.structureRef ? null : onClickEdit(data);
               }}
-              options={{
-                depict: true,
-                zoom: false,
-              }}
-            ></SmilesView>
+            />
           );
         },
       },
@@ -71,11 +90,13 @@ export function SmilesList(props: {
       },
       {
         field: "structureRef",
-        headerName: "Comes from Mol*",
+        headerName: "Comes from 3D structure",
+
         valueGetter: (params: any) => {
           const data = params.data as HorusSmilesType;
-          return data.structureRef ? "Yes" : "No";
+          return data.structureRef ? true : false;
         },
+        cellRenderer: "agCheckboxCellRenderer",
         sortable: true,
         filter: true,
         editable: false,
@@ -188,6 +209,8 @@ export function SmilesList(props: {
       columnDefs={columns}
       rows={availableSmiles}
       gridProps={{
+        singleClickEdit: true,
+        rowBuffer: 0,
         onRowSelected: handleRowSelected,
         suppressPropertyNamesCheck: true,
         rowSelection: "multiple",

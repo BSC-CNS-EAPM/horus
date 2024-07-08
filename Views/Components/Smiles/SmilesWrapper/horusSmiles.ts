@@ -8,7 +8,10 @@ export type HorusSmilesType = {
   id: string;
   label: string;
   smi: string;
-  structureRef?: string;
+  structureRef?: {
+    id: string;
+    residue?: AtomInfo;
+  };
   extraInfo?: string;
   selected?: boolean;
   group?: string;
@@ -121,7 +124,7 @@ export default class HorusSmilesManager {
     });
 
     removedRefs.forEach((ref) => {
-      if (this._currentSmiles?.structureRef === ref) {
+      if (this._currentSmiles?.structureRef?.id === ref) {
         this._currentSmiles = null;
       }
 
@@ -184,8 +187,9 @@ export default class HorusSmilesManager {
         // Update the current smiles if it still exists
         this.setCurrentSmiles(currentSmilesExistsOnNewList);
       } else {
-        // Otherwise, set the current smiles to the first smiles
-        this.setCurrentSmiles(smiles[0]!);
+        // Otherwise, set the current smiles to the first smiles that has a structureRef
+        const smilesWithStructureRef = smiles.find((s) => s.structureRef);
+        smilesWithStructureRef && this.setCurrentSmiles(smilesWithStructureRef);
       }
     }
 
@@ -229,7 +233,11 @@ export default class HorusSmilesManager {
    * @return {void} This function does not return anything.
    */
   public reset() {
-    this.setSmilesList([]);
+    // Keep the Molstar smiles
+    const smilesList = this.getSmilesList().filter((smi) => {
+      return smi.structureRef;
+    });
+    this.setSmilesList(smilesList);
   }
 
   /**
@@ -241,7 +249,7 @@ export default class HorusSmilesManager {
   private removeSmilesFromRef(sourceRef: string) {
     this.setSmilesList(
       this.getSmilesList().filter((smi) => {
-        return smi.structureRef !== sourceRef;
+        return smi.structureRef?.id !== sourceRef;
       })
     );
   }
@@ -262,7 +270,7 @@ export default class HorusSmilesManager {
           ...smi,
           group:
             currentLabels.find((label) => {
-              return label.id === smi.structureRef;
+              return label.id === smi.structureRef?.id;
             })?.label ?? smi.group,
         };
       })
@@ -375,7 +383,13 @@ export default class HorusSmilesManager {
         structure.fileContents,
         structure.label
       ).then((smiles) =>
-        smiles.map((s) => ({ ...s, structureRef: structure.id }))
+        smiles.map((s) => ({
+          ...s,
+          structureRef: {
+            id: structure.id,
+            residue: { label: structureLabel } as AtomInfo,
+          },
+        }))
       );
     } else {
       const heteroAtomsList =
@@ -415,7 +429,7 @@ export default class HorusSmilesManager {
           id: this.getNewID(),
           label: key,
           smi: smiles,
-          structureRef: structure.id,
+          structureRef: { id: structure.id, residue: groupedAtoms[key]![0]! },
           group: structureLabel,
         });
       }
@@ -776,7 +790,12 @@ export default class HorusSmilesManager {
   }
 
   public removeSelected() {
-    this.removeIDs(this.getSelectedSmiles().map((s) => s.id));
+    // Prevent removing of structureRefs
+    this.removeIDs(
+      this.getSelectedSmiles()
+        .filter((s) => !s.structureRef)
+        .map((s) => s.id)
+    );
   }
 
   public getSelectedSmiles() {

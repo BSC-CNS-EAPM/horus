@@ -2,6 +2,7 @@ import { Component, useState } from "react";
 import Modal from "react-bootstrap/Modal";
 import { Popover } from "@headlessui/react";
 import Chevron from "./Toolbar/Icons/Chevron";
+import { horusPost } from "../Utils/utils";
 
 type HorusPopoverProps = {
   trigger: React.ReactNode;
@@ -203,3 +204,56 @@ export function MovingChevron({ down }: { down: boolean }) {
 }
 
 export { HorusModal, HorusModalProps, debounce, HorusPopover };
+
+export function saveFile(file: File) {
+  // If we ar eon desktop mode, use the /savecontents endpoint,
+  // otherwise, create a download link
+  if (window.horusInternal.isDesktop) {
+    // Post the file to the /savecontents endpoint
+    const form = new FormData();
+
+    form.append("file", file, file.name);
+    const headers = {
+      Accept: "application/json",
+    };
+
+    horusPost("/api/savecontents", headers, form)
+      .then((res) => {
+        return res.json();
+      })
+      .then((data) => {
+        if (!data.ok) {
+          alert(data.msg);
+        }
+      })
+      .catch((error) => {
+        alert(error);
+      });
+  } else {
+    // Convert your blob into a Blob URL (a special url that points to an object in the browser's memory)
+    const blobUrl = URL.createObjectURL(file);
+
+    // Create a link element
+    const link = document.createElement("a");
+
+    // Set link's href to point to the Blob URL
+    link.href = blobUrl;
+    link.download = file.name;
+
+    // Append link to the body
+    document.body.appendChild(link);
+
+    // Dispatch click event on the link
+    // This is necessary as link.click() does not work on the latest firefox
+    link.dispatchEvent(
+      new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+      })
+    );
+
+    // Remove link from body
+    document.body.removeChild(link);
+  }
+}

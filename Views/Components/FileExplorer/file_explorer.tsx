@@ -17,18 +17,6 @@ import { GLOBAL_IDS } from "../../Utils/globals";
 import { usePrompt } from "../HorusPrompt/horus_prompt";
 import { useAlert } from "../HorusPrompt/horus_alert";
 
-function saveBlob(blob: Blob, fileName: string) {
-  const a = document.createElement("a") as HTMLAnchorElement;
-  document.body.appendChild(a);
-  a.setAttribute("style", "display: none");
-
-  const url = window.URL.createObjectURL(blob);
-  a.href = url;
-  a.download = fileName;
-  a.click();
-  window.URL.revokeObjectURL(url);
-}
-
 // Create custom hook for server picker file explorer
 function useServerExplorer(
   openFolder: boolean,
@@ -342,7 +330,11 @@ function useServerExplorer(
         // Get the name of the file (last part of the path)
         const fileName = filePath.path.split("/").pop();
 
-        saveBlob(data, fileName ?? "downloaded_file");
+        const file = new File([data], fileName ?? "downloaded_file", {
+          type: "application/octet-stream",
+        });
+
+        window.horus.saveFile(file);
       }
       resetActionFiles();
     },

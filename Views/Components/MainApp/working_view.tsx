@@ -347,7 +347,17 @@ function MolstarPanel({ expand }: { expand?: boolean }) {
             ref={smilesPanelRef}
             defaultSize={0}
           >
-            <SmilesGrid />
+            <div className="w-full h-full">
+              {isDragging && <MolstarResizing />}
+              <div
+                className="w-full h-full"
+                style={{
+                  display: isDragging ? "none" : "block",
+                }}
+              >
+                <SmilesGrid />
+              </div>
+            </div>
           </Panel>
         </PanelGroup>
       </Panel>

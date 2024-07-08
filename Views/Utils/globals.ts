@@ -9,6 +9,7 @@ import { ExtensionsFilePickerOptions } from "../Components/FileExplorer/file_exp
 // Terminal ref
 // @ts-ignore
 import Terminal from "react-console-emulator";
+import { saveFile } from "../Components/reusable";
 
 export {};
 
@@ -53,6 +54,7 @@ declare global {
       getFlow?: () => any;
       setFlow?: (value: any) => void;
       openExtensionFilePicker?: (options: ExtensionsFilePickerOptions) => void;
+      saveFile: (file: File) => void;
     };
     // JSME viewer
     JSApplet: any;
@@ -70,4 +72,6 @@ export enum GLOBAL_IDS {
 }
 
 // Define an empty window.horus object
-window.horus = {};
+window.horus = {
+  saveFile: saveFile,
+};

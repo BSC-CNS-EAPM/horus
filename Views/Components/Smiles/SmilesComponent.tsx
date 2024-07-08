@@ -217,6 +217,7 @@ type SmilesViewProps = {
   options?: JSMEOptions;
   parameters?: JSMEParameters;
   smiles?: string;
+  removePolygon?: boolean;
   onChange?: (jsmeEvent: JSMEEvent) => void;
   onClickEdit?: () => void;
   containerProps?: JSX.IntrinsicElements["div"];
@@ -303,7 +304,9 @@ export class SmilesView extends PureComponent {
     this.jsmeApplet = jsmeApplet;
 
     // Remove the blue "drag and drop" icon that appears by default
-    this.removePolygon();
+    if (this.props.removePolygon !== false) {
+      this.removePolygon();
+    }
   };
 
   private async removePolygon() {
@@ -364,7 +367,9 @@ export class SmilesView extends PureComponent {
       }
     }
 
-    this.removePolygon();
+    if (this.props.removePolygon !== false) {
+      this.removePolygon();
+    }
   }
 
   override render() {

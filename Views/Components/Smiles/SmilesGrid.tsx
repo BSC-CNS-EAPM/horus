@@ -5,18 +5,21 @@ import "react-virtualized/styles.css";
 import AutoSizer from "react-virtualized/dist/commonjs/AutoSizer";
 import List from "react-virtualized/dist/commonjs/List";
 
+import AppButton from "../appbutton";
+import { useAlert } from "../HorusPrompt/horus_alert";
 import { usePrompt } from "../HorusPrompt/horus_prompt";
 import { HorusModal } from "../reusable";
 import RotatingLines from "../RotatingLines/rotatinglines";
 import SidebarView from "../SidebarView/sidebar_view";
 import CenterView from "../Toolbar/Icons/CenterView";
+import EyeIcon from "../Toolbar/Icons/Eye";
 import LogFile from "../Toolbar/Icons/LogFile";
+import MolStarIcon from "../Toolbar/Icons/MolStar";
 import SaveIcon from "../Toolbar/Icons/Save";
 import { ToolbarMenu, ToolBarMenuProps } from "../Toolbar/toolbar";
 import { SmilesView } from "./SmilesComponent";
 import { SmilesList } from "./SmilesList";
 import { HorusSmilesType, SmilesEvents } from "./SmilesWrapper/horusSmiles";
-import { useAlert } from "../HorusPrompt/horus_alert";
 
 const SMILES_GRID_WIDTH = 200;
 const SMILES_GRID_HEIGTH = 150;
@@ -99,6 +102,18 @@ export function SmilesGrid() {
   };
 
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [previewSmiles, setPreviewSmiles] = useState<boolean>(true);
+  const [alertShownAtLeastOnce, setAlertShownAtLeastOnce] = useState(false);
+
+  useEffect(() => {
+    if (!alertShownAtLeastOnce && availableSmiles.length > 30) {
+      setPreviewSmiles(false);
+      setAlertShownAtLeastOnce(true);
+      horusAlert(
+        `Disabled SMILES preview due to the list being too large. Click 'View' -> 'Toggle SMILES preview' to enable previews again at the cost of performance.`
+      );
+    }
+  }, [availableSmiles]);
 
   return (
     <div
@@ -129,6 +144,7 @@ export function SmilesGrid() {
         availableSmiles={availableSmiles}
         viewMode={viewMode}
         setViewMode={setViewMode}
+        toggleSMILESPreview={() => setPreviewSmiles(!previewSmiles)}
       />
       {availableSmiles.length > 0 ? (
         viewMode === "grid" ? (
@@ -137,11 +153,13 @@ export function SmilesGrid() {
             setEditingSmiles={setEditingSmiles}
             updateExistingSmiles={updateExistingSmiles}
             setCurrentGroup={setCurrentGroup}
+            previewSmiles={previewSmiles}
           />
         ) : (
           <SmilesList
             availableSmiles={availableSmiles}
             updateExistingSmiles={updateExistingSmiles}
+            previewSmiles={previewSmiles}
             onClickEdit={(smiles) => {
               setEditingSmiles(smiles);
             }}
@@ -197,6 +215,7 @@ export type InternalSmilesGridViewProps = {
   setEditingSmiles: (smiles: HorusSmilesType) => void;
   updateExistingSmiles: (smiles: HorusSmilesType) => void;
   setCurrentGroup: (group?: string) => void;
+  previewSmiles: boolean;
 };
 
 function InternalSmilesGridView(props: InternalSmilesGridViewProps) {
@@ -312,6 +331,7 @@ function _GroupingVirtualizedOfSmilesView(props: InternalSmilesGridViewProps) {
                     updateExistingSmiles={props.updateExistingSmiles}
                     setEditingSmiles={props.setEditingSmiles}
                     isScrolling={!isVisible}
+                    previewSmiles={props.previewSmiles}
                   />
                 );
               }
@@ -335,6 +355,7 @@ type VirtualizedSmilesViewType = Omit<
   smilesToRender: HorusSmilesType;
   index: number;
   isScrolling: boolean;
+  previewSmiles: boolean;
 };
 
 function _VirtualizedSmilesView({
@@ -343,6 +364,7 @@ function _VirtualizedSmilesView({
   updateExistingSmiles,
   setEditingSmiles,
   isScrolling,
+  previewSmiles,
 }: VirtualizedSmilesViewType) {
   return (
     <div
@@ -371,13 +393,14 @@ function _VirtualizedSmilesView({
           bottom: "2px",
           left: "2px",
           zIndex: 10,
+          backgroundColor: "transparent",
         }}
         type="text"
         placeholder="Unnamed SMILES"
         value={
           smiles?.label
             ? smiles.structureRef
-              ? `Mol*: ${smiles.label}`
+              ? `${smiles.label}`
               : smiles.label
             : ""
         }
@@ -385,6 +408,17 @@ function _VirtualizedSmilesView({
           updateExistingSmiles({ ...smiles, label: e.target.value });
         }}
       />
+      {smiles?.structureRef && (
+        <MolStarIcon
+          style={{
+            position: "absolute",
+            bottom: "2px",
+            right: "2px",
+            zIndex: 10,
+            backgroundColor: "white",
+          }}
+        />
+      )}
       <input
         id={`${smiles.id}-selected`}
         className="absolute"
@@ -413,11 +447,20 @@ function _VirtualizedSmilesView({
         >
           <RotatingLines />
         </div>
+      ) : !previewSmiles ? (
+        <NoPreviewSmilesView
+          smiles={smiles}
+          onClickEdit={() => setEditingSmiles(smiles)}
+          containerStyle={{
+            width: `${SMILES_GRID_WIDTH}px`,
+            height: `${SMILES_GRID_HEIGTH}px`,
+          }}
+        />
       ) : (
         <SmilesView
           width={`${SMILES_GRID_WIDTH}px`}
-          // Needed for overflow issue to substract -2px
-          height={`${SMILES_GRID_HEIGTH + -2}px`}
+          // Needed for overflow issue to substract -2px (-10 if )
+          height={`${SMILES_GRID_HEIGTH - 2}px`}
           options={{
             depict: true,
             contextmenu: false,
@@ -438,11 +481,35 @@ function _VirtualizedSmilesView({
   );
 }
 
+export function NoPreviewSmilesView({
+  smiles,
+  containerStyle,
+  onClickEdit,
+}: {
+  smiles: HorusSmilesType;
+  containerStyle?: React.CSSProperties;
+  onClickEdit: () => void;
+}) {
+  return (
+    <div
+      className="w-full h-full flex items-center justify-center"
+      style={{ ...containerStyle }}
+    >
+      <AppButton
+        disabled={smiles.structureRef ? true : false}
+        action={onClickEdit}
+      >
+        {smiles.structureRef ? <MolStarIcon /> : "Edit SMILES"}
+      </AppButton>
+    </div>
+  );
+}
 function SmilesToolBox(props: {
   availableSmiles: HorusSmilesType[];
   currentGroup?: string;
   viewMode: ViewMode;
   setViewMode: (viewMode: ViewMode) => void;
+  toggleSMILESPreview: () => void;
 }) {
   const [busy, setBusy] = useState<string | null>(null);
   const horusPrompt = usePrompt();
@@ -535,7 +602,7 @@ function SmilesToolBox(props: {
 
           window.smiles?.setSmilesList(
             window.smiles?.getSmilesList().map((s) => {
-              if (newSmiles.includes(s.id)) {
+              if (newSmiles.includes(s.id) && !s.structureRef) {
                 return { ...s, group: newGroup };
               }
               return s;
@@ -633,10 +700,7 @@ function SmilesToolBox(props: {
 
             if (!file) return;
 
-            const a = document.createElement("a");
-            a.href = URL.createObjectURL(file);
-            a.download = file.name;
-            a.click();
+            window.horus.saveFile(file);
           } finally {
             setBusy(null);
           }
@@ -663,12 +727,11 @@ function SmilesToolBox(props: {
           })
           .join("\n");
 
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(
-          new Blob([smiles], { type: "text/plain" })
-        );
-        a.download = fileName + ".smi";
-        a.click();
+        const file = new File([smiles], fileName + ".smi", {
+          type: "text/plain",
+        });
+
+        window.horus.saveFile(file);
       },
     },
     {
@@ -703,10 +766,11 @@ function SmilesToolBox(props: {
           .map((row) => row.join(","))
           .join("\n");
 
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-        a.download = fileName + ".csv";
-        a.click();
+        const file = new File([csv], fileName + ".csv", {
+          type: "text/plain",
+        });
+
+        window.horus.saveFile(file);
       },
     },
   ];
@@ -725,6 +789,13 @@ function SmilesToolBox(props: {
         props.setViewMode("list");
       },
       svgPath: <LogFile />,
+    },
+    {
+      name: "Toggle SMILES preview",
+      onClick: () => {
+        props.toggleSMILESPreview();
+      },
+      svgPath: <EyeIcon />,
     },
   ];
 

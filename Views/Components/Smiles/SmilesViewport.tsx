@@ -14,7 +14,9 @@ export function Smiles2DMolstarViewportComponent() {
 
   useEffect(() => {
     const updateSmilesEventListener = () => {
-      setAvailableSmiles(window.smiles?.getSmilesList() ?? []);
+      setAvailableSmiles(
+        window.smiles?.getSmilesList().filter((s) => s.structureRef) ?? []
+      );
       setCurrentSmiles(window.smiles?.getCurrentSmiles() ?? null);
     };
 
@@ -67,6 +69,23 @@ export function Smiles2DMolstarViewportComponent() {
         >
           <div className="border">
             <SmilesView
+              containerProps={{
+                onClick: () => {
+                  // Focus the residue if it comes from a structure
+                  if (
+                    currentSmiles &&
+                    currentSmiles.structureRef &&
+                    currentSmiles.structureRef.residue
+                  ) {
+                    const label = currentSmiles.structureRef.residue.label;
+                    const residueNum =
+                      currentSmiles.structureRef.residue.residue;
+                    const chain = currentSmiles.structureRef.residue.chainID;
+                    window.molstar.focus(label, residueNum, chain);
+                  }
+                },
+              }}
+              removePolygon={true}
               width={"100%"}
               height={"150px"}
               options={{
@@ -103,7 +122,11 @@ export function Smiles2DMolstarViewportComponent() {
                 ? availableSmiles.map((smi) => {
                     return (
                       <option key={smi.id} value={smi.id}>
-                        {smi.label || "Unnamed SMILES"}
+                        {`${smi.label} - ${
+                          window.molstar.getLabelFromStructureRef(
+                            smi.structureRef?.id ?? ""
+                          ) ?? "Unknown"
+                        }` || "Unnamed SMILES"}
                       </option>
                     );
                   })

@@ -59,7 +59,7 @@ function BrowserMode() {
   };
 
   return (
-    <div className="flex flex-col justify-center items-center overflow-hidden">
+    <div className="flex flex-col justify-center items-center overflow-hidden p-4">
       <img
         src={horus_logo}
         alt="Horus logo"
