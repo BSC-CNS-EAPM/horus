@@ -425,10 +425,15 @@ class VariableTypes(str, Enum):
     Must be JSON serializable.
     """
 
-    PYTHON = "python"
+    CODE = "code"
     """
-    A python code variable. This will be rendered as a code editor.
-    The resulting value will be a python code snippet as a string.
+    A code variable. This will be rendered as a code editor.
+    The resulting value will be a code snippet as a string.
+
+    You can select the language of the code with the allowedValues parameter.
+    For example, for python:
+
+    allowedValues = ["python"]
     """
 
     CUSTOM = "custom"

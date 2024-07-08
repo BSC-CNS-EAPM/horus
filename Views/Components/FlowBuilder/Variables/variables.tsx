@@ -523,7 +523,7 @@ function VariableRenderer(props: {
           variable={props.variable}
         />
       );
-    case PluginVariableTypes.PYTHON:
+    case PluginVariableTypes.CODE:
       return (
         <PythonVariableView
           currentValue={currentValue}

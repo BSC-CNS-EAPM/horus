@@ -60,7 +60,7 @@ export function PythonVariableView(props: VariableViewProps) {
     <Editor
       className="w-full h-full rounded-md border-red border-2 overflow-hidden"
       height="300px"
-      defaultLanguage="python"
+      defaultLanguage={props.variable.allowedValues[0] ?? "python"}
       value={props.variable.value}
       defaultValue={props.variable.defaultValue}
       onChange={(value) => props.onChange(value)}

@@ -13,7 +13,8 @@ codeVariable = PluginVariable(
     name="Code",
     id="code",
     description="Write a Python script",
-    type=VariableTypes.PYTHON,
+    type=VariableTypes.CODE,
+    allowedValues=["python"],
     defaultValue="""# The inputs of the block are in the 'inputs' variable
 print("inputs are", inputs)
 
