@@ -60,6 +60,7 @@ class Extensions(metaclass=SingletonMeta):
             raise Exception("Could not run the ExtensionsAPI. No flow is currently running")
 
         extensionData = {
+            "extensionAPI": True,
             "url": f"/plugins/pages/{pluginID}.{pageID}",
             "pluginID": pluginID,
             "pageID": pageID,

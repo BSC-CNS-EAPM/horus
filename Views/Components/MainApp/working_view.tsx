@@ -35,6 +35,15 @@ type WorkingViewProps = {
   molstar?: boolean;
 };
 
+interface ExtensionAPIEvent extends CustomEvent {
+  data: any;
+  pageID: string;
+  pluginID: string;
+  title: string;
+  url: string;
+  extensionAPI: boolean;
+}
+
 export default function WorkingView(props: WorkingViewProps) {
   // States
   const [mainView, setMainView] = useState(<FlowBuilderView />);
@@ -53,13 +62,29 @@ export default function WorkingView(props: WorkingViewProps) {
 
   const handleIFrame = (event: Event) => {
     // Opening it from a block action yields a socket event
-    const parsedEvent = event as CustomEvent;
+    const parsedEvent = event as ExtensionAPIEvent;
 
-    const page: PluginPage = parsedEvent.detail?.page ?? {};
-    const url: string | null = page?.url ?? null;
-    const pagename: string = page?.name ?? "Unknown";
-    const data: any = parsedEvent.detail?.data ?? null;
+    // Assign a block id to the iframe
     const blockIDCustom: number = parsedEvent.detail?.blockIDCustom ?? -1;
+
+    // handle events that come from the Extension API too
+    let page: PluginPage = parsedEvent.detail?.page ?? {};
+    let url: string | null = page?.url ?? null;
+    let data: any = parsedEvent.detail?.data ?? null;
+    let pagename: string = page?.name ?? "Unknown";
+    if (parsedEvent.extensionAPI) {
+      data = parsedEvent.data;
+      url = parsedEvent.url;
+      pagename = parsedEvent.title;
+      page = {
+        name: parsedEvent.title,
+        url: parsedEvent.url,
+        plugin: parsedEvent.pluginID,
+        id: parsedEvent.pageID,
+        description: "Block extension",
+        hidden: false,
+      };
+    }
 
     // The block which provided the custom variable view unmounted,
     // Therefore we need to hide the current extension view
