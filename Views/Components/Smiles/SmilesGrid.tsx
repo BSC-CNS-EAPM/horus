@@ -516,7 +516,7 @@ function SmilesToolBox(props: {
 
   const getSDFFile = async () => {
     const fileName = await horusPrompt(
-      "Enter the name of the file to save the converted SDF to"
+      "Enter the name of the file to save the converted SDF"
     );
 
     const sdfContents = await window.smiles?.convertSelectedToSDF();
@@ -715,7 +715,7 @@ function SmilesToolBox(props: {
       disabled: !window.smiles?.getSelectedSmiles().length,
       onClick: async () => {
         const fileName = await horusPrompt(
-          "Enter the name of the file to save the SMILES to"
+          "Enter the name of the file to save the SMILES"
         );
         const selectedSmiles = window.smiles?.getSelectedSmiles();
 
@@ -739,7 +739,7 @@ function SmilesToolBox(props: {
       disabled: !window.smiles?.getSelectedSmiles().length,
       onClick: async () => {
         const fileName = await horusPrompt(
-          "Enter the CSV file name to save the SMILES to"
+          "Enter the CSV file name to save the SMILES"
         );
         const selectedSmiles = window.smiles?.getSelectedSmiles();
 

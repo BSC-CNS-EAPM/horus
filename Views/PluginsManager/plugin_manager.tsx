@@ -795,10 +795,9 @@ function InstallingPluginView({
             Installing Plugin...
           </h1>
           <HorusContainer className="flex flex-col gap-2 justify-center items-center mb-2">
-            <p>
-              Installing
-              <span className="plugin-variable-name">'{selectedFile}'</span>
-            </p>
+            <span className="plugin-variable-name">
+              Installing {selectedFile}
+            </span>
             <RotatingLines />
             <p>
               Please be patient as some dependencies may take a while to

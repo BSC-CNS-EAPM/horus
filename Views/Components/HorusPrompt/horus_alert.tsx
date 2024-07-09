@@ -62,11 +62,12 @@ const AlertComponent = ({
 
   const handleEvent = useCallback(
     (event: KeyboardEvent) => {
-      event.preventDefault();
       if (event.key === "Enter") {
+        event.preventDefault();
         onSubmit(); // Call the onSubmit function
       }
       if (event.key === "Escape") {
+        event.preventDefault();
         onSubmit();
       }
     },
