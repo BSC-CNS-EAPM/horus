@@ -16,18 +16,21 @@ type AppButtonProps = {
 function AppButton(props: AppButtonProps) {
   const className = "app-button " + props?.className;
 
+  // First div necessary for padding
   return (
-    <button
-      type={props.type}
-      disabled={props.disabled}
-      id={props.id}
-      className={className}
-      onClick={() => props.action && props.action()}
-      style={props.style}
-    >
-      {props?.text}
-      {props?.children}
-    </button>
+    <div>
+      <button
+        type={props.type}
+        disabled={props.disabled}
+        id={props.id}
+        className={className}
+        onClick={() => props.action && props.action()}
+        style={props.style}
+      >
+        {props?.text}
+        {props?.children}
+      </button>
+    </div>
   );
 }
 

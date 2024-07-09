@@ -149,6 +149,7 @@ export function BlurredModal(props: BlurredModalProps) {
       </div>
       {/* This will make the background */}
       <div
+        id="horus-modal-backdrop"
         className="backdrop-blur-sm h-full w-full absolute z-20 blur-in-animation"
         onClick={props.onHide}
       ></div>

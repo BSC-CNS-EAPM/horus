@@ -22,13 +22,12 @@ export const usePrompt = () => {
   };
 
   useEffect(() => {
-    const promptRoot = document.createElement("div");
-    promptRoot.id = "prompt-root";
-    document.body.appendChild(promptRoot);
-
-    return () => {
-      document.body.removeChild(promptRoot);
-    };
+    // If the element exists, remove it first
+    if (!document.getElementById("prompt-root")) {
+      const promptRoot = document.createElement("div");
+      promptRoot.id = "prompt-root";
+      document.body.appendChild(promptRoot);
+    }
   }, []);
 
   useEffect(() => {

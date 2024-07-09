@@ -22,13 +22,12 @@ export const useAlert = () => {
   };
 
   useEffect(() => {
-    const alertRoot = document.createElement("div");
-    alertRoot.id = "alert-root";
-    document.body.appendChild(alertRoot);
-
-    return () => {
-      document.body.removeChild(alertRoot);
-    };
+    // If the element exists, remove it first
+    if (!document.getElementById("alert-root")) {
+      const alertRoot = document.createElement("div");
+      alertRoot.id = "alert-root";
+      document.body.appendChild(alertRoot);
+    }
   }, []);
 
   useEffect(() => {
@@ -92,6 +91,7 @@ const AlertComponent = ({
       <div className="prompt-container flex flex-col items-center">
         <p className="plugin-variable-name">{message}</p>
         <form onSubmit={() => onSubmit()}>
+          <AppButton type="submit">OK</AppButton>
           <input
             type="text"
             ref={inputRef}
@@ -100,9 +100,9 @@ const AlertComponent = ({
               height: 0,
               opacity: "0",
               position: "absolute",
+              zIndex: -1,
             }}
           />
-          <AppButton type="submit">OK</AppButton>
         </form>
       </div>
     </div>

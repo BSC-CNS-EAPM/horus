@@ -149,25 +149,28 @@ export function useGetRecentFlows(
       return;
     }
 
-    const recentFlowsData = await recentFlowsResponse.json();
+    try {
+      const recentFlowsData = await recentFlowsResponse.json();
+      if (!recentFlowsData.ok) {
+        return;
+      }
 
-    if (!recentFlowsData.ok) {
-      return;
+      const flows: Flow[] = recentFlowsData.flows;
+
+      // Sort the flows by the flow.date field (yyyy-mm-dd hh:mm:ss)
+      flows.sort((a: Flow, b: Flow) => {
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+
+        return dateB.getTime() - dateA.getTime();
+      });
+
+      setRecentFlows(flows);
+      setOtherDirectories(recentFlowsData.otherDirectories ?? []);
+      setCorruptedFlows(recentFlowsData.corruptedFlows ?? []);
+    } catch (error) {
+      console.error(error);
     }
-
-    const flows: Flow[] = recentFlowsData.flows;
-
-    // Sort the flows by the flow.date field (yyyy-mm-dd hh:mm:ss)
-    flows.sort((a: Flow, b: Flow) => {
-      const dateA = new Date(a.date);
-      const dateB = new Date(b.date);
-
-      return dateB.getTime() - dateA.getTime();
-    });
-
-    setRecentFlows(flows);
-    setOtherDirectories(recentFlowsData.otherDirectories ?? []);
-    setCorruptedFlows(recentFlowsData.corruptedFlows ?? []);
   }, [webAppFlows]);
 
   const getTemplates = useCallback(async () => {

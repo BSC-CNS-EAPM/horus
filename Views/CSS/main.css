@@ -152,13 +152,14 @@ select:hover {
   transition: height 1s ease-in-out !important;
 }
 .modal {
+  -webkit-backdrop-filter: blur(5px);
   backdrop-filter: blur(5px);
 }
 
 .modal-backdrop {
   /* Apply the same style as the blurred modal */
   background: transparent;
-  /* backdrop-filter: blur(5px); */
+  backdrop-filter: blur(5px) !important;
 }
 
 .root {

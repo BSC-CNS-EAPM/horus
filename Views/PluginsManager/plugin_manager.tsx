@@ -28,6 +28,7 @@ import "../CSS/colors.css";
 import "../CSS/animations.css";
 import { useAlert } from "../Components/HorusPrompt/horus_alert";
 import { useConfirm } from "../Components/HorusPrompt/horus_confirm";
+import { LazyLog } from "@melloware/react-logviewer";
 
 type ConfigBlockType = Array<{
   remote: string;
@@ -37,6 +38,57 @@ type ConfigBlockType = Array<{
 type PluginConfigViewProps = {
   configBlocks: ConfigBlockType;
 };
+
+function getModal() {
+  const modal = document.getElementById("home-modal");
+
+  if (!modal) {
+    return null;
+  }
+
+  const root = document.documentElement;
+
+  const buttons = modal.querySelectorAll("button");
+
+  return {
+    root,
+    buttons,
+  };
+}
+
+function disableModal() {
+  const queryModal = getModal();
+
+  if (!queryModal) {
+    return;
+  }
+
+  const { root, buttons } = queryModal;
+
+  buttons.forEach((button) => {
+    button.disabled = true;
+  });
+
+  root.style.pointerEvents = "none";
+  root.style.cursor = "wait";
+}
+
+function enableModal() {
+  const queryModal = getModal();
+
+  if (!queryModal) {
+    return;
+  }
+
+  const { root, buttons } = queryModal;
+
+  buttons.forEach((button) => {
+    button.disabled = false;
+  });
+
+  root.style.pointerEvents = "auto";
+  root.style.cursor = "default";
+}
 
 function PluginConfigView(props: PluginConfigViewProps) {
   // Create a state to store the modified config
@@ -329,50 +381,37 @@ function PluginCard(props: PluginCardProps) {
     }
 
     setIsDeleting(true);
-    // Disable all pointer events on modal
-    const modal = document.getElementById("home-modal");
 
-    if (!modal) {
-      return;
+    disableModal();
+    try {
+      const body = JSON.stringify({
+        name: plugin.name,
+      });
+
+      const headers = {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      };
+
+      // Wait for the animation to finish
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      setShowDeletingView(true);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      const response = await horusPost("/api/plugins/uninstall", headers, body);
+
+      const data = await response.json();
+
+      if (!data.ok) {
+        await horusAlert("Error deleting plugin: " + data.msg);
+      } else {
+        props.deletePlugin(plugin.id);
+      }
+    } finally {
+      enableModal();
+      setShowDeletingView(false);
+      setIsDeleting(false);
     }
-
-    const buttons = modal.querySelectorAll("button");
-
-    buttons.forEach((button) => {
-      button.disabled = true;
-    });
-    modal.style.cursor = "wait !important";
-
-    const body = JSON.stringify({
-      name: plugin.name,
-    });
-
-    const headers = {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    };
-
-    // Wait for the animation to finish
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    setShowDeletingView(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    const response = await horusPost("/api/plugins/uninstall", headers, body);
-
-    const data = await response.json();
-
-    buttons.forEach((button) => {
-      button.disabled = false;
-    });
-    modal.style.cursor = "default";
-
-    if (!data.ok) {
-      await horusAlert("Error deleting plugin: " + data.msg);
-    } else {
-      props.deletePlugin(plugin.id);
-    }
-    setShowDeletingView(false);
-    setIsDeleting(false);
   };
 
   if (showDeletingView) {
@@ -620,12 +659,6 @@ export function PluginManager({
             {window.horusInternal.isDesktop && (
               <AppButton text="Open Horus folder" action={openPluginsFolder} />
             )}
-            <AppButton
-              text="Close"
-              action={() => {
-                closePluginManager?.();
-              }}
-            />
             <SearchComponent
               placeholder="Search plugins..."
               onChange={(e) => {
@@ -665,6 +698,9 @@ function InstallingPluginView({
 }) {
   const [isInstalling, setIsInstalling] = useState(false);
   const [text, setText] = useState<string>("");
+  const [selectedFile, setSelectedFile] = useState<string>("");
+
+  console.log("selectedFile is", selectedFile);
 
   const updateText = useCallback((data: any) => {
     // Update the state
@@ -693,74 +729,128 @@ function InstallingPluginView({
       file: file,
     });
 
-    const response = await horusPost("/api/plugins/install", header, body);
-    const data = await response.json();
+    horusPost("/api/plugins/install", header, body)
+      .then((response) => response.json())
+      .then((data) => {
+        if (!data.ok) {
+          horusAlert("Error installing plugin: " + data.msg);
+        } else {
+          onPluginInstall();
+        }
+      })
+      .catch(() => {
+        horusAlert(
+          "Error retrieving data while installing plugin. Please check the Horus console for details."
+        );
+      })
+      .finally(() => {
+        setIsInstalling(false);
+      });
+  };
+
+  const showAlertOnDisconnect = () => {
+    const msg =
+      "Disconnected from server while installing plugin. Check console for details.";
+    horusAlert(msg);
+
+    setText((currentText) => {
+      return currentText + "\n" + msg;
+    });
 
     setIsInstalling(false);
-
-    if (!data.ok) {
-      await horusAlert("Error installing plugin: " + data.msg);
-    } else {
-      onPluginInstall();
-    }
   };
 
   useEffect(() => {
     // When recieving a message from the server, log it to the console
     socket.on("installPluginDep", updateText);
+    socket.on("disconnect", showAlertOnDisconnect);
 
     return () => {
       socket.off("installPluginDep", updateText);
+      socket.off("disconnect", showAlertOnDisconnect);
     };
   }, [updateText]);
 
   useEffect(() => {
-    // Disable all pointer events on modal
-    const modal = document.getElementById("home-modal");
+    // Disable all pointer events on the modal,
+    // The modal has the following class "fade modal-backdrop show"
 
-    if (!modal) {
+    // If no path is selected is just the first render
+    if (!selectedFile) {
       return;
     }
 
-    const buttons = modal.querySelectorAll("button");
     if (isInstalling) {
-      buttons.forEach((button) => {
-        button.disabled = true;
-      });
-      modal.style.cursor = "wait !important";
+      disableModal();
     } else {
-      buttons.forEach((button) => {
-        button.disabled = false;
-      });
-      modal.style.cursor = "default";
+      enableModal();
     }
-  }, [isInstalling]);
+  }, [selectedFile, isInstalling]);
 
   return (
-    <div className="flex flex-col justify-center items-center gap-2">
-      <HorusContainer className="w-[25rem] h-[10rem] flex flex-col gap-2 justify-center items-center">
-        {isInstalling ? (
-          <RotatingLines />
-        ) : (
-          <div>Select a plugin to install</div>
-        )}
-        {!isInstalling && (
-          <HorusFileExplorer
-            openDirectly
-            onFileConfirm={(file) => {
-              installPlugin(file);
-            }}
-            onFileSelect={() => {}}
-            allowedExtensions={["hp"]}
-          >
-            Browse...
-          </HorusFileExplorer>
-        )}
-      </HorusContainer>
+    <div>
+      {isInstalling ? (
+        <div>
+          <h1 className="plugin-variable-name text-2xl mb-2">
+            Installing Plugin...
+          </h1>
+          <HorusContainer className="flex flex-col gap-2 justify-center items-center mb-2">
+            <p>
+              Installing
+              <span className="plugin-variable-name">'{selectedFile}'</span>
+            </p>
+            <RotatingLines />
+            <p>
+              Please be patient as some dependencies may take a while to
+              download and install.
+            </p>
+          </HorusContainer>
+        </div>
+      ) : (
+        <div>
+          <h1 className="plugin-variable-name text-2xl mb-2">
+            Select a Plugin
+          </h1>
+          <div className="flex flex-row justify-center items-center gap-2 mb-2">
+            <input
+              className="app-button plugin-variable-value"
+              placeholder="Select a plugin to install..."
+              value={selectedFile}
+              onChange={(e) => {
+                setSelectedFile(e.target.value);
+              }}
+            />
+            <AppButton
+              disabled={!selectedFile}
+              action={() => {
+                installPlugin(selectedFile!);
+              }}
+            >
+              Install
+            </AppButton>
+            <HorusFileExplorer
+              onFileConfirm={(file) => {
+                installPlugin(file);
+              }}
+              onFileSelect={(file) => {
+                setSelectedFile(file);
+              }}
+              allowedExtensions={["hp"]}
+            >
+              Browse...
+            </HorusFileExplorer>
+          </div>
+        </div>
+      )}
       {text && (
-        <HorusContainer className="overflow-scroll lg:w-[1000px] w-[400px]">
-          <pre>{text}</pre>
-        </HorusContainer>
+        <div>
+          <h1 className="plugin-variable-name text-2xl mb-2">
+            Installation logs
+          </h1>
+          <div className="rounded-lg h-full overflow-hidden">
+            <LazyLog height={600} extraLines={1} follow text={text} />
+          </div>
+        </div>
       )}
     </div>
   );

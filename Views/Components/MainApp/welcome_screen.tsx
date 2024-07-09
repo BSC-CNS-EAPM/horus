@@ -281,7 +281,6 @@ function ManagePlugins(props: ButtonOpensModalProps) {
     props.setModalContent({
       body: body,
       footer: footer,
-      allowBlurClose: false,
     });
   };
 

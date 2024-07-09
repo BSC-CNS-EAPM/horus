@@ -22,13 +22,12 @@ export const useConfirm = () => {
   };
 
   useEffect(() => {
-    const confirmRoot = document.createElement("div");
-    confirmRoot.id = "confirm-root";
-    document.body.appendChild(confirmRoot);
-
-    return () => {
-      document.body.removeChild(confirmRoot);
-    };
+    // If the element exists, do not create
+    if (!document.getElementById("confirm-root")) {
+      const confirmRoot = document.createElement("div");
+      confirmRoot.id = "confirm-root";
+      document.body.appendChild(confirmRoot);
+    }
   }, []);
 
   useEffect(() => {
@@ -96,6 +95,10 @@ const ConfirmComponent = ({
       <div className="prompt-container flex flex-col items-center">
         <p className="plugin-variable-name">{message}</p>
         <form onSubmit={() => onSubmit(true)}>
+          <div className="flex flex-row gap-2">
+            <AppButton action={() => onSubmit(false)}>Cancel</AppButton>
+            <AppButton type="submit">OK</AppButton>
+          </div>
           <input
             type="text"
             ref={inputRef}
@@ -104,12 +107,9 @@ const ConfirmComponent = ({
               height: 0,
               opacity: "0",
               position: "absolute",
+              zIndex: -1,
             }}
           />
-          <div className="flex flex-row gap-2">
-            <AppButton action={() => onSubmit(false)}>Cancel</AppButton>
-            <AppButton type="submit">OK</AppButton>
-          </div>
         </form>
       </div>
     </div>
