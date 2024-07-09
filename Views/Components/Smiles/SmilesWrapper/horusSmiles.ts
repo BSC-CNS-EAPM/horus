@@ -132,7 +132,12 @@ export default class HorusSmilesManager {
     });
 
     if (!this._currentSmiles && this._smilesList.length > 0) {
-      this.setCurrentSmiles(this._smilesList[0]!);
+      // Set the current smiles to the first smiles in the list
+      // Only if comes from a structure
+      const firstSmiles = this._smilesList[0]!;
+      if (firstSmiles.structureRef) {
+        this.setCurrentSmiles(firstSmiles);
+      }
     }
 
     // Update the groups too
