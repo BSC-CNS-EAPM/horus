@@ -80,7 +80,7 @@ export default function About() {
           href="https://nbdsoftware.github.io/horus/index.html"
           target="_blank"
         >
-          HorusAPI documentation
+          Horus documentation
         </a>
       </div>
     </div>

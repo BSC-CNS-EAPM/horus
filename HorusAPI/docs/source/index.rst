@@ -1,10 +1,28 @@
-.. HorusAPI documentation master file, created by
+.. Horus documentation master file, created by
    sphinx-quickstart on Thu Aug 31 12:21:53 2023.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to HorusAPI's documentation!
+Welcome to Horus documentation!
 ====================================
+
+.. toctree::
+   :maxdepth: 3
+   :caption: Installing Horus
+
+   installing_horus/index
+
+.. toctree::
+   :maxdepth: 3
+   :caption: Running Horus
+
+   running_horus/index
+
+.. toctree::
+   :maxdepth: 3
+   :caption: Installing plugins
+
+   installing_plugins/index
 
 .. toctree::
    :maxdepth: 3

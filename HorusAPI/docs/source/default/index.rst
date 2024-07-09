@@ -4,23 +4,22 @@
 Default blocks
 **************
 
-Horus implements some useful blocks by default.
+:bdg-secondary-line:`Horus` implements some useful blocks by default. These can be found under the "Horus" section of the :bdg-secondary-line:`Block` list.
 
-- VisualizePDB
-- Atom
-- chain
-- File
-- Folder
-- Smiles
+.. image:: images/horus_defaults.png
+    :width: 600
+    :align: center
+    :alt: Horus default blocks
 
 ******************
 Default extensions
 ******************
 
-Horus comes with a default extension used to load HTML files. This can be useful for loading simple reports of the calculations made by a block.
+Horus comes with a default :bdg-secondary-line:`Extension` used to load HTML files, images and more. This can be useful for loading simple reports of the calculations made by a :bdg-secondary-line:`Block`.
 For example, one could load pandas dataframes, matplotlib plots, or even ipywidgets.
 
-You can use the extension by calling the ExtensionsAPI from inside a block. Use the pluginID "horus" and the pageID "html_loader". Then, pass the html file as a string in the data parameter.
+You can use the extension by calling the :bdg-secondary-line:`ExtensionsAPI` from inside a :bdg-secondary-line:`Block`. You can use its methods to load information into :bdg-secondary-line:`Horus`. For
+more information about :bdg-secondary-line:`Extensions`, please refer to the :ref:`extensions` section.
 
 .. code-block:: python
 
@@ -37,7 +36,7 @@ You can use the extension by calling the ExtensionsAPI from inside a block. Use 
         with open("export.html", "r") as f:
             html = f.read()
 
-        Extensions().open(pluginID="horus", pageID="html_loader", data={"html": html})
+        Extensions().loadHTML(html, "My results")
 
 
 

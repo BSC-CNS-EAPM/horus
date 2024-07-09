@@ -1,3 +1,5 @@
+.. _extensions:
+
 **********
 Extensions
 **********
@@ -133,7 +135,7 @@ You can access the data in JavaScript as follows:
     console.log(data.someData) // The object passed from the Extensions class
 
 Using the File Picker inside an Extension
-----------------------------------------
+-----------------------------------------
 
 You can call the Horus File Picker using the following JavaScript snippet:
 
@@ -164,3 +166,25 @@ allow only specific file extensions, or controlling what happens when the user s
             allowedExtensions: ["pdb", "mol2"]
         }
     )
+
+Saving files within an Extension
+--------------------------------
+
+To save files either in desktop mode or server mode, you can use the following method:
+
+.. code-block:: javascript
+
+    // 'file' is an instance of the File class
+    parent.horus.saveFile(file)
+
+This method will either download the file from the browser (when in server or webapp mode)
+or open the operating system's file picker to save it in the desired location (when in desktop mode).
+Here is an example of how to use this method to save a file:
+
+.. code-block:: javascript
+
+    // Example usage
+    const contents = "Hello file!"
+    const fileName = "hello_file.txt"
+    const myFile = new File([fileContents], fileName)
+    parent.horus.saveFile(file)

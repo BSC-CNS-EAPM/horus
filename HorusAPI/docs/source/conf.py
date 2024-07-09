@@ -6,7 +6,7 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "HorusAPI"
+project = "Horus"
 copyright = "2024, BSC | Barcelona Supercomputing Center"
 author = "Barcelona Supercomputing Center"
 
@@ -96,7 +96,7 @@ html_theme_options = {
     # TODO not ready yet
     "show_nav_level": 1,
     "logo": {
-        "text": "HorusAPI",
+        "text": "Horus",
         "image_dark": "horus.png",
         "alt_text": "Horus logo",
     },
