@@ -70,9 +70,12 @@ const PromptComponent = ({
 
   const handleEvent = useCallback(
     (event: KeyboardEvent) => {
+      event.preventDefault();
       if (event.key === "Enter") {
-        event.preventDefault();
         onSubmit(inputValue); // Call the onSubmit function
+      }
+      if (event.key === "Escape") {
+        onSubmit(null);
       }
     },
     [inputValue, onSubmit]

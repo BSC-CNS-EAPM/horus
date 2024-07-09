@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 import "./horus_prompt.css";
 import { render, unmountComponentAtNode } from "react-dom";
@@ -59,11 +59,51 @@ const AlertComponent = ({
   message: string;
   onSubmit: () => void;
 }) => {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleEvent = useCallback(
+    (event: KeyboardEvent) => {
+      event.preventDefault();
+      if (event.key === "Enter") {
+        onSubmit(); // Call the onSubmit function
+      }
+      if (event.key === "Escape") {
+        onSubmit();
+      }
+    },
+    [onSubmit]
+  );
+
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.addEventListener("keydown", handleEvent);
+    }
+
+    return () => {
+      if (inputRef.current) {
+        inputRef.current.removeEventListener("keydown", handleEvent);
+      }
+    };
+  }, [onSubmit, handleEvent]);
+
   return (
     <div className="prompt-overlay backdrop-blur-sm">
       <div className="prompt-container flex flex-col items-center">
         <p className="plugin-variable-name">{message}</p>
-        <AppButton action={() => onSubmit()}>OK</AppButton>
+        <form onSubmit={() => onSubmit()}>
+          <input
+            type="text"
+            ref={inputRef}
+            style={{
+              width: 0,
+              height: 0,
+              opacity: "0",
+              position: "absolute",
+            }}
+          />
+          <AppButton type="submit">OK</AppButton>
+        </form>
       </div>
     </div>
   );

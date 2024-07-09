@@ -1,27 +1,39 @@
-import { render } from "react-dom";
-import { setChonkyDefaults, ChonkyActions, FileArray } from "chonky";
+import {
+  ChonkyActions,
+  FileActionState,
+  FileArray,
+  FileData,
+  setChonkyDefaults,
+} from "chonky";
 import { ChonkyIconFA } from "chonky-icon-fontawesome";
-import { horusPost } from "../../Utils/utils";
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
-import { HorusModal } from "../reusable";
+import { render } from "react-dom";
+import { horusPost } from "../../Utils/utils";
 import AppButton from "../appbutton";
+import { HorusModal } from "../reusable";
 
 // Somewhere in your `index.ts`:
 // @ts-ignore
 setChonkyDefaults({ iconComponent: ChonkyIconFA });
 
-import { FileBrowser, FileNavbar, FileToolbar, FileList } from "chonky";
+import { FileBrowser, FileList, FileNavbar, FileToolbar } from "chonky";
 import { FlowContext } from "../FlowBuilder/flow.view";
 
 import { GLOBAL_IDS } from "../../Utils/globals";
-import { usePrompt } from "../HorusPrompt/horus_prompt";
 import { useAlert } from "../HorusPrompt/horus_alert";
+import { usePrompt } from "../HorusPrompt/horus_prompt";
+
+function getDirOfPath(path?: string | null) {
+  if (!path) return null;
+
+  return path.split("/").slice(0, -1).join("/");
+}
 
 // Create custom hook for server picker file explorer
 function useServerExplorer(
   openFolder: boolean,
-  onFileSelect: (file: any) => void,
-  onFileConfirm: (file: any) => void,
+  onFileSelect: (file: FileData) => void,
+  onFileConfirm: (file: FileData) => void,
   setOpen: (open: boolean) => void,
   extensions?: string[],
   // If this is true (or defined) means that an extension
@@ -32,7 +44,7 @@ function useServerExplorer(
 ) {
   const [files, setFiles] = useState<FileArray>([null]);
   const [folderChain, setFolderChain] = useState<FileArray>([null]);
-  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<FileData | null>(null);
   const [actionFilesActive, setActionFilesActive] = useState({
     status: false,
     progress: 0,
@@ -72,7 +84,8 @@ function useServerExplorer(
       });
 
       const body = JSON.stringify({
-        path: openPath ?? currentPath.current,
+        path:
+          openPath ?? currentPath.current ?? getDirOfPath(flowContext?.path),
         extensions: extensions,
         openFolder: openFolder,
         flowContextPath: flowContext?.path,
@@ -95,7 +108,12 @@ function useServerExplorer(
 
       // If the selected path is null, set it to the current path if we are on folder mode
       if (!selectedFile && openFolder) {
-        setSelectedFile(data.folderChain[data.folderChain.length - 1].path);
+        const fileToSelect = data.folderChain[data.folderChain.length - 1];
+
+        if (fileToSelect) {
+          setSelectedFile(fileToSelect);
+          onFileSelect(fileToSelect["path"]);
+        }
       }
 
       if (!currentPath.current) {
@@ -115,56 +133,49 @@ function useServerExplorer(
     ]
   );
 
-  const handleFileAction = (action: any) => {
+  const handleFileAction = (action: FileActionState) => {
+    const targetFile = action["payload"]?.targetFile;
+    const payloadFile = action["payload"]?.file;
+
     // If the action is double clickinga folder, open it
-    if (action.id === "open_files") {
-      if (action.payload.targetFile.isDir) {
-        currentPath.current = action.payload.targetFile.path;
+    if (action["id"] === "open_files") {
+      if (targetFile && targetFile.isDir) {
+        currentPath.current = targetFile["path"];
         fetchFolders();
       }
     }
 
     // If the action is clicking a file, set the selected file
-    if (action.id === "mouse_click_file") {
+    if (action["id"] === "mouse_click_file") {
       // If open folder mode is enable, select only folders
-      if (openFolder) {
-        if (action.payload.file.isDir) {
-          setSelectedFile(action.payload.file.path);
-          onFileSelect(action.payload.file.path);
-        }
-      }
-
-      // If open folder mode is disabled, select only files
-      else {
-        if (!action.payload.file.isDir) {
-          setSelectedFile(action.payload.file.path);
-          onFileSelect(action.payload.file.path);
-        }
+      if (payloadFile) {
+        setSelectedFile(payloadFile);
+        onFileSelect(payloadFile);
       }
     }
 
     // If the action is opening a file, call the onFileConfirm function
-    if (action.id === "open_files") {
-      if (!action.payload.targetFile.isDir) {
-        setSelectedFile(action.payload.targetFile.path);
-        onFileConfirm(action.payload.targetFile.path);
+    if (action["id"] === "open_files") {
+      if (targetFile && !targetFile.isDir) {
+        setSelectedFile(targetFile);
+        onFileConfirm(targetFile);
       }
     }
 
-    if (action.id === "create_folder") {
+    if (action["id"] === "create_folder") {
       createFolder();
     }
 
-    if (action.id === "upload_files") {
+    if (action["id"] === "upload_files") {
       filePicker.current?.click();
     }
 
-    if (action.id === "download_files") {
-      downloadFiles(action.state.selectedFilesForAction);
+    if (action["id"] === "download_files") {
+      downloadFiles(action["state"].selectedFilesForAction);
     }
 
-    if (action.id === "delete_files") {
-      deleteFiles(action.state.selectedFilesForAction);
+    if (action["id"] === "delete_files") {
+      deleteFiles(action["state"].selectedFilesForAction);
     }
   };
 
@@ -421,9 +432,44 @@ type ServerFileExplorerModalProps = {
 function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
   const { open, setOpen, fileProps } = props;
 
-  const onFileConfirm = (file: any) => {
-    fileProps?.onFileConfirm ? fileProps.onFileConfirm(file) : null;
+  const [goToPath, setGoToPath] = useState<string>("");
+  const [selectedIsDir, setSelectedIsDir] = useState<boolean>(false);
+
+  const onFileConfirm = (file: FileData) => {
+    const path = file["path"];
+
+    if (file.isDir && !fileProps?.openFolder) {
+      return;
+    }
+
+    fileProps?.onFileConfirm ? fileProps.onFileConfirm(path) : null;
     setOpen(false);
+  };
+
+  const onFileSelect = (file: FileData) => {
+    const path = file["path"];
+
+    if (!path) {
+      return;
+    }
+
+    if (file.isDir) {
+      setGoToPath(path);
+    } else {
+      setGoToPath(getDirOfPath(path) ?? "");
+    }
+
+    if (file.isDir) {
+      setSelectedIsDir(true);
+    } else {
+      setSelectedIsDir(false);
+    }
+
+    if (file.isDir && !fileProps?.openFolder) {
+      return;
+    }
+
+    fileProps?.onFileSelect ? fileProps.onFileSelect(path) : null;
   };
 
   const openFolder = fileProps?.openFolder ?? false;
@@ -440,18 +486,18 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
     uploadFiles,
   } = useServerExplorer(
     openFolder,
-    fileProps?.onFileSelect
-      ? fileProps.onFileSelect
-      : (_) => {
-          _;
-        },
+    onFileSelect,
     onFileConfirm,
     setOpen,
     fileProps?.allowedExtensions,
     fileProps?.openDirectly
   );
 
-  const [goToPath, setGoToPath] = useState<string>("");
+  useEffect(() => {
+    setSelectedIsDir(
+      selectedFile?.isDir === undefined ? false : selectedFile.isDir
+    );
+  }, [selectedFile]);
 
   const chonkyActions = [
     ChonkyActions.UploadFiles,
@@ -460,9 +506,32 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
     ChonkyActions.DeleteFiles,
   ];
 
+  const [tabIndex, setTabIndex] = useState(0);
+
+  const disabledSelect = () => {
+    if (!selectedFile) return true;
+
+    const requiresFolder = props.fileProps?.openFolder;
+
+    if (requiresFolder === selectedIsDir) {
+      return false;
+    }
+
+    return true;
+  };
+
   useEffect(() => {
     if (open) {
-      fetchFolders();
+      let openAtPath = fileProps?.openAtPath;
+
+      if (openAtPath) {
+        if (!fileProps?.openFolder) {
+          openAtPath = getDirOfPath(openAtPath) ?? undefined;
+        }
+      }
+
+      setGoToPath(openAtPath ?? "");
+      fetchFolders(openAtPath);
     } else {
       // Reset the selected file
       setSelectedFile(null);
@@ -474,8 +543,8 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
   return (
     <HorusModal show={open} onHide={() => setOpen(false)} size="xl">
       <div className="w-full flex flex-col gap-2 p-4">
-        <div className="flex flex-row justify-between flex-wrap">
-          <div className="text-3xl text-bold">
+        <div className="flex flex-col gap-2 flex-wrap justify-start items-start">
+          <div className="text-3xl text-bold min-w-[180px]">
             {fileProps
               ? openFolder
                 ? "Select a folder"
@@ -483,13 +552,76 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
               : "Browse"}
           </div>
           {!window.horusInternal?.webApp && (
-            <div className="flex flex-row gap-2">
+            <div className="flex flex-row gap-2 w-full">
               <input
-                className="app-button"
+                className="app-button w-full"
                 placeholder="Input a folder path..."
                 value={goToPath}
                 onChange={(e) => {
                   setGoToPath(e.target.value);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    if (goToPath) {
+                      fetchFolders(goToPath);
+                      if (
+                        props.fileProps?.onFileSelect &&
+                        props.fileProps.openFolder
+                      ) {
+                        props.fileProps?.onFileSelect(goToPath);
+                      }
+                    }
+                  }
+                  if (e.key === "Escape") {
+                    setGoToPath("");
+                  }
+                  if (e.key === "Tab") {
+                    e.preventDefault();
+
+                    // If the last part of the path ends with "/", go to the current path and start the tabbing there
+                    if (goToPath.endsWith("/")) {
+                      // Remove also the last /
+                      const goingTo = goToPath.slice(0, -1);
+                      setGoToPath(goingTo);
+                      fetchFolders(goingTo);
+                      return;
+                    }
+
+                    // If there is something typed from the last /
+                    // Then autocomplete
+                    const folders = files.filter((f) => f?.isDir);
+
+                    if (folders.length === 0) return;
+
+                    const lastPart = goToPath.split("/").pop();
+                    if (lastPart && lastPart.length > 0) {
+                      // Find the folder to autocomplete
+                      const folder = folders.find((f) =>
+                        f?.name.includes(lastPart)
+                      );
+                      if (folder) {
+                        // If the folder was fully completed, then do nothing
+                        if (folder["path"] !== goToPath) {
+                          setGoToPath(folder["path"]);
+                          return;
+                        }
+                      }
+                    }
+
+                    let currentTabIndex = tabIndex;
+
+                    // Wrap around the folder list if necessary
+                    if (currentTabIndex >= folders.length) {
+                      currentTabIndex = 0;
+                    }
+
+                    const nextFolder = folders[currentTabIndex];
+
+                    if (!nextFolder) return;
+
+                    setGoToPath(nextFolder["path"]);
+                    setTabIndex(currentTabIndex + 1);
+                  }
                 }}
               />
               <AppButton
@@ -552,9 +684,10 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
           </AppButton>
           {fileProps?.onFileConfirm && (
             <AppButton
+              disabled={disabledSelect()}
               action={() => {
                 fileProps?.onFileConfirm
-                  ? fileProps.onFileConfirm(selectedFile! as string)
+                  ? fileProps.onFileConfirm(selectedFile?.["path"])
                   : null;
                 setOpen(false);
               }}
@@ -683,4 +816,4 @@ function openExtensionFilePicker(options: ExtensionsFilePickerOptions) {
 
 window.horus.openExtensionFilePicker = openExtensionFilePicker;
 
-export { ServerFileExplorerModal, HorusFileExplorer };
+export { HorusFileExplorer, ServerFileExplorerModal };

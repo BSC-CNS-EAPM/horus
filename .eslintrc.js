@@ -31,12 +31,4 @@ module.exports = {
     "react-hooks/rules-of-hooks": "error",
     "react-hooks/exhaustive-deps": "warn",
   },
-  "overrides": [
-    {
-      "files": ["**/*.js", "**/*.jsx", "**/*.ts", "**/*.tsx"],
-      "rules": {
-        "react-hooks/exhaustive-deps": "off"
-      }
-    }
-  ]
 };

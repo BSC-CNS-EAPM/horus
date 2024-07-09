@@ -788,6 +788,7 @@ function FilePickerView(props: FilePickerViewProps) {
         onChange={(e) => onChange(e.target.value)}
       />
       <HorusFileExplorer
+        openAtPath={currentValue}
         onFileConfirm={onChange}
         onFileSelect={onChange}
         openFolder={props.openFolder ?? false}
