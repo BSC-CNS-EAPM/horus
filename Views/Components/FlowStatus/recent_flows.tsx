@@ -54,7 +54,7 @@ export default function RecentUserFlows(props: RecentUserFlowProps) {
                 className="flex flex-row gap-1 predefined-flow-plugin m-0"
               >
                 {index > 0 && <div>▸</div>}
-                <div>{p}</div>
+                <span className="whitespace-nowrap">{p}</span>
               </div>
             );
           })}

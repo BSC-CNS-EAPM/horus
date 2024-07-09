@@ -1399,6 +1399,27 @@ class HorusServer:
         def listFlows():
             try:
                 flows = self.pluginManager.listFlows()
+
+                # If on webapp mode, filter the flows that cannot be executed
+                # by the user
+                if (
+                    self._isForUser
+                    and self.webAppManager is not None
+                    and self.webAppManager.userGroupsManager is not None
+                    and not currentUser.admin
+                ):
+                    filteredFlows = []
+                    for flow in flows:
+                        flowInstance = self.flowManager.openFlowFromPath(flow["path"])
+                        try:
+                            self.webAppManager.userGroupsManager.verifyFlowCanBeExecuted(
+                                flowInstance
+                            )
+                            filteredFlows.append(flow)
+                        except ValueError:
+                            pass
+                    flows = filteredFlows
+
                 # Remove the paths
                 for flow in flows:
                     flow.pop("path", None)

@@ -997,6 +997,17 @@ export function SimpleVariableView(props: {
   variable: PluginVariable;
   border?: boolean;
 }) {
+  const capitalizedType =
+    props.variable.type[0]?.toUpperCase() + props.variable.type.slice(1);
+
+  const getAllowedValues = () => {
+    if (props.variable.allowedValues) {
+      return ` - (${props.variable.allowedValues.join(", ")})`;
+    }
+
+    return "";
+  };
+
   return (
     <div
       className="plugin-variable animated-gradient"
@@ -1007,6 +1018,9 @@ export function SimpleVariableView(props: {
       <div className="plugin-variable-name">{props.variable.name}</div>
       <div className="plugin-variable-description">
         {props.variable.description}
+      </div>
+      <div className="text-muted text-xs">
+        Type: {capitalizedType} {getAllowedValues()}
       </div>
     </div>
   );

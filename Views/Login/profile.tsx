@@ -29,6 +29,28 @@ type UserData = {
   quota?: UserQuota;
 };
 
+function hourFormat(quota: UserQuota) {
+  const usedHoursNumber = Number(quota.usedHours || 0);
+  const maxHoursnumber = Number(quota.maxHours || 0);
+
+  const h = Math.floor(usedHoursNumber);
+  const m = Math.floor((usedHoursNumber - h) * 60);
+  const used = `${h}h ${m}m`;
+
+  let max = "∞";
+  if (maxHoursnumber) {
+    const maxH = Math.floor(maxHoursnumber);
+    const maxM = Math.floor((maxHoursnumber - maxH) * 60);
+    max = `${maxH}h`;
+
+    if (maxM > 0) {
+      max += ` ${maxM}m`;
+    }
+  }
+
+  return `${used} / ${max}`;
+}
+
 export default function Profile() {
   const [userData, setUserData] = useState<UserData | null>(null);
 
@@ -120,13 +142,12 @@ export default function Profile() {
             <>
               <div className="plugin-block mb-2">
                 <span className="font-bold">Flows:</span>{" "}
-                {userData.quota.currentFlows} /{" "}
-                {userData.quota.maxFlows ?? "Unlimited"}
+                {userData.quota.currentFlows} / {userData.quota.maxFlows ?? "∞"}
               </div>
               <div className="plugin-block mb-2">
                 <span className="font-bold">Templates:</span>{" "}
                 {userData.quota.currentTemplates} /{" "}
-                {userData.quota.maxTemplates ?? "Unlimited"}
+                {userData.quota.maxTemplates ?? "∞"}
               </div>
               <div className="plugin-block mb-2">
                 <UsedSpace
@@ -136,8 +157,7 @@ export default function Profile() {
               </div>
               <div className="plugin-block mb-2">
                 <span className="font-bold">Computation hours:</span>{" "}
-                {userData.quota?.usedHours.toFixed(2)} /{" "}
-                {userData.quota?.maxHours}h
+                {hourFormat(userData.quota)}
               </div>
             </>
           )}
@@ -203,7 +223,7 @@ function UsedSpace({ used, maximum }: { used?: number; maximum?: number }) {
   return (
     <>
       <span className="font-bold">Used space:</span> {parsedSpace(used)} /{" "}
-      {maximum ? parsedSpace(maximum) : "Unlimited"}
+      {maximum ? parsedSpace(maximum) : "∞"}
     </>
   );
 }

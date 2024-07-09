@@ -8,6 +8,8 @@ type HorusPopoverProps = {
   trigger: React.ReactNode;
   children: React.ReactNode;
   overrideClassName?: string;
+  triggerClassName?: string;
+  cancelStyle?: boolean;
 
   onOpen?: () => void;
   onClose?: () => void;
@@ -38,16 +40,26 @@ const HorusPopover = (props: HorusPopoverProps) => {
       <Popover.Group
         onMouseOver={disableHover ? () => {} : handleOpen}
         onMouseLeave={disableHover ? () => {} : handleClose}
-        style={{
-          margin: "0",
-          padding: "0",
-          height: "1.25rem",
-        }}
+        style={
+          props.cancelStyle
+            ? undefined
+            : {
+                margin: "0",
+                padding: "0",
+                height: "1.25rem",
+              }
+        }
       >
-        <div onClick={handleClickTrigger}>{trigger}</div>
+        <div className={props.triggerClassName} onClick={handleClickTrigger}>
+          {trigger}
+        </div>
       </Popover.Group>
       {isOpen && (
-        <Popover.Panel className="absolute zoom-out-animation" static>
+        <Popover.Panel
+          className="absolute zoom-out-animation"
+          style={{ zIndex: Number.MAX_SAFE_INTEGER }}
+          static
+        >
           {children}
         </Popover.Panel>
       )}

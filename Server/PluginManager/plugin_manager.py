@@ -1136,12 +1136,18 @@ class PluginManager(metaclass=HorusSingleton):
                 outputs = block()
                 # Execute the block
                 # outputs = PluginDeps.subprocessBlock(block)
-        except Exception:  # pylint: disable=broad-exception-caught
+        except Exception as e:  # pylint: disable=broad-exception-caught
 
-            # Get the full traceback
-            import traceback
+            # Get the full traceback onyl for development / debug mode
+            from App import AppDelegate
 
-            errorMSG = traceback.format_exc()
+            if AppDelegate().debug or self.horusSettings.getSetting("developmentMode").value:
+                import traceback
+
+                errorMSG = traceback.format_exc()
+            else:
+                errorMSG = str(e)
+
             error = True
         finally:
             # Calculate the final time

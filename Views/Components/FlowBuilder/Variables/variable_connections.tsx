@@ -2,17 +2,16 @@
 import { CSSProperties, useEffect, useRef, useState } from "react";
 
 // Horus components
-import SidebarView from "../../SidebarView/sidebar_view";
+import Xarrow from "react-xarrows";
 import AppButton from "../../appbutton";
+import { BlurredModal, HorusPopover } from "../../reusable";
+import SidebarView from "../../SidebarView/sidebar_view";
 import { SearchComponent } from "../../Toolbar/toolbar";
 import {
-  InputView,
   PluginVariableView,
   SimpleVariableView,
   VariableGroupInfoView,
 } from "./variables";
-import { BlurredModal, HorusPopover } from "../../reusable";
-import Xarrow from "react-xarrows";
 
 // TS types
 import {
@@ -28,8 +27,8 @@ import {
 import Chevron from "../../Toolbar/Icons/Chevron";
 
 // Hooks
-import { BlockHooks } from "../flow.hooks";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
+import { BlockHooks } from "../flow.hooks";
 
 export function getBlockVarPair(
   block: Block,
@@ -99,26 +98,26 @@ export function VariableModalView(props: VariableModalViewProps) {
       ];
     }
 
-    // Add a section for the inputs
-    groupedViews["Block inputs"] = [
-      <div className="flex flex-col gap-2 flex-wrap">
-        <InputView groups={block.inputs} />
-      </div>,
-    ];
+    // // Add a section for the inputs
+    // groupedViews["Block inputs"] = [
+    //   <div className="flex flex-col gap-2 flex-wrap">
+    //     <InputView groups={block.inputs} />
+    //   </div>,
+    // ];
 
-    // And for the outputs
-    groupedViews["Block outputs"] = [
-      <div className="flex flex-col gap-2 flex-wrap">
-        {block.outputs.map((variable, index) => (
-          <SimpleVariableView
-            key={
-              variable.id + "-" + index + "-" + block.id + "-" + block.placedID
-            }
-            variable={variable}
-          />
-        ))}
-      </div>,
-    ];
+    // // And for the outputs
+    // groupedViews["Block outputs"] = [
+    //   <div className="flex flex-col gap-2 flex-wrap">
+    //     {block.outputs.map((variable, index) => (
+    //       <SimpleVariableView
+    //         key={
+    //           variable.id + "-" + index + "-" + block.id + "-" + block.placedID
+    //         }
+    //         variable={variable}
+    //       />
+    //     ))}
+    //   </div>,
+    // ];
 
     return groupedViews;
   };
@@ -195,8 +194,8 @@ function OutputVariableBallConnector({
         flowCanvas.style.transform.match(/scale\((.*?)\)/)?.[1] || "1"
       );
     style = {
-      transform: `translate(${transform.x * scale}px, ${
-        transform.y * scale
+      transform: `translate(${transform.x * scale - 15}px, ${
+        transform.y * scale + 15
       }px)`,
       zIndex: 100,
       cursor: "grabbing",
@@ -217,28 +216,57 @@ function OutputVariableBallConnector({
   const curveness = arrowAppareance === "Extra curved" ? 1 : 0.35;
 
   return (
-    <div
-      id={id}
-      className="flex flex-row gap-1 align-center items-center justify-between variable-squared h-full"
-    >
-      <div className="cut-text">{variable.name}</div>
-      <div style={style} id={id} ref={ref} {...listeners} {...attributes}>
-        {transform ? (
-          <Xarrow
-            SVGcanvasStyle={{ scale: `${scale}` }}
-            start={id}
-            end={ref}
-            endAnchor={"right"}
-            dashness={{ animation: -2 }}
-            color={"var(--pop-code)"}
-            headShape={"circle"}
-            path={path}
-            curveness={curveness}
-          />
-        ) : (
-          <Chevron direction="right" />
-        )}
-      </div>
+    <div id={id} className="w-full h-full">
+      <HorusPopover
+        cancelStyle
+        triggerClassName="flex flex-row gap-1 align-center items-center justify-between variable-squared h-full w-full"
+        trigger={
+          <>
+            <div className="cut-text-nohover w-full">{variable.name}</div>
+            <div
+              style={{
+                ...style,
+              }}
+              id={id}
+              ref={ref}
+              {...listeners}
+              {...attributes}
+            >
+              {transform ? (
+                <Xarrow
+                  SVGcanvasStyle={{
+                    scale: `${scale}`,
+                  }}
+                  start={id}
+                  end={ref}
+                  endAnchor={"right"}
+                  dashness={{ animation: -2 }}
+                  color={"var(--pop-code)"}
+                  headShape={"circle"}
+                  path={path}
+                  curveness={curveness}
+                />
+              ) : (
+                <Chevron direction="right" />
+              )}
+            </div>
+          </>
+        }
+      >
+        <div
+          className="flex flex-col gap-2 rounded-xl p-2 shadow-md w-full flex-1"
+          style={{
+            border: "1px solid var(--pop-code)",
+            position: "absolute",
+            top: "4px",
+            zIndex: Number.MAX_SAFE_INTEGER,
+            minWidth: "400px",
+            background: "white",
+          }}
+        >
+          <SimpleVariableView variable={variable} />
+        </div>
+      </HorusPopover>
     </div>
   );
 }
@@ -510,13 +538,31 @@ function VariableInputConnectView(props: VariableConnectViewProps) {
   }
 
   return (
-    <div
-      ref={setNodeRef}
-      id={id}
-      className="flex flex-row gap-1 align-center items-center variable-squared h-full w-full"
-    >
-      <div className={classNameVariableBall} />
-      <div className="cut-text">{props.variable.name}</div>
+    <div ref={setNodeRef} id={id} className="h-full w-full">
+      <HorusPopover
+        cancelStyle
+        triggerClassName="flex flex-row gap-1 align-center items-center variable-squared h-full w-full"
+        trigger={
+          <>
+            <div className={classNameVariableBall} />
+            <div className="cut-text-nohover">{props.variable.name}</div>
+          </>
+        }
+      >
+        <div
+          className="flex flex-col gap-2 rounded-xl p-2 shadow-md w-full flex-1"
+          style={{
+            border: "1px solid var(--pop-code)",
+            position: "absolute",
+            top: "4px",
+            zIndex: Number.MAX_SAFE_INTEGER,
+            minWidth: "400px",
+            background: "white",
+          }}
+        >
+          <SimpleVariableView variable={props.variable} />
+        </div>
+      </HorusPopover>
     </div>
   );
 }
