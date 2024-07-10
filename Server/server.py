@@ -1199,7 +1199,12 @@ class HorusServer:
 
             # Filter the blocks based on the user
             # Admins have access to all
-            if self._isForUser and self.webAppManager is not None and not currentUser.admin:
+            if (
+                self._isForUser
+                and self.webAppManager is not None
+                and self.webAppManager.userGroupsManager is not None
+                and not currentUser.admin
+            ):
                 blocks = self.webAppManager.userGroupsManager.getBlocksForUser()
             else:
                 blocks = self.pluginManager.getBlocks()
@@ -1212,7 +1217,12 @@ class HorusServer:
 
             # Filter the pages based on the user
             # Admins have access to all
-            if self._isForUser and self.webAppManager is not None and not currentUser.admin:
+            if (
+                self._isForUser
+                and self.webAppManager is not None
+                and self.webAppManager.userGroupsManager is not None
+                and not currentUser.admin
+            ):
                 pages = self.webAppManager.userGroupsManager.getPagesForUser()
             else:
                 pages = self.pluginManager.getPages()
@@ -1287,7 +1297,12 @@ class HorusServer:
                 flow._skipPath = relativePath if self._isForUser else None
 
                 # Before running the flow, check that the blocks are available for the user
-                if self._isForUser and self.webAppManager is not None and not currentUser.admin:
+                if (
+                    self._isForUser
+                    and self.webAppManager is not None
+                    and self.webAppManager.userGroupsManager is not None
+                    and not currentUser.admin
+                ):
                     self.webAppManager.userGroupsManager.verifyFlowCanBeExecuted(flow)
 
                 # Run the flow
@@ -2017,6 +2032,7 @@ class HorusServer:
                     if (
                         self._isForUser
                         and self.webAppManager is not None
+                        and self.webAppManager.userGroupsManager is not None
                         and not currentUser.admin
                     ):
                         self.webAppManager.userGroupsManager.verifyExtensionCanBeExecuted(
@@ -2056,6 +2072,7 @@ class HorusServer:
                     if (
                         self._isForUser
                         and self.webAppManager is not None
+                        and self.webAppManager.userGroupsManager is not None
                         and not currentUser.admin
                     ):
                         try:
@@ -2073,6 +2090,7 @@ class HorusServer:
                     if (
                         self._isForUser
                         and self.webAppManager is not None
+                        and self.webAppManager.userGroupsManager is not None
                         and not currentUser.admin
                     ):
                         try:

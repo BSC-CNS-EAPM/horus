@@ -52,25 +52,24 @@ export default function About() {
 
   return (
     <div className="flex flex-row flex-wrap justify-around items-center overflow-hidden h-full w-full ">
-      {appInfo.mode !== "webapp" ||
-        (appInfo.debug && (
-          <div className="flex flex-col gap-2">
-            <div className="p-2 horus-container animated-gradient text-black">
-              Version: {appInfo.APP_VERSION}
-            </div>
-            <div className="p-2 horus-container animated-gradient text-black">
-              Platform: {appInfo.platform}
-            </div>
-            <div className="p-2 horus-container animated-gradient text-black">
-              Mode: {appInfo.mode.toUpperCase()}
-            </div>
-            {appInfo.debug && (
-              <div className="p-2 horus-container animated-gradient text-orange-400 font-semibold">
-                Debug mode enabled - Python version: {appInfo.PYTHON_VERSION}
-              </div>
-            )}
+      {(appInfo.mode !== "webapp" || appInfo.debug) && (
+        <div className="flex flex-col gap-2">
+          <div className="p-2 horus-container animated-gradient text-black">
+            Version: {appInfo.APP_VERSION}
           </div>
-        ))}
+          <div className="p-2 horus-container animated-gradient text-black">
+            Platform: {appInfo.platform}
+          </div>
+          <div className="p-2 horus-container animated-gradient text-black">
+            Mode: {appInfo.mode.toUpperCase()}
+          </div>
+          {appInfo.debug && (
+            <div className="p-2 horus-container animated-gradient text-orange-400 font-semibold">
+              Debug mode enabled - Python version: {appInfo.PYTHON_VERSION}
+            </div>
+          )}
+        </div>
+      )}
       <div className="flex flex-col gap-2 justify-center items-center">
         <img
           src={HorusLogo}

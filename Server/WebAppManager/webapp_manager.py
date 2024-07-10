@@ -804,7 +804,7 @@ class WebAppManager:
     """
 
     # User blocks
-    userGroupsManager: UserGroupsManager
+    userGroupsManager: typing.Optional[UserGroupsManager] = None
     """
     Manage groups and available blocks
     """
