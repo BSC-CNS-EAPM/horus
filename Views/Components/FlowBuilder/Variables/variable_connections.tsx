@@ -25,6 +25,7 @@ import {
 
 // Icons
 import Chevron from "../../Toolbar/Icons/Chevron";
+import LockIcon from "../../Toolbar/Icons/Lock";
 
 // Hooks
 import { useDraggable, useDroppable } from "@dnd-kit/core";
@@ -182,7 +183,8 @@ function OutputVariableBallConnector({
   });
 
   let style: CSSProperties = {
-    cursor: "grab",
+    cursor: variable.disabled ? "not-allowed !important" : "grab",
+    pointerEvents: variable.disabled ? "none" : "auto",
   };
   let scale = 1;
   if (transform) {
@@ -205,7 +207,9 @@ function OutputVariableBallConnector({
   const ref = useRef(null);
 
   useEffect(() => {
-    setNodeRef(ref.current);
+    if (!variable.disabled) {
+      setNodeRef(ref.current);
+    }
   }, [ref]);
 
   const arrowAppareance = window.horusSettings["arrowLook"]?.value ?? "Curved";
@@ -219,7 +223,9 @@ function OutputVariableBallConnector({
     <div id={id} className="w-full h-full">
       <HorusPopover
         cancelStyle
-        triggerClassName="flex flex-row gap-1 align-center items-center justify-between variable-squared h-full w-full"
+        triggerClassName={`flex flex-row gap-1 align-center items-center justify-between variable-squared h-full w-full ${
+          variable.disabled && "cursor-not-allowed"
+        }`}
         trigger={
           <>
             <div className="cut-text-nohover w-full">{variable.name}</div>
@@ -228,7 +234,7 @@ function OutputVariableBallConnector({
                 ...style,
               }}
               id={id}
-              ref={ref}
+              ref={variable.disabled ? null : ref}
               {...listeners}
               {...attributes}
             >
@@ -246,6 +252,8 @@ function OutputVariableBallConnector({
                   path={path}
                   curveness={curveness}
                 />
+              ) : variable.disabled ? (
+                <LockIcon />
               ) : (
                 <Chevron direction="right" />
               )}
@@ -489,7 +497,10 @@ function VariableInputConnectView(props: VariableConnectViewProps) {
     allowedValues = props.variable.allowedValues as Array<string>;
   }
 
-  let classNameVariableBall: string = "variable-ball";
+  let classNameVariableBall: string = `variable-ball ${
+    props.variable.required && "variable-ball-required"
+  }`;
+
   if (props.connectingVariable) {
     const acceptConnection = compareAllowedValues(
       props.variable.type,
@@ -526,7 +537,9 @@ function VariableInputConnectView(props: VariableConnectViewProps) {
   }
   // If the active block is not a "connect", don't show the animation
   if (active?.data?.current?.["type"] !== "connector") {
-    classNameVariableBall = "variable-ball";
+    classNameVariableBall = `variable-ball ${
+      props.variable.required && "variable-ball-required"
+    }`;
   }
 
   const isAlreadyConnected = props.block.variableConnections.find(
@@ -538,13 +551,23 @@ function VariableInputConnectView(props: VariableConnectViewProps) {
   }
 
   return (
-    <div ref={setNodeRef} id={id} className="h-full w-full">
+    <div
+      ref={props.variable.disabled ? null : setNodeRef}
+      id={id}
+      className="h-full w-full"
+    >
       <HorusPopover
         cancelStyle
-        triggerClassName="flex flex-row gap-1 align-center items-center variable-squared h-full w-full"
+        triggerClassName={`flex flex-row gap-1 align-center items-center variable-squared h-full w-full ${
+          props.variable.disabled && "cursor-not-allowed"
+        }`}
         trigger={
           <>
-            <div className={classNameVariableBall} />
+            {props.variable.disabled ? (
+              <LockIcon />
+            ) : (
+              <div className={classNameVariableBall} />
+            )}
             <div className="cut-text-nohover">{props.variable.name}</div>
           </>
         }

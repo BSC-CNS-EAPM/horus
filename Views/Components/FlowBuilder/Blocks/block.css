@@ -83,6 +83,7 @@
 }
 
 .plugin-variable-name {
+  word-break: break-word;
   font-weight: bold;
   font-size: 1rem;
   color: var(--digital-grey-IV);
@@ -341,6 +342,11 @@
   background-color: var(--red-error);
   /* animation: pulse 1s infinite; */
   cursor: not-allowed;
+  border: none;
+}
+
+.variable-ball-required {
+  background-color: var(--waring-orange);
   border: none;
 }
 

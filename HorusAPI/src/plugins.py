@@ -490,6 +490,8 @@ class PluginVariable:
         allowedValues: typing.Optional[typing.List[typing.Any]] = None,
         category: typing.Optional[str] = None,
         disabled: bool = False,
+        required: bool = False,
+        placeholder: typing.Optional[str] = None,
     ):
         """
         :param name: The name of the variable.
@@ -499,11 +501,15 @@ class PluginVariable:
         :param id: The ID of the variable.
         :param allowedValues: A list of allowed values for the variable.
         :param disabled: Whether the variable is disabled or not
+        :param required: Whether the variable is required or not. This will show the variable in orange when not connected.
+        :param placeholder: The placeholder of the input field.
         """
         self.name = name
         self.description = description
         self.type = type
         self.disabled = disabled
+        self.required = required
+        self.placeholder = placeholder
 
         if type not in VariableTypes.getTypes():
             raise Exception(f"Invalid type {type}.")
@@ -542,6 +548,8 @@ class PluginVariable:
             varDict["description"] = self.description
             varDict["allowedValues"] = self.allowedValues
             varDict["disabled"] = self.disabled
+            varDict["required"] = self.required
+            varDict["placeholder"] = self.placeholder
 
         return varDict
 
@@ -575,6 +583,7 @@ class CustomVariable(PluginVariable):
         allowedValues: List[Any] | None = None,
         category: str | None = None,
         disabled: bool = False,
+        required: bool = False,
     ):
         """
         The custom variable works like a regular variable, but it can use an extension \
@@ -592,7 +601,7 @@ class CustomVariable(PluginVariable):
         :param customPage: The page instance where the variable will be rendered.
         """
         super().__init__(
-            id, name, description, type, defaultValue, allowedValues, category, disabled
+            id, name, description, type, defaultValue, allowedValues, category, disabled, required
         )
         self.customPage = customPage
 
@@ -630,6 +639,7 @@ class VariableGroup(PluginVariable):
         allowedValues: typing.Optional[typing.List[typing.Any]] = None,
         category: typing.Optional[str] = None,
         disabled: bool = False,
+        required: bool = False,
     ) -> None:
         """
         Initialize a VariableGroup
@@ -657,6 +667,7 @@ class VariableGroup(PluginVariable):
             allowedValues=allowedValues,
             category=category,
             disabled=disabled,
+            required=required,
         )
 
     def toDict(self, minimal: bool = False):
@@ -695,6 +706,7 @@ class VariableList(PluginVariable):
         allowedValues: typing.Optional[typing.List[typing.Any]] = None,
         category: typing.Optional[str] = None,
         disabled: bool = False,
+        required: bool = False,
     ):
         """
         :param id: The ID of the variable.
@@ -704,6 +716,7 @@ class VariableList(PluginVariable):
         :param allowedValues: Matching allowedValues in other variables will \
         indicate in the GUI which variables can be connected.
         :param disabled: Will set all variables under the list as disabled.
+        :param required: Will set all variables under the list as required.
         """
 
         super().__init__(
@@ -715,6 +728,7 @@ class VariableList(PluginVariable):
             allowedValues=allowedValues,
             category=category,
             disabled=disabled,
+            required=required,
         )
 
         # prototypes cannot be VariableGroups

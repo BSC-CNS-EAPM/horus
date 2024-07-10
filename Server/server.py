@@ -1484,6 +1484,10 @@ class HorusServer:
 
                 appINFO = AppDelegate().APP_INFO
 
+                # On webapp mode, hide the platform
+                if self.mode == "webapp" and not self.debug:
+                    appINFO = {"mode": "webapp"}
+
                 success = {
                     "ok": True,
                     "appINFO": appINFO,

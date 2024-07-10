@@ -41,6 +41,7 @@ import { ObjectVariableView, PythonVariableView } from "./editor_variables";
 
 // Smiles
 import { SmilesVariableView } from "./smiles_variables";
+import ErrorIcon from "../../Toolbar/Icons/Error";
 
 type PluginVariableViewProps = {
   variable: PluginVariable;
@@ -95,33 +96,40 @@ export function PluginVariableView(props: PluginVariableViewProps) {
         ...widthStyle,
       }}
     >
-      <div>
-        {!hideName && (
-          <span
-            style={{
-              marginRight: "0.5rem",
-            }}
-            className={`${
-              props.hideDescription
-                ? "plugin-variable-description"
-                : "plugin-variable-name"
-            }`}
-          >
-            {variable.name}
-          </span>
-        )}
-        {!props.hideDescription && (
-          <span className="plugin-variable-description">
-            {variable.description}
-          </span>
-        )}
-        {variable.disabled && (
-          <LockIcon
-            style={{
-              display: "inline",
-              transform: "translateY(-3px)",
-            }}
-          />
+      <div className="flex flex-row w-full justify-between">
+        <div>
+          {!hideName && (
+            <span
+              style={{
+                marginRight: "0.5rem",
+              }}
+              className={`${
+                props.hideDescription
+                  ? "plugin-variable-description"
+                  : "plugin-variable-name"
+              }`}
+            >
+              {variable.name}
+            </span>
+          )}
+          {!props.hideDescription && (
+            <span className="plugin-variable-description">
+              {variable.description}
+            </span>
+          )}
+          {variable.disabled && (
+            <LockIcon
+              style={{
+                display: "inline",
+                transform: "translateY(-3px)",
+              }}
+            />
+          )}
+        </div>
+        {!variable.value && variable.required && (
+          <div>
+            <RequiredVariable />
+          </div>
         )}
       </div>
       <div
@@ -564,7 +572,7 @@ function TextAreaVariableView(props: VariableViewProps) {
     <textarea
       className="plugin-variable-value"
       id={props.variable.id}
-      placeholder="Write text here..."
+      placeholder={props.variable.placeholder ?? "Write text here..."}
       value={(props.currentValue as string) ?? ""}
       onChange={(e) => props.onChange(e.target.value)}
     />
@@ -635,6 +643,7 @@ function IntegerFloatVariableView(props: VariableViewProps) {
     <div className="flex flex-col gap-2 justify-center text-center items-center w-full">
       {numberMessage && <div className="text-red-500">{numberMessage}</div>}
       <input
+        placeholder={props.variable.placeholder}
         className="plugin-variable-value"
         value={currentValue}
         onChange={handleChange}
@@ -782,7 +791,7 @@ function FilePickerView(props: FilePickerViewProps) {
     <div className="flex flex-row gap-2 w-full h-10 p-1 justify-center items-center">
       <input
         id={variable.id}
-        placeholder="Write a path or browse..."
+        placeholder={props.variable.placeholder ?? "Write a path or browse..."}
         className="overflow-x-auto break-keep-all h-6 plugin-variable-value"
         value={currentValue ?? ""}
         onChange={(e) => onChange(e.target.value)}
@@ -1015,7 +1024,23 @@ export function SimpleVariableView(props: {
         border: props.border ? "1px solid var(--pop-code)" : "none",
       }}
     >
-      <div className="plugin-variable-name">{props.variable.name}</div>
+      <div className="flex flex-row justify-between w-full">
+        <div className="plugin-variable-name">
+          {props.variable.name}
+          {props.variable.disabled && (
+            <LockIcon
+              style={{
+                display: "inline",
+                transform: "translateY(-3px)",
+              }}
+            />
+          )}
+        </div>
+
+        <div className="no-wrap whitespace-nowrap">
+          {props.variable.required && <RequiredVariable />}
+        </div>
+      </div>
       <div className="plugin-variable-description">
         {props.variable.description}
       </div>
@@ -1023,5 +1048,29 @@ export function SimpleVariableView(props: {
         Type: {capitalizedType} {getAllowedValues()}
       </div>
     </div>
+  );
+}
+
+function RequiredVariable() {
+  return (
+    <span
+      className="plugin-variable-description"
+      style={{
+        marginLeft: "5px",
+        display: "inline",
+        color: "var(--waring-orange)",
+      }}
+    >
+      <ErrorIcon
+        name="required"
+        color="var(--waring-orange)"
+        style={{
+          display: "inline",
+          marginRight: "5px",
+          transform: "translateY(-3px)",
+        }}
+      />
+      Required
+    </span>
   );
 }

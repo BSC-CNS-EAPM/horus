@@ -11,7 +11,7 @@ type AppInfo = {
   APP_VERSION: string;
   platform: string;
   debug: boolean;
-  mode: string;
+  mode: "app" | "server" | "webapp" | "browser" | "unknown";
   appSupportDir: string;
   PYTHON_VERSION: string;
 };
@@ -21,7 +21,7 @@ export default function About() {
     APP_VERSION: "Unknown",
     platform: "Unknown",
     debug: false,
-    mode: "Unknown",
+    mode: "unknown",
     appSupportDir: "Unknown",
     PYTHON_VERSION: "Unknown",
   } as AppInfo);
@@ -52,22 +52,25 @@ export default function About() {
 
   return (
     <div className="flex flex-row flex-wrap justify-around items-center overflow-hidden h-full w-full ">
-      <div className="flex flex-col gap-2">
-        <div className="p-2 horus-container animated-gradient text-black">
-          Version: {appInfo.APP_VERSION}
-        </div>
-        <div className="p-2 horus-container animated-gradient text-black">
-          Platform: {appInfo.platform}
-        </div>
-        <div className="p-2 horus-container animated-gradient text-black">
-          Mode: {appInfo.mode.toUpperCase()}
-        </div>
-        {appInfo.debug && (
-          <div className="p-2 horus-container animated-gradient text-orange-400 font-semibold">
-            Debug mode enabled - Python version: {appInfo.PYTHON_VERSION}
+      {appInfo.mode !== "webapp" ||
+        (appInfo.debug && (
+          <div className="flex flex-col gap-2">
+            <div className="p-2 horus-container animated-gradient text-black">
+              Version: {appInfo.APP_VERSION}
+            </div>
+            <div className="p-2 horus-container animated-gradient text-black">
+              Platform: {appInfo.platform}
+            </div>
+            <div className="p-2 horus-container animated-gradient text-black">
+              Mode: {appInfo.mode.toUpperCase()}
+            </div>
+            {appInfo.debug && (
+              <div className="p-2 horus-container animated-gradient text-orange-400 font-semibold">
+                Debug mode enabled - Python version: {appInfo.PYTHON_VERSION}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        ))}
       <div className="flex flex-col gap-2 justify-center items-center">
         <img
           src={HorusLogo}

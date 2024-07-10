@@ -59,6 +59,9 @@ timeToWaitVar = PluginVariable(
     name="timeToWaitVar",
     description="Time to wait",
     type=VariableTypes.NUMBER,
+    required=True,
+    disabled=True,
+    placeholder="Write here the time to wait",
 )
 
 waiterInput = PluginVariable(
@@ -66,6 +69,9 @@ waiterInput = PluginVariable(
     name="timeToWaitInput",
     description="Input",
     type=VariableTypes.ANY,
+    required=True,
+    disabled=True,
+    placeholder="Write here the time to wait",
 )
 
 waiterOutput = PluginVariable(
@@ -73,6 +79,7 @@ waiterOutput = PluginVariable(
     name="timeToWaitOutput",
     description="Same as input",
     type=VariableTypes.ANY,
+    disabled=True,
 )
 
 

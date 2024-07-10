@@ -65,6 +65,7 @@ export type PluginVariable = {
   defaultValue: any;
   category: string;
   disabled: boolean;
+  required: boolean;
   placeholder?: string;
 
   // For GroupVariable
