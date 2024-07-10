@@ -117,20 +117,17 @@ export function BlockView(props: BlockViewProps) {
                       />
                     </>
                   )}
-                  {props.block.type !== BlockTypes.INPUT ? (
-                    <PlayBlockButton
-                      isRunning={props.block.isRunning}
-                      runError={props.block.runError}
-                      onClick={(resetFlow) => {
-                        props.blockHooks?.executeFlow(
-                          props.block.placedID,
-                          resetFlow
-                        );
-                      }}
-                    />
-                  ) : (
-                    <InputRunningSpinner isRunning={props.block.isRunning} />
-                  )}
+
+                  <PlayBlockButton
+                    isRunning={props.block.isRunning}
+                    runError={props.block.runError}
+                    onClick={(resetFlow) => {
+                      props.blockHooks?.executeFlow(
+                        props.block.placedID,
+                        resetFlow
+                      );
+                    }}
+                  />
                   {props.block.variables.length > 0 &&
                     props.block.type !== BlockTypes.INPUT && (
                       <BlockVariablesButton
