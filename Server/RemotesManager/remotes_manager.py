@@ -230,7 +230,7 @@ class RemotesAPI:
         try:
             out = self.conn.run(command, hide=True, in_stream=False)
         except Exception as exc:
-            logging.getLogger("Horus").error(
+            logging.getLogger("Horus").debug(
                 "Error running command %s on remote %s: %s", command, self.name, str(exc)
             )
             raise exc
