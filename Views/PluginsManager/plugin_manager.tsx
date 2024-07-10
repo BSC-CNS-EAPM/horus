@@ -700,8 +700,6 @@ function InstallingPluginView({
   const [text, setText] = useState<string>("");
   const [selectedFile, setSelectedFile] = useState<string>("");
 
-  console.log("selectedFile is", selectedFile);
-
   const updateText = useCallback((data: any) => {
     // Update the state
     setText((currentText) => {
