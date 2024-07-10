@@ -71,7 +71,18 @@ function isInteractiveElement(element: Element | null) {
     "select",
     "option",
     "rect",
+    "pre",
+    "a",
+    "img",
   ];
+
+  // Disable drag on the blurred mdoal
+  if (
+    element?.id?.includes("modal") ||
+    element?.id?.includes("block-error-title")
+  ) {
+    return true;
+  }
 
   if (
     element?.tagName &&

@@ -357,6 +357,7 @@ function FinishedCheck(props: { runError: boolean; runErrorMessage?: string }) {
               <div className="flex flex-col h-full justify-between">
                 <div className="sticky top-0 z-10">
                   <div
+                    id="block-error-title"
                     className="font-semibold text-3xl"
                     style={{
                       color: "var(--digital-grey-IV)",
@@ -366,7 +367,9 @@ function FinishedCheck(props: { runError: boolean; runErrorMessage?: string }) {
                   </div>
                   <hr className="my-4 p-0"></hr>
                 </div>
-                <pre className="h-full select-all">{props.runErrorMessage}</pre>
+                <pre className="h-full select-text">
+                  {props.runErrorMessage}
+                </pre>
                 <hr className="p-2"></hr>
                 <div className="flex items-center justify-center">
                   <AppButton
