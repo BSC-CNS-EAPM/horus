@@ -403,7 +403,7 @@ class Flow:
             if not found:
                 raise Exception(  # pylint: disable=broad-exception-raised
                     f"Variable ID '{originVarID}' of block '{var.origin.blockID}'"
-                    + "has changed."
+                    + " has changed."
                 )
 
             found = False
