@@ -589,7 +589,7 @@ class PluginManager(metaclass=HorusSingleton):
             except Exception as e:
 
                 dummyMeta = {
-                    "id": os.path.basename(pth),
+                    "id": os.path.basename(pth).lower(),
                     "name": os.path.basename(pth),
                     "description": str(e),
                     "author": "unknown",
@@ -601,14 +601,21 @@ class PluginManager(metaclass=HorusSingleton):
                 # Define an error dummy plugin
                 errorPlugin = Plugin(noMetaLoad=True)
                 errorPlugin.pluginMeta = PluginMetaModel(**dummyMeta)
+                errorPlugin.id = dummyMeta["id"]
                 errorPlugin._path = pth
                 self.errorPlugins.append(errorPlugin)
 
-        logging.getLogger("Horus").info("Plugins initialized: (%i).", len(self.loadedPlugins))
+        logging.getLogger("Horus").info(
+            "%i plugins initialized: %s.",
+            len(self.loadedPlugins),
+            ", ".join([plugin.id for plugin in self.loadedPlugins]),
+        )
 
         if len(self.errorPlugins) > 0:
-            logging.getLogger("Horus").warning(
-                "Plugins with errors: (%i).", len(self.errorPlugins)
+            logging.getLogger("Horus").error(
+                "%i plugins with errors: %s.",
+                len(self.errorPlugins),
+                ", ".join([plugin.id for plugin in self.errorPlugins]),
             )
 
         self.pluginChanges = False

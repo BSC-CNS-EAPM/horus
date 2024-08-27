@@ -196,31 +196,37 @@ class RemotesAPI:
 
         if self.isLocal:
             # Run command locally
-            process = subprocess.Popen(
-                command,
-                shell=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
+            try:
+                process = subprocess.Popen(
+                    command,
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
 
-            process.wait()
+                process.wait(timeout=10)
 
-            # If the command failed, raise an exception
-            if process.returncode != 0:
-                if process.stderr is not None:
-                    raise Exception(  # pylint: disable=broad-exception-raised
-                        process.stderr.read().decode("utf-8").strip()
-                    )
+                # If the command failed, raise an exception
+                if process.returncode != 0:
+                    if process.stderr is not None:
+                        raise Exception(  # pylint: disable=broad-exception-raised
+                            process.stderr.read().decode("utf-8").strip()
+                        )
+                    else:
+                        raise Exception(
+                            "Command failed."
+                        )  # pylint: disable=broad-exception-raised
+
+                # Return the stdout and stderr as a string
+                if process.stdout is not None:
+                    out = process.stdout.read().decode("utf-8").strip()
+                    logging.getLogger("Horus").debug("Local command output: %s", out)
+                    return out
                 else:
-                    raise Exception("Command failed.")  # pylint: disable=broad-exception-raised
-
-            # Return the stdout and stderr as a string
-            if process.stdout is not None:
-                out = process.stdout.read().decode("utf-8").strip()
-                logging.getLogger("Horus").debug("Local command output: %s", out)
-                return out
-            else:
-                return str(f"Command {command} executed successfully.")
+                    return str(f"Command {command} executed successfully.")
+            except subprocess.TimeoutExpired as te:
+                logging.getLogger("Horus").error("Timeout when performing the above command.")
+                raise Exception("Command failed.") from te
 
         # Run command on remote
         # Hide is needed to avoid the output to be printed on the console
@@ -877,9 +883,9 @@ class RemotesAPI:
         """
         Read Job's StdOut file
         """
-        stdPath = self.command(f"scontrol show job {jobID} | grep {file} ")
+        stdPath = self.command(f"scontrol show job {jobID} | grep {file}")
         try:
-            std = self.command(f"cat  {stdPath.split('=')[1]} ")
+            std = self.command(f"cat {stdPath.split('=')[1]}")
             if std.strip() == "":
                 std = None
         except Exception:

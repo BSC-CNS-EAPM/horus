@@ -292,16 +292,18 @@ class FileExplorer:
                 stderr=subprocess.PIPE,
                 stdin=subprocess.DEVNULL,
             ) as proc:
-                proc.wait()
-                if proc.stdout is not None:
-                    size = float(proc.stdout.read().decode("utf-8").split("\t")[0])
-                else:
-                    raise Exception("stdout from du command is None")
+                try:
+                    proc.wait(timeout=10)
+                    if proc.stdout is not None:
+                        size = float(proc.stdout.read().decode("utf-8").split("\t")[0])
+                    else:
+                        raise Exception("STDOUT from 'du' command is null")
+                except subprocess.TimeoutExpired as te:
+                    proc.kill()
+                    raise Exception("'du' command timed out. Is the folder too big?") from te
 
         except Exception as e:
-            logging.getLogger("Horus").warning(
-                "Could not compute the size of %s: %s", path, str(e)
-            )
+            logging.getLogger("Horus").error("Failed to compute the size of %s: %s", path, str(e))
 
         return size / units
 
