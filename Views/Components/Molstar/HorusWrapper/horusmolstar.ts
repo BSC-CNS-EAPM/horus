@@ -1158,6 +1158,7 @@ export default class HorusMolstar {
     const label = structureID
       ? this.getLabelFromStructureRef(structureID)
       : StructureProperties.unit.model_label(loc);
+
     // If auth_comp_id has 2 characters instead of 3, then add a space
     // before it
     if (auth_comp_id.length === 2) {
@@ -1436,17 +1437,17 @@ export default class HorusMolstar {
     const resInfo: AtomInfo[] = [];
     Structure.eachAtomicHierarchyElement(structureRef.cell.obj!.data, {
       atom: (loc) => {
-        // auth_comp_id is the 3 letter code for the residue like "ALA", "GLY", etc.
-        const auth_comp_id = StructureProperties.atom.auth_comp_id(loc);
+        const res = this.extractAtomInfo(loc, structureRef.cell.sourceRef);
+
+        const { auth_comp_id } = res;
 
         // Skip waters
         if (auth_comp_id === "HOH") return;
 
+        // auth_comp_id is the 3 letter code for the residue like "ALA", "GLY", etc.
         if (get === "hetero" && standardResidues.includes(auth_comp_id)) return;
         else if (get === "standard" && !standardResidues.includes(auth_comp_id))
           return;
-
-        const res = this.extractAtomInfo(loc, structureRef.cell.sourceRef);
 
         // If the molInfo.ID and the current auth_comp_id are already in the
         // heteroInfo array, then don't add it again
@@ -1454,7 +1455,7 @@ export default class HorusMolstar {
           for (const info of resInfo) {
             if (
               info.structureID === res.structureID &&
-              info.auth_comp_id === auth_comp_id &&
+              info.auth_comp_id === res.auth_comp_id &&
               info.residue === res.residue
             ) {
               return;
