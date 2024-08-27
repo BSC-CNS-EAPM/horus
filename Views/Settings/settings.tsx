@@ -73,6 +73,7 @@ function parseSettingsIntoPluginVariable(
       type: settings[settingID]?.type ?? PluginVariableTypes.ANY,
       allowedValues: settings[settingID]?.allowedValues ?? [],
       disabled: false,
+      required: false,
     };
   });
 }
@@ -160,6 +161,9 @@ function useSettings(forAdmin?: boolean) {
     } else {
       // Update the settings
       await getSettings();
+
+      // Send the "settingsChanged" event
+      window.dispatchEvent(new CustomEvent("settingsChanged"));
 
       await new Promise((resolve) => setTimeout(resolve, 1000));
 

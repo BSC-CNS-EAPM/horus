@@ -270,16 +270,8 @@ function ManagePlugins(props: ButtonOpensModalProps) {
       </a>
     );
 
-    const body = (
-      <PluginManager
-        closePluginManager={() => {
-          props.setModalContent(null);
-        }}
-      />
-    );
-
     props.setModalContent({
-      body: body,
+      body: <PluginManager />,
       footer: footer,
     });
   };

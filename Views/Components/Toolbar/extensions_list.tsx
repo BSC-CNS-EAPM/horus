@@ -85,8 +85,13 @@ export function usePluginPages() {
     // Add a scoket listener to update the extensions list after a plugin is installed/uninstalled
     socket.on("pluginChanges", getPluginPages);
 
+    // Create an event listener for when changing the setting of the Development page
+    // to reload the pages
+    window.addEventListener("settingsChanged", getPluginPages);
+
     return () => {
       socket.off("pluginChanges", getPluginPages);
+      window.removeEventListener("settingsChanged", getPluginPages);
     };
   }, []);
 
