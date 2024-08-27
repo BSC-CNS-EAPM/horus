@@ -10,16 +10,18 @@ type AppButtonProps = {
   className?: string;
   disabled?: boolean;
   type?: HTMLButtonElement["type"];
+  title?: string;
 };
 
 // Create a component called AppButton
 function AppButton(props: AppButtonProps) {
-  const className = "app-button " + props?.className;
+  const className = "app-button text-black" + props?.className;
 
   // First div necessary for padding
   return (
     <div>
       <button
+        title={props?.title}
         type={props.type}
         disabled={props.disabled}
         id={props.id}

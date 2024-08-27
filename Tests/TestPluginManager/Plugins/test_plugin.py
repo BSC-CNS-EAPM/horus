@@ -1,7 +1,7 @@
 from HorusAPI import Plugin, PluginBlock, PluginVariable, VariableTypes, PluginPage, PluginConfig
 
 
-plugin = Plugin(id="test_plugin")
+plugin = Plugin()
 
 
 def myaction(block):

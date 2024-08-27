@@ -1,5 +1,5 @@
 // React imports
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 // Web-server imports
 import { socket } from "../Utils/socket";
@@ -29,6 +29,9 @@ import "../CSS/animations.css";
 import { useAlert } from "../Components/HorusPrompt/horus_alert";
 import { useConfirm } from "../Components/HorusPrompt/horus_confirm";
 import { LazyLog } from "@melloware/react-logviewer";
+import PluginsIcon from "../Components/Toolbar/Icons/Plugins";
+import OpenFlowIcon from "../Components/Toolbar/Icons/Open";
+import { PluginBrowserRoot } from "./repo_browser";
 
 type ConfigBlockType = Array<{
   remote: string;
@@ -383,9 +386,10 @@ function PluginCard(props: PluginCardProps) {
     setIsDeleting(true);
 
     disableModal();
+
     try {
       const body = JSON.stringify({
-        name: plugin.name,
+        id: plugin.id,
       });
 
       const headers = {
@@ -433,69 +437,86 @@ function PluginCard(props: PluginCardProps) {
         !error && plugin.config.length > 0;
       }}
     >
-      <div className="card-body d-flex justify-content-between align-items-start">
-        <div>
-          <div className="flex flex-row items-baseline gap-2">
-            <div>
-              <span className="text-xl font-semibold">{plugin.name}</span>
-              {!error && (
-                <span className="card-subtitle"> - {plugin.description}</span>
-              )}
-            </div>
-          </div>
-          {!error ? (
-            <>
-              <div>Version: {plugin.version}</div>
-              <div>Author: {plugin.author}</div>
-            </>
+      <div className="grid grid-cols-[100px_auto]">
+        <div className="my-2 ml-2 grid place-items-center overflow-hidden rounded">
+          {plugin.logo ? (
+            <img
+              src={plugin.logo}
+              alt={plugin.name}
+              className="w-20 h-20 object-contain"
+            />
           ) : (
-            <div className="plugin-error">{plugin.description}</div>
+            <PluginsIcon
+              className="w-20 h-20"
+              color={error ? "red" : undefined}
+            />
           )}
         </div>
-        <div>
-          <div className="d-flex justify-content-between gap-2">
-            {!error && plugin.config.length > 0 && (
-              <button
-                onClick={() => {
-                  props.setSubview(
-                    <PluginConfigView configBlocks={plugin.config} />
-                  );
-                }}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className="w-5 h-5"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M7.84 1.804A1 1 0 018.82 1h2.36a1 1 0 01.98.804l.331 1.652a6.993 6.993 0 011.929 1.115l1.598-.54a1 1 0 011.186.447l1.18 2.044a1 1 0 01-.205 1.251l-1.267 1.113a7.047 7.047 0 010 2.228l1.267 1.113a1 1 0 01.206 1.25l-1.18 2.045a1 1 0 01-1.187.447l-1.598-.54a6.993 6.993 0 01-1.929 1.115l-.33 1.652a1 1 0 01-.98.804H8.82a1 1 0 01-.98-.804l-.331-1.652a6.993 6.993 0 01-1.929-1.115l-1.598.54a1 1 0 01-1.186-.447l-1.18-2.044a1 1 0 01.205-1.251l1.267-1.114a7.05 7.05 0 010-2.227L1.821 7.773a1 1 0 01-.206-1.25l1.18-2.045a1 1 0 011.187-.447l1.598.54A6.993 6.993 0 017.51 3.456l.33-1.652zM10 13a3 3 0 100-6 3 3 0 000 6z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </button>
-            )}
-            {plugin.default ? (
-              <div>Default plugin</div>
+        <div className="card-body d-flex justify-content-between align-items-start">
+          <div>
+            <div className="flex flex-row items-baseline gap-2">
+              <div>
+                <span className="text-xl font-semibold">{plugin.name}</span>
+                {!error && (
+                  <span className="card-subtitle"> - {plugin.description}</span>
+                )}
+              </div>
+            </div>
+            {!error ? (
+              <>
+                <div>Version: {plugin.version}</div>
+                <div>Author: {plugin.author}</div>
+                <div>{plugin.externalURL}</div>
+              </>
             ) : (
-              <button onClick={deletePlugin}>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="red"
-                  className="w-6 h-6"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
-                  />
-                </svg>
-              </button>
+              <div className="plugin-error">{plugin.description}</div>
             )}
+          </div>
+          <div>
+            <div className="d-flex justify-content-between gap-2">
+              {!error && plugin.config.length > 0 && (
+                <button
+                  onClick={() => {
+                    props.setSubview(
+                      <PluginConfigView configBlocks={plugin.config} />
+                    );
+                  }}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    className="w-5 h-5"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M7.84 1.804A1 1 0 018.82 1h2.36a1 1 0 01.98.804l.331 1.652a6.993 6.993 0 011.929 1.115l1.598-.54a1 1 0 011.186.447l1.18 2.044a1 1 0 01-.205 1.251l-1.267 1.113a7.047 7.047 0 010 2.228l1.267 1.113a1 1 0 01.206 1.25l-1.18 2.045a1 1 0 01-1.187.447l-1.598-.54a6.993 6.993 0 01-1.929 1.115l-.33 1.652a1 1 0 01-.98.804H8.82a1 1 0 01-.98-.804l-.331-1.652a6.993 6.993 0 01-1.929-1.115l-1.598.54a1 1 0 01-1.186-.447l-1.18-2.044a1 1 0 01.205-1.251l1.267-1.114a7.05 7.05 0 010-2.227L1.821 7.773a1 1 0 01-.206-1.25l1.18-2.045a1 1 0 011.187-.447l1.598.54A6.993 6.993 0 017.51 3.456l.33-1.652zM10 13a3 3 0 100-6 3 3 0 000 6z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </button>
+              )}
+              {plugin.default ? (
+                <div>Default plugin</div>
+              ) : (
+                <button onClick={deletePlugin}>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="red"
+                    className="w-6 h-6"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+                    />
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -508,11 +529,7 @@ type PluginList = {
   errors: HorusPlugin[];
 };
 
-export function PluginManager({
-  closePluginManager,
-}: {
-  closePluginManager?: () => void;
-}) {
+export function PluginManager() {
   const [subView, setSubView] = useState<React.ReactNode>(null);
   const [hideSubView, setHideSubView] = useState<boolean>(true);
 
@@ -660,7 +677,7 @@ export function PluginManager({
               <AppButton text="Open Horus folder" action={openPluginsFolder} />
             )}
             <SearchComponent
-              placeholder="Search plugins..."
+              placeholder="Search installed plugins..."
               onChange={(e) => {
                 filterPlugins(e.target.value);
               }}
@@ -677,14 +694,19 @@ export function PluginManager({
             />
           </div>
         ) : (
-          <>
-            <div className="p-2 flex flex-row fade-in-animation">
-              <button onClick={returnToMainView} id="back-arrow-plugins">
-                <BackArrowIcon className="w-10 h-10" />
-              </button>
-              <div className="flex-grow p-2">{subView}</div>
+          <div className="p-2 fade-in-animation items-start">
+            <div className="m-2">
+              <AppButton
+                action={returnToMainView}
+                id="back-arrow-plugins"
+                className="flex flex-row gap-2 items-center"
+              >
+                <BackArrowIcon className="w-5 h-5" />
+                <span>Go back</span>
+              </AppButton>
             </div>
-          </>
+            <div className="w-full p-2">{subView}</div>
+          </div>
         )}
       </div>
     </div>
@@ -746,7 +768,11 @@ function InstallingPluginView({
       });
   };
 
-  const showAlertOnDisconnect = () => {
+  const showAlertOnDisconnect = useCallback(() => {
+    if (!isInstalling) {
+      return;
+    }
+
     const msg =
       "Disconnected from server while installing plugin. Check console for details.";
     horusAlert(msg);
@@ -756,7 +782,7 @@ function InstallingPluginView({
     });
 
     setIsInstalling(false);
-  };
+  }, [isInstalling, horusAlert]);
 
   useEffect(() => {
     // When recieving a message from the server, log it to the console
@@ -767,7 +793,7 @@ function InstallingPluginView({
       socket.off("installPluginDep", updateText);
       socket.off("disconnect", showAlertOnDisconnect);
     };
-  }, [updateText]);
+  }, [updateText, showAlertOnDisconnect]);
 
   useEffect(() => {
     // Disable all pointer events on the modal,
@@ -804,51 +830,163 @@ function InstallingPluginView({
           </HorusContainer>
         </div>
       ) : (
-        <div>
-          <h1 className="plugin-variable-name text-2xl mb-2">
-            Select a Plugin
-          </h1>
-          <div className="flex flex-row justify-center items-center gap-2 mb-2">
-            <input
-              className="app-button plugin-variable-value"
-              placeholder="Select a plugin to install..."
-              value={selectedFile}
-              onChange={(e) => {
-                setSelectedFile(e.target.value);
-              }}
-            />
-            <AppButton
-              disabled={!selectedFile}
-              action={() => {
-                installPlugin(selectedFile!);
-              }}
-            >
-              Install
-            </AppButton>
-            <HorusFileExplorer
-              onFileConfirm={(file) => {
-                installPlugin(file);
-              }}
-              onFileSelect={(file) => {
-                setSelectedFile(file);
-              }}
-              allowedExtensions={["hp"]}
-            >
-              Browse...
-            </HorusFileExplorer>
-          </div>
-        </div>
+        !text && (
+          <ManualOrStoreInstall
+            isInstalling={isInstalling}
+            onPluginInstall={installPlugin}
+            selectedFile={selectedFile}
+            setSelectedFile={setSelectedFile}
+          />
+        )
       )}
       {text && (
-        <div>
-          <h1 className="plugin-variable-name text-2xl mb-2">
-            Installation logs
-          </h1>
+        <div className="space-y-2">
+          <div className="flex flex-row justify-between items-center ">
+            <h1 className="plugin-variable-name text-2xl">Installation logs</h1>
+            <AppButton disabled={isInstalling} action={() => setText("")}>
+              Install other...
+            </AppButton>
+          </div>
           <div className="rounded-lg h-full overflow-hidden">
             <LazyLog height={600} extraLines={1} follow text={text} />
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+export type PluginInstallProps = {
+  selectedFile: string;
+  setSelectedFile: (file: string) => void;
+  isInstalling: boolean;
+  onPluginInstall: (file: string) => void;
+};
+
+type InstallationViewsType = "manual" | "repo";
+
+function ManualOrStoreInstall({
+  selectedFile,
+  setSelectedFile,
+  isInstalling,
+  onPluginInstall,
+}: PluginInstallProps) {
+  const tabs: {
+    [key in InstallationViewsType]: {
+      title: string;
+      view: JSX.Element;
+      icon: JSX.Element;
+    };
+  } = {
+    repo: {
+      title: "Plugins repository",
+      icon: <PluginsIcon />,
+      view: (
+        <PluginBrowserRoot
+          isInstalling={isInstalling}
+          selectedFile={selectedFile}
+          setSelectedFile={setSelectedFile}
+          onPluginInstall={onPluginInstall}
+        />
+      ),
+    },
+    manual: {
+      title: "Manual install",
+      icon: <OpenFlowIcon />,
+      view: (
+        <ManualFileSelectionInstall
+          isInstalling={isInstalling}
+          selectedFile={selectedFile}
+          setSelectedFile={setSelectedFile}
+          onPluginInstall={onPluginInstall}
+        />
+      ),
+    },
+  };
+
+  const [currentTab, setCurrentTab] = useState<InstallationViewsType>(
+    Object.keys(tabs)[0] as InstallationViewsType
+  );
+
+  const activeTab =
+    "inline-block p-4 text-black bg-gray-100 rounded-t-lg active";
+  const inactiveTab =
+    "inline-block p-4 rounded-t-lg hover:text-gray-600 hover:bg-gray-50";
+
+  const isFirstTabSelected = currentTab === Object.keys(tabs)[0];
+
+  return (
+    <div className="overflow-hidden">
+      <ul className="flex flex-wrap text-sm font-medium text-center text-gray-500">
+        {(Object.keys(tabs) as InstallationViewsType[]).map((key) => (
+          <li className="me-2">
+            <button
+              aria-current={currentTab === key ? "page" : undefined}
+              className={currentTab === key ? activeTab : inactiveTab}
+              disabled={isInstalling}
+              key={key}
+              onClick={() => {
+                setCurrentTab(key);
+              }}
+            >
+              <div className="flex flex-row gap-2 items-center">
+                {tabs[key].icon}
+                {tabs[key].title}
+              </div>
+            </button>
+          </li>
+        ))}
+      </ul>
+      <div
+        className={`p-4 bg-gray-100 rounded-b-lg rounded-tr-lg ${
+          isFirstTabSelected ? "" : "rounded-tl-lg"
+        }`}
+      >
+        {tabs[currentTab].view}
+      </div>
+    </div>
+  );
+}
+
+function ManualFileSelectionInstall({
+  selectedFile,
+  setSelectedFile,
+  onPluginInstall,
+}: PluginInstallProps) {
+  return (
+    <div>
+      <h1 className="plugin-variable-name text-2xl mb-2">
+        Manual installation
+      </h1>
+      <div className="flex flex-row justify-center items-center gap-2 mb-2">
+        <input
+          className="app-button plugin-variable-value"
+          placeholder="Select a plugin to install or input an URL..."
+          value={selectedFile}
+          onChange={(e) => {
+            setSelectedFile(e.target.value);
+          }}
+        />
+        <AppButton
+          disabled={!selectedFile}
+          action={() => {
+            onPluginInstall(selectedFile!);
+          }}
+        >
+          Install
+        </AppButton>
+        <HorusFileExplorer
+          onFileConfirm={(file) => {
+            onPluginInstall(file);
+          }}
+          onFileSelect={(file) => {
+            setSelectedFile(file);
+          }}
+          allowedExtensions={["hp"]}
+        >
+          Browse...
+        </HorusFileExplorer>
+      </div>
     </div>
   );
 }

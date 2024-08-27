@@ -9,11 +9,7 @@ import "regenerator-runtime/runtime";
 import { App } from "./app";
 
 // Import CSS
-import "bootstrap/dist/css/bootstrap.css";
 import "../CSS/main.css";
-import "../CSS/colors.css";
-import "../CSS/animations.css";
-import "../CSS/font.css";
 
 let container = null;
 

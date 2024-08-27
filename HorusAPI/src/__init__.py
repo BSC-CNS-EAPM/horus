@@ -12,6 +12,8 @@ from .plugins import (
     PluginConfig,
     PluginEndpoint,
     VariableList,
+    PluginMetaModel,
+    PlatformType,
 )
 
 # Export the Molstar API
@@ -46,6 +48,8 @@ __all__ = [
     "HorusSingleton",
     "TempFile",
     "ResetRemoteException",
+    "PluginMetaModel",
+    "PlatformType",
 ]
 
 # Set the module name

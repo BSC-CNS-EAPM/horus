@@ -582,7 +582,7 @@ def test_block_plugin_dir_inside_action(plugin_manager):
         # Verify that the block has been updated with the plugin dir during the execution
         assert hasattr(block1, "pluginDir")
         assert block1.pluginDir is not None
-        assert block1.pluginDir == "AppSupport/DefaultPlugins/Horus"
+        assert block1.pluginDir == os.path.abspath("AppSupport/DefaultPlugins/Horus")
 
     finally:
         # Restore the flow by copying the .bak file to the original file

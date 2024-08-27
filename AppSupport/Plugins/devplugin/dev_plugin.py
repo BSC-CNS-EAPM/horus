@@ -16,7 +16,7 @@ from HorusAPI import (
 )
 
 
-plugin = Plugin("devplugin")
+plugin = Plugin()
 
 
 numberVariable = PluginVariable(

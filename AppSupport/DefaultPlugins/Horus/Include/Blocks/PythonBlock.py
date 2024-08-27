@@ -37,7 +37,7 @@ class EnvironmentVariable(PluginVariable):
 
         pluginList = AppDelegate().server.pluginManager.loadedPlugins
 
-        varDict["allowedValues"] = [plugin.info["name"] for plugin in pluginList]
+        varDict["allowedValues"] = [plugin.id for plugin in pluginList]
 
         return varDict
 
@@ -45,7 +45,7 @@ class EnvironmentVariable(PluginVariable):
 environmentVariable = EnvironmentVariable(
     name="Plugin environment",
     id="environment",
-    description="Select a Plugin to use its dependencies within the code.",
+    description="Select a Plugin ID to use its dependencies within the code.",
     type=VariableTypes.STRING_LIST,
     defaultValue="Horus",
 )
@@ -77,19 +77,19 @@ def executePython(block: PluginBlock):
     from Server.PluginManager import PluginDeps
 
     # Get the environment
-    pluginName = block.variables[environmentVariable.id]
+    pluginID = block.variables[environmentVariable.id]
 
     # Get the plugin path
     from App import AppDelegate
 
     pluginPath = None
     for p in AppDelegate().server.pluginManager.loadedPlugins:
-        if p.info["name"] == pluginName:
+        if p.id == pluginID:
             pluginPath = p._path
             break
 
     if pluginPath is None:
-        raise Exception(f"Plugin '{pluginName}' not found")
+        raise Exception(f"Plugin with ID '{pluginID}' not found")
 
     with PluginDeps(pluginPath):
         exec(pythonCode)

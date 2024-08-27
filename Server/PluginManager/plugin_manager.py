@@ -14,6 +14,10 @@ import logging
 import json
 import shutil
 import datetime
+from pydantic import ValidationError
+
+# For downloading plugins
+import requests
 
 from packaging import version as version_module
 
@@ -38,7 +42,16 @@ import flask_login
 import multiprocess as mp
 
 # More types from the HorusAPI
-from HorusAPI import Plugin, PluginBlock, PluginPage, HorusSingleton, SlurmBlock
+from HorusAPI import (
+    Plugin,
+    PluginBlock,
+    PluginPage,
+    HorusSingleton,
+    SlurmBlock,
+    PluginMetaModel,
+    PlatformType,
+    __version__ as HorusAPIVersion,
+)
 
 # Import the RemoteManager for the block's remote
 from Server.RemotesManager import RemotesManager
@@ -59,6 +72,12 @@ else:
 class DefaultPluginConfigException(Exception):
     """
     Exception raised when a default plugin stores configuration in the AppSupport directory.
+    """
+
+
+class PluginNotFoundError(Exception):
+    """
+    Exception raised when a plugin is not found.
     """
 
 
@@ -147,14 +166,143 @@ class PluginManager(metaclass=HorusSingleton):
         if not files:
             return
 
-        for f in files:  # pylint: disable=invalid-name
-            with PrintSocketCapturer(socketio, "installPluginDep"):
-                print("Installing plugin: " + f)
-                self._installPlugin(f)
+        downloadDir = os.path.join(self.appSupportDir, "plugin_downloads")
+
+        with PrintSocketCapturer(socketio, "installPluginDep"):
+            try:
+                for f in files:  # pylint: disable=invalid-name
+                    # If the file isa plugin URL from the web, download it
+                    if f.startswith("https://") or f.startswith("http://"):
+                        print("Downloading plugin from URL...")
+
+                        os.makedirs(downloadDir, exist_ok=True)
+
+                        f = self._downloadPluginFromURL(f, downloadDir)
+
+                    # If the file is a plugin from the plugin repo (starts with pluginID://)
+                    # then download the specific version
+                    # for this system
+                    if f.startswith("pluginID://"):
+                        pluginID = f.split("://")[1]
+                        os.makedirs(downloadDir, exist_ok=True)
+                        f = self._downloadPluginFromRepo(pluginID, downloadDir)
+
+                    print("Installing plugin: " + f)
+                    self._installPlugin(f)
+            finally:
+                if os.path.exists(downloadDir):
+                    shutil.rmtree(downloadDir)
 
         self.reloadPlugins()
 
         socketio.emit("pluginChanges")
+
+    def _downloadPluginFromRepo(self, pluginID: str, downloadDir: str) -> str:
+        """
+        Downloads a plugin from the repo.
+
+        Args:
+            pluginID (str): The ID of the plugin to download.
+
+        Returns:
+            str: The path to the downloaded plugin.
+        """
+
+        from App import AppDelegate
+
+        print(f"Downloading plugin {pluginID}...")
+
+        # First get plugin info
+        urlForInfo = f"https://horus.bsc.es/repo_api/plugins/{pluginID}"
+
+        pluginResponse = requests.get(urlForInfo, timeout=30)
+
+        if pluginResponse.status_code != 200:
+            raise Exception(f"Failed to get plugin info: {pluginResponse.status_code}")
+
+        jsonResponse = pluginResponse.json()
+
+        # Get the latest compatible version
+        compatibleVersion: typing.Optional[str] = None
+        compatiblePlatform: typing.Optional[str] = None
+
+        appPlatform = AppDelegate.getPlatform()
+
+        print(f"Finding compatible version for '{appPlatform}' and Horus {HorusAPIVersion}...")
+
+        found = False
+        for v in jsonResponse["versions"]:
+
+            if found:
+                break
+
+            version = jsonResponse["versions"][v]
+            platforms = version["platforms"]
+            for p in platforms:
+                pluginPlatforms = p["platforms"]
+
+                if "universal" not in pluginPlatforms and appPlatform not in pluginPlatforms:
+                    continue
+
+                if appPlatform in p["platforms"]:
+                    compatiblePlatform = appPlatform
+                    compatibleVersion = v
+                    found = True
+                    break
+
+                compatibleVersion = v
+                compatiblePlatform = "universal"
+                found = True
+                break
+
+        if compatibleVersion is None or compatiblePlatform is None:
+            raise Exception("Could not find compatible version.")
+
+        print(f"Found compatible version: {compatibleVersion} ({compatiblePlatform})")
+
+        # Download the plugin
+        urlForPlugin = (
+            f"https://horus.bsc.es/repo_api/download?"
+            f"plugin_id={pluginID}&version={compatibleVersion}&platform={compatiblePlatform}"
+        )
+
+        return self._downloadPluginFromURL(urlForPlugin, downloadDir)
+
+    def _downloadPluginFromURL(self, url: str, downloadDir: str) -> str:
+        """
+        Downloads a plugin from a URL.
+
+        Args:
+            url (str): The URL of the plugin to download.
+            downloadDir (str): The directory to download the plugin to.
+
+        Returns:
+            str: The path to the downloaded plugin.
+        """
+
+        downloadPath = os.path.join(downloadDir, "plugin_download.hp")
+
+        print(f"Downloading plugin from {url}...")
+
+        with requests.get(url, stream=True, timeout=30) as pluginResponse:
+            pluginResponse.raise_for_status()
+
+            total = int(pluginResponse.headers.get("content-length", 1))
+
+            progress = 0
+            with open(downloadPath, "wb") as f:
+                for chunk in pluginResponse.iter_content(chunk_size=8192):
+                    progress += len(chunk)
+                    roundedProgress = int(progress / total * 100)
+                    print(f"{roundedProgress}%")
+                    f.write(chunk)
+
+        if pluginResponse.status_code != 200:
+            raise Exception(f"Failed to download plugin: {pluginResponse.status_code}")
+
+        print("Downloaded plugin to: " + downloadPath)
+
+        return downloadPath
 
     def _installPlugin(self, path):
         # Get the name of the plugin
@@ -281,10 +429,10 @@ class PluginManager(metaclass=HorusSingleton):
                 self.loadedPlugins.append(loadedPlugin)
             else:
                 # If we are installing the same plugin, upgrade it only if the version is higher
-                newPluginVersion = loadedPlugin.info["version"]
-                currentInstalledPluginVersion = self._getPluginByID(loadedPlugin.id).info[
-                    "version"
-                ]
+                newPluginVersion = loadedPlugin.pluginMeta.version
+                currentInstalledPluginVersion = self._getPluginByID(
+                    loadedPlugin.id
+                ).pluginMeta.version
 
                 newPluginVersion = version_module.parse(newPluginVersion)
                 currentInstalledPluginVersion = version_module.parse(
@@ -295,7 +443,7 @@ class PluginManager(metaclass=HorusSingleton):
                 newVersionIsHigher = newPluginVersion > currentInstalledPluginVersion
 
                 if newVersionIsHigher:
-                    print(f"Upgrading plugin {loadedPlugin.info['name']}...")
+                    print(f"Upgrading plugin {loadedPlugin.pluginMeta.name}...")
 
                     for config in RemotesManager(self.appSupportDir).listRemotes(
                         includeLocal=True
@@ -337,15 +485,15 @@ class PluginManager(metaclass=HorusSingleton):
                     # Add the new plugin
                     self.loadedPlugins.append(loadedPlugin)
 
-                    print("Plugin upgraded to version " + f"{loadedPlugin.info['version']}")
+                    print("Plugin upgraded to version " + f"{loadedPlugin.pluginMeta.version}.")
 
                     # Emit the plugin changes
                     self.reloadPlugins()
                 else:
                     message = (
                         "You are trying to install "
-                        + f"{loadedPlugin.info['name']} version "
-                        + f"{loadedPlugin.info['version']}, but you already have version "
+                        + f"{loadedPlugin.pluginMeta.name} version "
+                        + f"{loadedPlugin.pluginMeta.version}, but you already have version "
                         + f"{currentInstalledPluginVersion}."
                     )
 
@@ -367,20 +515,6 @@ class PluginManager(metaclass=HorusSingleton):
                 shutil.rmtree(tmpInstallDir)
             raise Exception(e) from e
 
-    def _getPlugin(self, byName: str) -> Plugin:
-        """
-        Returns a plugin with the given name.
-        """
-        for p in self.loadedPlugins:
-            if p.info["name"] == byName:
-                return p
-
-        # Search in the error plugins
-        for p in self.errorPlugins:
-            if p.info["name"] == byName:
-                return p
-        raise Exception(f"Plugin {byName} not found.")
-
     def _getPluginByID(self, id: str) -> Plugin:
         """
         Returns a plugin with the given name.
@@ -388,14 +522,19 @@ class PluginManager(metaclass=HorusSingleton):
         for p in self.loadedPlugins:
             if p.id == id:
                 return p
-        raise Exception(f"PluginID {id} not found.")
 
-    def uninstallPlugin(self, pluginName: str):
+        # Search in the error plugins
+        for p in self.errorPlugins:
+            if p.id == id:
+                return p
+        raise PluginNotFoundError(f"PluginID '{id}' not found.")
+
+    def uninstallPlugin(self, pluginID: str):
         """
-        Uninstalls a plugin with the given name.
+        Uninstalls a plugin with the given ID.
         """
 
-        plugin = self._getPlugin(pluginName)
+        plugin = self._getPluginByID(pluginID)
 
         # Remove the plugin folder
         pluginPath = os.path.join(self.pluginsDir, plugin._path)
@@ -448,22 +587,29 @@ class PluginManager(metaclass=HorusSingleton):
             try:
                 self._loadPlugin(pth)
             except Exception as e:
-                basename = os.path.basename(pth)
-                # Define an error dummy plugin
-                errorPlugin = Plugin(id=f"error.{basename}")
-                errorPlugin.info = {
+
+                dummyMeta = {
+                    "id": os.path.basename(pth),
                     "name": os.path.basename(pth),
                     "description": str(e),
-                    "author": "",
-                    "version": "",
-                    "dependencies": "",
-                    "filename": os.path.basename(pth),
+                    "author": "unknown",
+                    "version": "unknown",
+                    "pluginFile": os.path.basename(pth),
+                    "platforms": None,
                 }
+
+                # Define an error dummy plugin
+                errorPlugin = Plugin(noMetaLoad=True)
+                errorPlugin.pluginMeta = PluginMetaModel(**dummyMeta)
                 errorPlugin._path = pth
                 self.errorPlugins.append(errorPlugin)
 
-        logging.getLogger("Horus").info("Plugins initialized (%i).", len(self.loadedPlugins))
-        logging.getLogger("Horus").info("Error plugins (%i).", len(self.errorPlugins))
+        logging.getLogger("Horus").info("Plugins initialized: (%i).", len(self.loadedPlugins))
+
+        if len(self.errorPlugins) > 0:
+            logging.getLogger("Horus").warning(
+                "Plugins with errors: (%i).", len(self.errorPlugins)
+            )
 
         self.pluginChanges = False
 
@@ -481,14 +627,16 @@ class PluginManager(metaclass=HorusSingleton):
 
         try:
             plugin = self._checkPlugin(pluginPath)
-            logging.getLogger("Horus").info("Loaded plugin %s", plugin.info["name"])
+            logging.getLogger("Horus").info(
+                "Loaded plugin %s with ID %s", plugin.pluginMeta.name, plugin.id
+            )
         except DefaultPluginConfigException:
             return None
         except Exception as e:
-            import traceback
+            # import traceback
 
-            logging.getLogger("Horus").error("Error loading plugin: %s", e)
-            logging.getLogger("Horus").error("Traceback: %s", traceback.format_exc())
+            logging.getLogger("Horus").error("Error loading plugin '%s'. %s", pluginPath, str(e))
+            # logging.getLogger("Horus").error("%s", traceback.format_exc())
             raise e
 
         # Check that the plugin is not already loaded
@@ -497,16 +645,20 @@ class PluginManager(metaclass=HorusSingleton):
                 logging.getLogger("Horus").warning(
                     "Plugin %s already loaded. If you are upgrading the plugin, "
                     + "ignore this warning. Otherwise, uninstall it first.",
-                    plugin.info["name"],
+                    plugin.pluginMeta.name,
                 )
-                # raise Exception(
-                #     f"Plugin {plugin.info['name']} already installed. "
-                #     + "In order to update it, uninstall it first."
-                # )
 
         # Add the plugin to the loaded plugins
         if appendToLoaded:
-            self.loadedPlugins.append(plugin)
+            try:
+                self._getPluginByID(plugin.id)
+                error = (
+                    f"Plugin with ID '{plugin.id}' already exists. Plugins must have unique IDs."
+                )
+                print(error)
+                raise ValueError(error)
+            except PluginNotFoundError:
+                self.loadedPlugins.append(plugin)
 
         # Return the plugin in case its needed
         return plugin
@@ -519,10 +671,10 @@ class PluginManager(metaclass=HorusSingleton):
         """
 
         # Load the plugin.meta
-        pluginMeta = os.path.join(pluginDir, "plugin.meta")
-        logging.getLogger("Horus").debug("Loading plugin meta: %s", pluginMeta)
+        pluginMetaPath = os.path.join(pluginDir, "plugin.meta")
+        logging.getLogger("Horus").debug("Loading plugin meta: %s", pluginMetaPath)
 
-        if not os.path.exists(pluginMeta):
+        if not os.path.exists(pluginMetaPath):
             # If the plugin.meta does not exist, but the plugin is in the default plugins
             # then we can assume that this folder is just the config folder of the plugin
 
@@ -535,11 +687,29 @@ class PluginManager(metaclass=HorusSingleton):
             raise DefaultPluginConfigException
 
         # Load the plugin.meta
-        with open(pluginMeta, "r", encoding="utf-8") as f:
+        with open(pluginMetaPath, "r", encoding="utf-8") as f:
             try:
                 pluginMeta = json.load(f)
             except Exception as e:
-                raise Exception(f"Could not load plugin meta ({pluginMeta}): {e}") from e
+                raise Exception(f"Could not load plugin meta ({pluginMetaPath}): {e}") from e
+
+        # Check that the plugin.meta is valid with the schema
+        try:
+            pluginMeta = PluginMetaModel(**pluginMeta)
+
+            self.assertPluginValidForThisPlatform(
+                pluginMeta.minHorusVersion, pluginMeta.maxHorusVersion, pluginMeta.platforms
+            )
+
+            pluginMeta = pluginMeta.dict()
+
+        except ValidationError as e:
+            for error in e.errors():
+                field = error["loc"][0]
+                msg = f"Field '{field}': {error['msg']}."
+            raise ValueError(f"Validation error in plugin meta '{pluginMetaPath}'. {msg}") from e
+        except Exception as e:
+            raise ValueError(f"Invalid plugin meta '{pluginMetaPath}'. {e}") from e
 
         # Dependencies for the plugin, there they will be installed
         # inside a /lib/pythonX.X/site-packages folder
@@ -566,17 +736,65 @@ class PluginManager(metaclass=HorusSingleton):
         if entryPoint is None:
             raise Exception("The plugin does not contain a pluginFile entry.")
 
+        pluginID = pluginMeta.get("id", None)
+        if pluginID is None:
+            raise Exception("The plugin does not contain an id entry.")
+
         pluginPath = os.path.join(pluginDir, entryPoint)
 
         with PluginDeps(pluginDir):
 
             # Install dependencies if the deps dir exists
-            if depsDir is not None:
+            if depsDir is not None and pluginMeta.get("dependencies", None):
                 self._installDependencies(pluginMeta, pluginDir)
 
             return PluginDeps.subprocessCall(
                 self._internalLoadPluginInModule, pluginPath, entryPoint
             )
+
+    def assertPluginValidForThisPlatform(
+        self,
+        minHorusVersion: typing.Optional[str],
+        maxHorusVersion: typing.Optional[str],
+        platforms: typing.Optional[PlatformType],
+    ):
+        """
+        Verifies that the plugin is compatible with the current platform.
+        """
+        # Get the Horus version, and parse correctly development versions
+        parsedHorusVersion = HorusAPIVersion
+        if "-" in parsedHorusVersion:
+            parsedHorusVersion = parsedHorusVersion.split("-")[0]
+
+        # Parse the Horus version
+        horusVersion = version_module.parse(parsedHorusVersion)
+
+        # Validate the Horus version with the "minHorusVersion" and "maxHorusVersion"
+        if minHorusVersion:
+            minHorusVersionParsed = version_module.parse(minHorusVersion)
+            if minHorusVersionParsed > horusVersion:
+                raise Exception(
+                    "This plugin requires at least Horus version " f"{minHorusVersion}"
+                )
+
+        if maxHorusVersion:
+            maxHorusVersionParsed = version_module.parse(maxHorusVersion)
+
+            if horusVersion > maxHorusVersionParsed:
+                raise Exception(f"This plugin requires at most Horus version {maxHorusVersion}")
+
+        # Validate the platform, for linux just "linux" is enough
+        # For macos, we have to check "macos_intel" and "macos_arm"
+        if platforms and not "universal" in platforms:
+            from App import AppDelegate
+
+            currentPlatform = AppDelegate.getPlatform()
+
+            if not currentPlatform in platforms:
+                raise Exception(
+                    "This plugin requires one of the following platforms: "
+                    f"{platforms}. Current platform: {currentPlatform}"
+                )
 
     def _internalLoadPluginInModule(self, pluginPath: str, entryPoint: str) -> Plugin:
         """
@@ -604,23 +822,14 @@ class PluginManager(metaclass=HorusSingleton):
             raise Exception("The plugin does not contain a valid plugin instance.")
 
         # Check that the plugin variable has a name
-        if not pluginModule.plugin.info["name"]:
-            raise Exception("The plugin does not have a name.")
-
-        # Add to the plugin the filename
-        pluginModule.plugin._filename = os.path.basename(pluginPath)
-
-        # Add to the plugin the full path of the containing folder
-        pluginModule.plugin._path = os.path.dirname(pluginPath)
-
-        # With the path set, load the metadata
-        pluginModule.plugin.loadPluginMeta()
+        if not pluginModule.plugin.pluginMeta.name:
+            raise Exception("The plugin does not have a valid name.")
 
         # Check if the plugin is a default plugin
         if pluginPath.startswith(self.defaultPluginsDir):
-            pluginModule.plugin.info["default"] = True  # type: ignore
+            pluginModule.plugin.default = True
         else:
-            pluginModule.plugin.info["default"] = False  # type: ignore
+            pluginModule.plugin.default = False
 
         # Return the loaded plugin instace
         return pluginModule.plugin
@@ -942,29 +1151,35 @@ class PluginManager(metaclass=HorusSingleton):
         # IS NOT AVAILABLE ON WEBAPP MODE
         remoteList = RemotesManager(self.appSupportDir).listRemotes(includeLocal=True)
 
-        for p in self.loadedPlugins:
-            info = p.info
-            info["actions"] = str(len(p.actions) if p.actions else 0)
-            info["views"] = str(len(p.views))
-            info["id"] = p.id
-            info["blocks"] = self._getBlocksFromList(p, p.blocks)
-            info["config"] = []
-            # Config per remotes
-            if len(p._configs) > 0:
-                for remote in remoteList:
-                    p._updateConfigs(self._pluginConfigPath(p, remote["name"]))
-                    info["config"].append(
-                        {
-                            "remote": remote["name"],
-                            "config": p._configToDict(),  # pylint: disable=protected-access
-                        }
-                    )
-            listedPlugins.append(info)
-        for ep in self.errorPlugins:
-            info = ep.info
-            info["actions"] = str(len(ep.actions) if ep.actions else 0)
-            info["views"] = str(len(ep.views))
-            errorPlugins.append(info)
+        try:
+            for p in self.loadedPlugins:
+                info = p.pluginMeta.dict()
+                info["id"] = p.id
+                info["blocks"] = self._getBlocksFromList(p, p.blocks)
+                info["default"] = p.default
+                info["logo"] = p.logo
+                info["config"] = []
+                # Config per remotes
+                if len(p._configs) > 0:
+                    for remote in remoteList:
+                        p._updateConfigs(self._pluginConfigPath(p, remote["name"]))
+                        info["config"].append(
+                            {
+                                "remote": remote["name"],
+                                "config": p._configToDict(),  # pylint: disable=protected-access
+                            }
+                        )
+                listedPlugins.append(info)
+            for ep in self.errorPlugins:
+                info = ep.pluginMeta.dict()
+                info["id"] = ep.id
+                info["blocks"] = []
+                info["default"] = ep.default
+                info["logo"] = ep.logo
+                info["config"] = []
+                errorPlugins.append(info)
+        except Exception as exc:
+            raise Exception(f"Could not get the plugins: {str(exc)}") from exc
         return {"plugins": listedPlugins, "errors": errorPlugins}
 
     def _getBlocksFromList(self, plugin: Plugin, blockList: typing.List[PluginBlock]):
@@ -978,34 +1193,10 @@ class PluginManager(metaclass=HorusSingleton):
         newBlocks: list[dict[str, typing.Any]] = []
         for b in blockList:
             newBlock = b._toDict()
-            newBlock["plugin"] = {"name": plugin.info["name"], "id": plugin.id}
-            # newBlock = {
-            #     "id": b.id,
-            #     "plugin": plugin.info["name"],
-            #     "name": b.name,
-            #     "description": b.description,
-            #     "variables": self.getVariables(b),
-            #     # Deprecated:
-            #     # "subBlocks": self._getBlocksFromList(plugin, b.getSubBlocks()),
-            #     "config": self._getConfigFromBlock(b),
-            # }
+            newBlock["plugin"] = {"name": plugin.pluginMeta.name, "id": plugin.id}
             newBlocks.append(newBlock)
 
         return newBlocks
-
-    # def _getConfigFromBlock(self, block: PluginBlock):
-    #     configs = []
-    #     for c in block.getConfigs():
-    #         configs.append(
-    #             c.toDict()
-    #             # {
-    #             #     "id": c.id,
-    #             #     "name": c.name,
-    #             #     "description": c.description,
-    #             #     "variables": self.getVariables(c),
-    #             # }
-    #         )
-    #     return configs
 
     def getBlocks(self):
         """
@@ -1177,7 +1368,7 @@ class PluginManager(metaclass=HorusSingleton):
     def _getPageInfo(self, pg: PluginPage, p: Plugin):
         return {
             "id": pg.id,
-            "plugin": p.info["name"],
+            "plugin": p.pluginMeta.name,
             "name": pg.name,
             "description": pg.description,
             "html": f"{p._path}/Pages/{pg.html}",
@@ -1284,7 +1475,7 @@ class PluginManager(metaclass=HorusSingleton):
                 os.makedirs(configDir)
             # Except a read-only filesystem
             except OSError as ose:
-                error = f"Could not create config folder for plugin {plugin.info['name']}. "
+                error = f"Could not create config folder for plugin {plugin.pluginMeta.name}. "
                 error += "The filesystem is read-only."
                 logging.getLogger("Horus").warning(error)
 
@@ -1292,7 +1483,7 @@ class PluginManager(metaclass=HorusSingleton):
 
         # If the config folder is inside a default plugin (read-only)
         # move it to the user's app support dir
-        if plugin.info["default"]:
+        if plugin.default:
             configDir = os.path.join(self.pluginsDir, plugin.id, "config")
 
         # Find the block config file

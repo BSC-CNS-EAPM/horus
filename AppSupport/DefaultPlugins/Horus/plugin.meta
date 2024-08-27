@@ -1,8 +1,8 @@
 {
+  "id": "Horus",
   "name": "Horus",
   "description": "Base plugin for Horus",
   "author": "Horus",
   "version": "0.0.1",
-  "pluginFile": "Horus.py",
-  "dependencies": []
+  "pluginFile": "Horus.py"
 }

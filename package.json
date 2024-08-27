@@ -50,6 +50,7 @@
     "@heroicons/react": "2.0.18",
     "@melloware/react-logviewer": "^5.0.6",
     "@monaco-editor/react": "^4.6.0",
+    "@tanstack/react-query": "^5.52.1",
     "ag-grid-community": "^31.3.2",
     "ag-grid-react": "^31.3.2",
     "bootstrap": "5.2.3",

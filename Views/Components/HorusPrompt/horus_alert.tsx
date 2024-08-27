@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import "./horus_prompt.css";
 import { render, unmountComponentAtNode } from "react-dom";
 import AppButton from "../appbutton";
+import { HorusModal } from "../reusable";
 
 export const useAlert = () => {
   const [showAlert, setShowAlert] = useState(false);
@@ -26,7 +27,7 @@ export const useAlert = () => {
     if (!document.getElementById("alert-root")) {
       const alertRoot = document.createElement("div");
       alertRoot.id = "alert-root";
-      document.body.appendChild(alertRoot);
+      document.body.insertBefore(alertRoot, document.body.firstChild);
     }
   }, []);
 
@@ -88,10 +89,13 @@ const AlertComponent = ({
   }, [onSubmit, handleEvent]);
 
   return (
-    <div className="prompt-overlay backdrop-blur-sm">
-      <div className="prompt-container flex flex-col items-center">
-        <p className="plugin-variable-name">{message}</p>
-        <form onSubmit={() => onSubmit()}>
+    <HorusModal show={true} onBackdropClick={() => {}} onHide={() => {}}>
+      <div className="prompt-container">
+        <p className="plugin-variable-name text-xl">{message}</p>
+        <form
+          onSubmit={() => onSubmit()}
+          className="flex flex-row justify-center"
+        >
           <AppButton type="submit">OK</AppButton>
           <input
             type="text"
@@ -106,6 +110,6 @@ const AlertComponent = ({
           />
         </form>
       </div>
-    </div>
+    </HorusModal>
   );
 };

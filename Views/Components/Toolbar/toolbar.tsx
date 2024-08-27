@@ -1,7 +1,13 @@
 // Desc: This is the toolbar component
 
 // React
-import { ChangeEvent, Fragment, useEffect, useState } from "react";
+import {
+  ChangeEvent,
+  Fragment,
+  KeyboardEvent,
+  useEffect,
+  useState,
+} from "react";
 
 // Useful components from HeadlessUI
 import { Menu, Transition } from "@headlessui/react";
@@ -223,11 +229,19 @@ interface SearchProps {
   showIcon?: boolean;
   onFocus?: () => void;
   onBlur?: () => void;
+  onEnter?: () => void;
   className?: string;
 }
 
 function SearchComponent(props: SearchProps) {
-  const { placeholder, onChange, showIcon = true, className } = props;
+  const { placeholder, onChange, showIcon = true, className, onEnter } = props;
+
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if (event.key === "Enter") {
+      onEnter?.();
+    }
+  };
+
   return (
     <div className={`app-button flex flex-row ${className}`}>
       <input
@@ -238,11 +252,12 @@ function SearchComponent(props: SearchProps) {
         onChange={onChange}
         onFocus={props.onFocus}
         onBlur={props.onBlur}
+        onKeyDown={handleKeyDown}
         // Disable browser completion
         autoComplete="off"
       />
       {showIcon && (
-        <button>
+        <button onClick={onEnter}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="white"

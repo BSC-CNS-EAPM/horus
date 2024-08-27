@@ -12,6 +12,8 @@ from .src import (  # noqa: F401
     PluginConfig,  # noqa: F401
     PluginEndpoint,  # noqa: F401
     VariableList,  # noqa: F401
+    PluginMetaModel,  # noqa: F401
+    PlatformType,  # noqa: F401
 )
 
 # Export the Molstar API

@@ -27,6 +27,7 @@ example of a plugin metadata file:
 .. code-block:: json
 
     {
+        "id": "horus",
         "name": "Horus",
         "description": "Base plugin for Horus",
         "author": "Horus",
@@ -38,12 +39,17 @@ example of a plugin metadata file:
 
 This is a JSON object that represents a plugin for the Horus app. The object contains the following properties:
 
+- ``id``: The unique ID of the plugin.
 - ``name``: The name of the plugin.
 - ``description``: The description of your plugin.
 - ``author``: The author of the plugin.
 - ``version``: The version of the plugin.
 - ``pluginFile``: The entry point of the plugin. This file must be located in the root of the plugin folder.
-- ``dependencies``: An array of strings that contains the PyPI dependencies of the plugin. This dependencies can be declared as DEPENDENCY==VERSION or using the --no-deps (DEPENDENCY==VERSION --no-deps) flag which will allow to install the dependency without installing the others that are necessary for it.
+- ``minHorusVersion``: The minimum Horus version required in order to run the plugin (optional).
+- ``maxHorusVersion``: The maximum Horus version required in order to run the plugin (optional).
+- ``platforms``: A list of the platforms where this plugin runs. Allowed values are "universal", "linux", "macos_intel" and "macos_arm". Defaults to "universal" if not specified (optional).
+- ``externalURL``: An URL that links to the Plugin's webpage or documentation (optional).
+- ``dependencies``: An array of strings that contains the PyPI dependencies of the plugin. This dependencies can be declared as DEPENDENCY==VERSION or using the --no-deps (DEPENDENCY==VERSION --no-deps) flag which will allow to install the dependency without installing the others that are necessary for it (optional).
 
 Dependencies of plugins
 -----------------------
@@ -56,6 +62,7 @@ to include pandas and matplotlib, your :bdg-secondary-line:`plugin.meta` file sh
 .. code-block:: json
 
     {
+        "id": "my_unique_id",
         "name": "My Plugin",
         "description": "A custom plugin",
         "author": "Foo",
@@ -70,10 +77,9 @@ Horus will skip the installation. In order for the dependencies to be installed,
 Horus is running must have a valid :bdg-secondary-line:`python` interpreter installed. 
 
 Deps folder: Some libraries are either not available in :bdg-secondary-line:`pip` or they are private. In this case, you can
-embeed the library pre-installed with the plugin by adding the library to the :bdg-secondary-line:`deps` folder of the plugin. You can
-also provide the packaged library and setting in the dependencies array the path to the library.
-The :bdg-secondary-line:`deps` folder is located in the root of the plugin folder and is appended to the :bdg-secondary-line:`PYTHONPATH` variable
-when the plugin is loaded.
+embeed the library pre-installed with the plugin by isntalling manually the package in the :bdg-secondary-line:`Include` folder of the plugin.
+The :bdg-secondary-line:`Include` folder is located in the root of the plugin folder and is appended to the :bdg-secondary-line:`PYTHONPATH` variable
+when the plugin is loaded, allowing for imports to work.
 
 .. warning::
 
@@ -94,6 +100,7 @@ The code of the plugin should be located in the root of the plugin folder, but t
 some of the code inside a :bdg-secondary-line:`Include` folder. The only requirement is that the entry point of the plugin must be
 located in the root of the plugin folder and must be named as the :bdg-secondary-line:`pluginFile` property of the plugin metadata file.
 When running the plugin, the :bdg-secondary-line:`Include` folder is appended to the :bdg-secondary-line:`PYTHONPATH` variable.
+Moreover, you can specify a logo for your plugin by including a :bdg-secondary-line:`logo.png` image into the root of the plugin.
 Therefore, a more complex :bdg-secondary-line:`Plugin` folder structure can look like:
 
 .. code-block:: bash
@@ -103,9 +110,10 @@ Therefore, a more complex :bdg-secondary-line:`Plugin` folder structure can look
     │   ├── __init__.py
     │   └── mymodule.py
     ├── deps
-    │   └── numpy/ # Installed by pip
+    │   └── ... # Installed by Horus
     ├── plugin.meta
     └── main.py
+    └── logo.png # Logo for your plugin
 
 Then you can use the following statement in your :bdg-secondary-line:`main.py` file to import the :bdg-secondary-line:`mymodule.py` file:
 
@@ -115,14 +123,14 @@ Then you can use the following statement in your :bdg-secondary-line:`main.py` f
 
 Coding the plugin
 =================
-In order to create a plugin we need to use the :bdg-secondary-line:`Plugin` class. This class is located in the :bdg-secondary-line:`HorusAPI` module. The only parameter needed for instantiating a plugin
-is a custom unique ID. The plugin object must be instantiated to a global :bdg-secondary-line:`plugin` variable. For example:
+In order to create a plugin we need to use the :bdg-secondary-line:`Plugin` class. This class is located in the :bdg-secondary-line:`HorusAPI` module. 
+The plugin object must be instantiated to a global :bdg-secondary-line:`plugin` variable. For example:
 
 .. code-block:: python
 
     from HorusAPI import Plugin
 
-    plugin = Plugin("myplugin")
+    plugin = Plugin()
 
 or from a function that returns the plugin object:
 
@@ -131,7 +139,7 @@ or from a function that returns the plugin object:
     from HorusAPI import Plugin
 
     def get_plugin():
-        return Plugin("myplugin")
+        return Plugin()
 
     plugin = get_plugin()
 

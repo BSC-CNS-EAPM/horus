@@ -17,7 +17,7 @@ def test_checkPlugin():
     # Create a mock plugin file
     entryPath = "Tests/TestServer/test_plugin.py"
     with open(entryPath, "w") as f:
-        f.write("from HorusAPI import Plugin\nplugin = Plugin(id='test')")
+        f.write("from HorusAPI import Plugin\nplugin = Plugin()")
 
     pluginDir = "Tests/TestServer"
 
@@ -26,6 +26,7 @@ def test_checkPlugin():
         f.write(
             """
 {
+  "id": "test",
   "name": "TestPlugin",
   "description": "The test plugin for Horus",
   "author": "BSC",
@@ -47,11 +48,11 @@ def test_checkPlugin():
     # Check that the plugin is valid
     assert plugin is not None
     assert isinstance(plugin, Plugin)
-    assert plugin.info["name"] == "TestPlugin"
-    assert plugin.info["version"] == "0.0.1"
-    assert plugin.info["author"] == "BSC"
-    assert plugin.info["description"] == "The test plugin for Horus"
-    assert plugin.info["dependencies"] == []
+    assert plugin.pluginMeta.name == "TestPlugin"
+    assert plugin.pluginMeta.version == "0.0.1"
+    assert plugin.pluginMeta.author == "BSC"
+    assert plugin.pluginMeta.description == "The test plugin for Horus"
+    assert plugin.pluginMeta.dependencies == []
 
     # Check that the comparison operators work
     assert plugin == plugin
@@ -154,6 +155,7 @@ def test_install_plugin_load_failure(mocker):
         f.write(
             """
 {
+  "id": "test",
   "name": "TestPlugin",
   "description": "The Test plugin for Horus",
   "author": "BSC",
@@ -531,11 +533,11 @@ def test_test_plugin_load():
     # Check that the plugin is valid
     assert plugin is not None
     assert isinstance(plugin, Plugin)
-    assert plugin.info["name"] == "Plugin TEST"
-    assert plugin.info["version"] == "0.0.1"
-    assert plugin.info["author"] == "Test"
-    assert plugin.info["description"] == "This is a test plugin"
-    assert plugin.info["dependencies"] == []
+    assert plugin.pluginMeta.name == "Plugin TEST"
+    assert plugin.pluginMeta.version == "0.0.1"
+    assert plugin.pluginMeta.author == "Test"
+    assert plugin.pluginMeta.description == "This is a test plugin"
+    assert plugin.pluginMeta.dependencies == []
 
     # Check that the comparison operators work
     assert plugin == plugin
@@ -616,7 +618,14 @@ def test_test_plugin_saveconfig():
         pluginManager.saveConfig(newConfig, remote["name"])
 
     # Reload the plugin
+    pluginManager.reloadPlugins()
     pluginManager._loadPlugin(pluginDir)
+
+    plugin = pluginManager._getPluginByID("test_plugin")
+
+    # Assign the new configs
+    configPath = pluginManager._pluginConfigPath(plugin, remotes[0]["name"])
+    plugin._updateConfigs(configPath)
 
     configBlock = pluginManager._getPluginByID("test_plugin")._getConfig(
         "test_plugin.config.configblock"
@@ -633,7 +642,14 @@ def test_test_plugin_saveconfig():
         pluginManager.saveConfig(newConfig, remote["name"])
 
     # Reload the plugin
+    pluginManager.reloadPlugins()
     pluginManager._loadPlugin(pluginDir)
+
+    plugin = pluginManager._getPluginByID("test_plugin")
+
+    # Assign the new configs
+    configPath = pluginManager._pluginConfigPath(plugin, remotes[0]["name"])
+    plugin._updateConfigs(configPath)
 
     configBlock = pluginManager._getPluginByID("test_plugin")._getConfig(
         "test_plugin.config.configblock"
@@ -660,6 +676,7 @@ def test_plugin_upgrade():
     plugin_test_path = None
 
     try:
+        pluginManager.reloadPlugins()
         # First load the unmodified plugin
         pluginManager._loadPlugin(pluginDir)
 
@@ -693,7 +710,7 @@ def test_plugin_upgrade():
         # Check that the plugin was upgraded
         plugin = pluginManager._getPluginByID("test_plugin")
 
-        assert plugin.info["version"] == "0.0.2"
+        assert plugin.pluginMeta.version == "0.0.2"
     finally:
         # Reset the plugin.meta file
         shutil.copyfile(
@@ -768,7 +785,7 @@ def test_plugin_downgrade():
         # Check that the plugin was NOT downgrade
         plugin = pluginManager._getPluginByID("test_plugin")
 
-        assert plugin.info["version"] == "0.0.1"
+        assert plugin.pluginMeta.version == "0.0.1"
     finally:
         # Reset the plugin.meta file
         shutil.copyfile(

@@ -1,9 +1,15 @@
+type AllowedPlatforms = "universal" | "macos_intel" | "macos_arm" | "linux";
+
 export type HorusPlugin = {
   id: string;
   name: string;
   description: string;
   version: string;
   author: string;
+  minHorusVersion: string;
+  maxHorusVersion: string;
+  platforms: AllowedPlatforms[];
+  externalURL: string;
   dependencies: Array<string>;
   blocks: Array<Block>;
   config: Array<{
@@ -11,6 +17,9 @@ export type HorusPlugin = {
     config: Array<Block>;
   }>;
   default: boolean;
+
+  // Base64 encoded logo
+  logo?: string;
 };
 
 export type PluginPage = {

@@ -165,10 +165,21 @@ def initPlugin():
     a Horus plugin.
     """
 
+    pluginID = input("Plugin ID. Must be unique: ")
     pluginName = input("Plugin name: ")
     description = input("Plugin description: ")
     pluginAuthor = input("Plugin author: ")
-    version = "0.0.1"
+    version = input("Plugin version [0.0.1]: ") or "0.0.1"
+    platforms = (
+        input(
+            "Plugin platforms. Allowed: universal, linux, macos_intel, macos_arm) separated by spaces. Default: universal: "
+        )
+        or "universal"
+    )
+
+    platforms = [platform.strip() for platform in platforms.split(" ")]
+
+    externalURL = input("Plugin external URL (optional): ") or None
 
     pluginFolder = pluginName.replace(" ", "_")
     pluginFolder = pluginFolder.lower()
@@ -176,21 +187,28 @@ def initPlugin():
     # Create the plugin folder
     os.mkdir(pluginFolder)
 
+    import HorusAPI
+
     pluginMeta = {
+        "id": pluginID,
         "name": pluginName,
         "description": description,
         "author": pluginAuthor,
         "version": version,
+        "minHorusVersion": HorusAPI.__version__,
+        "platforms": platforms,
         "pluginFile": "plugin.py",
+        "externalURL": externalURL,
         "dependencies": [],
     }
+
+    # Validate the meta
+    metaModel = HorusAPI.PluginMetaModel(**pluginMeta)
 
     # Inside the plugin folder, create the meta file
     with open(os.path.join(pluginFolder, "plugin.meta"), "w", encoding="utf-8") as f:
         # Dump the JSON meta file
-        import json
-
-        json.dump(pluginMeta, f, indent=4)
+        f.write(metaModel.json(indent=4))
 
     # Inside the plugin folder, create the plugin file
     with open(os.path.join(pluginFolder, "plugin.py"), "w", encoding="utf-8") as f:
@@ -198,7 +216,7 @@ def initPlugin():
         f.write("from HorusAPI import Plugin\n")
         f.write("\n")
         f.write("\n")
-        f.write(f"plugin = Plugin(id='{pluginFolder}')\n")
+        f.write("plugin = Plugin()\n")
 
     # Create the Include folder inside the plugin folder
     os.mkdir(os.path.join(pluginFolder, "Include"))
@@ -217,3 +235,6 @@ def initPlugin():
         f.write(f"zip -r {pluginFolder}.hp {pluginFolder}\n")
 
     print(f"Plugin {pluginName} created successfully!")
+    print(
+        "Visit https://horus.bsc.es/repo for instructions on how to upload your plugin to the public repository."
+    )

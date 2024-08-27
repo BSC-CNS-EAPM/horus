@@ -1157,14 +1157,14 @@ class HorusServer:
         @self.verifyAdmin
         def uninstallPlugin():
             data = request.get_json()
-            pluginName = data.get("name", None)
-            if pluginName is None:
+            pluginID = data.get("id", None)
+            if pluginID is None:
                 success = {
                     "ok": False,
-                    "msg": "Plugin name not provided.",
+                    "msg": "Plugin ID not provided.",
                 }
             try:
-                self.pluginManager.uninstallPlugin(pluginName)
+                self.pluginManager.uninstallPlugin(pluginID)
                 self.socketio.emit("pluginChanges")
                 success = {
                     "ok": True,

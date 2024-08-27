@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import "./horus_prompt.css";
 import { render, unmountComponentAtNode } from "react-dom";
 import AppButton from "../appbutton";
+import { HorusModal } from "../reusable";
 
 export const usePrompt = () => {
   const [showPrompt, setShowPrompt] = useState(false);
@@ -26,7 +27,7 @@ export const usePrompt = () => {
     if (!document.getElementById("prompt-root")) {
       const promptRoot = document.createElement("div");
       promptRoot.id = "prompt-root";
-      document.body.appendChild(promptRoot);
+      document.body.insertBefore(promptRoot, document.body.firstChild);
     }
   }, []);
 
@@ -97,9 +98,9 @@ const PromptComponent = ({
   }, [inputValue, onSubmit, handleEvent]);
 
   return (
-    <div className="prompt-overlay backdrop-blur-sm">
+    <HorusModal show={true} onHide={() => onSubmit(null)}>
       <div className="prompt-container">
-        <p className="plugin-variable-name">{message}</p>
+        <p className="plugin-variable-name text-xl">{message}</p>
         <form ref={formRef} onSubmit={handleSubmit}>
           <input
             className="plugin-variable-value border-b-2"
@@ -108,12 +109,12 @@ const PromptComponent = ({
             onChange={(e) => setInputValue(e.target.value)}
             ref={inputRef}
           />
-          <div className="flex gap-1 justify-end">
+          <div className="flex gap-2 justify-center">
             <AppButton action={() => onSubmit(null)}>Cancel</AppButton>
             <AppButton type="submit">OK</AppButton>
           </div>
         </form>
       </div>
-    </div>
+    </HorusModal>
   );
 };

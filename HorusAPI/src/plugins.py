@@ -7,7 +7,14 @@ from enum import Enum
 from copy import deepcopy
 import contextlib
 import logging
+import re
+import base64
+import shutil
 from typing import Any, Dict, List
+
+from pydantic import (  # pylint: disable=no-name-in-module. # Somehow pylint does not recognize BaseModel
+    BaseModel,
+)
 
 from .utils import ResetRemoteException
 
@@ -130,13 +137,17 @@ class PluginRemote:
 
 
 class PluginEndpoint:
+    """
+    Endpoints for plugin pages.
+    """
+
     def __init__(self, url: str, methods: typing.List[str], function: typing.Callable):
         """
         Create a new PluginEndpoint.
 
         :param url: The URL of the endpoint.
         :param method: The method of the endpoint.
-        :param function: The function that will be called when the endpoint is accessed. To the function the request object will be passed as the first argument. Remember to define the function with the request argument.
+        :param function: The function that will be called when the endpoint is accessed.
         """
         self.url = url
         self.methods = methods
@@ -198,6 +209,10 @@ class PluginPage:
 
 
 class VariableTypes(str, Enum):
+    """
+    The types of variables.
+    """
+
     ANY = "any"
     """
     Any type of variable.
@@ -395,9 +410,9 @@ class VariableTypes(str, Enum):
 
     SMILES = "smiles"
     """
-    A single molecule SMILES string.
+    A list of molecule SMILES strings.
 
-    Will render as the JSME viewer (https://jsme-editor.github.io/)
+    Will use the loaded molecules in the JSME viewer (https://jsme-editor.github.io/)
     """
 
     _GROUP = "group"
@@ -452,9 +467,9 @@ class VariableTypes(str, Enum):
         Returns a list of all the available types.
         """
         types = []
-        for attr_name in dir(VariableTypes):
-            attr = getattr(VariableTypes, attr_name)
-            if not callable(attr) and not attr_name.startswith("__"):
+        for attrName in dir(VariableTypes):
+            attr = getattr(VariableTypes, attrName)
+            if not callable(attr) and not attrName.startswith("__"):
                 types.append(attr)
 
         return types
@@ -501,7 +516,8 @@ class PluginVariable:
         :param id: The ID of the variable.
         :param allowedValues: A list of allowed values for the variable.
         :param disabled: Whether the variable is disabled or not
-        :param required: Whether the variable is required or not. This will show the variable in orange when not connected.
+        :param required: Whether the variable is required or not.
+        This will show the variable in orange when not connected.
         :param placeholder: The placeholder of the input field.
         """
         self.name = name
@@ -1020,7 +1036,7 @@ class PluginBlock:
             )
             id = name
 
-        self.id: str = id
+        self.id: str = re.sub(r"[^A-Za-z0-9]", "_", str(id).lower())
         """
         The id of the block.
         It is composed by the plugin id and the id/name of the block.
@@ -1828,46 +1844,65 @@ class SlurmBlock(PluginBlock):
         self._jobID = None
 
 
+# Platform typing
+PlatformType = typing.List[typing.Literal["universal", "linux", "macos_intel", "macos_arm"]]
+
+
+class PluginMetaModel(BaseModel):
+    """
+    The metadata of a plugin
+    """
+
+    id: str
+    name: str
+    description: str
+    author: str
+    version: str
+    pluginFile: str
+    minHorusVersion: typing.Optional[str]
+    maxHorusVersion: typing.Optional[str]
+    platforms: typing.Optional[PlatformType] = ["universal"]
+    externalURL: typing.Optional[str]
+    dependencies: typing.Optional[typing.List[str]] = []
+
+
 class Plugin:
     """
     Base class for all plugins.
     """
 
-    info: dict[str, typing.Any] = {
-        "name": "Unnamed plugin",
-        "version": "0.0.1",
-        "author": "None",
-        "description": "None",
-        "dependencies": ["None"],
-    }
+    pluginMeta: PluginMetaModel
     """
-    A dictionary with the information about the plugin.
-
-    This mirrors the plugin.meta file.
-
-    Keys:
-    - name: The name of the plugin
-    - version: The version of the plugin
-    - author: The author of the plugin
-    - description: A description of the plugin
-    - dependencies: A list of dependencies of the plugin
+    The metadata of the plugin.
     """
 
-    def __init__(self, id: str):
+    logo: typing.Optional[str] = None
+    """
+    The path to the logo of the plugin.
+    """
+
+    default: bool = False
+    """
+    Whether the plugin is a default plugin or not.
+    """
+
+    def __init__(self, id: typing.Optional[str] = None, noMetaLoad: bool = False):
         """
         Initializes the plugin.
 
         :param id: The id of the plugin.
         """
 
-        self._filename: str = ""
-        """
-        The filename of the plugin. Internal use only.
-        """
+        if id is not None:
+            logging.getLogger("Horus").warning(
+                "Plugins must define the ID in the plugin.meta file. "
+                "Please remove the ID parameter from the Plugin class initialization."
+            )
 
-        self._path: str = ""
+        self.id: str = "undefined"
         """
-        The path of the plugin folder. Internal use only.
+        The unique id of the plugin. Will be automatically
+        assigned when loading the plugin from the plugin.meta file.
         """
 
         self.actions: typing.Optional[typing.List[typing.Callable]] = None
@@ -1903,13 +1938,39 @@ class Plugin:
         Allowed type: PluginConfig
         """
 
-        # Set the id of the plugin
-        self.id = id.lower().replace(" ", "_")
+        currentPath: typing.Optional[str] = None
+        import inspect
+
+        if __name__ != "__main__":
+            for frame in inspect.stack()[1:]:
+                if frame.filename[0] != "<":
+                    currentPath = os.path.abspath(frame.filename)
+                    break
+
+        if currentPath is None:
+            raise ValueError(
+                "Could not find the path of the plugin. Please check the plugin installation."
+            )
+
+        # Add to the plugin the filename
+        self._filename: str = os.path.basename(currentPath)
+        """
+        The filename of the plugin. Internal use only.
+        """
+
+        # Add to the plugin the full path of the containing folder
+        self._path = os.path.dirname(currentPath)
+        """
+        The path of the plugin folder. Internal use only.
+        """
+
+        if not noMetaLoad:
+            self.loadPluginMeta()
 
     # Define comparison operators
     def __eq__(self, other):
         if isinstance(other, Plugin):
-            return self.info["name"] == other.info["name"]
+            return self.pluginMeta.id == other.pluginMeta.id
         return False
 
     def __ne__(self, other):
@@ -1917,7 +1978,7 @@ class Plugin:
 
     # Define the str function to print(plugin)
     def __str__(self):
-        return self.info["name"]
+        return self.pluginMeta.id
 
     def loadPluginMeta(self):
         """
@@ -1934,11 +1995,27 @@ class Plugin:
         if os.path.exists(metaPath):
             try:
                 with open(metaPath, "r", encoding="utf-8") as metaFile:
-                    self.info = json.load(metaFile)
+                    self.pluginMeta = PluginMetaModel.parse_raw(metaFile.read())
+
+                # Assign the id to the plugin
+                self.id = re.sub(r"[^A-Za-z0-9]", "_", self.pluginMeta.id.lower())
+
+                # Update the id on the meta too
+                self.pluginMeta.id = self.id
+
+                logging.debug("Assigned ID %s to plugin %s", self.id, self.pluginMeta.name)
             except Exception as exc:
                 raise Exception(f"Error loading plugin.meta file ({metaPath}): {exc}") from exc
         else:
-            raise Exception("plugin.meta file not found.")
+            raise Exception(f"plugin.meta file not found at '{metaPath}'.")
+
+        # Load the plugin logo
+        logoPath = os.path.join(self._path, "logo.png")
+        if os.path.exists(logoPath):
+            with open(logoPath, "rb") as logoFile:
+                self.logo = (
+                    f"data:image/png;base64,{base64.b64encode(logoFile.read()).decode('utf-8')}"
+                )
 
     # Function to get a block by its ID
     def getBlock(self, id):
@@ -1953,11 +2030,17 @@ class Plugin:
         raise Exception(f"Block {id} not found.")
 
     def getBlocks(self):
+        """
+        Returns a list of all the blocks in the plugin.
+        """
         return self._blocks
 
     # Define the .blocks property to the getBlocks function
     @property
     def blocks(self):
+        """
+        Returns a list of all the blocks in the plugin.
+        """
         return self.getBlocks()
 
     def addBlock(self, block: PluginBlock):
@@ -2004,10 +2087,17 @@ class Plugin:
         raise Exception(f"Page {id} not found.")
 
     def getPages(self):
+        """
+        Returns a list of all the pages in the plugin.
+        """
         return self._pages
 
     @property
     def pages(self):
+        """
+        Returns a list of all the pages in the plugin.
+        """
+
         return self.getPages()
 
     def addPage(self, page: PluginPage):
@@ -2075,7 +2165,7 @@ class Plugin:
                     "name": flow.name,
                     "path": flow.path,
                     "pluginID": self.id,
-                    "pluginName": self.info["name"],
+                    "pluginName": self.pluginMeta.name,
                     "savedID": flow.savedID,
                 }
                 flows.append(flowInfo)
@@ -2122,10 +2212,6 @@ class Plugin:
             except Exception:
                 self._configs.append(config)
 
-                # Assign to the configs in the block the ID
-                # for config in block._getConfigs():
-                #     config.id = f"{block.id}.config.{config.name}".replace(" ", "_").lower()
-
     def _updateConfigs(self, configPath: str):
         """
         Updates the values of the configs of the block.
@@ -2139,8 +2225,20 @@ class Plugin:
             self._createConfig(configPath)
 
         # Read the config file
-        with open(configPath, "r", encoding="utf-8") as configFile:
-            configs = json.load(configFile)
+        try:
+            with open(configPath, "r", encoding="utf-8") as configFile:
+                configs = json.load(configFile)
+        except json.JSONDecodeError:
+            backupConfigPath = configPath + ".bak"
+            shutil.move(configPath, backupConfigPath)
+            self._createConfig(configPath)
+            logging.getLogger("Horus").error(
+                "Error reading config file %s."
+                "The config file has been moved to %s and "
+                "a new config file has been created",
+                configPath,
+                backupConfigPath,
+            )
 
         # Update the values of the configs
         for config in self._configs:
@@ -2176,7 +2274,11 @@ class Plugin:
         """
         # Save the config file only if the block has configs
         if len(self._configs) > 0:
+
             # Read the existing config file
+            if not os.path.exists(configPath):
+                self._createConfig(configPath)
+
             with open(configPath, "r", encoding="utf-8") as configFile:
                 configs = json.load(configFile)
 

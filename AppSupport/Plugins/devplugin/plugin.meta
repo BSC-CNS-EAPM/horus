@@ -1,4 +1,5 @@
 {
+  "id": "devplugin",
   "name": "Dev plugin",
   "description": "Development plugin for testing purposes",
   "author": "Horus",

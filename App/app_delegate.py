@@ -18,6 +18,7 @@ import logging
 import datetime
 import io
 import argparse
+import platform
 
 # Import type annotations
 import typing
@@ -713,8 +714,6 @@ class AppDelegate(metaclass=HorusSingleton):
 
         def getOsName():
             # Obtain the OS version too
-            import platform
-
             if self.platform == "darwin":
                 return "macOS " + platform.mac_ver()[0]
             if self.platform == "win32":
@@ -969,6 +968,25 @@ class AppDelegate(metaclass=HorusSingleton):
 
         # Always return a string
         return str(result)
+
+    @staticmethod
+    def getPlatform() -> str:
+        """
+        Returns the platform of the app
+        """
+
+        # Get the platform
+        currentPlatform = platform.platform().lower()
+        if "macos" in currentPlatform:
+            currentArch = platform.machine()
+            currentPlatform = "macos_intel" if currentArch == "x86_64" else "macos_arm"
+        elif "linux" in currentPlatform:
+            currentPlatform = "linux"
+        else:
+            currentPlatform = "unknown"
+            logging.warning("Unknown platform: %s", currentPlatform)
+
+        return currentPlatform
 
     @staticmethod
     def tokenize(url: str):

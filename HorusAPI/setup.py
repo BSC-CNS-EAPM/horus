@@ -111,6 +111,7 @@ setuptools.setup(
     include_package_data=True,
     zip_safe=False,
     entry_points={"console_scripts": ["create-horus-plugin=HorusAPI.utils:initPlugin"]},
+    install_requires=["pydantic<2"],
 )
 
 # Restore the original src/__init__.py file

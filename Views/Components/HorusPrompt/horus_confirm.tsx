@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import "./horus_prompt.css";
 import { render, unmountComponentAtNode } from "react-dom";
 import AppButton from "../appbutton";
+import { HorusModal } from "../reusable";
 
 export const useConfirm = () => {
   const [showConfirm, setShowConfirm] = useState(false);
@@ -26,7 +27,7 @@ export const useConfirm = () => {
     if (!document.getElementById("confirm-root")) {
       const confirmRoot = document.createElement("div");
       confirmRoot.id = "confirm-root";
-      document.body.appendChild(confirmRoot);
+      document.body.insertBefore(confirmRoot, document.body.firstChild);
     }
   }, []);
 
@@ -92,11 +93,11 @@ const ConfirmComponent = ({
   }, [onSubmit, handleEvent]);
 
   return (
-    <div className="prompt-overlay backdrop-blur-sm">
-      <div className="prompt-container flex flex-col items-center">
-        <p className="plugin-variable-name">{message}</p>
+    <HorusModal show={true} onHide={() => onSubmit(false)}>
+      <div className="prompt-container">
+        <p className="plugin-variable-name text-xl">{message}</p>
         <form onSubmit={() => onSubmit(true)}>
-          <div className="flex flex-row gap-2">
+          <div className="flex flex-row gap-2 justify-center">
             <AppButton action={() => onSubmit(false)}>Cancel</AppButton>
             <AppButton type="submit">OK</AppButton>
           </div>
@@ -113,6 +114,6 @@ const ConfirmComponent = ({
           />
         </form>
       </div>
-    </div>
+    </HorusModal>
   );
 };

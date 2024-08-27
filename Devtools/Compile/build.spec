@@ -85,6 +85,11 @@ with open(horus_meta_path, "w", encoding="utf-8") as f:
             line = f'\t"version": "{version}",\n'
         f.write(line)
 
+# Copy the Horus logo to the plugin folder
+horus_logo = os.path.join(currentDir, "Resources", "horus.png")
+shutil.copy(horus_logo, "AppSupport/DefaultPlugins/Horus/logo.png")
+
+
 # Default settings
 default_settings = os.path.join(currentDir, "App", "default_settings.json")
 
