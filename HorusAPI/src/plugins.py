@@ -1942,10 +1942,21 @@ class Plugin:
         import inspect
 
         if __name__ != "__main__":
-            for frame in inspect.stack()[1:]:
-                if frame.filename[0] != "<":
-                    currentPath = os.path.abspath(frame.filename)
-                    break
+
+            # If we are on compiled HOrus, the path of the plugin is the same
+            # is the first element of the stack trace
+
+            # On uncompiled, the path is the second element of the stack trace
+            # as the first one will be the HorusAPI module
+            import sys
+
+            if hasattr(sys, "frozen"):
+                currentPath = os.path.abspath(inspect.stack()[0].filename)
+            else:
+                for frame in inspect.stack()[1:]:
+                    if frame.filename[0] != "<":
+                        currentPath = os.path.abspath(frame.filename)
+                        break
 
         if currentPath is None:
             raise ValueError(
