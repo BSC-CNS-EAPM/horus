@@ -15,7 +15,7 @@ type AppButtonProps = {
 
 // Create a component called AppButton
 function AppButton(props: AppButtonProps) {
-  const className = "app-button text-black" + props?.className;
+  const className = "app-button text-black " + props?.className;
 
   // First div necessary for padding
   return (

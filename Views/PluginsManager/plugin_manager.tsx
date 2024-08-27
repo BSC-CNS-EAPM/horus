@@ -32,6 +32,8 @@ import { LazyLog } from "@melloware/react-logviewer";
 import PluginsIcon from "../Components/Toolbar/Icons/Plugins";
 import OpenFlowIcon from "../Components/Toolbar/Icons/Open";
 import { PluginBrowserRoot } from "./repo_browser";
+import { HorusViewTabs, Tab, TabSelector } from "../Components/Tabs";
+import RemoteIcon from "../Components/Toolbar/Icons/Remote";
 
 type ConfigBlockType = Array<{
   remote: string;
@@ -204,8 +206,6 @@ function PluginConfigView(props: PluginConfigViewProps) {
     (c) => c.remote === selectedRemote
   );
 
-  const availRemotes = configBlocks.map((c) => c.remote);
-
   const getGroupedVariables = () => {
     // Group the variables by category
     const groupedVariables: Record<string, PluginVariable[]> = {};
@@ -240,65 +240,56 @@ function PluginConfigView(props: PluginConfigViewProps) {
     return groupedViews;
   };
 
-  return (
-    <div className="flex flex-col gap-2 justify-center items-center w-full">
-      <div
-        className="plugin-variable"
-        // Override some of the plugin-variable
-        style={{
-          display: "flex",
-          flexDirection: "row",
-          justifyContent: "space-between",
-          fontSize: "1rem",
-          width: "calc(100% - 1rem)",
-        }}
-      >
-        <div className="flex flex-row w-full justify-start gap-2 items-center">
-          <span className="plugin-variable-name">Remote:</span>
-          <select
-            className="w-full"
-            onChange={async (e) => {
-              if (hasChanges) {
-                await horusAlert(
-                  "You have unsaved changes for the current remote."
-                );
-                return;
-              }
-              setTempChanges([]);
-              setHasChanges(false);
-              setSelectedRemote(e.target.value);
-            }}
-            value={selectedRemote}
-          >
-            {availRemotes.map((a) => {
-              return (
-                <option key={a} value={a}>
-                  {a}
-                </option>
-              );
-            })}
-          </select>
-        </div>
-        {currentVariables && (
-          <AppButton
-            disabled={saving}
-            text={saving ? "Saving..." : "Save"}
-            action={handleSave}
-            className={`${hasChanges ? "bg-orange-300" : ""}`}
-          />
-        )}
-      </div>
-      <div className="flex flex-col gap-2 flex-wrap w-full">
-        {/* Map the config blocks and place a <PluginVariable/> component */}
-        {currentVariables ? (
-          <SidebarView key={selectedRemote} views={getGroupedVariables()} />
-        ) : (
-          <div className="w-full text-center text-red-600">
-            Error reading remote configuration
+  const availRemotes: {
+    [key: string]: Tab;
+  } = {};
+
+  configBlocks.map((c) => {
+    if (!availRemotes[c.remote]) {
+      availRemotes[c.remote] = {
+        title: c.remote,
+        view: (
+          <div className="flex flex-col gap-2 flex-wrap w-full">
+            {currentVariables && (
+              <div className="flex justify-end mr-2">
+                <AppButton
+                  disabled={saving}
+                  text={saving ? "Saving..." : "Save"}
+                  action={handleSave}
+                  className={`${hasChanges ? "bg-orange-300" : ""}`}
+                />
+              </div>
+            )}
+            {/* Map the config blocks and place a <PluginVariable/> component */}
+            {currentVariables ? (
+              <SidebarView key={selectedRemote} views={getGroupedVariables()} />
+            ) : (
+              <div className="w-full text-center text-red-600">
+                Error reading remote configuration
+              </div>
+            )}
           </div>
-        )}
-      </div>
-    </div>
+        ),
+        icon: <RemoteIcon />,
+      };
+    }
+  });
+
+  return (
+    <HorusViewTabs
+      tabs={availRemotes}
+      disabled={saving}
+      onTabChange={async (tab) => {
+        if (hasChanges) {
+          await horusAlert("You have unsaved changes for the current remote.");
+          return false;
+        }
+        setTempChanges([]);
+        setHasChanges(false);
+        setSelectedRemote(tab);
+        return true;
+      }}
+    />
   );
 }
 
@@ -904,48 +895,7 @@ function ManualOrStoreInstall({
     },
   };
 
-  const [currentTab, setCurrentTab] = useState<InstallationViewsType>(
-    Object.keys(tabs)[0] as InstallationViewsType
-  );
-
-  const activeTab =
-    "inline-block p-4 text-black bg-gray-100 rounded-t-lg active";
-  const inactiveTab =
-    "inline-block p-4 rounded-t-lg hover:text-gray-600 hover:bg-gray-50";
-
-  const isFirstTabSelected = currentTab === Object.keys(tabs)[0];
-
-  return (
-    <div className="overflow-hidden">
-      <ul className="flex flex-wrap text-sm font-medium text-center text-gray-500">
-        {(Object.keys(tabs) as InstallationViewsType[]).map((key) => (
-          <li className="me-2">
-            <button
-              aria-current={currentTab === key ? "page" : undefined}
-              className={currentTab === key ? activeTab : inactiveTab}
-              disabled={isInstalling}
-              key={key}
-              onClick={() => {
-                setCurrentTab(key);
-              }}
-            >
-              <div className="flex flex-row gap-2 items-center">
-                {tabs[key].icon}
-                {tabs[key].title}
-              </div>
-            </button>
-          </li>
-        ))}
-      </ul>
-      <div
-        className={`p-4 bg-gray-100 rounded-b-lg rounded-tr-lg ${
-          isFirstTabSelected ? "" : "rounded-tl-lg"
-        }`}
-      >
-        {tabs[currentTab].view}
-      </div>
-    </div>
-  );
+  return <HorusViewTabs tabs={tabs} disabled={isInstalling} />;
 }
 
 function ManualFileSelectionInstall({

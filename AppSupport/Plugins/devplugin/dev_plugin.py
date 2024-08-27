@@ -13,6 +13,7 @@ from HorusAPI import (
     PluginPage,
     CustomVariable,
     PluginConfig,
+    VariableList,
 )
 
 
@@ -558,3 +559,57 @@ add_smiles_block = PluginBlock(
 )
 
 plugin.addBlock(add_smiles_block)
+
+
+integer_input = PluginVariable(
+    id="integer_input",
+    name="Integer input",
+    description="Integer input",
+    type=VariableTypes.NUMBER,
+)
+
+string_input = PluginVariable(
+    id="string_input",
+    name="String input",
+    description="String input",
+    type=VariableTypes.STRING,
+)
+
+atom_input = PluginVariable(
+    id="atom_input",
+    name="Atom input",
+    description="Atom input",
+    type=VariableTypes.ATOM,
+)
+
+dropdown_input = PluginVariable(
+    id="dropdown_input",
+    name="Dropdown input",
+    description="Dropdown input",
+    type=VariableTypes.STRING_LIST,
+    allowedValues=["Value 1", "Value 2", "Value 3"],
+)
+
+boolean_input = PluginVariable(
+    id="boolean_input",
+    name="Boolean input",
+    description="Boolean input",
+    type=VariableTypes.BOOLEAN,
+)
+
+variable_list_multiple = VariableList(
+    id="variable_group_multiple",
+    name="Variable group multiple",
+    description="Variable group multiple",
+    prototypes=[integer_input, string_input, atom_input, dropdown_input, boolean_input],
+)
+
+input_block_variable_list = InputBlock(
+    id="input_block_variable_list",
+    name="Input block variable list",
+    description="Input block variable list",
+    variable=variable_list_multiple,
+    action=None,
+)
+
+plugin.addBlock(input_block_variable_list)

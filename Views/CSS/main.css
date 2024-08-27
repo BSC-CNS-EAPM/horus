@@ -38,7 +38,8 @@ select {
   background-size: 1.5em;
   transition: all 0.3s ease-in-out;
   border: 1px solid transparent !important;
-  padding-inline: 0.5rem;
+  padding-right: 1.5rem;
+  padding-left: 0.2rem;
 }
 
 select:hover {
@@ -51,7 +52,6 @@ select:hover {
       no-repeat 100% 50%,
     var(--vintage-code);
   background-size: 1.5em;
-  padding-inline: 0.5rem;
 }
 
 .splash-container {

@@ -42,6 +42,7 @@ import { ObjectVariableView, PythonVariableView } from "./editor_variables";
 // Smiles
 import { SmilesVariableView } from "./smiles_variables";
 import ErrorIcon from "../../Toolbar/Icons/Error";
+import TrashIcon from "../../Toolbar/Icons/Trash";
 
 type PluginVariableViewProps = {
   variable: PluginVariable;
@@ -218,17 +219,6 @@ function VariableListView(props: VariableViewProps) {
         >
           {variable.name}
         </div>
-
-        <PluginVariableView
-          variable={updatedVariable}
-          onChange={(value: any, id: string, groupID?: string) => {
-            internalOnChange(index, value, id, groupID);
-          }}
-          hideDescription={true}
-          applyStyle={false}
-          hideName={true}
-          customClass="h-full justify-start min-w-[150px] flex items-center"
-        />
       </div>
     );
   };
@@ -240,8 +230,40 @@ function VariableListView(props: VariableViewProps) {
     return null;
   }
 
+  const names = variable.variables!.reduce((acc: any, variable) => {
+    acc[variable.id] = variable.name;
+    return acc;
+  }, {});
+
+  const cols = variable.variables!.map((variable) => {
+    return (
+      <div
+        key={variable.id}
+        style={{
+          minWidth: "200px",
+          textAlign: "center",
+        }}
+        // className="break-all"
+      >
+        {names[variable.id]}
+      </div>
+    );
+  });
+
+  cols.push(
+    <div key="delete" className="w-[100px] text-center">
+      Delete
+    </div>
+  );
+
+  const colsNum = cols.length;
+
+  const gridColsStyle = {
+    gridTemplateColumns: `repeat(${colsNum}, auto)`,
+  };
+
   return (
-    <div className="flex flex-col w-full">
+    <div className="flex flex-col w-full break-all">
       <div className="flex flex-row gap-2 justify-center my-2 mb-2">
         <AppButton action={addRow}>Add row</AppButton>
         <AppButton
@@ -253,21 +275,33 @@ function VariableListView(props: VariableViewProps) {
         </AppButton>
       </div>
       {currentValue?.length > 0 && (
-        <div className="flex flex-col pb-2 gap-1 justify-between items-center overflow-x-scroll w-full">
+        <div
+          className={`zoom-out-animation grid gap-2 place-items-center overflow-x-auto`}
+          style={gridColsStyle}
+        >
+          {cols}
           {currentValue?.map((value: any, index: number) => (
-            <div className="w-full zoom-out-animation flex flex-row gap-2 h-full items-end">
-              <div className="flex flex-row gap-2 items-end px-2 h-full justify-between w-full flex-grow">
-                {variable.variables!.map((variable) => {
-                  return variableViewsUpdated(index, value, variable);
-                })}
-                <button
-                  className="flex justify-center items-center w-6"
-                  onClick={() => removeRow(index)}
-                >
-                  <CrossIcon stroke="red" className="p-0 m-0 w-6 h-6" />
-                </button>
-              </div>
-            </div>
+            <>
+              {variable.variables!.map((variable) => {
+                return (
+                  <PluginVariableView
+                    variable={variable}
+                    onChange={(value: any, id: string, groupID?: string) => {
+                      internalOnChange(index, value, id, groupID);
+                    }}
+                    hideDescription={true}
+                    applyStyle={false}
+                    hideName={true}
+                  />
+                );
+              })}
+              <button
+                className="flex justify-center items-center w-6"
+                onClick={() => removeRow(index)}
+              >
+                <TrashIcon stroke="none" color="red" />
+              </button>
+            </>
           ))}
         </div>
       )}
@@ -381,7 +415,12 @@ function VariableRenderer(props: {
 
       return (
         <select
-          style={{ border: "none", outline: "none", WebkitAppearance: "none" }}
+          // style={{
+          //   border: "none",
+          //   outline: "none",
+          //   WebkitAppearance: "none",
+          //   gap: "0.5rem",
+          // }}
           value={currentValue}
           onChange={(e) => handleVariableChangeInternal(e.target.value as any)}
         >
@@ -907,18 +946,7 @@ function ListView(props: VariableViewProps) {
                   width: "unset",
                 }}
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="red"
-                  className="w-5 h-5"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M8.75 1A2.75 2.75 0 006 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 10.23 1.482l.149-.022.841 10.518A2.75 2.75 0 007.596 19h4.807a2.75 2.75 0 002.742-2.53l.841-10.52.149.023a.75.75 0 00.23-1.482A41.03 41.03 0 0014 4.193V3.75A2.75 2.75 0 0011.25 1h-2.5zM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4zM8.58 7.72a.75.75 0 00-1.5.06l.3 7.5a.75.75 0 101.5-.06l-.3-7.5zm4.34.06a.75.75 0 10-1.5-.06l-.3 7.5a.75.75 0 101.5.06l.3-7.5z"
-                    clipRule="evenodd"
-                  />
-                </svg>
+                <TrashIcon stroke="none" color="red" />
               </button>
             </div>
           ))}
