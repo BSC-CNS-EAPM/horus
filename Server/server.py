@@ -2082,7 +2082,9 @@ class HorusServer:
                         except ValueError:
                             return flask.redirect("/")
 
-                    return flask.render_template(os.path.basename(htmlPath))
+                    return flask.send_from_directory(
+                        os.path.dirname(htmlPath), os.path.basename(htmlPath)
+                    )
 
                 # Create a route for the static files
                 @newBluePrint.route(url + "<path:filename>")
