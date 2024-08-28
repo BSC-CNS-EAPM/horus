@@ -1270,7 +1270,7 @@ class HorusServer:
                     relativePath = flowPath
                     flowPath = str(UserFileExplorer(flowPath, currentUser).getAbsolutePath())
 
-                placedID = data["placedID"]
+                placedID = data.get("placedID", None)
                 resetRemoteBlock = data.get("resetRemote", False)
                 resetFlow = data.get("resetFlow", True)
 
@@ -1331,6 +1331,7 @@ class HorusServer:
             data = request.get_json()
 
             flowPath = data.get("flowPath", None)
+            pause = data.get("pause", False)
 
             if flowPath is None:
                 return flask.jsonify({"ok": False, "msg": "No flowPath provided"})
@@ -1342,7 +1343,10 @@ class HorusServer:
                     relativePath = flowPath
                     flowPath = str(UserFileExplorer(flowPath, currentUser).getAbsolutePath())
 
-                stoppedFlow = self.flowManager.stopFlow(flowPath)
+                if pause:
+                    stoppedFlow = self.flowManager.pauseFlow(flowPath)
+                else:
+                    stoppedFlow = self.flowManager.stopFlow(flowPath)
 
                 # Update the flow in the database
                 if self.webAppManager is not None and self.webAppManager.db is not None:

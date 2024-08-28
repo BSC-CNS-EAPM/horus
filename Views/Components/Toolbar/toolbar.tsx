@@ -50,6 +50,7 @@ import "./toolbar.css";
 import { Flow, PluginPage } from "../FlowBuilder/flow.types";
 import { useConfirm } from "../HorusPrompt/horus_confirm";
 import { useAlert } from "../HorusPrompt/horus_alert";
+import PausedIcon from "./Icons/Paused";
 interface ToolBarItemProps {
   name: string;
   hidden?: boolean;
@@ -278,7 +279,7 @@ function SearchComponent(props: SearchProps) {
   );
 }
 
-const handleKeyDown = (event: KeyboardEvent) => {
+const handleKeyDown = (event: globalThis.KeyboardEvent) => {
   const isModifierKeyPressed = event.getModifierState(modifierKey);
   const isShiftKeyPressed = event.getModifierState(shiftKey);
 
@@ -579,6 +580,14 @@ export default function HorusToolbar() {
           name: "Reset flow",
           onClick: () => {
             const centerEvent = new CustomEvent("resetFlow");
+            window.dispatchEvent(centerEvent);
+          },
+        },
+        {
+          name: "Pause flow",
+          svgPath: <PausedIcon />,
+          onClick: () => {
+            const centerEvent = new CustomEvent("pauseFlow");
             window.dispatchEvent(centerEvent);
           },
         },

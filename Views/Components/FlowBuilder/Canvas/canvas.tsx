@@ -2,7 +2,7 @@
 import { useDroppable } from "@dnd-kit/core";
 
 // Types
-import { DroppableEntity, FlowStatus } from "../flow.types";
+import { DroppableEntity, Flow, FlowStatus } from "../flow.types";
 
 // Hooks
 import { FlowHooks, HandleMouseHooks } from "../flow.hooks";
@@ -109,112 +109,159 @@ function CanvasZoom({ flowHooks }: { flowHooks: FlowHooks }) {
 }
 
 function FlowTopBar(props: { flowHooks: FlowHooks }) {
-  const { flow } = props.flowHooks;
+  const {
+    flow,
+    saved,
+    handleFlowChange,
+    stopFlow,
+    executeFlow: resumeFlow,
+  } = props.flowHooks;
 
   const hasPendingActions = flow.pendingActions.length > 0;
   const hasPendingSmilesActions = flow.pendingSmilesActions.length > 0;
-
   const hasActions = hasPendingActions || hasPendingSmilesActions;
 
   return (
     <div className="flex flex-row top-bar-flow-reciver gap-2">
-      <input
-        style={{
-          // Set the border color to red if the flow is not saved
-          borderColor: props.flowHooks.saved
-            ? "var(--digital-grey-IV)"
-            : "orange",
-          minWidth: "200px",
-        }}
-        className="flow-name flow-title"
-        type="text"
-        id="flow-name"
-        placeholder={"Flow Name"}
-        onChange={(e) => {
-          props.flowHooks.handleFlowChange({
-            ...props.flowHooks.flow,
-            name: e.target.value,
-          });
-        }}
-        value={props.flowHooks.flow.name}
+      <FlowNameInput
+        flow={flow}
+        saved={saved}
+        handleFlowChange={handleFlowChange}
       />
-      {flow.startedTime && (
+      {flow.startedTime && <FlowElapsedDisplay flow={flow} saved={saved} />}
+      <FlowStatusControl
+        flow={flow}
+        saved={saved}
+        stopFlow={stopFlow}
+        resumeFlow={resumeFlow}
+      />
+      {hasActions && <FlowActionsIndicator />}
+    </div>
+  );
+}
+
+function FlowNameInput({
+  flow,
+  saved,
+  handleFlowChange,
+}: {
+  flow: Flow;
+  saved: boolean;
+  handleFlowChange: (newFlow: Flow) => void;
+}) {
+  return (
+    <input
+      style={{
+        borderColor: saved ? "var(--digital-grey-IV)" : "orange",
+        minWidth: "200px",
+      }}
+      className="flow-name flow-title"
+      type="text"
+      id="flow-name"
+      placeholder={"Flow Name"}
+      onChange={(e) => handleFlowChange({ ...flow, name: e.target.value })}
+      value={flow.name}
+    />
+  );
+}
+
+function FlowElapsedDisplay({ flow, saved }: { flow: Flow; saved: boolean }) {
+  return (
+    <div
+      className="flex flex-col gap-0 items-center text-center justify-center bg-white flow-name"
+      style={{
+        borderColor: saved ? "var(--digital-grey-IV)" : "orange",
+        minWidth: "100px",
+      }}
+    >
+      <FlowElapsed
+        startedTime={flow.startedTime}
+        finishedTime={flow.finishedTime}
+        elapsed={flow.elapsed}
+      />
+    </div>
+  );
+}
+
+function FlowStatusControl({
+  flow,
+  saved,
+  stopFlow,
+  resumeFlow,
+}: {
+  flow: Flow;
+  saved: boolean;
+  stopFlow: () => void;
+  resumeFlow: () => void;
+}) {
+  return (
+    <div
+      className={`flex flex-col gap-0 items-center text-center justify-center bg-white flow-name ${
+        flow.status === FlowStatus.RUNNING ||
+        flow.status === FlowStatus.QUEUED ||
+        flow.status === FlowStatus.PAUSED
+          ? "cursor-pointer"
+          : "cursor-default"
+      }`}
+      onClick={() => {
+        (flow.status === FlowStatus.RUNNING ||
+          flow.status === FlowStatus.QUEUED) &&
+          stopFlow();
+
+        flow.status === FlowStatus.PAUSED && resumeFlow();
+      }}
+      style={{
+        borderColor: saved ? "var(--digital-grey-IV)" : "orange",
+        minWidth: "200px",
+      }}
+    >
+      <FlowStatusIcons flow={flow} saved={saved} />
+    </div>
+  );
+}
+
+function FlowStatusIcons({ flow, saved }: { flow: Flow; saved: boolean }) {
+  return (
+    <div className="flex flex-row gap-1 items-center justify-center">
+      {(flow.status === FlowStatus.RUNNING ||
+        flow.status === FlowStatus.QUEUED) && (
+        <>
+          <StopIcon className="text-red-500 w-6 h-6" />
+          <div
+            className="h-6 mx-2"
+            style={{ border: "0.5px solid var(--digital-grey-IV)" }}
+          ></div>
+        </>
+      )}
+      {saved ? (
+        <FlowStatusView status={flow.status} />
+      ) : (
         <div
-          className="flex flex-col gap-0 items-center text-center justify-center bg-white flow-name"
+          onClick={saveEvent}
+          className="flex flex-row gap-2"
           style={{
-            borderColor: props.flowHooks.saved
-              ? "var(--digital-grey-IV)"
-              : "orange",
-            minWidth: "100px",
+            color: "orange",
+            cursor: "pointer",
           }}
         >
-          <FlowElapsed
-            startedTime={flow.startedTime}
-            finishedTime={flow.finishedTime}
-            elapsed={flow.elapsed}
-          />
+          <SaveIcon />
+          <div>Unsaved</div>
         </div>
       )}
-      <div
-        className={`flex flex-col gap-0 items-center text-center justify-center bg-white flow-name ${
-          props.flowHooks.flow.status === FlowStatus.RUNNING ||
-          props.flowHooks.flow.status === FlowStatus.QUEUED
-            ? "cursor-pointer"
-            : "cursor-default"
-        }`}
-        onClick={() => {
-          (props.flowHooks.flow.status === FlowStatus.RUNNING ||
-            props.flowHooks.flow.status === FlowStatus.QUEUED) &&
-            props.flowHooks.stopFlow();
-        }}
-        style={{
-          borderColor: props.flowHooks.saved
-            ? "var(--digital-grey-IV)"
-            : "orange",
-          minWidth: "200px",
-        }}
-      >
-        <div className="flex flex-row gap-1 items-center justify-center">
-          {(props.flowHooks.flow.status === FlowStatus.RUNNING ||
-            props.flowHooks.flow.status === FlowStatus.QUEUED) && (
-            <>
-              <StopIcon className="text-red-500 w-6 h-6" />
-              <div
-                className="h-6 mx-2"
-                style={{
-                  border: "0.5px solid var(--digital-grey-IV)",
-                }}
-              ></div>{" "}
-            </>
-          )}
-          {props.flowHooks.saved ? (
-            <FlowStatusView status={props.flowHooks.flow.status} />
-          ) : (
-            <div
-              onClick={saveEvent}
-              className="flex flex-row gap-2"
-              style={{
-                color: "orange",
-                cursor: "pointer",
-              }}
-            >
-              <SaveIcon />
-              <div>Unsaved</div>
-            </div>
-          )}
-        </div>
-        {hasActions && (
-          <div
-            className="text-xs text-green-500 text-center"
-            style={{
-              position: "absolute",
-              bottom: "-1.5rem",
-            }}
-          >
-            Applying actions
-          </div>
-        )}
-      </div>
+    </div>
+  );
+}
+
+function FlowActionsIndicator() {
+  return (
+    <div
+      className="text-xs text-green-500 text-center"
+      style={{
+        position: "absolute",
+        bottom: "-1.5rem",
+      }}
+    >
+      Applying actions
     </div>
   );
 }

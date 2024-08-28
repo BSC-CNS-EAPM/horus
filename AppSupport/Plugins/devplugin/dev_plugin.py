@@ -307,7 +307,7 @@ def testSlurmBlockAction(block: SlurmBlock):
 
     print("is local?", block.remote.isLocal)
 
-    timeToWait = int(block.inputs.get("timeToWait", 0))
+    timeToWait = int(block.inputs.get("timeToWait", 0) or 0)
 
     # Submit test job to the current remote
     script = f"""#!/bin/bash
@@ -322,6 +322,7 @@ echo "Hello world"
 
 # Wait
 sleep {timeToWait}
+
     
 """
 
@@ -329,7 +330,13 @@ sleep {timeToWait}
         f.write(script)
 
     # Upload the script to the remote
-    finalPath = block.remote.sendData("test.sh", block.remote.workDir)
+    import os
+
+    finalPath = os.path.join(block.remote.workDir, "test.sh")
+    try:
+        finalPath = block.remote.sendData("test.sh", block.remote.workDir)
+    except Exception as e:
+        print("Error uploading script: ", e)
 
     jobID = block.remote.submitJob(finalPath)
 
@@ -339,7 +346,7 @@ sleep {timeToWait}
 def finalTestSlurmBlockAction(block: SlurmBlock):
     print("Test slurm block final action")
 
-    block.setOutput("time_to_wait", block.inputs["timeToWait"])
+    print("Status of slurm job: ", block.status)
 
 
 slurmBlockTest = SlurmBlock(
@@ -366,7 +373,57 @@ slurmBlockTest = SlurmBlock(
     id="slurm_block_test",
 )
 
+
+def testSlurmBlockFailedAction(block: SlurmBlock):
+
+    print("This block will fail and then continue")
+
+    script = """#!/bin/bash
+#SBATCH --qos="short"
+#SBATCH --partition="short"
+#SBATCH --job-name="tunnel"
+#SBATCH --time=2:00:00     # walltime
+#SBATCH --ntasks=8  # number of cores
+#SBATCH --mem-per-cpu=1GB
+
+echo "Hello world"
+
+# Wait
+sleep 200
+
+# fail
+exit 1
+    
+"""
+
+    with open("test.sh", "w") as f:
+        f.write(script)
+
+    # Upload the script to the remote
+    import os
+
+    finalPath = os.path.join(block.remote.workDir, "test.sh")
+    try:
+        finalPath = block.remote.sendData("test.sh", block.remote.workDir)
+    except Exception as e:
+        print("Error uploading script: ", e)
+
+    jobID = block.remote.submitJob(finalPath)
+
+    print("Job ID: ", jobID)
+
+
+slurmBlockFailes = SlurmBlock(
+    name="Slurm block test fail",
+    description="Slurm block test fail and continue",
+    initialAction=testSlurmBlockFailedAction,
+    finalAction=finalTestSlurmBlockAction,
+    id="slurm_block_test_fail",
+    failOnSlurmError=False,
+)
+
 plugin.addBlock(slurmBlockTest)
+plugin.addBlock(slurmBlockFailes)
 
 extension_input_variable = PluginVariable(
     id="extensions_input", name="Input", description="Input", type=VariableTypes.STRING

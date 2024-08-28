@@ -1626,7 +1626,7 @@ class SlurmBlock(PluginBlock):
     one before the job is submitted and one after the job is completed.
     """
 
-    _jobID: typing.Optional[list[int]] = None
+    jobID: typing.Optional[list[int]] = None
     """
     The Job ID of the job.
     """
@@ -1659,21 +1659,34 @@ class SlurmBlock(PluginBlock):
         def __str__(self):
             return str(self.value)
 
-    _status: Status = Status.IDLE
+    status: Status = Status.IDLE
     """
     The status of the block.
     """
-    _stdOut: typing.Optional[str] = None
+    stdOut: typing.Optional[str] = None
     """
     The standard output a slurm job.
     """
-    _stdErr: typing.Optional[str] = None
+    stdErr: typing.Optional[str] = None
     """
     The standard error a slurm job.
     """
-    _detailedStatus: typing.Optional[str] = None
+    detailedStatus: typing.Optional[str] = None
     """
     Status and aditional information of a slurm job.
+    """
+
+    failOnSlurmError: bool = True
+    """
+    Whether to raise an exception if the slurm job fails.
+
+    If set to False, the status of the block will be set to FAILED but the
+    block will continue to execute its final action. Defaults to True.
+    """
+
+    _executeSecondAction: bool = False
+    """
+    Flag to indicate whether to execute the second action after the job is completed.
     """
 
     def __init__(  # pylint: disable=dangerous-default-value
@@ -1687,6 +1700,7 @@ class SlurmBlock(PluginBlock):
         inputGroups: typing.List[VariableGroup] = [],
         outputs: typing.List[PluginVariable] = [],
         id: typing.Optional[str] = None,
+        failOnSlurmError: bool = True,
     ):
         """
         :param name: The name of the block.
@@ -1697,6 +1711,8 @@ class SlurmBlock(PluginBlock):
         :param inputs: The inputs of the block.
         :param inputGroups: The input groups of the block.
         :param outputs: The outputs of the block.
+        :param id: The id of the block.
+        :param failOnSlurmError: Whether to fail the block if the slurm job fails.
         """
         super().__init__(
             name,
@@ -1711,14 +1727,18 @@ class SlurmBlock(PluginBlock):
         )
         self.initalAction = initialAction
         self.finalAction = finalAction
+        self.failOnSlurmError = failOnSlurmError
 
     # Override the __call__ method to accomodate the two actions
     def __call__(self, *args, **kwargs):
         # If the block has not submitted the job, run the first action
         # If the job has been submitted, and has ended, run the second action
-        if self._status == self.Status.COMPLETED:
+        if self._executeSecondAction:
             self.action = self.finalAction
             outputs = super().__call__(*args, **kwargs)
+
+            # Reset the _executeSecondAction flag
+            self._executeSecondAction = False
         else:
             self.action = self.initalAction
             outputs = super().__call__(*args, **kwargs)
@@ -1738,22 +1758,22 @@ class SlurmBlock(PluginBlock):
             # Get the current status of the job submited by the block
             # and parse the status to the block
             status = self.remote._remote.getRemoteBlockStatus(self.flow.savedID, self._placedID)
-            self._status = self.Status(status)
+            self.status = self.Status(status)
 
             # Set also the jobIDs of this block
-            self._jobID = self.remote._remote.getJobIDfromBlock(self.flow.savedID, self._placedID)
+            self.jobID = self.remote._remote.getJobIDfromBlock(self.flow.savedID, self._placedID)
 
             # Get Slurm status and logging info
-            self._stdOut, self._stdErr, self._detailedStatus = (
+            self.stdOut, self.stdErr, self.detailedStatus = (
                 self.remote._remote.getRemoteBlockLogs(self.flow.savedID, self._placedID)
             )
             self.time += self.remote._remote.getRemoteBlockTime(self.flow.savedID, self._placedID)
         except AttributeError as attre:
             logging.getLogger("Horus").error("Could not parse SlurmBlock status: %s", str(attre))
-            self._status = self.Status.IDLE
+            self.status = self.Status.IDLE
 
         # Set the parsed status with only the first letter as capital
-        return self._status.value.capitalize()
+        return self.status.value.capitalize()
 
     @property
     def isWaitingForJob(self):
@@ -1761,7 +1781,7 @@ class SlurmBlock(PluginBlock):
         Whether the block is waiting for the job to finish or not.
         """
 
-        if self._status == self.Status.COMPLETED or self._status == self.Status.IDLE:
+        if self.status == self.Status.COMPLETED or self.status == self.Status.IDLE:
             return False
 
         try:
@@ -1772,7 +1792,7 @@ class SlurmBlock(PluginBlock):
             self.parseStatus()
 
             # If the job is RUNNING or PENNDING, return False
-            if self._status == self.Status.RUNNING or self._status == self.Status.PENDING:
+            if self.status == self.Status.RUNNING or self.status == self.Status.PENDING:
                 return True
             else:
                 return False
@@ -1811,11 +1831,12 @@ class SlurmBlock(PluginBlock):
     # Re-define the minimal method to include the status and jobID
     def _minimalEncode(self):
         minimalBlock = super()._minimalEncode()
-        minimalBlock["status"] = str(self._status)
-        minimalBlock["jobID"] = self._jobID
-        minimalBlock["stdOut"] = self._stdOut
-        minimalBlock["stdErr"] = self._stdErr
-        minimalBlock["detailedStatus"] = self._detailedStatus
+        minimalBlock["status"] = str(self.status)
+        minimalBlock["jobID"] = self.jobID
+        minimalBlock["stdOut"] = self.stdOut
+        minimalBlock["stdErr"] = self.stdErr
+        minimalBlock["detailedStatus"] = self.detailedStatus
+        minimalBlock["executeSecondAction"] = self._executeSecondAction
         return minimalBlock
 
     # Re-define the parseInternalVariables method to include the status and jobID
@@ -1827,21 +1848,24 @@ class SlurmBlock(PluginBlock):
         stdErr = blockJSON.get("stdErr", None)
         detailedStatus = blockJSON.get("detailedStatus", None)
         jobID = blockJSON.get("jobID", None)
+        executeSecondAction = blockJSON.get("executeSecondAction", False)
 
-        self._status = self.Status(status)
-        self._jobID = jobID
-        self._stdOut = stdOut
-        self._stdErr = stdErr
-        self._detailedStatus = detailedStatus
+        self.status = self.Status(status)
+        self.jobID = jobID
+        self.stdOut = stdOut
+        self.stdErr = stdErr
+        self.detailedStatus = detailedStatus
+        self._executeSecondAction = executeSecondAction
 
     # Override the clean run to reset the status
     def _cleanRun(self, cleanCycles: bool = True):
         super()._cleanRun(cleanCycles)
-        self._stdOut = None
-        self._stdErr = None
-        self._detailedStatus = None
-        self._status = self.Status.IDLE
-        self._jobID = None
+        self.stdOut = None
+        self.stdErr = None
+        self.detailedStatus = None
+        self.status = self.Status.IDLE
+        self.jobID = None
+        self._executeSecondAction = False
 
 
 # Platform typing
@@ -2066,6 +2090,10 @@ class Plugin:
             try:
                 # If the block does not exist, an exception will be raised
                 self.getBlock(block.id)
+
+                logging.getLogger("Horus").warning(
+                    "Block with ID '%s' already exists. Skipping.", block.id
+                )
             except Exception:
                 # Add the block to the list of blocks if it is not found
                 self._blocks.append(block)

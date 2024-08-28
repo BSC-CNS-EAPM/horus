@@ -817,11 +817,21 @@ class Flow:
                 # Raise again a special "ErrorRunningBlock" exception
                 raise ErrorRunningBlock(blockToRun, str(exc)) from exc
 
-            if blockToRun._status != SlurmBlock.Status.COMPLETED:
-                self.currentExecuting = None
-                raise ErrorRunningBlock(
-                    blockToRun, f"Slurm job failed. Status: {blockToRun._status.value}"
-                )
+            if blockToRun.status != SlurmBlock.Status.COMPLETED:
+                if blockToRun.failOnSlurmError:
+                    self.currentExecuting = None
+                    raise ErrorRunningBlock(
+                        blockToRun, f"Slurm job failed. Status: {blockToRun.status.value}"
+                    )
+                else:
+                    logging.getLogger("Horus").warning(
+                        "Slurm job for block '%s' failed. But the flow will continue. Status: %s",
+                        blockToRun.id,
+                        blockToRun.status.value,
+                    )
+
+            # Set the block to execute the second action
+            blockToRun._executeSecondAction = True
 
             # Once the block has been executed, call again the execution
             # of this block to execute the finalAction
@@ -1595,19 +1605,17 @@ class FlowManager:
         if addToRecents:
             self._addToRecentFlows(flow)
 
-        # If the flow was paused, resume it
-        if flow.status == flow.FlowStatus.PAUSED:
-            logging.getLogger("Horus").info("Resuming flow %s", flow.name)
-
-            self.runFlow(flow, socket=socket)
-
         # If the flow is marked as running but its not present
         # in the running flows list, set the status to FAILED
         if flow.status == flow.FlowStatus.RUNNING and flow.path not in self._flowProcesses:
-            flow.stop(message="The flow failed due an internal error.", fail=True)
-
-            # Save the flow
-            flow.write()
+            logging.getLogger("Horus").warning(
+                "The flow '%s' was running but it was not found in the running flows "
+                "for this Horus instance, setting status to PAUSED. "
+                "If you have another Horus instance running, "
+                "please open the flow from there.",
+                flow.path,
+            )
+            flow = self.pauseFlow(flow.path)
 
         # Return the flow
         return flow
@@ -1761,8 +1769,8 @@ class FlowManager:
             read = False
             while not read:
                 try:
-                    # Read the latest status of the flow
-                    flow = Flow.read(flowPath)
+                    # Read the latest status of the flow and pause it
+                    flow = self.pauseFlow(flowPath)
                     read = True
                 except Exception:
                     pass
@@ -1772,18 +1780,6 @@ class FlowManager:
                     "Flow %s could not be loaded. Not able to pause flow.", flowPath
                 )
                 continue
-
-            # Kill the flow
-            self._killFlow(flow)
-
-            # Set the flow status to paused
-            flow.status = Flow.FlowStatus.PAUSED
-            flow._computeFinalTime()
-
-            print(f"Pausing flow {flowPath}")
-
-            # Save the flow
-            flow.write()
 
     def stopFlow(self, flowPath: str) -> Flow:
         """
@@ -1812,6 +1808,30 @@ class FlowManager:
         updatedFlowToStop.write()
 
         return updatedFlowToStop
+
+    def pauseFlow(self, flowPath: str):
+        """
+        Pauses the flow execution of the given flow.
+
+        :param flowPath: The path of the flow to pause
+        """
+
+        logging.getLogger("Horus").info("Pausing flow %s", flowPath)
+
+        # Read the latest status of the flow
+        updatedFlowToPause = Flow.read(flowPath)
+
+        # Kill the flow process
+        self._killFlow(updatedFlowToPause)
+
+        # Set the flow status to paused
+        updatedFlowToPause.status = Flow.FlowStatus.PAUSED
+        updatedFlowToPause._computeFinalTime()
+
+        # Save the flow
+        updatedFlowToPause.write()
+
+        return updatedFlowToPause
 
     def _killFlow(self, flow: Flow):
         """

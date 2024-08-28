@@ -206,7 +206,8 @@ export function useFlowBuilder() {
     return (
       flow.status === FlowStatus.RUNNING ||
       flow.status === FlowStatus.CANCELLING ||
-      flow.status === FlowStatus.QUEUED
+      flow.status === FlowStatus.QUEUED ||
+      flow.status === FlowStatus.PAUSED
     );
   }, [flow]);
 
@@ -300,6 +301,8 @@ export function useFlowBuilder() {
     } catch (e) {
       await horusAlert("Error updating mol* state: " + e);
     }
+    // Disable horusAlert and horusConfirm hook warning
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flow.path]);
 
   const internalLoadFlow = useCallback(
@@ -476,6 +479,8 @@ export function useFlowBuilder() {
         isLoadingFlow.current = false;
       }
     },
+    // Disable horusAlert and horusConfirm hook warning
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [saved, resetHistory, setSaved, internalLoadFlow]
   );
 
@@ -709,6 +714,8 @@ export function useFlowBuilder() {
         setFlowLoading(false);
       }
     },
+    // Disable horusAlert hook warning
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [serializeFlow, handleFlowChange, saved]
   );
 
@@ -1409,6 +1416,8 @@ export function useFlowBuilder() {
     window.horusTerm.storedMessages = [];
 
     setFlowLoading(false);
+    // Disable horusConfirm hook warning
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flow.savedID, saved, resetHistory]);
 
   /**
@@ -1506,6 +1515,8 @@ export function useFlowBuilder() {
         return await handleSave(flowToSave);
       }
     },
+    // Disable horusAlert hook warning
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [handleSave, serverPickerFolder, flow.path]
   );
 
@@ -1671,7 +1682,7 @@ export function useFlowBuilder() {
 
   const latestPath = useRef<string | null>(null);
 
-  async function executeFlow(placedID: number, resetFlow: boolean = false) {
+  async function executeFlow(placedID?: number, resetFlow: boolean = false) {
     if (isExecutingInProcess.current) {
       return;
     }
@@ -1731,25 +1742,20 @@ export function useFlowBuilder() {
     }
   }
 
-  async function stopFlow() {
-    if (
-      !(await horusConfirm("Are you sure you want to stop executing the flow?"))
-    ) {
-      return;
-    }
-
+  async function pauseOrStopFlow(pause: boolean = false) {
     // Make sure we have joined the flow room
     socket.emit("joinFlow", flow.savedID);
 
     const stoppedFlow = {
       ...flow,
-      status: FlowStatus.CANCELLING,
+      status: pause ? FlowStatus.PAUSED : FlowStatus.CANCELLING,
     };
 
     setFlow(stoppedFlow);
 
     const body = JSON.stringify({
       flowPath: flow.path,
+      pause: pause,
     });
 
     const response = await horusPost("/api/plugins/stopflow", null, body);
@@ -1760,6 +1766,37 @@ export function useFlowBuilder() {
       await horusAlert(data.msg);
     }
   }
+
+  async function stopFlow() {
+    if (
+      !(await horusConfirm("Are you sure you want to stop executing the flow?"))
+    ) {
+      return;
+    }
+
+    await pauseOrStopFlow();
+  }
+
+  const pauseFlow = useCallback(async () => {
+    // If the flow is not running, display an alert
+    if (flow.status !== FlowStatus.RUNNING) {
+      await horusAlert("The flow is not running");
+      return;
+    }
+
+    if (
+      !(await horusConfirm(
+        "Are you sure you want to pause the flow? You can resume it later."
+      ))
+    ) {
+      return;
+    }
+
+    await pauseOrStopFlow(true);
+
+    // Disable horusAlert and horusConfirm hook warning
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pauseOrStopFlow]);
 
   function setBlockRemote(placedID: number, selectedRemote: string) {
     const blockToUpdate = findBlocks([placedID]);
@@ -1817,6 +1854,9 @@ export function useFlowBuilder() {
       // @ts-ignore
       horusAlert(error);
     }
+
+    // Disable horusAlert and horusConfirm hook warning
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flow.path, preHandleSave]);
 
   // Remove the event listeners
@@ -1831,6 +1871,7 @@ export function useFlowBuilder() {
     window.removeEventListener("saveTemplate", handleSaveTemplate);
     window.removeEventListener("centerView", centerView);
     window.removeEventListener("resetFlow", resetFlow);
+    window.removeEventListener("pauseFlow", pauseFlow);
 
     window.removeEventListener("undo", handleUndo);
     window.removeEventListener("redo", handleRedo);
@@ -1843,6 +1884,7 @@ export function useFlowBuilder() {
     handleSaveTemplate,
     centerView,
     resetFlow,
+    pauseFlow,
     handleUndo,
     handleRedo,
   ]);
@@ -1875,6 +1917,9 @@ export function useFlowBuilder() {
     // Add an event listener for the reset flow button
     window.addEventListener("resetFlow", resetFlow);
 
+    // Add an event listener for the pause flow button
+    window.addEventListener("pauseFlow", pauseFlow);
+
     // Event for the fileExplorer
     window.addEventListener("toggleFileExplorer", toggleFileExplorer);
   }, [
@@ -1886,6 +1931,7 @@ export function useFlowBuilder() {
     handleSaveAs,
     handleSaveTemplate,
     centerView,
+    pauseFlow,
     resetFlow,
   ]);
 
@@ -1918,6 +1964,8 @@ export function useFlowBuilder() {
   // Fetch the remotes only one time after the component is mounted
   useEffect(() => {
     fetchRemotes();
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return {
@@ -1930,6 +1978,7 @@ export function useFlowBuilder() {
       flowLoading,
       isFlowActive,
       scale,
+      executeFlow,
       loadFlow,
       handleSave,
       handleFlowChange,

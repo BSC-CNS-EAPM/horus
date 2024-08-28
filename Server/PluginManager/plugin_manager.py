@@ -1319,7 +1319,7 @@ class PluginManager(metaclass=HorusSingleton):
         if isinstance(block, SlurmBlock):
             # If we are unpausing a flow that sent a slurm calculation,
             # we need to skip the first execution of the block
-            if block._status != block.Status.IDLE and isFirstSlurm:
+            if block.status != block.Status.IDLE and isFirstSlurm:
                 return
 
         # Execute the block
