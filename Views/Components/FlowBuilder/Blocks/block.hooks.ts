@@ -12,6 +12,7 @@ export type BlockViewProps = {
   blockHooks?: BlockHooks;
   onAir?: boolean;
   scale?: number;
+  isPaused?: boolean;
 };
 
 export function useBlockView({
@@ -158,7 +159,6 @@ export function useBlockView({
   }
 
   const showPlacedID = window.horusSettings["showPlacedID"];
-  const allowRemotesOnNonSlurm = window.horusSettings["allowRemotesOnNonSlurm"];
 
   useEffect(() => {
     setDropRef(ref.current);
@@ -190,7 +190,6 @@ export function useBlockView({
     },
     settings: {
       showPlacedID: showPlacedID,
-      allowRemotesOnNonSlurm: allowRemotesOnNonSlurm,
     },
   };
 }

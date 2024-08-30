@@ -2,7 +2,7 @@
 // import rotatinglines from "./rotating.gif";
 
 // Pulsating circle
-import { CSSProperties, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import "./rotating.css";
 
 export default function RotatingLines(

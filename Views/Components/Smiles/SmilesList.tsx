@@ -3,8 +3,9 @@ import { AgGridReact } from "ag-grid-react";
 import { useEffect, useMemo, useRef } from "react";
 import { HorusTable } from "../TablePlot/horustable";
 import { SmilesView } from "./SmilesComponent";
-import { NoPreviewSmilesView } from "./SmilesGrid";
+import { CannotEdit3D, NoPreviewSmilesView } from "./SmilesGrid";
 import { HorusSmilesType } from "./SmilesWrapper/horusSmiles";
+import { useAlert } from "../HorusPrompt/horus_alert";
 
 export function SmilesList(props: {
   availableSmiles: HorusSmilesType[];
@@ -145,9 +146,18 @@ export function SmilesList(props: {
     return columns;
   }, [availableSmiles, onClickEdit]);
 
+  const horusAlert = useAlert();
+
+  const handleRowEditingStarted = (event: any) => {
+    // If the molecule comes from 3D structure, do not allow editing
+    if (event.data.structureRef) {
+      horusAlert(CannotEdit3D);
+      event.api.stopEditing();
+    }
+  };
+
   const editCell = (event: any) => {
     // If the modified value is from the property, we need to update the smiles accordingly
-
     if (event.colDef.isProperty) {
       const newValue = event.newValue;
       const field = event.colDef.field;
@@ -222,6 +232,7 @@ export function SmilesList(props: {
             alignItems: "center ",
           },
         },
+        onCellEditingStarted: handleRowEditingStarted,
       }}
       onCellEdit={editCell}
     ></HorusTable>

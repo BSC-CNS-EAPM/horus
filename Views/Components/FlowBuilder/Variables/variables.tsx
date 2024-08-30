@@ -246,6 +246,7 @@ function VariableListView(props: VariableViewProps) {
         // className="break-all"
       >
         {names[variable.id]}
+        <hr></hr>
       </div>
     );
   });
@@ -253,6 +254,7 @@ function VariableListView(props: VariableViewProps) {
   cols.push(
     <div key="delete" className="w-[100px] text-center">
       Delete
+      <hr></hr>
     </div>
   );
 
@@ -276,15 +278,16 @@ function VariableListView(props: VariableViewProps) {
       </div>
       {currentValue?.length > 0 && (
         <div
-          className={`zoom-out-animation grid gap-2 place-items-center overflow-x-auto`}
-          style={gridColsStyle}
+          className={`zoom-out-animation grid gap-2 place-items-center overflow-x-auto bg-white rounded-md p-2 border`}
+          style={{ ...gridColsStyle }}
         >
           {cols}
           {currentValue?.map((value: any, index: number) => (
             <>
-              {variable.variables!.map((variable) => {
+              {variable.variables!.map((variable, i) => {
                 return (
                   <PluginVariableView
+                    key={i}
                     variable={variable}
                     onChange={(value: any, id: string, groupID?: string) => {
                       internalOnChange(index, value, id, groupID);
@@ -296,6 +299,7 @@ function VariableListView(props: VariableViewProps) {
                 );
               })}
               <button
+                key={index}
                 className="flex justify-center items-center w-6"
                 onClick={() => removeRow(index)}
               >

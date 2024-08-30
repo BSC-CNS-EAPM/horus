@@ -204,7 +204,9 @@ def test_horus_settings_load_settings(horus_settings):
     Test the _loadSettings method of a HorusSettings instance
     """
 
-    # Create a user settings file
+    # Create a fake user settings
+    # this setting does not exists on the default settings
+    # therefore it should be automatically deleted
     with open(horus_settings.userSettingsPath, "w") as f:
         json.dump(
             {
@@ -220,14 +222,16 @@ def test_horus_settings_load_settings(horus_settings):
             f,
         )
 
-    # Call the _loadSettings method
+    # Call the _loadSettings method in order to reload the settings
+    # and remove the invalid setting
     horus_settings._loadSettings()
 
     # Check that the settings were loaded correctly
-    assert horus_settings.settings["id"].name == "name"
-    assert horus_settings.settings["id"].value == "value"
-    assert horus_settings.settings["id"].description == "description"
-    assert horus_settings.settings["id"].category == "category"
+    assert horus_settings.settings.get("id") is None
+
+    # Check that the default settings are present, for example
+    # the dependencies interpreter
+    assert horus_settings.settings.get("dependenciesInterpreter") is not None
 
 
 def test_horus_settings_get_setting(horus_settings):

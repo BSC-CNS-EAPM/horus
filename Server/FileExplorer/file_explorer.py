@@ -419,7 +419,11 @@ class UserFileExplorer(FileExplorer):
             if f.path == self.relativeTo:
                 f.path = pathlib.Path("./")
             elif f.path == self.userPathBoundary:
-                f.path = pathlib.Path("../")
+                # The flow users directory is now 2 levels up
+                # because the working directory of the flow was
+                # changed to be a new generated folder
+                # with the same name as the flow file
+                f.path = pathlib.Path("../../")
             elif self.userPathBoundary in f.path.resolve().parents:
                 if self.obfuscate:
                     f.path = self._getRelativePathOf(f.path)

@@ -146,12 +146,12 @@ function useSettings(forAdmin?: boolean) {
     let response;
     if (forAdmin) {
       response = await horusPost(
-        "/users/admintools/saveSettings",
+        "/users/admintools/savesettings",
         header,
         body
       );
     } else {
-      response = await horusPost("/api/saveSettings", header, body);
+      response = await horusPost("/api/savesettings", header, body);
     }
 
     const data = await response.json();

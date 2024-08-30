@@ -233,3 +233,101 @@ export {
 export function getRandomFromRange(max: number, min: number) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
+
+// Helper function to fetch and track download progress
+export async function fetchWithProgress(
+  url: string,
+  options: RequestInit,
+  onProgress: (percentage: number) => void
+): Promise<Response> {
+  const response = await fetch(url, options);
+
+  if (!response.body) {
+    throw new Error("ReadableStream not supported in this browser.");
+  }
+
+  const contentLength = response.headers.get("Content-Length");
+  if (!contentLength) {
+    throw new Error("Content-Length header is missing.");
+  }
+
+  const totalBytes = parseInt(contentLength, 10);
+  let loadedBytes = 0;
+
+  const reader = response.body.getReader();
+  const stream = new ReadableStream({
+    start(controller) {
+      function read() {
+        reader
+          .read()
+          .then(({ done, value }) => {
+            if (done) {
+              controller.close();
+              return;
+            }
+
+            loadedBytes += value.length;
+            const percentage = (loadedBytes / totalBytes) * 100;
+            onProgress(percentage);
+
+            controller.enqueue(value);
+            read();
+          })
+          .catch((error) => {
+            console.error(error);
+            controller.error(error);
+          });
+      }
+
+      read();
+    },
+  });
+
+  // Create a new response with the modified stream
+  return new Response(stream, {
+    headers: response.headers,
+  });
+}
+
+// Helper function to post data with upload progress
+export function POSTUploadWithProgress(
+  url: string,
+  formData: FormData,
+  onProgress: (percentage: number) => void
+) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+
+    // Set the response type
+    xhr.responseType = "json";
+
+    // Set headers
+    xhr.setRequestHeader("Accept", "application/json");
+
+    // Track upload progress
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        const percentage = (event.loaded / event.total) * 100;
+        onProgress(percentage);
+      }
+    };
+
+    // Handle load
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(xhr.response);
+      } else {
+        reject(new Error("Failed to upload. Status: " + xhr.status));
+      }
+    };
+
+    // Handle errors
+    xhr.onerror = () =>
+      reject(new Error("Upload failed due to a network error."));
+    xhr.onabort = () => reject(new Error("Upload was aborted."));
+
+    // Send the request
+    xhr.send(formData);
+  });
+}

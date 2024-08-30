@@ -7,9 +7,9 @@ import os
 import sys
 import json
 import typing
-import uuid
 import datetime
 import logging
+import hashlib
 
 # Multiprocess module, a fork of multiprocessing with enhancements
 # Cast the multiprocess module as the multiprocessing module
@@ -142,15 +142,33 @@ class Flow:
     The blocks of the flow
     """
 
-    savedID: str
+    savedID: typing.Optional[str]
     """
     The savedID of the flow
     """
 
-    path: str
+    _path: typing.Optional[str]
     """
     The path to the flow
     """
+
+    @property
+    def path(self) -> typing.Optional[str]:
+        """
+        The path to the flow
+        """
+        return self._path
+
+    @path.setter
+    def path(self, value: typing.Optional[str]):
+        """
+        Setter for the path
+        """
+        self._path = value
+
+        # Update the savedID accordingly
+        # with the path hash
+        self._generateID()
 
     remote: str
     """
@@ -300,7 +318,6 @@ class Flow:
 
         # Set the flow properties
         self.name = flow.get("name", "Unnamed flow")
-        self.savedID = flow.get("savedID", None)
         self.path = flow.get("path", None)
         self.remote = flow.get("remote", None)
         self.currentExecuting = flow.get("currentExecuting", None)
@@ -505,6 +522,12 @@ class Flow:
         :returns: The encoded flow
         """
 
+        if not self.path:
+            raise Exception(f"The flow '{self.name}' has no path")
+
+        # Set the flow size
+        self.size = self._computeSize()
+
         # If the flow does not have a name, set to "Unnamed flow"
         if self.name is None or self.name == "":
             self.name = "Unnamed flow"
@@ -574,6 +597,9 @@ class Flow:
         Gets the molstar state molx file from the flow zip
         """
 
+        if not self.path:
+            return None
+
         try:
             with zipfile.ZipFile(self.path, "r") as zipFile:
                 with zipFile.open(self.MOLSTAR_STATE_FILE) as file:
@@ -586,12 +612,27 @@ class Flow:
         Gets the smiles state json file from the flow zip
         """
 
+        if not self.path:
+            return None
+
         try:
             with zipfile.ZipFile(self.path, "r") as zipFile:
                 with zipFile.open(self.SMILES_STATE_FILE) as file:
                     return json.load(file)
         except Exception:
             return None
+
+    @staticmethod
+    def flowWorkDir(flowPath: str) -> str:
+        """
+        Returns the working directory for the flow
+        by using the flow path name. Does not create the directory
+        """
+
+        flowDir = os.path.dirname(flowPath)
+        flowFileName = os.path.splitext(os.path.basename(flowPath))[0]
+
+        return os.path.join(flowDir, flowFileName)
 
     @property
     def isActive(self):
@@ -645,10 +686,26 @@ class Flow:
     _pluginManager: typing.Optional[PluginManager] = None
 
     def _runPreviousBlocks(
-        self, placedID: int, resetRemoteBlock: bool = False, comesFromCyclic: bool = False
+        self,
+        placedID: int,
+        resetRemoteBlock: bool = False,
+        comesFromCyclic: bool = False,
+        flowResumed: bool = False,
     ):
         """
         Executes iteratively the blocks of the flow
+
+        Parameters
+        ----------
+        placedID: int
+            The ID of the block to start from
+        resetRemoteBlock: bool
+            Whether to reset the remote block
+        flowResumed: bool
+            Whether the flow was resumed from a paused state. For this case
+            the parameter its only used in the first call to _runPreviousBlocks
+        comesFromCyclic: bool
+            Whether the call comes from a cyclic block
         """
 
         # Check for the plugin manager instance.
@@ -675,6 +732,19 @@ class Flow:
             blockToRun._finishedExecution and not resetRemoteBlock and not blockToRun._runError
         ):  # and not comesFromCyclic
             return blockToRun._storedOutputs
+        else:
+            # Clean the block run only if its not a Slurm block which is currently running
+            # nad needs to execute its second action.
+            if (
+                isinstance(blockToRun, SlurmBlock)
+                and flowResumed
+                and blockToRun.jobID is not None
+            ):
+                logging.getLogger("Horus").info(
+                    "Resuming Slurm block with JOB ID '%s'", blockToRun.jobID
+                )
+            else:
+                blockToRun._cleanRun(cleanCycles=not comesFromCyclic)
 
         # Execute the regular inputs before the cyclic ones
         # This is to avoid cyclic connections to be executed before the regular ones
@@ -711,15 +781,6 @@ class Flow:
                         blockToRun, "Exceded the maximum number of cycles for this connection."
                     )
 
-                # blockToRun._runError = True
-                # blockToRun._runErrorMessage = "Cyclic connection detected"
-                # blockToRun._isRunning = False
-                # blockToRun._finishedExecution = True
-                # self.currentExecuting = None
-                # raise Exception(  # pylint: disable=broad-exception-raised
-                #     "Cyclic connection detected"
-                # )
-
             if connection.isCyclic and not comesFromCyclic:
                 continue
 
@@ -743,13 +804,13 @@ class Flow:
             # Setting the correct keys for each block
             try:
                 inputs[connection.destination.variableID] = outputs[connection.origin.variableID]
-            except KeyError:
+            except KeyError as keye:
                 raise ErrorRunningBlock(
                     blockToRun,
                     f"The block '{variableBlock.name}' does not provide the variable "
                     + f"'{connection.origin.variableID}' to the block '{blockToRun.name}'. "
                     + "Did you forget to call setOutput() in the action of the block?",
-                )
+                ) from keye
 
         # With the generated inputs, update the block to run
         blockToRun._updateInputs(inputs)
@@ -760,6 +821,9 @@ class Flow:
 
         # Save the flow
         self.write()
+
+        # When running a flow, the savedID is always defined
+        self.savedID = typing.cast(str, self.savedID)
 
         # Execute the block by calling the plugin manager
         # Calling the PM is a must because it handles
@@ -885,7 +949,9 @@ class Flow:
             if realConnection is None:
                 raise ErrorRunningBlock(
                     blockToRun,
-                    f"The reference of a variable is not valid. Origin: {nextConnection.origin.variableID}, Destination: {nextConnection.destination.variableID}",
+                    "The reference of a variable is not valid. "
+                    f"Origin: {nextConnection.origin.variableID}, "
+                    f"Destination: {nextConnection.destination.variableID}",
                 )
 
             if realConnection.isCyclic:
@@ -940,7 +1006,8 @@ class Flow:
 
     def reset(self):
         """
-        Resets the state of the object by cleaning the run of all blocks, clearing the terminal output,
+        Resets the state of the object by cleaning the run of all blocks,
+        clearing the terminal output,
         and resetting the pending actions. Also, it restores the elapsed time to 0.
 
         This function does not take any parameters.
@@ -979,10 +1046,18 @@ class Flow:
         If None, no updates will be sent (intended for command line execution)
         """
 
+        if not self.path:
+            raise Exception(f"The flow '{self.name}' does not have a path.")
+
+        # Cast the savedID
+        self.savedID = typing.cast(str, self.savedID)
+
+        flowResumed = False
         if placedID is None and self.currentExecuting is not None:
             # If this method was called without a placedID,
             # resume the flow execution from the latest executed block
             placedID = self.currentExecuting
+            flowResumed = True
         elif resetFlow:
             # Set all blocks as not executed because a new run is starting
             self.reset()
@@ -1020,9 +1095,16 @@ class Flow:
                 + "The flow will run with the default settings."
             )
 
+        # Generate a folder for the results of the flow, and change the working dir
+        # to it
+        flowResultsDir = self.flowWorkDir(self.path)
+
+        if not os.path.exists(flowResultsDir):
+            os.makedirs(flowResultsDir)
+
         # Update the working dir
         oldWD = os.getcwd()
-        os.chdir(os.path.dirname(self.path))
+        os.chdir(flowResultsDir)
 
         # Set the flow status to running
         self.status = self.FlowStatus.RUNNING
@@ -1065,7 +1147,9 @@ class Flow:
         # Run the blocks
         with self.TerminalOutputUpdater(self.terminalOutput, self.savedID, socket):
             try:
-                self._runPreviousBlocks(placedID, resetRemoteBlock)
+                self._runPreviousBlocks(
+                    placedID, resetRemoteBlock=resetRemoteBlock, flowResumed=flowResumed
+                )
                 self._runNextBlocks(placedID)
                 self.status = self.FlowStatus.FINISHED
             except ErrorRunningBlock:
@@ -1132,6 +1216,12 @@ class Flow:
         """
         Stops the flow from executing
         """
+
+        if not self.path:
+            raise Exception(f"Cannot cancel a pathless flow '{self.name}'.")
+
+        # Cast the savedID
+        self.savedID = typing.cast(str, self.savedID)
 
         # If the current executing block is a Slurm block, cancel the job
         if self.currentExecuting:
@@ -1239,15 +1329,25 @@ class Flow:
             if AppDelegate().debug:
                 super().write(message)
 
-    def _generateID(self) -> str:
+    def _generateID(self):
         """
-        Generates a unique identifier using the UUID version 4 algorithm.
+        Generates a unique identifier using a hash of the flow path
 
         Returns:
-            str: A randomly generated UUID string.
+            str: The hash of the flow path as the ID
         """
 
-        return str(uuid.uuid4())
+        if not self.path:
+            self.savedID = None
+        else:
+            algorithm = "md5"
+
+            # Create a hash object
+            hashObj = hashlib.new(algorithm)
+            hashObj.update(self.path.encode("utf-8"))
+
+            # Get the hexadecimal representation of the hash
+            self.savedID = hashObj.hexdigest()
 
 
 class FlowManager:
@@ -1487,6 +1587,11 @@ class FlowManager:
         """
         flowPath = flow.path
 
+        if flowPath is None:
+            raise Exception(  # pylint: disable=broad-exception-raised
+                f"The flow '{flow.name}' does not have a path"
+            )
+
         # Read the savedID from the file if it exists
         overwriteCaution = False
         if os.path.exists(flowPath) and not overwrite:
@@ -1497,10 +1602,6 @@ class FlowManager:
                     overwriteCaution = True
             except Exception:  # pylint: disable=broad-exception-caught
                 overwriteCaution = True
-
-        # Create a new savedID if it doesn't exist
-        if not flow.savedID:
-            flow.savedID = flow._generateID()
 
         # If we are overwriting a flow, check if the user wants to overwrite it
         from App import AppDelegate  # pylint: disable=import-outside-toplevel
@@ -1582,7 +1683,6 @@ class FlowManager:
     def openFlowFromPath(
         self,
         flowPath: str,
-        socket: typing.Optional["HorusSocket"] = None,
         addToRecents: bool = True,
     ) -> Flow:
         """
@@ -1615,12 +1715,12 @@ class FlowManager:
                 "please open the flow from there.",
                 flow.path,
             )
-            flow = self.pauseFlow(flow.path)
+            flow = self.pauseFlow(flowPath)
 
         # Return the flow
         return flow
 
-    def openFlow(self, socket: typing.Optional["HorusSocket"] = None) -> Flow:
+    def openFlow(self) -> Flow:
         """
         Opens the file select dialog to open a flow.
         """
@@ -1634,7 +1734,7 @@ class FlowManager:
             if flowPath:
                 if isinstance(flowPath, tuple):
                     flowPath = flowPath[0]
-                return self.openFlowFromPath(str(flowPath), socket=socket)
+                return self.openFlowFromPath(str(flowPath))
             raise NoPathSelected("No path selected.")  # pylint: disable=broad-exception-raised
         else:
             # WIP implement server user folders
@@ -1658,8 +1758,7 @@ class FlowManager:
 
         # Replace the savedID and the flow path so
         # the forntend can save it to another location
-        loadedFLow.savedID = None  # type: ignore
-        loadedFLow.path = None  # type: ignore
+        loadedFLow.path = None
 
         return loadedFLow
 
@@ -1719,6 +1818,9 @@ class FlowManager:
 
         # Save the flow
         flow.write()
+
+        if not flow.path:
+            raise Exception(f"Something went wrong. The flow path is None for flow '{flow.name}'")
 
         # Run the flow in a separate process
         def flowRun():
@@ -1838,6 +1940,9 @@ class FlowManager:
         Internal function to kill running flows
         """
 
+        if not flow.path:
+            raise Exception(f"Flow path of '{flow.name}' is not defined.")
+
         logging.getLogger("Horus").debug("Killing flow %s", flow.path)
 
         # Kill the process
@@ -1870,6 +1975,9 @@ class FlowManager:
 
         :returns: The path to the compressed file
         """
+
+        if not flow.path:
+            raise Exception(f"Flow path of '{flow.name}' is not defined.")
 
         # Generate the "download folders" if they don't exist
         downloadsFolder = os.path.join(self.appSupportDir, "download")
@@ -1905,7 +2013,8 @@ class FlowManager:
         if os.path.exists(templatePath):
             readTemplate = self.openFlowFromPath(templatePath)
             raise Exception(
-                f"Trying to overwrite a template. Please remove the template '{readTemplate.name}' before saving this one."
+                "Trying to overwrite a template. Please remove the template "
+                f"'{readTemplate.name}' before saving this one."
             )
 
         flow["path"] = templatePath

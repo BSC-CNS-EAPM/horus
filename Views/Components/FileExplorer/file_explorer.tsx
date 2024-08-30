@@ -40,7 +40,11 @@ function useServerExplorer(
   // Wants to get a path. Due to how this work
   // We need to append the user paths directory
   // in this specific case. (Server will do that)
-  openDirectly?: boolean
+  openDirectly?: boolean,
+
+  // Needed for opening the file explore routside a flow
+  // for example, in the plugin installer page
+  openOutsideFlowContext: boolean = false
 ) {
   const [files, setFiles] = useState<FileArray>([null]);
   const [folderChain, setFolderChain] = useState<FileArray>([null]);
@@ -65,7 +69,12 @@ function useServerExplorer(
         "Access-Control-Allow-Origin": "*",
       };
 
-      if (window.horusInternal.webApp && !flowContext?.path && !openDirectly) {
+      if (
+        window.horusInternal.webApp &&
+        !flowContext?.path &&
+        !openDirectly &&
+        !openOutsideFlowContext
+      ) {
         await horusAlert("Save or open a flow before selecting files.");
         setOpen(false);
         return;
@@ -90,6 +99,7 @@ function useServerExplorer(
         openFolder: openFolder,
         flowContextPath: flowContext?.path,
         obfuscate: !openDirectly,
+        openOutsideFlowContext: openOutsideFlowContext,
       });
 
       const response = await horusPost("/api/filepicker", header, body);
@@ -421,6 +431,7 @@ export type FileExplorerProps = {
   onFileConfirm?: (file: string) => void;
   allowedExtensions?: string[];
   openDirectly?: boolean;
+  openOutsideFlowContext?: boolean;
 };
 
 type ServerFileExplorerModalProps = {
@@ -490,7 +501,8 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
     onFileConfirm,
     setOpen,
     fileProps?.allowedExtensions,
-    fileProps?.openDirectly
+    fileProps?.openDirectly,
+    fileProps?.openOutsideFlowContext
   );
 
   useEffect(() => {
@@ -511,7 +523,7 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
   const disabledSelect = () => {
     if (!selectedFile) return true;
 
-    const requiresFolder = props.fileProps?.openFolder;
+    const requiresFolder = props.fileProps?.openFolder ?? false;
 
     if (requiresFolder === selectedIsDir) {
       return false;
@@ -551,7 +563,8 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
                 : "Select a file"
               : "Browse"}
           </div>
-          {!window.horusInternal?.webApp && (
+          {(!window.horusInternal?.webApp ||
+            props.fileProps?.openOutsideFlowContext) && (
             <div className="flex flex-row gap-2 w-full">
               <input
                 className="app-button w-full"

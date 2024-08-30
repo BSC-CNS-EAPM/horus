@@ -497,32 +497,23 @@ export default class HorusMolstar {
    *
    * @throws {Error} If an error occurs during session loading.
    */
-  private async loadSession(session: string | Blob): Promise<void> {
-    try {
-      let file: File;
+  private async loadSession(session: Blob): Promise<void> {
+    const ALLOWED_MB = 1500;
 
-      if (typeof session === "string") {
-        // Convert the session string to a binary Blob
-        const b = hexToBlob(session);
-        file = new File([b], "session.molx", {
-          type: "application/zip",
-        });
-      } else {
-        // Treat it as a Blob for a legacy session
-        file = new File([session], "session.molx", {
-          type: "application/zip",
-        });
-      }
+    const MAX_SESSION_SIZE = ALLOWED_MB * 1024 * 1024;
 
-      // Load the session
-      await PluginCommands.State.Snapshots.OpenFile(this.plugin!, { file });
-    } catch (error) {
+    if (session.size > MAX_SESSION_SIZE) {
       throw new Error(
-        `Failed to load session: ${
-          error instanceof Error ? error.message : String(error)
-        }`
+        `Session size exceeds the maximum size of ${ALLOWED_MB} MB.`
       );
     }
+
+    const file = new File([session], "session.molx", {
+      type: "application/zip",
+    });
+
+    // Load the session
+    await PluginCommands.State.Snapshots.OpenFile(this.plugin!, { file });
   }
 
   /**
@@ -560,7 +551,7 @@ export default class HorusMolstar {
      *
      * @throws {Error} If an error occurs while loading the session.
      */
-    set: async (snapshot: string | Blob): Promise<void> => {
+    set: async (snapshot: Blob): Promise<void> => {
       await this.loadSession(snapshot);
     },
   };

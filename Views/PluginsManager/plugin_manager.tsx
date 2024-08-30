@@ -653,6 +653,9 @@ export function PluginManager() {
             Plugin manager
           </div>
           <div className="flex flex-row flex-wrap justify-center gap-2 mr-2">
+            {developmentMode && (
+              <AppButton text="Reload plugins" action={reloadPlugins} />
+            )}
             <AppButton
               text="Install plugin"
               action={() => {
@@ -661,9 +664,6 @@ export function PluginManager() {
                 );
               }}
             />
-            {developmentMode && (
-              <AppButton text="Reload plugins" action={reloadPlugins} />
-            )}
             {window.horusInternal.isDesktop && (
               <AppButton text="Open Horus folder" action={openPluginsFolder} />
             )}
@@ -926,6 +926,7 @@ function ManualFileSelectionInstall({
           Install
         </AppButton>
         <HorusFileExplorer
+          openOutsideFlowContext
           onFileConfirm={(file) => {
             onPluginInstall(file);
           }}

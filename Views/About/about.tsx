@@ -6,70 +6,79 @@ import { horusGet } from "../Utils/utils";
 // @ts-ignore
 import HorusLogo from "../../Resources/horus.png";
 import { useAlert } from "../Components/HorusPrompt/horus_alert";
+import RotatingLines from "../Components/RotatingLines/rotatinglines";
 
 type AppInfo = {
   APP_VERSION: string;
-  platform: string;
-  debug: boolean;
-  mode: "app" | "server" | "webapp" | "browser" | "unknown";
-  appSupportDir: string;
-  PYTHON_VERSION: string;
+  platform?: string;
+  debug?: boolean;
+  mode?: "app" | "server" | "webapp" | "browser" | "unknown";
+  appSupportDir?: string;
+  PYTHON_VERSION?: string;
 };
 
 export default function About() {
-  const [appInfo, setAppInfo] = useState<AppInfo>({
-    APP_VERSION: "Unknown",
-    platform: "Unknown",
-    debug: false,
-    mode: "unknown",
-    appSupportDir: "Unknown",
-    PYTHON_VERSION: "Unknown",
-  } as AppInfo);
+  const [appInfo, setAppInfo] = useState<AppInfo>({} as AppInfo);
+
+  const [gettingInfo, setGettingInfo] = useState<boolean>(true);
 
   const horusAlert = useAlert();
 
   const getVersion = async () => {
-    const response = await horusGet("/api/version");
-    if (!response.ok) {
-      console.error("Error getting application info");
-      return;
+    setGettingInfo(true);
+    try {
+      const response = await horusGet("/api/version");
+      if (!response.ok) {
+        console.error("Error getting application info");
+        return;
+      }
+      const data = await response.json();
+
+      if (!data.ok) {
+        await horusAlert("Error getting application info: " + data.msg);
+        return;
+      }
+
+      const appInfo: AppInfo = data.appINFO;
+
+      setAppInfo(appInfo);
+    } finally {
+      setGettingInfo(false);
     }
-    const data = await response.json();
-
-    if (!data.ok) {
-      await horusAlert("Error getting application info: " + data.msg);
-      return;
-    }
-
-    const appInfo: AppInfo = data.appINFO;
-
-    setAppInfo(appInfo);
   };
 
   useEffect(() => {
     getVersion();
   }, []);
 
+  if (gettingInfo) {
+    return <RotatingLines />;
+  }
+
   return (
     <div className="flex flex-row flex-wrap justify-around items-center overflow-hidden h-full w-full ">
-      {(appInfo.mode !== "webapp" || appInfo.debug) && (
-        <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2">
+        {appInfo.APP_VERSION && (
           <div className="p-2 horus-container animated-gradient text-black">
             Version: {appInfo.APP_VERSION}
           </div>
+        )}
+        {appInfo.platform && (
           <div className="p-2 horus-container animated-gradient text-black">
             Platform: {appInfo.platform}
           </div>
+        )}
+        {appInfo.mode && (
           <div className="p-2 horus-container animated-gradient text-black">
-            Mode: {appInfo.mode.toUpperCase()}
+            Mode: {appInfo.mode?.toUpperCase()}
           </div>
-          {appInfo.debug && (
-            <div className="p-2 horus-container animated-gradient text-orange-400 font-semibold">
-              Debug mode enabled - Python version: {appInfo.PYTHON_VERSION}
-            </div>
-          )}
-        </div>
-      )}
+        )}
+        {appInfo.debug && (
+          <div className="p-2 horus-container animated-gradient text-orange-400 font-semibold">
+            Debug mode enabled - Python version: {appInfo.PYTHON_VERSION}
+          </div>
+        )}
+      </div>
       <div className="flex flex-col gap-2 justify-center items-center">
         <img
           src={HorusLogo}

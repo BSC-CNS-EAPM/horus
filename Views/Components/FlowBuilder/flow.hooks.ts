@@ -16,7 +16,12 @@ import {
 } from "@dnd-kit/core";
 
 // Horus web-server
-import { horusGet, horusPost } from "../../Utils/utils";
+import {
+  fetchWithProgress,
+  horusGet,
+  horusPost,
+  POSTUploadWithProgress,
+} from "../../Utils/utils";
 import { socket } from "../../Utils/socket";
 
 // Types
@@ -273,18 +278,14 @@ export function useFlowBuilder() {
         formData.append("smilesState", JSON.stringify(smilesState));
       }
 
-      const headers = {
-        Accept: "application/json",
-      };
-
-      const response = await horusPost(
+      // Use the helper function to upload with progress tracking
+      const data: any = await POSTUploadWithProgress(
         "/api/updatemolstate",
-        headers,
         formData,
-        undefined,
-        10
+        (percentage) => {
+          setFlowText(`Saving Mol* state: ${percentage.toFixed(0)}%`);
+        }
       );
-      const data = await response.json();
 
       if (!data.ok) {
         throw new Error(data.msg);
@@ -299,11 +300,74 @@ export function useFlowBuilder() {
         };
       });
     } catch (e) {
-      await horusAlert("Error updating mol* state: " + e);
+      await horusAlert("Error updating Mol* state: " + e);
     }
     // Disable horusAlert and horusConfirm hook warning
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flow.path]);
+
+  const downloadMolstarState = useCallback(
+    async (flowPath?: string) => {
+      const flowToOpen = flowPath ?? flow.path;
+
+      // Check that the flow has a valid path and
+      // that Mol* is mounted
+      if (!flowToOpen) {
+        return;
+      }
+
+      await fetchWithProgress(
+        "/api/getmolstate",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({ flowPath: flowToOpen }),
+        },
+        (percentage) => {
+          if (percentage === 100) {
+            setFlowText("Applying Mol* state...");
+          } else {
+            setFlowText(`Reading Mol* state... (${percentage.toFixed(0)}%)`);
+          }
+        }
+      )
+        .then(async (response) => {
+          // Determine the content type of the response
+          const contentType = response.headers.get("Content-Type");
+
+          if (!contentType) {
+            throw new Error("Content-Type header is missing.");
+          }
+
+          if (contentType.includes("application/json")) {
+            // If the response is JSON, parse it as JSON
+            response.json().then((data) => {
+              if (!data.ok) {
+                horusAlert("Error reading Mol* state: " + data.msg);
+              }
+            });
+          } else if (contentType.includes("application/octet-stream")) {
+            // If the response is a file (binary data), handle it as a Blob
+            await response.blob().then(async (blob) => {
+              await window.molstar.snapshot.set(blob);
+            });
+          } else {
+            horusAlert("Error downloading Mol* state: Invalid content type.");
+            // Handle unknown content type
+          }
+        })
+        .catch((error) => {
+          horusAlert("Error downloading Mol* state: " + error);
+        });
+
+      // Disable horusAlert and horusConfirm hook warning
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [flow.path]
+  );
 
   const internalLoadFlow = useCallback(
     async (openedFlow: Flow) => {
@@ -397,7 +461,7 @@ export function useFlowBuilder() {
       }
 
       isLoadingFlow.current = true;
-      setFlowText("Opening flow");
+      setFlowText("Opening flow...");
       setFlowLoading(true);
 
       // Wait a second for the animation to play
@@ -409,7 +473,7 @@ export function useFlowBuilder() {
           ok: boolean;
           flow: Flow | null;
           msg: string;
-          molstarState: string | null;
+          molstarState: Blob | null;
           smilesState: string | null;
         } = {
           ok: false,
@@ -423,6 +487,7 @@ export function useFlowBuilder() {
         let isDefaultFlow = false;
 
         // If the flow is being opened from the recent flows list, use the savedID
+        let response: Response;
         if (openRecent !== null) {
           const header = {
             "Content-Type": "application/json",
@@ -438,12 +503,46 @@ export function useFlowBuilder() {
             path: openRecent.path,
             template: openRecent.template,
           });
-          const response = await horusPost("/api/openrecentflow", header, body);
-          data = await response.json();
+
+          // Using fetchWithProgress to fetch with download progress
+          response = await fetchWithProgress(
+            "/api/openrecentflow",
+            {
+              method: "POST",
+              headers: header,
+              body: body,
+            },
+            (percentage) => {
+              setFlowText(`Reading data... (${percentage.toFixed(0)}%)`);
+              // Here you can update a UI element or do something else with the progress
+            }
+          );
         } else {
-          const response = await horusGet("/api/openflow");
-          data = await response.json();
+          // Using fetchWithProgress to fetch with download progress
+          response = await fetchWithProgress(
+            "/api/openflow",
+            {
+              method: "GET",
+            },
+            (percentage) => {
+              setFlowText(`Reading data... (${percentage.toFixed(0)}%)`);
+              // Here you can update a UI element or do something else with the progress
+            }
+          );
         }
+
+        // Read the response. This will call the onProgress callback
+        data = await response
+          .json()
+          .then((data) => data)
+          .catch((error) => {
+            return {
+              ok: false,
+              msg: `Failed to open flow. ${
+                error instanceof Error ? error.message : error
+              }.`,
+            };
+          });
 
         if (!data.ok) {
           await horusAlert(data.msg);
@@ -458,13 +557,13 @@ export function useFlowBuilder() {
 
         // Set the molstar state at the beggining in case blocks need structures
         // If it has the new molstar state, open it
-        if (window.molstar && data.molstarState) {
-          await window.molstar.snapshot.set(data.molstarState);
-        }
+        setFlowText("Loading Mol* state...");
+        await downloadMolstarState(openedFlow.path!);
 
         // If smiles state, open it
+        setFlowText("Loading SMILES state...");
         if (window.smiles && data.smilesState) {
-          await window.smiles.restoreState(JSON.parse(data.smilesState));
+          window.smiles.restoreState(JSON.parse(data.smilesState));
         }
 
         await internalLoadFlow(openedFlow);
@@ -565,39 +664,16 @@ export function useFlowBuilder() {
 
       // Set the state
       isSaving.current = true;
-      setFlowText("Saving flow");
+      setFlowText("Saving flow...");
       setFlowLoading(true);
 
       // The serialization of the flow to save
       const saveContents = flowToSave ? flowToSave : serializeFlow();
 
-      // Set a timeout on the first save only if the flow is NOT new
-      // Otherwise the saving process will be canceled on the first save
-      // while the user is selecting the folder where to save the flow
-      // This happens only in the desktop version, but we will setup
-      // the timeout for both versions as the request might fail due
-      // to Flask request aprser not being able to parse the form data
-      // mainly due the Mol* state being too large. Sometimes sending
-      // the request again fixes the issue
-      const timeout = saveContents.path ? 10 : null;
-
       try {
         // Prepare the body for the save request
         const body = new FormData();
         body.append("flowData", JSON.stringify(saveContents));
-
-        // Append the molstar and smiles state if present
-        let molstarState: Blob | null = null;
-        let smilesState: string | null = null;
-        if (window.molstar) {
-          molstarState = await window.molstar!.snapshot.get();
-          body.append("molstarState", molstarState, "molstarState.zip");
-        }
-
-        if (window.smiles) {
-          smilesState = JSON.stringify(window.smiles.saveState());
-          body.append("smilesState", smilesState);
-        }
 
         // Set the headers so that flask correctly accepts the form data
         const headers = {
@@ -609,8 +685,7 @@ export function useFlowBuilder() {
           "/api/saveflow",
           headers,
           body,
-          undefined,
-          timeout
+          undefined
         );
 
         // Read the response
@@ -660,27 +735,12 @@ export function useFlowBuilder() {
           const overwriteBody = new FormData();
           overwriteBody.append("flowData", JSON.stringify(overwriteContents));
 
-          // Append the molstar state if present
-          if (molstarState) {
-            overwriteBody.append(
-              "molstarState",
-              molstarState,
-              "molstarState.zip"
-            );
-          }
-
-          // Append the smiles state if present
-          if (smilesState) {
-            overwriteBody.append("smilesState", smilesState);
-          }
-
           // Send the request again
           const overwriteResponse = await horusPost(
             "/api/saveflow",
             headers,
             overwriteBody,
-            undefined,
-            10
+            undefined
           );
 
           savedFlow = await overwriteResponse.json();
@@ -706,6 +766,10 @@ export function useFlowBuilder() {
         socket.emit("joinFlow", savedFlow.savedID);
 
         (!flowToSave?.template || saved) && setSaved(true);
+
+        // Update the molstar state
+        setFlowText("Getting Mol* state...");
+        await updateMolstarState();
 
         return savedFlow as Flow;
       } finally {
@@ -1359,6 +1423,8 @@ export function useFlowBuilder() {
 
             if (hasToUpdate) {
               // Save the mol* state after applying the actions
+              // Wait artificaially 500ms for the mol* state to be updated
+              await new Promise((resolve) => setTimeout(resolve, 1000));
               await updateMolstarState();
             }
           }
@@ -1667,12 +1733,13 @@ export function useFlowBuilder() {
         return {
           ...block,
           selectedInputGroup: inputGroup,
+          finishedExecution: false,
         };
       }
       return block;
     });
 
-    handleBlockChanges(updatedBlocks);
+    handleBlockChanges(updatedBlocks, false, true, false);
   }
 
   // Take into account if we are inside the executeFlow function

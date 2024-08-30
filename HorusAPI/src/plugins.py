@@ -835,10 +835,19 @@ class BlockVarPair:
     A connection of a block for a given variable of that block.
     """
 
-    def __init__(self, blockPlacedID: int, blockID: str, variableID: str):
+    def __init__(
+        self,
+        blockPlacedID: int,
+        blockID: str,
+        variableID: str,
+        variableType: str,
+        variableAllowedValues: typing.Optional[typing.List[typing.Any]] = None,
+    ):
         self.blockPlacedID = blockPlacedID
         self.blockID = blockID
         self.variableID = variableID
+        self.variableType = variableType
+        self.variableAllowedValues = variableAllowedValues
 
     def _toDict(self):
         """
@@ -849,6 +858,8 @@ class BlockVarPair:
             "placedID": self.blockPlacedID,
             "blockID": self.blockID,
             "variableID": self.variableID,
+            "variableType": self.variableType,
+            "variableAllowedValues": self.variableAllowedValues,
         }
 
         return pairDict
@@ -1407,16 +1418,34 @@ class PluginBlock:
             if origin is None or destination is None:
                 raise Exception("Invalid flow object.")  # pylint: disable=broad-exception-raised
 
+            # Gather the origin variable info
             originPlacedID = origin.get("placedID", None)
             originBlockID = origin.get("blockID", None)
             originVariableID = origin.get("variableID", None)
-            originPair = BlockVarPair(originPlacedID, originBlockID, originVariableID)
+            originVariableType = origin.get("variableType", None)
+            originVariableAllowedValues = origin.get("variableAllowedValues", None)
 
+            originPair = BlockVarPair(
+                originPlacedID,
+                originBlockID,
+                originVariableID,
+                originVariableType,
+                originVariableAllowedValues,
+            )
+
+            # Gather the destination variable info
             destinationPlacedID = destination.get("placedID", None)
             destinationBlockID = destination.get("blockID", None)
             destinationVariableID = destination.get("variableID", None)
+            destinationVariableType = destination.get("variableType", None)
+            destinationVariableAllowedValues = destination.get("variableAllowedValues", None)
+
             destinationPair = BlockVarPair(
-                destinationPlacedID, destinationBlockID, destinationVariableID
+                destinationPlacedID,
+                destinationBlockID,
+                destinationVariableID,
+                destinationVariableType,
+                destinationVariableAllowedValues,
             )
 
             return BlockConnection(originPair, destinationPair, isCyclic, cycles, currentCycle)
@@ -1626,7 +1655,7 @@ class SlurmBlock(PluginBlock):
     one before the job is submitted and one after the job is completed.
     """
 
-    jobID: typing.Optional[list[int]] = None
+    jobID: typing.Optional[int] = None
     """
     The Job ID of the job.
     """

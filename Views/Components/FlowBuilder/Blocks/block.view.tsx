@@ -37,6 +37,7 @@ import CheckMark from "../../Toolbar/Icons/CheckMark";
 import ErrorIcon from "../../Toolbar/Icons/Error";
 import PlayIcon from "../../Toolbar/Icons/Play";
 import { GLOBAL_IDS } from "../../../Utils/globals";
+import PausedIcon from "../../Toolbar/Icons/Paused";
 
 export function BlockView(props: BlockViewProps) {
   const blockState = useBlockView(props);
@@ -120,6 +121,7 @@ export function BlockView(props: BlockViewProps) {
 
                   <PlayBlockButton
                     isRunning={props.block.isRunning}
+                    isPaused={props.isPaused ?? false}
                     runError={props.block.runError}
                     onClick={(resetFlow) => {
                       props.blockHooks?.executeFlow(
@@ -186,20 +188,18 @@ export function BlockView(props: BlockViewProps) {
                         </div>
                       </div>
                     )}
-                  {(props.block.type === BlockTypes.SLURM ||
-                    window.horusSettings["allowRemotesOnNonSlurm"]?.value) &&
-                    props.block.isPlaced && (
-                      <div>
+                  {props.block.isPlaced && (
+                    <div>
+                      <hr className="mt-1 mb-1" />
+                      <BlockRemotes
+                        block={props.block}
+                        blockHooks={props.blockHooks!}
+                      />
+                      {props.block.type === BlockTypes.INPUT && (
                         <hr className="mt-1 mb-1" />
-                        <BlockRemotes
-                          block={props.block}
-                          blockHooks={props.blockHooks!}
-                        />
-                        {props.block.type === BlockTypes.INPUT && (
-                          <hr className="mt-1 mb-1" />
-                        )}
-                      </div>
-                    )}
+                      )}
+                    </div>
+                  )}
                 </div>
               ) : null}
             </div>
@@ -465,6 +465,7 @@ interface DeleteBlockButtonProps {
 interface PlayBlockButtonProps {
   isRunning: boolean;
   runError: boolean;
+  isPaused: boolean;
   onClick: (resetFlow: boolean) => void;
 }
 
@@ -539,7 +540,11 @@ function DeleteBlockButton({ block, onClick }: DeleteBlockButtonProps) {
   );
 }
 
-function PlayBlockButton({ isRunning, onClick }: PlayBlockButtonProps) {
+function PlayBlockButton({
+  isRunning,
+  isPaused,
+  onClick,
+}: PlayBlockButtonProps) {
   const [executeDescription, setExecuteDescription] = useState("Execute block");
   const isModifierPressed = useRef(false);
 
@@ -573,51 +578,48 @@ function PlayBlockButton({ isRunning, onClick }: PlayBlockButtonProps) {
     };
   }, []);
 
+  if (isRunning && isPaused) {
+    return (
+      <PausedIcon
+        className="w-5 h-5 text-orange-500"
+        style={{
+          position: "relative",
+          top: "-1px",
+          right: "-3px",
+        }}
+      />
+    );
+  }
+
+  if (isRunning) {
+    return (
+      <RotatingLines
+        size={"1.5rem"}
+        style={{
+          position: "relative",
+          top: "-4px",
+        }}
+      />
+    );
+  }
+
   return (
     <HorusPopover
       trigger={
-        isRunning ? (
-          <RotatingLines
-            size="1.5rem"
-            style={{
-              position: "relative",
-              top: "-4px",
-            }}
-          />
-        ) : (
-          <button
-            onClick={handleClick}
-            style={{
-              position: "relative",
-              right: "-2px",
-            }}
-          >
-            <PlayIcon />
-          </button>
-        )
+        <button
+          onClick={handleClick}
+          style={{
+            position: "relative",
+            right: "-2px",
+          }}
+        >
+          <PlayIcon />
+        </button>
       }
     >
       <div className="hover-description">{executeDescription}</div>
     </HorusPopover>
   );
-}
-
-function InputRunningSpinner(props: { isRunning: boolean }) {
-  if (props.isRunning) {
-    return (
-      <>
-        <BlockTime />
-        <RotatingLines
-          size="1.5rem"
-          style={{
-            position: "relative",
-            top: "-1px",
-          }}
-        />
-      </>
-    );
-  }
-  return null;
 }
 
 export function BreakLongUnderscoreNames(props: { name: string }) {

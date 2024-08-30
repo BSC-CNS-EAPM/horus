@@ -172,11 +172,6 @@ class SettingsManager:
         :param appSupportDir: The path to the app support directory
         """
 
-        if appSupportDir is None:
-            raise Exception(
-                "The app support directory is not defined in the SettingsManager init call"
-            )
-
         # Define the default settings path based on if the app is frozen
         try:
             bundleDir = sys._MEIPASS  # type: ignore
@@ -278,6 +273,12 @@ class SettingsManager:
         # Instantiate the settings
         self.settings = {}
         for key, value in fileSettings.items():
+
+            # If the setting does not exist in the default settings, skip it
+            # so it will be removed from the settings file
+            if key not in defaultSettings:
+                continue
+
             try:
                 newSetting = Setting(
                     key,

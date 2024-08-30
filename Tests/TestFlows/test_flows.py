@@ -50,7 +50,6 @@ def flow_data():
     """
     return {
         "name": "Test Flow",
-        "savedID": "1234",
         "path": "/path/to/flow.flow",
         "remote": "Local",
         "currentExecuting": 1,
@@ -80,7 +79,6 @@ def flow(flow_data, plugin_manager):
 
 def test_flow_properties(flow: Flow):
     assert flow.name == "Test Flow"
-    assert flow.savedID == "1234"
     assert flow.path == "/path/to/flow.flow"
     assert flow.remote == "Local"
     assert flow.currentExecuting == 1
@@ -104,7 +102,6 @@ def test_flow_blocks(flow: Flow):
 def test_flow_encode(flow: Flow):
     encoded_flow = flow.encode()
     assert encoded_flow["name"] == "Test Flow"
-    assert encoded_flow["savedID"] == "1234"
     assert encoded_flow["path"] == "/path/to/flow.flow"
     assert encoded_flow["remote"] == "Local"
     assert encoded_flow["currentExecuting"] == 1
@@ -143,7 +140,6 @@ def test_flow_read(tmpdir, flow_data):
         json.dump(flow_data, f)
     read_flow = Flow.read(flow_path)
     assert read_flow.name == "Test Flow"
-    assert read_flow.savedID == "1234"
     assert read_flow.remote == "Local"
     assert read_flow.currentExecuting == 1
     assert read_flow.status == Flow.FlowStatus.RUNNING

@@ -61,7 +61,6 @@ timeToWaitVar = PluginVariable(
     description="Time to wait",
     type=VariableTypes.NUMBER,
     required=True,
-    disabled=True,
     placeholder="Write here the time to wait",
 )
 
@@ -71,7 +70,6 @@ waiterInput = PluginVariable(
     description="Input",
     type=VariableTypes.ANY,
     required=True,
-    disabled=True,
     placeholder="Write here the time to wait",
 )
 
@@ -80,7 +78,6 @@ waiterOutput = PluginVariable(
     name="timeToWaitOutput",
     description="Same as input",
     type=VariableTypes.ANY,
-    disabled=True,
 )
 
 
@@ -342,6 +339,8 @@ sleep {timeToWait}
 
     print("Job ID: ", jobID)
 
+    block.setOutput("time_to_wait", timeToWait)
+
 
 def finalTestSlurmBlockAction(block: SlurmBlock):
     print("Test slurm block final action")
@@ -435,6 +434,9 @@ extension_output_variable = PluginVariable(
 
 
 def testExtensionsShortcuts(block: PluginBlock):
+
+    print("Test extensions shortcuts. Toggle: ", block.variables.get("toggle", False))
+
     text = "Hello this is some text"
 
     Extensions().loadText(text, title="Some text")
@@ -451,10 +453,16 @@ def testExtensionsShortcuts(block: PluginBlock):
 
     Extensions().loadHTML(html, title="Some HTML")
 
-    # Download an image from the internet
-    image = "https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png"
+    block.setOutput(extension_output_variable.id, block.inputs[extension_input_variable.id])
+
+
+def finalAction(block: PluginBlock):
+    print("Final action")
 
     import requests
+
+    # Download an image from the internet
+    image = "https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png"
 
     downloadedImage = requests.get(image)
 
@@ -463,15 +471,22 @@ def testExtensionsShortcuts(block: PluginBlock):
 
     Extensions().loadImage("google.png", title="Goolge image")
 
-    block.setOutput(extension_output_variable.id, block.inputs[extension_input_variable.id])
 
+some_toggle_variable = PluginVariable(
+    id="toggle",
+    name="Toggle",
+    description="Toggle",
+    type=VariableTypes.BOOLEAN,
+)
 
-testExtensionsShortcutsBlock = PluginBlock(
+testExtensionsShortcutsBlock = SlurmBlock(
     name="Test extensions shortcuts",
     description="Tests extensions shortcuts",
-    action=testExtensionsShortcuts,
+    initialAction=testExtensionsShortcuts,
+    finalAction=finalAction,
     id="test_extensions_shorcuts",
     inputs=[extension_input_variable],
+    variables=[some_toggle_variable],
     outputs=[extension_output_variable],
 )
 

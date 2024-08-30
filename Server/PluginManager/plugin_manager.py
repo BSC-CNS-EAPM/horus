@@ -91,7 +91,12 @@ class PluginManager(metaclass=HorusSingleton):
     pluginChanges = True
 
     # HorusSettings instance
-    horusSettings: SettingsManager
+    @property
+    def horusSettings(self) -> SettingsManager:
+        """
+        Returns a global HorusSettings instance
+        """
+        return SettingsManager(self.appSupportDir)
 
     def __init__(
         self,
@@ -99,9 +104,6 @@ class PluginManager(metaclass=HorusSingleton):
     ):
         if appSupportDir is None:
             raise Exception("AppSupport directory not provided in PluginManager init call.")
-
-        # Set the HorusSettings instance
-        self.horusSettings = SettingsManager(appSupportDir)
 
         self.appSupportDir = appSupportDir
 
@@ -508,6 +510,8 @@ class PluginManager(metaclass=HorusSingleton):
                         )
 
                     logging.getLogger("Horus").error(message)
+
+                    print(message)
 
                     raise Exception(message)
         except Exception as e:

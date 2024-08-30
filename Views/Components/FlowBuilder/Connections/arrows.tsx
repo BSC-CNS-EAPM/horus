@@ -9,6 +9,7 @@ import CrossIcon from "../../Toolbar/Icons/Cross";
 import { DroppableEntity, VariableConnection } from "../flow.types";
 import { BlockVarPair } from "../flow.types";
 import { BlockHooks } from "../flow.hooks";
+import { compareAllowedValues } from "../Variables/variable_connections";
 
 type ConnectedArrows = {
   blockHooks: BlockHooks;
@@ -56,6 +57,19 @@ export function ConnectedArrows(props: ConnectedArrows) {
       : "grid";
   const curveness = arrowAppareance === "Extra curved" ? 1 : 0.35;
 
+  const allowedConnection = compareAllowedValues(
+    props.connection.origin.variableType,
+    props.connection.destination.variableType,
+    props.connection.origin.variableAllowedValues ?? [],
+    props.connection.destination.variableAllowedValues ?? []
+  );
+
+  const arrowColor = allowedConnection
+    ? props.connection.isCyclic
+      ? "var(--waring-orange)"
+      : "var(--pop-code)"
+    : "var(--red-error)";
+
   return (
     <div
       style={
@@ -96,9 +110,7 @@ export function ConnectedArrows(props: ConnectedArrows) {
         startAnchor={["right", "top", "bottom"]}
         showHead={false}
         path={path}
-        color={
-          props.connection.isCyclic ? "var(--waring-orange)" : "var(--pop-code)"
-        }
+        color={arrowColor}
         curveness={curveness}
         labels={{
           middle: props.connection.isCyclic ? (

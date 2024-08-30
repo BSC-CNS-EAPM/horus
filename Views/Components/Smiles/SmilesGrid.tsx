@@ -26,6 +26,9 @@ const SMILES_GRID_HEIGTH = 150;
 
 type ViewMode = "list" | "grid";
 
+export const CannotEdit3D =
+  "This SMILES comes from a 3D structure. It cannot be modified from here. Use the Mol* panel to remove / edit it. In order to manipulate a SMILES coming from a structure, first duplicate it using the 'Selection' > 'Duplicate selected' tool.";
+
 export function SmilesGrid() {
   const [availableSmiles, setAvailableSmiles] = useState<HorusSmilesType[]>([]);
   const [editingSmiles, setEditingSmiles] = useState<HorusSmilesType | null>(
@@ -101,7 +104,7 @@ export function SmilesGrid() {
     setIsHoveringFile(true);
   };
 
-  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [previewSmiles, setPreviewSmiles] = useState<boolean>(true);
   const [alertShownAtLeastOnce, setAlertShownAtLeastOnce] = useState(false);
 
@@ -366,12 +369,19 @@ function _VirtualizedSmilesView({
   isScrolling,
   previewSmiles,
 }: VirtualizedSmilesViewType) {
+  const horusAlert = useAlert();
+
   return (
     <div
       className="border relative"
       key={smiles.id}
       style={{
         cursor: smiles.structureRef ? "not-allowed" : "default",
+      }}
+      onClick={() => {
+        if (smiles.structureRef) {
+          horusAlert(CannotEdit3D);
+        }
       }}
     >
       <span
@@ -555,11 +565,7 @@ function SmilesToolBox(props: {
       disabled: props.viewMode === "list",
       onClick: () => {
         const updatedSmiles = props.availableSmiles.map((s) => {
-          const istoBeselected = s.structureRef
-            ? false
-            : s.group === props.currentGroup
-            ? true
-            : false;
+          const istoBeselected = s.group === props.currentGroup ? true : false;
 
           if (istoBeselected) return { ...s, selected: true };
 

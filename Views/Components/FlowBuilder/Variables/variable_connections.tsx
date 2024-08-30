@@ -174,7 +174,7 @@ function OutputVariableBallConnector({
 }) {
   const id = `output-drag-${variable.id}-${block.placedID}-connector`;
 
-  const { setNodeRef, transform, listeners, attributes } = useDraggable({
+  const { setNodeRef, transform, listeners, attributes, over } = useDraggable({
     id: id,
     data: {
       blockVarPair: getBlockVarPair(block, variable),
@@ -219,6 +219,24 @@ function OutputVariableBallConnector({
       : "grid";
   const curveness = arrowAppareance === "Extra curved" ? 1 : 0.35;
 
+  let arrowColor = "var(--pop-code)";
+
+  if (over?.id.toString().includes("connect")) {
+    const overBlockVarPair: BlockVarPair | undefined =
+      over.data?.current?.["blockVarPair"];
+
+    if (overBlockVarPair) {
+      const allowedConnection = compareAllowedValues(
+        variable.type,
+        overBlockVarPair.variableType,
+        variable.allowedValues ?? [],
+        overBlockVarPair.variableAllowedValues ?? []
+      );
+
+      arrowColor = allowedConnection ? "var(--pop-code)" : "var(--red-error)";
+    }
+  }
+
   return (
     <div id={id} className="w-full h-full">
       <HorusPopover
@@ -247,7 +265,7 @@ function OutputVariableBallConnector({
                   end={ref}
                   endAnchor={"right"}
                   dashness={{ animation: -2 }}
-                  color={"var(--pop-code)"}
+                  color={arrowColor}
                   headShape={"circle"}
                   path={path}
                   curveness={curveness}
@@ -418,64 +436,6 @@ type VariableConnectViewProps = {
 };
 
 function VariableInputConnectView(props: VariableConnectViewProps) {
-  const compareAllowedValues = (
-    variableType: PluginVariableTypes,
-    otherVariableType: PluginVariableTypes,
-    allowedValues: Array<string>,
-    tryingToConnect: Array<string>
-  ) => {
-    if (
-      variableType === PluginVariableTypes.ANY ||
-      otherVariableType === PluginVariableTypes.ANY
-    ) {
-      return true;
-    }
-
-    // If the input and output are different than FILE
-    // check the type instead of the allowed values
-    if (
-      variableType !== PluginVariableTypes.FILE &&
-      variableType !== PluginVariableTypes.GROUP &&
-      variableType !== PluginVariableTypes._LIST &&
-      variableType === otherVariableType
-    ) {
-      return true;
-    }
-
-    // For file type and group, check that the allowedValues of variable and other variable match
-    if (
-      variableType === PluginVariableTypes.FILE &&
-      otherVariableType === PluginVariableTypes.FILE
-    ) {
-      if (allowedValues.includes("*") || tryingToConnect.includes("*")) {
-        return true;
-      }
-    }
-
-    // If its of type CUSTOM, check that at least one of the allowed values in either variable matches
-    if (
-      variableType === PluginVariableTypes.CUSTOM &&
-      otherVariableType === PluginVariableTypes.CUSTOM
-    ) {
-      if (allowedValues.includes("*") || tryingToConnect.includes("*")) {
-        return true;
-      }
-
-      for (let i = 0; i < allowedValues.length; i++) {
-        if (tryingToConnect.includes(allowedValues[i]!)) {
-          return true;
-        }
-      }
-    }
-
-    for (let i = 0; i < allowedValues.length; i++) {
-      if (tryingToConnect.includes(allowedValues[i]!)) {
-        return true;
-      }
-    }
-    return false;
-  };
-
   const blockVarPair: BlockVarPair = getBlockVarPair(
     props.block,
     props.variable
@@ -547,7 +507,19 @@ function VariableInputConnectView(props: VariableConnectViewProps) {
   );
 
   if (isAlreadyConnected) {
-    classNameVariableBall = "variable-ball variable-ball-connected";
+    const acceptConnection = compareAllowedValues(
+      props.variable.type,
+      isAlreadyConnected.origin.variableType,
+      allowedValues as Array<string>,
+      (isAlreadyConnected.origin.variableAllowedValues as Array<string>) ||
+        ([] as Array<string>)
+    );
+
+    if (acceptConnection) {
+      classNameVariableBall = "variable-ball variable-ball-connected";
+    } else {
+      classNameVariableBall = "variable-ball variable-ball-reject";
+    }
   }
 
   return (
@@ -588,4 +560,62 @@ function VariableInputConnectView(props: VariableConnectViewProps) {
       </HorusPopover>
     </div>
   );
+}
+
+export function compareAllowedValues(
+  variableType: PluginVariableTypes,
+  otherVariableType: PluginVariableTypes,
+  allowedValues: Array<string>,
+  tryingToConnect: Array<string>
+) {
+  if (
+    variableType === PluginVariableTypes.ANY ||
+    otherVariableType === PluginVariableTypes.ANY
+  ) {
+    return true;
+  }
+
+  // If the input and output are different than FILE
+  // check the type instead of the allowed values
+  if (
+    variableType !== PluginVariableTypes.FILE &&
+    variableType !== PluginVariableTypes.GROUP &&
+    variableType !== PluginVariableTypes._LIST &&
+    variableType === otherVariableType
+  ) {
+    return true;
+  }
+
+  // For file type and group, check that the allowedValues of variable and other variable match
+  if (
+    variableType === PluginVariableTypes.FILE &&
+    otherVariableType === PluginVariableTypes.FILE
+  ) {
+    if (allowedValues.includes("*") || tryingToConnect.includes("*")) {
+      return true;
+    }
+  }
+
+  // If its of type CUSTOM, check that at least one of the allowed values in either variable matches
+  if (
+    variableType === PluginVariableTypes.CUSTOM &&
+    otherVariableType === PluginVariableTypes.CUSTOM
+  ) {
+    if (allowedValues.includes("*") || tryingToConnect.includes("*")) {
+      return true;
+    }
+
+    for (let i = 0; i < allowedValues.length; i++) {
+      if (tryingToConnect.includes(allowedValues[i]!)) {
+        return true;
+      }
+    }
+  }
+
+  for (let i = 0; i < allowedValues.length; i++) {
+    if (tryingToConnect.includes(allowedValues[i]!)) {
+      return true;
+    }
+  }
+  return false;
 }

@@ -13,6 +13,7 @@ import typing
 import traceback
 import tarfile
 import datetime
+import io
 
 # Decorators
 from functools import wraps
@@ -54,11 +55,8 @@ import requests
 # Webview
 import webview
 
-# Utilities
-from HorusAPI import TempFile
-
 # Flow manager
-from Server.FlowManager import FlowManager, OverwriteException, NoPathSelected
+from Server.FlowManager import FlowManager, OverwriteException, NoPathSelected, Flow
 
 # Settings manager
 from Server.SettingsManager import SettingsManager
@@ -78,7 +76,6 @@ from Server.WebAppManager import HorusUser
 
 if typing.TYPE_CHECKING:
     from Server.WebAppManager import Database
-    from Server.FlowManager import Flow
 
     # Cast the flask_login UserMixin to the HorusUser class
     currentUser = typing.cast(HorusUser, flask_login.current_user)
@@ -709,9 +706,8 @@ class HorusServer:
         @self.verifyQuotas(verify=["maxStorage"])
         def saveFlow():
 
-            # The client here sends a form data with two values:
+            # The client here sends a form data with:
             # - flowData: The flow data as a JSON string (contains flow name, placed blocks...)
-            # - molstarState: The molstar state as a zip file
 
             # Parse the request data
             request.get_data()
@@ -739,14 +735,6 @@ class HorusServer:
 
             # Parse the data string as JSON
             flowData = flask.json.loads(flowData)
-
-            # Get the molstar state
-            molstarState = files.get("molstarState", None)
-
-            # Read the bytes of the state
-            if molstarState is not None:
-                molstarState.stream.seek(0)
-                molstarState = molstarState.stream.read()
 
             # Get and parse the smilesState
             smilesState = data.get("smilesState", None)
@@ -803,7 +791,7 @@ class HorusServer:
 
                     @self.verifyQuotas(verify=["maxFlows"])
                     def getFlow():
-                        return self.flowManager.saveFlow(flowData, molstarState, smilesState)
+                        return self.flowManager.saveFlow(flowData, smilesState=smilesState)
 
                     verifiedFlow = getFlow()
 
@@ -813,17 +801,20 @@ class HorusServer:
                 else:
                     flow = verifiedFlow
 
+                fullSavedID = flow.savedID
                 if self._isForUser:
                     # Clear back the full path in webapp mode
+                    # but keep the old savedID, if not it willbe
+                    # overwritten by the new flow path
                     flow.path = str(UserFileExplorer(flow.path, currentUser).getRelativePath())
 
                 # Emit the saved flow to connected rooms
-                self.socketio.emit("flow", flow.encode(minimal=False), to=flow.savedID)
+                self.socketio.emit("flow", flow.encode(minimal=False), to=fullSavedID)
 
                 success = {
                     "ok": True,
                     "name": flow.name,
-                    "savedID": flow.savedID,
+                    "savedID": fullSavedID,
                     "path": flow.path,
                     "overwrite": False,
                     "template": saveAsTemplate,
@@ -856,7 +847,7 @@ class HorusServer:
 
             try:
                 if self.desktop:
-                    flow = self.flowManager.openFlow(socket=self.socketio)
+                    flow = self.flowManager.openFlow()
                 else:
                     raise Exception(  # pylint: disable=broad-exception-raised
                         "This function is only available on desktop mode."
@@ -864,16 +855,7 @@ class HorusServer:
 
                 # Get the flow JSON
                 flowJson = flow.encode(minimal=False)
-
-                # Get the molstarState zip file
-                molstarState = flow.getMolstarState()
-
                 success = {"ok": True, "flow": flowJson}
-                if molstarState is not None:
-                    # Convert the molstar state to a hex string
-                    molstarState = molstarState.hex()
-
-                    success["molstarState"] = molstarState
 
                 # Get the smilesState json
                 smilesState = flow.getSmilesState()
@@ -944,6 +926,9 @@ class HorusServer:
                     # Get the template
                     template = self.flowManager.getTemplateByID(templateID)
 
+                    if not template.path:
+                        raise ValueError("Template not found")
+
                     # Delete the file
                     if os.path.exists(template.path):
                         os.remove(template.path)
@@ -997,7 +982,7 @@ class HorusServer:
                         path = str(UserFileExplorer(path, currentUser).getAbsolutePath())
 
                     # Load the flow from the path
-                    flow = self.flowManager.openFlowFromPath(path, socket=self.socketio)
+                    flow = self.flowManager.openFlowFromPath(path)
 
                 else:
                     if savedID is None:
@@ -1012,9 +997,6 @@ class HorusServer:
                     else:
                         flow = self.flowManager.loadPredefinedFlow(savedID)
 
-                # Get the molstarStte zip file
-                molstarState = flow.getMolstarState()
-
                 # Get the smilesState
                 smilesState = flow.getSmilesState()
 
@@ -1026,11 +1008,6 @@ class HorusServer:
                 flowJson = flow.encode(minimal=False)
 
                 success = {"ok": True, "flow": flowJson}
-                if molstarState is not None:
-                    # Convert the molstar state to a hex string
-                    molstarState = molstarState.hex()
-
-                    success["molstarState"] = molstarState
 
                 if smilesState is not None:
                     success["smilesState"] = flask.json.dumps(smilesState)
@@ -1045,6 +1022,53 @@ class HorusServer:
                     "msg": str(exc),
                 }
             return flask.jsonify(success)
+
+        @self.server.route("/api/getmolstate", methods=["POST"])
+        @self.verifyLogin
+        def getMolState():
+
+            data = request.get_json()
+            flowPath = data.get("flowPath", None)
+
+            if data is None or flowPath is None:
+                return flask.jsonify(
+                    {
+                        "ok": False,
+                        "msg": "No data provided",
+                    }
+                )
+
+            try:
+                # If we are on webapp mode, update the path to the user's directory
+                if self._isForUser:
+                    # Update the path to the user's directory
+                    flowPath = str(UserFileExplorer(flowPath, currentUser).getAbsolutePath())
+
+                # Load the flow from the path
+                flow = self.flowManager.openFlowFromPath(flowPath)
+
+                # Get the molstarStte zip file
+                molstarState = flow.getMolstarState()
+
+                # Send the file to the client as .molx file
+                if molstarState is not None:
+                    return flask.send_file(
+                        io.BytesIO(molstarState),
+                        mimetype="application/octet-stream",
+                        as_attachment=True,
+                        download_name="molstar_state.molx",
+                    )
+                else:
+                    # Return an empty file
+                    return flask.jsonify({"ok": True, "molstarState": False})
+
+            except Exception as exc:
+                success = {
+                    "ok": False,
+                    "msg": str(exc),
+                }
+
+                return flask.jsonify(success)
 
         @self.server.route("/api/updatemolstate", methods=["POST"])
         @self.verifyLogin
@@ -1285,6 +1309,7 @@ class HorusServer:
                     from Server.RemotesManager import RemotesAPI
 
                     rAPI = RemotesAPI()
+                    flow.savedID = typing.cast(str, flow.savedID)
                     rAPI.deleteFlowFromQueue(flow.savedID)
 
                 # If we are on webappmode, register the flow
@@ -1503,9 +1528,9 @@ class HorusServer:
 
                 appINFO = AppDelegate().APP_INFO
 
-                # On webapp mode, hide the platform
+                # On webapp mode, jsut return the version
                 if self.mode == "webapp" and not self.debug:
-                    appINFO = {"mode": "webapp"}
+                    appINFO = {"APP_VERSION": appINFO["APP_VERSION"]}
 
                 success = {
                     "ok": True,
@@ -1529,20 +1554,30 @@ class HorusServer:
                 extensions = jsonData.get("extensions")
                 openFolder = jsonData.get("openFolder", False)
                 obfuscate = jsonData.get("obfuscate", True)
+                openOutsideFlowContext = jsonData.get("openOutsideFlowContext", False)
 
                 # Read the path with the FileExplorer class
                 if self._isForUser:
 
-                    # If the flow context path is none, then use the users flow dir
-                    relativeTo = (
-                        os.path.join(currentUser.flowsDir, os.path.dirname(flowContextPath))
-                        if flowContextPath
-                        else currentUser.flowsDir
-                    )
+                    if openOutsideFlowContext:
+                        # An admin wants to install a plugin
+                        # Verify its really an admin
+                        if not currentUser.admin:
+                            raise ValueError("User is not admin")
 
-                    fileExplorer = UserFileExplorer(
-                        path, currentUser, relativeTo=relativeTo, obfuscate=obfuscate
-                    )
+                        fileExplorer = FileExplorer(path)
+                    else:
+
+                        # If the flow context path is none, then use the users flow dir
+                        relativeTo = (
+                            os.path.join(currentUser.flowsDir, Flow.flowWorkDir(flowContextPath))
+                            if flowContextPath
+                            else currentUser.flowsDir
+                        )
+
+                        fileExplorer = UserFileExplorer(
+                            path, currentUser, relativeTo=relativeTo, obfuscate=obfuscate
+                        )
                 else:
                     fileExplorer = FileExplorer(path)
 
@@ -1868,7 +1903,7 @@ class HorusServer:
 
             return flask.jsonify({"ok": True, "setting": setting.toDict()})
 
-        @self.server.route("/api/saveSettings", methods=["POST"])
+        @self.server.route("/api/savesettings", methods=["POST"])
         @self.verifyLogin
         @self.stopDemoUser
         def saveSettings():
@@ -2756,6 +2791,9 @@ class HorusServer:
                 # Load the flow from the data
                 flow = self.flowManager.openFlowFromPath(flowPath)
 
+                if not flow.path:
+                    return flask.jsonify({"ok": False, "msg": "The flow does not have a path"})
+
                 # Delete the container folder of the flow
                 if os.path.exists(flow.path):
                     shutil.rmtree(os.path.dirname(flow.path))
@@ -2799,6 +2837,9 @@ class HorusServer:
                 # Load the flow from the data
                 flow = self.flowManager.openFlowFromPath(flowPath)
 
+                if not flow.path:
+                    return flask.jsonify({"ok": False, "msg": "Flow path is not defined."})
+
                 # Delete the container folder of the flow
                 if os.path.exists(flow.path):
 
@@ -2815,8 +2856,8 @@ class HorusServer:
                     # Update the new flow name
                     newFlowInstance = self.flowManager.openFlowFromPath(newFlow)
                     newFlowInstance.date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    # Generate a new ID
-                    newFlowInstance.savedID = newFlowInstance._generateID()
+
+                    # Write the new flow to its path
                     newFlowInstance.write()
 
                     # Delete the old .flow in the newly cloned folder
@@ -2986,12 +3027,12 @@ class HorusServer:
             @self.verifyAdmin
             def adminSettings():
                 # Fetch all the settings that were not available in the regular settings view
-
-                settings = self.settingsManager.listUnsafeSettings()
+                # Use the app support dir of the GLOBAL app
+                settings = SettingsManager(self.appSupportDir).listUnsafeSettings()
 
                 return flask.jsonify({"ok": True, "settings": settings})
 
-            @self.server.route("/users/admintools/saveSettings", methods=["POST"])
+            @self.server.route("/users/admintools/savesettings", methods=["POST"])
             @self.verifyLogin
             @self.verifyAdmin
             def saveAdminSettings():

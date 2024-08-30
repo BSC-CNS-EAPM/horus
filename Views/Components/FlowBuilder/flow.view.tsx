@@ -25,7 +25,7 @@ import RotatingLines from "../RotatingLines/rotatinglines";
 import { ServerFileExplorerModal } from "../FileExplorer/file_explorer";
 import { ConnectedArrows } from "./Connections/arrows";
 import { Xwrapper } from "react-xarrows";
-import { DroppableEntity, Flow } from "./flow.types";
+import { DroppableEntity, Flow, FlowStatus } from "./flow.types";
 import { socket } from "../../Utils/socket";
 
 export const FlowContext = createContext<Flow | null>(null);
@@ -130,6 +130,10 @@ function FlowBuilderView() {
                           block={block}
                           blockHooks={flowBuilderState.block}
                           scale={flowBuilderState.flow.scale}
+                          isPaused={
+                            flowBuilderState.flow.flow.status ===
+                            FlowStatus.PAUSED
+                          }
                         />
                       );
                     })}

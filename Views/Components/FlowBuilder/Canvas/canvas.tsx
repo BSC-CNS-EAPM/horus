@@ -50,7 +50,7 @@ export function FlowCanvas(props: FlowCanvasProps) {
         <div
           style={{
             pointerEvents: isFlowActive ? "none" : "auto",
-            opacity: isFlowActive ? 0.8 : 1,
+            filter: isFlowActive ? "opacity(0.8)" : "none",
           }}
         >
           {children}
@@ -130,12 +130,12 @@ function FlowTopBar(props: { flowHooks: FlowHooks }) {
       />
       {flow.startedTime && <FlowElapsedDisplay flow={flow} saved={saved} />}
       <FlowStatusControl
+        hasActions={hasActions}
         flow={flow}
         saved={saved}
         stopFlow={stopFlow}
         resumeFlow={resumeFlow}
       />
-      {hasActions && <FlowActionsIndicator />}
     </div>
   );
 }
@@ -186,11 +186,13 @@ function FlowElapsedDisplay({ flow, saved }: { flow: Flow; saved: boolean }) {
 function FlowStatusControl({
   flow,
   saved,
+  hasActions,
   stopFlow,
   resumeFlow,
 }: {
   flow: Flow;
   saved: boolean;
+  hasActions: boolean;
   stopFlow: () => void;
   resumeFlow: () => void;
 }) {
@@ -216,6 +218,7 @@ function FlowStatusControl({
       }}
     >
       <FlowStatusIcons flow={flow} saved={saved} />
+      {hasActions && <FlowActionsIndicator />}
     </div>
   );
 }

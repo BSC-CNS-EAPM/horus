@@ -134,13 +134,13 @@ export function SmilesVariableView(props: VariableViewProps) {
             setUsingSelectedSmiles(!usingSelectedSmiles);
           }}
         >
-          {usingSelectedSmiles ? "Select manually" : "Use selected"}
+          {usingSelectedSmiles ? "Select manually" : "From viewer"}
         </AppButton>
       </div>
       {usingSelectedSmiles ? (
-        <div className="w-full grid place-items-center plugin-variable-name">
-          Using {window.smiles?.getSelectedSmiles().length} SMILES from the
-          Smiles viewer
+        <div className="w-full grid place-items-center plugin-variable-name text-center">
+          Using {window.smiles?.getSelectedSmiles().length} selected SMILES.
+          Modify the selection in the Smiles viewer.
         </div>
       ) : filteredStructures.length === 0 ? (
         <NotFoundView>No SMILES</NotFoundView>
