@@ -61,6 +61,8 @@ export enum PluginVariableTypes {
   OBJECT = "object",
   CODE = "code",
   CUSTOM = "custom",
+  CHECKBOX = "checkbox",
+  RADIO = "radio",
 }
 
 export type PluginVariable = {

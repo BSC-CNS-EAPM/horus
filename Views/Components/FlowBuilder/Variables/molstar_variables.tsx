@@ -238,7 +238,7 @@ function SelectSingleStructure({
       style={{
         gap: "1rem",
         textAlign: "left",
-        paddingInline: "0.5rem",
+        paddingInline: "0.25rem",
       }}
     >
       <input
@@ -332,7 +332,7 @@ function SelectMultipleStructures({
       style={{
         gap: "1rem",
         textAlign: "left",
-        paddingInline: "0.5rem",
+        paddingInline: "0.25rem",
       }}
     >
       <input
@@ -432,7 +432,7 @@ function SelectMultipleChains({
       style={{
         gap: "1rem",
         textAlign: "left",
-        paddingInline: "0.5rem",
+        paddingInline: "0.25rem",
       }}
     >
       <input
@@ -595,7 +595,7 @@ function SelectMultipleResidues({
       style={{
         gap: "1rem",
         textAlign: "left",
-        paddingInline: "0.5rem",
+        paddingInline: "0.25rem",
       }}
     >
       <input

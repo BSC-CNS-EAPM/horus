@@ -81,12 +81,24 @@ function isInteractiveElement(element: Element | null) {
     "img",
   ];
 
-  // Disable drag on the blurred mdoal
-  if (
-    element?.id?.includes("modal") ||
-    element?.id?.includes("block-error-title")
-  ) {
-    return true;
+  // Disable drag on certain IDs
+  const interactiveIDS = ["modal", "block-error-title"];
+
+  // Disable drag on certain classNames
+  const interactiveClassNames = ["rc-slider"];
+
+  for (const id of interactiveIDS) {
+    if (element?.id?.includes(id)) {
+      return true;
+    }
+  }
+
+  if (typeof element?.className === "string") {
+    for (const className of interactiveClassNames) {
+      if (element?.className?.includes(className)) {
+        return true;
+      }
+    }
   }
 
   if (

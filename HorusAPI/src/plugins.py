@@ -461,6 +461,24 @@ class VariableTypes(str, Enum):
     can be connected to another custom variable with allowedValues = ["B"]
     """
 
+    RADIO = "radio"
+    """
+    A radio variable. It will render as a list of radio buttons.
+    Only one can be selected at a time.
+    
+    Setup the allowedValues parameter to define the list of options such as
+    ["A", "B", "C"].
+    """
+
+    CHECKBOX = "checkbox"
+    """
+    A checkbox variable. It will render as a list of checkboxes.
+    Multiple can be selected at the same time.
+    
+    Setup the allowedValues parameter to define the list of options such as
+    ["A", "B", "C"].
+    """
+
     @staticmethod
     def getTypes():
         """

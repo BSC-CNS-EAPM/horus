@@ -685,3 +685,61 @@ input_block_variable_list = InputBlock(
 )
 
 plugin.addBlock(input_block_variable_list)
+
+number_input = PluginVariable(
+    id="number_input",
+    name="Number input",
+    description="Number input",
+    type=VariableTypes.NUMBER_RANGE,
+    allowedValues=[0, 100, 1],
+)
+
+
+input_block_number = InputBlock(
+    id="input_block_number",
+    name="Input block number",
+    description="Input block number",
+    variable=number_input,
+    action=None,
+)
+
+plugin.addBlock(input_block_number)
+
+
+radio_input = PluginVariable(
+    id="radio_input",
+    name="Radio input",
+    description="Radio input",
+    type=VariableTypes.RADIO,
+    allowedValues=["Value 1", "Value 2", "Value 3"],
+)
+
+
+input_block_radio = InputBlock(
+    id="input_block_radio",
+    name="Input block radio",
+    description="Input block radio",
+    variable=radio_input,
+    action=None,
+)
+
+plugin.addBlock(input_block_radio)
+
+checkbox_input = PluginVariable(
+    id="checkbox_input",
+    name="Checkbox input",
+    description="Checkbox input",
+    type=VariableTypes.CHECKBOX,
+    allowedValues=["Value 1", "Value 2", "Value 3"],
+)
+
+
+input_block_checkbox = InputBlock(
+    id="input_block_checkbox",
+    name="Input block checkbox",
+    description="Input block checkbox",
+    variable=checkbox_input,
+    action=None,
+)
+
+plugin.addBlock(input_block_checkbox)

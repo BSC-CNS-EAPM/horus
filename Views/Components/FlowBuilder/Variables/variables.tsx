@@ -43,6 +43,7 @@ import { ObjectVariableView, PythonVariableView } from "./editor_variables";
 import { SmilesVariableView } from "./smiles_variables";
 import ErrorIcon from "../../Toolbar/Icons/Error";
 import TrashIcon from "../../Toolbar/Icons/Trash";
+import { BreakLongUnderscoreNames } from "../Blocks/block.view";
 
 type PluginVariableViewProps = {
   variable: PluginVariable;
@@ -582,6 +583,23 @@ function VariableRenderer(props: {
           variable={props.variable}
         />
       );
+    case PluginVariableTypes.CHECKBOX:
+      return (
+        <CheckboxVariableView
+          currentValue={currentValue}
+          onChange={handleVariableChangeInternal}
+          variable={props.variable}
+        />
+      );
+    case PluginVariableTypes.RADIO:
+      return (
+        <CheckboxVariableView
+          currentValue={currentValue}
+          onChange={handleVariableChangeInternal}
+          variable={props.variable}
+          radio
+        />
+      );
     default:
       return (
         <div className="red-containerp-2 m-2">
@@ -589,6 +607,59 @@ function VariableRenderer(props: {
         </div>
       );
   }
+}
+function CheckboxVariableView(props: VariableViewProps & { radio?: boolean }) {
+  const allowedValues: string[] = props.variable.allowedValues;
+
+  let currentValue: string[] | string | null = props.currentValue;
+  if (props.radio) {
+    currentValue = props.currentValue as string | null;
+  } else {
+    currentValue = props.currentValue as string[];
+  }
+
+  if (!currentValue && !props.radio) {
+    props.onChange([]);
+  }
+
+  if (!allowedValues) {
+    return (
+      <div className="text-red-500">
+        Missing allowed values for {props.radio ? "radio" : "checkbox"} variable
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 whitespace-normal">
+      {allowedValues.map((value, index) => (
+        <div key={index} className="flex flex-row items-center gap-2">
+          <input
+            style={{ width: "1rem" }}
+            key={index}
+            type={props.radio ? "radio" : "checkbox"}
+            checked={
+              props.radio
+                ? currentValue === value
+                : currentValue?.includes(value)
+            }
+            onChange={(e) => {
+              if (props.radio) {
+                props.onChange(e.target.checked ? value : null);
+              } else {
+                const castValue = currentValue as string[] | null;
+                const newValue = e.target.checked
+                  ? [...(castValue ?? []), value]
+                  : castValue?.filter((v) => v !== value);
+                props.onChange(newValue);
+              }
+            }}
+          />
+          <span>{value}</span>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export type VariableViewProps = {
@@ -1017,15 +1088,17 @@ export function InputView(props: { groups: VariableGroup[] }) {
 export function VariableGroupInfoView({ group }: { group: VariableGroup }) {
   return (
     <div
-      className="flex flex-col gap-2 rounded-xl p-2 shadow-md w-full flex-1"
+      className="flex flex-col gap-2 rounded-xl p-2 shadow-md w-full flex-1 whitespace-normal"
       style={{
         border: "1px solid var(--pop-code)",
       }}
       key={group.id}
     >
-      <div className="text-xl font-semibold">{group.name}</div>
-      <div>{group.description}</div>
-      <div className="flex flex-col gap-2 overflow-x-scroll h-full flex-wrap">
+      <div className="text-xl font-semibold">
+        <BreakLongUnderscoreNames name={group.name} />
+      </div>
+      <BreakLongUnderscoreNames name={group.description} />
+      <div className="flex flex-col gap-2 overflow-x-scroll h-full">
         {group.variables.map((variable) => {
           return <SimpleVariableView variable={variable} />;
         })}
