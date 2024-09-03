@@ -826,6 +826,12 @@ class PluginBlockTypes(str, Enum):
     A block designed to store configuration variables.
     """
 
+    GHOST = "ghost"
+    """
+    A placeholder for a block that no longer
+    exists due to a removed or modified plugin.
+    """
+
     def __str__(self):
         return self.value
 
@@ -905,6 +911,22 @@ class BlockConnection:
     def __str__(self):
         return json.dumps(self._toDict(), indent=4)
 
+    # Define comparison operators
+    def __eq__(self, other):
+        return self._toDict() == other._toDict()
+
+    def __ne__(self, other):
+        return self._toDict() != other._toDict()
+
+
+class BlockNotFoundError(Exception):
+    """
+    Exception raised when a block is not found.
+    """
+
+    def __init__(self, blockID: str):
+        super().__init__(f"Block with ID '{blockID}' not found.")
+
 
 class PluginBlock:
     """
@@ -962,16 +984,6 @@ class PluginBlock:
     Other variables that connect to this block.
     """
 
-    _connectedTo: typing.List[int] = []
-    """
-    The IDs of the blocks that this block is connected to.
-    """
-
-    _connectedToReferences: typing.List[int] = []
-    """
-    The IDs of the blocks that connect to this block.
-    """
-
     selectedInputGroup: str = "default"
     """
     The ID of the selected input group. This gets updated when the user
@@ -1022,6 +1034,18 @@ class PluginBlock:
     embedded with the plugin.
     """
 
+    def _parseID(self, id: str) -> str:
+        """
+        Parses the ID of the block.
+
+        The ID should only contain letters, numbers, and underscores.
+
+        :param id: The ID of the block.
+        :return: The parsed ID.
+        """
+
+        return re.sub(r"[^A-Za-z0-9]", "_", str(id).lower())
+
     def __init__(  # pylint: disable=dangerous-default-value
         self,
         name: str,
@@ -1047,7 +1071,7 @@ class PluginBlock:
             )
             id = name
 
-        self.id: str = re.sub(r"[^A-Za-z0-9]", "_", str(id).lower())
+        self.id: str = self._parseID(id)
         """
         The id of the block.
         It is composed by the plugin id and the id/name of the block.
@@ -1405,9 +1429,6 @@ class PluginBlock:
             "variableConnectionsReference", []
         )
 
-        connectedTo: typing.List[int] = blockJSON.get("connectedTo", [])
-        connectedToReference: typing.List[int] = blockJSON.get("connectedToReference", [])
-
         def parseVariableConnection(connection: typing.Dict[str, typing.Any]):
             origin = connection.get("origin", None)
             destination = connection.get("destination", None)
@@ -1497,8 +1518,6 @@ class PluginBlock:
         self._storedOutputs = storedOutputs
         self._variableConnections = parsedVariableConnections
         self._variableConnectionsReferences = parsedVariableConnectionsReference
-        self._connectedTo = connectedTo
-        self._connectedToReferences = connectedToReference
         self._extensionsToOpen = extensionsToOpen
         self.time = blockTime
         self.extraData = extraData
@@ -1521,8 +1540,6 @@ class PluginBlock:
             "variables": self._variablesToDict(self._variables, minimal=True),
             "variableConnections": self._connectionsToDict(),
             "variableConnectionsReference": self._connectionsToDict(True),
-            "connectedTo": self._connectedTo,
-            "connectedToReference": self._connectedToReferences,
             "selectedInputGroup": self.selectedInputGroup,
             "selectedRemote": self.selectedRemote,
             "extensionsToOpen": self._extensionsToOpen,
@@ -1549,6 +1566,43 @@ class PluginBlock:
     """
     The configuration of the plugin that hosts this block.
     """
+
+
+class GhostBlock(PluginBlock):
+    """
+    A block used to represent missing or unavailable blocks in a flow.
+    """
+
+    _runError = True
+    _runErrorMessage = "Missing or unavailable block."
+
+    def _parseID(self, id: str) -> str:
+
+        # Because ghost blocks are not instantiated when Blocks are created
+        # using the PluginBlock's _parseID will remove the original plugin ID
+        # by removing the "." from the original ID.
+        # For ghost blocks, we need to preserve the original ID (with the pluginID prefix).
+
+        return id
+
+    def __init__(self, id: str):
+        super().__init__(
+            name=id,
+            description=self._runErrorMessage,
+            blockType=PluginBlockTypes.GHOST,  # Explicitly sets the block type to GHOST
+            id=id,
+        )
+
+    def __call__(self, *args, **kwargs):
+        raise Exception("Cannot execute a ghost block.")
+
+    def _toDict(self):
+
+        # Set to have an error always
+        self._runError = True
+        self._runErrorMessage = "Missing or unavailable block."
+
+        return super()._toDict()
 
 
 class PluginConfig(PluginBlock):
@@ -2112,9 +2166,16 @@ class Plugin:
         Adds a PluginBlock to the plugin.
         """
 
+        if isinstance(block, GhostBlock):  # If trying to add a Ghost block, log an error
+            logging.getLogger("Horus").error("Cannot add a GhostBlock to the plugin as a block.")
+        # If trying to add a Config, log an error
+        elif isinstance(block, PluginConfig):
+            logging.getLogger("Horus").error(
+                "Cannot add a PluginConfig to the plugin as a block. Use addConfig instead of addBlock."
+            )
         # If the attribute is a PluginBlock (not PluginConfig), add it to the list
         # Only add the block if it is not already in the list
-        if isinstance(block, PluginBlock) and not isinstance(block, PluginConfig):
+        elif isinstance(block, PluginBlock):
             block.id = f"{self.id}.{block.id}".replace(" ", "_").lower()
             try:
                 # If the block does not exist, an exception will be raised

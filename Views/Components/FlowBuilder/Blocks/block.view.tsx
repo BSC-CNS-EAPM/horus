@@ -1,5 +1,5 @@
 // React
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 // Horus components
@@ -26,7 +26,7 @@ import { Block, BlockTypes, ExtensionsToOpen, PluginPage } from "../flow.types";
 import "./block.css";
 
 // Drag the blocks, drop the arrows
-import { BlockViewProps, useBlockView } from "./block.hooks";
+import { BlockViewProps, BlockViewState, useBlockView } from "./block.hooks";
 import { BlockHooks } from "../flow.hooks";
 import InfoIcon from "../../Toolbar/Icons/Info";
 import RemoteIcon from "../../Toolbar/Icons/Remote";
@@ -40,36 +40,64 @@ import { GLOBAL_IDS } from "../../../Utils/globals";
 import PausedIcon from "../../Toolbar/Icons/Paused";
 
 export function BlockView(props: BlockViewProps) {
+  const { block, blockHooks } = props;
+
   const blockState = useBlockView(props);
 
-  // Create a portal to show the variables modal on top of the flow builder
-  const VariableModal = blockState.blockViewHooks.variablesModal
-    ? createPortal(
-        <VariableModalView
-          block={props.block}
-          handleChange={blockState.blockViewHooks.handleVariableChange}
-          handleClose={() => {
-            blockState.blockViewHooks.toggleVariablesModal();
-          }}
-        />,
-        document.getElementById("flow-builder-div")!
-      )
-    : null;
-
-  const SlurmOutputModal = blockState.blockViewHooks.slurmOutputModal
-    ? createPortal(
-        <SlurmOutputModalView
-          block={props.block}
-          handleChange={blockState.blockViewHooks.handleVariableChange}
-          handleClose={() => {
-            blockState.blockViewHooks.toggleSlurmOutputModal();
-          }}
-        />,
-        document.getElementById("flow-builder-div")!
-      )
-    : null;
-
   return (
+    <BlockWrapper blockState={blockState} block={block}>
+      <BlockVariablesModalView block={block} blockState={blockState} />
+      <BlockExtensionsView block={block} />
+      <BlockBox block={block}>
+        <BlockTopBar>
+          <BlockNameAndPlacedID block={block} />
+          <BlockToolbar
+            block={block}
+            blockState={blockState}
+            blockHooks={blockHooks}
+            isPaused={props.isPaused}
+          />
+        </BlockTopBar>
+        {block.type !== BlockTypes.GHOST && (
+          <BlockDescription
+            description={block.description}
+            show={block.isPlaced || blockState.blockViewHooks.isInfoHovering}
+            animate={!block.isPlaced}
+          />
+        )}
+        <div className="mt-2">
+          <BlockBody block={block} blockState={blockState} />
+        </div>
+      </BlockBox>
+      <BlockVariablesAndConnections
+        block={block}
+        blockState={blockState}
+        blockHooks={blockHooks}
+      />
+    </BlockWrapper>
+  );
+}
+
+function BlockBox({ block, children }: { block: Block; children: ReactNode }) {
+  return (
+    <div
+      id={`placed-${block.placedID}`}
+      className={`plugin-block ${block.isPlaced && "plugin-block-placed"} ${
+        block.runError && "plugin-block-failed"
+      }`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function BlockWrapper({
+  blockState,
+  block,
+  children,
+}: BlockViewProps & { children: ReactNode; blockState: BlockViewState }) {
+  return (
+    // Outer div nedded fro DnD to work
     <div>
       <div
         ref={blockState.div.ref}
@@ -77,170 +105,43 @@ export function BlockView(props: BlockViewProps) {
         {...blockState.div.listeners}
         {...blockState.div.attributes}
         className={`flex flex-col gap-1 ${
-          props.block.isPlaced ? "absolute z-1" : "relative"
+          block.isPlaced ? "absolute z-1" : "relative"
         }`}
       >
-        {VariableModal}
-        <BlockExtensionsView block={props.block} />
-        <div
-          id={`placed-${props.block.placedID}`}
-          className={`plugin-block ${
-            props.block.isPlaced && "plugin-block-placed"
-          } ${props.block.runError && "plugin-block-failed"}`}
-        >
-          <div className={`flex flex-row justify-between gap-2`}>
-            <div
-              className="block-name break-word flex flex-row gap-2 items-start"
-              style={{
-                transform: props.block.isPlaced ? "translateY(-2px)" : "",
-              }}
-            >
-              <BreakLongUnderscoreNames name={props.block.name} />
-              {props.block.isPlaced &&
-                window.horusSettings["showPlacedID"]?.value && (
-                  <span className="text-gray-400" style={{}}>
-                    {" "}
-                    {props.block.placedID}
-                  </span>
-                )}
-            </div>
-            <div className="flex flex-row gap-1 items-start cursor-auto">
-              {/* Play button to execute the block */}
-              {/* Delete button to remove the block from the canvas */}
-              {props.block.isPlaced && (
-                <>
-                  {props.block.finishedExecution && (
-                    <>
-                      <BlockTime time={props.block.time} />
-                      <FinishedCheck
-                        runError={props.block.runError}
-                        runErrorMessage={props.block.runErrorMessage}
-                      />
-                    </>
-                  )}
-
-                  <PlayBlockButton
-                    isRunning={props.block.isRunning}
-                    isPaused={props.isPaused ?? false}
-                    runError={props.block.runError}
-                    onClick={(resetFlow) => {
-                      props.blockHooks?.executeFlow(
-                        props.block.placedID,
-                        resetFlow
-                      );
-                    }}
-                  />
-                  {props.block.variables.length > 0 &&
-                    props.block.type !== BlockTypes.INPUT && (
-                      <BlockVariablesButton
-                        onClick={blockState.blockViewHooks.toggleVariablesModal}
-                      />
-                    )}
-
-                  <DeleteBlockButton
-                    block={props.block}
-                    onClick={() => props.blockHooks?.handleDelete(props.block)}
-                  />
-                </>
-              )}
-
-              {!props.block.isPlaced && (
-                <div
-                  onMouseOver={() =>
-                    blockState.blockViewHooks.setIsInfoHovering(true)
-                  }
-                  onMouseLeave={() =>
-                    blockState.blockViewHooks.setIsInfoHovering(false)
-                  }
-                  className="cursor-help"
-                >
-                  <InfoIcon />
-                </div>
-              )}
-            </div>
-          </div>
-          <div
-            className={
-              "text-gray-500 transition-opacity duration-300 " +
-              (blockState.blockViewHooks.isInfoHovering || props.block.isPlaced
-                ? "opacity-100"
-                : "opacity-0")
-            }
-          >
-            <div className="flex flex-row gap-1 items-center cursor-auto ">
-              {blockState.blockViewHooks.isInfoHovering ||
-              props.block.isPlaced ? (
-                <div className="w-full">
-                  <div className="plugin-description">
-                    {props.block.description}
-                  </div>
-                  {props.block.type === BlockTypes.SLURM &&
-                    props.block.isPlaced && (
-                      <div className="remote-block-cloud">
-                        {SlurmOutputModal}
-                        <ServerIcon /> Slurm Block - {props.block.status}
-                        <div style={{ position: "absolute", right: "15px" }}>
-                          <SlurmLoggingButton
-                            onClick={
-                              blockState.blockViewHooks.toggleSlurmOutputModal
-                            }
-                          />
-                        </div>
-                      </div>
-                    )}
-                  {props.block.isPlaced && (
-                    <div>
-                      <hr className="mt-1 mb-1" />
-                      <BlockRemotes
-                        block={props.block}
-                        blockHooks={props.blockHooks!}
-                      />
-                      {props.block.type === BlockTypes.INPUT && (
-                        <hr className="mt-1 mb-1" />
-                      )}
-                    </div>
-                  )}
-                </div>
-              ) : null}
-            </div>
-
-            {props.block.type === BlockTypes.INPUT && props.block.isPlaced && (
-              <PluginVariableView
-                key={
-                  props.block.variables[0]?.id +
-                  "-" +
-                  0 +
-                  "-" +
-                  props.block.id +
-                  "-" +
-                  props.block.placedID
-                }
-                variable={props.block.variables[0]!}
-                onChange={blockState.blockViewHooks.handleVariableChange}
-                hideName={true}
-                hideDescription={true}
-                applyStyle={false}
-              />
-            )}
-          </div>
-        </div>
-        {props.block.isPlaced && (
-          <PlacedBlockVariables
-            block={props.block}
-            blockHooks={props.blockHooks!}
-            handleSelectedInputGroupChange={
-              blockState.blockViewHooks.handleSelectedInputGroupChange
-            }
-          />
-        )}
+        {children}
       </div>
     </div>
   );
 }
+
 type BlockRemotesProps = {
   block: Block;
   blockHooks: BlockHooks;
 };
+
+function BlockVariablesAndConnections({
+  block,
+  blockState,
+  blockHooks,
+}: {
+  block: Block;
+  blockState: BlockViewState;
+  blockHooks?: BlockHooks;
+}) {
+  if (!block.isPlaced || !blockHooks) {
+    return null;
+  }
+
+  return (
+    <PlacedBlockVariables
+      block={block}
+      blockHooks={blockHooks}
+      handleSelectedInputGroupChange={
+        blockState.blockViewHooks.handleSelectedInputGroupChange
+      }
+    />
+  );
+}
 
 export function BlockRemotes(props: BlockRemotesProps) {
   return (
@@ -457,6 +358,212 @@ function BlockTime(props: { time?: number }) {
   );
 }
 
+function BlockNameAndPlacedID({ block }: { block: Block }) {
+  return (
+    <div
+      className="block-name break-word flex flex-row gap-2 items-start"
+      style={{
+        transform: block.isPlaced ? "translateY(-2px)" : "",
+      }}
+    >
+      <BreakLongUnderscoreNames name={block.name} />
+      {block.isPlaced && window.horusSettings["showPlacedID"]?.value && (
+        <span className="text-gray-400" style={{}}>
+          {" "}
+          {block.placedID}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function BlockToolbar({
+  block,
+  blockState,
+  blockHooks,
+  isPaused,
+}: {
+  block: Block;
+  blockState: BlockViewState;
+  blockHooks?: BlockHooks;
+  isPaused?: boolean;
+}) {
+  return (
+    <div className="flex flex-row gap-1 items-start cursor-auto">
+      {/* Play button to execute the block */}
+      {/* Delete button to remove the block from the canvas */}
+      {block.isPlaced && (
+        <>
+          {block.finishedExecution && (
+            <>
+              <BlockTime time={block.time} />
+              <FinishedCheck
+                runError={block.runError}
+                runErrorMessage={block.runErrorMessage}
+              />
+            </>
+          )}
+
+          {block.type !== BlockTypes.GHOST && (
+            <PlayBlockButton
+              isRunning={block.isRunning}
+              isPaused={isPaused ?? false}
+              runError={block.runError}
+              onClick={(resetFlow) => {
+                blockHooks?.executeFlow(block.placedID, resetFlow);
+              }}
+            />
+          )}
+          {block.variables.length > 0 && block.type !== BlockTypes.INPUT && (
+            <BlockVariablesButton
+              onClick={blockState.blockViewHooks.toggleVariablesModal}
+            />
+          )}
+
+          <DeleteBlockButton
+            block={block}
+            onClick={() => blockHooks?.handleDelete(block)}
+          />
+        </>
+      )}
+
+      {!block.isPlaced && (
+        <div
+          onMouseOver={() => blockState.blockViewHooks.setIsInfoHovering(true)}
+          onMouseLeave={() =>
+            blockState.blockViewHooks.setIsInfoHovering(false)
+          }
+          className="cursor-help"
+        >
+          <InfoIcon />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BlockTopBar({ children }: { children: React.ReactNode }) {
+  return (
+    <div className={`flex flex-row justify-between gap-2`}>{children}</div>
+  );
+}
+
+function SlurmBlockIconAndLogs({
+  block,
+  blockState,
+}: {
+  block: Block;
+  blockState: BlockViewState;
+}) {
+  const SlurmOutputModal = blockState.blockViewHooks.slurmOutputModal
+    ? createPortal(
+        <SlurmOutputModalView
+          block={block}
+          handleChange={blockState.blockViewHooks.handleVariableChange}
+          handleClose={() => {
+            blockState.blockViewHooks.toggleSlurmOutputModal();
+          }}
+        />,
+        document.getElementById("flow-builder-div")!
+      )
+    : null;
+  return (
+    <div className="remote-block-cloud">
+      {SlurmOutputModal}
+      <ServerIcon /> Slurm Block - {block.status}
+      <div style={{ position: "absolute", right: "15px" }}>
+        <SlurmLoggingButton
+          onClick={blockState.blockViewHooks.toggleSlurmOutputModal}
+        />
+      </div>
+    </div>
+  );
+}
+
+function BlockDescription({
+  description,
+  show,
+  animate,
+}: {
+  description: string;
+  show: boolean;
+  animate: boolean;
+}) {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState(animate ? "0px" : "auto");
+
+  useEffect(() => {
+    if (animate) {
+      if (show) {
+        // If show is true, set the height to the scrollHeight of the content
+        setHeight(`${contentRef.current?.scrollHeight}px`);
+      } else {
+        // Otherwise, set it to 0px to collapse
+        setHeight("0px");
+      }
+    }
+  }, [show, animate]);
+
+  return (
+    <div
+      ref={contentRef}
+      className="plugin-description"
+      style={{
+        overflow: "hidden", // Hide overflowing content
+        height: height,
+        transition: "height 0.3s ease", // Animate the height change
+      }}
+    >
+      {description}
+    </div>
+  );
+}
+
+function BlockBody({
+  block,
+  blockState,
+}: {
+  block: Block;
+  blockState: BlockViewState;
+}) {
+  if (!block.isPlaced) {
+    return null;
+  }
+
+  switch (block.type) {
+    case BlockTypes.INPUT:
+      return (
+        <PluginVariableView
+          key={
+            block.variables[0]?.id +
+            "-" +
+            0 +
+            "-" +
+            block.id +
+            "-" +
+            block.placedID
+          }
+          variable={block.variables[0]!}
+          onChange={blockState.blockViewHooks.handleVariableChange}
+          hideName={true}
+          hideDescription={true}
+          applyStyle={false}
+        />
+      );
+    case BlockTypes.SLURM:
+      return <SlurmBlockIconAndLogs block={block} blockState={blockState} />;
+    case BlockTypes.GHOST:
+      return (
+        <div className="grid grid-cols-1 place-items-center">
+          <ErrorIcon className="w-10 h-10 text-red-500" />
+          <span className="text-red-500">{block.description}</span>
+        </div>
+      );
+    default:
+      return null;
+  }
+}
+
 interface DeleteBlockButtonProps {
   block: Block;
   onClick: (block: Block) => void;
@@ -467,6 +574,30 @@ interface PlayBlockButtonProps {
   runError: boolean;
   isPaused: boolean;
   onClick: (resetFlow: boolean) => void;
+}
+
+function BlockVariablesModalView({
+  block,
+  blockState,
+}: {
+  block: Block;
+  blockState: BlockViewState;
+}) {
+  // Create a portal to show the variables modal on top of the flow builder
+  if (blockState.blockViewHooks.variablesModal) {
+    return createPortal(
+      <VariableModalView
+        block={block}
+        handleChange={blockState.blockViewHooks.handleVariableChange}
+        handleClose={() => {
+          blockState.blockViewHooks.toggleVariablesModal();
+        }}
+      />,
+      document.getElementById("flow-builder-div")!
+    );
+  }
+
+  return null;
 }
 
 function BlockVariablesButton({ onClick }: { onClick: () => void }) {

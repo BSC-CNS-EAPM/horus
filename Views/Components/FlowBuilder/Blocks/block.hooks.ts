@@ -15,12 +15,34 @@ export type BlockViewProps = {
   isPaused?: boolean;
 };
 
+export type BlockViewState = {
+  div: {
+    ref: React.RefObject<HTMLDivElement>;
+    attributes: any; // Replace `any` with a more specific type if available
+    listeners: any; // Replace `any` with a more specific type if available
+    style: CSSProperties;
+  };
+  blockViewHooks: {
+    isInfoHovering: boolean;
+    setIsInfoHovering: React.Dispatch<React.SetStateAction<boolean>>;
+    variablesModal: boolean;
+    toggleVariablesModal: () => void;
+    slurmOutputModal: boolean;
+    toggleSlurmOutputModal: () => void;
+    handleVariableChange: (value: any, id: string, groupID?: string) => void;
+    handleSelectedInputGroupChange: (direction: "up" | "down") => void;
+  };
+  settings: {
+    showPlacedID: boolean;
+  };
+};
+
 export function useBlockView({
   block,
   blockHooks,
   onAir,
   scale,
-}: BlockViewProps) {
+}: BlockViewProps): BlockViewState {
   // Trigger xarrow update when block is moved
   useXarrow();
 
@@ -158,7 +180,7 @@ export function useBlockView({
     style.cursor = "grabbing";
   }
 
-  const showPlacedID = window.horusSettings["showPlacedID"];
+  const showPlacedID = window.horusSettings["showPlacedID"]?.value ?? false;
 
   useEffect(() => {
     setDropRef(ref.current);

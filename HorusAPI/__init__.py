@@ -1,38 +1,40 @@
 # Export the HorusAPI plugins
-from .src import (  # noqa: F401
-    Plugin,  # noqa: F401
-    PluginBlock,  # noqa: F401
-    InputBlock,  # noqa: F401
-    SlurmBlock,  # noqa: F401
-    PluginVariable,  # noqa: F401
-    CustomVariable,  # noqa: F401
-    VariableTypes,  # noqa: F401
-    VariableGroup,  # noqa: F401
-    PluginPage,  # noqa: F401
-    PluginConfig,  # noqa: F401
-    PluginEndpoint,  # noqa: F401
-    VariableList,  # noqa: F401
-    PluginMetaModel,  # noqa: F401
-    PlatformType,  # noqa: F401
+from .src import (
+    Plugin,
+    PluginBlock,
+    InputBlock,
+    SlurmBlock,
+    GhostBlock,
+    BlockNotFoundError,
+    PluginVariable,
+    CustomVariable,
+    VariableTypes,
+    VariableGroup,
+    PluginPage,
+    PluginConfig,
+    PluginEndpoint,
+    VariableList,
+    PluginMetaModel,
+    PlatformType,
 )
 
 # Export the Molstar API
-from .src import MolstarAPI  # noqa: F401
+from .src import MolstarAPI
 
 # Export the smiles API
-from .src import SmilesAPI  # noqa: F401
+from .src import SmilesAPI
 
 # Export the extensions API
 from .src import Extensions
 
 # Export the utility SingletonMeta class
-from .src import HorusSingleton, TempFile, ResetRemoteException  # noqa: F401
+from .src import HorusSingleton, TempFile, ResetRemoteException
 
 # Export the initPlugin function
-from .src import initPlugin  # noqa: F401
+from .src import initPlugin
 
 # Export the HorusAPI version
-from ._version import version as __version__  # noqa: F401
+from ._version import version as __version__
 
 # Export the __all__ and __module__ variables
-from .src import __all__, __module__  # noqa: F401
+from .src import __all__, __module__

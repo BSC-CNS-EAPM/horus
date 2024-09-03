@@ -94,6 +94,7 @@ export enum BlockTypes {
   ACTION = "action",
   SLURM = "slurm",
   CONFIG = "config",
+  GHOST = "ghost",
 }
 
 export type VariableGroup = {

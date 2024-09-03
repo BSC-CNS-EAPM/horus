@@ -27,7 +27,7 @@ import tarfile
 from enum import Enum
 
 # Blocks from Horus
-from HorusAPI import PluginBlock as Block, SlurmBlock
+from HorusAPI import PluginBlock as Block, SlurmBlock, BlockNotFoundError, GhostBlock
 
 # The plugin manager
 from Server.PluginManager import PluginManager, PrintCapturer
@@ -107,6 +107,21 @@ class StoppedFlowException(BlocksException):
         super().__init__(block, self.message)
 
 
+class VariableConnectionNotFound(Exception):
+    """
+    Custom variable connection not found exception
+    """
+
+    def __init__(self, var: "BlockConnection") -> None:
+        super().__init__(
+            f"The block '{var.origin.blockID}' "
+            f"had the variable '{var.origin.variableID}' connected "
+            f"to the block '{var.destination.blockID}' variable "
+            f"'{var.destination.variableID}'. "
+            "No such variable connection could be found."
+        )
+
+
 # Define a overwrite exception for the saveFlow method
 class OverwriteException(Exception):
     """
@@ -150,6 +165,12 @@ class Flow:
     _path: typing.Optional[str]
     """
     The path to the flow
+    """
+
+    canExecute: bool = True
+    """
+    Whether the flow can be executed or not. This depends on the flow
+    having GhostBlocks
     """
 
     @property
@@ -371,11 +392,23 @@ class Flow:
                 )
 
             # Get the block class
-            blockClass = PluginManager().findBlock(blockID)
+            try:
+                blockClass = PluginManager().findBlock(blockID)
+                # Create a copy of the block, so we don't modify the original
+                newCopyBlockClass = blockClass.copy()
 
-            # Create a copy of the block, so we don't modify the original
-            newCopyBlockClass = blockClass.copy()
-            # newCopyBlockClass = blockClass
+            except BlockNotFoundError:
+
+                # The BlockIDs here should be "pluginID.blockID"
+                # if the GhostBlock is instantiated directly with this
+                # value, it will modify the blockID to be
+                # "pluginID_blockID" and after saving the flow
+                # the original block information will be lost
+                # Therefore we need to instantiate it with the original
+                # blockID
+
+                newCopyBlockClass = GhostBlock(blockID)
+                self.canExecute = False
 
             # Parse the internal variables
             newCopyBlockClass._parseInternalVariables(  # pylint: disable=protected-access # noqa: E501
@@ -385,26 +418,7 @@ class Flow:
             # Add the block to the list
             blocks.append(newCopyBlockClass)
 
-        def checkConnection(block: Block, conn: int):
-            found = False
-            for otherBlock in blocks:
-                if otherBlock._placedID == conn:  # pylint: disable=protected-access
-                    found = True
-                    break
-            if not found:
-                raise Exception(  # pylint: disable=broad-exception-raised
-                    f"'{block.name}' is connected " + "to a non-existing block."
-                )
-
-        # Check that the blocks are connected to existing blocks
-        for block in blocks:
-            for conn in block._connectedTo:  # pylint: disable=protected-access
-                checkConnection(block, conn)
-
-            for connRef in block._connectedToReferences:  # pylint: disable=protected-access
-                checkConnection(block, connRef)
-
-        def checkVarConnection(var):
+        def checkVarConnection(var: "BlockConnection"):
             found = False
             originVarID = var.origin.variableID
             originBlockID = var.origin.blockPlacedID
@@ -418,10 +432,7 @@ class Flow:
                     break
 
             if not found:
-                raise Exception(  # pylint: disable=broad-exception-raised
-                    f"Variable ID '{originVarID}' of block '{var.origin.blockID}'"
-                    + " has changed."
-                )
+                raise VariableConnectionNotFound(var)
 
             found = False
             destinationVarID = var.destination.variableID
@@ -436,20 +447,34 @@ class Flow:
                     break
 
             if not found:
-                raise Exception(  # pylint: disable=broad-exception-raised
-                    f"Variable ID '{destinationVarID}' of block "
-                    + f"'{var.destination.blockID}' has changed."
-                )
+                raise VariableConnectionNotFound(var)
 
         # Verify that variables are connected to existing variables
         for block in blocks:
             for var in block._variableConnections:  # pylint: disable=protected-access
-                checkVarConnection(var)
+                try:
+                    checkVarConnection(var)
+                except VariableConnectionNotFound as exc:
+                    logging.getLogger("Horus").warning(exc)
+
+                    # Remove the connection
+                    block._variableConnections.remove(var)
+
+                    self.canExecute = False
+
             # Do the same for the references
             for (
                 refVar
             ) in block._variableConnectionsReferences:  # pylint: disable=protected-access
-                checkVarConnection(refVar)
+                try:
+                    checkVarConnection(refVar)
+                except VariableConnectionNotFound as exc:
+                    logging.getLogger("Horus").warning(exc)
+
+                    # Remove the reference
+                    block._variableConnectionsReferences.remove(refVar)
+
+                    self.canExecute = False
 
         for block in blocks:
             # If the flow is not running but any block is running, set the block as not running
@@ -1047,7 +1072,12 @@ class Flow:
         """
 
         if not self.path:
-            raise Exception(f"The flow '{self.name}' does not have a path.")
+            msg = f"The flow '{self.name}' does not have a path."
+
+            # Stop the flow
+            self.stop(msg, fail=True)
+
+            raise Exception(msg)
 
         # Cast the savedID
         self.savedID = typing.cast(str, self.savedID)
@@ -1079,8 +1109,28 @@ class Flow:
         # the block. For example, a paused SlurmBlock
         # should not be resetted, as the status of the job
         # would be lost
+        blockSelectedToRun: typing.Optional["Block"] = None
         if self.currentExecuting is None:
-            self.findBlockByPlacedID(placedID)._cleanRun()
+            blockSelectedToRun = self.findBlockByPlacedID(placedID)
+            blockSelectedToRun._cleanRun(cleanCycles=False)
+        else:
+            blockSelectedToRun = self.findBlockByPlacedID(self.currentExecuting)
+
+        # Set the block as running
+        blockSelectedToRun._isRunning = True
+
+        if not self.canExecute:
+
+            msg = (
+                f"The flow '{self.name}' is not executable because "
+                "it contains ghost blocks. Please remove them or "
+                "re-install the Plugins that provided such blocks."
+            )
+
+            # Stop the flow
+            self.stop(msg, fail=True)
+
+            raise Exception(msg)
 
         # Assign the socket instance
         self._socket = socket

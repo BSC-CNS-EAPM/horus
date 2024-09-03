@@ -62,8 +62,6 @@ def flow_data():
                 "inputs": {},
                 "outputs": {},
                 "internalVariables": {},
-                "connectedTo": [],
-                "connectedToReferences": [],
                 "placedID": 1,
             }
         ],
@@ -94,13 +92,12 @@ def test_flow_blocks(flow: Flow):
     assert flow.blocks[0].name == "String"
     assert flow.blocks[0].inputs == {"string": None}
     assert flow.blocks[0].outputs == {"string": None}
-    assert flow.blocks[0]._connectedTo == []
-    assert flow.blocks[0]._connectedToReferences == []
     assert flow.blocks[0]._placedID == 1
 
 
 def test_flow_encode(flow: Flow):
     encoded_flow = flow.encode()
+    print(encoded_flow)
     assert encoded_flow["name"] == "Test Flow"
     assert encoded_flow["path"] == "/path/to/flow.flow"
     assert encoded_flow["remote"] == "Local"
@@ -110,8 +107,6 @@ def test_flow_encode(flow: Flow):
     assert encoded_flow["terminalOutput"] == ["Test output"]
     assert len(encoded_flow["blocks"]) == 1
     assert encoded_flow["blocks"][0]["id"] == "horus.string"
-    assert encoded_flow["blocks"][0]["connectedTo"] == []
-    assert encoded_flow["blocks"][0]["connectedToReference"] == []
     assert encoded_flow["blocks"][0]["placedID"] == 1
 
 
@@ -150,8 +145,6 @@ def test_flow_read(tmpdir, flow_data):
     assert read_flow.blocks[0].id == "horus.string"
     assert read_flow.blocks[0].inputs == {"string": None}
     assert read_flow.blocks[0].outputs == {"string": None}
-    assert read_flow.blocks[0]._connectedTo == []
-    assert read_flow.blocks[0]._connectedToReferences == []
     assert read_flow.blocks[0]._placedID == 1
 
 

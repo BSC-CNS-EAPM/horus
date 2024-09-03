@@ -49,6 +49,7 @@ from HorusAPI import (
     HorusSingleton,
     SlurmBlock,
     PluginMetaModel,
+    BlockNotFoundError,
     PlatformType,
     __version__ as HorusAPIVersion,
 )
@@ -1231,7 +1232,7 @@ class PluginManager(metaclass=HorusSingleton):
 
     def findBlock(self, fromBlockID: str):
         """
-        Finds a block from a block ID or raises an exception if not found.
+        Finds a block from a 'plugin.block' ID format or raises an exception if not found.
         """
         # Split the id
         pluginID = fromBlockID.split(".")[0]
@@ -1239,16 +1240,11 @@ class PluginManager(metaclass=HorusSingleton):
         # Find the plugin
         try:
             plugin = self._getPluginByID(pluginID)
-        except Exception as exc:
-            raise Exception(f"PluginID {pluginID} not found") from exc
 
-        # Get the block
-        try:
-            block = plugin.getBlock(fromBlockID)
-        except Exception as exc:
-            raise Exception(f"Block {fromBlockID} not found") from exc
+            return plugin.getBlock(fromBlockID)
 
-        return block
+        except Exception as exc:
+            raise BlockNotFoundError(fromBlockID) from exc
 
     def executeBlock(
         self,

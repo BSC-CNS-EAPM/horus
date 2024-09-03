@@ -97,7 +97,7 @@ export function SmilesVariableView(props: VariableViewProps) {
 
   return (
     <div className="plugin-variable-value min-h-[60px]">
-      <div className="flex flex-row gap-2 w-full justify-center py-2">
+      <div className="flex flex-row gap-2 w-full justify-center">
         {!usingSelectedSmiles && (
           <>
             <SearchComponent
