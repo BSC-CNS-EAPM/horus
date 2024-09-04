@@ -20,7 +20,7 @@ build_docs:
 
     - echo "Setting up Micromamba environment..."
     - $MICROMAMBA_BINARY_PATH remove --name horus_docs --yes || true
-    - $MICROMAMBA_BINARY_PATH create --name horus_docs --file Devtools/Environment/docs.yaml
+    - $MICROMAMBA_BINARY_PATH create --name horus_docs --file Devtools/Environment/docs.yaml --yes
     - source <($MICROMAMBA_BINARY_PATH shell hook --shell bash)
     - micromamba activate horus_docs
 
