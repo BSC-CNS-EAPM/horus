@@ -159,7 +159,7 @@ class Flow:
 
     savedID: typing.Optional[str]
     """
-    The savedID of the flow
+    The savedID of the flow. The path hashed.
     """
 
     _path: typing.Optional[str]
@@ -185,7 +185,11 @@ class Flow:
         """
         Setter for the path
         """
+
         self._path = value
+
+        if value and not os.path.isabs(value):
+            return
 
         # Update the savedID accordingly
         # with the path hash
@@ -1652,6 +1656,9 @@ class FlowManager:
                     overwriteCaution = True
             except Exception:  # pylint: disable=broad-exception-caught
                 overwriteCaution = True
+        else:
+            # Set the saved ID (will hash automatically the path with the Flow class setter)
+            flow.path = flowPath
 
         # If we are overwriting a flow, check if the user wants to overwrite it
         from App import AppDelegate  # pylint: disable=import-outside-toplevel
@@ -1699,6 +1706,12 @@ class FlowManager:
 
         # Init the flow instance
         flowInstance = Flow(flow)
+        # Because the savedID now gets automatically generated when the path is set,
+        # in the case of saving the flow for the first time we have to set manually the
+        # ID to none in order to check to overwrite a new flow. When overwriting we
+        # leave the generated ID in place.
+        if not overwrite:
+            flowInstance.savedID = flow.get("savedID", None)
 
         # Check if the flow has a path, if its a new flow,
         # and if we are not overwriting

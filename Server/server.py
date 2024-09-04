@@ -801,7 +801,6 @@ class HorusServer:
                 else:
                     flow = verifiedFlow
 
-                fullSavedID = flow.savedID
                 if self._isForUser:
                     # Clear back the full path in webapp mode
                     # but keep the old savedID, if not it willbe
@@ -809,12 +808,12 @@ class HorusServer:
                     flow.path = str(UserFileExplorer(flow.path, currentUser).getRelativePath())
 
                 # Emit the saved flow to connected rooms
-                self.socketio.emit("flow", flow.encode(minimal=False), to=fullSavedID)
+                self.socketio.emit("flow", flow.encode(minimal=False), to=flow.savedID)
 
                 success = {
                     "ok": True,
                     "name": flow.name,
-                    "savedID": fullSavedID,
+                    "savedID": flow.savedID,
                     "path": flow.path,
                     "overwrite": False,
                     "template": saveAsTemplate,
