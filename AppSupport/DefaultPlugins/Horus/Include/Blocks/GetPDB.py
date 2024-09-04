@@ -41,6 +41,7 @@ pdbID = PluginVariable(
     name="PDB ID",
     id="pdbID",
     description="The PDB ID to download",
+    placeholder="PDB ID...",
     type=VariableTypes.STRING,
 )
 

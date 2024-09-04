@@ -743,3 +743,35 @@ input_block_checkbox = InputBlock(
 )
 
 plugin.addBlock(input_block_checkbox)
+
+
+def fail_on_even_action(block: PluginBlock):
+
+    block.extraData["runs"] = block.extraData.get("runs", 0) + 1
+    print("Runs: ", block.extraData["runs"])
+
+    if block.extraData["runs"] % 2 == 0:
+        raise Exception("Failed on even runs")
+
+    print("Passed on odd runs")
+
+    block.setOutput("input_output_even", block.inputs["input_output_even"])
+
+
+input_output_even = PluginVariable(
+    id="input_output_even",
+    name="Input output even",
+    description="Input output even",
+    type=VariableTypes.ANY,
+)
+
+fail_on_even_block = PluginBlock(
+    id="fail_on_even_block",
+    name="Fail on even",
+    description="Fail on even",
+    action=fail_on_even_action,
+    inputs=[input_output_even],
+    outputs=[input_output_even],
+)
+
+plugin.addBlock(fail_on_even_block)

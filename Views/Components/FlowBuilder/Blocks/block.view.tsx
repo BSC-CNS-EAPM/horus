@@ -65,9 +65,7 @@ export function BlockView(props: BlockViewProps) {
             animate={!block.isPlaced}
           />
         )}
-        <div className="mt-2">
-          <BlockBody block={block} blockState={blockState} />
-        </div>
+        <BlockBody block={block} blockState={blockState} />
       </BlockBox>
       <BlockVariablesAndConnections
         block={block}
@@ -530,38 +528,36 @@ function BlockBody({
     return null;
   }
 
-  switch (block.type) {
-    case BlockTypes.INPUT:
-      return (
-        <PluginVariableView
-          key={
-            block.variables[0]?.id +
-            "-" +
-            0 +
-            "-" +
-            block.id +
-            "-" +
-            block.placedID
-          }
-          variable={block.variables[0]!}
-          onChange={blockState.blockViewHooks.handleVariableChange}
-          hideName={true}
-          hideDescription={true}
-          applyStyle={false}
-        />
-      );
-    case BlockTypes.SLURM:
-      return <SlurmBlockIconAndLogs block={block} blockState={blockState} />;
-    case BlockTypes.GHOST:
-      return (
-        <div className="grid grid-cols-1 place-items-center">
-          <ErrorIcon className="w-10 h-10 text-red-500" />
-          <span className="text-red-500">{block.description}</span>
-        </div>
-      );
-    default:
-      return null;
-  }
+  const renderBlockView = () => {
+    switch (block.type) {
+      case BlockTypes.INPUT:
+        return (
+          <PluginVariableView
+            key={`${block.variables[0]?.id}-0-${block.id}-${block.placedID}`}
+            variable={block.variables[0]!}
+            onChange={blockState.blockViewHooks.handleVariableChange}
+            hideName={true}
+            hideDescription={true}
+            applyStyle={false}
+          />
+        );
+      case BlockTypes.SLURM:
+        return <SlurmBlockIconAndLogs block={block} blockState={blockState} />;
+      case BlockTypes.GHOST:
+        return (
+          <div className="grid grid-cols-1 place-items-center">
+            <ErrorIcon className="w-10 h-10 text-red-500" />
+            <span className="text-red-500">{block.description}</span>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const content = renderBlockView();
+
+  return content ? <div className="mt-2">{content}</div> : null;
 }
 
 interface DeleteBlockButtonProps {
