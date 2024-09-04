@@ -11,3 +11,4 @@ dependencies:
       - nbsphinx==0.9.3
       - sphinx_copybutton==0.5.2
       - flask-socketio==5.3.4
+      - pydantic==1.10.13
