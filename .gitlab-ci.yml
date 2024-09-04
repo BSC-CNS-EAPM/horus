@@ -71,8 +71,6 @@ upload:
         echo "Uploading $file..."
         curl --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file "$file" "${PACKAGE_REGISTRY_URL}/horus${CI_COMMIT_TAG}/$(basename $file)"
       done
-  only:
-    - tags
 
 publish:
   stage: publish
