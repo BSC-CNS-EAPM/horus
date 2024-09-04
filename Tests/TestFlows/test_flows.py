@@ -391,7 +391,7 @@ def test_molview_flow(flow_appDelegate):
         flow.run(placedID=1)
 
         for block in flow.blocks:
-            print(block._runErrorMessage)
+            print(block.blockLogs)
 
         # Check that the flow has been updated
         assert flow.status == Flow.FlowStatus.FINISHED

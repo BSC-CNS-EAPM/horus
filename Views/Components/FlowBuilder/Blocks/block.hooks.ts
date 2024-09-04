@@ -27,8 +27,8 @@ export type BlockViewState = {
     setIsInfoHovering: React.Dispatch<React.SetStateAction<boolean>>;
     variablesModal: boolean;
     toggleVariablesModal: () => void;
-    slurmOutputModal: boolean;
-    toggleSlurmOutputModal: () => void;
+    blockLogsModal: boolean;
+    toggleBlockLogsModal: () => void;
     handleVariableChange: (value: any, id: string, groupID?: string) => void;
     handleSelectedInputGroupChange: (direction: "up" | "down") => void;
   };
@@ -55,7 +55,7 @@ export function useBlockView({
   const [isInfoHovering, setIsInfoHovering] = useState(false);
 
   const [variablesModal, setVariablesModal] = useState(false);
-  const [slurmOutputModal, setSlurmOutputModal] = useState(false);
+  const [blockLogsModal, setBlockLogsModal] = useState(false);
 
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: block.placedID ? `${block.placedID}-${block.id}` : block.id,
@@ -80,11 +80,11 @@ export function useBlockView({
     setVariablesModal(!variablesModal);
   };
 
-  const toggleSlurmOutputModal = () => {
+  const toggleBlockLogsModal = () => {
     if (setDisableDrag) {
-      setDisableDrag(!slurmOutputModal);
+      setDisableDrag(!blockLogsModal);
     }
-    setSlurmOutputModal(!slurmOutputModal);
+    setBlockLogsModal(!blockLogsModal);
   };
 
   const handleSelectedInputGroupChange = (direction: "up" | "down") => {
@@ -205,8 +205,8 @@ export function useBlockView({
       setIsInfoHovering: setIsInfoHovering,
       variablesModal,
       toggleVariablesModal: toggleVariablesModal,
-      slurmOutputModal,
-      toggleSlurmOutputModal: toggleSlurmOutputModal,
+      blockLogsModal: blockLogsModal,
+      toggleBlockLogsModal: toggleBlockLogsModal,
       handleVariableChange: handleVariableChange,
       handleSelectedInputGroupChange: handleSelectedInputGroupChange,
     },

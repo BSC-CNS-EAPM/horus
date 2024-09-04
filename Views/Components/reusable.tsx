@@ -139,6 +139,7 @@ type BlurredModalProps = {
     height?: string;
     width?: string;
   };
+  noMargin?: boolean;
 };
 
 export function BlurredModal(props: BlurredModalProps) {
@@ -153,6 +154,12 @@ export function BlurredModal(props: BlurredModalProps) {
     >
       {/* This is the content */}
       <div
+        style={{
+          margin: props.noMargin ? 0 : undefined,
+          padding: props.noMargin ? 0 : undefined,
+          borderRadius: props.noMargin ? "15px" : undefined,
+          overflow: props.noMargin ? "hidden" : undefined,
+        }}
         className={`z-30 absolute blurred-modal-content zoom-in-animation ${
           props.maxContentSize?.width ?? "max-w-[60%]"
         }  ${props.maxContentSize?.height ?? "max-h-[85%]"}`}

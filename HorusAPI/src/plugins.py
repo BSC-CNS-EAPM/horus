@@ -967,14 +967,14 @@ class PluginBlock:
     Whether the block is running or not.
     """
 
-    _runError: bool = False
+    error: bool = False
     """
     Whether the block has an error or not.
     """
 
-    _runErrorMessage: str = ""
+    blockLogs: str = ""
     """
-    The error message of the block.
+    The logs of the block.
     """
 
     _placedID: typing.Optional[int] = 0
@@ -1369,8 +1369,8 @@ class PluginBlock:
     def _cleanRun(self, cleanCycles: bool = True):
         # Clean internal variables related to the execution
         self._finishedExecution = False
-        self._runError = False
-        self._runErrorMessage = ""
+        self.error = False
+        self.blockLogs = ""
         self._isRunning = False
         self._extensionsToOpen = []
         self._storedOutputs = {}
@@ -1422,8 +1422,8 @@ class PluginBlock:
 
         isPlaced: bool = blockJSON.get("isPlaced", False)
         isRunning: bool = blockJSON.get("isRunning", False)
-        runError: bool = blockJSON.get("runError", False)
-        runErrorMessage: str = blockJSON.get("runErrorMessage", "")
+        error: bool = blockJSON.get("error", False)
+        blockLogs: str = blockJSON.get("blockLogs", "")
         placedID: int = blockJSON.get("placedID", 0)
         finishedExecution: bool = blockJSON.get("finishedExecution", True)
         selectedInputGroup: str = blockJSON.get("selectedInputGroup", "default")
@@ -1528,8 +1528,8 @@ class PluginBlock:
         # Update the internal variables
         self._isPlaced = isPlaced
         self._isRunning = isRunning
-        self._runError = runError
-        self._runErrorMessage = runErrorMessage
+        self.error = error
+        self.blockLogs = blockLogs
         self._position = [xPos, yPos]
         self._placedID = placedID
         self._finishedExecution = finishedExecution
@@ -1550,8 +1550,8 @@ class PluginBlock:
             "isPlaced": self._isPlaced,
             "position": {"x": self._position[0], "y": self._position[1]},
             "isRunning": self._isRunning,
-            "runError": self._runError,
-            "runErrorMessage": self._runErrorMessage,
+            "error": self.error,
+            "blockLogs": self.blockLogs,
             "placedID": self._placedID,
             "finishedExecution": self._finishedExecution,
             "storedOutputs": self._storedOutputs,
@@ -1591,8 +1591,8 @@ class GhostBlock(PluginBlock):
     A block used to represent missing or unavailable blocks in a flow.
     """
 
-    _runError = True
-    _runErrorMessage = "Missing or unavailable block."
+    error = True
+    blockLogs = "Missing or unavailable block."
 
     def _parseID(self, id: str) -> str:
 
@@ -1606,7 +1606,7 @@ class GhostBlock(PluginBlock):
     def __init__(self, id: str):
         super().__init__(
             name=id,
-            description=self._runErrorMessage,
+            description=self.blockLogs,
             blockType=PluginBlockTypes.GHOST,  # Explicitly sets the block type to GHOST
             id=id,
         )
@@ -1617,8 +1617,8 @@ class GhostBlock(PluginBlock):
     def _toDict(self):
 
         # Set to have an error always
-        self._runError = True
-        self._runErrorMessage = "Missing or unavailable block."
+        self.error = True
+        self.blockLogs = "Missing or unavailable block."
 
         return super()._toDict()
 

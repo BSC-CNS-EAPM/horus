@@ -151,7 +151,7 @@ function ErrorFlowStatus() {
   return (
     <FlowStatusBase color="red">
       Failed
-      <ErrorIcon />
+      <ErrorIcon className="w-5 h-5" />
     </FlowStatusBase>
   );
 }

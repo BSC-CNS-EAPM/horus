@@ -4,9 +4,8 @@ import { createPortal } from "react-dom";
 
 // Horus components
 import RotatingLines from "../../RotatingLines/rotatinglines";
-import AppButton from "../../appbutton";
 import ServerIcon from "../../Toolbar/Icons/Server";
-import { BlurredModal, HorusPopover, MovingChevron } from "../../reusable";
+import { HorusPopover, MovingChevron } from "../../reusable";
 
 // Utilities
 import { modifierKey } from "../../Toolbar/toolbar";
@@ -17,7 +16,7 @@ import {
   VariableModalView,
   PlacedBlockVariables,
 } from "../Variables/variable_connections";
-import { SlurmOutputModalView } from "../Logs/logs_connections";
+import { BlockLogsModalView } from "../Logs/logs_connections";
 
 // Typescript types
 import { Block, BlockTypes, ExtensionsToOpen, PluginPage } from "../flow.types";
@@ -38,6 +37,7 @@ import ErrorIcon from "../../Toolbar/Icons/Error";
 import PlayIcon from "../../Toolbar/Icons/Play";
 import { GLOBAL_IDS } from "../../../Utils/globals";
 import PausedIcon from "../../Toolbar/Icons/Paused";
+import ErrorLogFile from "../../Toolbar/Icons/ErrorLogFile";
 
 export function BlockView(props: BlockViewProps) {
   const { block, blockHooks } = props;
@@ -65,6 +65,7 @@ export function BlockView(props: BlockViewProps) {
             animate={!block.isPlaced}
           />
         )}
+        <BlockRemotes block={block} blockHooks={blockHooks} />
         <BlockBody block={block} blockState={blockState} />
       </BlockBox>
       <BlockVariablesAndConnections
@@ -81,7 +82,7 @@ function BlockBox({ block, children }: { block: Block; children: ReactNode }) {
     <div
       id={`placed-${block.placedID}`}
       className={`plugin-block ${block.isPlaced && "plugin-block-placed"} ${
-        block.runError && "plugin-block-failed"
+        block.error && "plugin-block-failed"
       }`}
     >
       {children}
@@ -114,7 +115,7 @@ function BlockWrapper({
 
 type BlockRemotesProps = {
   block: Block;
-  blockHooks: BlockHooks;
+  blockHooks?: BlockHooks;
 };
 
 function BlockVariablesAndConnections({
@@ -142,14 +143,18 @@ function BlockVariablesAndConnections({
 }
 
 export function BlockRemotes(props: BlockRemotesProps) {
+  if (!props.block.isPlaced || !props.blockHooks) {
+    return null;
+  }
+
   return (
-    <div className="remote-block-cloud items-center mt-0">
+    <div className="remote-block-cloud items-center border-t border-gray-300 pt-1">
       <RemoteIcon />
       <div className="plugin-variable-value">
         <select
           value={props.block.selectedRemote}
           onChange={(e) => {
-            props.blockHooks.setBlockRemote(
+            props.blockHooks?.setBlockRemote(
               props.block.placedID,
               e.target.value
             );
@@ -236,67 +241,9 @@ function BlockExtensionsView(props: { block: Block }) {
   );
 }
 
-function FinishedCheck(props: { runError: boolean; runErrorMessage?: string }) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  if (props.runError) {
-    return (
-      <>
-        {isOpen &&
-          createPortal(
-            <BlurredModal
-              show={isOpen}
-              onHide={() => {
-                setIsOpen(false);
-              }}
-              maxContentSize={{
-                height: "h-[85%]",
-              }}
-            >
-              <div className="flex flex-col h-full justify-between">
-                <div className="sticky top-0 z-10">
-                  <div
-                    id="block-error-title"
-                    className="font-semibold text-3xl"
-                    style={{
-                      color: "var(--digital-grey-IV)",
-                    }}
-                  >
-                    The block failed with the following error
-                  </div>
-                  <hr className="my-4 p-0"></hr>
-                </div>
-                <pre className="h-full select-text">
-                  {props.runErrorMessage}
-                </pre>
-                <hr className="p-2"></hr>
-                <div className="flex items-center justify-center">
-                  <AppButton
-                    action={() => {
-                      setIsOpen(false);
-                    }}
-                  >
-                    Close
-                  </AppButton>
-                </div>
-              </div>
-            </BlurredModal>,
-            document.getElementById(GLOBAL_IDS.FLOW_BUILDER_DIV)!
-          )}
-        <div
-          onClick={() => {
-            setIsOpen(true);
-          }}
-          className="cursor-pointer"
-          style={{
-            position: "relative",
-            top: "-2px",
-          }}
-        >
-          <ErrorIcon color="var(--red-error)" className="w-5 h-5" />
-        </div>
-      </>
-    );
+function FinishedCheck(props: { error: boolean; blockLogs?: string }) {
+  if (props.error) {
+    return null;
   }
 
   return (
@@ -346,7 +293,7 @@ function BlockTime(props: { time?: number }) {
 
   return (
     <div
-      className="overflow-scroll max-w-14"
+      className="max-w-14"
       style={{
         transform: "translateY(-2px)",
       }}
@@ -395,18 +342,18 @@ function BlockToolbar({
           {block.finishedExecution && (
             <>
               <BlockTime time={block.time} />
-              <FinishedCheck
-                runError={block.runError}
-                runErrorMessage={block.runErrorMessage}
-              />
+              <FinishedCheck error={block.error} blockLogs={block.blockLogs} />
             </>
+          )}
+
+          {block.blockLogs && (
+            <BlockLogs block={block} blockState={blockState} />
           )}
 
           {block.type !== BlockTypes.GHOST && (
             <PlayBlockButton
               isRunning={block.isRunning}
               isPaused={isPaused ?? false}
-              runError={block.runError}
               onClick={(resetFlow) => {
                 blockHooks?.executeFlow(block.placedID, resetFlow);
               }}
@@ -446,35 +393,50 @@ function BlockTopBar({ children }: { children: React.ReactNode }) {
   );
 }
 
-function SlurmBlockIconAndLogs({
+function BlockLogs({
   block,
   blockState,
 }: {
   block: Block;
   blockState: BlockViewState;
 }) {
-  const SlurmOutputModal = blockState.blockViewHooks.slurmOutputModal
+  const blockLogsView = blockState.blockViewHooks.blockLogsModal
     ? createPortal(
-        <SlurmOutputModalView
+        <BlockLogsModalView
           block={block}
-          handleChange={blockState.blockViewHooks.handleVariableChange}
           handleClose={() => {
-            blockState.blockViewHooks.toggleSlurmOutputModal();
+            blockState.blockViewHooks.toggleBlockLogsModal();
           }}
         />,
-        document.getElementById("flow-builder-div")!
+        document.getElementById(GLOBAL_IDS.FLOW_BUILDER_DIV)!
       )
     : null;
+
   return (
-    <div className="remote-block-cloud">
-      {SlurmOutputModal}
-      <ServerIcon /> Slurm Block - {block.status}
-      <div style={{ position: "absolute", right: "15px" }}>
-        <SlurmLoggingButton
-          onClick={blockState.blockViewHooks.toggleSlurmOutputModal}
-        />
-      </div>
-    </div>
+    <>
+      {blockLogsView}
+      <HorusPopover
+        trigger={
+          block.error ? (
+            <ErrorLogFile
+              className="w-5 h-5 cursor-pointer"
+              color="var(--red-error)"
+              onClick={blockState.blockViewHooks.toggleBlockLogsModal}
+            />
+          ) : (
+            <LogFileIcon
+              style={{
+                transform: "translateY(-1px)",
+              }}
+              className="w-5 h-5 cursor-pointer"
+              onClick={blockState.blockViewHooks.toggleBlockLogsModal}
+            />
+          )
+        }
+      >
+        <div className="hover-description">Block logs</div>
+      </HorusPopover>
+    </>
   );
 }
 
@@ -542,7 +504,11 @@ function BlockBody({
           />
         );
       case BlockTypes.SLURM:
-        return <SlurmBlockIconAndLogs block={block} blockState={blockState} />;
+        return (
+          <div className="remote-block-cloud border-t border-gray-300 pt-1">
+            <ServerIcon /> Slurm Block - {block.status}
+          </div>
+        );
       case BlockTypes.GHOST:
         return (
           <div className="grid grid-cols-1 place-items-center">
@@ -567,7 +533,6 @@ interface DeleteBlockButtonProps {
 
 interface PlayBlockButtonProps {
   isRunning: boolean;
-  runError: boolean;
   isPaused: boolean;
   onClick: (resetFlow: boolean) => void;
 }
@@ -604,7 +569,7 @@ function BlockVariablesButton({ onClick }: { onClick: () => void }) {
           onClick={onClick}
           style={{
             position: "relative",
-            top: "-2px",
+            top: "-1px",
             right: "-1px",
           }}
         >
@@ -613,27 +578,6 @@ function BlockVariablesButton({ onClick }: { onClick: () => void }) {
       }
     >
       <div className="hover-description">Setup variables</div>
-    </HorusPopover>
-  );
-}
-function SlurmLoggingButton({ onClick }: { onClick: () => void }) {
-  return (
-    <HorusPopover
-      trigger={
-        <button
-          onClick={onClick}
-          style={{
-            pointerEvents: "all",
-            right: 0,
-            position: "absolute",
-            marginLeft: "auto",
-          }}
-        >
-          <LogFileIcon />
-        </button>
-      }
-    >
-      <div className="hover-description">Job info</div>
     </HorusPopover>
   );
 }

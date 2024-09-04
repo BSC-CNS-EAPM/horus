@@ -143,8 +143,8 @@ export type Block = {
   // Block state
   isPlaced: boolean;
   isRunning: boolean;
-  runError: boolean;
-  runErrorMessage: string;
+  error: boolean;
+  blockLogs: string;
   position: { x: number; y: number };
   placedID: number;
   isConnecting: boolean;

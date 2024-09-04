@@ -237,7 +237,9 @@ function FlowStatusIcons({ flow, saved }: { flow: Flow; saved: boolean }) {
         </>
       )}
       {saved ? (
-        <FlowStatusView status={flow.status} />
+        <div className="grid place-items-center">
+          <FlowStatusView status={flow.status} />
+        </div>
       ) : (
         <div
           onClick={saveEvent}

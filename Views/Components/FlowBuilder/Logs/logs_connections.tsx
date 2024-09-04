@@ -5,19 +5,69 @@ import SidebarView from "../../SidebarView/sidebar_view";
 import { FlowStatusView } from "../../FlowStatus/flow_status";
 
 // TS types
-import { Block, FlowStatus } from "../flow.types";
+import { Block, BlockTypes, FlowStatus } from "../flow.types";
 import AppButton from "../../appbutton";
 import { BlurredModal } from "../../reusable";
+import { LazyLog } from "@melloware/react-logviewer";
 
-type SlurmOutputModalViewProps = {
+type BlockLogsModalViewProps = {
   block: Block;
-  handleChange: (value: any, id: string, groupID?: string) => void;
-  handleClose?: () => void;
+  handleClose: () => void;
 };
 
-export function SlurmOutputModalView(props: SlurmOutputModalViewProps) {
-  const { block } = props;
+export function BlockLogsModalView(props: BlockLogsModalViewProps) {
+  const { block, handleClose } = props;
 
+  return (
+    <BlurredModal
+      show
+      noMargin={block.type !== BlockTypes.SLURM}
+      onHide={() => {
+        handleClose?.();
+      }}
+      maxContentSize={{
+        height: "h-[85%]",
+        width: "w-[60%]",
+      }}
+    >
+      {block.type === BlockTypes.SLURM ? (
+        <SlurmOutputModalView block={block} handleClose={handleClose} />
+      ) : (
+        <RegularBlockLogs logs={block.blockLogs} />
+      )}
+    </BlurredModal>
+  );
+}
+
+function RegularBlockLogs({ logs }: { logs: string }) {
+  return (
+    <div
+      style={{
+        height: "100%",
+        borderRadius: "10px",
+        overflow: "hidden",
+      }}
+    >
+      <LazyLog
+        caseInsensitive
+        enableHotKeys
+        enableSearch
+        extraLines={1}
+        selectableLines
+        follow
+        text={logs}
+      />
+    </div>
+  );
+}
+
+function SlurmOutputModalView({
+  block,
+  handleClose,
+}: {
+  block: Block;
+  handleClose: () => void;
+}) {
   const groupedViews: Record<string, React.ReactNode[]> = {};
 
   const worldList = () => {
@@ -62,7 +112,9 @@ export function SlurmOutputModalView(props: SlurmOutputModalViewProps) {
   };
 
   const getGroupedVariables = () => {
-    groupedViews["Status"] = [
+    groupedViews["Block logs"] = [<RegularBlockLogs logs={block.blockLogs} />];
+
+    groupedViews["Slurm status"] = [
       <div
         className="flex flex-row gap-2 flex-wrap p-2 shadow-md"
         style={{
@@ -80,7 +132,7 @@ export function SlurmOutputModalView(props: SlurmOutputModalViewProps) {
       </div>,
     ];
 
-    groupedViews["Output"] = [
+    groupedViews["Slurm output"] = [
       <div
         className="flex flex-row gap-2 flex-wrap p-2 shadow-md"
         style={{
@@ -91,14 +143,26 @@ export function SlurmOutputModalView(props: SlurmOutputModalViewProps) {
         }}
       >
         {block.stdOut ? (
-          <pre className="pb-2">{block.stdOut}</pre>
+          <LazyLog
+            style={{
+              borderRadius: "10px",
+              overflow: "hidden",
+            }}
+            caseInsensitive
+            enableHotKeys
+            enableSearch
+            extraLines={1}
+            selectableLines
+            follow
+            text={block.stdOut}
+          />
         ) : (
           <span className="text-center w-full">No output during execution</span>
         )}
       </div>,
     ];
 
-    groupedViews["Error"] = [
+    groupedViews["Slurm error"] = [
       <div
         className="flex flex-row gap-2 flex-wrap p-2 shadow-md"
         style={{
@@ -109,7 +173,19 @@ export function SlurmOutputModalView(props: SlurmOutputModalViewProps) {
         }}
       >
         {block.stdErr ? (
-          <pre className="pb-2">{block.stdErr}</pre>
+          <LazyLog
+            style={{
+              borderRadius: "10px",
+              overflow: "hidden",
+            }}
+            caseInsensitive
+            enableHotKeys
+            enableSearch
+            extraLines={1}
+            selectableLines
+            follow
+            text={block.stdErr}
+          />
         ) : (
           <span className="text-center w-full">No errors during execution</span>
         )}
@@ -120,36 +196,25 @@ export function SlurmOutputModalView(props: SlurmOutputModalViewProps) {
   };
 
   return (
-    <BlurredModal
-      show
-      onHide={() => {
-        props?.handleClose?.();
-      }}
-      maxContentSize={{
-        height: "h-[85%]",
-        width: "w-[60%]",
-      }}
-    >
-      <div className="flex flex-col h-full">
-        <div className="sticky top-0 z-10">
-          <div className="variables-modal-title-search">
-            <div
-              className="font-semibold text-3xl break-all"
-              style={{
-                color: "var(--digital-grey-IV)",
-              }}
-            >
-              {block.name} - {block.jobID ?? "No job ID"}
-            </div>
-            <div className="flex flex-row gap-4 items-center">
-              {parsedStatus()}
-              <AppButton action={props.handleClose!}>Close</AppButton>
-            </div>
+    <div className="flex flex-col h-full">
+      <div className="sticky top-0 z-10">
+        <div className="variables-modal-title-search">
+          <div
+            className="font-semibold text-3xl break-all"
+            style={{
+              color: "var(--digital-grey-IV)",
+            }}
+          >
+            {block.name} - {block.jobID ?? "No job ID"}
           </div>
-          <hr className="my-4 p-0"></hr>
+          <div className="flex flex-row gap-4 items-center">
+            {parsedStatus()}
+            <AppButton action={handleClose}>Close</AppButton>
+          </div>
         </div>
-        <SidebarView views={getGroupedVariables()} />
+        <hr className="my-4 p-0"></hr>
       </div>
-    </BlurredModal>
+      <SidebarView views={getGroupedVariables()} />
+    </div>
   );
 }

@@ -80,8 +80,8 @@ class BlocksException(Exception):
         self.block = block
 
         # Set the block as with the error
-        self.block._runError = True
-        self.block._runErrorMessage = message
+        self.block.error = True
+        self.block.blockLogs += f"\nERROR: {message}"
         self.block._isRunning = False
         self.block._finishedExecution = True
 
@@ -198,6 +198,11 @@ class Flow:
     remote: str
     """
     The remote name where the flow is connected
+    """
+
+    _runningBlock: typing.Optional[Block] = None
+    """
+    The block that is currently running. Only used internally for the block logs
     """
 
     currentExecuting: typing.Optional[int]
@@ -758,7 +763,7 @@ class Flow:
         # If the block is already executed, return its outputs.
         # Except for when we are ressetting the flow run
         if (
-            blockToRun._finishedExecution and not resetRemoteBlock and not blockToRun._runError
+            blockToRun._finishedExecution and not resetRemoteBlock and not blockToRun.error
         ):  # and not comesFromCyclic
             return blockToRun._storedOutputs
         else:
@@ -858,6 +863,7 @@ class Flow:
         # Calling the PM is a must because it handles
         # the dependencies for each block
         try:
+            self._runningBlock = blockToRun
             outputs = self._pluginManager.executeBlock(
                 blockToRun,
                 self.savedID,
@@ -870,6 +876,8 @@ class Flow:
 
             # Raise again a special "ErrorRunningBlock" exception
             raise ErrorRunningBlock(blockToRun, str(exc)) from exc
+        finally:
+            self._runningBlock = None
 
         # Save the flow
         self.write()
@@ -929,6 +937,7 @@ class Flow:
             # Once the block has been executed, call again the execution
             # of this block to execute the finalAction
             try:
+                self._runningBlock = blockToRun
                 outputs = self._pluginManager.executeBlock(
                     blockToRun, self.savedID, resetRemoteBlock=False, isFirstSlurm=False
                 )
@@ -939,6 +948,8 @@ class Flow:
 
                 # Raise again a special "ErrorRunningBlock" exception
                 raise ErrorRunningBlock(blockToRun, str(exc)) from exc
+            finally:
+                self._runningBlock = None
 
         # Block endend executing, thus update the state
         blockToRun._isRunning = False
@@ -1199,7 +1210,9 @@ class Flow:
         self.finishedTime = None
 
         # Run the blocks
-        with self.TerminalOutputUpdater(self.terminalOutput, self.savedID, socket):
+        with self.TerminalOutputUpdater(
+            self.terminalOutput, lambda: self._runningBlock, self.savedID, socket
+        ):
             try:
                 self._runPreviousBlocks(
                     placedID, resetRemoteBlock=resetRemoteBlock, flowResumed=flowResumed
@@ -1320,8 +1333,8 @@ class Flow:
             if block._isRunning:
                 block._isRunning = False
                 block._finishedExecution = True
-                block._runError = True
-                block._runErrorMessage = message
+                block.error = True
+                block.blockLogs += f"\nERROR: {message}"
                 block._finishedExecution = True
 
         # Update the flow size and the finished time
@@ -1330,6 +1343,26 @@ class Flow:
 
         # Save the flow
         self.write()
+
+    def _generateID(self):
+        """
+        Generates a unique identifier using a hash of the flow path
+
+        Returns:
+            str: The hash of the flow path as the ID
+        """
+
+        if not self.path:
+            self.savedID = None
+        else:
+            algorithm = "md5"
+
+            # Create a hash object
+            hashObj = hashlib.new(algorithm)
+            hashObj.update(self.path.encode("utf-8"))
+
+            # Get the hexadecimal representation of the hash
+            self.savedID = hashObj.hexdigest()
 
     class TerminalOutputUpdater(PrintCapturer):
         """
@@ -1357,12 +1390,14 @@ class Flow:
         def __init__(
             self,
             terminalOutput: typing.List[str],
+            getRunningBlock: typing.Callable[[], typing.Optional[Block]],
             savedID: str,
             socket: typing.Optional["HorusSocket"] = None,
         ):
             super().__init__()
 
             self.terminalOutput = terminalOutput
+            self.getRunningBlock = getRunningBlock
             self.savedID = savedID
             self.socket = socket
 
@@ -1376,32 +1411,16 @@ class Flow:
 
             self.terminalOutput.append(message)
 
+            runningBlock = self.getRunningBlock()
+            if runningBlock:
+                runningBlock.blockLogs += message
+
             # Prevent printing flow prints to the terminal in roder to not
             # saturate the terminal on WebAppMode (only in not debug mode)
             from App import AppDelegate
 
             if AppDelegate().debug:
                 super().write(message)
-
-    def _generateID(self):
-        """
-        Generates a unique identifier using a hash of the flow path
-
-        Returns:
-            str: The hash of the flow path as the ID
-        """
-
-        if not self.path:
-            self.savedID = None
-        else:
-            algorithm = "md5"
-
-            # Create a hash object
-            hashObj = hashlib.new(algorithm)
-            hashObj.update(self.path.encode("utf-8"))
-
-            # Get the hexadecimal representation of the hash
-            self.savedID = hashObj.hexdigest()
 
 
 class FlowManager:
