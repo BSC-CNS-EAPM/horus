@@ -29,9 +29,6 @@ build_docs:
     - echo "Pushing the documentation..."
     - mkdir -p $DOCS_BUILD_DIR
     - cp -r docs/_build/html $DOCS_BUILD_DIR
-  rules:
-  # Only if its a tag / main branch
-    - if: $CI_COMMIT_BRANCH == "main"
 
 
 build_horus:
