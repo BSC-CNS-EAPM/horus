@@ -21,7 +21,7 @@ npm i --save-dev --legacy-peer-deps --save-exact parcel@2.12.0
 
 # Reinstall the conda environment
 echo "Reinstalling the conda environment"
-micromamba env remove -n horus_test -y
+micromamba env remove -n horus_test -y || true
 micromamba env create -f Devtools/Environment/conda_horus.yaml -n horus_test
 
 # Activate conda environment

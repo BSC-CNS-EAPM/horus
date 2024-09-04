@@ -18,7 +18,7 @@ echo "Starting the build process for Ubuntu 14.04"
 
 # Reinstall the conda environment
 echo "Reinstalling the conda environment"
-micromamba env remove -n horus_ubuntu14 -y
+micromamba env remove -n horus_ubuntu14 -y || true
 micromamba env create -f Devtools/Environment/conda_horus.yaml -n horus_ubuntu14
 
 # Activate conda environment

@@ -18,7 +18,7 @@ echo "Starting the build process for Centos 7"
 
 # Reinstall the conda environment
 echo "Reinstalling the conda environment"
-micromamba env remove -n horus_centos7 -y
+micromamba env remove -n horus_centos7 -y || true
 micromamba env create -f Devtools/Environment/conda_horus.yaml -n horus_centos7
 
 # Activate conda environment
