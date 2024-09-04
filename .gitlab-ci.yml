@@ -19,9 +19,9 @@ build_docs:
     - git checkout $CI_COMMIT_REF_NAME
 
     - echo "Setting up Micromamba environment..."
-    - $MICROMAMBA_BINARY_PATH shell activate horus_docs || \
-      $MICROMAMBA_BINARY_PATH create --name horus_docs --file Devtools/Environment/docs.yaml
-    - $MICROMAMBA_BINARY_PATH shell activate horus_docs
+    - $MICROMAMBA_BINARY_PATH remove --name horus_docs --yes || true
+    - $MICROMAMBA_BINARY_PATH create --name horus_docs --file Devtools/Environment/docs.yaml
+    - $MICROMAMBA_BINARY_PATH activate horus_docs
 
     - echo "Building the documentation..."
     - bash Devtools/build_docs.sh
