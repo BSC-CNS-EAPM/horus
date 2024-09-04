@@ -1,0 +1,98 @@
+stages:
+  - build_docs
+  - build_horus
+  - upload
+  - publish
+
+variables:
+  MICROMAMBA_BINARY_PATH: "/home/perry/data/bin/micromamba"
+  DOCS_BUILD_DIR: "/home/perry/data/cdominguez/horus-docs/"
+  PACKAGE_REGISTRY_URL: "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/horus/${CI_COMMIT_TAG}"
+
+build_docs:
+  stage: build_docs
+  tags:
+    - perry
+  script:
+    - echo "Checking out the code..."
+    - git fetch --all
+    - git checkout $CI_COMMIT_REF_NAME
+
+    - echo "Setting up Micromamba environment..."
+    - $MICROMAMBA_BINARY_PATH shell activate horus_docs || \
+      $MICROMAMBA_BINARY_PATH create --name horus_docs --file Devtools/Environment/docs.yaml
+    - $MICROMAMBA_BINARY_PATH shell activate horus_docs
+
+    - echo "Building the documentation..."
+    - bash Devtools/build_docs.sh
+
+    - echo "Pushing the documentation..."
+    - mkdir -p $DOCS_BUILD_DIR
+    - cp -r docs/_build/html $DOCS_BUILD_DIR
+  rules:
+    - if: $CI_COMMIT_TAG
+
+build_horus:
+  stage: build_horus
+  tags:
+    - perry
+  before_script:
+    - git fetch --all --tags
+    - export GIT_TAG=$(git describe --tags --abbrev=0)
+    - export GIT_COMMIT=$CI_COMMIT_SHORT_SHA
+    - export VERSION=$GIT_TAG
+    - echo "GIT_TAG=$GIT_TAG"
+    - echo "GIT_COMMIT=$GIT_COMMIT"
+    - echo "VERSION=$VERSION"
+  script:
+    - echo "Building Horus for Rocky Linux 8..."
+    - docker run --rm -v $CI_PROJECT_DIR:/app chdominguez/horus_rocky
+    - echo "Building Horus for Ubuntu 22.04..."
+    - docker run --rm -v $CI_PROJECT_DIR:/app chdominguez/horus_ubuntu
+    - echo "Building Horus for CentOS 7..."
+    - docker run --rm -v $CI_PROJECT_DIR:/app chdominguez/horus_centos
+    - echo "Building Horus for Linux Universal..."
+    - docker run --rm -v $CI_PROJECT_DIR:/app chdominguez/horus_universal
+  rules:
+    - if: $CI_COMMIT_TAG
+
+upload:
+  stage: upload
+  image: curlimages/curl:latest
+  tags:
+    - perry
+  rules:
+    - if: $CI_COMMIT_TAG
+  script:
+    - |
+      for file in dist/*.tar.gz; do
+        echo "Uploading $file..."
+        curl --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file "$file" "${PACKAGE_REGISTRY_URL}/horus${CI_COMMIT_TAG}/$(basename $file)"
+      done
+  only:
+    - tags
+
+publish:
+  stage: publish
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  tags:
+    - perry
+  rules:
+    - if: $CI_COMMIT_TAG
+  script:
+    - |
+      # Initialize the release command
+      release_command="release-cli create --name \"Horus $CI_COMMIT_TAG\" --tag-name $CI_COMMIT_TAG"
+      
+      # Loop over each .tar.gz file in the dist/ directory
+      for file in dist/*.tar.gz; do
+        echo "Adding $file to release assets..."
+        asset_name=$(basename $file)
+        asset_url="${PACKAGE_REGISTRY_URL}/horus-protein-protonation-${CI_COMMIT_TAG}/$asset_name"
+        
+        # Append each asset to the release command
+        release_command+=" --assets-link \"{\\\"name\\\":\\\"$asset_name\\\", \\\"url\\\":\\\"$asset_url\\\"}\""
+      done
+      
+      # Execute the release command with all assets
+      eval $release_command
