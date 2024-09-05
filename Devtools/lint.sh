@@ -5,24 +5,34 @@ if bunx tsc --noEmit --skipLibCheck Views/**/*.ts Views/**/*.tsx --jsx react-jsx
     echo "No TypeScript errors found."
 else
     echo "TypeScript errors found."
+    exit 1
 fi
 
 # Check for eslint errors
-if bunx eslint Views/; then
+if bunx eslint Views/ --ignore-pattern Static; then
     echo "No ESLint errors found."
 else
     echo "ESLint errors found."
+    exit 1
 fi
 
-# Run prettier
+# Run prettier (does not affect the pipeline, just formatting)
 bunx prettier --write Views/
 
-# Check for Python errors with pylint
-pylint App Server HorusAPI
+# Check for Python linting errors with pylint
+if pylint App Server HorusAPI --fail-under 9.5; then
+    echo "No pylint errors found."
+else
+    echo "pylint errors found."
+    exit 1
+fi
 
-# Check for types errors with pyright
-pyright App Server HorusAPI
+# Check for Python type errors with pyright
+if pyright App Server HorusAPI; then
+    echo "No pyright type errors found."
+else
+    echo "pyright type errors found. Please check / fix them."
+fi
 
-# Format python with black
+# Format python with black (does not affect the pipeline, just formatting)
 black --line-length 98 App Server HorusAPI
-

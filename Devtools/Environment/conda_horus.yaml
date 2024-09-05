@@ -37,3 +37,4 @@ dependencies:
       - APScheduler==3.10.4
       - zope==5.9
       - locust==2.29.0
+      - twine==5.1.1

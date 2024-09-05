@@ -14,7 +14,7 @@ import time
 
 @pytest.fixture
 def desktopServer():
-    return HorusServer(mode="app", port=3000)
+    return HorusServer(mode="app", port=3124)
 
 
 @pytest.fixture
@@ -25,14 +25,14 @@ def server():
 def test_desktop_server_init(desktopServer):
     assert desktopServer.debug is False
     assert desktopServer.host == "localhost"
-    assert 3000 <= desktopServer.port <= 9000
+    assert 3124 <= desktopServer.port <= 9000
     assert desktopServer.pluginManager is not None
 
 
 def test_get_free_port(desktopServer):
     port = desktopServer._getFreePort()
     assert isinstance(port, int)
-    assert 3000 <= port <= 9000
+    assert 3124 <= port <= 9000
 
 
 def test_gui_dir(desktopServer):
@@ -70,7 +70,7 @@ def test_gui_dir_debug_mode_parcel_not_running(mocker):
 
 def test_gui_dir_frozen_executable(mocker):
     # Create an instance of HorusServer with debug and parcelURL set to False
-    server = HorusServer(debug=False, port=3000)
+    server = HorusServer(debug=False, port=3124)
 
     # Mock os.path.abspath and os.path.join
     mocker.patch(
@@ -98,7 +98,7 @@ def test_gui_dir_frozen_executable(mocker):
 
 def test_gui_dir_not_frozen_executable(mocker):
     # Create an instance of HorusServer with debug and parcelURL set to False
-    server = HorusServer(debug=False, port=3000)
+    server = HorusServer(debug=False, port=3124)
 
     # Mock os.path.abspath and os.path.join
     mocker.patch(
@@ -116,7 +116,7 @@ def test_gui_dir_not_frozen_executable(mocker):
 
 def test_get_token_desktop(mocker):
     # Create an instance of HorusServer with desktop set to True
-    server = HorusServer(mode="app", port=3000)
+    server = HorusServer(mode="app", port=3124)
 
     # Mock the webview module and its token attribute
     mocked_token = "mocked_token"
@@ -131,7 +131,7 @@ def test_get_token_desktop(mocker):
 
 def test_get_token_no_desktop(mocker):
     # Create an instance of HorusServer with desktop set to False
-    server = HorusServer(mode="server", port=3000)
+    server = HorusServer(mode="server", port=3124)
 
     # Call the _getToken method
     token = server._getToken()
@@ -141,7 +141,7 @@ def test_get_token_no_desktop(mocker):
 
 
 def test_tokenize():
-    server = HorusServer(port=3000)
+    server = HorusServer(port=3124)
 
     test_string = "Hello, World!"
 
@@ -151,7 +151,7 @@ def test_tokenize():
 
 def test_checkToken():
     # Create an instance of TokenManager with a specific salt
-    server = HorusServer(port=3000)
+    server = HorusServer(port=3124)
 
     # Test token verification for a valid token
     test_string = "Hello, World!"
