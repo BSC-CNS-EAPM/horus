@@ -73,6 +73,10 @@ upload:
         echo "Uploading $file..."
         curl --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file "$file" "${PACKAGE_REGISTRY_URL}/$(basename $file)"
       done
+  artifacts:
+    paths:
+      - dist
+    expire_in: 1 day
 
 publish:
   dependencies:
