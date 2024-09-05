@@ -1414,6 +1414,7 @@ class Flow:
             runningBlock = self.getRunningBlock()
             if runningBlock:
                 runningBlock.blockLogs += message
+                runningBlock.flow.write()
 
             # Prevent printing flow prints to the terminal in roder to not
             # saturate the terminal on WebAppMode (only in not debug mode)

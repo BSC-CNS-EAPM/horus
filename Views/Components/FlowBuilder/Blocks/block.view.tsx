@@ -346,9 +346,7 @@ function BlockToolbar({
             </>
           )}
 
-          {block.blockLogs && (
-            <BlockLogs block={block} blockState={blockState} />
-          )}
+          <BlockLogs block={block} blockState={blockState} />
 
           {block.type !== BlockTypes.GHOST && (
             <PlayBlockButton
@@ -416,6 +414,7 @@ function BlockLogs({
     <>
       {blockLogsView}
       <HorusPopover
+        triggerClassName="pointer-events-auto"
         trigger={
           block.error ? (
             <ErrorLogFile
