@@ -1,8 +1,6 @@
 stages:
   - test-and-lint
   - build_horus
-  - upload
-  - publish
   - publish_horusapi
   - build_docs
 
@@ -48,43 +46,11 @@ build_horus:
     - echo "VERSION=$VERSION"
   script:
     - bash Devtools/Singularity/build_multiplatform.sh
-  rules:
-    - if: $CI_COMMIT_TAG
-  artifacts:
-    paths:
-      - dist
-    expire_in: 1 day
-
-upload:
-  dependencies:
-    - build_horus
-  stage: upload
-  image: curlimages/curl:latest
-  tags:
-    - docker
-  rules:
-    - if: $CI_COMMIT_TAG
-  script:
     - |
       for file in dist/*.tar.gz; do
         echo "Uploading $file..."
         curl --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file "$file" "${PACKAGE_REGISTRY_URL}/$(basename $file)"
       done
-  artifacts:
-    paths:
-      - dist
-    expire_in: 1 day
-
-publish:
-  dependencies:
-    - upload
-  stage: publish
-  image: registry.gitlab.com/gitlab-org/release-cli:latest
-  tags:
-    - docker
-  rules:
-    - if: $CI_COMMIT_TAG
-  script:
     - |
       # Initialize the release command
       release_command="release-cli create --name \"Horus $CI_COMMIT_TAG\" --tag-name $CI_COMMIT_TAG"
@@ -102,6 +68,8 @@ publish:
       # Execute the release command with all assets
       echo "Executing: $release_command"
       eval "$release_command"
+  rules:
+    - if: $CI_COMMIT_TAG
 
 publish_horusapi:
   stage: publish_horusapi
