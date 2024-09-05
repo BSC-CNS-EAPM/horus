@@ -1,5 +1,5 @@
 // React
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 // Import the core component
 import { Switch } from "@headlessui/react";
@@ -23,6 +23,10 @@ export default function HorusSwitch(props: HorusSwitchProps) {
     await new Promise((resolve) => setTimeout(resolve, 200));
     props.setEnabled && props.setEnabled(enabled);
   };
+
+  useEffect(() => {
+    setEnabled(props.enabled ?? false);
+  }, [props.enabled]);
 
   return (
     <Switch

@@ -21,7 +21,7 @@ import { fetchDesktop, horusDelete, horusGet, horusPost } from "../Utils/utils";
 import HorusContainer from "../Components/HorusContainer/horus_container";
 import RotatingLines from "../Components/RotatingLines/rotatinglines";
 import AppButton from "../Components/appbutton";
-import { HorusModal } from "../Components/reusable";
+import { HorusModal, HorusPopover } from "../Components/reusable";
 import { SettingsView, fetchSettings } from "../Settings/settings";
 import { PluginManager } from "../PluginsManager/plugin_manager";
 import { SearchComponent } from "../Components/Toolbar/toolbar";
@@ -40,6 +40,8 @@ import TrashIcon from "../Components/Toolbar/Icons/Trash";
 // Types
 import { Block, PluginPage } from "../Components/FlowBuilder/flow.types";
 import { useAlert } from "../Components/HorusPrompt/horus_alert";
+import StopIcon from "../Components/Toolbar/Icons/Stop";
+import HorusSwitch from "../Components/Switch/switch";
 
 type Database = {
   users: UsersDatabase[];
@@ -298,8 +300,13 @@ function FlowsTableView() {
 function HorusLogs() {
   const logsInterval = useRef<Timer | null>(null);
   const [logs, setLogs] = useState<string>("Loading...");
+  const [logging, setLogging] = useState(true);
 
-  const getLogs = async () => {
+  const getLogs = useCallback(async () => {
+    if (!logging) {
+      return;
+    }
+
     const response = await horusGet("/users/admintools/getlogs");
     const logsText = await response.text();
     setLogs(logsText);
@@ -313,7 +320,7 @@ function HorusLogs() {
       const logsText = await response.text();
       setLogs(logsText);
     }, 10000);
-  };
+  }, [logging]);
 
   useEffect(() => {
     // Get the first logs
@@ -323,19 +330,71 @@ function HorusLogs() {
       logsInterval.current && clearInterval(logsInterval.current);
       logsInterval.current = null;
     };
-  }, []);
+  }, [getLogs]);
 
   return (
-    <div className="w-full h-[90vh]">
-      <LazyLog
-        caseInsensitive
-        enableHotKeys
-        enableSearch
-        extraLines={1}
-        selectableLines
-        follow
-        text={logs}
-      />
+    <div className="flex flex-col h-full p-2">
+      <div
+        style={{
+          position: "absolute",
+          marginTop: "0.5rem",
+          marginLeft: "0.5rem",
+        }}
+      >
+        <div className="flex flex-row items-center gap-2">
+          <HorusSwitch enabled={logging} setEnabled={setLogging}>
+            Live logs
+          </HorusSwitch>
+          <HorusPopover
+            trigger={
+              <AppButton
+                style={{
+                  transform: "translateY(-3px)",
+                }}
+                action={() => {
+                  setLogging(!logging);
+                }}
+              >
+                <div className="flex flex-row gap-2 items-center">
+                  {logging ? (
+                    <>
+                      Logging... <RotatingLines size={"1.5rem"} />
+                    </>
+                  ) : (
+                    <>
+                      <StopIcon color="var(--red-error)" /> Stopped
+                    </>
+                  )}
+                </div>
+              </AppButton>
+            }
+          >
+            <div
+              className="hover-description"
+              style={{
+                position: "absolute",
+                transform: "translateX(100px) translateY(10px)",
+              }}
+            >
+              Disable live logging to interact with the text
+            </div>
+          </HorusPopover>
+        </div>
+      </div>
+      <div className="h-full overflow-hidden rounded-xl">
+        <LazyLog
+          style={{
+            pointerEvents: logging ? "none" : "auto",
+          }}
+          caseInsensitive
+          enableHotKeys
+          enableSearch
+          extraLines={1}
+          selectableLines
+          text={logs}
+          follow={logging}
+        />
+      </div>
     </div>
   );
 }

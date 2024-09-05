@@ -775,3 +775,19 @@ fail_on_even_block = PluginBlock(
 )
 
 plugin.addBlock(fail_on_even_block)
+
+
+def print_lots_of_logs(block: PluginBlock):
+
+    for i in range(0, 100):
+        print("Printing a lot of logs, this is iteration: " + str(i))
+
+
+print_lots_of_logs_block = PluginBlock(
+    id="print_lots_of_logs_block",
+    name="Print lots of logs",
+    description="Print lots of logs",
+    action=print_lots_of_logs,
+)
+
+plugin.addBlock(print_lots_of_logs_block)

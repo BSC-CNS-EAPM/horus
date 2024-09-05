@@ -33,13 +33,19 @@ export function BlockLogsModalView(props: BlockLogsModalViewProps) {
       {block.type === BlockTypes.SLURM ? (
         <SlurmOutputModalView block={block} handleClose={handleClose} />
       ) : (
-        <RegularBlockLogs logs={block.blockLogs} />
+        <RegularBlockLogs logs={block.blockLogs} isRunning={block.isRunning} />
       )}
     </BlurredModal>
   );
 }
 
-function RegularBlockLogs({ logs }: { logs: string }) {
+function RegularBlockLogs({
+  logs,
+  isRunning,
+}: {
+  logs: string;
+  isRunning: boolean;
+}) {
   return (
     <div
       style={{
@@ -54,8 +60,8 @@ function RegularBlockLogs({ logs }: { logs: string }) {
         enableSearch
         extraLines={1}
         selectableLines
-        follow
-        text={logs}
+        follow={isRunning}
+        text={logs ?? "No logs"}
       />
     </div>
   );
@@ -112,82 +118,87 @@ function SlurmOutputModalView({
   };
 
   const getGroupedVariables = () => {
-    groupedViews["Block logs"] = [<RegularBlockLogs logs={block.blockLogs} />];
+    groupedViews["Block logs"] = [
+      <RegularBlockLogs logs={block.blockLogs} isRunning={block.isRunning} />,
+    ];
 
     groupedViews["Slurm status"] = [
       <div
-        className="flex flex-row gap-2 flex-wrap p-2 shadow-md"
+        className="flex flex-row gap-2 flex-wrap p-2"
         style={{
           background: "var(--grey-white)",
           borderRadius: "10px",
           borderColor: "lightgray",
           fontFamily: "Poppins",
+          height: "100%",
+          overflowY: "auto",
         }}
       >
         {block.detailedStatus ? (
-          <div>{worldList()}</div>
+          worldList()
         ) : (
-          <span className="text-center w-full"> No job status </span>
+          <span className="text-center w-full grid place-items-center h-full">
+            No job status
+          </span>
         )}
       </div>,
     ];
 
     groupedViews["Slurm output"] = [
       <div
-        className="flex flex-row gap-2 flex-wrap p-2 shadow-md"
         style={{
           background: "var(--grey-white)",
           borderRadius: "10px",
           borderColor: "lightgray",
           fontFamily: "Poppins",
+          overflow: "hidden",
+          height: "100%",
         }}
       >
         {block.stdOut ? (
           <LazyLog
-            style={{
-              borderRadius: "10px",
-              overflow: "hidden",
-            }}
             caseInsensitive
             enableHotKeys
             enableSearch
             extraLines={1}
             selectableLines
-            follow
+            follow={block.isRunning}
             text={block.stdOut}
           />
         ) : (
-          <span className="text-center w-full">No output during execution</span>
+          <span className="text-center w-full grid place-items-center h-full">
+            No output during execution
+          </span>
         )}
       </div>,
     ];
 
     groupedViews["Slurm error"] = [
       <div
-        className="flex flex-row gap-2 flex-wrap p-2 shadow-md"
         style={{
           background: "var(--grey-white)",
           borderRadius: "10px",
           borderColor: "lightgray",
           fontFamily: "Poppins",
+          overflow: "hidden",
+          height: "100%",
         }}
       >
         {block.stdErr ? (
           <LazyLog
-            style={{
-              borderRadius: "10px",
-              overflow: "hidden",
-            }}
+            containerStyle={{}}
             caseInsensitive
             enableHotKeys
             enableSearch
             extraLines={1}
             selectableLines
-            follow
             text={block.stdErr}
+            follow={block.isRunning}
           />
         ) : (
-          <span className="text-center w-full">No errors during execution</span>
+          <span className="text-center w-full grid place-items-center h-full">
+            No errors during execution
+          </span>
         )}
       </div>,
     ];
