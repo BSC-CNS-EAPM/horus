@@ -64,14 +64,14 @@ upload:
   stage: upload
   image: curlimages/curl:latest
   tags:
-    - perry
+    - docker
   rules:
     - if: $CI_COMMIT_TAG
   script:
     - |
       for file in dist/*.tar.gz; do
         echo "Uploading $file..."
-        curl --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file "$file" "${PACKAGE_REGISTRY_URL}/horus${CI_COMMIT_TAG}/$(basename $file)"
+        curl --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file "$file" "${PACKAGE_REGISTRY_URL}/$(basename $file)"
       done
 
 publish:
@@ -80,7 +80,7 @@ publish:
   stage: publish
   image: registry.gitlab.com/gitlab-org/release-cli:latest
   tags:
-    - perry
+    - docker
   rules:
     - if: $CI_COMMIT_TAG
   script:
@@ -92,7 +92,7 @@ publish:
       for file in dist/*.tar.gz; do
         echo "Adding $file to release assets..."
         asset_name=$(basename $file)
-        asset_url="${PACKAGE_REGISTRY_URL}/horus-protein-protonation-${CI_COMMIT_TAG}/$asset_name"
+        asset_url="${PACKAGE_REGISTRY_URL}/$asset_name"
         
         # Append each asset to the release command
         release_command+=" --assets-link \"{\\\"name\\\":\\\"$asset_name\\\", \\\"url\\\":\\\"$asset_url\\\"}\""
