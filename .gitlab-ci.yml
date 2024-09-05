@@ -95,12 +95,13 @@ publish:
       # Loop over each .tar.gz file in the dist/ directory
       for file in dist/*.tar.gz; do
         echo "Adding $file to release assets..."
-        asset_name=$(basename $file)
+        asset_name=$(basename "$file")
         asset_url="${PACKAGE_REGISTRY_URL}/$asset_name"
         
         # Append each asset to the release command
-        release_command+=" --assets-link \"{\\\"name\\\":\\\"$asset_name\\\", \\\"url\\\":\\\"$asset_url\\\"}\""
+        release_command="$release_command --assets-link \"{\\\"name\\\":\\\"$asset_name\\\", \\\"url\\\":\\\"$asset_url\\\"}\""
       done
       
       # Execute the release command with all assets
-      eval $release_command
+      echo "Executing: $release_command"
+      eval "$release_command"
