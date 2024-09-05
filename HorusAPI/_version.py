@@ -8,17 +8,21 @@ def get_git_version():
     # in the environment, use those
     # This is useful for CI/CD pipelines in the GitHub Actions
     if "GIT_TAG" in os.environ:
-        tag = os.environ["GIT_TAG"]
-        _branch = os.environ["GIT_BRANCH"]
-        commit = os.environ["GIT_COMMIT"]
+        try:
+            tag = os.environ["GIT_TAG"]
+            _branch = os.environ["GIT_BRANCH"]
+            commit = os.environ["GIT_COMMIT"]
 
-        # If the branch is equal to the tag, it's a release
-        if _branch == tag:
-            _branch = "release"
-        else:
-            _branch = f"{_branch}-{commit}"
+            # If the branch is equal to the tag, it's a release
+            if _branch == tag:
+                _branch = "release"
+            else:
+                _branch = f"{_branch}-{commit}"
 
-        return _branch, tag
+            return _branch, tag
+
+        except Exception:
+            pass
 
     # Get version from git tag or branch name
     try:
