@@ -40,7 +40,7 @@ build_horus:
     - perry
   before_script:
     - git fetch --all --tags
-    - git checkout $CI_COMMIT_TAG
+    - git checkout tags/$CI_COMMIT_TAG
     - export GIT_TAG=$CI_COMMIT_TAG
     - export GIT_COMMIT=$CI_COMMIT_SHORT_SHA
     - export VERSION=$CI_COMMIT_TAG
@@ -48,14 +48,7 @@ build_horus:
     - echo "GIT_COMMIT=$GIT_COMMIT"
     - echo "VERSION=$VERSION"
   script:
-    - echo "Building Horus for Rocky Linux 8..."
-    - docker run --rm -v $CI_PROJECT_DIR:/app chdominguez/horus_rocky
-    - echo "Building Horus for Ubuntu 22.04..."
-    - docker run --rm -v $CI_PROJECT_DIR:/app chdominguez/horus_ubuntu
-    - echo "Building Horus for CentOS 7..."
-    - docker run --rm -v $CI_PROJECT_DIR:/app chdominguez/horus_centos
-    - echo "Building Horus for Linux Universal..."
-    - docker run --rm -v $CI_PROJECT_DIR:/app chdominguez/horus_universal
+    - bash Devtools/Singularity/build_multiplatform.sh
   rules:
     - if: $CI_COMMIT_TAG
 
