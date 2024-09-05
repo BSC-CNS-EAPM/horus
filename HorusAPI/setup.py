@@ -95,7 +95,7 @@ setuptools.setup(
     author="Barcelona Supercomputing Center",
     author_email="christian.dominguez@bsc.es",
     description=f"Horus API package for building plugins. Version: {version}",
-    long_description="Horus API",
+    long_description="Horus API package for building plugins. More information at [https://horus.bsc.es/docs](https://horus.bsc.es/docs)",
     long_description_content_type="text/markdown",
     cmdclass={"build_ext": build_ext},
     ext_modules=ext_modules,  # type: ignore

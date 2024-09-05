@@ -27,7 +27,7 @@ def test_launch_app_not_compiled():
         sys.argv.append("--host")
         sys.argv.append("localhost")
         sys.argv.append("--port")
-        sys.argv.append("3000")
+        sys.argv.append("3124")
 
         launchApp()
 
@@ -38,7 +38,7 @@ def test_launch_app_not_compiled():
     # Wait for the server to start
     time.sleep(5)
 
-    baseURL = "http://localhost:3000"
+    baseURL = "http://localhost:3124"
 
     # Check that the server is running
     try:
@@ -68,7 +68,7 @@ def test_launch_app_compiled():
         sys.argv.append("--host")
         sys.argv.append("localhost")
         sys.argv.append("--port")
-        sys.argv.append("3000")
+        sys.argv.append("3124")
 
         patch("cython.compiled", True)
         patch("sys._MEIPASS", "path", create=True)
@@ -83,7 +83,7 @@ def test_launch_app_compiled():
     # Wait for the server to start
     time.sleep(1)
 
-    baseURL = "http://localhost:3000"
+    baseURL = "http://localhost:3124"
 
     # Check that the server is running
     try:

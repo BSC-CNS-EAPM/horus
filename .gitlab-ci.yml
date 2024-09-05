@@ -1,38 +1,35 @@
 stages:
-  - build_docs
+  - test-and-lint
   - build_horus
   - upload
   - publish
+  - publish_horusapi
+  - build_docs
 
 variables:
   MICROMAMBA_BINARY_PATH: "/home/perry/data/bin/micromamba"
   DOCS_BUILD_DIR: "/home/perry/data/cdominguez/horus-docs/"
   PACKAGE_REGISTRY_URL: "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/horus/${CI_COMMIT_TAG}"
 
-build_docs:
-  stage: build_docs
+test-and-lint:
+  stage: test-and-lint
   tags:
     - perry
-  script:
-    - echo "Checking out the code..."
-    - git fetch --all
-    - git checkout $CI_COMMIT_REF_NAME
-
-    - echo "Setting up Micromamba environment..."
-    - $MICROMAMBA_BINARY_PATH remove --name horus_docs --yes || true
-    - $MICROMAMBA_BINARY_PATH create --name horus_docs --file Devtools/Environment/docs.yaml --yes
+  before_script:
     - source <($MICROMAMBA_BINARY_PATH shell hook --shell bash)
-    - micromamba activate horus_docs
-
-    - echo "Building the documentation..."
-    - bash Devtools/build_docs.sh
-
-    - echo "Pushing the documentation..."
-    - mkdir -p $DOCS_BUILD_DIR
-    - cp -r HorusAPI/docs/build/html/* $DOCS_BUILD_DIR
+    - $MICROMAMBA_BINARY_PATH create -f Devtools/Environment/conda_horus.yaml -n horus_test_ci -y
+    - micromamba activate horus_test_ci
+    - export BUN_INSTALL="$HOME/.bun"
+    - export PATH="$BUN_INSTALL/bin:$PATH"
+    - bun i
+    - npm install --save-dev --save-exact --legacy-peer-deps parcel@2.12.0
+  script:
+    - bun run buildparcel
+    - bun run test
+    - sh Devtools/lint.sh
   rules:
     - if: $CI_COMMIT_TAG
-
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
 
 build_horus:
   stage: build_horus
@@ -91,7 +88,7 @@ publish:
     - |
       # Initialize the release command
       release_command="release-cli create --name \"Horus $CI_COMMIT_TAG\" --tag-name $CI_COMMIT_TAG"
-      
+
       # Loop over each .tar.gz file in the dist/ directory
       for file in dist/*.tar.gz; do
         echo "Adding $file to release assets..."
@@ -101,7 +98,57 @@ publish:
         # Append each asset to the release command
         release_command="$release_command --assets-link \"{\\\"name\\\":\\\"$asset_name\\\", \\\"url\\\":\\\"$asset_url\\\"}\""
       done
-      
+
       # Execute the release command with all assets
       echo "Executing: $release_command"
       eval "$release_command"
+
+publish_horusapi:
+  stage: publish_horusapi
+  image: quay.io/pypa/manylinux2014_x86_64
+  tags:
+    - docker
+  before_script:
+    - git fetch --all --tags
+    - git checkout tags/$CI_COMMIT_TAG
+    - export GIT_TAG=$CI_COMMIT_TAG
+    - export GIT_COMMIT=$CI_COMMIT_SHORT_SHA
+    - export GIT_BRANCH=$CI_COMMIT_REF_NAME
+    - export VERSION=$CI_COMMIT_TAG
+    - echo "GIT_TAG=$GIT_TAG"
+    - echo "GIT_COMMIT=$GIT_COMMIT"
+    - echo "GIT_BRANCH=$GIT_BRANCH"
+    - echo "VERSION=$VERSION"
+  script:
+    - yum install -y zip unzip
+    - export PATH=/opt/python/cp39-cp39/bin:$PATH
+    - pip install cython==3.0.2 twine==5.1.1 mypy==1.8 pydantic==1.10.13
+    - bash Devtools/Compile/build_horusapi.sh
+    - auditwheel repair dist/*.whl
+    - twine upload wheelhouse/*.whl
+  rules:
+    - if: $CI_COMMIT_TAG
+
+build_docs:
+  stage: build_docs
+  tags:
+    - perry
+  script:
+    - echo "Checking out the code..."
+    - git fetch --all
+    - git checkout $CI_COMMIT_REF_NAME
+
+    - echo "Setting up Micromamba environment..."
+    - $MICROMAMBA_BINARY_PATH remove --name horus_docs --yes || true
+    - $MICROMAMBA_BINARY_PATH create --name horus_docs --file Devtools/Environment/docs.yaml --yes
+    - source <($MICROMAMBA_BINARY_PATH shell hook --shell bash)
+    - micromamba activate horus_docs
+
+    - echo "Building the documentation..."
+    - bash Devtools/build_docs.sh
+
+    - echo "Pushing the documentation..."
+    - mkdir -p $DOCS_BUILD_DIR
+    - cp -r HorusAPI/docs/build/html/* $DOCS_BUILD_DIR
+  rules:
+    - if: $CI_COMMIT_TAG

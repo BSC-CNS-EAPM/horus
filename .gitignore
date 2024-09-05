@@ -230,3 +230,5 @@ AppSupport/templates
 
 Tests/TestPluginManager/Plugins/config/
 Tests/TestFlows/test_flow_smiles_manager
+
+wheelhouse/

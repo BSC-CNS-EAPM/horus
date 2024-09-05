@@ -670,7 +670,7 @@ def test_flow_run_flow_post_full_app(plugin_manager):
 
     # Must be in app / browser mode in order to test the multiprocessing component of flows
     p = subprocess.Popen(
-        ["python", "Horus.py", "--host", "localhost", "--port", "3000"],
+        ["python", "Horus.py", "--host", "localhost", "--port", "3124"],
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -679,7 +679,7 @@ def test_flow_run_flow_post_full_app(plugin_manager):
     # Wait for the server to start
     time.sleep(5)
 
-    baseURL = "http://localhost:3000"
+    baseURL = "http://localhost:3124"
 
     # Check that the server is running
     try:
