@@ -263,7 +263,7 @@ function ManagePlugins(props: ButtonOpensModalProps) {
     const footer = (
       <a
         className="app-button text-black text-decoration-none"
-        href="https://nbdsoftware.github.io/horus/developer_guide/horusapi/plugins.html"
+        href="https://horus.bsc.es/docs/developer_guide/horusapi/plugins.html"
         target="_blank"
       >
         Learn more about plugins
@@ -360,7 +360,7 @@ function PredefinedFlowsSplash() {
       <ScrollableViewWelcome.Footer>
         <a
           className="app-button text-black text-decoration-none"
-          href="https://nbdsoftware.github.io/horus/running_flows/index.html"
+          href="https://horus.bsc.es/docs/running_flows/index.html"
           target="_blank"
         >
           Learn more about flows
@@ -409,7 +409,7 @@ function RecentFlowsSplash() {
       <ScrollableViewWelcome.Footer>
         <a
           className="app-button text-black text-decoration-none"
-          href="https://nbdsoftware.github.io/horus/running_flows/index.html"
+          href="https://horus.bsc.es/docs/running_flows/index.html"
           target="_blank"
         >
           Learn more about flows
@@ -453,7 +453,7 @@ function ExploreExtensions() {
       <ScrollableViewWelcome.Footer>
         <a
           className="app-button text-black text-decoration-none"
-          href="https://nbdsoftware.github.io/horus/developer_guide/horusapi/extensions.html"
+          href="https://horus.bsc.es/docs/developer_guide/horusapi/extensions.html"
           target="_blank"
         >
           Learn more about extensions

@@ -88,7 +88,7 @@ export default function About() {
         />
         <a
           className="app-button text-black text-decoration-none"
-          href="https://nbdsoftware.github.io/horus/index.html"
+          href="https://horus.bsc.es/docs"
           target="_blank"
         >
           Horus documentation

@@ -12,12 +12,12 @@ Main installation
 =================
 
 You will need to download the latest release of |Product| from the
-`releases page <https://github.com/NBDsoftware/horus/releases>`_. You can also install
+`releases page <https://horus.bsc.com/download>`_. You can also install
 |Product| directly from PyPI using ``pip``:
 
 .. code-block:: bash
 
-    pip install horusapi
+    pip install HorusAPI
 
 Once installed, you can import the |Product| package into your Python
 application:
@@ -33,9 +33,5 @@ application:
     .. code-block:: bash
 
         pip install <path to horusapi-x.x.x.whl>
-
-.. warning::
-
-    The HorusAPI is not available yet for public use. Please wait for the first release.
 
 .. |Product| replace:: HorusAPI

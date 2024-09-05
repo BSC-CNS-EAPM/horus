@@ -80,7 +80,7 @@ export default function ConfigRemotes() {
             <AppButton action={handleNewRemote}>New remote</AppButton>
             <a
               className="app-button text-black text-decoration-none"
-              href="https://nbdsoftware.github.io/horus/developer_guide/horusapi/remotes.html"
+              href="https://horus.bsc.es/docs/developer_guide/horusapi/remotes.html"
               target="_blank"
             >
               Learn more about remotes

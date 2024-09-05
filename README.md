@@ -3,15 +3,15 @@
 Horus is an innovative multi-platform GUI which empowers scientists in areas such as molecular modelling. Leveraging cutting-edge technologies, it can serve as a local application or as a centralized server for collaborative teamwork. Integrated with a 2D infinite canvas, Horus excels as a modular workflow designer across different environments. Its autonomous blocks enable seamless linking, facilitating customizable and distributable workflows via an accessible API, ushering in a new era of efficiency and adaptability in scientific endeavors.
 
 <p align="center">
-<img width="160" alt="horus" src="https://github.com/NBDsoftware/horus/assets/34599976/cd8a305a-cd91-449d-ab12-cb6284f7b244">
-<img height="160" alt="bsc" src="https://github.com/NBDsoftware/horus/assets/34599976/fdbc5625-8dec-4b97-b49e-3af1c783628a">
+<img width="160" alt="horus" src="/uploads/9dd63e21d344b67efaa00581a8c7baab/317780018-cd8a305a-cd91-449d-ab12-cb6284f7b244.png">
+<img height="160" alt="bsc" src="/uploads/7a8af5f945d1059514b777bd3812b41e/317752671-fdbc5625-8dec-4b97-b49e-3af1c783628a.png">
 <p\>
 
 # Installation
 
 ## Linux
 
-1. Download the latest Linux release from the [releases page](https://github.com/NBDsoftware/horus/releases/latest)
+1. Download the latest Linux release from the [releases page](https://gitlab.bsc.es/eapm/horus/-/releases)
 2. Install the .deb depending on your distro
 3. Run the application by executing the `horus` command or opening the Horus icon:
 
@@ -21,7 +21,7 @@ Horus is an innovative multi-platform GUI which empowers scientists in areas suc
 
 ## macOS
 
-1. Download the latest macOS release from the [releases page](https://github.com/NBDsoftware/horus/releases/latest)
+1. Download the latest macOS release from the [releases page](https://gitlab.bsc.es/eapm/horus/-/releases)
 2. Open the .dmg file and drag the application to your usual applications folder
 3. Run the application by double clicking on the `Horus` icon in your applications folder
 
