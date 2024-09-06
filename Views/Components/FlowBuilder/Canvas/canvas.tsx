@@ -79,7 +79,7 @@ function CanvasZoom({ flowHooks }: { flowHooks: FlowHooks }) {
           handleScaleChange(scale - 0.1);
         }}
       >
-        <ZoomOutIcon />
+        <ZoomOutIcon className="w-10 h-10" />
       </div>
       <div
         className="w-full h-full"
@@ -102,7 +102,7 @@ function CanvasZoom({ flowHooks }: { flowHooks: FlowHooks }) {
           handleScaleChange(scale + 0.1);
         }}
       >
-        <ZoomInIcon />
+        <ZoomInIcon className="w-10 h-10" />
       </div>
     </div>
   );
