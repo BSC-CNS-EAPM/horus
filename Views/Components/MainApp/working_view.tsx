@@ -230,6 +230,7 @@ export default function WorkingView(props: WorkingViewProps) {
 
 function MolstarPanel({ expand }: { expand?: boolean }) {
   const [showMolstar, setShowMolstar] = useState<boolean>(true);
+
   const [initialMolstarHidden, setInitialMolstarHidden] = useState<boolean>(
     window.horusSettings["molstarHidden"]?.value && !expand
   );
@@ -248,10 +249,20 @@ function MolstarPanel({ expand }: { expand?: boolean }) {
 
     if (!showMolstar) {
       molstarPanelRef.current?.expand();
+
+      // Collapse the smiles panel
+      smilesPanelRef.current?.collapse();
+
       setShowMolstar(true);
     } else {
-      molstarPanelRef.current?.collapse();
-      setShowMolstar(false);
+      // If the smiles panel is 100% expanded, expand the molstar panel
+      if (smilesPanelRef.current?.getSize() === 100) {
+        smilesPanelRef.current?.collapse();
+        molstarPanelRef.current?.expand();
+      } else {
+        molstarPanelRef.current?.collapse();
+        setShowMolstar(false);
+      }
     }
   }, [initialMolstarHidden, showMolstar]);
 
@@ -284,11 +295,20 @@ function MolstarPanel({ expand }: { expand?: boolean }) {
   // Add an event listener for the toggleSmilesGrid event
   useEffect(() => {
     const toggleSmilesEventListener = () => {
+      // If the root panel is collapsed, expand it
       if (smilesPanelRef.current) {
+        // If the smiles panel is collapsed, expand it
         if (smilesPanelRef.current.getCollapsed()) {
+          setShowMolstar(true);
           smilesPanelRef.current.expand();
+          smilesPanelRef.current.resize(100);
+
+          // Collapse the molstar panel
+          molstarPanelRef.current?.expand();
         } else {
           smilesPanelRef.current.collapse();
+          molstarPanelRef.current?.collapse();
+          setShowMolstar(false);
         }
       }
     };
@@ -298,7 +318,7 @@ function MolstarPanel({ expand }: { expand?: boolean }) {
     return () => {
       window.removeEventListener("toggleSmilesGrid", toggleSmilesEventListener);
     };
-  }, []);
+  }, [showMolstar]);
 
   return (
     <>

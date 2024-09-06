@@ -298,6 +298,11 @@ const handleKeyDown = (event: globalThis.KeyboardEvent) => {
     event.preventDefault();
     toggleMolstar();
   }
+  // Toggle SMILES
+  if (event.code === "KeyL" && isModifierKeyPressed && isShiftKeyPressed) {
+    event.preventDefault();
+    toggleSmiles();
+  }
   // Redo
   if (event.code === "KeyZ" && isModifierKeyPressed && isShiftKeyPressed) {
     event.preventDefault();
@@ -327,6 +332,11 @@ const handleKeyDown = (event: globalThis.KeyboardEvent) => {
 
 const toggleMolstar = () => {
   const centerEvent = new CustomEvent("toggleMolstar");
+  window.dispatchEvent(centerEvent);
+};
+
+const toggleSmiles = () => {
+  const centerEvent = new CustomEvent("toggleSmilesGrid");
   window.dispatchEvent(centerEvent);
 };
 
@@ -553,6 +563,14 @@ export default function HorusToolbar() {
           svgPath: <MolStarIcon />,
           // Set a keyShortcut to enable keyboard navigation.
           keyShortcut: `${modifierKeyLogo}${shiftKeyLogo}M`,
+        },
+        {
+          name: "Toggle SMILES",
+          onClick: () => {
+            toggleSmiles();
+          },
+          // Set a keyShortcut to enable keyboard navigation.
+          keyShortcut: `${modifierKeyLogo}${shiftKeyLogo}L`,
         },
         {
           name: "Toggle console",
