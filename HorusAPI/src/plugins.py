@@ -864,7 +864,7 @@ class BlockVarPair:
         blockPlacedID: int,
         blockID: str,
         variableID: str,
-        variableType: str,
+        variableType: typing.Optional[str] = None,
         variableAllowedValues: typing.Optional[typing.List[typing.Any]] = None,
     ):
         self.blockPlacedID = blockPlacedID
@@ -872,6 +872,18 @@ class BlockVarPair:
         self.variableID = variableID
         self.variableType = variableType
         self.variableAllowedValues = variableAllowedValues
+
+        if self.variableType is None:
+            logging.getLogger("Horus").warning(
+                "While opening a flow, Horus has detected that the variable "
+                "connection for variable '%s' of block '%s' has no type. "
+                "This can cause visual bugs on the flow editor. "
+                "Please re-connect the variable and save the flow to fix this issue.",
+                self.variableID,
+                self.blockID,
+            )
+
+            self.variableType = VariableTypes.ANY
 
     def _toDict(self):
         """
