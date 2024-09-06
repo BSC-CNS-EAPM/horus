@@ -862,7 +862,7 @@ function EditSmilesModal(props: {
 
   return (
     <HorusModal show={props.isOpen} onHide={props.onClose} size="xl">
-      <div className="flex flex-row flex-wrap gap-4 p-4 w-full max-h-[70vh] justify-around overflow-y-scroll">
+      <div className="flex flex-row flex-wrap gap-4 p-4 w-full max-h-[70vh] justify-around overflow-y-auto">
         <div className="flex flex-col gap-2 w-full max-w-[500px]">
           <div>
             <label
@@ -919,7 +919,7 @@ function EditSmilesModal(props: {
                 minHeight: "200px",
               }}
               id="extra-info-textarea"
-              className="plugin-variable-value block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm overflow-y-scroll"
+              className="plugin-variable-value block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm overflow-y-auto"
               placeholder="Add additional information here"
               value={smilesState.extraInfo ?? ""}
               onChange={(e) => {

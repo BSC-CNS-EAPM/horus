@@ -56,9 +56,9 @@ export default function SplashScreen() {
   };
 
   return (
-    <div className="grid h-screen">
+    <>
       <WelcomeToHorus setModalContent={updateModalContent} />
-      <div className="splash-container flex flex-col overflow-auto gap-4 items-center">
+      <div className="splash-container h-full grid place-items-center gap-4 items-center">
         <div className="flex flex-row flex-wrap justify-center items-center w-full gap-8 zoom-in-animation text-white">
           <div className="flex gap-2 p-2 flex-wrap justify-center flex-direction-splash-buttons">
             <CreateNewFlow />
@@ -92,7 +92,7 @@ export default function SplashScreen() {
           onHide={() => setShowModal(false)}
         />
       )}
-    </div>
+    </>
   );
 }
 
@@ -387,7 +387,7 @@ function RecentFlowsSplash() {
       </ScrollableViewWelcome.Header>
       <ScrollableViewWelcome.Body>
         {fetchingRecents ? (
-          <div className="w-[26rem] h-full flex justify-center items-center">
+          <div className="w-full h-full flex justify-center items-center">
             <RotatingLines />
           </div>
         ) : (
@@ -481,8 +481,9 @@ function ScrollableViewWelcomeBody(props: {
 }) {
   return (
     <div
-      className="overflow-y-scroll scrollable-welcome"
+      className="overflow-y-auto scrollable-welcome"
       style={{
+        width: "400px",
         maxHeight: props.maxHeight || "50vh",
       }}
     >

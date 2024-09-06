@@ -1098,7 +1098,7 @@ export function VariableGroupInfoView({ group }: { group: VariableGroup }) {
         <BreakLongUnderscoreNames name={group.name} />
       </div>
       <BreakLongUnderscoreNames name={group.description} />
-      <div className="flex flex-col gap-2 overflow-x-scroll h-full">
+      <div className="flex flex-col gap-2 overflow-x-auto h-full">
         {group.variables.map((variable) => {
           return <SimpleVariableView variable={variable} />;
         })}

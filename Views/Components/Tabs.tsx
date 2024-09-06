@@ -65,7 +65,7 @@ export function TabSelector({
     "inline-block p-4 rounded-t-lg hover:text-gray-600 hover:bg-gray-50";
 
   return (
-    <ul className="flex flex-row overflow-x-scroll text-sm font-medium text-center text-gray-500">
+    <ul className="flex flex-row overflow-x-auto text-sm font-medium text-center text-gray-500">
       {tabKeys.map((key) => (
         <li className="me-2" key={key}>
           <button

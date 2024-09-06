@@ -162,7 +162,7 @@ export function ToolbarMenu(props: ToolBarMenuProps) {
             leaveTo="transform opacity-0 scale-95"
           >
             <Menu.Items
-              className="absolute p-md-2 mt-3 w-56 origin-top-left rounded-xl bg-white toolbar-menu outline-none overflow-y-scroll"
+              className="absolute p-md-2 mt-3 w-56 origin-top-left rounded-xl bg-white toolbar-menu outline-none overflow-y-auto"
               style={{
                 maxHeight: "calc(100vh - 4rem)",
                 width: "auto",
@@ -792,7 +792,7 @@ function HorusSearch(props: HorusSearchProps) {
 
   return (
     <div
-      className="h-full overflow-y-scroll"
+      className="h-full overflow-y-auto"
       onFocus={() => {
         setIsOnFocus(true);
       }}
@@ -810,7 +810,7 @@ function HorusSearch(props: HorusSearchProps) {
       />
       {isOnFocus && (
         <div
-          className="flex flex-col gap-2 absolute p-2 mt-3 origin-top-right rounded-xl bg-white toolbar-menu overflow-y-scroll zoom-out-animation"
+          className="flex flex-col gap-2 absolute p-2 mt-3 origin-top-right rounded-xl bg-white toolbar-menu overflow-y-auto zoom-out-animation"
           style={{
             right: 4,
             maxHeight: "calc(100vh - 4rem)",

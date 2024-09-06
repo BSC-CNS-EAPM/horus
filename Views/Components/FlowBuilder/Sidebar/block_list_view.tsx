@@ -117,7 +117,7 @@ export function BlockListSidebar() {
 
   // Render
   return (
-    <div className="block-sidebar overflow-y-scroll h-full">
+    <div className="block-sidebar overflow-y-auto h-full">
       {loadingBlocks ? (
         <div className="h-full flex flex-col gap-2 items-center justify-center">
           <RotatingLines />
