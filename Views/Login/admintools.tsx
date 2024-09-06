@@ -111,7 +111,7 @@ export function AdminTools() {
       <TopBar />
       <div className="flex flex-row gap-0 w-available admin-current-view">
         <Sidebar />
-        <div className="overflow-y-scroll w-full">{currentView}</div>
+        <div className="overflow-y-auto w-full">{currentView}</div>
       </div>
       <HorusModal
         size="xl"

@@ -11,6 +11,8 @@ body {
 
 html {
   background: var(--grey-white);
+  scrollbar-gutter: stable both-edges;
+  overflow: hidden;
 }
 
 div[role="button"] {
@@ -57,9 +59,10 @@ select:hover {
 
 .splash-container {
   /* Use a media query so that when the viewpoer width is less than 600px, height changes from 100% to fit*/
-  max-height: 100vh;
+  max-height: calc(100vh - 65px);
   padding: 2rem;
   grid-col: 1;
+  overflow-y: auto;
 }
 
 .vertical-splash-separator {
@@ -138,7 +141,7 @@ select:hover {
 }
 
 .horus-scroll {
-  overflow-y: scroll;
+  overflow-y: auto;
   border-radius: 0.25rem;
 }
 
@@ -185,6 +188,7 @@ select:hover {
   grid-column: 1;
   position: sticky;
   top: 0;
+  height: 65px;
 }
 
 .bsc-btn {

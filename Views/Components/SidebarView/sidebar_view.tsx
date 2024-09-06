@@ -19,14 +19,14 @@ export default function SidebarView(props: SidebarViewProps) {
   );
 
   return (
-    <div className="h-full w-full overflow-hidden overflow-y-scroll">
-      <div className="flex flex-row w-full h-full overflow-y-scroll">
+    <div className="h-full w-full overflow-hidden">
+      <div className="flex flex-row w-full h-full">
         <SidebarLeft
           selectedCategory={currentCategory}
           categories={Object.keys(props.views)}
           setCurrentCategory={setCurrentCategory}
         />
-        <div className="w-full p-2 overflow-y-scroll">
+        <div className="w-full p-2 overflow-y-auto">
           {props.views[currentCategory]}
         </div>
       </div>
@@ -47,7 +47,7 @@ function SidebarLeft(props: {
 
   return (
     <div
-      className="p-2 flex flex-col gap-1 overflow-y-scroll"
+      className="p-2 flex flex-col gap-1 overflow-y-auto"
       style={{
         width: "15rem",
       }}

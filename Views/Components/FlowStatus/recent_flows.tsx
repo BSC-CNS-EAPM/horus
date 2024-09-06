@@ -46,7 +46,7 @@ export default function RecentUserFlows(props: RecentUserFlowProps) {
       path.shift();
       path.pop();
       return (
-        <div className="flex flex-row gap-1 overflow-x-scroll justify-start">
+        <div className="flex flex-row gap-1 overflow-x-auto justify-start">
           {path.map((p, index) => {
             return (
               <div
