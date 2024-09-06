@@ -522,7 +522,16 @@ function BlockBody({
 
   const content = renderBlockView();
 
-  return content ? <div className="mt-2">{content}</div> : null;
+  return content ? (
+    <div
+      className={
+        "mt-2" +
+        (block.type !== BlockTypes.SLURM && " border-t border-gray-300 pt-2")
+      }
+    >
+      {content}
+    </div>
+  ) : null;
 }
 
 interface DeleteBlockButtonProps {

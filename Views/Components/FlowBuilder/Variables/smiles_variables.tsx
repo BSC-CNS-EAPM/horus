@@ -136,9 +136,18 @@ export function SmilesVariableView(props: VariableViewProps) {
         >
           {usingSelectedSmiles ? "Select manually" : "From viewer"}
         </AppButton>
+        {usingSelectedSmiles && (
+          <AppButton
+            action={() => {
+              window.dispatchEvent(new CustomEvent("toggleSmilesGrid"));
+            }}
+          >
+            Toggle SMILES viewer
+          </AppButton>
+        )}
       </div>
       {usingSelectedSmiles ? (
-        <div className="w-full grid place-items-center plugin-variable-name text-center">
+        <div className="w-full grid place-items-center plugin-variable-name text-center mt-2">
           Using {window.smiles?.getSelectedSmiles().length} selected SMILES.
           Modify the selection in the Smiles viewer.
         </div>
