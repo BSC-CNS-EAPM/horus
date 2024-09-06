@@ -123,7 +123,7 @@ export function Smiles2DMolstarViewportComponent() {
                     return (
                       <option key={smi.id} value={smi.id}>
                         {`${smi.label} - ${
-                          window.molstar.getLabelFromStructureRef(
+                          window.molstar?.getLabelFromStructureRef(
                             smi.structureRef?.id ?? ""
                           ) ?? "Unknown"
                         }` || "Unnamed SMILES"}

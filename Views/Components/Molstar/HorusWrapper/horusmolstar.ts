@@ -1300,7 +1300,7 @@ export default class HorusMolstar {
 
   // Will search iteratibely until finding the actual label of the structure (the one on the root)
   public getLabelFromStructureRef(refID: string) {
-    return this.plugin!.state.data.cells.get(
+    return this.plugin?.state.data.cells.get(
       this.getStructureRootIDFromStructureSourceRef(refID)
     )!.obj!.label;
   }

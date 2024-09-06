@@ -38,6 +38,7 @@ import { FileExplorerProps } from "../FileExplorer/file_explorer";
 import { usePrompt } from "../HorusPrompt/horus_prompt";
 import { useAlert } from "../HorusPrompt/horus_alert";
 import { useConfirm } from "../HorusPrompt/horus_confirm";
+import { HorusSmilesManagerState } from "../Smiles/SmilesWrapper/horusSmiles";
 
 /**
  * An extended "PointerSensor" that prevent some
@@ -575,7 +576,20 @@ export function useFlowBuilder() {
         // If smiles state, open it
         setFlowText("Loading SMILES state...");
         if (window.smiles && data.smilesState) {
-          window.smiles.restoreState(JSON.parse(data.smilesState));
+          try {
+            // Parse the smiles only if its a string
+            // Skip if already an object
+            let smilesState: HorusSmilesManagerState | string =
+              data.smilesState;
+
+            if (typeof smilesState === "string") {
+              smilesState = JSON.parse(smilesState) as HorusSmilesManagerState;
+            }
+
+            window.smiles.restoreState(smilesState);
+          } catch (error) {
+            await horusAlert(`Failed to load SMILES state. ${error}`);
+          }
         }
 
         await internalLoadFlow(openedFlow);
