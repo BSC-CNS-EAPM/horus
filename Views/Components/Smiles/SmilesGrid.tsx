@@ -20,6 +20,7 @@ import { ToolbarMenu, ToolBarMenuProps } from "../Toolbar/toolbar";
 import { SmilesView } from "./SmilesComponent";
 import { SmilesList } from "./SmilesList";
 import { HorusSmilesType, SmilesEvents } from "./SmilesWrapper/horusSmiles";
+import { GreenOverlay } from "../GreenOverlay/GreenOverlay";
 
 const SMILES_GRID_WIDTH = 200;
 const SMILES_GRID_HEIGTH = 150;
@@ -127,20 +128,20 @@ export function SmilesGrid() {
       onDragLeave={handleDragEnd}
     >
       {isHoveringFile && (
-        <_GreenOverlay>
+        <GreenOverlay>
           <div className="flex flex-col gap-2 items-center justify-center font-semibold">
             <SaveIcon className="w-16 h-16" />
             Drop a .CSV / .SMI / .SDF file
           </div>
-        </_GreenOverlay>
+        </GreenOverlay>
       )}
       {loadingFile && (
-        <_GreenOverlay>
+        <GreenOverlay>
           <div className="flex flex-col gap-2 items-center justify-center font-semibold">
             <RotatingLines />
             Loading files...
           </div>
-        </_GreenOverlay>
+        </GreenOverlay>
       )}
       <SmilesToolBox
         currentGroup={currentGroup}
@@ -193,22 +194,6 @@ export function SmilesGrid() {
           setEditingSmiles(null);
         }}
       />
-    </div>
-  );
-}
-
-function _GreenOverlay({ children }: { children: ReactNode }) {
-  return (
-    <div
-      className="backdrop-blur-sm bg-green-200 bg-opacity-50 m-auto cursor-copy w-full h-full"
-      style={{
-        placeContent: "center",
-        display: "grid",
-        position: "absolute",
-        zIndex: 100,
-      }}
-    >
-      {children}
     </div>
   );
 }

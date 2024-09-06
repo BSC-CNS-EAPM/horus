@@ -33,7 +33,7 @@ export enum SmilesEvents {
   STATE = "smiles-state-event",
 }
 
-type HorusSmilesManagerState = {
+export type HorusSmilesManagerState = {
   smilesList: HorusSmilesType[];
   currentSmiles: HorusSmilesType | null;
   loadedRefs: string[];
