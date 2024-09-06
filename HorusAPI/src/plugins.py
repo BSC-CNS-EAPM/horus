@@ -500,7 +500,11 @@ class VariableTypes(str, Enum):
         return self.value
 
     def __eq__(self, other):
-        return self.value == other.value
+
+        if isinstance(other, VariableTypes):
+            return self.value == other.value
+
+        return self.value == other
 
     def __hash__(self):
         return hash(self.value)
