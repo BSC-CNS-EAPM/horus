@@ -99,6 +99,8 @@ function SlurmOutputModalView({
   };
 
   const parsedStatus = () => {
+    // We need to use a different flow status for slurm
+    // because for the IDLE we do not want to use the "Saved" status
     switch (block.status) {
       case "COMPLETED":
         return <FlowStatusView status={FlowStatus.FINISHED} />;
@@ -110,8 +112,6 @@ function SlurmOutputModalView({
         return <FlowStatusView status={FlowStatus.RUNNING} />;
       case "CANCELLED":
         return <FlowStatusView status={FlowStatus.STOPPED} />;
-      // case "IDLE":
-      //   return <FlowStatusView status={FlowStatus.IDLE} />;
       default:
         return <div className="font-semibold">Status: {block.status} </div>;
     }

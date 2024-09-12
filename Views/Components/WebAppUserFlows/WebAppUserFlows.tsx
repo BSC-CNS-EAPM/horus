@@ -493,26 +493,20 @@ function FlowDownload({ flow }: { flow: Flow }) {
     return <div>-</div>;
   }
 
-  if (isDownloading) {
-    return (
-      <RotatingLines
-        size="25px"
-        style={{
-          // Center the loading icon
-          margin: "0 auto",
-        }}
-      />
-    );
-  }
-
   return (
-    <CloudDownload
-      className="cursor-pointer w-6 h-6"
-      style={{
-        color: "var(--pop-code)",
-      }}
-      onClick={downloadFlow}
-    />
+    <div className="h-6 text-center cursor-pointer items-center justify-center flex">
+      {isDownloading ? (
+        <RotatingLines size="25px" />
+      ) : (
+        <CloudDownload
+          className="cursor-pointer w-6 h-6"
+          style={{
+            color: "var(--pop-code)",
+          }}
+          onClick={downloadFlow}
+        />
+      )}
+    </div>
   );
 }
 
