@@ -611,6 +611,8 @@ class Flow:
         Reads a flow from a file
         """
 
+        logging.getLogger("Horus").debug("Reading flow from '%s'", path)
+
         # Read the flow with the new zipped version
         try:
             with zipfile.ZipFile(path, "r") as zipFile:
