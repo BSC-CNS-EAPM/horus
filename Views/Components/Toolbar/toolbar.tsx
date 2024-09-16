@@ -328,6 +328,11 @@ const handleKeyDown = (event: globalThis.KeyboardEvent) => {
     event.preventDefault();
     newFlowEvent();
   }
+  // Hide extensions
+  if (event.code === "KeyE" && isModifierKeyPressed) {
+    event.preventDefault();
+    hideExtensions();
+  }
 };
 
 const toggleMolstar = () => {
@@ -624,8 +629,9 @@ export default function HorusToolbar() {
       name: "Extensions",
       items: [
         {
-          name: "Hide extensions",
+          name: "Close extensions",
           svgPath: <EyeDashIcon />,
+          keyShortcut: `${modifierKeyLogo}E`,
           onClick: hideExtensions,
         },
         ...pluginPages.map((page) => {
