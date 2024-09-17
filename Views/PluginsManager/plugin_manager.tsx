@@ -457,7 +457,12 @@ function PluginCard(props: PluginCardProps) {
               <>
                 <div>Version: {plugin.version}</div>
                 <div>Author: {plugin.author}</div>
-                <div>{plugin.externalURL}</div>
+                {plugin.externalURL && (
+                  <span>
+                    External URL:{" "}
+                    <a href={plugin.externalURL}>{plugin.externalURL}</a>
+                  </span>
+                )}
               </>
             ) : (
               <div className="plugin-error">{plugin.description}</div>

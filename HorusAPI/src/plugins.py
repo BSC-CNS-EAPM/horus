@@ -1068,6 +1068,13 @@ class PluginBlock:
     embedded with the plugin.
     """
 
+    dirty: bool = False
+    """
+    Whether the block is dirty or not. When running for the first time,
+    the block is not dirty. When the flow is reset, the block is not dirty.
+    The block will be dirty on subsequent runs without a reset.
+    """
+
     def _parseID(self, id: str) -> str:
         """
         Parses the ID of the block.
@@ -1382,7 +1389,16 @@ class PluginBlock:
             inputGroupsList.append(v.toDict())
         return inputGroupsList
 
-    def _cleanRun(self, cleanCycles: bool = True):
+    def _cleanRun(self, cleanCycles: bool = True, cleanDirty: bool = False):
+        """
+        Cleans the run of the block.
+
+        :param cleanCycles: Whether to clean the cycles of the connections.
+        :param setClean: Whether to set the block as clean or not. This is useful
+        when checking if a flow was resetted or not. When the flow is resetted, the block will
+        be set as "clean" / "not dirty" (same as if its the first time running). For other calls of
+        _cleanRun() the block will be set as "dirty".
+        """
         # Clean internal variables related to the execution
         self._finishedExecution = False
         self.error = False
@@ -1391,6 +1407,9 @@ class PluginBlock:
         self._extensionsToOpen = []
         self._storedOutputs = {}
         self.time = 0
+
+        if cleanDirty:
+            self.dirty = False
 
         # Reset the cycles count on the connections
         if cleanCycles:
@@ -1449,6 +1468,7 @@ class PluginBlock:
         )
         blockTime = blockJSON.get("time", 0)
         extraData = blockJSON.get("extraData", {})
+        dirty = blockJSON.get("dirty", False)
 
         position: typing.Dict[str, float] = blockJSON.get("position", {})
         xPos: float = position.get("x", 0)
@@ -1555,6 +1575,7 @@ class PluginBlock:
         self._extensionsToOpen = extensionsToOpen
         self.time = blockTime
         self.extraData = extraData
+        self.dirty = dirty
 
     def _minimalEncode(self):
         """
@@ -1579,6 +1600,7 @@ class PluginBlock:
             "extensionsToOpen": self._extensionsToOpen,
             "time": self.time,
             "extraData": self.extraData,
+            "dirty": self.dirty,
         }
 
     def _toDict(self):
@@ -1975,8 +1997,8 @@ class SlurmBlock(PluginBlock):
         self._executeSecondAction = executeSecondAction
 
     # Override the clean run to reset the status
-    def _cleanRun(self, cleanCycles: bool = True):
-        super()._cleanRun(cleanCycles)
+    def _cleanRun(self, *args, **kwargs):
+        super()._cleanRun(*args, **kwargs)
         self.stdOut = None
         self.stdErr = None
         self.detailedStatus = None

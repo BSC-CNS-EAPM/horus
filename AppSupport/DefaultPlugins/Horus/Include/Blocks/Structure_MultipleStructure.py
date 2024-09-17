@@ -122,8 +122,6 @@ def saveMultipleStructure(block: InputBlock):
     for structure in structureList:
         name = structure.get("label", None)
 
-        print(structure)
-
         # Formats come without the "." for the extension
         format = "." + structure.get("format")
 

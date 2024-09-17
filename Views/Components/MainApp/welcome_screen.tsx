@@ -342,13 +342,13 @@ function PredefinedFlowsSplash() {
       </ScrollableViewWelcome.Header>
       <ScrollableViewWelcome.Body>
         {fetchingRecents ? (
-          <div className="w-[26rem] h-full flex justify-center items-center">
+          <div className="h-full flex justify-center items-center">
             <RotatingLines />
           </div>
         ) : (
           <div className="w-full h-full">
             {predefinedFlows.length === 0 ? (
-              <div className="h-full w-[26rem] flex justify-center items-center">
+              <div className="h-full flex justify-center items-center">
                 No preset flows
               </div>
             ) : (

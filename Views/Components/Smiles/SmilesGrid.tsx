@@ -117,7 +117,7 @@ export function SmilesGrid() {
         `Disabled SMILES preview due to the list being too large. Click 'View' -> 'Toggle SMILES preview' to enable previews again at the cost of performance.`
       );
     }
-  }, [availableSmiles]);
+  }, [availableSmiles, alertShownAtLeastOnce]);
 
   return (
     <div
@@ -171,16 +171,13 @@ export function SmilesGrid() {
         )
       ) : (
         <div
-          className="flex flex-col justify-center items-center h-full text-muted"
+          className="flex flex-col justify-center items-center h-full text-gray-400 text-center p-2"
           style={{
             margin: "auto",
           }}
         >
-          <span>No molecules available.</span>
-          <span className="text-center">
-            Load a protein in Mol* with ligands or draw manually one using the
-            "New molecule" button
-          </span>
+          Load a protein with ligands in Mol*, draw manually one using the "New
+          molecule" button or drag and drop a CSV, SDF or SMILES file here.
         </div>
       )}
       <EditSmilesModal
@@ -193,6 +190,7 @@ export function SmilesGrid() {
         onClose={() => {
           setEditingSmiles(null);
         }}
+        isShowingList={viewMode === "list"}
       />
     </div>
   );
@@ -490,10 +488,7 @@ export function NoPreviewSmilesView({
       className="w-full h-full flex items-center justify-center"
       style={{ ...containerStyle }}
     >
-      <AppButton
-        disabled={smiles.structureRef ? true : false}
-        action={onClickEdit}
-      >
+      <AppButton action={onClickEdit}>
         {smiles.structureRef ? <MolStarIcon /> : "Edit SMILES"}
       </AppButton>
     </div>
@@ -838,6 +833,7 @@ function EditSmilesModal(props: {
   onChange: (smiles: HorusSmilesType) => void;
   onClose: () => void;
   isOpen: boolean;
+  isShowingList: boolean;
 }) {
   const [smilesState, setSmilesState] = useState<HorusSmilesType | null>(
     props.smiles
@@ -862,72 +858,79 @@ function EditSmilesModal(props: {
 
   return (
     <HorusModal show={props.isOpen} onHide={props.onClose} size="xl">
-      <div className="flex flex-row flex-wrap gap-4 p-4 w-full max-h-[70vh] justify-around overflow-y-auto">
-        <div className="flex flex-col gap-2 w-full max-w-[500px]">
-          <div>
-            <label
-              className="block plugin-variable-name"
-              htmlFor="smiles-input"
-            >
-              Label
-            </label>
-            <input
-              id={`${smilesState.id}-label-modal`}
-              className="px-2 py-1 plugin-variable-value block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              type="text"
-              placeholder="Label"
-              value={smilesState.label}
-              onChange={(e) => {
-                handleNewSmiles({ ...smilesState, label: e.target.value });
-              }}
-            />
-          </div>
-          <div>
-            <label
-              className="block plugin-variable-name"
-              htmlFor="smiles-input"
-            >
-              SMILES
-            </label>
-            <input
-              onBlur={() => setCurrentFocusOn(null)}
-              onFocus={() => {
-                setCurrentFocusOn("input");
-              }}
-              id={`${smilesState.id}-smiles-modal`}
-              className="px-2 py-1 plugin-variable-value block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              type="text"
-              placeholder="SMILES"
-              value={smilesState.smi}
-              onChange={(e) => {
-                if (currentFocusOn === "input") {
-                  handleNewSmiles({ ...smilesState, smi: e.target.value });
-                }
-              }}
-            />
-          </div>
+      <div
+        className={`flex flex-row flex-wrap gap-4 p-4 justify-around overflow-y-auto max-h-[70vh] w-full`}
+      >
+        {!props.isShowingList && (
+          <div className="flex flex-col gap-2 w-full max-w-[500px]">
+            <div>
+              <label
+                className="block plugin-variable-name"
+                htmlFor="smiles-input"
+              >
+                Label
+              </label>
+              <input
+                id={`${smilesState.id}-label-modal`}
+                className="px-2 py-1 plugin-variable-value block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                type="text"
+                placeholder="Label"
+                value={smilesState.label}
+                onChange={(e) => {
+                  handleNewSmiles({ ...smilesState, label: e.target.value });
+                }}
+              />
+            </div>
+            <div>
+              <label
+                className="block plugin-variable-name"
+                htmlFor="smiles-input"
+              >
+                SMILES
+              </label>
+              <input
+                onBlur={() => setCurrentFocusOn(null)}
+                onFocus={() => {
+                  setCurrentFocusOn("input");
+                }}
+                id={`${smilesState.id}-smiles-modal`}
+                className="px-2 py-1 plugin-variable-value block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                type="text"
+                placeholder="SMILES"
+                value={smilesState.smi}
+                onChange={(e) => {
+                  if (currentFocusOn === "input") {
+                    handleNewSmiles({ ...smilesState, smi: e.target.value });
+                  }
+                }}
+              />
+            </div>
 
-          <div>
-            <label
-              className="block plugin-variable-name"
-              htmlFor="extra-info-textarea"
-            >
-              Additional information
-            </label>
-            <textarea
-              style={{
-                minHeight: "200px",
-              }}
-              id="extra-info-textarea"
-              className="plugin-variable-value block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm overflow-y-auto"
-              placeholder="Add additional information here"
-              value={smilesState.extraInfo ?? ""}
-              onChange={(e) => {
-                handleNewSmiles({ ...smilesState, extraInfo: e.target.value });
-              }}
-            />
+            <div>
+              <label
+                className="block plugin-variable-name"
+                htmlFor="extra-info-textarea"
+              >
+                Additional information
+              </label>
+              <textarea
+                style={{
+                  minHeight: "200px",
+                }}
+                id="extra-info-textarea"
+                className="plugin-variable-value block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm overflow-y-auto"
+                placeholder="Add additional information here"
+                value={smilesState.extraInfo ?? ""}
+                onChange={(e) => {
+                  handleNewSmiles({
+                    ...smilesState,
+                    extraInfo: e.target.value,
+                  });
+                }}
+              />
+            </div>
           </div>
-        </div>
+        )}
         <div className="border">
           <SmilesView
             containerProps={{
@@ -937,6 +940,7 @@ function EditSmilesModal(props: {
               onBlur: () => setCurrentFocusOn(null),
             }}
             options={{
+              depict: props.smiles?.structureRef ? true : false,
               contextmenu: false,
             }}
             parameters={{
