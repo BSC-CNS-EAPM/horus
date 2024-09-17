@@ -751,3 +751,38 @@ def test_flow_run_flow_post_full_app(plugin_manager):
 
         # Restore the flow by copying the .bak file to the original file
         os.system(f"mv {path}.bak {path}")
+
+
+def test_dirty_block(plugin_manager):
+    path = os.path.join(os.path.dirname(__file__), "dirty.flow")
+
+    # Backup the flow
+    os.system(f"cp {path} {path}.bak")
+
+    try:
+        flow = Flow.read(path)
+
+        flow.reset()
+
+        # Check that the output is correct
+        blockToRun = flow.findBlockByPlacedID(1)
+
+        assert blockToRun.dirty == False
+
+        flow.run(placedID=1, resetFlow=True)  # Default
+
+        assert blockToRun.dirty == True
+
+        # Run again without reset
+        flow.run(placedID=1, resetFlow=False)
+
+        assert flow.terminalOutput[6] == "True"
+
+        # Run with reset
+        flow.run(placedID=1, resetFlow=True)
+
+        assert flow.terminalOutput[2] == "False"
+
+    finally:
+        # Restore the flow by copying the .bak file to the original file
+        os.system(f"mv {path}.bak {path}")

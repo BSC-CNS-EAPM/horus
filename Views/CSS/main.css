@@ -11,7 +11,6 @@ body {
 
 html {
   background: var(--grey-white);
-  scrollbar-gutter: stable both-edges;
   overflow: hidden;
 }
 
