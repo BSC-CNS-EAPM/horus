@@ -791,3 +791,21 @@ print_lots_of_logs_block = PluginBlock(
 )
 
 plugin.addBlock(print_lots_of_logs_block)
+
+
+def dirty_block(block: PluginBlock):
+    print("Is this block dirty?", block.dirty)
+
+    block.setOutput("input_output_even", block.inputs["input_output_even"])
+
+
+dirty_block_block = PluginBlock(
+    id="dirty_block_block",
+    name="Dirty block",
+    description="Dirty block",
+    action=dirty_block,
+    inputs=[input_output_even],
+    outputs=[input_output_even],
+)
+
+plugin.addBlock(dirty_block_block)

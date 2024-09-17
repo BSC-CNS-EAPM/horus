@@ -82,6 +82,12 @@ class PluginNotFoundError(Exception):
     """
 
 
+class PluginMetaNotFound(Exception):
+    """
+    Exception raised when a plugin meta is not found.
+    """
+
+
 class PluginManager(metaclass=HorusSingleton):
     """
     This class manages the installation, loading and uninstallation of plugins.
@@ -132,22 +138,24 @@ class PluginManager(metaclass=HorusSingleton):
             # We are not in a bundle, use the AppSupport/DefaultPlugins directory
             self.defaultPluginsDir = os.path.join(self.appSupportDir, "DefaultPlugins")
 
+        # If the environment varialbe HORUS_DEFAULT_PLUGINS_DIR is set, use that
+        self.defaultPluginsDir = os.getenv("HORUS_DEFAULT_PLUGINS_DIR") or self.defaultPluginsDir
+
+        logging.getLogger("Horus").info("Default plugins directory: %s", self.defaultPluginsDir)
+
         if not os.path.exists(self.defaultPluginsDir):
             os.makedirs(self.defaultPluginsDir, exist_ok=True)
 
         # Defines the plugins directory, which should be in the AppSupport directory
-        self.pluginsDir = os.path.join(self.appSupportDir, "Plugins")
+        # If the environment varialbe HORUS_PLUGINS_DIR is set, use that
+        self.pluginsDir = os.getenv("HORUS_PLUGINS_DIR") or os.path.join(
+            self.appSupportDir, "Plugins"
+        )
+
+        logging.getLogger("Horus").info("Plugins directory: %s", self.pluginsDir)
+
         if not os.path.exists(self.pluginsDir):
             os.makedirs(self.pluginsDir, exist_ok=True)
-
-        # Defines the dependencies directory, which should
-        # be in the AppSupport directory
-        # self.depsDir = os.path.join(appSupportDir, "Dependencies")
-        # if not os.path.exists(self.depsDir):
-        #     os.mkdir(self.depsDir)
-
-        # # Add the dependencies directory to the PYTHON path
-        # sys.path.append(self.depsDir)
 
     def installPlugin(self, socketio: SocketIO, file: typing.Optional[str] = None):
         """
@@ -539,11 +547,16 @@ class PluginManager(metaclass=HorusSingleton):
         Uninstalls a plugin with the given ID.
         """
 
-        plugin = self._getPluginByID(pluginID)
+        try:
+            plugin = self._getPluginByID(pluginID)
+            pluginPath = os.path.join(self.pluginsDir, plugin._path)
+        except PluginNotFoundError:
+            pluginPath = os.path.join(self.pluginsDir, pluginID)
+
+        if not os.path.exists(pluginPath):
+            return
 
         # Remove the plugin folder
-        pluginPath = os.path.join(self.pluginsDir, plugin._path)
-
         try:
             self._preRemovePlugin(pluginPath)
             shutil.rmtree(pluginPath)
@@ -640,7 +653,7 @@ class PluginManager(metaclass=HorusSingleton):
         try:
             plugin = self._checkPlugin(pluginPath)
             logging.getLogger("Horus").info(
-                "Loaded plugin %s with ID %s", plugin.pluginMeta.name, plugin.id
+                "Loaded plugin '%s' with ID '%s'", plugin.pluginMeta.name, plugin.id
             )
         except DefaultPluginConfigException:
             return None
@@ -693,8 +706,13 @@ class PluginManager(metaclass=HorusSingleton):
             pluginID = os.path.basename(pluginDir)
             try:
                 self._getPluginByID(pluginID)
-            except Exception as e:
-                raise Exception("The plugin does not contain a plugin.meta file.") from e
+            except PluginNotFoundError as e:
+                # A exception is raised here if the plugin is not loaded
+                # That means that there is a folder in the Plugins directory that does
+                # not correspond with any plugin configuration nor loaded plugin.
+                # Because the directory also does not  contain a plugin.meta file
+                # it will get ignored.
+                raise PluginMetaNotFound("The plugin does not contain a plugin.meta file.") from e
 
             raise DefaultPluginConfigException
 

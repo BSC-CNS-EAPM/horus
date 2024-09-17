@@ -880,6 +880,7 @@ class Flow:
             raise ErrorRunningBlock(blockToRun, str(exc)) from exc
         finally:
             self._runningBlock = None
+            blockToRun.dirty = True
 
         # Save the flow
         self.write()
@@ -1057,7 +1058,7 @@ class Flow:
         This function does not return any value.
         """
         for block in self.blocks:
-            block._cleanRun()
+            block._cleanRun(cleanDirty=True)
 
         # Clear the terminal output
         self.terminalOutput = []
@@ -1694,12 +1695,12 @@ class FlowManager:
         flow.date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         # Save the flow (overwrite if already exists)
-        if len(flow.blocks) == 0:
-            raise Exception(
-                "Trying to save empty flow. Please save flows that contain placed blocks."
-            )
-        else:
-            flow.write(molstarState, smilesState)
+        # if len(flow.blocks) == 0:
+        #     raise Exception(
+        #         "Trying to save empty flow. Please save flows that contain placed blocks."
+        #     )
+        # else:
+        flow.write(molstarState, smilesState)
 
         # Add the flow to the recent flows list
         if addToRecents:

@@ -31,10 +31,10 @@ Welcome to Horus documentation!
    running_flows/index
 
 .. toctree::
-   :maxdepth: 3
-   :caption: Web App mode
-   
-   webapp_mode/index
+   :maxdepth: 2
+   :caption: FAQ
+
+   faq/index
 
 .. toctree::
    :maxdepth: 3
@@ -47,6 +47,12 @@ Welcome to Horus documentation!
    :caption: The Horus plugin
 
    default/index
+
+.. toctree::
+   :maxdepth: 3
+   :caption: Web App mode
+   
+   webapp_mode/index
 
 .. toctree::
    :maxdepth: 1

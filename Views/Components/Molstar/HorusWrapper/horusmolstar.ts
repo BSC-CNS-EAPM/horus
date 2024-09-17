@@ -3,7 +3,8 @@ import { AnimateModelIndex } from "molstar/lib/mol-plugin-state/animation/built-
 import { createStructureRepresentationParams } from "molstar/lib/mol-plugin-state/helpers/structure-representation-params";
 import { PluginStateObject } from "molstar/lib/mol-plugin-state/objects";
 import { StateTransforms } from "molstar/lib/mol-plugin-state/transforms";
-import { createPluginUI } from "molstar/lib/mol-plugin-ui/react18";
+import { createPluginUI } from "molstar/lib/mol-plugin-ui/";
+import { renderReact18 } from "molstar/lib/mol-plugin-ui/react18";
 import { PluginUIContext } from "molstar/lib/mol-plugin-ui/context";
 import { DefaultPluginUISpec } from "molstar/lib/mol-plugin-ui/spec";
 import { OpenFiles } from "molstar/lib/mol-plugin-state/actions/file";
@@ -142,33 +143,37 @@ export default class HorusMolstar {
       mvs: PluginSpec.Behavior(MolViewSpec),
     };
 
-    this.plugin = await createPluginUI(this.target, {
-      ...DefaultPluginUISpec(),
-      behaviors: [
-        ...DefaultPluginUISpec().behaviors,
-        ...ObjectKeys(ExtensionMap).map((k) => ExtensionMap[k]),
-      ],
-      animations: [AnimateModelIndex],
-      config: [
-        [PluginConfig.Viewport.ShowExpand, false],
-        [PluginConfig.Viewport.ShowControls, true],
-        [PluginConfig.Viewport.ShowSelectionMode, true],
-        [PluginConfig.Viewport.ShowSettings, true],
-      ],
-      layout: {
-        initial: {
-          isExpanded: true,
-          showControls: options?.showControls ?? false,
+    this.plugin = await createPluginUI({
+      target: this.target,
+      render: renderReact18,
+      spec: {
+        ...DefaultPluginUISpec(),
+        behaviors: [
+          ...DefaultPluginUISpec().behaviors,
+          ...ObjectKeys(ExtensionMap).map((k) => ExtensionMap[k]),
+        ],
+        animations: [AnimateModelIndex],
+        config: [
+          [PluginConfig.Viewport.ShowExpand, false],
+          [PluginConfig.Viewport.ShowControls, true],
+          [PluginConfig.Viewport.ShowSelectionMode, true],
+          [PluginConfig.Viewport.ShowSettings, true],
+        ],
+        layout: {
+          initial: {
+            isExpanded: true,
+            showControls: options?.showControls ?? false,
+          },
         },
-      },
-      components: {
-        controls: {
-          right: "none",
-          bottom: "none",
-        },
-        remoteState: "none",
-        viewport: {
-          view: HorusMolstarViewportComponent,
+        components: {
+          controls: {
+            right: "none",
+            bottom: "none",
+          },
+          remoteState: "none",
+          viewport: {
+            view: HorusMolstarViewportComponent,
+          },
         },
       },
     });
@@ -1141,7 +1146,7 @@ export default class HorusMolstar {
     const sourceIndex = StructureProperties.atom.sourceIndex(loc);
     let auth_comp_id = StructureProperties.atom.auth_comp_id(loc);
     const auth_atom_id = StructureProperties.atom.auth_atom_id(loc);
-    const chainID = StructureProperties.chain.label_asym_id(loc);
+    const chainID = StructureProperties.chain.auth_asym_id(loc);
     const type = StructureProperties.atom.type_symbol(loc);
     const x = StructureProperties.atom.x(loc);
     const y = StructureProperties.atom.y(loc);
@@ -1168,7 +1173,7 @@ export default class HorusMolstar {
       x: x,
       y: y,
       z: z,
-      label: label,
+      label: label ?? "No label",
       structureID: structureID,
     };
   }
@@ -1447,7 +1452,8 @@ export default class HorusMolstar {
             if (
               info.structureID === res.structureID &&
               info.auth_comp_id === res.auth_comp_id &&
-              info.residue === res.residue
+              info.residue === res.residue &&
+              info.chainID === res.chainID
             ) {
               return;
             }

@@ -63,7 +63,12 @@ function useServerExplorer(
   const horusAlert = useAlert();
 
   const fetchFolders = useCallback(
-    async (openPath?: string) => {
+    async (
+      openPath?: string,
+      options?: {
+        setGoToPathAsSelected: boolean;
+      }
+    ) => {
       const header = {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
@@ -130,6 +135,11 @@ function useServerExplorer(
         currentPath.current =
           data.folderChain[data.folderChain.length - 1].path;
       }
+
+      if (options?.setGoToPathAsSelected) {
+        setSelectedFile(data.folderChain[data.folderChain.length - 1]);
+        onFileSelect(data.folderChain[data.folderChain.length - 1]["path"]);
+      }
     },
     [
       extensions,
@@ -140,6 +150,8 @@ function useServerExplorer(
       folderChain,
       openDirectly,
       files,
+      onFileSelect,
+      openOutsideFlowContext,
     ]
   );
 
@@ -576,7 +588,10 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     if (goToPath) {
-                      fetchFolders(goToPath);
+                      fetchFolders(goToPath, {
+                        setGoToPathAsSelected: true,
+                      });
+
                       if (
                         props.fileProps?.onFileSelect &&
                         props.fileProps.openFolder
@@ -596,7 +611,9 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
                       // Remove also the last /
                       const goingTo = goToPath.slice(0, -1);
                       setGoToPath(goingTo);
-                      fetchFolders(goingTo);
+                      fetchFolders(goingTo, {
+                        setGoToPathAsSelected: true,
+                      });
                       return;
                     }
 
@@ -639,7 +656,10 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
               />
               <AppButton
                 action={() => {
-                  goToPath && fetchFolders(goToPath);
+                  goToPath &&
+                    fetchFolders(goToPath, {
+                      setGoToPathAsSelected: true,
+                    });
                 }}
               >
                 Go

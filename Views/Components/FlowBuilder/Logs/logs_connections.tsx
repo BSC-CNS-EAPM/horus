@@ -8,7 +8,7 @@ import { FlowStatusView } from "../../FlowStatus/flow_status";
 import { Block, BlockTypes, FlowStatus } from "../flow.types";
 import AppButton from "../../appbutton";
 import { BlurredModal } from "../../reusable";
-import { LazyLog } from "@melloware/react-logviewer";
+import { HorusLazyLog } from "../../HorusLazyLog/HorusLazyLog";
 
 type BlockLogsModalViewProps = {
   block: Block;
@@ -54,15 +54,7 @@ function RegularBlockLogs({
         overflow: "hidden",
       }}
     >
-      <LazyLog
-        caseInsensitive
-        enableHotKeys
-        enableSearch
-        extraLines={1}
-        selectableLines
-        follow={isRunning}
-        text={logs ?? "No logs"}
-      />
+      <HorusLazyLog logText={logs ?? "No logs"} keepDisabled={!isRunning} />
     </div>
   );
 }
@@ -156,14 +148,9 @@ function SlurmOutputModalView({
         }}
       >
         {block.stdOut ? (
-          <LazyLog
-            caseInsensitive
-            enableHotKeys
-            enableSearch
-            extraLines={1}
-            selectableLines
-            follow={block.isRunning}
-            text={block.stdOut}
+          <HorusLazyLog
+            logText={block.stdOut}
+            keepDisabled={!block.isRunning}
           />
         ) : (
           <span className="text-center w-full grid place-items-center h-full">
@@ -185,15 +172,9 @@ function SlurmOutputModalView({
         }}
       >
         {block.stdErr ? (
-          <LazyLog
-            containerStyle={{}}
-            caseInsensitive
-            enableHotKeys
-            enableSearch
-            extraLines={1}
-            selectableLines
-            text={block.stdErr}
-            follow={block.isRunning}
+          <HorusLazyLog
+            logText={block.stdErr}
+            keepDisabled={!block.isRunning}
           />
         ) : (
           <span className="text-center w-full grid place-items-center h-full">
