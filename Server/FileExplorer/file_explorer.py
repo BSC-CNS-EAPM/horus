@@ -212,7 +212,7 @@ class FileExplorer:
             # Skip files that are not part of the allowedExtensions
             if (
                 allowedExtensions is not None
-                and not "".join(file.suffixes) in allowedExtensions
+                and not any(ext in file.suffixes for ext in allowedExtensions)
                 and not file.is_dir()
             ):
                 continue

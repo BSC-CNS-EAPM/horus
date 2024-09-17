@@ -52,7 +52,11 @@ export default function About() {
   }, []);
 
   if (gettingInfo) {
-    return <RotatingLines />;
+    return (
+      <div className="grid grid-cols-1 place-items-center h-full">
+        <RotatingLines />
+      </div>
+    );
   }
 
   return (

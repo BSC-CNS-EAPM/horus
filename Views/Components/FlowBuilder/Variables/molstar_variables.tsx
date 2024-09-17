@@ -56,7 +56,10 @@ function filterStandardResidues(residues: AtomInfo[], query?: string) {
 }
 
 // Custom hooks
-function useStructureFilters() {
+function useStructureFilters(
+  currentValue: MolInfo[] | MolInfo | null,
+  onChange: (value: any) => void
+) {
   const [currentFilter, _setCurrentFilter] = useState("");
   const [filteredStructures, setFilteredStructures] = useState<MolInfo[]>([]);
 
@@ -68,10 +71,26 @@ function useStructureFilters() {
   };
 
   const refreshStructures = useCallback(() => {
-    setFilteredStructures(
-      filterStructures(window.molstar.listStructures(), currentFilter)
-    );
-  }, [currentFilter]);
+    const currentStructures = window.molstar.listStructures();
+
+    // If any structure does not exist anymore, remove it from the values of the variable
+    if (currentValue) {
+      let newValue: MolInfo[] | MolInfo | null = currentValue;
+
+      if (Array.isArray(currentValue)) {
+        newValue = currentValue.filter((structure) =>
+          currentStructures.find((s) => s.id === structure.id)
+        );
+      } else {
+        newValue =
+          currentStructures.find((s) => s.id === currentValue.id) ?? null;
+      }
+
+      onChange(newValue);
+    }
+
+    setFilteredStructures(filterStructures(currentStructures, currentFilter));
+  }, [currentFilter, currentValue, onChange]);
 
   useEffect(() => {
     // Add event listener for structures
@@ -93,7 +112,10 @@ function useStructureFilters() {
   };
 }
 
-function useChainFilters() {
+function useChainFilters(
+  currentValue: AtomInfo[] | AtomInfo | null,
+  onChange: (value: any) => void
+) {
   const [currentFilter, _setCurrentFilter] = useState("");
   const [filteredChains, setFilteredChains] = useState<AtomInfo[]>([]);
 
@@ -103,8 +125,32 @@ function useChainFilters() {
   };
 
   const refreshStructures = useCallback(() => {
-    setFilteredChains(filterChains(window.molstar.listChains(), currentFilter));
-  }, [currentFilter]);
+    const currentChains = window.molstar.listChains();
+    // If any chain does not exist anymore, remove it from the values of the variable
+    if (currentValue) {
+      let newValue: AtomInfo[] | AtomInfo | null = currentValue;
+
+      if (Array.isArray(currentValue)) {
+        newValue = currentValue.filter((chain) =>
+          currentChains.find(
+            (c) =>
+              c.structureID === chain.structureID && c.chainID === chain.chainID
+          )
+        );
+      } else {
+        newValue =
+          currentChains.find(
+            (c) =>
+              c.structureID === currentValue.structureID &&
+              c.chainID === currentValue.chainID
+          ) ?? null;
+      }
+
+      onChange(newValue);
+    }
+
+    setFilteredChains(filterChains(currentChains, currentFilter));
+  }, [currentFilter, currentValue, onChange]);
 
   useEffect(() => {
     // Add event listener for structures
@@ -126,7 +172,11 @@ function useChainFilters() {
   };
 }
 
-function useResidueFilters(type: "standard" | "hetero") {
+function useResidueFilters(
+  type: "standard" | "hetero",
+  currentValue: AtomInfo[] | AtomInfo | null,
+  onChange: (value: any) => void
+) {
   const [currentFilter, _setCurrentFilter] = useState("");
   const [filteredResidues, setFilteredResidues] = useState<AtomInfo[]>([]);
 
@@ -143,16 +193,39 @@ function useResidueFilters(type: "standard" | "hetero") {
   };
 
   const refreshStructures = useCallback(() => {
-    setFilteredResidues(
-      filterStandardResidues(
-        type === "standard"
-          ? window.molstar.listStandardRes()
-          : window.molstar.listHeteroRes(),
-        currentFilter
-      )
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentFilter]);
+    const currentResidues =
+      type === "standard"
+        ? window.molstar.listStandardRes()
+        : window.molstar.listHeteroRes();
+
+    // If any residue does not exist anymore, remove it from the values of the variable
+    if (currentValue) {
+      let newValue: AtomInfo[] | AtomInfo | null = currentValue;
+
+      if (Array.isArray(currentValue)) {
+        newValue = currentValue.filter((residue) =>
+          currentResidues.find(
+            (r) =>
+              r.structureID === residue.structureID &&
+              r.chainID === residue.chainID &&
+              r.residue === residue.residue
+          )
+        );
+      } else {
+        newValue =
+          currentResidues.find(
+            (r) =>
+              r.structureID === currentValue.structureID &&
+              r.chainID === currentValue.chainID &&
+              r.residue === currentValue.residue
+          ) ?? null;
+      }
+
+      onChange(newValue);
+    }
+
+    setFilteredResidues(filterStandardResidues(currentResidues, currentFilter));
+  }, [currentFilter, currentValue, onChange, type]);
 
   useEffect(() => {
     // Add event listener for structures
@@ -183,7 +256,10 @@ function useResidueFilters(type: "standard" | "hetero") {
 export function StructureVariableView(props: VariableViewProps) {
   const { currentValue, onChange } = props;
 
-  const { setCurrentFilter, filteredStructures } = useStructureFilters();
+  const { setCurrentFilter, filteredStructures } = useStructureFilters(
+    currentValue,
+    onChange
+  );
 
   useEffect(() => {
     // Set the initial structures
@@ -260,7 +336,10 @@ function SelectSingleStructure({
 export function MultipleStructureVariableView(props: VariableViewProps) {
   const { currentValue, onChange } = props;
 
-  const { setCurrentFilter, filteredStructures } = useStructureFilters();
+  const { setCurrentFilter, filteredStructures } = useStructureFilters(
+    currentValue,
+    onChange
+  );
 
   useEffect(() => {
     // Set the initial structures
@@ -362,7 +441,10 @@ function SelectMultipleStructures({
 export function ChainView(props: VariableViewProps) {
   const { currentValue, onChange } = props;
 
-  const { setCurrentFilter, filteredChains } = useChainFilters();
+  const { setCurrentFilter, filteredChains } = useChainFilters(
+    currentValue,
+    onChange
+  );
 
   useEffect(() => {
     // Set the initial chains
@@ -469,7 +551,11 @@ function SelectMultipleChains({
 export function StandardResView(props: VariableViewProps) {
   const { currentValue, onChange } = props;
 
-  const { setCurrentFilter, filteredResidues } = useResidueFilters("standard");
+  const { setCurrentFilter, filteredResidues } = useResidueFilters(
+    "standard",
+    currentValue,
+    onChange
+  );
 
   useEffect(() => {
     if (!currentValue && filteredResidues.length > 0) {
@@ -525,7 +611,11 @@ export function StandardResView(props: VariableViewProps) {
 export function HeteroResView(props: VariableViewProps) {
   const { currentValue, onChange } = props;
 
-  const { setCurrentFilter, filteredResidues } = useResidueFilters("hetero");
+  const { setCurrentFilter, filteredResidues } = useResidueFilters(
+    "hetero",
+    currentValue,
+    onChange
+  );
 
   useEffect(() => {
     // Set the initial residues

@@ -47,7 +47,6 @@ export function SmilesList(props: {
                 removePolygon={true}
                 containerProps={{
                   onClick: () => {
-                    if (data.structureRef) return;
                     onClickEdit(data);
                   },
                 }}
@@ -63,7 +62,7 @@ export function SmilesList(props: {
             <NoPreviewSmilesView
               smiles={data}
               onClickEdit={() => {
-                data.structureRef ? null : onClickEdit(data);
+                onClickEdit(data);
               }}
             />
           );
