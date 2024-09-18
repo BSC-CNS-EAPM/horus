@@ -1197,7 +1197,7 @@ export default class HorusMolstar {
    * @throws {Error} If the plugin is not initialized or if the structure hierarchy is unavailable.
    */
 
-  private structures(): StructureRef[] {
+  structures(): StructureRef[] {
     if (!this.plugin || !this.plugin.managers.structure.hierarchy.current) {
       throw new Error(
         "Plugin is not properly initialized. Cannot retrieve structures."
