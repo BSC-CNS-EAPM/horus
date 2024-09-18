@@ -2823,7 +2823,6 @@ class HorusServer:
             if data is None:
                 return flask.jsonify({"ok": False, "msg": "No data provided"})
 
-            # Remove the flow from the database and the user's directory
             try:
                 flowPath = data.get("path", None)
 
@@ -2839,20 +2838,21 @@ class HorusServer:
                 if not flow.path:
                     return flask.jsonify({"ok": False, "msg": "Flow path is not defined."})
 
-                # Delete the container folder of the flow
                 if os.path.exists(flow.path):
 
                     # Use date as unique identifier
-                    uniqueCloned = f"cloned_{datetime.datetime.now().timestamp()}"
-                    newFolderName = os.path.join(currentUser.flowsDir, uniqueCloned)
+                    oldFlowFileName = os.path.basename(flow.path)
+                    uniqueCloned = f"cloned_{datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')}_{oldFlowFileName}"
+                    newFolderName = os.path.join(
+                        currentUser.flowsDir, os.path.splitext(uniqueCloned)[0]
+                    )
                     newFolder = shutil.copytree(os.path.dirname(flow.path), newFolderName)
 
-                    # Now rename the flow file to "_cloned" in order for horus to recognize it
-                    oldFlowFileName = os.path.splitext(os.path.basename(flow.path))[0]
-                    newFlow = os.path.join(newFolder, uniqueCloned + ".flow")
+                    # Now rename the flow file to "cloned" in order for horus to recognize it
+                    newFlow = os.path.join(newFolder, uniqueCloned)
                     newFlow = shutil.copyfile(flow.path, newFlow)
 
-                    # Update the new flow name
+                    # Update the new flow date
                     newFlowInstance = self.flowManager.openFlowFromPath(newFlow)
                     newFlowInstance.date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -2860,8 +2860,16 @@ class HorusServer:
                     newFlowInstance.write()
 
                     # Delete the old .flow in the newly cloned folder
-                    oldFlow = os.path.join(newFolder, oldFlowFileName + ".flow")
+                    oldFlow = os.path.join(newFolder, oldFlowFileName)
                     os.remove(oldFlow)
+
+                    # Rename any previous results folder
+                    oldFolderResults = Flow.flowWorkDir(oldFlow)
+                    newFolderResults = Flow.flowWorkDir(newFlow)
+
+                    if os.path.exists(oldFolderResults):
+                        shutil.move(oldFolderResults, newFolderResults)
+
                 else:
                     return flask.jsonify({"ok": False, "msg": "Flow path does not exist"})
 
