@@ -1776,16 +1776,34 @@ class SlurmBlock(PluginBlock):
         The status of the block.
         """
 
-        IDLE = "IDLE"
-        RUNNING = "RUNNING"
-        PENDING = "PENDING"
-        COMPLETED = "COMPLETED"
-        FAILED = "FAILED"
-        CANCELLED = "CANCELLED"
-        CANCELLING = "CANCELLING"
-        TIMEOUT = "TIMEOUT"
-        OUT_OF_ME = "OUT_OF_ME"
+        BOOT_FAIL = "BOOT_FAIL"  # BF
+        CANCELLED = "CANCELLED"  # CA
+        CANCELLING = "CANCELLING"  # C
+        COMPLETED = "COMPLETED"  # CD
+        CONFIGURING = "CONFIGURING"  # CF
+        COMPLETING = "COMPLETING"  # CG
+        DEADLINE = "DEADLINE"  # DL
+        FAILED = "FAILED"  # F
+        NODE_FAIL = "NODE_FAIL"  # NF
+        OUT_OF_ME = "OUT_OF_ME"  # OM
+        PENDING = "PENDING"  # PD
+        PREEMPTED = "PREEMPTED"  # PR
+        RUNNING = "RUNNING"  # R
+        RESV_DEL_HOLD = "RESV_DEL_HOLD"  # RD
+        REQUEUE_FED = "REQUEUE_FED"  # RF
+        REQUEUE_HOLD = "REQUEUE_HOLD"  # RH
+        REQUEUED = "REQUEUED"  # RQ
+        RESIZING = "RESIZING"  # RS
+        REVOKED = "REVOKED"  # RV
+        SIGNALING = "SIGNALING"  # SI
+        SPECIAL_EXIT = "SPECIAL_EXIT"  # SE
+        STAGE_OUT = "STAGE_OUT"  # SO
+        STOPPED = "STOPPED"  # ST
+        SUSPENDED = "SUSPENDED"  # SS
+        TIMEOUT = "TIMEOUT"  # TO
+
         UNKNOWN = "UNKNOWN"
+        IDLE = "IDLE"
 
         # Wehn the enum is instantiated with some value,
         # e.g. Status("IDLE"), if the value is not in the enum,
