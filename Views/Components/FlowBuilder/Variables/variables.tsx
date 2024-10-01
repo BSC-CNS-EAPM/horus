@@ -21,7 +21,6 @@ import { loadPage } from "../../Toolbar/extensions_list";
 
 // Styles
 import "rc-slider/assets/index.css";
-import CrossIcon from "../../Toolbar/Icons/Cross";
 
 // Mol* variables components
 import {
@@ -58,9 +57,13 @@ type PluginVariableViewProps = {
 export function PluginVariableView(props: PluginVariableViewProps) {
   const { variable, onChange, hideName } = props;
 
-  const handleChange = (value: any) => {
+  const handleChange = (value: any, id?: string, groupID?: string) => {
     if (!variable.disabled) {
-      onChange(value, variable.id);
+      if (variable.type === PluginVariableTypes.GROUP) {
+        onChange(value, id!, groupID);
+      } else {
+        onChange(value, variable.id);
+      }
     }
   };
 
@@ -165,7 +168,6 @@ function VariableListView(props: VariableViewProps) {
         return acc;
       }, {})
     );
-
     onChange(newValues);
   };
 

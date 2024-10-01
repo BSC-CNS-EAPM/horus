@@ -14,6 +14,7 @@ from HorusAPI import (
     CustomVariable,
     PluginConfig,
     VariableList,
+    VariableGroup,
 )
 
 
@@ -685,6 +686,28 @@ input_block_variable_list = InputBlock(
 )
 
 plugin.addBlock(input_block_variable_list)
+
+input_block_variablegroup = InputBlock(
+    id="input_block_variablegroup",
+    name="Input block variable group",
+    description="Input block variable group",
+    variable=VariableGroup(
+        id="variable_group",
+        name="Variable group",
+        description="Variable group",
+        variables=[
+            integer_input,
+            string_input,
+            atom_input,
+            dropdown_input,
+            boolean_input,
+            variable_list_multiple,
+        ],
+    ),
+    action=None,
+)
+
+plugin.addBlock(input_block_variablegroup)
 
 number_input = PluginVariable(
     id="number_input",
