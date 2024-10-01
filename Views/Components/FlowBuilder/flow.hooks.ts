@@ -395,8 +395,7 @@ export function useFlowBuilder() {
 
       // Set the placedIDCounter
       // Search for the highest placedID in the blocks and subblocks
-      const placedIDs = openedFlow.blocks.map((b) => b.placedID);
-
+      const placedIDs = openedFlow.blocks.length > 0 ? openedFlow.blocks.map((b) => b.placedID) : [0];
       placedIDCounter.current = Math.max(...placedIDs) + 1;
 
       if (openedFlow.terminalOutput.length > 0) {
