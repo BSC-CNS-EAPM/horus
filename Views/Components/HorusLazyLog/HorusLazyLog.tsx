@@ -14,7 +14,9 @@ type HorusLazyLogProps = {
 export function HorusLazyLog(props: HorusLazyLogProps) {
   const { logText } = props;
 
-  const [internalText, setInternalText] = useState<string>(logText);
+  const parsedLogText = logText || "No logs";
+
+  const [internalText, setInternalText] = useState<string>(parsedLogText);
   const [logging, setLogging] = useState<boolean>(true);
 
   useEffect(() => {
@@ -23,9 +25,9 @@ export function HorusLazyLog(props: HorusLazyLogProps) {
 
   useEffect(() => {
     if (logging) {
-      setInternalText(logText);
+      setInternalText(parsedLogText);
     }
-  }, [logging, logText]);
+  }, [parsedLogText, logging]);
 
   return (
     <div className="flex flex-col h-full p-2">
