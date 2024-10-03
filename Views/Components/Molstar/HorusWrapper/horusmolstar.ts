@@ -39,6 +39,7 @@ import { MolViewSpec } from "molstar/lib/extensions/mvs/behavior";
 import { StateObjectSelector } from "molstar/lib/mol-state";
 import { BuiltInTrajectoryFormats } from "molstar/lib/mol-plugin-state/formats/trajectory";
 import { HorusMolstarViewportComponent } from "./ui/viewport";
+import { HorusLeftPanelControls } from "./ui/HorusLeftPanelControls";
 
 // Import the HorusSmilesManager
 import HorusSmilesManager from "../../Smiles/SmilesWrapper/horusSmiles";
@@ -120,7 +121,6 @@ export enum MolstarEvents {
   COORDINATES = "molstar-coordinates",
   STATE = "molstar-state-event",
 }
-
 export type MolstarInitOptions = {
   showControls?: boolean;
 };
@@ -170,6 +170,7 @@ export default class HorusMolstar {
           controls: {
             right: "none",
             bottom: "none",
+            left: HorusLeftPanelControls
           },
           remoteState: "none",
           viewport: {
