@@ -76,8 +76,8 @@
     "react-router-dom": "6.11.2",
     "react-simple-captcha": "9.3.1",
     "react-xarrows": "2.0.2",
-    "socket.io": "4.6.1",
-    "socket.io-client": "4.6.1"
+    "socket.io": "4.8.0",
+    "socket.io-client": "4.8.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.24.7",
@@ -111,11 +111,11 @@
     "events": "3.3.0",
     "fp-ts": "2.16.2",
     "husky": "9.0.10",
-    "lint-staged": "15.2.2",
+    "lint-staged": "15.2.10",
     "parcel": "2.12.0",
     "parcel-reporter-static-files-copy": "1.5.3",
     "parcel-resolver-ignore": "2.2.0",
-    "postcss": "8.4.23",
+    "postcss": "8.4.47",
     "prettier": "2.8.8",
     "process": "0.11.10",
     "react-virtualized": "^9.22.5",
