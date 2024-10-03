@@ -38,6 +38,7 @@ import PlayIcon from "../../Toolbar/Icons/Play";
 import { GLOBAL_IDS } from "../../../Utils/globals";
 import PausedIcon from "../../Toolbar/Icons/Paused";
 import ErrorLogFile from "../../Toolbar/Icons/ErrorLogFile";
+import { socket } from "../../../Utils/socket";
 
 export function BlockView(props: BlockViewProps) {
   const { block, blockHooks } = props;
@@ -391,6 +392,12 @@ function BlockTopBar({ children }: { children: React.ReactNode }) {
   );
 }
 
+type LogsData = {
+  message: string;
+  blockID: string;
+  placedID: number;
+};
+
 function BlockLogs({
   block,
   blockState,
@@ -398,10 +405,33 @@ function BlockLogs({
   block: Block;
   blockState: BlockViewState;
 }) {
+  const [updatedBlockLogs, setUpdatedBlockLogs] = useState(block.blockLogs);
+
+  // Setup a socket listener for the "blockLogs" event
+  useEffect(() => {
+    const parseLogs = (logs: LogsData) => {
+      const { blockID, placedID, message } = logs;
+
+      if (blockID === block.id && placedID === block.placedID) {
+        setUpdatedBlockLogs((latestLogs) => {
+          return latestLogs + message;
+        });
+      }
+    };
+    socket.on("blockLogs", parseLogs);
+
+    return () => {
+      socket.off("blockLogs", parseLogs);
+    };
+  }, [block.id, block.placedID]);
+  useEffect(() => {
+    setUpdatedBlockLogs(block.blockLogs);
+  }, [block.blockLogs]);
+
   const blockLogsView = blockState.blockViewHooks.blockLogsModal
     ? createPortal(
         <BlockLogsModalView
-          block={block}
+          block={{ ...block, blockLogs: updatedBlockLogs }}
           handleClose={() => {
             blockState.blockViewHooks.toggleBlockLogsModal();
           }}

@@ -39,11 +39,7 @@ function SidebarLeft(props: {
   selectedCategory: string;
   setCurrentCategory: React.Dispatch<React.SetStateAction<string>>;
 }) {
-  const { categories } = props;
-
-  const handleClick = (category: string) => {
-    props.setCurrentCategory(category);
-  };
+  const { selectedCategory, categories, setCurrentCategory } = props;
 
   return (
     <div
@@ -55,11 +51,13 @@ function SidebarLeft(props: {
       {categories.map((category) => (
         <div
           className={`break-word sidebar-item animated-gradient ${
-            props.selectedCategory === category
+            selectedCategory === category
               ? "sidebar-selected"
               : "sidebar-unselected"
           }`}
-          onClick={() => handleClick(category)}
+          onClick={() => {
+            setCurrentCategory(category);
+          }}
           key={category}
         >
           <BreakLongUnderscoreNames name={category} />
