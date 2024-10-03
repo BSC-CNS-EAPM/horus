@@ -1409,17 +1409,29 @@ class Flow:
             Writes the text to the terminal output
             """
 
-            if self.socket is not None:
-                self.socket.emit("printTerm", message, to=self.savedID)
-
             self.terminalOutput.append(message)
 
             runningBlock = self.getRunningBlock()
             if runningBlock:
                 runningBlock.blockLogs += message
-                runningBlock.flow.write()
 
-            # Prevent printing flow prints to the terminal in roder to not
+            if self.socket is not None:
+                self.socket.emit("printTerm", message, to=self.savedID)
+
+                if runningBlock:
+                    self.socket.emit(
+                        "blockLogs",
+                        {
+                            "message": message,
+                            "blockID": runningBlock.id,
+                            "placedID": runningBlock._placedID,
+                        },
+                        to=self.savedID,
+                    )
+
+                # runningBlock.flow.write()
+
+            # Prevent printing flow prints to the terminal in order to not
             # saturate the terminal on WebAppMode (only in not debug mode)
             from App import AppDelegate
 
