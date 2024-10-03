@@ -10,6 +10,7 @@ import WorkingView from "../MainApp/working_view";
 import { Flow } from "../FlowBuilder/flow.types";
 import { FileData } from "chonky";
 import { useAlert } from "../HorusPrompt/horus_alert";
+import { BreakLongUnderscoreNames } from "../FlowBuilder/Blocks/block.view";
 
 type RecentUserFlowProps = {
   flows: Flow[];
@@ -77,7 +78,9 @@ export default function RecentUserFlows(props: RecentUserFlowProps) {
             className="predefined-flow w-full h-full"
           >
             <div className="flex flex-row justify-between">
-              <div className="predefined-flow-name">{flow.name}</div>
+              <div className="predefined-flow-name max-w-[260px] cut-text">
+                <BreakLongUnderscoreNames name={flow.name} />
+              </div>
               <div className="text-base">
                 <FlowStatusView status={flow.status} />
               </div>
@@ -105,7 +108,9 @@ export function PredefinedFlows(props: RecentUserFlowProps) {
           }}
           className="predefined-flow"
         >
-          <div className="predefined-flow-name">{flow.name}</div>
+          <div className="predefined-flow-name  max-w-[380px] cut-text">
+            <BreakLongUnderscoreNames name={flow.name} />
+          </div>
           <div className="predefined-flow-plugin">{flow.pluginName}</div>
         </div>
       ))}

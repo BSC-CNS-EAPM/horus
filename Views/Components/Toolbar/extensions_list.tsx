@@ -7,6 +7,7 @@ import { horusGet } from "../../Utils/utils";
 
 // Horus imports
 import { PluginPage } from "../FlowBuilder/flow.types";
+import { BreakLongUnderscoreNames } from "../FlowBuilder/Blocks/block.view";
 
 export const loadPage = async (page?: PluginPage, blockIDCustom?: number) => {
   // Emit an event to the iframe
@@ -44,8 +45,12 @@ export default function PluginPagesView(props: PluginPageViewProps) {
             }}
             className="predefined-flow"
           >
-            <div className="predefined-flow-name">{page.name}</div>
-            <div className="predefined-flow-plugin">{page.description}</div>
+            <div className="predefined-flow-name max-w-[380px] cut-text">
+              <BreakLongUnderscoreNames name={page.name} />
+            </div>
+            <div className="predefined-flow-plugin max-w-[380px] cut-text">
+              <BreakLongUnderscoreNames name={page.description} />
+            </div>
           </div>
         ))}
     </div>
