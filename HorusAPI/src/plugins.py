@@ -1921,9 +1921,15 @@ class SlurmBlock(PluginBlock):
             self.jobID = self.remote._remote.getJobIDfromBlock(self.flow.savedID, self._placedID)
 
             # Get Slurm status and logging info
-            self.stdOut, self.stdErr, self.detailedStatus = (
-                self.remote._remote.getRemoteBlockLogs(self.flow.savedID, self._placedID)
-            )
+            try:
+                self.stdOut, self.stdErr, self.detailedStatus = (
+                    self.remote._remote.getRemoteBlockLogs(self.flow.savedID, self._placedID)
+                )
+            except Exception as e:
+                logging.getLogger("Horus").error(
+                    "Could not parse latest SlurmBlock logs: %s", str(e)
+                )
+
             self.time += self.remote._remote.getRemoteBlockTime(self.flow.savedID, self._placedID)
         except AttributeError as attre:
             logging.getLogger("Horus").error("Could not parse SlurmBlock status: %s", str(attre))
