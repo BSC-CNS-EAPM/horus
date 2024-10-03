@@ -90,7 +90,12 @@ cd dist
 
 echo "Removing libstdc++.so.6 from the bundle (issue #68)"
 
-rm -rf Horus/libstdc++.so.6
+# The library is in the _internal folder of the bundle
+# Removed to avoid conflicts between this library and the system one
+
+# TODO: Use internal PIP so that we don't need to do this, as the
+# dependencies will be compiled with the internal libstdc++.so.6
+rm -rf Horus/_internal/libstdc++.so.6
 
 # # Zip the Horus folder
 # zip -rq $filename.zip Horus
