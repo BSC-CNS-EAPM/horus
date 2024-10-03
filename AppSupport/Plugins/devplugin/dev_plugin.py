@@ -687,6 +687,21 @@ input_block_variable_list = InputBlock(
 
 plugin.addBlock(input_block_variable_list)
 
+input_block_string_list = InputBlock(
+    id="input_block_string_list",
+    name="Input block string list",
+    description="Input block string list",
+    variable=PluginVariable(
+        id="string_list_input",
+        name="String list input",
+        description="String list input",
+        type=VariableTypes.LIST,
+    ),
+    action=None,
+)
+
+plugin.addBlock(input_block_string_list)
+
 input_block_variablegroup = InputBlock(
     id="input_block_variablegroup",
     name="Input block variable group",

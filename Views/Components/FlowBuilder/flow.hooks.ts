@@ -257,6 +257,12 @@ export function useFlowBuilder() {
   // It updates the flow state and the saved state
   const handleFlowChange = useCallback(
     (newFlow: Flow, updateHistory: boolean = false) => {
+
+      // Do not modify the flow if it is active
+      if (isFlowActive) {
+        return;
+      }
+
       const handledFlow: Flow = { ...newFlow, status: FlowStatus.IDLE };
       setFlow((currentFlow) => {
         if (updateHistory) {
@@ -266,7 +272,7 @@ export function useFlowBuilder() {
       });
       setSaved(false);
     },
-    []
+    [isFlowActive]
   );
 
   const updateMolstarState = useCallback(async () => {
@@ -834,6 +840,7 @@ export function useFlowBuilder() {
     updateHistory: boolean = false,
     resetExecution: boolean = true
   ) => {
+
     const updatedBlocks = isNew
       ? [...flow.blocks, ...newBlocks]
       : flow.blocks.map((block: Block) => {
