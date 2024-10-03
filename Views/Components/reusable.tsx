@@ -247,7 +247,7 @@ export function saveFile(file: File) {
         }
       })
       .catch((error) => {
-        alert(error);
+        alert("There was an error saving the file: " + error);
       });
   } else {
     // Convert your blob into a Blob URL (a special url that points to an object in the browser's memory)
