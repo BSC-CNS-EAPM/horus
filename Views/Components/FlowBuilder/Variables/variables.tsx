@@ -52,6 +52,7 @@ type PluginVariableViewProps = {
   applyStyle?: boolean;
   customClass?: string;
   placeholder?: string;
+  isFlowActive?: boolean;
 };
 
 export function PluginVariableView(props: PluginVariableViewProps) {
@@ -86,19 +87,27 @@ export function PluginVariableView(props: PluginVariableViewProps) {
         variable={variable}
         hideName={hideName ?? false}
         hideDescription={props.hideDescription ?? false}
+        isFlowActive={props.isFlowActive}
       />
     );
   }
 
   return (
     <div
-      className={`${variable.disabled && "cursor-not-allowed "} ${
+      className={`${
+        variable.disabled
+          ? "cursor-not-allowed "
+          : props.isFlowActive
+          ? "cursor-wait "
+          : ""
+      } ${
         props.applyStyle === false
           ? props.customClass ?? "flex-auto"
           : "plugin-variable animated-gradient border-none"
       }`}
       style={{
         ...widthStyle,
+        pointerEvents: variable.disabled ? "none" : "auto",
       }}
     >
       <div className="flex flex-row w-full justify-between">
@@ -140,10 +149,15 @@ export function PluginVariableView(props: PluginVariableViewProps) {
       <div
         className={`plugin-variable-value flex justify-start w-full`}
         style={{
-          pointerEvents: variable.disabled ? "none" : "auto",
+          pointerEvents:
+            variable.disabled || props.isFlowActive ? "none" : "auto",
         }}
       >
-        <VariableRenderer variable={variable} onChange={handleChange} />
+        <VariableRenderer
+          variable={variable}
+          onChange={handleChange}
+          isFlowActive={props.isFlowActive}
+        />
       </div>
     </div>
   );
@@ -298,6 +312,7 @@ function VariableListView(props: VariableViewProps) {
                     hideDescription={true}
                     applyStyle={false}
                     hideName={true}
+                    isFlowActive={props.isFlowActive}
                   />
                 );
               })}
@@ -336,6 +351,7 @@ function GroupVariableView(props: PluginVariableViewProps) {
               hideName={props.hideName ?? false}
               hideDescription={props.hideDescription ?? false}
               applyStyle={false}
+              isFlowActive={props.isFlowActive}
             />
           );
         })}
@@ -347,6 +363,7 @@ function GroupVariableView(props: PluginVariableViewProps) {
 function VariableRenderer(props: {
   variable: PluginVariable;
   onChange: (value: any) => void;
+  isFlowActive?: boolean;
 }) {
   // Extract the variable from the props
   const { variable: variableToRender, onChange } = props;
@@ -356,6 +373,9 @@ function VariableRenderer(props: {
   const [currentValue, setCurrentValue] = useState(variableToRender.value);
 
   const handleVariableChangeInternal = (value: any) => {
+    if (props.isFlowActive) {
+      return;
+    }
     onChange(value);
     setCurrentValue(value);
   };
@@ -460,6 +480,7 @@ function VariableRenderer(props: {
           currentValue={currentValue}
           variable={props.variable}
           onChange={handleVariableChangeInternal}
+          isFlowActive={props.isFlowActive}
         />
       );
     case PluginVariableTypes._LIST:
@@ -468,6 +489,7 @@ function VariableRenderer(props: {
           currentValue={currentValue}
           variable={props.variable}
           onChange={handleVariableChangeInternal}
+          isFlowActive={props.isFlowActive}
         />
       );
 
@@ -668,6 +690,7 @@ export type VariableViewProps = {
   variable: PluginVariable;
   currentValue: any;
   onChange: (value: any) => void;
+  isFlowActive?: boolean;
 };
 
 function StringVariableView(props: VariableViewProps) {
@@ -993,7 +1016,13 @@ function ListView(props: VariableViewProps) {
       {currentValue?.length > 0 && (
         <div className="flex flex-col gap-2 pb-2">
           {currentValue?.map((value: any, index: number) => (
-            <div className="flex flex-row gap-2 items-center justify-between px-2 zoom-out-animation">
+            <div
+              className="flex flex-row gap-2 items-center justify-between px-2 zoom-out-animation "
+              style={{
+                pointerEvents: props.isFlowActive ? "none" : "auto",
+                cursor: props.isFlowActive ? "wait" : "auto",
+              }}
+            >
               <input
                 id={`${props.variable.id}-${index}`}
                 type="text"

@@ -134,6 +134,7 @@ function FlowBuilderView() {
                             flowBuilderState.flow.flow.status ===
                             FlowStatus.PAUSED
                           }
+                          isFlowActive={flowBuilderState.flow.isFlowActive}
                         />
                       );
                     })}

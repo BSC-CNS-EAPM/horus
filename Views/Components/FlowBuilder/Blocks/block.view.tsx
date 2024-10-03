@@ -41,7 +41,7 @@ import ErrorLogFile from "../../Toolbar/Icons/ErrorLogFile";
 import { socket } from "../../../Utils/socket";
 
 export function BlockView(props: BlockViewProps) {
-  const { block, blockHooks } = props;
+  const { block, blockHooks, isFlowActive } = props;
 
   const blockState = useBlockView(props);
 
@@ -67,7 +67,11 @@ export function BlockView(props: BlockViewProps) {
           />
         )}
         <BlockRemotes block={block} blockHooks={blockHooks} />
-        <BlockBody block={block} blockState={blockState} />
+        <BlockBody
+          block={block}
+          blockState={blockState}
+          isFlowActive={isFlowActive}
+        />
       </BlockBox>
       <BlockVariablesAndConnections
         block={block}
@@ -511,9 +515,11 @@ function BlockDescription({
 function BlockBody({
   block,
   blockState,
+  isFlowActive,
 }: {
   block: Block;
   blockState: BlockViewState;
+  isFlowActive?: boolean;
 }) {
   if (!block.isPlaced) {
     return null;
@@ -530,6 +536,7 @@ function BlockBody({
             hideName={true}
             hideDescription={true}
             applyStyle={false}
+            isFlowActive={isFlowActive}
           />
         );
       case BlockTypes.SLURM:

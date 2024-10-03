@@ -13,6 +13,7 @@ export type BlockViewProps = {
   onAir?: boolean;
   scale?: number;
   isPaused?: boolean;
+  isFlowActive?: boolean;
 };
 
 export type BlockViewState = {
@@ -42,6 +43,7 @@ export function useBlockView({
   blockHooks,
   onAir,
   scale,
+  isFlowActive,
 }: BlockViewProps): BlockViewState {
   // Trigger xarrow update when block is moved
   useXarrow();
@@ -131,6 +133,11 @@ export function useBlockView({
   };
 
   const handleVariableChange = (value: any, id: string, groupID?: string) => {
+
+    if (isFlowActive) {
+      return
+    }
+
     let hasChanged = false;
 
     const updateValue = (variable: PluginVariable) => {
