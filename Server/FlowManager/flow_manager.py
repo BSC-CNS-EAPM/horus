@@ -10,6 +10,7 @@ import typing
 import datetime
 import logging
 import hashlib
+import re
 
 # Multiprocess module, a fork of multiprocessing with enhancements
 # Cast the multiprocess module as the multiprocessing module
@@ -666,9 +667,29 @@ class Flow:
         """
 
         flowDir = os.path.dirname(flowPath)
-        flowFileName = os.path.splitext(os.path.basename(flowPath))[0]
+        flowFileNameExt = os.path.basename(flowPath)
+        flowFileName = os.path.splitext(flowFileNameExt)[0]
 
-        return os.path.join(flowDir, flowFileName)
+        # Sanitize the name
+        flowFileDir = re.sub(r"[^a-zA-Z0-9]", "_", flowFileName)
+
+        if flowFileDir == "":
+            logging.getLogger("Horus").warning(
+                "The flow file name '%s' contains only non-alphanumeric characters. "
+                "The flow will be stored in the 'flow' directory.",
+                flowFileNameExt,
+            )
+            flowFileDir = "flow"
+
+        if flowFileDir != flowFileName:
+            logging.getLogger("Horus").warning(
+                "The flow file name '%s' contains non-alphanumeric characters and/or spaces. "
+                "The flow will be stored in the '%s' directory.",
+                flowFileNameExt,
+                flowFileDir,
+            )
+
+        return os.path.join(flowDir, flowFileDir)
 
     @property
     def isActive(self):
