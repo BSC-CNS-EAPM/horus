@@ -603,6 +603,11 @@ class Flow:
         if self._socket is not None:
             self._socket.emit("flow", self.encode(minimal=False), to=self.savedID)
 
+        # Generate the results folder if needed
+        flowWorkDir = self.flowWorkDir(flowPath=self.path)
+        if not os.path.exists(flowWorkDir):
+            os.makedirs(flowWorkDir)
+
         # Return the encoded flow in case its needed
         return encodedFlow
 

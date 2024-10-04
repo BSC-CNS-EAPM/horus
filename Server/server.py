@@ -1613,7 +1613,7 @@ class HorusServer:
                     # If a flow context path was provided,
                     # set the highest boundary to that flow folder
                     path = UserFileExplorer(
-                        path, currentUser, relativeTo=os.path.dirname(flowContextPath)
+                        path, currentUser, relativeTo=Flow.flowWorkDir(flowContextPath)
                     ).getAbsolutePath()
 
                 if folderName is None:
@@ -1644,7 +1644,7 @@ class HorusServer:
                     # If a flow context path was provided,
                     # set the highest boundary to that flow folder
                     path = UserFileExplorer(
-                        path, currentUser, relativeTo=os.path.dirname(flowContextPath)
+                        path, currentUser, relativeTo=Flow.flowWorkDir(flowContextPath)
                     ).getAbsolutePath()
 
                 if not os.path.exists(path):
@@ -1680,7 +1680,7 @@ class HorusServer:
                     # If a flow context path was provided,
                     # set the highest boundary to that flow folder
                     path = UserFileExplorer(
-                        path, currentUser, relativeTo=os.path.dirname(flowContextPath)
+                        path, currentUser, relativeTo=Flow.flowWorkDir(flowContextPath)
                     ).getAbsolutePath()
 
                 if os.path.isdir(path):
@@ -1733,7 +1733,7 @@ class HorusServer:
                     # If a flow context path was provided,
                     # set the highest boundary to that flow folder
                     path = UserFileExplorer(
-                        path, currentUser, relativeTo=os.path.dirname(flowContextPath)
+                        path, currentUser, relativeTo=Flow.flowWorkDir(flowContextPath)
                     ).getAbsolutePath()
 
                 if os.path.isdir(path):
