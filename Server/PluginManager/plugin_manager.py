@@ -203,7 +203,7 @@ class PluginManager(metaclass=HorusSingleton):
                     self._installPlugin(f)
             finally:
                 if os.path.exists(downloadDir):
-                    shutil.rmtree(downloadDir)
+                    shutil.rmtree(downloadDir, ignore_errors=True)
 
         self.reloadPlugins()
 
@@ -330,7 +330,7 @@ class PluginManager(metaclass=HorusSingleton):
             print("Removing previous temporary folder...")
 
             # Remove any previous tmpInstall folder
-            shutil.rmtree(tmpInstallDir)
+            shutil.rmtree(tmpInstallDir, ignore_errors=True)
 
             import time
 
@@ -406,7 +406,7 @@ class PluginManager(metaclass=HorusSingleton):
 
                 # Remove the folder
                 print("Removing temporary plugin folder...")
-                shutil.rmtree(newFolderPath)
+                shutil.rmtree(newFolderPath, ignore_errors=True)
 
         else:
             raise Exception("Invalid plugin format (.hp expected)")
@@ -486,7 +486,7 @@ class PluginManager(metaclass=HorusSingleton):
                 print("Deleting old plugin version...")
                 # Remove the old plugin folder
                 if os.path.exists(pluginFinalPath):
-                    shutil.rmtree(pluginFinalPath)
+                    shutil.rmtree(pluginFinalPath, ignore_errors=True)
 
                 # Wait for the folder to be deleted
                 while os.path.exists(pluginFinalPath):
@@ -527,7 +527,7 @@ class PluginManager(metaclass=HorusSingleton):
                 #     raise Exception(message)
         except Exception as e:
             if os.path.exists(tmpInstallDir):
-                shutil.rmtree(tmpInstallDir)
+                shutil.rmtree(tmpInstallDir, ignore_errors=True)
             raise Exception(e) from e
 
     def _getPluginByID(self, id: str) -> Plugin:
@@ -561,7 +561,7 @@ class PluginManager(metaclass=HorusSingleton):
         # Remove the plugin folder
         try:
             self._preRemovePlugin(pluginPath)
-            shutil.rmtree(pluginPath)
+            shutil.rmtree(pluginPath, ignore_errors=True)
             self._postRemovePlugin(pluginPath)
         except Exception as exc:
             raise Exception(f"{exc}. Try restarting the app") from exc
