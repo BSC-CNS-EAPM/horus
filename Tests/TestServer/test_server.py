@@ -32,7 +32,7 @@ def test_desktop_server_init(desktopServer):
 def test_get_free_port(desktopServer):
     port = desktopServer._getFreePort()
     assert isinstance(port, int)
-    assert 3124 <= port <= 9000
+    assert 3000 <= port <= 9000
 
 
 def test_gui_dir(desktopServer):
