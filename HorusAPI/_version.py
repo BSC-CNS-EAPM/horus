@@ -26,9 +26,13 @@ def get_git_version():
 
     # Get version from git tag or branch name
     try:
-        _version = subprocess.check_output(
-            ["git", "describe", "--tags", "--abbrev=0"], stderr=subprocess.DEVNULL, text=True
-        ).strip()
+        _version = (
+            subprocess.check_output(
+                ["git", "tag", "--sort=-v:refname"], stderr=subprocess.DEVNULL, text=True
+            )
+            .splitlines()[0]
+            .strip()
+        )
     except Exception:
         _version = "0.0.1"
 
