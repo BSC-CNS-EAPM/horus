@@ -38,7 +38,8 @@ import { FileExplorerProps } from "../FileExplorer/file_explorer";
 import { usePrompt } from "../HorusPrompt/horus_prompt";
 import { useAlert } from "../HorusPrompt/horus_alert";
 import { useConfirm } from "../HorusPrompt/horus_confirm";
-import { HorusSmilesManagerState } from "../Smiles/SmilesWrapper/horusSmiles";
+import { HorusSmilesManagerState, SmilesEvents } from "../Smiles/SmilesWrapper/horusSmiles";
+import { MolstarEvents } from "../Molstar/HorusWrapper/horusmolstar";
 
 /**
  * An extended "PointerSensor" that prevent some
@@ -1958,6 +1959,15 @@ export function useFlowBuilder() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flow.path, preHandleSave]);
 
+  const handleMoleculeChange = useCallback(() => {
+    if (isFlowActive) {
+      return
+    }
+
+    setSaved(false);
+
+  }, [isFlowActive]);
+
   // Remove the event listeners
   const removeListeners = useCallback(() => {
     window.removeEventListener("newFlow", handleNewFlow);
@@ -1975,6 +1985,10 @@ export function useFlowBuilder() {
     window.removeEventListener("undo", handleUndo);
     window.removeEventListener("redo", handleRedo);
     window.removeEventListener("toggleFileExplorer", toggleFileExplorer);
+
+    window.removeEventListener(MolstarEvents.STATE, handleMoleculeChange);
+    window.removeEventListener(SmilesEvents.STATE, handleMoleculeChange);
+
   }, [
     handleNewFlow,
     handleOpenFlow,
@@ -1986,6 +2000,7 @@ export function useFlowBuilder() {
     pauseFlow,
     handleUndo,
     handleRedo,
+    handleMoleculeChange,
   ]);
 
   const addListeners = useCallback(() => {
@@ -2021,6 +2036,12 @@ export function useFlowBuilder() {
 
     // Event for the fileExplorer
     window.addEventListener("toggleFileExplorer", toggleFileExplorer);
+
+    // Event for the molecules state
+    window.addEventListener(MolstarEvents.STATE, handleMoleculeChange);
+
+    // Event for the molecules state
+    window.addEventListener(SmilesEvents.STATE, handleMoleculeChange);
   }, [
     handleUndo,
     handleRedo,
@@ -2032,6 +2053,7 @@ export function useFlowBuilder() {
     centerView,
     pauseFlow,
     resetFlow,
+    handleMoleculeChange
   ]);
 
   useEffect(() => {
