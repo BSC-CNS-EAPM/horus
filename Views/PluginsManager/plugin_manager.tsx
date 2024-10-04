@@ -460,7 +460,9 @@ function PluginCard(props: PluginCardProps) {
                 {plugin.externalURL && (
                   <span>
                     External URL:{" "}
-                    <a href={plugin.externalURL}>{plugin.externalURL}</a>
+                    <a target="_blank" href={plugin.externalURL}>
+                      {plugin.externalURL}
+                    </a>
                   </span>
                 )}
               </>
