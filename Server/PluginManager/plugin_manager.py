@@ -315,7 +315,7 @@ class PluginManager(metaclass=HorusSingleton):
 
         return downloadPath
 
-    def _installPlugin(self, path):
+    def _installPlugin(self, path, asDefault: bool = False):
         # Get the name of the plugin
         pluginName = os.path.basename(path)
 
@@ -425,7 +425,10 @@ class PluginManager(metaclass=HorusSingleton):
                 )
 
             # If everything went correct, move the plugin to its folder
-            pluginFinalPath = os.path.join(self.pluginsDir, loadedPlugin.id)
+            if asDefault:
+                pluginFinalPath = os.path.join(self.defaultPluginsDir, loadedPlugin.id)
+            else:
+                pluginFinalPath = os.path.join(self.pluginsDir, loadedPlugin.id)
 
             # If a plugin with the same name already exists, check if it is the same plugin
             # in order to upgrade it
@@ -439,90 +442,88 @@ class PluginManager(metaclass=HorusSingleton):
                 )
                 self.loadedPlugins.append(loadedPlugin)
             else:
-                # If we are installing the same plugin, upgrade it only if the version is higher
-                newPluginVersion = loadedPlugin.pluginMeta.version
-                currentInstalledPluginVersion = self._getPluginByID(
-                    loadedPlugin.id
-                ).pluginMeta.version
+                # If we are installing the same plugin, replace it
+                # newPluginVersion = loadedPlugin.pluginMeta.version
+                # currentInstalledPluginVersion = self._getPluginByID(
+                #     loadedPlugin.id
+                # ).pluginMeta.version
 
-                newPluginVersion = version_module.parse(newPluginVersion)
-                currentInstalledPluginVersion = version_module.parse(
-                    currentInstalledPluginVersion
-                )
+                # newPluginVersion = version_module.parse(newPluginVersion)
+                # currentInstalledPluginVersion = version_module.parse(
+                #     currentInstalledPluginVersion
+                # )
 
-                # Compare the versions
-                newVersionIsHigher = newPluginVersion > currentInstalledPluginVersion
+                # # Compare the versions
+                # newVersionIsHigher = newPluginVersion > currentInstalledPluginVersion
 
-                if newVersionIsHigher:
-                    print(f"Upgrading plugin {loadedPlugin.pluginMeta.name}...")
+                # if newVersionIsHigher:
+                print(f"Upgrading plugin {loadedPlugin.pluginMeta.name}...")
 
-                    for config in RemotesManager(self.appSupportDir).listRemotes(
-                        includeLocal=True
-                    ):
-                        remoteName = config.get("name")
-                        if not remoteName:
-                            continue
+                for config in RemotesManager(self.appSupportDir).listRemotes(includeLocal=True):
+                    remoteName = config.get("name")
+                    if not remoteName:
+                        continue
 
-                        # Backup the plugin configuration to the new plugin folder
-                        currentConfigPath = self._pluginConfigPath(
-                            self._getPluginByID(loadedPlugin.id), remoteName
-                        )
-                        newConfigPath = self._pluginConfigPath(loadedPlugin, remoteName)
-
-                        # Read the current config if it exists, and update the new plugin config
-                        if os.path.exists(currentConfigPath):
-                            print(f"Backing up plugin configuration for remote '{remoteName}'")
-                            with open(currentConfigPath, "r", encoding="utf-8") as f:
-                                currentConfig = json.load(f)
-
-                            # Update the new plugin config
-                            loadedPlugin._saveConfig(newConfigPath, currentConfig)
-
-                    # Remove the old plugin
-                    self.loadedPlugins.remove(self._getPluginByID(loadedPlugin.id))
-
-                    print("Deleting old plugin version...")
-                    # Remove the old plugin folder
-                    if os.path.exists(pluginFinalPath):
-                        shutil.rmtree(pluginFinalPath)
-
-                    # Wait for the folder to be deleted
-                    while os.path.exists(pluginFinalPath):
-                        pass
-
-                    # Move the new plugin to the final path
-                    shutil.move(tmpInstallDir, pluginFinalPath)
-
-                    # Add the new plugin
-                    self.loadedPlugins.append(loadedPlugin)
-
-                    print("Plugin upgraded to version " + f"{loadedPlugin.pluginMeta.version}.")
-
-                    # Emit the plugin changes
-                    self.reloadPlugins()
-                else:
-                    message = (
-                        "You are trying to install "
-                        + f"{loadedPlugin.pluginMeta.name} version "
-                        + f"{loadedPlugin.pluginMeta.version}, but you already have version "
-                        + f"{currentInstalledPluginVersion}."
+                    # Backup the plugin configuration to the new plugin folder
+                    currentConfigPath = self._pluginConfigPath(
+                        self._getPluginByID(loadedPlugin.id), remoteName
                     )
+                    newConfigPath = self._pluginConfigPath(loadedPlugin, remoteName)
 
-                    if currentInstalledPluginVersion == newPluginVersion:
-                        message += (
-                            " If you are trying to reinstall the plugin, " + "uninstall it first."
-                        )
+                    # Read the current config if it exists, and update the new plugin config
+                    if os.path.exists(currentConfigPath):
+                        print(f"Backing up plugin configuration for remote '{remoteName}'")
+                        with open(currentConfigPath, "r", encoding="utf-8") as f:
+                            currentConfig = json.load(f)
 
-                    if currentInstalledPluginVersion > newPluginVersion:
-                        message += (
-                            " Which means that you are trying to install an older version. "
-                        )
+                        # Update the new plugin config
+                        loadedPlugin._saveConfig(newConfigPath, currentConfig)
 
-                    logging.getLogger("Horus").error(message)
+                # Remove the old plugin
+                self.loadedPlugins.remove(self._getPluginByID(loadedPlugin.id))
 
-                    print(message)
+                print("Deleting old plugin version...")
+                # Remove the old plugin folder
+                if os.path.exists(pluginFinalPath):
+                    shutil.rmtree(pluginFinalPath)
 
-                    raise Exception(message)
+                # Wait for the folder to be deleted
+                while os.path.exists(pluginFinalPath):
+                    pass
+
+                # Move the new plugin to the final path
+                shutil.move(tmpInstallDir, pluginFinalPath)
+
+                # Add the new plugin
+                self.loadedPlugins.append(loadedPlugin)
+
+                print("Plugin upgraded to version " + f"{loadedPlugin.pluginMeta.version}.")
+
+                # Emit the plugin changes
+                # self.reloadPlugins()
+                # else:
+                #     message = (
+                #         "You are trying to install "
+                #         + f"{loadedPlugin.pluginMeta.name} version "
+                #         + f"{loadedPlugin.pluginMeta.version}, but you already have version "
+                #         + f"{currentInstalledPluginVersion}."
+                #     )
+
+                #     if currentInstalledPluginVersion == newPluginVersion:
+                #         message += (
+                #             " If you are trying to reinstall the plugin, " + "uninstall it first."
+                #         )
+
+                #     if currentInstalledPluginVersion > newPluginVersion:
+                #         message += (
+                #             " Which means that you are trying to install an older version. "
+                #         )
+
+                #     logging.getLogger("Horus").error(message)
+
+                #     print(message)
+
+                #     raise Exception(message)
         except Exception as e:
             if os.path.exists(tmpInstallDir):
                 shutil.rmtree(tmpInstallDir)

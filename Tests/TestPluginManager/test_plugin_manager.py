@@ -777,15 +777,12 @@ def test_plugin_downgrade():
         os.rename(plugin_test_path + ".zip", plugin_test_path)
 
         # Try to downgrade the plugin
-        with pytest.raises(Exception) as e:
-            pluginManager._installPlugin(plugin_test_path)
+        pluginManager._installPlugin(plugin_test_path)
 
-        assert "you are trying to install an older version." in str(e.value)
-
-        # Check that the plugin was NOT downgrade
+        # Check that the plugin was downgraded
         plugin = pluginManager._getPluginByID("test_plugin")
 
-        assert plugin.pluginMeta.version == "0.0.1"
+        assert plugin.pluginMeta.version != "0.0.1"
     finally:
         # Reset the plugin.meta file
         shutil.copyfile(
