@@ -38,7 +38,10 @@ import { FileExplorerProps } from "../FileExplorer/file_explorer";
 import { usePrompt } from "../HorusPrompt/horus_prompt";
 import { useAlert } from "../HorusPrompt/horus_alert";
 import { useConfirm } from "../HorusPrompt/horus_confirm";
-import { HorusSmilesManagerState, SmilesEvents } from "../Smiles/SmilesWrapper/horusSmiles";
+import {
+  HorusSmilesManagerState,
+  SmilesEvents,
+} from "../Smiles/SmilesWrapper/horusSmiles";
 import { MolstarEvents } from "../Molstar/HorusWrapper/horusmolstar";
 
 /**
@@ -258,7 +261,6 @@ export function useFlowBuilder() {
   // It updates the flow state and the saved state
   const handleFlowChange = useCallback(
     (newFlow: Flow, updateHistory: boolean = false) => {
-
       // Do not modify the flow if it is active
       if (isFlowActive) {
         return;
@@ -402,7 +404,10 @@ export function useFlowBuilder() {
 
       // Set the placedIDCounter
       // Search for the highest placedID in the blocks and subblocks
-      const placedIDs = openedFlow.blocks.length > 0 ? openedFlow.blocks.map((b) => b.placedID) : [0];
+      const placedIDs =
+        openedFlow.blocks.length > 0
+          ? openedFlow.blocks.map((b) => b.placedID)
+          : [0];
       placedIDCounter.current = Math.max(...placedIDs) + 1;
 
       if (openedFlow.terminalOutput.length > 0) {
@@ -841,7 +846,6 @@ export function useFlowBuilder() {
     updateHistory: boolean = false,
     resetExecution: boolean = true
   ) => {
-
     const updatedBlocks = isNew
       ? [...flow.blocks, ...newBlocks]
       : flow.blocks.map((block: Block) => {
@@ -1960,13 +1964,22 @@ export function useFlowBuilder() {
   }, [flow.path, preHandleSave]);
 
   const handleMoleculeChange = useCallback(() => {
+    // If we are on a new flow or the flow is active return
     if (isFlowActive) {
-      return
+      return;
     }
 
-    setSaved(false);
-
-  }, [isFlowActive]);
+    if (!flow.savedID || !flow.path) {
+      // For new flows, allow to set unsaved if we added 1 molecule
+      const molecules = window.molstar.structures();
+      const smiles = window.smiles?.getSmilesList() ?? [];
+      if (molecules.length > 0 || smiles.length > 0) {
+        setSaved(false);
+      }
+    } else {
+      setSaved(false);
+    }
+  }, [flow.savedID, flow.path, isFlowActive]);
 
   // Remove the event listeners
   const removeListeners = useCallback(() => {
@@ -1988,7 +2001,6 @@ export function useFlowBuilder() {
 
     window.removeEventListener(MolstarEvents.STATE, handleMoleculeChange);
     window.removeEventListener(SmilesEvents.STATE, handleMoleculeChange);
-
   }, [
     handleNewFlow,
     handleOpenFlow,
@@ -2053,7 +2065,7 @@ export function useFlowBuilder() {
     centerView,
     pauseFlow,
     resetFlow,
-    handleMoleculeChange
+    handleMoleculeChange,
   ]);
 
   useEffect(() => {
