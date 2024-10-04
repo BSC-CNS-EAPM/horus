@@ -15,6 +15,7 @@ import json
 import shutil
 import datetime
 from pydantic import ValidationError
+import re
 
 # For downloading plugins
 import requests
@@ -793,9 +794,10 @@ class PluginManager(metaclass=HorusSingleton):
         Verifies that the plugin is compatible with the current platform.
         """
         # Get the Horus version, and parse correctly development versions
-        parsedHorusVersion = HorusAPIVersion
-        if "-" in parsedHorusVersion:
-            parsedHorusVersion = parsedHorusVersion.split("-")[0]
+        parsedHorusVersion = re.match(r"(\d+(?:\.\d+){0,2})", HorusAPIVersion)
+        parsedHorusVersion = (
+            parsedHorusVersion.group(1) if parsedHorusVersion else HorusAPIVersion
+        )
 
         # Parse the Horus version
         horusVersion = version_module.parse(parsedHorusVersion)
