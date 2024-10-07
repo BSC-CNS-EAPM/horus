@@ -1172,16 +1172,10 @@ class PluginBlock:
             ids = []
             for var in variables:
                 if var.id in ids:
-                    try:
-                        raise UniqueVariableIDException(
-                            message=f"Variable '{var.id}' is used more than once on block '{self.id}'. Variable IDs must be unique.",
-                            variableId=var.id,
-                        )
-                    except Exception:
-                        import traceback
-
-                        print(traceback.format_exc())
-                        raise
+                    raise UniqueVariableIDException(
+                        message=f"Variable '{var.id}' is used more than once on block '{self.id}'. Variable IDs must be unique.",
+                        variableId=var.id,
+                    )
                 ids.append(var.id)
 
         verifyUniqueIDs(variables)
