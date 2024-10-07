@@ -210,36 +210,6 @@ function VariableListView(props: VariableViewProps) {
     onChange(newValues);
   };
 
-  const variableViewsUpdated = (
-    index: number,
-    value: any,
-    variable: PluginVariable
-  ) => {
-    const updatedVariable: PluginVariable = {
-      ...variable,
-      value: value[variable.id],
-      disabled: props.variable.disabled,
-    };
-
-    return (
-      <div className="h-full w-full flex flex-col gap-1 justify-between flex-grow">
-        <div
-          className="w-full whitespace-nowrap"
-          style={{
-            // minWidth: "fit-content",
-            marginTop: "0.5rem",
-            paddingBottom: "0.5rem",
-            opacity: index === 0 ? 1 : 0,
-            position: index === 0 ? "relative" : "absolute",
-            display: index === 0 ? "block" : "none",
-          }}
-        >
-          {variable.name}
-        </div>
-      </div>
-    );
-  };
-
   // If the currentValue is not an array and not null, set it to an empty array
   if (!Array.isArray(currentValue) && currentValue !== null) {
     onChange([]);
@@ -305,7 +275,10 @@ function VariableListView(props: VariableViewProps) {
                 return (
                   <PluginVariableView
                     key={i}
-                    variable={variable}
+                    variable={{
+                      ...variable,
+                      value: value[variable.id],
+                    }}
                     onChange={(value: any, id: string, groupID?: string) => {
                       internalOnChange(index, value, id, groupID);
                     }}
