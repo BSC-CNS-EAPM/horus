@@ -138,6 +138,7 @@ function SlurmOutputModalView({
 
     groupedViews["Slurm output"] = [
       <div
+        key={"slurm-output"}
         style={{
           background: "var(--grey-white)",
           borderRadius: "10px",
@@ -162,6 +163,7 @@ function SlurmOutputModalView({
 
     groupedViews["Slurm error"] = [
       <div
+        key={"slurm-error"}
         style={{
           background: "var(--grey-white)",
           borderRadius: "10px",

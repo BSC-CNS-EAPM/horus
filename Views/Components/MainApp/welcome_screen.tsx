@@ -483,7 +483,7 @@ function ScrollableViewWelcomeBody(props: {
     <div
       className="overflow-y-auto scrollable-welcome"
       style={{
-        width: "400px",
+        width: "420px",
         maxHeight: props.maxHeight || "50vh",
       }}
     >

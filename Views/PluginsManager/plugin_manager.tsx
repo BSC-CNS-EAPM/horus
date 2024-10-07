@@ -28,12 +28,12 @@ import "../CSS/colors.css";
 import "../CSS/animations.css";
 import { useAlert } from "../Components/HorusPrompt/horus_alert";
 import { useConfirm } from "../Components/HorusPrompt/horus_confirm";
-import { LazyLog } from "@melloware/react-logviewer";
 import PluginsIcon from "../Components/Toolbar/Icons/Plugins";
 import OpenFlowIcon from "../Components/Toolbar/Icons/Open";
 import { PluginBrowserRoot } from "./repo_browser";
-import { HorusViewTabs, Tab, TabSelector } from "../Components/Tabs";
+import { HorusViewTabs, Tab } from "../Components/Tabs";
 import RemoteIcon from "../Components/Toolbar/Icons/Remote";
+import { HorusLazyLog } from "../Components/HorusLazyLog/HorusLazyLog";
 
 type ConfigBlockType = Array<{
   remote: string;
@@ -460,7 +460,9 @@ function PluginCard(props: PluginCardProps) {
                 {plugin.externalURL && (
                   <span>
                     External URL:{" "}
-                    <a href={plugin.externalURL}>{plugin.externalURL}</a>
+                    <a target="_blank" href={plugin.externalURL}>
+                      {plugin.externalURL}
+                    </a>
                   </span>
                 )}
               </>
@@ -843,8 +845,14 @@ function InstallingPluginView({
               Install other...
             </AppButton>
           </div>
-          <div className="rounded-lg h-full overflow-hidden">
-            <LazyLog height={600} extraLines={1} follow text={text} />
+          <div
+            style={{
+              height: "500px",
+              borderRadius: "10px",
+              overflow: "hidden",
+            }}
+          >
+            <HorusLazyLog logText={text} />
           </div>
         </div>
       )}

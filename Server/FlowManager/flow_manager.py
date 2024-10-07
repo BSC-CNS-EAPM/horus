@@ -10,6 +10,7 @@ import typing
 import datetime
 import logging
 import hashlib
+import re
 
 # Multiprocess module, a fork of multiprocessing with enhancements
 # Cast the multiprocess module as the multiprocessing module
@@ -602,6 +603,11 @@ class Flow:
         if self._socket is not None:
             self._socket.emit("flow", self.encode(minimal=False), to=self.savedID)
 
+        # Generate the results folder if needed
+        flowWorkDir = self.flowWorkDir(flowPath=self.path)
+        if not os.path.exists(flowWorkDir):
+            os.makedirs(flowWorkDir)
+
         # Return the encoded flow in case its needed
         return encodedFlow
 
@@ -666,9 +672,29 @@ class Flow:
         """
 
         flowDir = os.path.dirname(flowPath)
-        flowFileName = os.path.splitext(os.path.basename(flowPath))[0]
+        flowFileNameExt = os.path.basename(flowPath)
+        flowFileName = os.path.splitext(flowFileNameExt)[0]
 
-        return os.path.join(flowDir, flowFileName)
+        # Sanitize the name
+        flowFileDir = re.sub(r"[^a-zA-Z0-9]", "_", flowFileName)
+
+        if flowFileDir == "":
+            logging.getLogger("Horus").warning(
+                "The flow file name '%s' contains only non-alphanumeric characters. "
+                "The flow will be stored in the 'flow' directory.",
+                flowFileNameExt,
+            )
+            flowFileDir = "flow"
+
+        if flowFileDir != flowFileName:
+            logging.getLogger("Horus").warning(
+                "The flow file name '%s' contains non-alphanumeric characters and/or spaces. "
+                "The flow will be stored in the '%s' directory.",
+                flowFileNameExt,
+                flowFileDir,
+            )
+
+        return os.path.join(flowDir, flowFileDir)
 
     @property
     def isActive(self):
@@ -1409,17 +1435,29 @@ class Flow:
             Writes the text to the terminal output
             """
 
-            if self.socket is not None:
-                self.socket.emit("printTerm", message, to=self.savedID)
-
             self.terminalOutput.append(message)
 
             runningBlock = self.getRunningBlock()
             if runningBlock:
                 runningBlock.blockLogs += message
-                runningBlock.flow.write()
 
-            # Prevent printing flow prints to the terminal in roder to not
+            if self.socket is not None:
+                self.socket.emit("printTerm", message, to=self.savedID)
+
+                if runningBlock:
+                    self.socket.emit(
+                        "blockLogs",
+                        {
+                            "message": message,
+                            "blockID": runningBlock.id,
+                            "placedID": runningBlock._placedID,
+                        },
+                        to=self.savedID,
+                    )
+
+                # runningBlock.flow.write()
+
+            # Prevent printing flow prints to the terminal in order to not
             # saturate the terminal on WebAppMode (only in not debug mode)
             from App import AppDelegate
 

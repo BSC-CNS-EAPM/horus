@@ -344,7 +344,11 @@ class UserFileExplorer(FileExplorer):
         """
 
         self.user = user
-        self.relativeTo = pathlib.Path(relativeTo) if relativeTo else self.userPathBoundary
+
+        # Need to resolve the relativeto path as it can be a symlink, not be absolute...
+        self.relativeTo = (
+            pathlib.Path(relativeTo).resolve() if relativeTo else self.userPathBoundary
+        )
         self.obfuscate = obfuscate
 
         # if not self.relativeTo.is_dir():

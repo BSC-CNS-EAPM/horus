@@ -11,6 +11,10 @@ The configuration file is a JSON file that contains the server configuration and
   You can set a custom logo for the Web App by placing a file called "logo.png" in the root folder of your project, just where you will run `horus -w`.
 
 
+.. note::
+  The first user to register will be automatically assigned as administrator. This user will have acces to the AdminTools panel, where permissions, plugins and app settings can be managed.
+
+
 Configuration File
 ==================
 

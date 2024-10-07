@@ -47,7 +47,7 @@ environmentVariable = EnvironmentVariable(
     id="environment",
     description="Select a Plugin ID to use its dependencies within the code.",
     type=VariableTypes.STRING_LIST,
-    defaultValue="Horus",
+    defaultValue="horus",
 )
 
 outputVariable = PluginVariable(

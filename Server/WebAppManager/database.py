@@ -234,6 +234,10 @@ class Database:
                 formData["email"], self.dbConfig.secretKey
             )
 
+        # If its the first user, make it admin
+        if len(self.getAllUsers()) == 0:
+            formData["admin"] = True
+
         # Insert the user into the database if everything went well
         try:
             with self.engine.connect() as connection:

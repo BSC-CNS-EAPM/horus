@@ -1,8 +1,8 @@
 .. _faq:
 
-===================================
-Frequently Asked Questions & Issues
-===================================
+===
+FAQ
+===
 
 
 Why aren't all the chains/ligands/residues of my PDB visible in the flow selector?
