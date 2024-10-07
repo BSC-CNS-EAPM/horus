@@ -854,6 +854,17 @@ class RemotesAPI:
             if status == "":
                 status = SlurmBlock.Status.COMPLETED.value
 
+        # Active statuses that should be considered as running
+        activeStatuses = [
+            SlurmBlock.Status.RUNNING.value,
+            SlurmBlock.Status.PENDING.value,
+            SlurmBlock.Status.CANCELLING.value,
+            SlurmBlock.Status.COMPLETING.value,
+            SlurmBlock.Status.CONFIGURING.value,
+            SlurmBlock.Status.SIGNALING.value,
+            SlurmBlock.Status.RESIZING.value,
+        ]
+
         if SlurmBlock.Status.OUT_OF_ME.value in status:
             status = SlurmBlock.Status.OUT_OF_ME.value
         elif SlurmBlock.Status.FAILED.value in status:
@@ -867,7 +878,7 @@ class RemotesAPI:
             # self.command(f"scancel {jobID}")
         elif status == "" or SlurmBlock.Status.PENDING.value in status:
             status = SlurmBlock.Status.PENDING.value
-        elif SlurmBlock.Status.RUNNING.value in status:
+        elif any(x in status for x in activeStatuses):
             status = SlurmBlock.Status.RUNNING.value
         elif SlurmBlock.Status.COMPLETED.value in status:
             status = SlurmBlock.Status.COMPLETED.value

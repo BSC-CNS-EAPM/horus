@@ -15,7 +15,7 @@ type AppButtonProps = {
 
 // Create a component called AppButton
 function AppButton(props: AppButtonProps) {
-  const className = "app-button text-black " + props?.className;
+  const className = "app-button " + props?.className;
 
   // First div necessary for padding
   return (
@@ -27,7 +27,10 @@ function AppButton(props: AppButtonProps) {
         id={props.id}
         className={className}
         onClick={() => props.action && props.action()}
-        style={props.style}
+        style={{
+          color: "black",
+          ...props.style,
+        }}
       >
         {props?.text}
         {props?.children}

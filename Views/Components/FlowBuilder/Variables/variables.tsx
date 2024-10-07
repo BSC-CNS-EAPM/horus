@@ -21,7 +21,6 @@ import { loadPage } from "../../Toolbar/extensions_list";
 
 // Styles
 import "rc-slider/assets/index.css";
-import CrossIcon from "../../Toolbar/Icons/Cross";
 
 // Mol* variables components
 import {
@@ -53,14 +52,19 @@ type PluginVariableViewProps = {
   applyStyle?: boolean;
   customClass?: string;
   placeholder?: string;
+  isFlowActive?: boolean;
 };
 
 export function PluginVariableView(props: PluginVariableViewProps) {
   const { variable, onChange, hideName } = props;
 
-  const handleChange = (value: any) => {
+  const handleChange = (value: any, id?: string, groupID?: string) => {
     if (!variable.disabled) {
-      onChange(value, variable.id);
+      if (variable.type === PluginVariableTypes.GROUP) {
+        onChange(value, id!, groupID);
+      } else {
+        onChange(value, variable.id);
+      }
     }
   };
 
@@ -83,19 +87,27 @@ export function PluginVariableView(props: PluginVariableViewProps) {
         variable={variable}
         hideName={hideName ?? false}
         hideDescription={props.hideDescription ?? false}
+        isFlowActive={props.isFlowActive}
       />
     );
   }
 
   return (
     <div
-      className={`${variable.disabled && "cursor-not-allowed "} ${
+      className={`${
+        variable.disabled
+          ? "cursor-not-allowed "
+          : props.isFlowActive
+          ? "cursor-wait "
+          : ""
+      } ${
         props.applyStyle === false
           ? props.customClass ?? "flex-auto"
           : "plugin-variable animated-gradient border-none"
       }`}
       style={{
         ...widthStyle,
+        pointerEvents: variable.disabled ? "none" : "auto",
       }}
     >
       <div className="flex flex-row w-full justify-between">
@@ -137,10 +149,15 @@ export function PluginVariableView(props: PluginVariableViewProps) {
       <div
         className={`plugin-variable-value flex justify-start w-full`}
         style={{
-          pointerEvents: variable.disabled ? "none" : "auto",
+          pointerEvents:
+            variable.disabled || props.isFlowActive ? "none" : "auto",
         }}
       >
-        <VariableRenderer variable={variable} onChange={handleChange} />
+        <VariableRenderer
+          variable={variable}
+          onChange={handleChange}
+          isFlowActive={props.isFlowActive}
+        />
       </div>
     </div>
   );
@@ -165,7 +182,6 @@ function VariableListView(props: VariableViewProps) {
         return acc;
       }, {})
     );
-
     onChange(newValues);
   };
 
@@ -192,36 +208,6 @@ function VariableListView(props: VariableViewProps) {
     }
 
     onChange(newValues);
-  };
-
-  const variableViewsUpdated = (
-    index: number,
-    value: any,
-    variable: PluginVariable
-  ) => {
-    const updatedVariable: PluginVariable = {
-      ...variable,
-      value: value[variable.id],
-      disabled: props.variable.disabled,
-    };
-
-    return (
-      <div className="h-full w-full flex flex-col gap-1 justify-between flex-grow">
-        <div
-          className="w-full whitespace-nowrap"
-          style={{
-            // minWidth: "fit-content",
-            marginTop: "0.5rem",
-            paddingBottom: "0.5rem",
-            opacity: index === 0 ? 1 : 0,
-            position: index === 0 ? "relative" : "absolute",
-            display: index === 0 ? "block" : "none",
-          }}
-        >
-          {variable.name}
-        </div>
-      </div>
-    );
   };
 
   // If the currentValue is not an array and not null, set it to an empty array
@@ -289,13 +275,17 @@ function VariableListView(props: VariableViewProps) {
                 return (
                   <PluginVariableView
                     key={i}
-                    variable={variable}
+                    variable={{
+                      ...variable,
+                      value: value[variable.id],
+                    }}
                     onChange={(value: any, id: string, groupID?: string) => {
                       internalOnChange(index, value, id, groupID);
                     }}
                     hideDescription={true}
                     applyStyle={false}
                     hideName={true}
+                    isFlowActive={props.isFlowActive}
                   />
                 );
               })}
@@ -334,6 +324,7 @@ function GroupVariableView(props: PluginVariableViewProps) {
               hideName={props.hideName ?? false}
               hideDescription={props.hideDescription ?? false}
               applyStyle={false}
+              isFlowActive={props.isFlowActive}
             />
           );
         })}
@@ -345,6 +336,7 @@ function GroupVariableView(props: PluginVariableViewProps) {
 function VariableRenderer(props: {
   variable: PluginVariable;
   onChange: (value: any) => void;
+  isFlowActive?: boolean;
 }) {
   // Extract the variable from the props
   const { variable: variableToRender, onChange } = props;
@@ -354,6 +346,9 @@ function VariableRenderer(props: {
   const [currentValue, setCurrentValue] = useState(variableToRender.value);
 
   const handleVariableChangeInternal = (value: any) => {
+    if (props.isFlowActive) {
+      return;
+    }
     onChange(value);
     setCurrentValue(value);
   };
@@ -458,6 +453,7 @@ function VariableRenderer(props: {
           currentValue={currentValue}
           variable={props.variable}
           onChange={handleVariableChangeInternal}
+          isFlowActive={props.isFlowActive}
         />
       );
     case PluginVariableTypes._LIST:
@@ -466,6 +462,7 @@ function VariableRenderer(props: {
           currentValue={currentValue}
           variable={props.variable}
           onChange={handleVariableChangeInternal}
+          isFlowActive={props.isFlowActive}
         />
       );
 
@@ -666,6 +663,7 @@ export type VariableViewProps = {
   variable: PluginVariable;
   currentValue: any;
   onChange: (value: any) => void;
+  isFlowActive?: boolean;
 };
 
 function StringVariableView(props: VariableViewProps) {
@@ -991,7 +989,13 @@ function ListView(props: VariableViewProps) {
       {currentValue?.length > 0 && (
         <div className="flex flex-col gap-2 pb-2">
           {currentValue?.map((value: any, index: number) => (
-            <div className="flex flex-row gap-2 items-center justify-between px-2 zoom-out-animation">
+            <div
+              className="flex flex-row gap-2 items-center justify-between px-2 zoom-out-animation "
+              style={{
+                pointerEvents: props.isFlowActive ? "none" : "auto",
+                cursor: props.isFlowActive ? "wait" : "auto",
+              }}
+            >
               <input
                 id={`${props.variable.id}-${index}`}
                 type="text"

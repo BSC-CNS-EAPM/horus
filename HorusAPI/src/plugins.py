@@ -22,6 +22,18 @@ if typing.TYPE_CHECKING:
     from Server.FlowManager import Flow
 
 
+class UniqueVariableIDException(Exception):
+    """
+    Exception that is raised when a variable ID is not unique inside a block.
+    """
+
+    def __init__(self, message: str, variableId: str = "Unknown") -> None:
+
+        super().__init__(message)
+
+        self.variableId = variableId
+
+
 class PluginRemote:
     """
     Remote interface for blocks
@@ -691,6 +703,16 @@ class VariableGroup(PluginVariable):
         :param disabled: This will set all the variables under the group as disabled
         """
 
+        # Verify all variable ID's are unique
+        ids = []
+        for variable in variables:
+            if variable.id in ids:
+                raise UniqueVariableIDException(
+                    message=f"Variable ID '{variable.id}' is not unique for VariableGroup '{id}'. Variable IDs must be unique.",
+                    variableId=variable.id,
+                )
+            ids.append(variable.id)
+
         self.variables = variables
         """
         The variables contained in the variable group
@@ -776,6 +798,16 @@ class VariableList(PluginVariable):
                     f"Variable {prot.id} is a VariableGroup inside "
                     + f"{self.id}. You cannot use VariableGroups inside VariableLists."
                 )
+
+        # Verify all variable ID's are unique
+        ids = []
+        for variable in prototypes:
+            if variable.id in ids:
+                raise UniqueVariableIDException(
+                    message=f"Variable ID '{variable.id}' is not unique for VariableList '{id}'. Variable IDs must be unique.",
+                    variableId=variable.id,
+                )
+            ids.append(variable.id)
 
         self.prototypes = prototypes
         """
@@ -1135,13 +1167,27 @@ class PluginBlock:
         The action that the block performs.
         """
 
+        # Verify all Variable IDs are unique
+        def verifyUniqueIDs(variables: typing.List[PluginVariable]):
+            ids = []
+            for var in variables:
+                if var.id in ids:
+                    raise UniqueVariableIDException(
+                        message=f"Variable '{var.id}' is used more than once on block '{self.id}'. Variable IDs must be unique.",
+                        variableId=var.id,
+                    )
+                ids.append(var.id)
+
+        verifyUniqueIDs(variables)
+        verifyUniqueIDs(outputs)
+
         # Check that neither variables, nor inputs, nor outputs contain nested VariableGroups
         def checkNestedVariables(variables: typing.List[PluginVariable]):
             for var in variables:
                 if isinstance(var, VariableGroup):
                     for v in var.variables:
                         if isinstance(v, VariableGroup):
-                            raise Exception(
+                            raise ValueError(
                                 f"Variable {v.id} is a VariableGroup inside "
                                 + f"{var.id} on block {self.id}. "
                                 + "You cannot use nested VariableGroups."
@@ -1172,6 +1218,13 @@ class PluginBlock:
 
         for group in inputGroups:
             checkNestedVariables(group.variables)
+            try:
+                verifyUniqueIDs(group.variables)
+            except UniqueVariableIDException as uve:
+                raise UniqueVariableIDException(
+                    message=f"Variable '{uve.variableId}' is used more than once on block '{self.id}' input group '{group.id}'. Variable IDs must be unique.",
+                    variableId=group.id,
+                ) from uve
 
         # self._inputs = inputs
         # """
@@ -1776,16 +1829,34 @@ class SlurmBlock(PluginBlock):
         The status of the block.
         """
 
-        IDLE = "IDLE"
-        RUNNING = "RUNNING"
-        PENDING = "PENDING"
-        COMPLETED = "COMPLETED"
-        FAILED = "FAILED"
-        CANCELLED = "CANCELLED"
-        CANCELLING = "CANCELLING"
-        TIMEOUT = "TIMEOUT"
-        OUT_OF_ME = "OUT_OF_ME"
+        BOOT_FAIL = "BOOT_FAIL"  # BF
+        CANCELLED = "CANCELLED"  # CA
+        CANCELLING = "CANCELLING"  # C
+        COMPLETED = "COMPLETED"  # CD
+        CONFIGURING = "CONFIGURING"  # CF
+        COMPLETING = "COMPLETING"  # CG
+        DEADLINE = "DEADLINE"  # DL
+        FAILED = "FAILED"  # F
+        NODE_FAIL = "NODE_FAIL"  # NF
+        OUT_OF_ME = "OUT_OF_ME"  # OM
+        PENDING = "PENDING"  # PD
+        PREEMPTED = "PREEMPTED"  # PR
+        RUNNING = "RUNNING"  # R
+        RESV_DEL_HOLD = "RESV_DEL_HOLD"  # RD
+        REQUEUE_FED = "REQUEUE_FED"  # RF
+        REQUEUE_HOLD = "REQUEUE_HOLD"  # RH
+        REQUEUED = "REQUEUED"  # RQ
+        RESIZING = "RESIZING"  # RS
+        REVOKED = "REVOKED"  # RV
+        SIGNALING = "SIGNALING"  # SI
+        SPECIAL_EXIT = "SPECIAL_EXIT"  # SE
+        STAGE_OUT = "STAGE_OUT"  # SO
+        STOPPED = "STOPPED"  # ST
+        SUSPENDED = "SUSPENDED"  # SS
+        TIMEOUT = "TIMEOUT"  # TO
+
         UNKNOWN = "UNKNOWN"
+        IDLE = "IDLE"
 
         # Wehn the enum is instantiated with some value,
         # e.g. Status("IDLE"), if the value is not in the enum,
@@ -1903,9 +1974,15 @@ class SlurmBlock(PluginBlock):
             self.jobID = self.remote._remote.getJobIDfromBlock(self.flow.savedID, self._placedID)
 
             # Get Slurm status and logging info
-            self.stdOut, self.stdErr, self.detailedStatus = (
-                self.remote._remote.getRemoteBlockLogs(self.flow.savedID, self._placedID)
-            )
+            try:
+                self.stdOut, self.stdErr, self.detailedStatus = (
+                    self.remote._remote.getRemoteBlockLogs(self.flow.savedID, self._placedID)
+                )
+            except Exception as e:
+                logging.getLogger("Horus").error(
+                    "Could not parse latest SlurmBlock logs: %s", str(e)
+                )
+
             self.time += self.remote._remote.getRemoteBlockTime(self.flow.savedID, self._placedID)
         except AttributeError as attre:
             logging.getLogger("Horus").error("Could not parse SlurmBlock status: %s", str(attre))
@@ -2177,7 +2254,7 @@ class Plugin:
                 # Update the id on the meta too
                 self.pluginMeta.id = self.id
 
-                logging.debug("Assigned ID %s to plugin %s", self.id, self.pluginMeta.name)
+                logging.debug("Assigned ID '%s' to plugin '%s'", self.id, self.pluginMeta.name)
             except Exception as exc:
                 raise Exception(f"Error loading plugin.meta file ({metaPath}): {exc}") from exc
         else:

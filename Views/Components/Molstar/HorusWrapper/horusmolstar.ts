@@ -39,9 +39,11 @@ import { MolViewSpec } from "molstar/lib/extensions/mvs/behavior";
 import { StateObjectSelector } from "molstar/lib/mol-state";
 import { BuiltInTrajectoryFormats } from "molstar/lib/mol-plugin-state/formats/trajectory";
 import { HorusMolstarViewportComponent } from "./ui/viewport";
+import { HorusLeftPanelControls } from "./ui/HorusLeftPanelControls";
 
 // Import the HorusSmilesManager
 import HorusSmilesManager from "../../Smiles/SmilesWrapper/horusSmiles";
+import { Expression } from "molstar/lib/mol-script/language/expression";
 
 // Definition of useful types
 export type AtomInfo = {
@@ -119,7 +121,6 @@ export enum MolstarEvents {
   COORDINATES = "molstar-coordinates",
   STATE = "molstar-state-event",
 }
-
 export type MolstarInitOptions = {
   showControls?: boolean;
 };
@@ -169,6 +170,7 @@ export default class HorusMolstar {
           controls: {
             right: "none",
             bottom: "none",
+            left: HorusLeftPanelControls
           },
           remoteState: "none",
           viewport: {
@@ -605,7 +607,7 @@ export default class HorusMolstar {
    *
    * @throws {Error} If there's an error while accessing the state cells or their properties.
    */
-  private getStructureIDFromStructureRef(
+  public getStructureIDFromStructureRef(
     structure: StructureRef
   ): string | null {
     try {
@@ -643,7 +645,7 @@ export default class HorusMolstar {
    *
    * @throws {Error} If there's an error while accessing the structures or their properties.
    */
-  private getStructureObjectFromLabel(
+  public getStructureObjectFromLabel(
     structureLabel: string,
     first: boolean = true
   ): StructureRef | null {
@@ -804,7 +806,7 @@ export default class HorusMolstar {
 
     // Get the residue from the provided resdiue number
     // We define a filter group. This will tell Mol* to filter the structure and only keep the residues that match the filter
-    const filterGroups: any = {
+    const filterGroups: Record<string, Expression> = {
       "residue-test": MS.core.rel.eq([
         MS.struct.atomProperty.macromolecular.auth_seq_id(),
         residueID,
@@ -1197,7 +1199,7 @@ export default class HorusMolstar {
    * @throws {Error} If the plugin is not initialized or if the structure hierarchy is unavailable.
    */
 
-  private structures(): StructureRef[] {
+  structures(): StructureRef[] {
     if (!this.plugin || !this.plugin.managers.structure.hierarchy.current) {
       throw new Error(
         "Plugin is not properly initialized. Cannot retrieve structures."

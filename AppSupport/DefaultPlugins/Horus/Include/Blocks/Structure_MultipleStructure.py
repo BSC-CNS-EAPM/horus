@@ -1,4 +1,5 @@
 import os
+import shutil
 from HorusAPI import PluginVariable, VariableTypes, InputBlock
 from pathvalidate import sanitize_filepath
 from pathlib import Path
@@ -116,8 +117,12 @@ def saveMultipleStructure(block: InputBlock):
         raise Exception("No structure provided.")
 
     directory = f"Structures_block_{block._placedID}"
-    if not os.path.exists(directory):
-        os.mkdir(directory)
+
+    # Remove if directory already exists
+    if os.path.exists(directory):
+        shutil.rmtree(directory)
+
+    os.mkdir(directory)
 
     for structure in structureList:
         name = structure.get("label", None)

@@ -750,13 +750,15 @@ function ServerFileExplorer(props: FileExplorerProps) {
         open={open}
         setOpen={setOpen}
       />
-      <AppButton
-        action={() => {
-          setOpen(true);
-        }}
-      >
-        {props.children}
-      </AppButton>
+      {props.children && (
+        <AppButton
+          action={() => {
+            setOpen(true);
+          }}
+        >
+          {props.children}
+        </AppButton>
+      )}
     </div>
   );
 }

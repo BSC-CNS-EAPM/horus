@@ -1019,7 +1019,7 @@ class AppDelegate(metaclass=HorusSingleton):
             subprocess.Popen(["xdg-open", path])
 
 
-def parseArgs() -> tuple[dict, dict]:
+def parseArgs() -> tuple[dict, dict, dict]:
     """
     Parse the arguments to the AppDelegate
     """
@@ -1080,6 +1080,20 @@ def parseArgs() -> tuple[dict, dict]:
         metavar="placedID",
         type=int,
         help="Block placedID to run when the --flow option is provided.",
+    )
+
+    # For installing a plugin from the command line
+    parser.add_argument(
+        "--install-plugin",
+        metavar="/path/to/plugin",
+        help="Install a plugin from the command line.",
+        type=str,
+    )
+
+    parser.add_argument(
+        "--as-default",
+        action="store_true",
+        help="Install the plugin in the default plugins folder.",
     )
 
     # Parse known arguments
@@ -1182,12 +1196,14 @@ def parseArgs() -> tuple[dict, dict]:
         "port": port,
     }
 
+    pluginArgs = {"installPlugin": args.install_plugin, "asDefault": args.as_default}
+
     flowArgs = {
         "flowPath": flowPath,
         "blockIndex": blockIndex,
     }
 
-    return argsDict, flowArgs
+    return argsDict, flowArgs, pluginArgs
 
 
 def runFlowInsteadOfLaunch(app: AppDelegate, args: dict):
@@ -1223,12 +1239,28 @@ def runFlowInsteadOfLaunch(app: AppDelegate, args: dict):
     sys.exit(0)
 
 
+def installPluginInsteadOfLaunch(app: AppDelegate, pluginArgs: dict):
+    """
+    If a plugin was provided as an argument, it will install the plugin instead of launching the app.
+    """
+
+    pluginPath = pluginArgs.get("installPlugin")
+    if pluginPath:
+
+        asDefault = pluginArgs.get("asDefault", False)
+
+        app.server.pluginManager._installPlugin(pluginPath, asDefault)
+
+        # Exit
+        sys.exit(0)
+
+
 def launchApp():
     """
     Launches the app.
     """
 
-    appDelegateArgs, flowArgs = parseArgs()
+    appDelegateArgs, flowArgs, pluginArgs = parseArgs()
 
     # Prepare the app delegate
     app = AppDelegate(**appDelegateArgs)
@@ -1246,6 +1278,9 @@ def launchApp():
 
     # If a flow was provided as an argument, it will run the flow instead of launching the app.
     runFlowInsteadOfLaunch(app, flowArgs)
+
+    # If a plugin was provided as an argument, it will install the plugin instead of launching the app.
+    installPluginInsteadOfLaunch(app, pluginArgs)
 
     # Start the app
     try:
