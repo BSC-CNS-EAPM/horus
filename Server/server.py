@@ -1664,10 +1664,17 @@ class HorusServer:
                 if self._isForUser:
                     if flowContextPath is None:
                         return {"ok": False, "msg": "Internal server error. Try again later."}
+
+                    # If the flow context path is none, then use the users flow dir
+                    relativeTo = (
+                        os.path.join(currentUser.flowsDir, Flow.flowWorkDir(flowContextPath))
+                        if flowContextPath
+                        else currentUser.flowsDir
+                    )
                     # If a flow context path was provided,
                     # set the highest boundary to that flow folder
                     path = UserFileExplorer(
-                        path, currentUser, relativeTo=Flow.flowWorkDir(flowContextPath)
+                        path, currentUser, relativeTo=relativeTo
                     ).getAbsolutePath()
 
                 if folderName is None:
@@ -1695,10 +1702,17 @@ class HorusServer:
                     if flowContextPath is None or flowContextPath == "":
                         return {"ok": False, "msg": "Internal server error. Try again later."}
 
+                    # If the flow context path is none, then use the users flow dir
+                    relativeTo = (
+                        os.path.join(currentUser.flowsDir, Flow.flowWorkDir(flowContextPath))
+                        if flowContextPath
+                        else currentUser.flowsDir
+                    )
+
                     # If a flow context path was provided,
                     # set the highest boundary to that flow folder
                     path = UserFileExplorer(
-                        path, currentUser, relativeTo=Flow.flowWorkDir(flowContextPath)
+                        path, currentUser, relativeTo=relativeTo
                     ).getAbsolutePath()
 
                 if not os.path.exists(path):
@@ -1731,10 +1745,17 @@ class HorusServer:
                 if self._isForUser:
                     if flowContextPath is None or flowContextPath == "":
                         raise Exception("Internal server error. Try again later.")
+
+                    # If the flow context path is none, then use the users flow dir
+                    relativeTo = (
+                        os.path.join(currentUser.flowsDir, Flow.flowWorkDir(flowContextPath))
+                        if flowContextPath
+                        else currentUser.flowsDir
+                    )
                     # If a flow context path was provided,
                     # set the highest boundary to that flow folder
                     path = UserFileExplorer(
-                        path, currentUser, relativeTo=Flow.flowWorkDir(flowContextPath)
+                        path, currentUser, relativeTo=relativeTo
                     ).getAbsolutePath()
 
                 if os.path.isdir(path):
@@ -1784,10 +1805,16 @@ class HorusServer:
                 if self._isForUser:
                     if flowContextPath is None or flowContextPath == "":
                         raise Exception("Internal server error. Try again later.")
+
+                    relativeTo = (
+                        os.path.join(currentUser.flowsDir, Flow.flowWorkDir(flowContextPath))
+                        if flowContextPath
+                        else currentUser.flowsDir
+                    )
                     # If a flow context path was provided,
                     # set the highest boundary to that flow folder
                     path = UserFileExplorer(
-                        path, currentUser, relativeTo=Flow.flowWorkDir(flowContextPath)
+                        path, currentUser, relativeTo=relativeTo
                     ).getAbsolutePath()
 
                 if os.path.isdir(path):
