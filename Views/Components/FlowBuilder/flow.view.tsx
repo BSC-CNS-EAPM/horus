@@ -27,6 +27,8 @@ import { ConnectedArrows } from "./Connections/arrows";
 import { Xwrapper } from "react-xarrows";
 import { DroppableEntity, Flow, FlowStatus } from "./flow.types";
 import { socket } from "../../Utils/socket";
+import { GreenOverlay } from "../GreenOverlay/GreenOverlay";
+import SaveIcon from "../Toolbar/Icons/Save";
 
 export const FlowContext = createContext<Flow | null>(null);
 
@@ -84,7 +86,18 @@ function FlowBuilderView() {
               className="m-auto flex flex-row h-100 relative"
               id={GLOBAL_IDS.FLOW_BUILDER_DIV}
               style={style}
+              onDragOver={flowBuilderState.handleMouse.handleDragOver}
+              onDrop={flowBuilderState.handleMouse.handleDrop}
+              onDragLeave={flowBuilderState.handleMouse.handleDragDropEnd}
             >
+              {flowBuilderState.handleMouse.isDraggingFlowFile && (
+                <GreenOverlay>
+                  <div className="flex flex-col gap-2 items-center justify-center font-semibold">
+                    <SaveIcon className="w-16 h-16" />
+                    Drop a .flow file
+                  </div>
+                </GreenOverlay>
+              )}
               {/* The block list coming from the server */}
               <BlockListSidebar />
               {/* The flow reciever, where blocks are already placed */}
