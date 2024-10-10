@@ -8,7 +8,7 @@ import {
 import { ChonkyIconFA } from "chonky-icon-fontawesome";
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { render } from "react-dom";
-import { horusPost } from "../../Utils/utils";
+import { horusPost, POSTUploadWithProgress } from "../../Utils/utils";
 import AppButton from "../appbutton";
 import { HorusModal } from "../reusable";
 
@@ -289,20 +289,21 @@ function useServerExplorer(
       // Check if its size is more than the maximum allowed
       setActionFilesActive({
         status: true,
-        progress: (i / files.length) * 100,
+        progress: 0,
         file: files[i]!.name,
         text: "Uploading files...",
       });
 
-      const response = await horusPost(
+      const data: any = await POSTUploadWithProgress(
         "/api/filepicker/upload",
-        header,
         formData,
-        undefined,
-        null
+        (percentage) => {
+          setActionFilesActive((currentText) => ({
+            ...currentText,
+            progress: percentage,
+          }));
+        }
       );
-
-      const data = await response.json();
 
       if (!data.ok) {
         await horusAlert(data.msg);
