@@ -1494,6 +1494,11 @@ class FlowManager:
     The user's templates directory.
     """
 
+    droppedFlowsDir: str
+    """
+    The path to the directory where dropped flows are temporary stored.
+    """
+
     @property
     def areThereRunningFlows(self):
         """
@@ -1508,6 +1513,7 @@ class FlowManager:
         # Assign the app support dir and the recent flows path
         self.appSupportDir = appSupportDir
         self._recentFlowsPath = os.path.join(appSupportDir, "recent_flows.json")
+        self.droppedFlowsDir = os.path.join(appSupportDir, ".dropped_flows")
 
         # Assign the templates path
         self._templatesDir = os.path.join(appSupportDir, "templates")
@@ -1556,7 +1562,7 @@ class FlowManager:
         updatedRecentFlows = {}
         for flow in recentFlows:
             path = recentFlows[flow]
-            if os.path.exists(path):
+            if path and os.path.exists(path):
                 updatedRecentFlows[flow] = recentFlows[flow]
             else:
                 logging.getLogger("Horus").info("Removing non-existing flow '%s'", path)

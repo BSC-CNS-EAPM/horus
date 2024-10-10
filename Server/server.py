@@ -1022,6 +1022,43 @@ class HorusServer:
                 }
             return flask.jsonify(success)
 
+        @self.server.route("/api/flowfile", methods=["POST"])
+        @self.verifyLogin
+        def readFlowFile():
+            try:
+                file = request.files.get("file")
+                if file is None:
+                    raise ValueError("No file provided")
+
+                # Store the file into a temporary path
+                temPath = self.flowManager.droppedFlowsDir
+                os.makedirs(temPath, exist_ok=True)
+                tempFile = os.path.join(temPath, file.filename or "dropped.flow")
+                file.save(tempFile)
+
+                flow = self.flowManager.openFlowFromPath(tempFile)
+
+                # Remove the path from the flow, as if it was a template
+                # This is a workaround as we do not have the actual path of the flow when we drop
+                # it due to javascript security. The suer will need to "save" again the flow in a new path
+                # (or the same path) in order to work with the flow. This will be the intended behaviour on
+                # server mode, as you are efectively uploading the file to the server, but for app mode
+                # is an annoying drawback.
+                flow.savedID = None
+
+                encodedFlow = flow.encode(minimal=False)
+
+                # Return the file as a tempalte/preset flow, so that the user needs to select a
+                # path to save it next time
+                success = {"ok": True, "flow": encodedFlow}
+            except Exception as exc:
+                success = {
+                    "ok": False,
+                    "msg": str(exc),
+                }
+
+            return flask.jsonify(success)
+
         @self.server.route("/api/getmolstate", methods=["POST"])
         @self.verifyLogin
         def getMolState():
@@ -1048,6 +1085,23 @@ class HorusServer:
 
                 # Get the molstarStte zip file
                 molstarState = flow.getMolstarState()
+
+                # Delete the tarfile after the download
+                @flask.after_this_request
+                def removeFile(response):
+
+                    # If the file is inside the .dropped_flows folder, delete it
+                    if os.path.dirname(flowPath) == self.flowManager.droppedFlowsDir:
+                        try:
+                            os.remove(flowPath)
+                        except Exception as exc:
+                            logging.getLogger("Horus").error(
+                                "Error removing file {%s}: {%s}",
+                                flowPath,
+                                str(exc),
+                            )
+
+                    return response
 
                 # Send the file to the client as .molx file
                 if molstarState is not None:
