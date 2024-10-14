@@ -396,7 +396,7 @@ function RecentFlowsSplash() {
               predefinedFlows.length > 0 ? (
                 <PredefinedFlows flows={predefinedFlows} />
               ) : (
-                <div className="h-full w-[26rem] flex justify-center items-center">
+                <div className="h-full flex justify-center items-center">
                   No recent flows
                 </div>
               )
@@ -442,7 +442,7 @@ function ExploreExtensions() {
       <ScrollableViewWelcome.Body>
         <div className="w-full h-full">
           {pagesToShow.length === 0 ? (
-            <div className="h-full w-[26rem] flex justify-center items-center">
+            <div className="h-full flex justify-center items-center">
               No extensions
             </div>
           ) : (
