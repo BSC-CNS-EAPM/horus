@@ -534,7 +534,7 @@ class PluginVariable:
         id: str,
         name: str,
         description: str,
-        type: VariableTypes,
+        type: typing.Union[VariableTypes, str],
         defaultValue: typing.Optional[typing.Any] = None,
         allowedValues: typing.Optional[typing.List[typing.Any]] = None,
         category: typing.Optional[str] = None,
