@@ -407,29 +407,12 @@ function VariableRenderer(props: {
       );
     case PluginVariableTypes.STRING_LIST:
     case PluginVariableTypes.NUMBER_LIST:
-      // If the current value is not set, set i to the first allowed value
-      // CAUTION WITH VALUES LIKE "0" or 0, they will cause infinite re-renders
-      if (!currentValue === null && variableToRender.allowedValues) {
-        handleVariableChangeInternal(variableToRender.allowedValues[0]);
-      }
-
       return (
-        <select
-          // style={{
-          //   border: "none",
-          //   outline: "none",
-          //   WebkitAppearance: "none",
-          //   gap: "0.5rem",
-          // }}
-          value={currentValue}
-          onChange={(e) => handleVariableChangeInternal(e.target.value as any)}
-        >
-          {props.variable.allowedValues?.map((value, index) => (
-            <option key={index} value={value}>
-              {value}
-            </option>
-          ))}
-        </select>
+        <DropdownVariableView
+          variable={variableToRender}
+          currentValue={currentValue}
+          onChange={handleVariableChangeInternal}
+        />
       );
     case PluginVariableTypes.NUMBER_RANGE:
       return (
@@ -605,6 +588,49 @@ function VariableRenderer(props: {
       );
   }
 }
+
+function DropdownVariableView({
+  currentValue,
+  variable: variableToRender,
+  onChange,
+}: VariableViewProps) {
+  useEffect(() => {
+    // If the current value is not set, set i to the first allowed value
+    // CAUTION WITH VALUES LIKE "0" or 0, they will cause infinite re-renders
+    // This is why we check for null and undefined explicitly
+    if (
+      (currentValue === null || currentValue === undefined) &&
+      variableToRender.allowedValues
+    ) {
+      onChange(
+        variableToRender.defaultValue ?? variableToRender?.allowedValues[0]
+      );
+    }
+  }, [
+    currentValue,
+    variableToRender.allowedValues,
+    variableToRender.defaultValue,
+    onChange,
+  ]);
+
+  return (
+    <select
+      value={
+        currentValue ??
+        variableToRender.defaultValue ??
+        variableToRender.allowedValues?.[0]
+      }
+      onChange={(e) => onChange(e.target.value as any)}
+    >
+      {variableToRender.allowedValues?.map((value, index) => (
+        <option key={index} value={value}>
+          {value}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 function CheckboxVariableView(props: VariableViewProps & { radio?: boolean }) {
   const allowedValues: string[] = props.variable.allowedValues;
 

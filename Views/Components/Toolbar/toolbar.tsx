@@ -280,8 +280,12 @@ function SearchComponent(props: SearchProps) {
 }
 
 const handleKeyDown = (event: globalThis.KeyboardEvent) => {
-  const isModifierKeyPressed = event.getModifierState(modifierKey);
-  const isShiftKeyPressed = event.getModifierState(shiftKey);
+  let isModifierKeyPressed = false;
+  let isShiftKeyPressed = false;
+  if (event.getModifierState) {
+    isModifierKeyPressed = event.getModifierState(modifierKey);
+    isShiftKeyPressed = event.getModifierState(shiftKey);
+  }
 
   // Toggle console
   if (event.code === "KeyK" && isModifierKeyPressed) {

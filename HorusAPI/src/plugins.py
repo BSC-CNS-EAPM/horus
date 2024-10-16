@@ -576,6 +576,20 @@ class PluginVariable:
 
         # Assign a default category if none is provided
         self.category = category if category else "General"
+
+        # For STRING_LIST and NUMBER_LIST set the first allowed value as the current one if no default value is set
+        if (
+            self.type in [VariableTypes.STRING_LIST, VariableTypes.NUMBER_LIST]
+            and defaultValue is None
+        ):
+            if allowedValues is None:
+                logging.getLogger("Horus").warning(
+                    f"No allowed values provided for STRING_LIST or NUMBER_LIST variable with id '{id}'. "
+                    "This variable may not work as expected."
+                )
+            else:
+                defaultValue = allowedValues[0]
+
         self.defaultValue = defaultValue
         self.value = defaultValue
         self.id = id
