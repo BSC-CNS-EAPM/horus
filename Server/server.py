@@ -3137,7 +3137,7 @@ class HorusServer:
                 try:
                     # Use the app support dir of the GLOBAL app
                     settingsManager = SettingsManager(self.appSupportDir)
-                    settingsManager.saveSettings(settings, allowUnsafe=True)
+                    settingsManager.saveSettings(settings, allowUnsafe=currentUser.admin)
                     return flask.jsonify({"ok": True})
                 except Exception as exc:
                     return flask.jsonify({"ok": False, "msg": str(exc)})

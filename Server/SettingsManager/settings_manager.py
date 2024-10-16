@@ -65,17 +65,8 @@ class Setting:
     @property
     def value(self):
         """
-        Returns the value of the setting if its safe
+        Returns the value of the setting
         """
-
-        from App import AppDelegate
-
-        if self.desktopOnly and AppDelegate().safeMode and not AppDelegate().debug:
-            # logging.getLogger("Horus").warning(
-            #     "The setting %s is only available on desktop. Returning the default value",
-            #     self.id,
-            # )
-            return self.defaultValue
 
         return self._value
 
@@ -366,8 +357,9 @@ class SettingsManager:
 
         self.settings[setting.id] = setting
 
-        # Save the settings
-        self._saveSettings()
+        logging.getLogger("Horus").info(
+            "Updated setting '%s' with value '%s'", setting.id, setting.value
+        )
 
     def _saveSettings(self):
         """
@@ -430,13 +422,17 @@ class SettingsManager:
         from App import AppDelegate
 
         # Loop over the new settings
+        allSettings = self.settings.copy()
         for newSetting in newSettings:
             # Get the setting
-            setting = self.getSetting(newSetting["id"])
+            setting = allSettings.get(newSetting["id"])
+
+            if setting is None:
+                continue
 
             # Update the setting only if it is not desktop only or if the app is not in safe mode
             if setting.desktopOnly and AppDelegate().safeMode and not allowUnsafe:
-                logging.getLogger("Horus").warning(
+                logging.getLogger("Horus").error(
                     "Trying to update an unsfe setting '%s' in WebApp mode. Skipping...",
                     setting.id,
                 )
@@ -444,5 +440,7 @@ class SettingsManager:
 
             setting._value = newSetting["value"]
 
-            # Update the setting
             self._updateSetting(setting)
+
+        # Save the settings
+        self._saveSettings()
