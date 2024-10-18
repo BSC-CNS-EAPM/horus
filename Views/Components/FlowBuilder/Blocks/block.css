@@ -391,6 +391,7 @@
   white-space: normal;
   text-overflow: unset;
   overflow: unset;
+  word-break: break-all;
 }
 
 .output-squared {

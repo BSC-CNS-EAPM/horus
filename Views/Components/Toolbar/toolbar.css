@@ -57,7 +57,7 @@
   transition: box-shadow 0.2s ease-in-out;
   z-index: 100;
   min-width: 400px;
-  max-width: 400px;
+  /* max-width: 400px; */
   border: 1px solid transparent;
   border-radius: 0px;
   transition: background 0.2s ease-in-out, border 0.2s ease-in-out,
