@@ -1090,7 +1090,7 @@ function CustomVariableRenderer(props: {
 
   return (
     <div className="w-full flex flex-col gap-2 items-center justify-center p-2">
-      <AppButton action={openCustomPage}>Configure</AppButton>
+      <AppButton action={openCustomPage}>{props.variable.name}</AppButton>
     </div>
   );
 }
