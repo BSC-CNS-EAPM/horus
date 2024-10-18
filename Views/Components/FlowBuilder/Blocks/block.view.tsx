@@ -148,7 +148,12 @@ function BlockVariablesAndConnections({
 }
 
 export function BlockRemotes(props: BlockRemotesProps) {
-  if (!props.block.isPlaced || !props.blockHooks) {
+  // Do not chose any remote if the only available one is the "Local"
+  if (
+    !props.block.isPlaced ||
+    !props.blockHooks ||
+    props.blockHooks.remotesOptions.length === 1
+  ) {
     return null;
   }
 
