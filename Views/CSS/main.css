@@ -14,6 +14,14 @@ html {
   overflow: hidden;
 }
 
+div[role="block-grab"] {
+  cursor: grab;
+}
+
+div[role="block-grabbing"] {
+  cursor: grabbing;
+}
+
 div[role="button"] {
   cursor: auto;
 }

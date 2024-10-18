@@ -99,6 +99,10 @@ function isInteractiveElement(element: Element | null) {
   }
 
   if (typeof element?.className === "string") {
+    if (element?.className?.includes("force-drag")) {
+      return false;
+    }
+
     for (const className of interactiveClassNames) {
       if (element?.className?.includes(className)) {
         return true;
