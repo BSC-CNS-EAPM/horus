@@ -49,7 +49,7 @@ export function BlockView(props: BlockViewProps) {
     <BlockWrapper blockState={blockState} block={block}>
       <BlockVariablesModalView block={block} blockState={blockState} />
       <BlockExtensionsView block={block} />
-      <BlockBox block={block}>
+      <BlockBox block={block} blockState={blockState}>
         <BlockTopBar>
           <BlockNameAndPlacedID block={block} />
           <BlockToolbar
@@ -82,9 +82,21 @@ export function BlockView(props: BlockViewProps) {
   );
 }
 
-function BlockBox({ block, children }: { block: Block; children: ReactNode }) {
+function BlockBox({
+  block,
+  children,
+  blockState,
+}: {
+  block: Block;
+  children: ReactNode;
+  blockState: BlockViewState;
+}) {
   return (
     <div
+      ref={blockState.div.ref}
+      {...blockState.div.listeners}
+      {...blockState.div.attributes}
+      role={`block-${blockState.div.style.cursor}`}
       id={`placed-${block.placedID}`}
       className={`plugin-block ${block.isPlaced && "plugin-block-placed"} ${
         block.error && "plugin-block-failed"
@@ -101,19 +113,13 @@ function BlockWrapper({
   children,
 }: BlockViewProps & { children: ReactNode; blockState: BlockViewState }) {
   return (
-    // Outer div nedded fro DnD to work
-    <div>
-      <div
-        ref={blockState.div.ref}
-        style={blockState.div.style}
-        {...blockState.div.listeners}
-        {...blockState.div.attributes}
-        className={`flex flex-col gap-1 ${
-          block.isPlaced ? "absolute z-1" : "relative"
-        }`}
-      >
-        {children}
-      </div>
+    <div
+      style={blockState.div.style}
+      className={`flex flex-col gap-1 ${
+        block.isPlaced ? "absolute z-1" : "relative"
+      }`}
+    >
+      {children}
     </div>
   );
 }
@@ -184,7 +190,7 @@ export function BlockRemotes(props: BlockRemotesProps) {
 function BlockExtensionsView(props: { block: Block }) {
   const block = props.block;
 
-  const [shown, setShown] = useState(false);
+  const [shown, setShown] = useState(true);
 
   if (block.extensionsToOpen.length === 0) {
     return null;
@@ -212,7 +218,7 @@ function BlockExtensionsView(props: { block: Block }) {
     <div
       className="w-full h-full"
       style={{
-        transform: "translateY(-2rem)",
+        transform: "translateY(0rem)",
         position: "absolute",
         pointerEvents: "all",
       }}
@@ -237,7 +243,7 @@ function BlockExtensionsView(props: { block: Block }) {
           </div>
         );
       })}
-      <div className="w-full flex flex-row justify-between extensions-box px-2">
+      {/* <div className="w-full flex flex-row justify-between extensions-box px-2">
         Extensions
         <div
           onClick={() => {
@@ -246,7 +252,7 @@ function BlockExtensionsView(props: { block: Block }) {
         >
           <MovingChevron down={shown} />
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }
@@ -512,7 +518,16 @@ function BlockDescription({
         transition: "height 0.3s ease", // Animate the height change
       }}
     >
-      {description}
+      <pre
+        className="font-sans force-drag"
+        style={{
+          whiteSpace: "pre-wrap",
+          wordWrap: "break-word",
+          wordBreak: "break-word",
+        }}
+      >
+        {description}
+      </pre>
     </div>
   );
 }

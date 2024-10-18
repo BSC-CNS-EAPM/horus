@@ -166,21 +166,22 @@ function FlowBuilderView() {
                 </div>
               </BlurredModal>
             </div>
-            <DragOverlay
-              dropAnimation={null}
-              style={{ cursor: "grabbing !important" }}
-            >
-              {
-                // If there is a block being dragged, show it
-                flowBuilderState.dnd.draggingBlock && (
-                  <BlockView
-                    block={flowBuilderState.dnd.draggingBlock}
-                    blockHooks={flowBuilderState.block}
-                    onAir={true}
-                  />
+            {
+              // If there is a block being dragged, show it
+              flowBuilderState.dnd.draggingBlock &&
+                !flowBuilderState.dnd.draggingBlock.isPlaced && (
+                  <DragOverlay
+                    dropAnimation={null}
+                    style={{ cursor: "grabbing !important" }}
+                  >
+                    <BlockView
+                      block={flowBuilderState.dnd.draggingBlock}
+                      blockHooks={flowBuilderState.block}
+                      onAir={true}
+                    />
+                  </DragOverlay>
                 )
-              }
-            </DragOverlay>
+            }
           </DndContext>
           <ServerFileExplorerModal
             key={"serverFilePicker-flow-reciver"}
