@@ -102,7 +102,7 @@ export function PluginVariableView(props: PluginVariableViewProps) {
           : ""
       } ${
         props.applyStyle === false
-          ? props.customClass ?? "flex-auto"
+          ? props.customClass ?? "flex-auto w-full"
           : "plugin-variable animated-gradient border-none"
       }`}
       style={{
