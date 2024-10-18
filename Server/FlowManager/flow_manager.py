@@ -461,7 +461,7 @@ class Flow:
 
         # Verify that variables are connected to existing variables
         for block in blocks:
-            for var in block._variableConnections:  # pylint: disable=protected-access
+            for var in block._variableConnections.copy():  # pylint: disable=protected-access
                 try:
                     checkVarConnection(var)
                 except VariableConnectionNotFound as exc:
@@ -475,7 +475,7 @@ class Flow:
             # Do the same for the references
             for (
                 refVar
-            ) in block._variableConnectionsReferences:  # pylint: disable=protected-access
+            ) in block._variableConnectionsReferences.copy():  # pylint: disable=protected-access
                 try:
                     checkVarConnection(refVar)
                 except VariableConnectionNotFound as exc:
