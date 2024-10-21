@@ -234,3 +234,5 @@ Tests/TestFlows/test_flow_smiles_manager
 wheelhouse/
 
 .dropped_flows
+
+tmp/
