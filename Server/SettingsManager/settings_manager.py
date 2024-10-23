@@ -174,8 +174,14 @@ class SettingsManager:
                 os.path.join("App", "default_settings.json")
             )
 
+        logging.getLogger("Horus").info(
+            "Reading default settings from: %s", self.defaultSettingsPath
+        )
+
         # Define the user settings path
         self.userSettingsPath = os.path.join(appSupportDir, "settings.json")
+
+        logging.getLogger("Horus").info("Reading user settings from: %s", self.userSettingsPath)
 
         # Load the settings
         self._loadSettings()

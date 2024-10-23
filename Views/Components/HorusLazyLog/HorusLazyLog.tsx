@@ -1,23 +1,28 @@
 import { LazyLog } from "@melloware/react-logviewer";
-import HorusSwitch from "../Switch/switch";
-import { HorusPopover } from "../reusable";
-import AppButton from "../appbutton";
-import RotatingLines from "../RotatingLines/rotatinglines";
-import StopIcon from "../Toolbar/Icons/Stop";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import AppButton from "../appbutton";
+import { HorusPopover } from "../reusable";
+import RotatingLines from "../RotatingLines/rotatinglines";
+import HorusSwitch from "../Switch/switch";
+import SaveIcon from "../Toolbar/Icons/Save";
+import StopIcon from "../Toolbar/Icons/Stop";
+import CenterView from "../Toolbar/Icons/CenterView";
 
 type HorusLazyLogProps = {
   logText: string;
   keepDisabled?: boolean;
+  filename?: string;
 };
 
 export function HorusLazyLog(props: HorusLazyLogProps) {
-  const { logText } = props;
+  const { logText, filename } = props;
 
   const parsedLogText = logText || "No logs";
 
   const [internalText, setInternalText] = useState<string>(parsedLogText);
   const [logging, setLogging] = useState<boolean>(true);
+  const [fullScreen, setFullScreen] = useState<boolean>(false);
 
   useEffect(() => {
     setLogging(!props.keepDisabled);
@@ -29,9 +34,20 @@ export function HorusLazyLog(props: HorusLazyLogProps) {
     }
   }, [parsedLogText, logging]);
 
-  return (
-    <div className="flex flex-col h-full p-2">
+  const LoggingView = (
+    <div
+      className="flex flex-col h-full p-2"
+      style={
+        fullScreen
+          ? {
+              position: "absolute",
+              width: "100%",
+            }
+          : undefined
+      }
+    >
       <div
+        className="flex flex-row justify-between items-center gap-2"
         style={{
           position: "absolute",
           marginTop: "0.5rem",
@@ -80,7 +96,57 @@ export function HorusLazyLog(props: HorusLazyLogProps) {
             Disable live logging to interact with the text
           </div>
         </HorusPopover>
+        <HorusPopover
+          trigger={
+            <AppButton
+              action={() => {
+                const file = new File(
+                  [parsedLogText],
+                  `${filename ?? "logs.log"}`,
+                  {
+                    type: "text/plain",
+                  }
+                );
+                window.horus.saveFile(file);
+              }}
+            >
+              <SaveIcon />
+            </AppButton>
+          }
+        >
+          <div
+            className="hover-description p-2"
+            style={{
+              position: "absolute",
+              transform: "translateX(70px) translateY(10px)",
+            }}
+          >
+            Save logs
+          </div>
+        </HorusPopover>
+        <HorusPopover
+          trigger={
+            <AppButton
+              action={() => {
+                setFullScreen(!fullScreen);
+              }}
+            >
+              <CenterView />
+            </AppButton>
+          }
+        >
+          <div
+            className="hover-description p-2"
+            style={{
+              position: "absolute",
+              transform: "translateX(70px) translateY(10px)",
+            }}
+          >
+            Toggle fullscreen
+          </div>
+        </HorusPopover>
       </div>
+
       <div className="h-full overflow-hidden rounded-xl">
         <LazyLog
           style={{
@@ -97,4 +163,12 @@ export function HorusLazyLog(props: HorusLazyLogProps) {
       </div>
     </div>
   );
+
+  if (fullScreen) {
+    // Find the react root element
+
+    return createPortal(LoggingView, document.documentElement);
+  }
+
+  return LoggingView;
 }

@@ -896,6 +896,11 @@ class Flow:
                 blockToRun,
                 self.savedID,
                 resetRemoteBlock=resetRemoteBlock,
+                developmentMode=(
+                    self.horusSettings.getSetting("developmentMode").value
+                    if self.horusSettings
+                    else False
+                ),
             )
         except Exception as exc:  # pylint: disable=broad-exception-raised
             # If an error was raised during the execution of the block
@@ -968,7 +973,15 @@ class Flow:
             try:
                 self._runningBlock = blockToRun
                 outputs = self._pluginManager.executeBlock(
-                    blockToRun, self.savedID, resetRemoteBlock=False, isFirstSlurm=False
+                    blockToRun,
+                    self.savedID,
+                    resetRemoteBlock=False,
+                    isFirstSlurm=False,
+                    developmentMode=(
+                        self.horusSettings.getSetting("developmentMode").value
+                        if self.horusSettings
+                        else False
+                    ),
                 )
             except Exception as exc:  # pylint: disable=broad-exception-raised
                 # If an error was raised during the execution of the block

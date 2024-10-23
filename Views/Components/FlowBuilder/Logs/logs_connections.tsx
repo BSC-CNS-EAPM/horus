@@ -33,19 +33,13 @@ export function BlockLogsModalView(props: BlockLogsModalViewProps) {
       {block.type === BlockTypes.SLURM ? (
         <SlurmOutputModalView block={block} handleClose={handleClose} />
       ) : (
-        <RegularBlockLogs logs={block.blockLogs} isRunning={block.isRunning} />
+        <RegularBlockLogs block={block} />
       )}
     </BlurredModal>
   );
 }
 
-function RegularBlockLogs({
-  logs,
-  isRunning,
-}: {
-  logs: string;
-  isRunning: boolean;
-}) {
+function RegularBlockLogs({ block }: { block: Block }) {
   return (
     <div
       style={{
@@ -54,7 +48,11 @@ function RegularBlockLogs({
         overflow: "hidden",
       }}
     >
-      <HorusLazyLog logText={logs ?? "No logs"} keepDisabled={!isRunning} />
+      <HorusLazyLog
+        logText={block.blockLogs ?? "No logs"}
+        keepDisabled={!block.isRunning}
+        filename={`${block.id}-${block.placedID}.log`}
+      />
     </div>
   );
 }
@@ -110,9 +108,7 @@ function SlurmOutputModalView({
   };
 
   const getGroupedVariables = () => {
-    groupedViews["Block logs"] = [
-      <RegularBlockLogs logs={block.blockLogs} isRunning={block.isRunning} />,
-    ];
+    groupedViews["Block logs"] = [<RegularBlockLogs block={block} />];
 
     groupedViews["Slurm status"] = [
       <div
@@ -152,6 +148,7 @@ function SlurmOutputModalView({
           <HorusLazyLog
             logText={block.stdOut}
             keepDisabled={!block.isRunning}
+            filename={`${block.id}-${block.placedID}-slurm.out`}
           />
         ) : (
           <span className="text-center w-full grid place-items-center h-full">
@@ -177,6 +174,7 @@ function SlurmOutputModalView({
           <HorusLazyLog
             logText={block.stdErr}
             keepDisabled={!block.isRunning}
+            filename={`${block.id}-${block.placedID}-slurm.err`}
           />
         ) : (
           <span className="text-center w-full grid place-items-center h-full">

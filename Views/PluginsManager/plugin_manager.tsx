@@ -711,6 +711,10 @@ export function PluginManager() {
   );
 }
 
+function getFileName(path: string) {
+  return (path.split("/").pop() ?? "").split(".")[0];
+}
+
 function InstallingPluginView({
   onPluginInstall,
 }: {
@@ -751,7 +755,13 @@ function InstallingPluginView({
       .then((response) => response.json())
       .then((data) => {
         if (!data.ok) {
-          horusAlert("Error installing plugin: " + data.msg);
+          const msg = "Error installing plugin: " + data.msg;
+
+          horusAlert(msg);
+
+          setText((currentText) => {
+            return currentText + "\n" + msg;
+          });
         } else {
           onPluginInstall();
         }
@@ -772,7 +782,7 @@ function InstallingPluginView({
     }
 
     const msg =
-      "Disconnected from server while installing plugin. Check console for details.";
+      "Disconnected from server while installing plugin. Don't worry, this is expected if the plugin installation is slow. Check the terminal for details on the installation progress.";
     horusAlert(msg);
 
     setText((currentText) => {
@@ -852,7 +862,15 @@ function InstallingPluginView({
               overflow: "hidden",
             }}
           >
-            <HorusLazyLog logText={text} />
+            <HorusLazyLog
+              logText={text}
+              keepDisabled={!isInstalling}
+              filename={
+                getFileName(selectedFile)
+                  ? `${getFileName(selectedFile)}.log`
+                  : "plugin-install.log"
+              }
+            />
           </div>
         </div>
       )}

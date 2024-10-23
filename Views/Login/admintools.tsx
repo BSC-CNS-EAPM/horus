@@ -330,7 +330,7 @@ function HorusLogs() {
     };
   }, [getLogs]);
 
-  return <HorusLazyLog logText={logs} />;
+  return <HorusLazyLog logText={logs} filename="horus-logs.log" />;
 }
 
 function Sidebar() {
