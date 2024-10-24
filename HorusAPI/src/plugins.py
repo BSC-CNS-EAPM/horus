@@ -1144,6 +1144,7 @@ class PluginBlock:
         outputs: typing.List[PluginVariable] = [],
         blockType: PluginBlockTypes = PluginBlockTypes.BASE,
         id: typing.Optional[str] = None,
+        externalURL: typing.Optional[str] = None,
     ):
         """
         Initialize a PluginBlock.
@@ -1179,6 +1180,11 @@ class PluginBlock:
         self.action = action
         """
         The action that the block performs.
+        """
+
+        self.externalURL = externalURL
+        """
+        The external URL of the block for documentation purposes.
         """
 
         # Verify all Variable IDs are unique
@@ -1676,6 +1682,8 @@ class PluginBlock:
         """
 
         fullBlock = self._minimalEncode()
+
+        fullBlock["externalURL"] = self.externalURL
         fullBlock["variables"] = self._variablesToDict(self._variables, minimal=False)
         fullBlock["name"] = self.name
         fullBlock["description"] = self.description
@@ -1785,11 +1793,16 @@ class InputBlock(PluginBlock):
         output: typing.Optional[PluginVariable] = None,
         action: typing.Optional[typing.Callable] = None,
         id: typing.Optional[str] = None,
+        externalURL: typing.Optional[str] = None,
     ):
         """
         :param name: The name of the block.
         :param description: The description of the block.
         :param variable: The variable of the block.
+        :param output: The output of the block.
+        :param action: The action of the block. Will be run when storing the config.
+        :param id: The id of the block.
+        :param externalURL: The external URL of the block for documentation purposes.
         """
 
         # Check that the variable is a PluginVariable instance
@@ -1807,6 +1820,7 @@ class InputBlock(PluginBlock):
             outputs=[variable if output is None else output],
             blockType=PluginBlockTypes.INPUT,
             id=id,
+            externalURL=externalURL,
         )
 
     # Override the __call__ method to return
@@ -1925,6 +1939,7 @@ class SlurmBlock(PluginBlock):
         outputs: typing.List[PluginVariable] = [],
         id: typing.Optional[str] = None,
         failOnSlurmError: bool = True,
+        extenrnalURL: typing.Optional[str] = None,
     ):
         """
         :param name: The name of the block.
@@ -1937,6 +1952,7 @@ class SlurmBlock(PluginBlock):
         :param outputs: The outputs of the block.
         :param id: The id of the block.
         :param failOnSlurmError: Whether to fail the block if the slurm job fails.
+        :param extenrnalURL: The external URL of the block for documentation purposes.
         """
         super().__init__(
             name,
@@ -1948,6 +1964,7 @@ class SlurmBlock(PluginBlock):
             outputs=outputs,
             blockType=PluginBlockTypes.SLURM,
             id=id,
+            externalURL=extenrnalURL,
         )
         self.initalAction = initialAction
         self.finalAction = finalAction
