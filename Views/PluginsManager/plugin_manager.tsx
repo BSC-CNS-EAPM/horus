@@ -625,6 +625,11 @@ export function PluginManager() {
       (plugin) => plugin.id !== id
     );
 
+    // Also remove it from the error plugins
+    newPluginList.errors = newPluginList.errors.filter(
+      (plugin) => plugin.id !== id
+    );
+
     setPluginList(newPluginList);
     setFilteredPluginList(newPluginList);
   };
