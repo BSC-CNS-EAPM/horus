@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 
 // Types for TypeScript
-import { Block, HorusPlugin } from "../flow.types";
+import { Block } from "../flow.types";
 
 // Horus components
 import { BlockView } from "../Blocks/block.view";
@@ -32,37 +32,41 @@ export function BlockListSidebar() {
   const [filteredBlocks, setFilteredBlocks] = useState<Array<Block>>([]);
   const [loadingBlocks, setLoadingBlocks] = useState<boolean>(true);
   const [developmentMode, setDevelopmentMode] = useState<boolean>(false);
-  const [search, setSearch] = useState<string | null>(null);
+  const [search, setSearch] = useState<string>("");
 
   /**
    * Fetches the list of available blocks from the server.
    * @returns A promise that resolves to an array of Block objects.
    */
-  async function fetchBlocks() {
+  const fetchBlocks = async () => {
     setLoadingBlocks(true);
 
-    const response = await horusGet("/api/plugins/listblocks");
+    try {
+      const response = await horusGet("/api/plugins/listblocks");
 
-    const data = await response.json();
+      const data = await response.json();
 
-    const unparsedBlocks: Array<Block> = data.blocks;
+      const unparsedBlocks: Array<Block> = data.blocks;
 
-    // Parse the data into the blockList
-    const blockList: Array<Block> = [];
-    unparsedBlocks.forEach((block: Block) => {
-      const newBlock: Block = {
-        ...block,
-        isPlaced: false,
-        position: { x: 0, y: 0 },
-        variableConnections: [],
-        variableConnectionsReference: [],
-      };
-      blockList.push(newBlock);
-    });
+      // Parse the data into the blockList
+      const blockList: Array<Block> = [];
+      unparsedBlocks.forEach((block: Block) => {
+        const newBlock: Block = {
+          ...block,
+          isPlaced: false,
+          position: { x: 0, y: 0 },
+          variableConnections: [],
+          variableConnectionsReference: [],
+        };
+        blockList.push(newBlock);
+      });
 
-    sidebarBlockList.current = blockList;
-    setLoadingBlocks(false);
-  }
+      sidebarBlockList.current = blockList;
+      setFilteredBlocks(sidebarBlockList.current);
+    } finally {
+      setLoadingBlocks(false);
+    }
+  };
 
   /**
    * Filters the list of blocks based on a search query.
@@ -92,7 +96,7 @@ export function BlockListSidebar() {
 
   // Update the filtered blocks when the search term changes
   useEffect(() => {
-    filterBlocks(search);
+    search ? filterBlocks(search) : setFilteredBlocks(sidebarBlockList.current);
   }, [search, sidebarBlockList.current]);
 
   // Side effects
@@ -105,7 +109,7 @@ export function BlockListSidebar() {
     // Fetch the blocks from the server api
     fetchBlocks();
 
-    // Add a scoket listener to update the block list after a plugin is installed/uninstalled
+    // Add a socket listener to update the block list after a plugin is installed/uninstalled
     socket.on("pluginChanges", fetchBlocks);
 
     return () => {
@@ -139,8 +143,8 @@ export function BlockListSidebar() {
                   action={async () => {
                     setLoadingBlocks(true);
                     await horusGet("/api/plugins/reload");
+                    await fetchBlocks();
                     await horusAlert("Plugins reloaded!");
-                    fetchBlocks();
                   }}
                 >
                   Reload
@@ -148,6 +152,7 @@ export function BlockListSidebar() {
               )}
             </div>
             <SearchComponent
+              value={search}
               placeholder="Search blocks..."
               onChange={(event) => {
                 setSearch(event.target.value);
