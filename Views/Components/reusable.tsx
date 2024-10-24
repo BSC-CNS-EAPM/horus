@@ -277,3 +277,28 @@ export function saveFile(file: File) {
     document.body.removeChild(link);
   }
 }
+
+// Will download the file (if its available for the user)
+// and return the Blob
+export function getFile(path: string) {
+  const url = new URL(window.location.origin + "/api/filepicker/download");
+
+  url.searchParams.append("path", path);
+
+  return new Promise<Blob>((resolve, reject) => {
+    fetch(url.toString())
+      .then((res) => {
+        // If the response is json, the fail
+        if (res.headers.get("content-type")?.includes("application/json")) {
+          reject("Could not open file");
+        }
+        return res.blob();
+      })
+      .then((blob) => {
+        resolve(blob);
+      })
+      .catch((err) => {
+        reject(err);
+      });
+  });
+}

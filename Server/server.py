@@ -1662,8 +1662,6 @@ class HorusServer:
                     raise Exception("No path provided")
 
                 if self._isForUser:
-                    if flowContextPath is None:
-                        return {"ok": False, "msg": "Internal server error. Try again later."}
 
                     # If the flow context path is none, then use the users flow dir
                     relativeTo = (
@@ -1699,9 +1697,6 @@ class HorusServer:
 
                 if self._isForUser:
 
-                    if flowContextPath is None or flowContextPath == "":
-                        return {"ok": False, "msg": "Internal server error. Try again later."}
-
                     # If the flow context path is none, then use the users flow dir
                     relativeTo = (
                         os.path.join(currentUser.flowsDir, Flow.flowWorkDir(flowContextPath))
@@ -1729,22 +1724,24 @@ class HorusServer:
             except Exception as exc:
                 return flask.jsonify({"ok": False, "msg": str(exc)})
 
-        @self.server.route("/api/filepicker/download", methods=["POST"])
+        @self.server.route("/api/filepicker/download", methods=["POST", "GET"])
         @self.verifyLogin
         @self.preventOnWebApp(specialBypass="allowDownload")
         def downloadFiles():
 
-            jsonData = request.get_json()
-            path = jsonData.get("path", None)
-            flowContextPath = jsonData.get("flowContextPath", None)
+            if request.method == "GET":
+                path = request.args.get("path", None)
+                flowContextPath = None
+            else:
+                jsonData = request.get_json()
+                path = jsonData.get("path", None)
+                flowContextPath = jsonData.get("flowContextPath", None)
 
             try:
                 if path is None:
-                    raise Exception("No path provided")
+                    return flask.jsonify({"ok": False, "msg": "No path provided"})
 
                 if self._isForUser:
-                    if flowContextPath is None or flowContextPath == "":
-                        raise Exception("Internal server error. Try again later.")
 
                     # If the flow context path is none, then use the users flow dir
                     relativeTo = (
@@ -1803,8 +1800,6 @@ class HorusServer:
                     raise Exception("No path provided")
 
                 if self._isForUser:
-                    if flowContextPath is None or flowContextPath == "":
-                        raise Exception("Internal server error. Try again later.")
 
                     relativeTo = (
                         os.path.join(currentUser.flowsDir, Flow.flowWorkDir(flowContextPath))
