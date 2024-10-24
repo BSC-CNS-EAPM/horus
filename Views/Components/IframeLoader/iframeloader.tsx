@@ -54,7 +54,7 @@ function IFrameLoader({ page, data }: { page: PluginPage; data: any }) {
       <iframe
         // id={`${url}-${pagename}`}
         id={GLOBAL_IDS.EXTENSIONS_IFRAME}
-        sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-presentation allow-downloads allow-modals allow-top-navigation"
+        sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-downloads allow-modals allow-top-navigation"
         // If the url does not start with the current domain, add It in order to prevent http / https errors
         // Prevent double backslashes //
         src={fixedURL()}
