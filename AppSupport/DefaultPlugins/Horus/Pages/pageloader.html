@@ -1,47 +1,51 @@
 <!DOCTYPE html>
 <html>
-
-<head>
-    <title>HTML Loader</title>
+  <head>
+    <title>Horus HTML Loader</title>
     <style>
-        .no-loaded-html {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            font-size: xx-large;
-            border: 5px solid #ccc;
-            border-radius: 1rem;
-            padding: 1rem;
-            box-shadow: 0 0 1rem #ccc;
-        }
+      html {
+        display: grid;
+        place-items: center;
+        height: 100%;
+      }
     </style>
-    </style>
+  </head>
 
-    <div id="dynamicContentContainer"></div>
+  <div id="htmlContainer"></div>
 
+  <body>
     <script>
+      function noHTML(error) {
+        document.getElementById("htmlContainer").innerHTML = `
+                <div class="no-loaded-html">Error: ${error}</div>
+            `;
+      }
+      function loadHTML(htmlToLoad) {
+        document.querySelector("html").innerHTML = htmlToLoad;
+        document.documentElement.innerHTML = htmlToLoad;
+        document.getElementsByTagName("html")[0].innerHTML = htmlToLoad;
+      }
 
-        let htmlToLoad = '<div class="no-loaded-html"><p>To know how to use this extension, <a href="https://horus.bsc.es/docs/" target="_blank">check the Horus documentation</a>.</p></div>';
+      // Check if the extensionData object is available
+      if (window.parent.extensionData) {
+        const htmlToLoad = window.parent.extensionData.html;
+        const type = window.parent.extensionData.type;
 
-        // Check if the extensionData object is available
-        if (window.parent.extensionData) {
-            htmlToLoad = window.parent.extensionData.html;
+        if (type === "html_file") {
+          parent.horus.getFile(htmlToLoad).then((blob) => {
+            const reader = new FileReader();
+            reader.onload = function (event) {
+              const htmlContent = event.target.result;
+              loadHTML(htmlContent);
+            };
+            reader.readAsText(blob);
+          });
         } else {
-            // Apply the body and html styles to the document to the unloaded HTML
-            document.documentElement.style.height = '100%';
-            document.body.style.height = '100%';
-            document.body.style.display = 'flex';
-            document.body.style.justifyContent = 'center';
-            document.body.style.alignItems = 'center';
+          loadHTML(htmlToLoad);
         }
-
-        // Get the container element where you want to render the HTML
-        var container = document.getElementById('dynamicContentContainer');
-
-        // Set the innerHTML property to the received HTML content
-        container.innerHTML = htmlToLoad;
+      } else {
+        noHTML("extensionData is not available");
+      }
     </script>
-    </body>
-
+  </body>
 </html>
