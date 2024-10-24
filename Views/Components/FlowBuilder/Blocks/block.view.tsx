@@ -39,6 +39,7 @@ import { GLOBAL_IDS } from "../../../Utils/globals";
 import PausedIcon from "../../Toolbar/Icons/Paused";
 import ErrorLogFile from "../../Toolbar/Icons/ErrorLogFile";
 import { socket } from "../../../Utils/socket";
+import ExternalIcon from "../../Toolbar/Icons/External";
 
 export function BlockView(props: BlockViewProps) {
   const { block, blockHooks, isFlowActive } = props;
@@ -392,9 +393,13 @@ function BlockToolbar({
           onMouseLeave={() =>
             blockState.blockViewHooks.setIsInfoHovering(false)
           }
-          className="cursor-help"
+          className={block.externalURL ? "cursor-pointer" : "cursor-help"}
+          onClick={() => {
+            // Open the external block URL if any
+            block.externalURL && window.open(block.externalURL, "_blank");
+          }}
         >
-          <InfoIcon />
+          {block.externalURL ? <ExternalIcon /> : <InfoIcon />}
         </div>
       )}
     </div>
