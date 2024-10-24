@@ -226,6 +226,7 @@ const MenuIcon = ({ active, svgPath }: IconProps) => {
 
 interface SearchProps {
   placeholder: string;
+  value?: string;
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
   showIcon?: boolean;
   onFocus?: () => void;
@@ -235,7 +236,14 @@ interface SearchProps {
 }
 
 function SearchComponent(props: SearchProps) {
-  const { placeholder, onChange, showIcon = true, className, onEnter } = props;
+  const {
+    placeholder,
+    onChange,
+    showIcon = true,
+    className,
+    onEnter,
+    value,
+  } = props;
 
   const handleKeyDown = (event: KeyboardEvent) => {
     if (event.key === "Enter") {
@@ -251,6 +259,7 @@ function SearchComponent(props: SearchProps) {
         placeholder={placeholder}
         className="w-full outline-none"
         onChange={onChange}
+        value={value}
         onFocus={props.onFocus}
         onBlur={props.onBlur}
         onKeyDown={handleKeyDown}

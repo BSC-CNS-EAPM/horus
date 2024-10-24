@@ -98,7 +98,7 @@ function HorusModal(props: HorusModalProps) {
   const sizeClass = props.size ? `modal-${props.size}` : "";
   return (
     <Modal
-      onBackdropClick={props.onBackdropClick ?? (() => {})}
+      // onBackdropClick={props.onBackdropClick ?? (() => {})}
       backdrop={props.backdrop ?? true}
       show={props.show}
       onHide={props.onHide ?? (() => {})}

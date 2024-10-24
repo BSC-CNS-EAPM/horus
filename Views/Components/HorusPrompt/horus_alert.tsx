@@ -89,7 +89,7 @@ const AlertComponent = ({
   }, [onSubmit, handleEvent]);
 
   return (
-    <HorusModal show={true} onBackdropClick={() => {}} onHide={() => {}}>
+    <HorusModal show={true} onHide={() => {}}>
       <div className="prompt-container">
         <p className="plugin-variable-name text-xl">{message}</p>
         <form
