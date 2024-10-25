@@ -31,9 +31,19 @@
 
 .card {
   word-break: break-word;
+  /* padding-block: 0.5rem; */
+}
+
+.card-body {
+  display: flex;
+  gap: 1rem;
+  flex-direction: row;
+  justify-content: space-between;
+  padding: 1rem;
 }
 
 .plugin-card {
+  border-radius: 5px;
   color: white;
   width: 100%;
   background: var(--gradient-blue);
@@ -42,6 +52,8 @@
 .plugin-card-error {
   color: black;
   width: 100%;
+  border: 1px solid red;
+  border-radius: 5px;
 }
 
 .plugin-manager-root {

@@ -5,7 +5,6 @@ import { createRoot } from "react-dom/client";
 import LoginRegister from "./login.tsx";
 
 // Import CSS
-import "bootstrap/dist/css/bootstrap.css";
 import "../CSS/main.css";
 import "../CSS/colors.css";
 import "../CSS/animations.css";

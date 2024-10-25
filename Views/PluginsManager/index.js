@@ -6,7 +6,6 @@ import { BrowserRouter } from "react-router-dom";
 import { PluginManager } from "./plugin_manager";
 
 // Import CSS
-import "bootstrap/dist/css/bootstrap.css";
 import "../CSS/main.css";
 import "../CSS/colors.css";
 import "../CSS/animations.css";

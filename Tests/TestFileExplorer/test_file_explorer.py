@@ -111,6 +111,7 @@ def test_compute_path_size(tmp_path):
 class MockHorusUser:
     def __init__(self, tmp_path) -> None:
         self.flowsDir = os.path.dirname(tmp_path)
+        self.appSupportDir = os.path.dirname(tmp_path)
 
 
 @pytest.fixture

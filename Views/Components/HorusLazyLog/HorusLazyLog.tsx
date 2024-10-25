@@ -165,8 +165,6 @@ export function HorusLazyLog(props: HorusLazyLogProps) {
   );
 
   if (fullScreen) {
-    // Find the react root element
-
     return createPortal(LoggingView, document.documentElement);
   }
 

@@ -10,7 +10,7 @@ import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { render } from "react-dom";
 import { horusPost, POSTUploadWithProgress } from "../../Utils/utils";
 import AppButton from "../appbutton";
-import { HorusModal } from "../reusable";
+import { BlurredModal } from "../reusable";
 
 // Somewhere in your `index.ts`:
 // @ts-ignore
@@ -566,10 +566,17 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
   }, [open]);
 
   return (
-    <HorusModal show={open} onHide={() => setOpen(false)} size="xl">
+    <BlurredModal
+      show={open}
+      onHide={() => setOpen(false)}
+      maxContentSize={{
+        width: "90%",
+      }}
+      overRoot
+    >
       <div className="w-full flex flex-col gap-2 p-4">
         <div className="flex flex-col gap-2 flex-wrap justify-start items-start">
-          <div className="text-3xl text-bold min-w-[180px]">
+          <div className="text-3xl font-bold min-w-[180px]">
             {fileProps
               ? openFolder
                 ? "Select a folder"
@@ -668,12 +675,7 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
             </div>
           )}
         </div>
-        <div
-          className="w-full"
-          style={{
-            height: "65vh",
-          }}
-        >
+        <div className="w-full" style={{ height: "65vh" }}>
           <FileBrowser
             defaultFileViewActionId={ChonkyActions.EnableListView.id}
             fileActions={chonkyActions}
@@ -704,6 +706,7 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
         </div>
         <div className="flex justify-end flex-row gap-2">
           <input
+            style={{ display: "none" }}
             hidden
             type="file"
             ref={filePicker}
@@ -731,7 +734,7 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
           )}
         </div>
       </div>
-    </HorusModal>
+    </BlurredModal>
   );
 }
 

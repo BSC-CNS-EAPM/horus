@@ -70,6 +70,7 @@ export enum GLOBAL_IDS {
   FLOW_BUILDER_DIV = "flow-builder-div",
   EXTENSIONS_IFRAME = "extensions-iframe",
   EXTENSIONS_FILEPICKER = "extensions-filepicker",
+  FLOW_BUILDER_CONTAINER = "flow-builder-container",
 }
 
 // Define an empty window.horus object

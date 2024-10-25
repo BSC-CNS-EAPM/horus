@@ -26,8 +26,8 @@ export function BlockLogsModalView(props: BlockLogsModalViewProps) {
         handleClose?.();
       }}
       maxContentSize={{
-        height: "h-[85%]",
-        width: "w-[60%]",
+        height: "90%",
+        width: "90%",
       }}
     >
       {block.type === BlockTypes.SLURM ? (
@@ -41,19 +41,11 @@ export function BlockLogsModalView(props: BlockLogsModalViewProps) {
 
 function RegularBlockLogs({ block }: { block: Block }) {
   return (
-    <div
-      style={{
-        height: "100%",
-        borderRadius: "10px",
-        overflow: "hidden",
-      }}
-    >
-      <HorusLazyLog
-        logText={block.blockLogs ?? "No logs"}
-        keepDisabled={!block.isRunning}
-        filename={`${block.id}-${block.placedID}.log`}
-      />
-    </div>
+    <HorusLazyLog
+      logText={block.blockLogs ?? "No logs"}
+      keepDisabled={!block.isRunning}
+      filename={`${block.id}-${block.placedID}.log`}
+    />
   );
 }
 

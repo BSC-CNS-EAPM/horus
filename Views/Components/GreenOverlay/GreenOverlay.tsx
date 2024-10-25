@@ -3,7 +3,7 @@ import { ReactNode } from "react";
 export function GreenOverlay({ children }: { children: ReactNode }) {
   return (
     <div
-      className="backdrop-blur-sm bg-green-200 bg-opacity-50 m-auto cursor-copy w-full h-full"
+      className="backdrop-blur bg-green-200 bg-opacity-50 m-auto cursor-copy w-full h-full"
       style={{
         placeContent: "center",
         display: "grid",
