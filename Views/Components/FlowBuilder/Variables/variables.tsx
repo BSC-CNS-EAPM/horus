@@ -951,16 +951,8 @@ function ListView(props: VariableViewProps) {
   const { currentValue, variable, onChange } = props;
 
   const addRow = () => {
-    let newValues = currentValue ? [...currentValue] : [];
-    if (variable.allowedValues) {
-      newValues.push({
-        value: "",
-        type: variable?.allowedValues?.[0] ?? PluginVariableTypes.STRING,
-      });
-    } else {
-      newValues = currentValue ? [...currentValue] : [];
-      newValues.push("");
-    }
+    const newValues = currentValue ? [...currentValue] : [];
+    newValues.push(null);
     onChange(newValues);
   };
 
@@ -973,23 +965,7 @@ function ListView(props: VariableViewProps) {
 
   const handleRowValueChange = (index: number, value: string) => {
     const newValues = [...currentValue];
-    if (props.variable.allowedValues) {
-      newValues[index] = {
-        value: value,
-        type: variable?.allowedValues?.[0] ?? PluginVariableTypes.STRING,
-      };
-    } else {
-      newValues[index] = value;
-    }
-    onChange(newValues);
-  };
-
-  const handleRowTypeChange = (index: number, type: string) => {
-    const newValues = [...currentValue];
-    newValues[index] = {
-      value: newValues[index].value,
-      type: type,
-    };
+    newValues[index] = value;
     onChange(newValues);
   };
 
@@ -1000,9 +976,11 @@ function ListView(props: VariableViewProps) {
     return null;
   }
 
+  const rowsTypes = variable.allowedValues?.[0] ?? PluginVariableTypes.STRING;
+
   return (
     <div className="flex flex-col w-full min-w-full flex-auto">
-      <div className="flex flex-row gap-2 justify-center">
+      <div className="flex flex-row gap-2 justify-center mb-2">
         <AppButton action={addRow}>Add row</AppButton>
         <AppButton
           action={() => {
@@ -1022,29 +1000,25 @@ function ListView(props: VariableViewProps) {
                 cursor: props.isFlowActive ? "wait" : "auto",
               }}
             >
-              <input
+              <VariableRenderer
+                variable={{
+                  ...variable,
+                  value: value,
+                  type: rowsTypes,
+                  allowedValues: [],
+                }}
+                onChange={(newValue: any) => {
+                  handleRowValueChange(index, newValue);
+                }}
+                isFlowActive={props.isFlowActive}
+              />
+              {/* <input
                 id={`${props.variable.id}-${index}`}
                 type="text"
                 className="plugin-variable-value"
                 value={props.variable.allowedValues ? value.value : value}
                 onChange={(e) => handleRowValueChange(index, e.target.value)}
-              />
-              {
-                // If the variable has a list of allowed values, set a dropdown
-                props.variable.allowedValues && (
-                  <select
-                    // @ts-ignore
-                    placeholder="Select an option"
-                    onChange={(e) => handleRowTypeChange(index, e.target.value)}
-                  >
-                    {props.variable.allowedValues.map((value, index) => (
-                      <option key={index} value={value}>
-                        {value}
-                      </option>
-                    ))}
-                  </select>
-                )
-              }
+              /> */}
               <button
                 onClick={() => removeRow(index)}
                 style={{

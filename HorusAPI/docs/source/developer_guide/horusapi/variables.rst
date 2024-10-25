@@ -51,21 +51,19 @@ the allowed values in the :bdg-secondary-line:`allowedValues` parameter. For exa
     )
 
 For the :bdg-secondary-line:`LIST` type, you can specify the type of the elements of the list
-using the :bdg-secondary-line:`allowedValues` parameter. For example:
+using the :bdg-secondary-line:`allowedValues` parameter. Only the first allowedValue will be used. If none provided, the :bdg-secondary-line:`LIST` will fallback to :bdg-secondary-line:`VariableTypes.STRING`.
 
 .. code-block:: python
 
     inputlistWithAllowedValues = PluginVariable(
         name="Residue indices",
         id="values",
-        description="A list with values to be used as an input.",
+        description="A list with numbers to be used as an input.",
         type=VariableTypes.LIST,
-        allowedValues=["ResidueID", "Ligand selection", "Atom number"],
+        allowedValues=[VariableTypes.NUMBER],
     )
 
-This will render a two-column table in the :bdg-secondary-line:`Flow builder` with the first column
-containing the value and the second column containing a dropdown menu with the allowed values as the :bdg-secondary-line:`type`
-which corresponds to the :bdg-secondary-line:`allowedValues` parameter.
+This will render a table in the :bdg-secondary-line:`Flow builder` with a dynamic number of elements, with each one being of the :bdg-secondary-line:`allowedValues` type.
 
 .. image:: images/list_variable.png
     :width: 500px
