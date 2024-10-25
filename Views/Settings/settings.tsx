@@ -223,6 +223,7 @@ function SettingsView({ forAdmin }: { forAdmin?: boolean }) {
 
     for (const [category, settings] of Object.entries(groupedSettings)) {
       const variableViews = settings.map((setting) => {
+        console.log("key: " + setting.id);
         return (
           <PluginVariableView
             key={setting.id}
@@ -232,12 +233,14 @@ function SettingsView({ forAdmin }: { forAdmin?: boolean }) {
         );
       });
       groupedViews[category] = [
-        <div className="flex flex-col gap-2 flex-wrap">{variableViews}</div>,
+        <div className="flex flex-col gap-2 flex-wrap" key={category}>
+          {variableViews}
+        </div>,
       ];
     }
 
     // Add the "About" page as a view
-    groupedViews["About Horus"] = [<About />];
+    groupedViews["About Horus"] = [<About key={"about-horus"} />];
 
     return groupedViews;
   };

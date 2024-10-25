@@ -132,7 +132,7 @@ export function BlurredModal(props: BlurredModalProps) {
   );
 
   if (props.overRoot) {
-    return createPortal(modalView, document.documentElement);
+    return createPortal(modalView, document.body.firstElementChild!);
   }
 
   return modalView;
