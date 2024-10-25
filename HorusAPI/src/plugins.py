@@ -590,6 +590,38 @@ class PluginVariable:
             else:
                 defaultValue = allowedValues[0]
 
+        # For .LIST variables, do not allow allowedvalues other than the allowed values
+        if self.type == VariableTypes.LIST and allowedValues is not None:
+
+            if len(allowedValues) > 1:
+                logging.getLogger("Horus").warning(
+                    f"Only the first allowed value '{allowedValues[0]}' will be used "
+                    f"on variable {id}. Use the VariableList class if you intend on "
+                    "having multiple values per row on a list."
+                )
+
+            if not all(x in VariableTypes.getTypes() for x in allowedValues):
+                raise ValueError(
+                    f"Variable '{id}' has invalid allowedValues. "
+                    "Allowed values for LIST variables can only include "
+                    "values from the VariableTypes enum. "
+                )
+
+            notAllowed = [
+                VariableTypes._GROUP,
+                VariableTypes.LIST,
+                VariableTypes._LIST,
+            ]
+
+            if any([x in allowedValues for x in notAllowed]):
+                cannotInclude = [f"VariableTypes.{x.upper()}" for x in notAllowed]
+                raise ValueError(
+                    f"Variable '{id}' has invalid allowedValues. "
+                    "Allowed values for LIST variables can not include "
+                    f"{', '.join(cannotInclude)}. "
+                    "Use the VariableList class instead."
+                )
+
         self.defaultValue = defaultValue
         self.value = defaultValue
         self.id = id
