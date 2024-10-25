@@ -11,9 +11,9 @@ import hashlib
 import logging
 import typing
 import traceback
-import tarfile
 import datetime
 import io
+import mimetypes
 
 # Decorators
 from functools import wraps
@@ -38,7 +38,7 @@ import threading  # For background socketio thread
 # Flask
 import flask
 import jinja2
-from flask import Flask, request, Response
+from flask import Flask, after_this_request, request, Response
 from flask_socketio import SocketIO, join_room, leave_room
 from flask_cors import CORS
 import flask_login
@@ -1756,32 +1756,20 @@ class HorusServer:
                     ).getAbsolutePath()
 
                 if os.path.isdir(path):
+
                     # Zip the folder
-                    import tempfile
-                    import zipfile
+                    shutil.make_archive(str(path), "zip", path)
+                    path = str(path) + ".zip"
 
-                    tempDir = tempfile.mkdtemp()
-                    tempZip = os.path.join(tempDir, "download.zip")
-
-                    with zipfile.ZipFile(tempZip, "w") as zipf:
-                        for root, _, files in os.walk(path):
-                            for file in files:
-                                zipf.write(
-                                    os.path.join(root, file),
-                                    os.path.relpath(os.path.join(root, file), path),
-                                )
-
-                    path = tempZip
-
-                downloadName = os.path.basename(path)
-                import mimetypes
-
-                mimetype = mimetypes.guess_type(path)[0]
+                    @after_this_request
+                    def remove_file(response):
+                        os.remove(path)
+                        return response
 
                 return flask.send_file(
                     path,
-                    download_name=downloadName,
-                    mimetype=mimetype,
+                    download_name=os.path.basename(path),
+                    mimetype=mimetypes.guess_type(path)[0],
                     as_attachment=True,
                 )
             except Exception as exc:
@@ -2997,10 +2985,10 @@ class HorusServer:
                     # Get the tar file from the request
                     tarFile = request.args.get("path", None)
 
-                    tarFile = str(UserFileExplorer(tarFile, currentUser).getAbsolutePath())
-
                     if tarFile is None:
                         return flask.jsonify({"ok": False, "msg": "No data provided"})
+
+                    tarFile = str(UserFileExplorer(tarFile, currentUser).getAbsolutePath())
 
                     # Delete the tarfile after the download
                     @flask.after_this_request
@@ -3042,27 +3030,25 @@ class HorusServer:
                 realPath = str(UserFileExplorer(filePath, currentUser).getAbsolutePath())
 
                 # If its a directory, compress it
-                tarPath = None
+                zipPath = None
                 if os.path.isdir(realPath):
-                    tarPath = realPath + ".tar.gz"
-                    with tarfile.open(tarPath, "w") as tar:
-                        tar.add(realPath, arcname=os.path.basename(realPath))
+                    shutil.make_archive(realPath, "zip", realPath)
 
-                    realPath = tarPath
+                    realPath = realPath + ".zip"
 
                 # Delete the tarfile after the download
                 @flask.after_this_request
                 def removeFile(response):
 
-                    if tarPath is None:
+                    if zipPath is None:
                         return response
 
                     try:
-                        os.remove(tarPath)
+                        os.remove(zipPath)
                     except Exception as exc:
                         logging.getLogger("Horus").error(
                             "Error removing file {%s}: {%s}",
-                            tarPath,
+                            zipPath,
                             str(exc),
                         )
 
