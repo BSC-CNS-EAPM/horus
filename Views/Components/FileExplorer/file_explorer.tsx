@@ -317,13 +317,7 @@ function useServerExplorer(
   }, [currentPath, fetchFolders, resetActionFiles, flowContext?.path]);
 
   const downloadFiles = useCallback(
-    async (
-      filePaths: [
-        {
-          path: string;
-        }
-      ]
-    ) => {
+    async (filePaths: FileData[]) => {
       const header = {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
@@ -334,13 +328,13 @@ function useServerExplorer(
 
         setActionFilesActive({
           status: true,
-          progress: (i / filePaths.length) * 100,
-          file: filePath.path,
+          progress: ((2 * i + 1) / (filePaths.length * 2)) * 100,
+          file: filePath.name,
           text: "Downloading files...",
         });
 
         const body = JSON.stringify({
-          path: filePath.path,
+          path: filePath["path"],
           flowContextPath: flowContext?.path,
         });
 
@@ -362,11 +356,23 @@ function useServerExplorer(
         // If the response is not a JSON, continue
         const data = await response.blob();
         // Get the name of the file (last part of the path)
-        const fileName = filePath.path.split("/").pop();
+        let fileName = filePath.name;
+
+        // Folders are downloaded as zips
+        if (filePath.isDir) {
+          fileName = fileName + ".zip";
+        }
 
         const file = new File([data], fileName ?? "downloaded_file", {
           type: "application/octet-stream",
         });
+
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        setActionFilesActive((currentText) => ({
+          ...currentText,
+          progress: ((2 * i + 2) / (filePaths.length * 2)) * 100,
+        }));
 
         window.horus.saveFile(file);
       }

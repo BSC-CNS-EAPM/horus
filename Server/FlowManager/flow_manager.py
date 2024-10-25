@@ -4,6 +4,7 @@ Flow manager
 
 # Basic imports
 import os
+import shutil
 import sys
 import json
 import typing
@@ -2132,12 +2133,11 @@ class FlowManager:
         flowDir = os.path.dirname(flow.path)
 
         # Create the tar file
-        tarPath = os.path.join(downloadsFolder, f"{flowDir}.tar")
+        zipPath = os.path.join(downloadsFolder, flowDir)
 
-        with tarfile.open(tarPath, "w") as tar:
-            tar.add(flowDir, arcname=os.path.basename(flowDir))
+        shutil.make_archive(zipPath, "zip", flowDir)
 
-        return tarPath
+        return zipPath + ".zip"
 
     def saveAsTemplate(self, flow: typing.Dict[str, typing.Any]):
         """
