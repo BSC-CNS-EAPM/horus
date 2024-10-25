@@ -74,6 +74,7 @@ function FlowBuilderView() {
         <div
           className="h-full"
           onMouseMove={flowBuilderState.handleMouse.handleMouseMove}
+          id={GLOBAL_IDS.FLOW_BUILDER_CONTAINER}
         >
           <DndContext
             onDragEnd={flowBuilderState.dnd.handleDragEnd}
@@ -83,7 +84,7 @@ function FlowBuilderView() {
             measuring={flowBuilderState.dnd.dndTweaks.measuring}
           >
             <div
-              className="m-auto flex flex-row h-100 relative"
+              className="m-auto flex flex-row h-full relative"
               id={GLOBAL_IDS.FLOW_BUILDER_DIV}
               style={style}
               onDragOver={flowBuilderState.handleMouse.handleDragOver}

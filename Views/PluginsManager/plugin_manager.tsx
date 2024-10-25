@@ -443,13 +443,13 @@ function PluginCard(props: PluginCardProps) {
             />
           )}
         </div>
-        <div className="card-body d-flex justify-content-between align-items-start">
+        <div className="card-body flex justify-content-between align-items-start">
           <div>
             <div className="flex flex-row items-baseline gap-2">
               <div>
                 <span className="text-xl font-semibold">{plugin.name}</span>
                 {!error && (
-                  <span className="card-subtitle"> - {plugin.description}</span>
+                  <span> - {plugin.description}</span>
                 )}
               </div>
             </div>
@@ -471,7 +471,7 @@ function PluginCard(props: PluginCardProps) {
             )}
           </div>
           <div>
-            <div className="d-flex justify-content-between gap-2">
+            <div className="flex justify-content-between gap-2">
               {!error && plugin.config.length > 0 && (
                 <button
                   onClick={() => {

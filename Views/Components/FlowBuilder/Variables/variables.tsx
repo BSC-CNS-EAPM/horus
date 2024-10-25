@@ -36,7 +36,7 @@ import {
 } from "./molstar_variables";
 
 // Code editor variables
-import { ObjectVariableView, PythonVariableView } from "./editor_variables";
+import { CodeVariableView, ObjectVariableView } from "./editor_variables";
 
 // Smiles
 import { SmilesVariableView } from "./smiles_variables";
@@ -557,7 +557,7 @@ function VariableRenderer(props: {
       );
     case PluginVariableTypes.CODE:
       return (
-        <PythonVariableView
+        <CodeVariableView
           currentValue={currentValue}
           onChange={handleVariableChangeInternal}
           variable={props.variable}

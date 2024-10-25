@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 // Horus components
 import RotatingLines from "../../RotatingLines/rotatinglines";
 import ServerIcon from "../../Toolbar/Icons/Server";
-import { HorusPopover, MovingChevron } from "../../reusable";
+import { HorusPopover } from "../../reusable";
 
 // Utilities
 import { modifierKey } from "../../Toolbar/toolbar";
@@ -624,7 +624,7 @@ function BlockVariablesModalView({
           blockState.blockViewHooks.toggleVariablesModal();
         }}
       />,
-      document.getElementById("flow-builder-div")!
+      document.getElementById(GLOBAL_IDS.FLOW_BUILDER_DIV)!
     );
   }
 

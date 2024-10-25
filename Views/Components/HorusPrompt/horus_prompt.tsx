@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import "./horus_prompt.css";
 import { render, unmountComponentAtNode } from "react-dom";
 import AppButton from "../appbutton";
-import { HorusModal } from "../reusable";
+import { BlurredModal } from "../reusable";
 
 export const usePrompt = () => {
   const [showPrompt, setShowPrompt] = useState(false);
@@ -27,7 +27,7 @@ export const usePrompt = () => {
     if (!document.getElementById("prompt-root")) {
       const promptRoot = document.createElement("div");
       promptRoot.id = "prompt-root";
-      document.body.insertBefore(promptRoot, document.body.firstChild);
+      document.documentElement.appendChild(promptRoot);
     }
   }, []);
 
@@ -98,7 +98,7 @@ const PromptComponent = ({
   }, [inputValue, onSubmit, handleEvent]);
 
   return (
-    <HorusModal show={true} onHide={() => onSubmit(null)}>
+    <BlurredModal show={true} onHide={() => onSubmit(null)}>
       <div className="prompt-container">
         <p className="plugin-variable-name text-xl">{message}</p>
         <form ref={formRef} onSubmit={handleSubmit}>
@@ -115,6 +115,6 @@ const PromptComponent = ({
           </div>
         </form>
       </div>
-    </HorusModal>
+    </BlurredModal>
   );
 };

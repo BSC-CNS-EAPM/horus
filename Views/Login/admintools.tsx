@@ -20,7 +20,7 @@ import { fetchDesktop, horusDelete, horusGet, horusPost } from "../Utils/utils";
 import HorusContainer from "../Components/HorusContainer/horus_container";
 import RotatingLines from "../Components/RotatingLines/rotatinglines";
 import AppButton from "../Components/appbutton";
-import { HorusModal } from "../Components/reusable";
+import { BlurredModal } from "../Components/reusable";
 import { SettingsView, fetchSettings } from "../Settings/settings";
 import { PluginManager } from "../PluginsManager/plugin_manager";
 import { SearchComponent } from "../Components/Toolbar/toolbar";
@@ -77,25 +77,18 @@ type FlowsDatabase = {
 
 type AdminContextType = {
   setCurrentView: (v: ReactNode) => void;
-  showModalWithView: (v: ReactNode) => void;
+  // showModalWithView: (v: ReactNode) => void;
 };
 
 const AdminContext = createContext<AdminContextType | null>(null);
 
 export function AdminTools() {
-  const [showModal, setShowModal] = useState(false);
-  const [modalContents, setModalContents] = useState<ReactNode>(null);
   const [currentView, _setCurrentView] = useState<ReactNode>(
     <UsersTableView />
   );
 
   const setCurrentView = (v: ReactNode) => {
     _setCurrentView(v);
-  };
-
-  const showModalWithView = (v: ReactNode) => {
-    setModalContents(v);
-    setShowModal(true);
   };
 
   useEffect(() => {
@@ -105,22 +98,12 @@ export function AdminTools() {
   }, []);
 
   return (
-    <AdminContext.Provider value={{ setCurrentView, showModalWithView }}>
+    <AdminContext.Provider value={{ setCurrentView }}>
       <TopBar />
       <div className="flex flex-row gap-0 w-available admin-current-view">
         <Sidebar />
         <div className="overflow-y-auto w-full">{currentView}</div>
       </div>
-      <HorusModal
-        size="xl"
-        noCentered
-        onHide={() => {
-          setShowModal(false);
-        }}
-        show={showModal}
-      >
-        {modalContents}
-      </HorusModal>
     </AdminContext.Provider>
   );
 }
@@ -677,8 +660,11 @@ function ModifyGroupBlocks({
       >
         {currentBlocks.length} blocks
       </div>
-      <HorusModal
-        noCentered
+      <BlurredModal
+        maxContentSize={{
+          width: "90vw",
+        }}
+        overRoot
         show={showModal}
         onHide={() => {
           setShowModal(false);
@@ -689,7 +675,7 @@ function ModifyGroupBlocks({
           blocks={blocks}
           getDatabase={getDatabase}
         />
-      </HorusModal>
+      </BlurredModal>
     </>
   );
 }
@@ -704,15 +690,19 @@ export function BlockViewModify(props: {
   const [editedBlocks, setEditedBlocks] = useState<Block[]>([]);
   const [filteredBlocks, setFilteredBlocks] = useState<Block[]>([]);
   const [currentFilter, setCurrentFilter] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const [allBlocks, setAllBlocks] = useState<Block[]>([]);
 
   const getBlocks = async () => {
-    const response = await horusGet("/api/plugins/listblocks");
+    setLoading(true);
 
-    const data = await response.json();
-
-    setAllBlocks(data.blocks);
+    horusGet("/api/plugins/listblocks")
+      .then((res) => res.json())
+      .then((data) => setAllBlocks(data.blocks))
+      .finally(() => {
+        setLoading(false);
+      });
   };
 
   useEffect(() => {
@@ -760,7 +750,13 @@ export function BlockViewModify(props: {
   }, [blocks, allBlocks]);
 
   return (
-    <div className="plugin-variable-value p-4">
+    <div
+      className="plugin-variable-value p-4"
+      style={{
+        height: "70vh",
+        overflow: "auto",
+      }}
+    >
       <div className="flex flex-row gap-2 w-full">
         <SearchComponent
           className="w-full"
@@ -797,7 +793,9 @@ export function BlockViewModify(props: {
         <AppButton action={modifyGroup}>Apply</AppButton>
       </div>
       {filteredBlocks.length === 0 ? (
-        <div>No blocks</div>
+        <div className="grid place-items-center mt-8">
+          {loading ? "Loading..." : "No blocks"}
+        </div>
       ) : (
         <div className="w-full overflow-auto min-h-12 mt-2">
           {filteredBlocks.map((filteredB) => (
@@ -862,11 +860,14 @@ function ModifyGroupPages({
       >
         {currentPages.length} extensions
       </div>
-      <HorusModal
-        noCentered
+      <BlurredModal
+        overRoot
         show={showModal}
         onHide={() => {
           setShowModal(false);
+        }}
+        maxContentSize={{
+          width: "90vw",
         }}
       >
         <ExtensionViewModify
@@ -874,7 +875,7 @@ function ModifyGroupPages({
           pages={pages}
           getDatabase={getDatabase}
         />
-      </HorusModal>
+      </BlurredModal>
     </>
   );
 }
@@ -886,13 +887,16 @@ export function ExtensionViewModify(props: {
 }) {
   const { group, pages, getDatabase } = props;
   const [allPages, setAllPages] = useState<PluginPage[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const getPages = async () => {
-    const response = await horusGet("/api/plugins/listpages");
-
-    const data = await response.json();
-
-    setAllPages(data.pages);
+    setLoading(true);
+    horusGet("/api/plugins/listpages")
+      .then((res) => res.json())
+      .then((data) => setAllPages(data.pages))
+      .finally(() => {
+        setLoading(false);
+      });
   };
 
   useEffect(() => {
@@ -943,7 +947,13 @@ export function ExtensionViewModify(props: {
   }, [pages, allPages]);
 
   return (
-    <div className="plugin-variable-value p-4">
+    <div
+      className="plugin-variable-value p-4"
+      style={{
+        height: "70vh",
+        overflow: "auto",
+      }}
+    >
       <div className="flex flex-row gap-2 w-full">
         <SearchComponent
           className="w-full"
@@ -980,7 +990,9 @@ export function ExtensionViewModify(props: {
         <AppButton action={modifyGroup}>Apply</AppButton>
       </div>
       {filteredPages.length === 0 ? (
-        <div>No blocks</div>
+        <div className="grid place-items-center mt-8">
+          {loading ? "Loading..." : "No extensions"}
+        </div>
       ) : (
         <div className="w-full overflow-auto min-h-12 mt-2">
           {filteredPages.map((filteredP) => (

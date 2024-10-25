@@ -162,7 +162,7 @@ export function ToolbarMenu(props: ToolBarMenuProps) {
             leaveTo="transform opacity-0 scale-95"
           >
             <Menu.Items
-              className="absolute p-md-2 mt-3 w-56 origin-top-left rounded-xl bg-white toolbar-menu outline-none overflow-y-auto"
+              className="absolute p-md-2 p-2 mt-3 w-56 origin-top-left rounded-xl bg-white toolbar-menu outline-none overflow-y-auto"
               style={{
                 maxHeight: "calc(100vh - 4rem)",
                 width: "auto",
