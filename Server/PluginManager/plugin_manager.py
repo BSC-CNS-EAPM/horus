@@ -1281,6 +1281,9 @@ class PluginManager(metaclass=HorusSingleton):
         Method specific for running the block through the Flow class.
         """
 
+        # Clean the block logs
+        block.blockLogs = ""
+
         logging.getLogger("Horus").info("Executing block %s", block.id)
 
         # Find the plugin
