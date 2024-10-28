@@ -77,6 +77,7 @@ export function ConnectedArrows(props: ConnectedArrows) {
 
   return (
     <div
+      key={`arrow-container-${start + end}`}
       style={
         isPlaced
           ? {
