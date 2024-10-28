@@ -56,6 +56,9 @@ export function SmilesGrid() {
     );
 
     return () => {
+      // Clean the smiles when the component unmounts
+      window.smiles?.reset();
+
       window.removeEventListener(
         SmilesEvents.STATE,
         updateAvailableSmilesEventListener

@@ -2151,6 +2151,11 @@ export function useFlowBuilder() {
   useEffect(() => {
     fetchRemotes();
 
+    // When the component unmounts, set the flow as "saved" to prevent bugs when opening new ones
+    return () => {
+      setSaved(true);
+    };
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
