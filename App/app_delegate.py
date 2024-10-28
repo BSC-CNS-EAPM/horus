@@ -38,7 +38,7 @@ else:
 
 # Server
 from Server import HorusServer
-from HorusAPI import HorusSingleton
+from HorusAPI import HorusSingleton, __version__
 
 
 # Add to the pythonpath the path of the project
@@ -70,12 +70,13 @@ class HorusLogger:
     The path to the current (and latest) log file
     """
 
-    def __init__(self, appSupportDir: str, debug: bool = False) -> None:
+    def __init__(self, appSupportDir: str, debug: bool = False, verbose: bool = False) -> None:
         # Define the logs folder
         self.logDir = os.path.join(appSupportDir, "logs")
 
-        # Define debug
+        # Define debug & verbose
         self.debug = debug
+        self.verbose = verbose
 
         # Create the logs folder if it doesn't exist
         if not os.path.exists(self.logDir):
@@ -277,9 +278,9 @@ class HorusLogger:
         sys.stderr = FakeWriter(logging.ERROR, self.capturer, oldStderr, debug=self.debug)
 
         # If we are on debug, print all the loggers to the old stdout and stderr
-        if self.debug:
+        if self.debug or self.verbose:
             rootDebugHandler = logging.StreamHandler(oldStdout)
-            rootDebugHandler.setLevel(logging.NOTSET)
+            rootDebugHandler.setLevel(logging.NOTSET if self.debug else logging.INFO)
             rootDebugHandler.setFormatter(colorFormatter)
             self.root.addHandler(rootDebugHandler)
         else:
@@ -384,6 +385,14 @@ class AppDelegate(metaclass=HorusSingleton):
 
         return openedWindows
 
+    @property
+    def isCompiled(self) -> bool:
+        """
+        Returns whether the app is compiled
+        """
+
+        return getattr(sys, "frozen", False)
+
     APP_INFO: typing.Dict[str, typing.Any] = {}
     """
     Stores relevant information about the app, such as
@@ -411,6 +420,12 @@ class AppDelegate(metaclass=HorusSingleton):
     _triedToStartServer: int = 0
     """
     The number of trials to start the server
+    """
+
+    verbose: bool = False
+    """
+    Whether the app is in verbose mode. This will print all logs
+    into the console apart from the logfile.
     """
 
     @property
@@ -448,6 +463,7 @@ class AppDelegate(metaclass=HorusSingleton):
         debugURL: typing.Optional[str] = None,
         host: typing.Optional[str] = None,
         port: typing.Optional[int] = None,
+        verbose: bool = False,
     ):
         """
         Initialize the AppDelegate.
@@ -458,6 +474,7 @@ class AppDelegate(metaclass=HorusSingleton):
         self.debugURL = debugURL
         self.host = host
         self.port = port
+        self.verbose = verbose
 
         self.desktop = self.mode == "app" or self.mode == "browser"
         """
@@ -524,7 +541,7 @@ class AppDelegate(metaclass=HorusSingleton):
         Starts a logger in production mode
         """
 
-        self.logger = HorusLogger(self.appSupportDir, debug=self.debug)
+        self.logger = HorusLogger(self.appSupportDir, debug=self.debug, verbose=self.verbose)
 
         # Log the date and app info
         self.logger.horus.info("Starting Horus %s", self.APP_INFO["APP_VERSION"])
@@ -1024,7 +1041,7 @@ def parseArgs() -> tuple[dict, dict, dict]:
     Parse the arguments to the AppDelegate
     """
 
-    debugReachable = not hasattr(sys, "_MEIPASS")
+    debugReachable = not hasattr(sys, "frozen")
 
     class HorusParser(argparse.ArgumentParser):
         """
@@ -1038,16 +1055,18 @@ def parseArgs() -> tuple[dict, dict, dict]:
 
     parser = HorusParser(description="Launch options for Horus", add_help=False)
     parser.add_argument("-H", "--help", action="help", help="Show this help message and exit.")
+    parser.add_argument("-v", "--version", action="store_true", help="Show the version and exit.")
+    parser.add_argument(
+        "-V",
+        "--verbose",
+        action="store_true",
+        help="Verbose mode. Prints logs into the terminal.",
+    )
     parser.add_argument(
         "--debug", "-d", action="store_true", help="Force the server to run in debug mode."
     )
     parser.add_argument(
         "--password", help="Password for entering debug mode in the compiled app."
-    )
-    parser.add_argument(
-        "--force-production",
-        action="store_true",
-        help="Force production mode. For development only.",
     )
     parser.add_argument(
         "--url",
@@ -1099,13 +1118,18 @@ def parseArgs() -> tuple[dict, dict, dict]:
     # Parse known arguments
     args, _ = parser.parse_known_args()
 
+    # If the version flag was provided, print the version and exit
+    if args.version:
+        print(__version__)
+        sys.exit(0)
+
     # If the password was provided along with the debug flag,
     # enter debug mode in production
     debugPassword = "horus_debug"
     if args.password and not debugReachable:
         # Check if the password is correct
         if args.password == debugPassword:
-            print("Entering debug mode in production")
+            print("Entering debug mode...")
             debugReachable = True
 
     # Check for the --debug flag (-d) (Only development and in production with password)
@@ -1114,10 +1138,6 @@ def parseArgs() -> tuple[dict, dict, dict]:
     debugURL = None
     if args.debug and debugReachable:
         debug = True
-
-        # Check for the --force-production flag
-        if args.force_production in sys.argv:
-            debug = False
 
         # Check for the --url (-u) flag
         if args.url:
@@ -1194,6 +1214,7 @@ def parseArgs() -> tuple[dict, dict, dict]:
         "debugURL": debugURL,
         "host": host,
         "port": port,
+        "verbose": True if args.verbose else False,
     }
 
     pluginArgs = {"installPlugin": args.install_plugin, "asDefault": args.as_default}

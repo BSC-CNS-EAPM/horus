@@ -1563,15 +1563,19 @@ class FlowManager:
         # Read the recent flows file
         read = False
         recentFlows = {}
+        tries = 0
         while not read:
             with open(self.recentFlowsPath, "r", encoding="utf-8") as file:
                 try:
                     recentFlows = json.load(file)
                     read = True
                 except json.JSONDecodeError as exc:
-                    logging.getLogger("Horus").error(
-                        "Error reading recent flows file: %s", str(exc)
-                    )
+                    tries += 1
+                    if tries > 5:    
+                        read = True
+                        logging.getLogger("Horus").error(
+                            "Error reading recent flows file: %s", str(exc)
+                        )
 
         updatedRecentFlows = {}
         for flow in recentFlows:
