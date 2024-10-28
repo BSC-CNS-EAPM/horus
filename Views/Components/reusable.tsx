@@ -1,8 +1,8 @@
 import { Component, useState } from "react";
-import Modal from "react-bootstrap/Modal";
 import { Popover } from "@headlessui/react";
 import Chevron from "./Toolbar/Icons/Chevron";
 import { horusPost } from "../Utils/utils";
+import { createPortal } from "react-dom";
 
 type HorusPopoverProps = {
   trigger: React.ReactNode;
@@ -78,57 +78,6 @@ function debounce(func: any, timeout = 300) {
   };
 }
 
-interface HorusModalProps {
-  id?: string;
-  show: boolean;
-  onHide?: () => void;
-  header?: React.ReactNode;
-  body?: React.ReactNode;
-  footer?: React.ReactNode;
-  fullscreen?: boolean;
-  size?: "sm" | "lg" | "xl";
-  contentClassName?: string;
-  children?: React.ReactNode;
-  noCentered?: boolean;
-  backdrop?: "static" | true;
-  onBackdropClick?: () => void;
-}
-
-function HorusModal(props: HorusModalProps) {
-  const sizeClass = props.size ? `modal-${props.size}` : "";
-  return (
-    <Modal
-      onBackdropClick={props.onBackdropClick ?? (() => {})}
-      backdrop={props.backdrop ?? true}
-      show={props.show}
-      onHide={props.onHide ?? (() => {})}
-      dialogClassName={sizeClass}
-      contentClassName={props.contentClassName ?? ""}
-      fullscreen={props.fullscreen ? true : "false"}
-      size={props.size ?? "lg"}
-      centered={props.noCentered ? false : true}
-    >
-      <div
-        id={props.id}
-        style={{
-          overflow: "hidden",
-        }}
-      >
-        {props.header && (
-          <Modal.Header>
-            <Modal.Title>{props.header}</Modal.Title>
-          </Modal.Header>
-        )}
-        <Modal.Body>
-          {props.body}
-          {props.children}
-        </Modal.Body>
-        {props.footer && <Modal.Footer>{props.footer}</Modal.Footer>}
-      </div>
-    </Modal>
-  );
-}
-
 type BlurredModalProps = {
   show: boolean;
   onHide: () => void;
@@ -140,40 +89,53 @@ type BlurredModalProps = {
     width?: string;
   };
   noMargin?: boolean;
+  overRoot?: boolean;
+  noCentered?: boolean;
 };
 
 export function BlurredModal(props: BlurredModalProps) {
   if (!props.show) return null;
 
-  return (
+  const modalView = (
     <div
       style={{
         zIndex: props.zIndex ?? 1000,
       }}
-      className="blurred-modal-container flex justify-center items-center"
+      className={`blurred-modal-container flex justify-center ${
+        !props.noCentered && "items-center"
+      }`}
     >
       {/* This is the content */}
       <div
         style={{
-          margin: props.noMargin ? 0 : undefined,
+          margin: props.noCentered ? "2rem" : props.noMargin ? 0 : undefined,
           padding: props.noMargin ? 0 : undefined,
           borderRadius: props.noMargin ? "15px" : undefined,
-          overflow: props.noMargin ? "hidden" : undefined,
+          overflow: "auto",
+          // overflow: props.noMargin ? "hidden" : undefined,
+          height: props.maxContentSize?.height,
+          width: props.maxContentSize?.width,
         }}
         className={`z-30 absolute blurred-modal-content zoom-in-animation ${
-          props.maxContentSize?.width ?? "max-w-[60%]"
-        }  ${props.maxContentSize?.height ?? "max-h-[85%]"}`}
+          !props.maxContentSize?.width && "max-w-[60%]"
+        }  ${!props.maxContentSize?.height && "max-h-[85%]"}`}
       >
         {props.children}
       </div>
       {/* This will make the background */}
       <div
         id="horus-modal-backdrop"
-        className="backdrop-blur-sm h-full w-full absolute z-20 blur-in-animation"
+        className="backdrop-blur h-full w-full absolute z-20 blur-in-animation"
         onClick={props.onHide}
       ></div>
     </div>
   );
+
+  if (props.overRoot) {
+    return createPortal(modalView, document.body.firstElementChild!);
+  }
+
+  return modalView;
 }
 
 type ErrorBoundaryProps = {
@@ -223,7 +185,7 @@ export function MovingChevron({ down }: { down: boolean }) {
   );
 }
 
-export { HorusModal, HorusModalProps, debounce, HorusPopover };
+export { debounce, HorusPopover };
 
 export function saveFile(file: File) {
   // If we ar eon desktop mode, use the /savecontents endpoint,
@@ -276,4 +238,29 @@ export function saveFile(file: File) {
     // Remove link from body
     document.body.removeChild(link);
   }
+}
+
+// Will download the file (if its available for the user)
+// and return the Blob
+export function getFile(path: string) {
+  const url = new URL(window.location.origin + "/api/filepicker/download");
+
+  url.searchParams.append("path", path);
+
+  return new Promise<Blob>((resolve, reject) => {
+    fetch(url.toString())
+      .then((res) => {
+        // If the response is json, the fail
+        if (res.headers.get("content-type")?.includes("application/json")) {
+          reject("Could not open file");
+        }
+        return res.blob();
+      })
+      .then((blob) => {
+        resolve(blob);
+      })
+      .catch((err) => {
+        reject(err);
+      });
+  });
 }

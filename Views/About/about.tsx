@@ -63,22 +63,22 @@ export default function About() {
     <div className="flex flex-row flex-wrap justify-around items-center overflow-hidden h-full w-full ">
       <div className="flex flex-col gap-2">
         {appInfo.APP_VERSION && (
-          <div className="p-2 horus-container animated-gradient text-black">
+          <div className="p-2 horus-container animated-gradient !text-black">
             Version: {appInfo.APP_VERSION}
           </div>
         )}
         {appInfo.platform && (
-          <div className="p-2 horus-container animated-gradient text-black">
+          <div className="p-2 horus-container animated-gradient !text-black">
             Platform: {appInfo.platform}
           </div>
         )}
         {appInfo.mode && (
-          <div className="p-2 horus-container animated-gradient text-black">
+          <div className="p-2 horus-container animated-gradient !text-black">
             Mode: {appInfo.mode?.toUpperCase()}
           </div>
         )}
         {appInfo.debug && (
-          <div className="p-2 horus-container animated-gradient text-orange-400 font-semibold">
+          <div className="p-2 horus-container animated-gradient !text-orange-400 font-semibold">
             Debug mode enabled - Python version: {appInfo.PYTHON_VERSION}
           </div>
         )}

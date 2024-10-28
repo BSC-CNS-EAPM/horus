@@ -12,7 +12,7 @@ import { openFlow } from "../FlowStatus/recent_flows";
 // Components
 import RotatingLines from "../RotatingLines/rotatinglines";
 import { SearchComponent } from "../Toolbar/toolbar";
-import { HorusModal } from "../reusable";
+import { BlurredModal } from "../reusable";
 
 // Icons
 import TrashIcon from "../Toolbar/Icons/Trash";
@@ -238,7 +238,7 @@ function _DeleteTemplateModal({
   };
 
   return (
-    <HorusModal show={true} onHide={() => {}}>
+    <BlurredModal show={true} onHide={() => {}}>
       <div className="p-2 flex flex-col gap-2">
         <div
           className="text-xl font-semibold flow-title"
@@ -289,6 +289,6 @@ function _DeleteTemplateModal({
           )}
         </div>
       </div>
-    </HorusModal>
+    </BlurredModal>
   );
 }

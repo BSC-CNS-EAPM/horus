@@ -284,10 +284,33 @@ the block has run, or a variable that is needed in the :bdg-secondary-line:`fina
 
     block.extraData["value_to_store"] = "myValue"
 
+Verifying if the flow was reset
+===============================
+
+The ``block.dirty`` property is a boolean flag that indicates whether a block is being re-executed within a flow. 
+It will be ``False`` when the block runs for the first time or after the flow has been manually reset by the user. 
+In all subsequent executions without a reset, ``block.dirty`` will be ``True``.
+
+This property can be particularly useful when managing persistent data stored in :bdg-secondary-line:`extraData`, 
+as it allows the developer to distinguish between fresh executions and re-runs. For instance, if certain variables 
+in :bdg-secondary-line:`extraData` should be cleared or reset upon a flow restart, you can use ``block.dirty`` to trigger this reset manually.
+
+.. code-block:: python
+
+    if block.dirty:
+        print("This block has been run multiple times without a reset...")
+    else:
+        # Reset persistent data in extraData if the flow was reset
+        block.extraData.clear()
+        print("Running the block for the first time or after reset!")
+
+This way, the developer can manage the lifecycle of :bdg-secondary-line:`extraData` values, ensuring they are 
+cleared or modified only when necessary, while maintaining persistence across non-reset runs.
+
 Accessing the flow inside the block
 ===================================
 
-The bl:bdg-secondary-line:`Block` has access to the instance of the :bdg-secondary-line:`Flow` it is being executed in.
+The :bdg-secondary-line:`Block` has access to the instance of the :bdg-secondary-line:`Flow` it is being executed in.
 This can be useful to access the list of blocks in the flow, the flow name, the flow ID or other
 properties. The flow instance can be obtained using the :bdg-secondary-line:`block.flow` property.
 

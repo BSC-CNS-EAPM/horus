@@ -83,29 +83,35 @@ function useSettings(forAdmin?: boolean) {
     Record<string, PluginVariable[]>
   >({});
   const [hasChanges, setHasChanges] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const horusAlert = useAlert();
   const horusConfirm = useConfirm();
 
   async function getSettings() {
-    const settings = await fetchSettings(forAdmin);
-    const parsedSettings = parseSettingsIntoPluginVariable(settings);
+    setIsLoading(true);
+    try {
+      const settings = await fetchSettings(forAdmin);
+      const parsedSettings = parseSettingsIntoPluginVariable(settings);
 
-    // Group settings by .category
-    let groupedSettings: Record<string, PluginVariable[]> = {};
-    if (parsedSettings !== null) {
-      groupedSettings = parsedSettings.reduce((acc, setting) => {
-        if (!acc[setting.category]) {
-          acc[setting.category] = [];
-        }
-        acc[setting.category]!.push(setting);
-        return acc;
-      }, {} as Record<string, PluginVariable[]>);
+      // Group settings by .category
+      let groupedSettings: Record<string, PluginVariable[]> = {};
+      if (parsedSettings !== null) {
+        groupedSettings = parsedSettings.reduce((acc, setting) => {
+          if (!acc[setting.category]) {
+            acc[setting.category] = [];
+          }
+          acc[setting.category]!.push(setting);
+          return acc;
+        }, {} as Record<string, PluginVariable[]>);
+      }
+
+      // Set the settings and the gruped variables
+      setSettings(parsedSettings);
+      setGroupedSettings(groupedSettings);
+    } finally {
+      setIsLoading(false);
     }
-
-    // Set the settings and the gruped variables
-    setSettings(parsedSettings);
-    setGroupedSettings(groupedSettings);
   }
 
   async function restoreSettings() {
@@ -197,6 +203,7 @@ function useSettings(forAdmin?: boolean) {
     saveSettings,
     onSettingChange,
     restoreSettings,
+    isLoading,
   };
 }
 
@@ -208,6 +215,7 @@ function SettingsView({ forAdmin }: { forAdmin?: boolean }) {
     saveSettings,
     onSettingChange,
     restoreSettings,
+    isLoading,
   } = useSettings(forAdmin);
 
   const getGroupedSettings = () => {
@@ -215,6 +223,7 @@ function SettingsView({ forAdmin }: { forAdmin?: boolean }) {
 
     for (const [category, settings] of Object.entries(groupedSettings)) {
       const variableViews = settings.map((setting) => {
+        console.log("key: " + setting.id);
         return (
           <PluginVariableView
             key={setting.id}
@@ -224,12 +233,14 @@ function SettingsView({ forAdmin }: { forAdmin?: boolean }) {
         );
       });
       groupedViews[category] = [
-        <div className="flex flex-col gap-2 flex-wrap">{variableViews}</div>,
+        <div className="flex flex-col gap-2 flex-wrap" key={category}>
+          {variableViews}
+        </div>,
       ];
     }
 
     // Add the "About" page as a view
-    groupedViews["About Horus"] = [<About />];
+    groupedViews["About Horus"] = [<About key={"about-horus"} />];
 
     return groupedViews;
   };
@@ -251,8 +262,8 @@ function SettingsView({ forAdmin }: { forAdmin?: boolean }) {
         {Object.keys(groupedSettings).length > 0 ? (
           <SidebarView views={memoizedGroupedSettings} />
         ) : (
-          <div className="m-auto mb-2 mt-2 p-4 horus-container flex font-semibold justify-center items-center w-48 h-full">
-            No settings found
+          <div className="m-auto mb-2 mt-2 p-4 flex font-semibold justify-center items-center w-48 h-full">
+            {isLoading ? <RotatingLines /> : "No settings found"}
           </div>
         )}
       </div>

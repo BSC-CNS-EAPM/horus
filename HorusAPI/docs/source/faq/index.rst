@@ -1,8 +1,8 @@
 .. _faq:
 
-===
-FAQ
-===
+============
+FAQ & Issues
+============
 
 
 Why aren't all the chains/ligands/residues of my PDB visible in the flow selector?
@@ -45,6 +45,17 @@ of a block to the input of another block, a small popup will appear providing in
 The popup displays the description, name, and type of the variable.
 To ensure maximum compatibility, verify that both variables are of the same type.
 If they are not compatible, the connection will be displayed as a red line on the canvas.
+
+Flows Stuck in "Queued" State and Application Crashes on macOS
+--------------------------------------------------------------
+
+A limitation with macOS multithreading can sometimes prevent flow subprocesses from starting correctly, causing flows to remain in the "Queued" state and the application to crash. To resolve this issue:
+
+1. **Restart Horus**: A simple restart often resolves the problem.
+
+2. **Run Horus from the Command Line**: If restarting does not help, start Horus from the command line (see the :ref:`running` section for details) and set the environment variable `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES`.
+
+This should allow flows to run smoothly.
 
 ==========
 Contribute

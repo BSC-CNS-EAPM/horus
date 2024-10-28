@@ -4,6 +4,7 @@ Flow manager
 
 # Basic imports
 import os
+import shutil
 import sys
 import json
 import typing
@@ -461,7 +462,7 @@ class Flow:
 
         # Verify that variables are connected to existing variables
         for block in blocks:
-            for var in block._variableConnections:  # pylint: disable=protected-access
+            for var in block._variableConnections.copy():  # pylint: disable=protected-access
                 try:
                     checkVarConnection(var)
                 except VariableConnectionNotFound as exc:
@@ -475,7 +476,7 @@ class Flow:
             # Do the same for the references
             for (
                 refVar
-            ) in block._variableConnectionsReferences:  # pylint: disable=protected-access
+            ) in block._variableConnectionsReferences.copy():  # pylint: disable=protected-access
                 try:
                     checkVarConnection(refVar)
                 except VariableConnectionNotFound as exc:
@@ -896,6 +897,11 @@ class Flow:
                 blockToRun,
                 self.savedID,
                 resetRemoteBlock=resetRemoteBlock,
+                developmentMode=(
+                    self.horusSettings.getSetting("developmentMode").value
+                    if self.horusSettings
+                    else False
+                ),
             )
         except Exception as exc:  # pylint: disable=broad-exception-raised
             # If an error was raised during the execution of the block
@@ -968,7 +974,15 @@ class Flow:
             try:
                 self._runningBlock = blockToRun
                 outputs = self._pluginManager.executeBlock(
-                    blockToRun, self.savedID, resetRemoteBlock=False, isFirstSlurm=False
+                    blockToRun,
+                    self.savedID,
+                    resetRemoteBlock=False,
+                    isFirstSlurm=False,
+                    developmentMode=(
+                        self.horusSettings.getSetting("developmentMode").value
+                        if self.horusSettings
+                        else False
+                    ),
                 )
             except Exception as exc:  # pylint: disable=broad-exception-raised
                 # If an error was raised during the execution of the block
@@ -1494,6 +1508,11 @@ class FlowManager:
     The user's templates directory.
     """
 
+    droppedFlowsDir: str
+    """
+    The path to the directory where dropped flows are temporary stored.
+    """
+
     @property
     def areThereRunningFlows(self):
         """
@@ -1508,6 +1527,7 @@ class FlowManager:
         # Assign the app support dir and the recent flows path
         self.appSupportDir = appSupportDir
         self._recentFlowsPath = os.path.join(appSupportDir, "recent_flows.json")
+        self.droppedFlowsDir = os.path.join(appSupportDir, ".dropped_flows")
 
         # Assign the templates path
         self._templatesDir = os.path.join(appSupportDir, "templates")
@@ -1543,20 +1563,24 @@ class FlowManager:
         # Read the recent flows file
         read = False
         recentFlows = {}
+        tries = 0
         while not read:
             with open(self.recentFlowsPath, "r", encoding="utf-8") as file:
                 try:
                     recentFlows = json.load(file)
                     read = True
                 except json.JSONDecodeError as exc:
-                    logging.getLogger("Horus").error(
-                        "Error reading recent flows file: %s", str(exc)
-                    )
+                    tries += 1
+                    if tries > 5:    
+                        read = True
+                        logging.getLogger("Horus").error(
+                            "Error reading recent flows file: %s", str(exc)
+                        )
 
         updatedRecentFlows = {}
         for flow in recentFlows:
             path = recentFlows[flow]
-            if os.path.exists(path):
+            if path and os.path.exists(path):
                 updatedRecentFlows[flow] = recentFlows[flow]
             else:
                 logging.getLogger("Horus").info("Removing non-existing flow '%s'", path)
@@ -2113,12 +2137,11 @@ class FlowManager:
         flowDir = os.path.dirname(flow.path)
 
         # Create the tar file
-        tarPath = os.path.join(downloadsFolder, f"{flowDir}.tar")
+        zipPath = os.path.join(downloadsFolder, flowDir)
 
-        with tarfile.open(tarPath, "w") as tar:
-            tar.add(flowDir, arcname=os.path.basename(flowDir))
+        shutil.make_archive(zipPath, "zip", flowDir)
 
-        return tarPath
+        return zipPath + ".zip"
 
     def saveAsTemplate(self, flow: typing.Dict[str, typing.Any]):
         """

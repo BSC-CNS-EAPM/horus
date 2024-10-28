@@ -405,6 +405,18 @@ export default class HorusSmilesManager {
 
       const groupedAtoms = this.splitAtomsByLigand(heteroAtomsList);
 
+      if (Object.keys(groupedAtoms).length > 5) {
+        console.error(
+          "Too many ligands to convert to SMILES. Skipping past 5..."
+        );
+
+        for (const key of Object.keys(groupedAtoms)) {
+          if (Object.keys(groupedAtoms).indexOf(key) > 5) {
+            delete groupedAtoms[key];
+          }
+        }
+      }
+
       for (const key of Object.keys(groupedAtoms)) {
         // Generate a XYZ file
         const atomFile = this.buildXYZFileFromAtomInfoList(groupedAtoms[key]!);

@@ -26,36 +26,26 @@ export function BlockLogsModalView(props: BlockLogsModalViewProps) {
         handleClose?.();
       }}
       maxContentSize={{
-        height: "h-[85%]",
-        width: "w-[60%]",
+        height: "90%",
+        width: "90%",
       }}
     >
       {block.type === BlockTypes.SLURM ? (
         <SlurmOutputModalView block={block} handleClose={handleClose} />
       ) : (
-        <RegularBlockLogs logs={block.blockLogs} isRunning={block.isRunning} />
+        <RegularBlockLogs block={block} />
       )}
     </BlurredModal>
   );
 }
 
-function RegularBlockLogs({
-  logs,
-  isRunning,
-}: {
-  logs: string;
-  isRunning: boolean;
-}) {
+function RegularBlockLogs({ block }: { block: Block }) {
   return (
-    <div
-      style={{
-        height: "100%",
-        borderRadius: "10px",
-        overflow: "hidden",
-      }}
-    >
-      <HorusLazyLog logText={logs ?? "No logs"} keepDisabled={!isRunning} />
-    </div>
+    <HorusLazyLog
+      logText={block.blockLogs ?? "No logs"}
+      keepDisabled={!block.isRunning}
+      filename={`${block.id}-${block.placedID}.log`}
+    />
   );
 }
 
@@ -110,9 +100,7 @@ function SlurmOutputModalView({
   };
 
   const getGroupedVariables = () => {
-    groupedViews["Block logs"] = [
-      <RegularBlockLogs logs={block.blockLogs} isRunning={block.isRunning} />,
-    ];
+    groupedViews["Block logs"] = [<RegularBlockLogs block={block} />];
 
     groupedViews["Slurm status"] = [
       <div
@@ -152,6 +140,7 @@ function SlurmOutputModalView({
           <HorusLazyLog
             logText={block.stdOut}
             keepDisabled={!block.isRunning}
+            filename={`${block.id}-${block.placedID}-slurm.out`}
           />
         ) : (
           <span className="text-center w-full grid place-items-center h-full">
@@ -177,6 +166,7 @@ function SlurmOutputModalView({
           <HorusLazyLog
             logText={block.stdErr}
             keepDisabled={!block.isRunning}
+            filename={`${block.id}-${block.placedID}-slurm.err`}
           />
         ) : (
           <span className="text-center w-full grid place-items-center h-full">

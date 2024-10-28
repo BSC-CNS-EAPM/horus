@@ -779,7 +779,7 @@ export function ResidueView(props: VariableViewProps) {
           Click here to enable selection
         </div>
       ) : (
-        <div className="text-center cut-text px-2 max-w-[300px] m-auto">
+        <div className="text-center cut-text px-2 max-w-[200px] m-auto">
           {residue.chainID}:{residue.auth_comp_id}:{residue.residue} -{" "}
           {residue.label}
         </div>
@@ -842,7 +842,7 @@ export function AtomView(props: VariableViewProps) {
           Click here to enable selection
         </div>
       ) : (
-        <div className="text-center px-1 cut-text max-w-[300px] m-auto">
+        <div className="text-center px-1 cut-text max-w-[200px] m-auto">
           {atom.auth_atom_id}:{atom.atom_index} - {atom.chainID}:
           {atom.auth_comp_id}:{atom.residue} - {atom.label}
         </div>

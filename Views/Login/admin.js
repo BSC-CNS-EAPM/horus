@@ -5,7 +5,6 @@ import { createRoot } from "react-dom/client";
 import { AdminTools } from "./admintools.tsx";
 
 // Import CSS
-import "bootstrap/dist/css/bootstrap.css";
 import "../CSS/main.css";
 import "./admintools.css";
 

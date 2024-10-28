@@ -1,5 +1,7 @@
 import time
 
+from sqlalchemy import String
+
 from HorusAPI import (
     InputBlock,
     SlurmBlock,
@@ -696,6 +698,7 @@ input_block_string_list = InputBlock(
         name="String list input",
         description="String list input",
         type=VariableTypes.LIST,
+        allowedValues=[VariableTypes.STRING],
     ),
     action=None,
 )
@@ -847,3 +850,87 @@ dirty_block_block = PluginBlock(
 )
 
 plugin.addBlock(dirty_block_block)
+
+
+number_variable_list = PluginVariable(
+    id="number_variable_list",
+    name="Number variable list",
+    description="Number variable list",
+    type=VariableTypes.LIST,
+    allowedValues=[VariableTypes.NUMBER],
+)
+
+strings_variable_list = PluginVariable(
+    id="strings_variable_list",
+    name="String variable list",
+    description="Number variable list",
+    type=VariableTypes.LIST,
+)
+
+
+files_variable_list = PluginVariable(
+    id="file_variable_list",
+    name="Files variable list",
+    description="Number variable list",
+    type=VariableTypes.LIST,
+    allowedValues=[VariableTypes.FILE],
+)
+
+range_variable_list = PluginVariable(
+    id="range_variable_list",
+    name="Range variable list",
+    description="Number variable list",
+    type=VariableTypes.LIST,
+    allowedValues=[VariableTypes.CONSTRAINED_NUMBER_RANGE],
+)
+
+atom_variable_list = PluginVariable(
+    id="atom_variable_list",
+    name="Atom variable list",
+    description="Number variable list",
+    type=VariableTypes.LIST,
+    allowedValues=[VariableTypes.ATOM],
+)
+
+structures_variable_list = PluginVariable(
+    id="structures_variable_list",
+    name="Structures variable list",
+    description="Number variable list",
+    type=VariableTypes.LIST,
+    allowedValues=[VariableTypes.STRUCTURE],
+)
+
+multiple_allowed_list = PluginVariable(
+    id="multiple_variable_list",
+    name="Multiple variable list",
+    description="Number variable list",
+    type=VariableTypes.LIST,
+    allowedValues=[VariableTypes.ATOM, VariableTypes.STRUCTURE],
+)
+
+# unallowed_variable_list = PluginVariable(
+#     id="number_variable_list",
+#     name="Number variable list",
+#     description="Number variable list",
+#     type=VariableTypes.LIST,
+#     allowedValues=[VariableTypes.LIST],
+# )
+
+multiple_list_block = PluginBlock(
+    id="multiple_list_block",
+    name="Multiple list block",
+    description="Multiple list block",
+    action=None,
+    variables=[
+        number_variable_list,
+        strings_variable_list,
+        files_variable_list,
+        range_variable_list,
+        atom_variable_list,
+        structures_variable_list,
+        multiple_allowed_list,
+        # unallowed_variable_list,
+    ],
+)
+
+plugin.addBlock(multiple_list_block)

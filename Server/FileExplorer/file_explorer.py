@@ -387,8 +387,20 @@ class UserFileExplorer(FileExplorer):
         Returns True if the current path is accessible, False otherwise.
         """
 
+        from Server.FlowManager import FlowManager
+
+        # The dropped flows directory is always accessible, but needs a special case because its directly into
+        # the appSupport directory of the user and not on the user's flow directory
+        droppedFlowsDir = pathlib.Path(
+            FlowManager(self.user.appSupportDir).droppedFlowsDir
+        ).resolve()
+
         # In User, include a check to verify the path is within the user's directory
-        if self.userPathBoundary != self.path and not self.userPathBoundary in self.path.parents:
+        if (
+            droppedFlowsDir != self.path.parent
+            and self.userPathBoundary != self.path
+            and not self.userPathBoundary in self.path.parents
+        ):
             return False
 
         return super().isAccesible

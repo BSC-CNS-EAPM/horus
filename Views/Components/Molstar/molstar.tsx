@@ -16,6 +16,12 @@ export default function Molstar({ options }: { options?: MolstarInitOptions }) {
 
   useEffect(() => {
     window.molstar = new HorusMolstar(parent.current!, options);
+
+    return () => {
+      // Reset mol* when the component unmounts
+      window?.molstar?.reset();
+    };
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

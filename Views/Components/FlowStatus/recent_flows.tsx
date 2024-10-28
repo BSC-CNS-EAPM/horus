@@ -75,7 +75,7 @@ export default function RecentUserFlows(props: RecentUserFlowProps) {
             onClick={() => {
               openFlow(flow);
             }}
-            className="predefined-flow w-full h-full"
+            className="predefined-flow w-full h-full max-w-[380px]"
           >
             <div className="flex flex-row justify-between">
               <div className="predefined-flow-name max-w-[260px] cut-text">
@@ -108,7 +108,7 @@ export function PredefinedFlows(props: RecentUserFlowProps) {
           }}
           className="predefined-flow"
         >
-          <div className="predefined-flow-name  max-w-[380px] cut-text">
+          <div className="predefined-flow-name max-w-[380px] cut-text">
             <BreakLongUnderscoreNames name={flow.name} />
           </div>
           <div className="predefined-flow-plugin">{flow.pluginName}</div>

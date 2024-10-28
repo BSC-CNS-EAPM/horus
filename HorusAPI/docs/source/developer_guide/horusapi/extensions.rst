@@ -181,10 +181,20 @@ This method will either download the file from the browser (when in server or we
 or open the operating system's file picker to save it in the desired location (when in desktop mode).
 Here is an example of how to use this method to save a file:
 
+Getting files within an Extension
+---------------------------------
+
+To get the contents of a file you can use the following method. The paths are automatically sanitized by Horus and
+trying to get files to which the user does not have acces to will throw an error.
+
 .. code-block:: javascript
 
-    // Example usage
-    const contents = "Hello file!"
-    const fileName = "hello_file.txt"
-    const myFile = new File([fileContents], fileName)
-    parent.horus.saveFile(file)
+    // Returns a promise of a blob with the contents of the file.
+    // Ideally, absolute path should be used, as relative paths 
+    // will be so to the current working directory in which Horus is being executed.
+    const blob = await parent.horus.getFile("/path/to/my/file")
+
+Default extensions
+------------------
+
+For more information about Horus default extensions, please refer to the :ref:`default` section. 

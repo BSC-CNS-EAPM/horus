@@ -109,6 +109,10 @@ from Blocks.VariableMerger import mergeVariablesBlock  # type: ignore
 plugin.addBlock(mergeVariablesBlock)
 
 # Add the "Page loader" extension
-from Extensions.PageLoader import htmlLoader  # type: ignore
+from Extensions.PageLoader import htmlLoader, imageLoader, csvLoader, pdfLoader, plotLoader  # type: ignore
 
 plugin.addPage(htmlLoader)
+plugin.addPage(imageLoader)
+plugin.addPage(csvLoader)
+plugin.addPage(pdfLoader)
+plugin.addPage(plotLoader)

@@ -170,7 +170,7 @@ export default class HorusMolstar {
           controls: {
             right: "none",
             bottom: "none",
-            left: HorusLeftPanelControls
+            left: HorusLeftPanelControls,
           },
           remoteState: "none",
           viewport: {
@@ -1396,7 +1396,11 @@ export default class HorusMolstar {
         // Skip waters
         if (auth_comp_id === "HOH") return;
 
-        if (standardResidues.includes(auth_comp_id)) return;
+        if (
+          standardResidues.includes(auth_comp_id) ||
+          nucleotidesResidues.includes(auth_comp_id)
+        )
+          return;
 
         const res = this.extractAtomInfo(loc, structureRef.cell.sourceRef);
         resInfo.push(res);
@@ -1909,26 +1913,15 @@ export default class HorusMolstar {
 
     try {
       switch (type) {
-        case "addPDB":
-          // Add PDB will be soon deprecated, use addMolecule Instead
-          const label = data.label ? data.label : "PDB";
-          const pdb = data.pdb;
-
-          // If the PDB data is empty, throw an error
-          if (!pdb || pdb === "") {
-            throw new Error("The PDB data is empty");
-          }
-
-          await this.loadPDBString(pdb, label);
-          break;
-
         case "addMolecule":
-          await this.loadMoleculeFile(
-            new File([hexToBlob(data.molContent)], data.fileName),
-            {
-              label: data.label,
-            }
-          );
+          const blob = await window.horus
+            .getFile(data.molContent)
+            .catch((e) => {
+              throw e;
+            });
+          await this.loadMoleculeFile(new File([blob], data.fileName), {
+            label: data.label,
+          });
           break;
         case "loadMVJS":
           await this.loadMolViewSpecSession(data.session, data.replaceExisting);
@@ -2039,6 +2032,11 @@ const standardResidues = [
   "HID",
   "HIE",
 ];
+
+/*
+ * Nucleotides residues
+ */
+const nucleotidesResidues = ["DA", "DC", "DG", "DT", "A", "C", "G", "U"];
 
 // Gets a random color from ColorNames enum
 function randomColor(): Color {

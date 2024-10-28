@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import "react-virtualized/styles.css";
 
@@ -8,7 +8,7 @@ import List from "react-virtualized/dist/commonjs/List";
 import AppButton from "../appbutton";
 import { useAlert } from "../HorusPrompt/horus_alert";
 import { usePrompt } from "../HorusPrompt/horus_prompt";
-import { HorusModal } from "../reusable";
+import { BlurredModal } from "../reusable";
 import RotatingLines from "../RotatingLines/rotatinglines";
 import SidebarView from "../SidebarView/sidebar_view";
 import CenterView from "../Toolbar/Icons/CenterView";
@@ -56,6 +56,9 @@ export function SmilesGrid() {
     );
 
     return () => {
+      // Clean the smiles when the component unmounts
+      window.smiles?.reset();
+
       window.removeEventListener(
         SmilesEvents.STATE,
         updateAvailableSmilesEventListener
@@ -857,9 +860,9 @@ function EditSmilesModal(props: {
   }
 
   return (
-    <HorusModal show={props.isOpen} onHide={props.onClose} size="xl">
+    <BlurredModal show={props.isOpen} onHide={props.onClose} noMargin>
       <div
-        className={`flex flex-row flex-wrap gap-4 p-4 justify-around overflow-y-auto max-h-[70vh] w-full`}
+        className={`flex flex-row flex-wrap gap-4 p-4 justify-around overflow-y-auto w-full`}
       >
         {!props.isShowingList && (
           <div className="flex flex-col gap-2 w-full max-w-[500px]">
@@ -931,7 +934,12 @@ function EditSmilesModal(props: {
             </div>
           </div>
         )}
-        <div className="border">
+        <div
+          className="border"
+          style={{
+            height: "400px",
+          }}
+        >
           <SmilesView
             containerProps={{
               onFocus: () => {
@@ -962,6 +970,6 @@ function EditSmilesModal(props: {
           />
         </div>
       </div>
-    </HorusModal>
+    </BlurredModal>
   );
 }
