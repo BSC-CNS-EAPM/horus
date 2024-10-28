@@ -37,7 +37,7 @@ defined in the :bdg-secondary-line:`VariableTypes` class:
 .. autoclass:: src.VariableTypes
     :members:
 
-For array types, such as :bdg-secondary-line:`STRING_LIST`, you need to specify
+For array types, such as :bdg-secondary-line:`STRING_LIST` (dropdown), you need to specify
 the allowed values in the :bdg-secondary-line:`allowedValues` parameter. For example:
 
 .. code-block:: python
@@ -63,14 +63,11 @@ using the :bdg-secondary-line:`allowedValues` parameter. Only the first allowedV
         allowedValues=[VariableTypes.NUMBER],
     )
 
-This will render a table in the :bdg-secondary-line:`Flow builder` with a dynamic number of elements, with each one being of the :bdg-secondary-line:`allowedValues` type.
+This will render a table in the :bdg-secondary-line:`Flow builder` with a dynamic number of elements, with each one being of the :bdg-secondary-line:`allowedValues` type. The variable returns an array of the form: [value1, value2...].
 
 .. image:: images/list_variable.png
     :width: 500px
     :align: center
-
-The variable returns an array of the form: [value1, value2...] but when providing :bdg-secondary-line:`allowedValues` the
-values are returned as a dictionary array of the form: [{"type": "allowedValue1", "value": value1}, {"type": "allowedValue2", "value": value2}...].
 
 VariableGroup
 =============
