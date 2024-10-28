@@ -2246,7 +2246,7 @@ class Plugin:
 
         if __name__ != "__main__":
 
-            # If we are on compiled HOrus, the path of the plugin is the same
+            # If we are on compiled Horus, the path of the plugin is the same
             # is the first element of the stack trace
 
             # On uncompiled, the path is the second element of the stack trace

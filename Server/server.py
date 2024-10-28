@@ -3268,12 +3268,20 @@ class HorusServer:
         if not self.desktop:
             print(f"Running {self.mode} mode at: " + self.baseURL)
 
+        from App import AppDelegate
+
+        # Using the reloader and debug mode when the app is bundled can
+        # cause multiprocessing issues. Therefore it will be completely disabled
+        # when the app is compiled
+        useReloader = False if AppDelegate().isCompiled else reloader
+        debug = False if AppDelegate().isCompiled else self.debug
+
         # Define the arguments for socketio.run
         runArgs = {
             "host": self.host,
             "port": self.port,
-            "debug": self.debug,
-            "use_reloader": reloader,
+            "debug": debug,
+            "use_reloader": useReloader,
             "log_output": self.debug,
         }
 
