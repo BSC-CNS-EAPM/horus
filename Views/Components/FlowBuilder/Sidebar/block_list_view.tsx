@@ -212,7 +212,7 @@ function PluginBlocksGroup({ groupedBlocks }: { groupedBlocks: Block[] }) {
   return (
     <div className="flex flex-col gap-2">
       <div
-        className="horus-container block-list-plugin animated-gradient flex flex-row justify-between p-2 plugin-group text-white"
+        className="!text-white horus-container block-list-plugin animated-gradient flex flex-row justify-between p-2 plugin-group"
         onClick={() => {
           setShowBlocks(!showBlocks);
         }}
