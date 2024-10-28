@@ -1396,7 +1396,11 @@ export default class HorusMolstar {
         // Skip waters
         if (auth_comp_id === "HOH") return;
 
-        if (standardResidues.includes(auth_comp_id)) return;
+        if (
+          standardResidues.includes(auth_comp_id) ||
+          nucleotidesResidues.includes(auth_comp_id)
+        )
+          return;
 
         const res = this.extractAtomInfo(loc, structureRef.cell.sourceRef);
         resInfo.push(res);
@@ -2028,6 +2032,11 @@ const standardResidues = [
   "HID",
   "HIE",
 ];
+
+/*
+ * Nucleotides residues
+ */
+const nucleotidesResidues = ["DA", "DC", "DG", "DT", "A", "C", "G", "U"];
 
 // Gets a random color from ColorNames enum
 function randomColor(): Color {
