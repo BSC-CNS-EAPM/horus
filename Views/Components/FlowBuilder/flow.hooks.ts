@@ -1,6 +1,6 @@
 // React
 import { useRef, useState, useEffect, useMemo, useCallback } from "react";
-import type { MouseEvent, PointerEvent } from "react";
+import type { DragEvent, MouseEvent, PointerEvent } from "react";
 
 // Drag and drop toolkit
 import {
@@ -99,6 +99,10 @@ function isInteractiveElement(element: Element | null) {
   }
 
   if (typeof element?.className === "string") {
+    if (element?.className?.includes("force-drag")) {
+      return false;
+    }
+
     for (const className of interactiveClassNames) {
       if (element?.className?.includes(className)) {
         return true;
@@ -468,7 +472,8 @@ export function useFlowBuilder() {
         savedID: string | null;
         path: string;
         template?: boolean;
-      } | null = null
+      } | null = null,
+      openFile?: File
     ) => {
       // If the flow is already loading, exit early
       if (isLoadingFlow.current) {
@@ -508,7 +513,7 @@ export function useFlowBuilder() {
         };
 
         // If a default flow is being opened, some variables need to be set
-        let isDefaultFlow = false;
+        let isDefaultFlow = openFile ? true : false;
 
         // If the flow is being opened from the recent flows list, use the savedID
         let response: Response;
@@ -538,7 +543,23 @@ export function useFlowBuilder() {
             },
             (percentage) => {
               setFlowText(`Reading data... (${percentage.toFixed(0)}%)`);
-              // Here you can update a UI element or do something else with the progress
+            }
+          );
+        } else if (openFile) {
+          const body = new FormData();
+
+          body.append("file", openFile);
+
+          response = await fetchWithProgress(
+            "/api/flowfile",
+            {
+              method: "POST",
+              body: body,
+            },
+            (percentage) => {
+              setFlowText(
+                `Verifying dropped flow... (${percentage.toFixed(0)}%)`
+              );
             }
           );
         } else {
@@ -601,6 +622,12 @@ export function useFlowBuilder() {
           } catch (error) {
             await horusAlert(`Failed to load SMILES state. ${error}`);
           }
+        }
+
+        // If we are dropping a file, do not set the path
+        // Except for App mode, in that case leave the path
+        if (openFile && !window.horusInternal.isDesktop) {
+          openedFlow.path = null;
         }
 
         await internalLoadFlow(openedFlow);
@@ -1039,6 +1066,32 @@ export function useFlowBuilder() {
       x: event.clientX - scaledRect.x,
       y: event.clientY - scaledRect.y,
     };
+  };
+
+  // Drag & drop flows
+  const [isDraggingFlowFile, setIsDraggingFlowFile] = useState(false);
+
+  const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    // If its dragging a .flow file,
+    // set the overlay to active
+    setIsDraggingFlowFile(true);
+  };
+
+  const handleDragDropEnd = (event: DragEvent<HTMLDivElement>) => {
+    setIsDraggingFlowFile(false);
+  };
+
+  const handleDrop = (event: DragEvent<HTMLDivElement>) => {
+    setIsDraggingFlowFile(false);
+    event.preventDefault();
+
+    // Send the file to the backend and open an "unsaved" flow
+    const file = event.dataTransfer.files[0];
+
+    if (file && file.name.endsWith(".flow")) {
+      loadFlow(null, file);
+    }
   };
 
   const handleDelete = async (block: Block) => {
@@ -2098,6 +2151,11 @@ export function useFlowBuilder() {
   useEffect(() => {
     fetchRemotes();
 
+    // When the component unmounts, set the flow as "saved" to prevent bugs when opening new ones
+    return () => {
+      setSaved(true);
+    };
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -2141,6 +2199,10 @@ export function useFlowBuilder() {
       handleMousePan,
       handleMouseUp,
       handleMouseMove,
+      handleDragOver,
+      handleDrop,
+      handleDragDropEnd,
+      isDraggingFlowFile,
       isPanning,
     },
     misc: {

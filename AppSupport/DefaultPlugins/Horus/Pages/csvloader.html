@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Horus CSV Loader</title>
+    <script src="ag-grid-community.min.js"></script>
+
+    <style>
+      html,
+      body {
+        height: calc(98vh);
+        margin: 1;
+      }
+
+      #gridContainer {
+        height: 100%;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="gridContainer" class="ag-theme-quartz"></div>
+
+    <script>
+      function noGrid(error) {
+        document.getElementById("gridContainer").innerHTML = `
+                <div style="display: flex; justify-content: center; align-items: center;">Error: ${error}</div>
+            `;
+      }
+
+      // Check if the extensionData object is available
+      if (window.parent.extensionData) {
+        csvToLoad = window.parent.extensionData.csv;
+
+        const blob = parent.horus
+          .getFile(csvToLoad)
+          .then((blob) => {
+            // Read the blob
+            const reader = new FileReader();
+            reader.readAsText(blob);
+            reader.onload = () => {
+              // Parse the CSV
+              const csvData = reader.result;
+              const csvRows = csvData.split("\n");
+              const csvHeaders = csvRows[0].split(",");
+              const csvRowsData = csvRows.slice(1).map((row) => {
+                const splittedRow = row.split(",");
+                let parsedRow = {};
+                for (let i = 0; i < splittedRow.length; i++) {
+                  parsedRow[csvHeaders[i]] = splittedRow[i];
+                }
+                return parsedRow;
+              });
+              const gridOptions = {
+                defaultColDef: {
+                  sortable: true,
+                  filter: true,
+                  resizable: true,
+                },
+                columnDefs: csvHeaders.map((header) => {
+                  return { headerName: header, field: header };
+                }),
+                rowData: csvRowsData,
+              };
+              const gridDiv = document.getElementById("gridContainer");
+              new agGrid.Grid(gridDiv, gridOptions);
+            };
+          })
+          .catch((error) => {
+            console.error(error);
+            noGrid(error);
+          });
+      } else {
+        noGrid("Extension data not available");
+      }
+    </script>
+  </body>
+</html>

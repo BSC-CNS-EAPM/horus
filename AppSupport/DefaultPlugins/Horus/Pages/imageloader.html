@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Horus Image Loader</title>
+    <style>
+      html {
+        display: grid;
+        place-items: center;
+        height: 100%;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="imageContainer"></div>
+
+    <script>
+      function noImage(error) {
+        document.getElementById("imageContainer").innerHTML = `
+                <div class="no-loaded-html">Error: ${error}</div>
+            `;
+      }
+
+      let imageToLoad = "";
+      // Check if the extensionData object is available
+      if (window.parent.extensionData) {
+        imageToLoad = window.parent.extensionData.image;
+
+        const blob = parent.horus
+          .getFile(imageToLoad)
+          .then((blob) => {
+            // If the blob is not image, display an error
+            if (!blob.type.startsWith("image")) {
+              noImage("Not an image");
+              return;
+            }
+
+            imageToLoad = URL.createObjectURL(blob);
+
+            document.getElementById("imageContainer").innerHTML = `
+                <img src="${imageToLoad}" alt="image" style="max-width: 100%; max-height: 100%; object-fit: contain" />
+            `;
+          })
+          .catch((error) => {
+            console.error(error);
+            noImage(error);
+          });
+      } else {
+        noImage("Extension data not available");
+      }
+    </script>
+  </body>
+</html>

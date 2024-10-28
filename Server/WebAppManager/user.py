@@ -55,6 +55,11 @@ class HorusUser(flask_login.UserMixin):
     The user's directory.
     """
 
+    droppedFlowsDir: str = ".dropped_flows"
+    """
+    The user's dropped flows directory.
+    """
+
     flowsDir: str
     """
     The user's flows directory.

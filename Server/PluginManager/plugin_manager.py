@@ -1273,12 +1273,16 @@ class PluginManager(metaclass=HorusSingleton):
         flowID: str,
         resetRemoteBlock: bool = False,
         isFirstSlurm: bool = True,
+        developmentMode: bool = False,
     ):
         """
         Executes a given block.
         Should be already prepared with the variables.
         Method specific for running the block through the Flow class.
         """
+
+        # Clean the block logs
+        block.blockLogs = ""
 
         logging.getLogger("Horus").info("Executing block %s", block.id)
 
@@ -1300,13 +1304,30 @@ class PluginManager(metaclass=HorusSingleton):
         # Set the block config to execute the block
         block.config = plugin.config
 
+        # Print debug info
+        # If the user has development mode activated, print useful information about the block
+        if developmentMode:
+            print("============================ Development mode ==============================")
+            print(f"Block starting time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            print(f"Block ID: {block.id}")
+            print(f"Block name: {block.name}")
+            print(f"Block selected remote: {block.selectedRemote}")
+            print(f"Block config:")
+            print(json.dumps(block.config, indent=4))
+            print(f"Block inputs:")
+            print(json.dumps(block.inputs, indent=4))
+            print(f"Block variables:")
+            print(json.dumps(block.variables, indent=4))
+            print(f"Block initial extraData:")
+            print(json.dumps(block.extraData, indent=4))
+            print(
+                "============================================================================\n"
+            )
+
         try:
             remoteManager = RemotesManager(currentUser.appSupportDir)
         except AttributeError:
             remoteManager = RemotesManager(self.appSupportDir)
-
-        if block.selectedRemote != "Local":
-            logging.getLogger("Horus").info("Connecting to remote %s", block.selectedRemote)
 
         # If the selected remote of the block does not exist, set it to Local
         if not remoteManager.remoteExists(block.selectedRemote):
@@ -1319,16 +1340,28 @@ class PluginManager(metaclass=HorusSingleton):
 
             block.selectedRemote = "Local"
 
+        if block.selectedRemote != "Local":
+            msg = "Connecting to remote '%s'..." % block.selectedRemote
+            print(msg)
+            logging.getLogger("Horus").info(msg)
+
         remoteManager.connectRemote(block.selectedRemote)
         rAPI = remoteManager.remote
 
         if rAPI is None:
-            raise Exception("No cluster selected.")  #  pylint: disable=broad-exception-raised
+            raise Exception(
+                "Error while getting the remote instance."
+            )  #  pylint: disable=broad-exception-raised
 
         rAPI._blockID = block.id  # pylint: disable=protected-access
         rAPI._blockPlacedID = block._placedID  # pylint: disable=protected-access
         rAPI._flowSavedID = flowID  # pylint: disable=protected-access
         rAPI._resetRemoteBlock = resetRemoteBlock  # pylint: disable=protected-access
+
+        if block.selectedRemote != "Local":
+            msg = "Successfully connected to remote '%s'" % block.selectedRemote
+            print(msg)
+            logging.getLogger("Horus").info(msg)
 
         # Update the block with the remote configuration
         block._setRemote(rAPI)  # pylint: disable=protected-access
@@ -1386,6 +1419,20 @@ class PluginManager(metaclass=HorusSingleton):
             formattedTime = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
             logging.getLogger("Horus").info("Block %s executed in %s", block.id, formattedTime)
+
+            if developmentMode:
+                print(
+                    "\n============================ Development mode =============================="
+                )
+                print(f"Block execution time: {formattedTime}")
+                print(f"Block error: {error}")
+                print(f"Block outputs:")
+                print(json.dumps(outputs, indent=4))
+                print(f"Block final extraData:")
+                print(json.dumps(block.extraData, indent=4))
+                print(
+                    "============================================================================="
+                )
 
         if error:
             raise Exception(errorMSG)

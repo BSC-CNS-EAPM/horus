@@ -534,7 +534,7 @@ class PluginVariable:
         id: str,
         name: str,
         description: str,
-        type: VariableTypes,
+        type: typing.Union[VariableTypes, str],
         defaultValue: typing.Optional[typing.Any] = None,
         allowedValues: typing.Optional[typing.List[typing.Any]] = None,
         category: typing.Optional[str] = None,
@@ -576,6 +576,52 @@ class PluginVariable:
 
         # Assign a default category if none is provided
         self.category = category if category else "General"
+
+        # For STRING_LIST and NUMBER_LIST set the first allowed value as the current one if no default value is set
+        if (
+            self.type in [VariableTypes.STRING_LIST, VariableTypes.NUMBER_LIST]
+            and defaultValue is None
+        ):
+            if allowedValues is None:
+                logging.getLogger("Horus").warning(
+                    f"No allowed values provided for STRING_LIST or NUMBER_LIST variable with id '{id}'. "
+                    "This variable may not work as expected."
+                )
+            else:
+                defaultValue = allowedValues[0]
+
+        # For .LIST variables, do not allow allowedvalues other than the allowed values
+        if self.type == VariableTypes.LIST and allowedValues is not None:
+
+            if len(allowedValues) > 1:
+                logging.getLogger("Horus").warning(
+                    f"Only the first allowed value '{allowedValues[0]}' will be used "
+                    f"on variable {id}. Use the VariableList class if you intend on "
+                    "having multiple values per row on a list."
+                )
+
+            if not all(x in VariableTypes.getTypes() for x in allowedValues):
+                raise ValueError(
+                    f"Variable '{id}' has invalid allowedValues. "
+                    "Allowed values for LIST variables can only include "
+                    "values from the VariableTypes enum. "
+                )
+
+            notAllowed = [
+                VariableTypes._GROUP,
+                VariableTypes.LIST,
+                VariableTypes._LIST,
+            ]
+
+            if any([x in allowedValues for x in notAllowed]):
+                cannotInclude = [f"VariableTypes.{x.upper()}" for x in notAllowed]
+                raise ValueError(
+                    f"Variable '{id}' has invalid allowedValues. "
+                    "Allowed values for LIST variables can not include "
+                    f"{', '.join(cannotInclude)}. "
+                    "Use the VariableList class instead."
+                )
+
         self.defaultValue = defaultValue
         self.value = defaultValue
         self.id = id
@@ -1130,6 +1176,7 @@ class PluginBlock:
         outputs: typing.List[PluginVariable] = [],
         blockType: PluginBlockTypes = PluginBlockTypes.BASE,
         id: typing.Optional[str] = None,
+        externalURL: typing.Optional[str] = None,
     ):
         """
         Initialize a PluginBlock.
@@ -1165,6 +1212,11 @@ class PluginBlock:
         self.action = action
         """
         The action that the block performs.
+        """
+
+        self.externalURL = externalURL
+        """
+        The external URL of the block for documentation purposes.
         """
 
         # Verify all Variable IDs are unique
@@ -1662,6 +1714,8 @@ class PluginBlock:
         """
 
         fullBlock = self._minimalEncode()
+
+        fullBlock["externalURL"] = self.externalURL
         fullBlock["variables"] = self._variablesToDict(self._variables, minimal=False)
         fullBlock["name"] = self.name
         fullBlock["description"] = self.description
@@ -1771,11 +1825,16 @@ class InputBlock(PluginBlock):
         output: typing.Optional[PluginVariable] = None,
         action: typing.Optional[typing.Callable] = None,
         id: typing.Optional[str] = None,
+        externalURL: typing.Optional[str] = None,
     ):
         """
         :param name: The name of the block.
         :param description: The description of the block.
         :param variable: The variable of the block.
+        :param output: The output of the block.
+        :param action: The action of the block. Will be run when storing the config.
+        :param id: The id of the block.
+        :param externalURL: The external URL of the block for documentation purposes.
         """
 
         # Check that the variable is a PluginVariable instance
@@ -1793,6 +1852,7 @@ class InputBlock(PluginBlock):
             outputs=[variable if output is None else output],
             blockType=PluginBlockTypes.INPUT,
             id=id,
+            externalURL=externalURL,
         )
 
     # Override the __call__ method to return
@@ -1911,6 +1971,7 @@ class SlurmBlock(PluginBlock):
         outputs: typing.List[PluginVariable] = [],
         id: typing.Optional[str] = None,
         failOnSlurmError: bool = True,
+        extenrnalURL: typing.Optional[str] = None,
     ):
         """
         :param name: The name of the block.
@@ -1923,6 +1984,7 @@ class SlurmBlock(PluginBlock):
         :param outputs: The outputs of the block.
         :param id: The id of the block.
         :param failOnSlurmError: Whether to fail the block if the slurm job fails.
+        :param extenrnalURL: The external URL of the block for documentation purposes.
         """
         super().__init__(
             name,
@@ -1934,6 +1996,7 @@ class SlurmBlock(PluginBlock):
             outputs=outputs,
             blockType=PluginBlockTypes.SLURM,
             id=id,
+            externalURL=extenrnalURL,
         )
         self.initalAction = initialAction
         self.finalAction = finalAction
@@ -2183,7 +2246,7 @@ class Plugin:
 
         if __name__ != "__main__":
 
-            # If we are on compiled HOrus, the path of the plugin is the same
+            # If we are on compiled Horus, the path of the plugin is the same
             # is the first element of the stack trace
 
             # On uncompiled, the path is the second element of the stack trace

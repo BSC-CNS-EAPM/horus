@@ -27,6 +27,8 @@ import { ConnectedArrows } from "./Connections/arrows";
 import { Xwrapper } from "react-xarrows";
 import { DroppableEntity, Flow, FlowStatus } from "./flow.types";
 import { socket } from "../../Utils/socket";
+import { GreenOverlay } from "../GreenOverlay/GreenOverlay";
+import SaveIcon from "../Toolbar/Icons/Save";
 
 export const FlowContext = createContext<Flow | null>(null);
 
@@ -72,6 +74,7 @@ function FlowBuilderView() {
         <div
           className="h-full"
           onMouseMove={flowBuilderState.handleMouse.handleMouseMove}
+          id={GLOBAL_IDS.FLOW_BUILDER_CONTAINER}
         >
           <DndContext
             onDragEnd={flowBuilderState.dnd.handleDragEnd}
@@ -81,10 +84,21 @@ function FlowBuilderView() {
             measuring={flowBuilderState.dnd.dndTweaks.measuring}
           >
             <div
-              className="m-auto flex flex-row h-100 relative"
+              className="m-auto flex flex-row h-full relative"
               id={GLOBAL_IDS.FLOW_BUILDER_DIV}
               style={style}
+              onDragOver={flowBuilderState.handleMouse.handleDragOver}
+              onDrop={flowBuilderState.handleMouse.handleDrop}
+              onDragLeave={flowBuilderState.handleMouse.handleDragDropEnd}
             >
+              {flowBuilderState.handleMouse.isDraggingFlowFile && (
+                <GreenOverlay>
+                  <div className="flex flex-col gap-2 items-center justify-center font-semibold">
+                    <SaveIcon className="w-16 h-16" />
+                    Drop a .flow file
+                  </div>
+                </GreenOverlay>
+              )}
               {/* The block list coming from the server */}
               <BlockListSidebar />
               {/* The flow reciever, where blocks are already placed */}
@@ -153,21 +167,22 @@ function FlowBuilderView() {
                 </div>
               </BlurredModal>
             </div>
-            <DragOverlay
-              dropAnimation={null}
-              style={{ cursor: "grabbing !important" }}
-            >
-              {
-                // If there is a block being dragged, show it
-                flowBuilderState.dnd.draggingBlock && (
-                  <BlockView
-                    block={flowBuilderState.dnd.draggingBlock}
-                    blockHooks={flowBuilderState.block}
-                    onAir={true}
-                  />
+            {
+              // If there is a block being dragged, show it
+              flowBuilderState.dnd.draggingBlock &&
+                !flowBuilderState.dnd.draggingBlock.isPlaced && (
+                  <DragOverlay
+                    dropAnimation={null}
+                    style={{ cursor: "grabbing !important" }}
+                  >
+                    <BlockView
+                      block={flowBuilderState.dnd.draggingBlock}
+                      blockHooks={flowBuilderState.block}
+                      onAir={true}
+                    />
+                  </DragOverlay>
                 )
-              }
-            </DragOverlay>
+            }
           </DndContext>
           <ServerFileExplorerModal
             key={"serverFilePicker-flow-reciver"}

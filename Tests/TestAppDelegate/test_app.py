@@ -296,6 +296,7 @@ def test_horus_settings_update_setting(horus_settings):
     # Update the setting
     setting.name = "new_name"
     horus_settings._updateSetting(setting)
+    horus_settings._saveSettings()
 
     # Check that the setting was updated correctly
     with open(horus_settings.userSettingsPath, "r") as f:

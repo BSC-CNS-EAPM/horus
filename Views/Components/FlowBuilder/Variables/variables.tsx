@@ -36,7 +36,7 @@ import {
 } from "./molstar_variables";
 
 // Code editor variables
-import { ObjectVariableView, PythonVariableView } from "./editor_variables";
+import { CodeVariableView, ObjectVariableView } from "./editor_variables";
 
 // Smiles
 import { SmilesVariableView } from "./smiles_variables";
@@ -102,7 +102,7 @@ export function PluginVariableView(props: PluginVariableViewProps) {
           : ""
       } ${
         props.applyStyle === false
-          ? props.customClass ?? "flex-auto"
+          ? props.customClass ?? "flex-auto w-full"
           : "plugin-variable animated-gradient border-none"
       }`}
       style={{
@@ -407,29 +407,12 @@ function VariableRenderer(props: {
       );
     case PluginVariableTypes.STRING_LIST:
     case PluginVariableTypes.NUMBER_LIST:
-      // If the current value is not set, set i to the first allowed value
-      // CAUTION WITH VALUES LIKE "0" or 0, they will cause infinite re-renders
-      if (!currentValue === null && variableToRender.allowedValues) {
-        handleVariableChangeInternal(variableToRender.allowedValues[0]);
-      }
-
       return (
-        <select
-          // style={{
-          //   border: "none",
-          //   outline: "none",
-          //   WebkitAppearance: "none",
-          //   gap: "0.5rem",
-          // }}
-          value={currentValue}
-          onChange={(e) => handleVariableChangeInternal(e.target.value as any)}
-        >
-          {props.variable.allowedValues?.map((value, index) => (
-            <option key={index} value={value}>
-              {value}
-            </option>
-          ))}
-        </select>
+        <DropdownVariableView
+          variable={variableToRender}
+          currentValue={currentValue}
+          onChange={handleVariableChangeInternal}
+        />
       );
     case PluginVariableTypes.NUMBER_RANGE:
       return (
@@ -574,7 +557,7 @@ function VariableRenderer(props: {
       );
     case PluginVariableTypes.CODE:
       return (
-        <PythonVariableView
+        <CodeVariableView
           currentValue={currentValue}
           onChange={handleVariableChangeInternal}
           variable={props.variable}
@@ -605,6 +588,49 @@ function VariableRenderer(props: {
       );
   }
 }
+
+function DropdownVariableView({
+  currentValue,
+  variable: variableToRender,
+  onChange,
+}: VariableViewProps) {
+  useEffect(() => {
+    // If the current value is not set, set i to the first allowed value
+    // CAUTION WITH VALUES LIKE "0" or 0, they will cause infinite re-renders
+    // This is why we check for null and undefined explicitly
+    if (
+      (currentValue === null || currentValue === undefined) &&
+      variableToRender.allowedValues
+    ) {
+      onChange(
+        variableToRender.defaultValue ?? variableToRender?.allowedValues[0]
+      );
+    }
+  }, [
+    currentValue,
+    variableToRender.allowedValues,
+    variableToRender.defaultValue,
+    onChange,
+  ]);
+
+  return (
+    <select
+      value={
+        currentValue ??
+        variableToRender.defaultValue ??
+        variableToRender.allowedValues?.[0]
+      }
+      onChange={(e) => onChange(e.target.value as any)}
+    >
+      {variableToRender.allowedValues?.map((value, index) => (
+        <option key={index} value={value}>
+          {value}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 function CheckboxVariableView(props: VariableViewProps & { radio?: boolean }) {
   const allowedValues: string[] = props.variable.allowedValues;
 
@@ -925,16 +951,8 @@ function ListView(props: VariableViewProps) {
   const { currentValue, variable, onChange } = props;
 
   const addRow = () => {
-    let newValues = currentValue ? [...currentValue] : [];
-    if (variable.allowedValues) {
-      newValues.push({
-        value: "",
-        type: variable?.allowedValues?.[0] ?? PluginVariableTypes.STRING,
-      });
-    } else {
-      newValues = currentValue ? [...currentValue] : [];
-      newValues.push("");
-    }
+    const newValues = currentValue ? [...currentValue] : [];
+    newValues.push(null);
     onChange(newValues);
   };
 
@@ -947,23 +965,7 @@ function ListView(props: VariableViewProps) {
 
   const handleRowValueChange = (index: number, value: string) => {
     const newValues = [...currentValue];
-    if (props.variable.allowedValues) {
-      newValues[index] = {
-        value: value,
-        type: variable?.allowedValues?.[0] ?? PluginVariableTypes.STRING,
-      };
-    } else {
-      newValues[index] = value;
-    }
-    onChange(newValues);
-  };
-
-  const handleRowTypeChange = (index: number, type: string) => {
-    const newValues = [...currentValue];
-    newValues[index] = {
-      value: newValues[index].value,
-      type: type,
-    };
+    newValues[index] = value;
     onChange(newValues);
   };
 
@@ -974,9 +976,11 @@ function ListView(props: VariableViewProps) {
     return null;
   }
 
+  const rowsTypes = variable.allowedValues?.[0] ?? PluginVariableTypes.STRING;
+
   return (
     <div className="flex flex-col w-full min-w-full flex-auto">
-      <div className="flex flex-row gap-2 justify-center">
+      <div className="flex flex-row gap-2 justify-center mb-2">
         <AppButton action={addRow}>Add row</AppButton>
         <AppButton
           action={() => {
@@ -996,29 +1000,25 @@ function ListView(props: VariableViewProps) {
                 cursor: props.isFlowActive ? "wait" : "auto",
               }}
             >
-              <input
+              <VariableRenderer
+                variable={{
+                  ...variable,
+                  value: value,
+                  type: rowsTypes,
+                  allowedValues: [],
+                }}
+                onChange={(newValue: any) => {
+                  handleRowValueChange(index, newValue);
+                }}
+                isFlowActive={props.isFlowActive}
+              />
+              {/* <input
                 id={`${props.variable.id}-${index}`}
                 type="text"
                 className="plugin-variable-value"
                 value={props.variable.allowedValues ? value.value : value}
                 onChange={(e) => handleRowValueChange(index, e.target.value)}
-              />
-              {
-                // If the variable has a list of allowed values, set a dropdown
-                props.variable.allowedValues && (
-                  <select
-                    // @ts-ignore
-                    placeholder="Select an option"
-                    onChange={(e) => handleRowTypeChange(index, e.target.value)}
-                  >
-                    {props.variable.allowedValues.map((value, index) => (
-                      <option key={index} value={value}>
-                        {value}
-                      </option>
-                    ))}
-                  </select>
-                )
-              }
+              /> */}
               <button
                 onClick={() => removeRow(index)}
                 style={{
@@ -1064,7 +1064,7 @@ function CustomVariableRenderer(props: {
 
   return (
     <div className="w-full flex flex-col gap-2 items-center justify-center p-2">
-      <AppButton action={openCustomPage}>Configure</AppButton>
+      <AppButton action={openCustomPage}>{props.variable.name}</AppButton>
     </div>
   );
 }

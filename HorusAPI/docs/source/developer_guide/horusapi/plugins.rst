@@ -167,6 +167,9 @@ run the following command in your terminal:
     # macOS
     ln -s /absolute/path/to/your/plugin /Users/<username>/Library/Application\ Support/horus/Plugins
 
+You can also change the folder where Horus looks for the installed plugins using the :bdg-secondary-line:`HORUS_PLUGINS_DIR` environment variable. Check all the
+Horus options in the :ref:`running` section.
+
 .. warning::
 
     Make sure the symlink is correctly created in the :bdg-secondary-line:`Plugins` folder of Horus. Otherwise, the plugin will not be loaded.

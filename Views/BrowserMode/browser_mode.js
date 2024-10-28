@@ -11,7 +11,6 @@ import horus_logo from "../../Resources/horus.png";
 import RotatingLines from "../Components/RotatingLines/rotatinglines";
 
 // Import CSS
-import "bootstrap/dist/css/bootstrap.css";
 import "../CSS/main.css";
 import "../CSS/colors.css";
 import "../CSS/animations.css";

@@ -146,13 +146,13 @@ function PluginInRepo({
             <PluginsIcon className="w-20 h-20" />
           )}
         </div>
-        <div className="card-body d-flex justify-content-between align-items-start">
+        <div className="card-body flex justify-content-between align-items-start">
           <div className="flex flex-col gap-2 justify-between h-full">
             <div>
               <div className="flex flex-row items-baseline gap-2">
                 <div>
                   <span className="text-xl font-semibold">{plugin.name}</span>
-                  <span className="card-subtitle"> - {plugin.description}</span>
+                  <span> - {plugin.description}</span>
                 </div>
               </div>
               <div>Author: {plugin.author}</div>

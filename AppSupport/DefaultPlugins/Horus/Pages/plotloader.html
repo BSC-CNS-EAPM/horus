@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Horus Plot Loader</title>
+    <script src="chart.js"></script>
+    <style>
+      body {
+        display: grid;
+        place-items: center;
+        height: 95vh;
+      }
+
+      canvas {
+        height: calc(100vh - 5rem);
+        max-height: calc(100vh - 5rem);
+      }
+
+      select {
+        margin: 5px;
+      }
+
+      #selector {
+        margin-top: 1rem;
+      }
+    </style>
+  </head>
+
+  <body>
+    <canvas id="chart"></canvas>
+    <div id="selector">
+      <select id="yaxis" onchange="rebuildChart()"></select>
+      vs.
+      <select id="xaxis" onchange="rebuildChart()"></select>
+      <select id="type" onchange="rebuildChart()">
+        <option value="line">Line</option>
+        <option value="bar">Bar</option>
+        <option value="scatter" selected>Scatter</option>
+      </select>
+    </div>
+
+    <script>
+      let csvHeaders = [];
+      let csvRowsData = [];
+      let chartInstance = null;
+
+      function noChart(error) {
+        document.body.innerHTML = `Error: ${error}`;
+      }
+
+      // Function to determine if the values are numeric
+      function isNumeric(value) {
+        return !isNaN(value) && !isNaN(parseFloat(value));
+      }
+
+      function buildChart(xaxis, yaxis, type) {
+        // Destroy previous chart if it exists
+        if (chartInstance) {
+          chartInstance.destroy();
+        }
+
+        // Prepare chart data
+        const xData = csvRowsData.map((row) => {
+          return row[xaxis];
+        });
+        const yData = csvRowsData.map((row) => row[yaxis]);
+
+        // Determine axis types based on data
+        const xAxisType = xData.every(isNumeric) ? "linear" : "category";
+        const yAxisType = yData.every(isNumeric) ? "linear" : "category";
+
+        // Create the chart
+        const ctx = document.getElementById("chart").getContext("2d");
+        chartInstance = new Chart(ctx, {
+          type: type,
+          data: {
+            datasets: [
+              {
+                labels: xData,
+                label: `${yaxis} vs ${xaxis}`,
+                data: yData.map((value, index) => ({
+                  x: xData[index],
+                  y: value,
+                })),
+                backgroundColor: "rgba(75, 192, 192, 0.2)",
+                borderColor: "rgba(75, 192, 192, 1)",
+                borderWidth: 1,
+                showLine: type !== "scatter",
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              xAxes: [
+                {
+                  type: xAxisType,
+                  display: true,
+                  scaleLabel: {
+                    display: true,
+                    labelString: xaxis,
+                  },
+                },
+              ],
+              yAxes: [
+                {
+                  type: yAxisType,
+                  position: "left",
+                  display: true,
+                  scaleLabel: {
+                    display: true,
+                    labelString: yaxis,
+                  },
+                  ticks: {
+                    reverse: true,
+                  },
+                },
+              ],
+            },
+          },
+        });
+      }
+
+      function rebuildChart() {
+        const xaxis = document.getElementById("xaxis").value;
+        const yaxis = document.getElementById("yaxis").value;
+        const type = document.getElementById("type").value;
+        buildChart(xaxis, yaxis, type);
+      }
+
+      // Load CSV data and initialize chart options
+      if (window.parent?.extensionData?.plot) {
+        const plot = window.parent.extensionData.plot;
+
+        parent.horus
+          .getFile(plot)
+          .then((blob) => {
+            // Read the blob
+            const reader = new FileReader();
+            reader.readAsText(blob);
+            reader.onload = () => {
+              const csvData = reader.result;
+              const csvRows = csvData.split("\n");
+              csvHeaders = csvRows[0]
+                .split(",")
+                .flatMap((header) => header.replace(/"/g, "").split(" "));
+
+              csvRowsData = csvRows.slice(1).map((row) => {
+                const splittedRow = row.split(",");
+                let parsedRow = {};
+                for (let i = 0; i < splittedRow.length; i++) {
+                  parsedRow[csvHeaders[i]] = splittedRow[i];
+                }
+                return parsedRow;
+              });
+
+              // Populate xaxis and yaxis dropdowns
+              const xaxis = document.getElementById("xaxis");
+              const yaxis = document.getElementById("yaxis");
+              csvHeaders.forEach((header) => {
+                const xOption = document.createElement("option");
+                const yOption = document.createElement("option");
+                xOption.value = yOption.value = header;
+                xOption.text = yOption.text = header;
+                xaxis.appendChild(xOption);
+                yaxis.appendChild(yOption);
+              });
+
+              // Default selection
+              xaxis.value = csvHeaders[0];
+              yaxis.value = csvHeaders[1];
+
+              // Build initial chart
+              buildChart(xaxis.value, yaxis.value, "scatter");
+            };
+          })
+          .catch((error) => {
+            noChart(error);
+          });
+      } else {
+        noChart("Extension data not available");
+      }
+    </script>
+  </body>
+</html>

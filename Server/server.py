@@ -11,9 +11,9 @@ import hashlib
 import logging
 import typing
 import traceback
-import tarfile
 import datetime
 import io
+import mimetypes
 
 # Decorators
 from functools import wraps
@@ -38,7 +38,7 @@ import threading  # For background socketio thread
 # Flask
 import flask
 import jinja2
-from flask import Flask, request, Response
+from flask import Flask, after_this_request, request, Response
 from flask_socketio import SocketIO, join_room, leave_room
 from flask_cors import CORS
 import flask_login
@@ -1022,6 +1022,43 @@ class HorusServer:
                 }
             return flask.jsonify(success)
 
+        @self.server.route("/api/flowfile", methods=["POST"])
+        @self.verifyLogin
+        def readFlowFile():
+            try:
+                file = request.files.get("file")
+                if file is None:
+                    raise ValueError("No file provided")
+
+                # Store the file into a temporary path
+                temPath = self.flowManager.droppedFlowsDir
+                os.makedirs(temPath, exist_ok=True)
+                tempFile = os.path.join(temPath, file.filename or "dropped.flow")
+                file.save(tempFile)
+
+                flow = self.flowManager.openFlowFromPath(tempFile)
+
+                # Remove the path from the flow, as if it was a template
+                # This is a workaround as we do not have the actual path of the flow when we drop
+                # it due to javascript security. The suer will need to "save" again the flow in a new path
+                # (or the same path) in order to work with the flow. This will be the intended behaviour on
+                # server mode, as you are efectively uploading the file to the server, but for app mode
+                # is an annoying drawback.
+                flow.savedID = None
+
+                encodedFlow = flow.encode(minimal=False)
+
+                # Return the file as a tempalte/preset flow, so that the user needs to select a
+                # path to save it next time
+                success = {"ok": True, "flow": encodedFlow}
+            except Exception as exc:
+                success = {
+                    "ok": False,
+                    "msg": str(exc),
+                }
+
+            return flask.jsonify(success)
+
         @self.server.route("/api/getmolstate", methods=["POST"])
         @self.verifyLogin
         def getMolState():
@@ -1048,6 +1085,23 @@ class HorusServer:
 
                 # Get the molstarStte zip file
                 molstarState = flow.getMolstarState()
+
+                # Delete the tarfile after the download
+                @flask.after_this_request
+                def removeFile(response):
+
+                    # If the file is inside the .dropped_flows folder, delete it
+                    if os.path.dirname(flowPath) == self.flowManager.droppedFlowsDir:
+                        try:
+                            os.remove(flowPath)
+                        except Exception as exc:
+                            logging.getLogger("Horus").error(
+                                "Error removing file {%s}: {%s}",
+                                flowPath,
+                                str(exc),
+                            )
+
+                    return response
 
                 # Send the file to the client as .molx file
                 if molstarState is not None:
@@ -1608,12 +1662,17 @@ class HorusServer:
                     raise Exception("No path provided")
 
                 if self._isForUser:
-                    if flowContextPath is None:
-                        return {"ok": False, "msg": "Internal server error. Try again later."}
+
+                    # If the flow context path is none, then use the users flow dir
+                    relativeTo = (
+                        os.path.join(currentUser.flowsDir, Flow.flowWorkDir(flowContextPath))
+                        if flowContextPath
+                        else currentUser.flowsDir
+                    )
                     # If a flow context path was provided,
                     # set the highest boundary to that flow folder
                     path = UserFileExplorer(
-                        path, currentUser, relativeTo=Flow.flowWorkDir(flowContextPath)
+                        path, currentUser, relativeTo=relativeTo
                     ).getAbsolutePath()
 
                 if folderName is None:
@@ -1638,13 +1697,17 @@ class HorusServer:
 
                 if self._isForUser:
 
-                    if flowContextPath is None or flowContextPath == "":
-                        return {"ok": False, "msg": "Internal server error. Try again later."}
+                    # If the flow context path is none, then use the users flow dir
+                    relativeTo = (
+                        os.path.join(currentUser.flowsDir, Flow.flowWorkDir(flowContextPath))
+                        if flowContextPath
+                        else currentUser.flowsDir
+                    )
 
                     # If a flow context path was provided,
                     # set the highest boundary to that flow folder
                     path = UserFileExplorer(
-                        path, currentUser, relativeTo=Flow.flowWorkDir(flowContextPath)
+                        path, currentUser, relativeTo=relativeTo
                     ).getAbsolutePath()
 
                 if not os.path.exists(path):
@@ -1661,55 +1724,52 @@ class HorusServer:
             except Exception as exc:
                 return flask.jsonify({"ok": False, "msg": str(exc)})
 
-        @self.server.route("/api/filepicker/download", methods=["POST"])
+        @self.server.route("/api/filepicker/download", methods=["POST", "GET"])
         @self.verifyLogin
         @self.preventOnWebApp(specialBypass="allowDownload")
         def downloadFiles():
 
-            jsonData = request.get_json()
-            path = jsonData.get("path", None)
-            flowContextPath = jsonData.get("flowContextPath", None)
+            if request.method == "GET":
+                path = request.args.get("path", None)
+                flowContextPath = None
+            else:
+                jsonData = request.get_json()
+                path = jsonData.get("path", None)
+                flowContextPath = jsonData.get("flowContextPath", None)
 
             try:
                 if path is None:
-                    raise Exception("No path provided")
+                    return flask.jsonify({"ok": False, "msg": "No path provided"})
 
                 if self._isForUser:
-                    if flowContextPath is None or flowContextPath == "":
-                        raise Exception("Internal server error. Try again later.")
+
+                    # If the flow context path is none, then use the users flow dir
+                    relativeTo = (
+                        os.path.join(currentUser.flowsDir, Flow.flowWorkDir(flowContextPath))
+                        if flowContextPath
+                        else currentUser.flowsDir
+                    )
                     # If a flow context path was provided,
                     # set the highest boundary to that flow folder
                     path = UserFileExplorer(
-                        path, currentUser, relativeTo=Flow.flowWorkDir(flowContextPath)
+                        path, currentUser, relativeTo=relativeTo
                     ).getAbsolutePath()
 
                 if os.path.isdir(path):
+
                     # Zip the folder
-                    import tempfile
-                    import zipfile
+                    shutil.make_archive(str(path), "zip", path)
+                    path = str(path) + ".zip"
 
-                    tempDir = tempfile.mkdtemp()
-                    tempZip = os.path.join(tempDir, "download.zip")
-
-                    with zipfile.ZipFile(tempZip, "w") as zipf:
-                        for root, _, files in os.walk(path):
-                            for file in files:
-                                zipf.write(
-                                    os.path.join(root, file),
-                                    os.path.relpath(os.path.join(root, file), path),
-                                )
-
-                    path = tempZip
-
-                downloadName = os.path.basename(path)
-                import mimetypes
-
-                mimetype = mimetypes.guess_type(path)[0]
+                    @after_this_request
+                    def remove_file(response):
+                        os.remove(path)
+                        return response
 
                 return flask.send_file(
                     path,
-                    download_name=downloadName,
-                    mimetype=mimetype,
+                    download_name=os.path.basename(path),
+                    mimetype=mimetypes.guess_type(path)[0],
                     as_attachment=True,
                 )
             except Exception as exc:
@@ -1728,12 +1788,16 @@ class HorusServer:
                     raise Exception("No path provided")
 
                 if self._isForUser:
-                    if flowContextPath is None or flowContextPath == "":
-                        raise Exception("Internal server error. Try again later.")
+
+                    relativeTo = (
+                        os.path.join(currentUser.flowsDir, Flow.flowWorkDir(flowContextPath))
+                        if flowContextPath
+                        else currentUser.flowsDir
+                    )
                     # If a flow context path was provided,
                     # set the highest boundary to that flow folder
                     path = UserFileExplorer(
-                        path, currentUser, relativeTo=Flow.flowWorkDir(flowContextPath)
+                        path, currentUser, relativeTo=relativeTo
                     ).getAbsolutePath()
 
                 if os.path.isdir(path):
@@ -2921,10 +2985,10 @@ class HorusServer:
                     # Get the tar file from the request
                     tarFile = request.args.get("path", None)
 
-                    tarFile = str(UserFileExplorer(tarFile, currentUser).getAbsolutePath())
-
                     if tarFile is None:
                         return flask.jsonify({"ok": False, "msg": "No data provided"})
+
+                    tarFile = str(UserFileExplorer(tarFile, currentUser).getAbsolutePath())
 
                     # Delete the tarfile after the download
                     @flask.after_this_request
@@ -2966,27 +3030,25 @@ class HorusServer:
                 realPath = str(UserFileExplorer(filePath, currentUser).getAbsolutePath())
 
                 # If its a directory, compress it
-                tarPath = None
+                zipPath = None
                 if os.path.isdir(realPath):
-                    tarPath = realPath + ".tar.gz"
-                    with tarfile.open(tarPath, "w") as tar:
-                        tar.add(realPath, arcname=os.path.basename(realPath))
+                    shutil.make_archive(realPath, "zip", realPath)
 
-                    realPath = tarPath
+                    realPath = realPath + ".zip"
 
                 # Delete the tarfile after the download
                 @flask.after_this_request
                 def removeFile(response):
 
-                    if tarPath is None:
+                    if zipPath is None:
                         return response
 
                     try:
-                        os.remove(tarPath)
+                        os.remove(zipPath)
                     except Exception as exc:
                         logging.getLogger("Horus").error(
                             "Error removing file {%s}: {%s}",
-                            tarPath,
+                            zipPath,
                             str(exc),
                         )
 
@@ -3056,7 +3118,7 @@ class HorusServer:
                 try:
                     # Use the app support dir of the GLOBAL app
                     settingsManager = SettingsManager(self.appSupportDir)
-                    settingsManager.saveSettings(settings, allowUnsafe=True)
+                    settingsManager.saveSettings(settings, allowUnsafe=currentUser.admin)
                     return flask.jsonify({"ok": True})
                 except Exception as exc:
                     return flask.jsonify({"ok": False, "msg": str(exc)})
@@ -3206,12 +3268,20 @@ class HorusServer:
         if not self.desktop:
             print(f"Running {self.mode} mode at: " + self.baseURL)
 
+        from App import AppDelegate
+
+        # Using the reloader and debug mode when the app is bundled can
+        # cause multiprocessing issues. Therefore it will be completely disabled
+        # when the app is compiled
+        useReloader = False if AppDelegate().isCompiled else reloader
+        debug = False if AppDelegate().isCompiled else self.debug
+
         # Define the arguments for socketio.run
         runArgs = {
             "host": self.host,
             "port": self.port,
-            "debug": self.debug,
-            "use_reloader": reloader,
+            "debug": debug,
+            "use_reloader": useReloader,
             "log_output": self.debug,
         }
 

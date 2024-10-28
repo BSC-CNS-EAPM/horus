@@ -54,22 +54,6 @@ class MolstarAPI(metaclass=SingletonMeta):
         # Store the action and data for when the client connects and opens the flow
         self._flow.pendingActions.append(data)
 
-    def addPDB(self, pdb: str, label: str = "PDB") -> None:
-        """
-        Adds the given PDB string to Mol*
-
-        :param pdb: The PDB as a read string
-        :param label: The label of the structure to be shown in the scene
-        """
-        # addPDB is deprecated
-        msg = "addPDB is deprecated. Please use addMolecule instead."
-        logging.getLogger("Horus").warning(msg)
-        print(msg)
-
-        data = {"type": "addPDB", "data": {"pdb": pdb, "label": label}}
-
-        self._emitAction("loadPDB", data)
-
     def addMolecule(self, filePath: str, label: typing.Optional[str] = None) -> None:
         """
         Adds the given Molecule file to Mol*
@@ -78,16 +62,17 @@ class MolstarAPI(metaclass=SingletonMeta):
         :param label: The label for the molecule. Optional. Defaults to the filename
         """
 
-        with open(filePath, "rb") as fopen:
-            molecule = fopen.read().hex()
+        # with open(filePath, "rb") as fopen:
+        #     molecule = fopen.read().hex()
 
         fileName = os.path.basename(filePath)
+        absPath = os.path.abspath(filePath)
 
         data = {
             "type": "addMolecule",
             "data": {
                 "fileName": fileName,
-                "molContent": molecule,
+                "molContent": absPath,
                 "label": label if label else fileName,
             },
         }

@@ -4,7 +4,6 @@ body {
   width: 100vw;
 } */
 
-@import "../../node_modules/bootstrap/dist/css/bootstrap.css";
 @import "colors.css";
 @import "animations.css";
 @import "font.css";
@@ -12,6 +11,14 @@ body {
 html {
   background: var(--grey-white);
   overflow: hidden;
+}
+
+div[role="block-grab"] {
+  cursor: grab;
+}
+
+div[role="block-grabbing"] {
+  cursor: grabbing;
 }
 
 div[role="button"] {
@@ -152,18 +159,13 @@ select:hover {
 
 .modal-content {
   border-radius: 15px !important;
-  overflow: hidden !important;
+  overflow: auto !important;
   transition: height 1s ease-in-out !important;
 }
-.modal {
-  -webkit-backdrop-filter: blur(5px);
-  backdrop-filter: blur(5px);
-}
 
-.modal-backdrop {
-  /* Apply the same style as the blurred modal */
-  background: transparent;
-  backdrop-filter: blur(5px) !important;
+.backdrop-blur {
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
 }
 
 .root {
@@ -303,8 +305,10 @@ select:hover {
 .blurred-modal-content {
   padding: 1rem;
   border-radius: 1rem;
-  background-color: white;
-  border: 2px solid #e5e5e5;
+  backdrop-filter: blur(100px);
+  -webkit-backdrop-filter: blur(100px);
+  box-shadow: 5px 5px 100px rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.8);
 }
 
 .index-module_lineSelectable__1-mwt {

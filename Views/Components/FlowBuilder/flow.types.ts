@@ -152,6 +152,7 @@ export type Block = {
   finishedExecution: boolean;
   extensionsToOpen: Array<ExtensionsToOpen>;
   time: number;
+  externalURL?: string;
 
   // Server execution
   storedOutputs: {

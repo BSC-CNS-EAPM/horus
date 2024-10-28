@@ -443,13 +443,13 @@ function PluginCard(props: PluginCardProps) {
             />
           )}
         </div>
-        <div className="card-body d-flex justify-content-between align-items-start">
+        <div className="card-body flex justify-content-between align-items-start">
           <div>
             <div className="flex flex-row items-baseline gap-2">
               <div>
                 <span className="text-xl font-semibold">{plugin.name}</span>
                 {!error && (
-                  <span className="card-subtitle"> - {plugin.description}</span>
+                  <span> - {plugin.description}</span>
                 )}
               </div>
             </div>
@@ -471,7 +471,7 @@ function PluginCard(props: PluginCardProps) {
             )}
           </div>
           <div>
-            <div className="d-flex justify-content-between gap-2">
+            <div className="flex justify-content-between gap-2">
               {!error && plugin.config.length > 0 && (
                 <button
                   onClick={() => {
@@ -625,6 +625,11 @@ export function PluginManager() {
       (plugin) => plugin.id !== id
     );
 
+    // Also remove it from the error plugins
+    newPluginList.errors = newPluginList.errors.filter(
+      (plugin) => plugin.id !== id
+    );
+
     setPluginList(newPluginList);
     setFilteredPluginList(newPluginList);
   };
@@ -711,6 +716,10 @@ export function PluginManager() {
   );
 }
 
+function getFileName(path: string) {
+  return (path.split("/").pop() ?? "").split(".")[0];
+}
+
 function InstallingPluginView({
   onPluginInstall,
 }: {
@@ -751,7 +760,13 @@ function InstallingPluginView({
       .then((response) => response.json())
       .then((data) => {
         if (!data.ok) {
-          horusAlert("Error installing plugin: " + data.msg);
+          const msg = "Error installing plugin: " + data.msg;
+
+          horusAlert(msg);
+
+          setText((currentText) => {
+            return currentText + "\n" + msg;
+          });
         } else {
           onPluginInstall();
         }
@@ -772,7 +787,7 @@ function InstallingPluginView({
     }
 
     const msg =
-      "Disconnected from server while installing plugin. Check console for details.";
+      "Disconnected from server while installing plugin. Don't worry, this is expected if the plugin installation is slow. Check the terminal for details on the installation progress.";
     horusAlert(msg);
 
     setText((currentText) => {
@@ -852,7 +867,15 @@ function InstallingPluginView({
               overflow: "hidden",
             }}
           >
-            <HorusLazyLog logText={text} />
+            <HorusLazyLog
+              logText={text}
+              keepDisabled={!isInstalling}
+              filename={
+                getFileName(selectedFile)
+                  ? `${getFileName(selectedFile)}.log`
+                  : "plugin-install.log"
+              }
+            />
           </div>
         </div>
       )}

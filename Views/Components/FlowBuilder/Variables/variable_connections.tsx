@@ -130,8 +130,8 @@ export function VariableModalView(props: VariableModalViewProps) {
         props?.handleClose?.();
       }}
       maxContentSize={{
-        height: "h-[85%]",
-        width: "w-[60%]",
+        height: "95%",
+        width: "95%",
       }}
     >
       <div className="flex flex-col h-full">

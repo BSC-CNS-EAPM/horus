@@ -13,7 +13,7 @@ import PluginPagesView, { usePluginPages } from "../Toolbar/extensions_list";
 import WebAppUserFlows from "../WebAppUserFlows/WebAppUserFlows";
 import ConfigRemotes from "../../Remotes/remotes";
 import Profile from "../../Login/profile";
-import { HorusModal } from "../reusable";
+import { BlurredModal } from "../reusable";
 import { PluginManager } from "../../PluginsManager/plugin_manager";
 import { TemplatesView } from "../Templates/templates";
 import { SettingsView } from "../../Settings/settings";
@@ -36,9 +36,7 @@ import Logo from "../logo";
 import MolStarIcon from "../Toolbar/Icons/MolStar";
 
 type SplashModal = {
-  header?: React.ReactNode;
   body: React.ReactNode;
-  footer?: React.ReactNode;
   allowBlurClose?: boolean;
 };
 
@@ -102,17 +100,16 @@ function ModalView(props: {
   onHide: () => void;
 }) {
   return (
-    <HorusModal
-      id="home-modal"
-      show={props.isOpen}
-      header={props.modal.header}
-      footer={props.modal.footer}
-      onHide={props.modal.allowBlurClose ?? true ? props.onHide : () => {}}
-      size="xl"
+    <BlurredModal
       noCentered
+      show={props.isOpen}
+      maxContentSize={{
+        width: "80vw",
+      }}
+      onHide={props.modal.allowBlurClose ?? true ? props.onHide : () => {}}
     >
       {props.modal.body}
-    </HorusModal>
+    </BlurredModal>
   );
 }
 
@@ -260,19 +257,8 @@ function ManageTemplates(props: ButtonOpensModalProps) {
 
 function ManagePlugins(props: ButtonOpensModalProps) {
   const setModalContent = () => {
-    const footer = (
-      <a
-        className="app-button text-black text-decoration-none"
-        href="https://horus.bsc.es/docs/developer_guide/horusapi/plugins.html"
-        target="_blank"
-      >
-        Learn more about plugins
-      </a>
-    );
-
     props.setModalContent({
       body: <PluginManager />,
-      footer: footer,
     });
   };
 
@@ -396,7 +382,7 @@ function RecentFlowsSplash() {
               predefinedFlows.length > 0 ? (
                 <PredefinedFlows flows={predefinedFlows} />
               ) : (
-                <div className="h-full w-[26rem] flex justify-center items-center">
+                <div className="h-full flex justify-center items-center">
                   No recent flows
                 </div>
               )
@@ -442,7 +428,7 @@ function ExploreExtensions() {
       <ScrollableViewWelcome.Body>
         <div className="w-full h-full">
           {pagesToShow.length === 0 ? (
-            <div className="h-full w-[26rem] flex justify-center items-center">
+            <div className="h-full flex justify-center items-center">
               No extensions
             </div>
           ) : (

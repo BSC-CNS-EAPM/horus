@@ -8,9 +8,9 @@ import {
 import { ChonkyIconFA } from "chonky-icon-fontawesome";
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { render } from "react-dom";
-import { horusPost } from "../../Utils/utils";
+import { horusPost, POSTUploadWithProgress } from "../../Utils/utils";
 import AppButton from "../appbutton";
-import { HorusModal } from "../reusable";
+import { BlurredModal } from "../reusable";
 
 // Somewhere in your `index.ts`:
 // @ts-ignore
@@ -289,20 +289,21 @@ function useServerExplorer(
       // Check if its size is more than the maximum allowed
       setActionFilesActive({
         status: true,
-        progress: (i / files.length) * 100,
+        progress: 0,
         file: files[i]!.name,
         text: "Uploading files...",
       });
 
-      const response = await horusPost(
+      const data: any = await POSTUploadWithProgress(
         "/api/filepicker/upload",
-        header,
         formData,
-        undefined,
-        null
+        (percentage) => {
+          setActionFilesActive((currentText) => ({
+            ...currentText,
+            progress: percentage,
+          }));
+        }
       );
-
-      const data = await response.json();
 
       if (!data.ok) {
         await horusAlert(data.msg);
@@ -316,13 +317,7 @@ function useServerExplorer(
   }, [currentPath, fetchFolders, resetActionFiles, flowContext?.path]);
 
   const downloadFiles = useCallback(
-    async (
-      filePaths: [
-        {
-          path: string;
-        }
-      ]
-    ) => {
+    async (filePaths: FileData[]) => {
       const header = {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
@@ -333,13 +328,13 @@ function useServerExplorer(
 
         setActionFilesActive({
           status: true,
-          progress: (i / filePaths.length) * 100,
-          file: filePath.path,
+          progress: ((2 * i + 1) / (filePaths.length * 2)) * 100,
+          file: filePath.name,
           text: "Downloading files...",
         });
 
         const body = JSON.stringify({
-          path: filePath.path,
+          path: filePath["path"],
           flowContextPath: flowContext?.path,
         });
 
@@ -361,11 +356,23 @@ function useServerExplorer(
         // If the response is not a JSON, continue
         const data = await response.blob();
         // Get the name of the file (last part of the path)
-        const fileName = filePath.path.split("/").pop();
+        let fileName = filePath.name;
+
+        // Folders are downloaded as zips
+        if (filePath.isDir) {
+          fileName = fileName + ".zip";
+        }
 
         const file = new File([data], fileName ?? "downloaded_file", {
           type: "application/octet-stream",
         });
+
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        setActionFilesActive((currentText) => ({
+          ...currentText,
+          progress: ((2 * i + 2) / (filePaths.length * 2)) * 100,
+        }));
 
         window.horus.saveFile(file);
       }
@@ -565,10 +572,17 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
   }, [open]);
 
   return (
-    <HorusModal show={open} onHide={() => setOpen(false)} size="xl">
+    <BlurredModal
+      show={open}
+      onHide={() => setOpen(false)}
+      maxContentSize={{
+        width: "90%",
+      }}
+      overRoot
+    >
       <div className="w-full flex flex-col gap-2 p-4">
         <div className="flex flex-col gap-2 flex-wrap justify-start items-start">
-          <div className="text-3xl text-bold min-w-[180px]">
+          <div className="text-3xl font-bold min-w-[180px]">
             {fileProps
               ? openFolder
                 ? "Select a folder"
@@ -667,12 +681,7 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
             </div>
           )}
         </div>
-        <div
-          className="w-full"
-          style={{
-            height: "65vh",
-          }}
-        >
+        <div className="w-full" style={{ height: "65vh" }}>
           <FileBrowser
             defaultFileViewActionId={ChonkyActions.EnableListView.id}
             fileActions={chonkyActions}
@@ -703,6 +712,7 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
         </div>
         <div className="flex justify-end flex-row gap-2">
           <input
+            style={{ display: "none" }}
             hidden
             type="file"
             ref={filePicker}
@@ -730,7 +740,7 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
           )}
         </div>
       </div>
-    </HorusModal>
+    </BlurredModal>
   );
 }
 

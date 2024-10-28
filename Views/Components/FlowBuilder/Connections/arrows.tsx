@@ -70,8 +70,14 @@ export function ConnectedArrows(props: ConnectedArrows) {
       : "var(--pop-code)"
     : "var(--red-error)";
 
+  // If either the end or start node do not exist, return
+  const originNode = document.getElementById(start);
+  const destinationNode = document.getElementById(end);
+  if (!originNode || !destinationNode) return null;
+
   return (
     <div
+      key={`arrow-container-${start + end}`}
       style={
         isPlaced
           ? {

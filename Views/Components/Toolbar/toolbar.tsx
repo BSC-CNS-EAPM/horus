@@ -162,7 +162,7 @@ export function ToolbarMenu(props: ToolBarMenuProps) {
             leaveTo="transform opacity-0 scale-95"
           >
             <Menu.Items
-              className="absolute p-md-2 mt-3 w-56 origin-top-left rounded-xl bg-white toolbar-menu outline-none overflow-y-auto"
+              className="absolute p-md-2 p-2 mt-3 w-56 origin-top-left rounded-xl bg-white toolbar-menu outline-none overflow-y-auto"
               style={{
                 maxHeight: "calc(100vh - 4rem)",
                 width: "auto",
@@ -226,6 +226,7 @@ const MenuIcon = ({ active, svgPath }: IconProps) => {
 
 interface SearchProps {
   placeholder: string;
+  value?: string;
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
   showIcon?: boolean;
   onFocus?: () => void;
@@ -235,7 +236,14 @@ interface SearchProps {
 }
 
 function SearchComponent(props: SearchProps) {
-  const { placeholder, onChange, showIcon = true, className, onEnter } = props;
+  const {
+    placeholder,
+    onChange,
+    showIcon = true,
+    className,
+    onEnter,
+    value,
+  } = props;
 
   const handleKeyDown = (event: KeyboardEvent) => {
     if (event.key === "Enter") {
@@ -251,6 +259,7 @@ function SearchComponent(props: SearchProps) {
         placeholder={placeholder}
         className="w-full outline-none"
         onChange={onChange}
+        value={value}
         onFocus={props.onFocus}
         onBlur={props.onBlur}
         onKeyDown={handleKeyDown}
@@ -280,8 +289,12 @@ function SearchComponent(props: SearchProps) {
 }
 
 const handleKeyDown = (event: globalThis.KeyboardEvent) => {
-  const isModifierKeyPressed = event.getModifierState(modifierKey);
-  const isShiftKeyPressed = event.getModifierState(shiftKey);
+  let isModifierKeyPressed = false;
+  let isShiftKeyPressed = false;
+  if (event.getModifierState) {
+    isModifierKeyPressed = event.getModifierState(modifierKey);
+    isShiftKeyPressed = event.getModifierState(shiftKey);
+  }
 
   // Toggle console
   if (event.code === "KeyK" && isModifierKeyPressed) {

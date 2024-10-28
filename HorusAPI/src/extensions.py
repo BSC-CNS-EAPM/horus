@@ -3,7 +3,7 @@ ExtensionAPI module
 """
 
 import logging
-import base64
+import os
 
 # Import types only in development
 # pyright: reportUnboundVariable=false
@@ -29,7 +29,7 @@ class Extensions(metaclass=SingletonMeta):
 
         logging.getLogger("Horus").debug("Emitting extension action %s", action)
 
-        if self._flow is None:
+        if self._flow is None or self._flow.savedID is None:
             raise Exception("Could not run the ExtensionsAPI. No flow is currently running")
 
         if self.socketio is not None:
@@ -55,9 +55,6 @@ class Extensions(metaclass=SingletonMeta):
         # Lowercase the plugin ID and the page ID
         pluginID = pluginID.lower()
         pageID = pageID.lower()
-
-        if self._flow is None:
-            raise Exception("Could not run the ExtensionsAPI. No flow is currently running")
 
         extensionData = {
             "extensionAPI": True,
@@ -108,23 +105,33 @@ class Extensions(metaclass=SingletonMeta):
 
     def loadHTML(self, html: str, title: str, store: bool = True) -> None:
         """
-        Loads the given HTML string into the extension.
+        Loads the given HTML into the extension.
 
-        :param html: The HTML to load as a string.
+        :param html: The path to the HTML to load .
         :param title: The title of the 'Result'. \
         This will be displayed on top of the block that produced the HTML.
         :param store: Whether to store the HTML as results or to open it inmediately.
+        :param asString: Whether the passed HTML is a string or an html file.
         """
 
-        if self._flow is None:
-            raise Exception("Could not run the ExtensionsAPI. No flow is currently running")
+        if html.endswith(".html") and not os.path.exists(html):
+            raise ValueError("HTML file does not exist at path {}".format(html))
+
+        if not html.endswith(".html"):
+            type = "html_content"
+        else:
+            html = os.path.abspath(html)
+            type = "html_file"
 
         if store:
             self.storeExtensionResults(
-                pluginID="horus", pageID="html_loader", data={"html": html}, title=title
+                pluginID="horus",
+                pageID="html_loader",
+                data={"html": html, "type": type},
+                title=title,
             )
         else:
-            self.open(pluginID="horus", pageID="html_loader", data={"html": html})
+            self.open(pluginID="horus", pageID="html_loader", data={"html": html, "type": type})
 
     def loadImage(self, image: str, title: str, store: bool = True) -> None:
         """
@@ -136,49 +143,17 @@ class Extensions(metaclass=SingletonMeta):
         :param store: Whether to store the image as results or to open it inmediately.
         """
 
-        if self._flow is None:
-            raise Exception("Could not run the ExtensionsAPI. No flow is currently running")
+        if not os.path.exists(image):
+            raise ValueError("Image file does not exist at path {}".format(image))
 
-        # Read the image as a base64 string
-        if image.endswith(".png"):
-            with open(image, "rb") as f:
-                imageData = base64.b64encode(f.read()).decode("utf-8")
-                image = "data:image/png;base64,{}".format(imageData)
-        elif image.endswith(".jpg"):
-            with open(image, "rb") as f:
-                imageData = base64.b64encode(f.read()).decode("utf-8")
-                image = "data:image/jpg;base64,{}".format(imageData)
-        elif image.endswith(".gif"):
-            with open(image, "rb") as f:
-                imageData = base64.b64encode(f.read()).decode("utf-8")
-                image = "data:image/gif;base64,{}".format(imageData)
-        else:
-            raise Exception("Unsupported image format {}".format(image))
-
-        # Generate an HTML string that contains the image
-        image = '<img src="{}" alt="{}" style="max-width: 100%; max-height: 100%;">'.format(
-            image, title
-        )
-
-        html = f"""
-        <html>
-            <head>
-                <title>{title}</title>
-            </head>
-            <body>
-                <div style="display: flex; justify-content: center; align-items: center; height: 100vh;">
-                    {image}
-                </div>
-            </body>
-        </html>
-        """
+        image = os.path.abspath(image)
 
         if store:
             self.storeExtensionResults(
-                pluginID="horus", pageID="html_loader", data={"html": html}, title=title
+                pluginID="horus", pageID="image_loader", data={"image": image}, title=title
             )
         else:
-            self.open(pluginID="horus", pageID="html_loader", data={"html": html})
+            self.open(pluginID="horus", pageID="image_loader", data={"image": image})
 
     def loadText(self, text: str, title: str, store: bool = True) -> None:
         """
@@ -191,10 +166,9 @@ class Extensions(metaclass=SingletonMeta):
         """
 
         # Use formatted text
-        text = "<pre>{}</pre>".format(text)
-
-        if self._flow is None:
-            raise Exception("Could not run the ExtensionsAPI. No flow is currently running")
+        text = "<pre style='white-space: pre-wrap; font-family: sans-serif;'>{}</pre>".format(
+            text
+        )
 
         if store:
             self.storeExtensionResults(
@@ -202,3 +176,69 @@ class Extensions(metaclass=SingletonMeta):
             )
         else:
             self.open(pluginID="horus", pageID="html_loader", data={"html": text})
+
+    def loadCSV(self, csv: str, title: str, store: bool = True) -> None:
+        """
+        Loads the given CSV into the extension.
+
+        :param csv: The path to the CSV to load.
+        :param title: The title of the 'Result'. \
+        This will be displayed on top of the block that produced the CSV.
+        :param store: Whether to store the CSV as results or to open it inmediately.
+        """
+
+        if not os.path.exists(csv):
+            raise ValueError("CSV file does not exist at path {}".format(csv))
+
+        csv = os.path.abspath(csv)
+
+        if store:
+            self.storeExtensionResults(
+                pluginID="horus", pageID="csv_loader", data={"csv": csv}, title=title
+            )
+        else:
+            self.open(pluginID="horus", pageID="csv_loader", data={"csv": csv})
+
+    def loadPlot(self, plotCSV: str, title: str, store: bool = True) -> None:
+        """
+        Loads the given CSV as a Plot into the extension.
+
+        :param csv: The path to the CSV to load as plot.
+        :param title: The title of the plot. \
+        This will be displayed on top of the block that produced the Plot.
+        :param store: Whether to store the Plot as results or to open it inmediately.
+        """
+
+        if not os.path.exists(plotCSV):
+            raise ValueError("CSV file does not exist at path {}".format(plotCSV))
+
+        plotCSV = os.path.abspath(plotCSV)
+
+        if store:
+            self.storeExtensionResults(
+                pluginID="horus", pageID="plot_loader", data={"plot": plotCSV}, title=title
+            )
+        else:
+            self.open(pluginID="horus", pageID="plot_loader", data={"plot": plotCSV})
+
+    def loadPDF(self, pdf: str, title: str, store: bool = True) -> None:
+        """
+        Loads the given PDF into the extension.
+
+        :param pdf: The path to the PDF to load.
+        :param title: The title of the 'Result'. \
+        This will be displayed on top of the block that produced the PDF.
+        :param store: Whether to store the PDF as results or to open it inmediately.
+        """
+
+        if not os.path.exists(pdf):
+            raise ValueError("PDF file does not exist at path {}".format(pdf))
+
+        pdf = os.path.abspath(pdf)
+
+        if store:
+            self.storeExtensionResults(
+                pluginID="horus", pageID="pdf_loader", data={"pdf": pdf}, title=title
+            )
+        else:
+            self.open(pluginID="horus", pageID="pdf_loader", data={"pdf": pdf})
