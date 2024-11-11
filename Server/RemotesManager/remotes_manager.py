@@ -239,7 +239,7 @@ class RemotesAPI:
         try:
 
             # Update the command with the timeout
-            command = f"timeout {timeout} {command}"
+            command = "timeout {timeout} {command}".format(timeout=timeout, command=command)
 
             out = self.conn.run(command, hide=True, in_stream=False)
         except Exception as exc:
