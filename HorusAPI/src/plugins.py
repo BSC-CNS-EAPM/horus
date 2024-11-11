@@ -1971,7 +1971,7 @@ class SlurmBlock(PluginBlock):
         outputs: typing.List[PluginVariable] = [],
         id: typing.Optional[str] = None,
         failOnSlurmError: bool = True,
-        extenrnalURL: typing.Optional[str] = None,
+        externalURL: typing.Optional[str] = None,
     ):
         """
         :param name: The name of the block.
@@ -1984,7 +1984,7 @@ class SlurmBlock(PluginBlock):
         :param outputs: The outputs of the block.
         :param id: The id of the block.
         :param failOnSlurmError: Whether to fail the block if the slurm job fails.
-        :param extenrnalURL: The external URL of the block for documentation purposes.
+        :param externalURL: The external URL of the block for documentation purposes.
         """
         super().__init__(
             name,
@@ -1996,7 +1996,7 @@ class SlurmBlock(PluginBlock):
             outputs=outputs,
             blockType=PluginBlockTypes.SLURM,
             id=id,
-            externalURL=extenrnalURL,
+            externalURL=externalURL,
         )
         self.initalAction = initialAction
         self.finalAction = finalAction
