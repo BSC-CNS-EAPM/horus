@@ -29,7 +29,7 @@ find dist/Packages/Horus.app -name '*.DS_Store' -exec rm {} \;
 codesign --remove-signature dist/Packages/Horus.app
 
 # Get the Apple Development signing identity (Code number)
-identity=$(security find-identity -v -p codesigning | grep "Apple" | awk -F' "' '{print $1}' | awk -F') ' '{print $2}')
+identity=$(security find-identity -v -p codesigning | grep "Developer ID" | awk -F' "' '{print $1}' | awk -F') ' '{print $2}')
 
 # Codesign the .app bundle if a signing identity is found
 if [[ -n "$identity" ]] && [[ "$identity" != "" ]]; then
