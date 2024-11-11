@@ -2,6 +2,7 @@ import { PluginUIComponent } from "molstar/lib/mol-plugin-ui/base";
 import {
   AnimationViewportControls,
   LociLabels,
+  SelectionViewportControls,
   TrajectoryViewportControls,
 } from "molstar/lib/mol-plugin-ui/controls";
 import { BackgroundTaskProgress } from "molstar/lib/mol-plugin-ui/task";
@@ -17,9 +18,6 @@ export class HorusMolstarViewportComponent extends PluginUIComponent {
     return (
       <>
         <ViewportCanvas />
-        <EmptyMolstarHelp />
-        <ViewportControls />
-        <BackgroundTaskProgress />
         <div className="msp-viewport-top-left-controls flex flex-col gap-1">
           <Smiles2DMolstarViewportComponent />
           <div className="flex flex-row">
@@ -27,6 +25,10 @@ export class HorusMolstarViewportComponent extends PluginUIComponent {
             <TrajectoryViewportControls />
           </div>
         </div>
+        <EmptyMolstarHelp />
+        <SelectionViewportControls />
+        <ViewportControls />
+        <BackgroundTaskProgress />
         <div className="msp-highlight-toast-wrapper">
           <LociLabels />
           <Toasts />
