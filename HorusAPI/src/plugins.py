@@ -43,14 +43,15 @@ class PluginRemote:
         self._remote = remote
         self.cd = self._remote.cd
 
-    def remoteCommand(self, command: str):
+    def remoteCommand(self, command: str, timeout: typing.Optional[int] = None):
         """
         Executes a command on the remote.
         The output of the command will be returned.
 
         :param command: The command to execute.
+        :param timeout: The timeout in seconds. None for no timeout.
         """
-        output = self._remote.command(command)
+        output = self._remote.command(command, timeout)
 
         return output
 
@@ -1971,7 +1972,7 @@ class SlurmBlock(PluginBlock):
         outputs: typing.List[PluginVariable] = [],
         id: typing.Optional[str] = None,
         failOnSlurmError: bool = True,
-        extenrnalURL: typing.Optional[str] = None,
+        externalURL: typing.Optional[str] = None,
     ):
         """
         :param name: The name of the block.
@@ -1984,7 +1985,7 @@ class SlurmBlock(PluginBlock):
         :param outputs: The outputs of the block.
         :param id: The id of the block.
         :param failOnSlurmError: Whether to fail the block if the slurm job fails.
-        :param extenrnalURL: The external URL of the block for documentation purposes.
+        :param externalURL: The external URL of the block for documentation purposes.
         """
         super().__init__(
             name,
@@ -1996,7 +1997,7 @@ class SlurmBlock(PluginBlock):
             outputs=outputs,
             blockType=PluginBlockTypes.SLURM,
             id=id,
-            externalURL=extenrnalURL,
+            externalURL=externalURL,
         )
         self.initalAction = initialAction
         self.finalAction = finalAction

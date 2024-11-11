@@ -786,3 +786,31 @@ def test_dirty_block(plugin_manager):
     finally:
         # Restore the flow by copying the .bak file to the original file
         os.system(f"mv {path}.bak {path}")
+
+
+def test_command_timeout(plugin_manager):
+    path = os.path.join(os.path.dirname(__file__), "Timeout_test.flow")
+
+    # Backup the flow
+    os.system(f"cp {path} {path}.bak")
+
+    try:
+        flow = Flow.read(path)
+
+        flow.reset()
+
+        # Run the flow
+        flow.run(placedID=1, resetFlow=True)
+
+        # Assert that the flow runned nicely
+        assert flow.status == flow.FlowStatus.FINISHED
+
+        # Run again without reset, the second time, the timeout is changed
+        flow.run(placedID=1, resetFlow=False)
+
+        # Assert that the flow failed due to the timeout
+        assert flow.status == flow.FlowStatus.ERROR
+
+    finally:
+        # Restore the flow by copying the .bak file to the original file
+        os.system(f"mv {path}.bak {path}")
