@@ -1210,10 +1210,6 @@ class Flow:
         if not os.path.exists(flowResultsDir):
             os.makedirs(flowResultsDir)
 
-        # Update the working dir
-        oldWD = os.getcwd()
-        os.chdir(flowResultsDir)
-
         # Set the flow status to running
         self.status = self.FlowStatus.RUNNING
 
@@ -1280,9 +1276,6 @@ class Flow:
 
         # Compute the size of the folder the flow is in
         self.size = self._computeSize()
-
-        # Restore the working dir
-        os.chdir(oldWD)
 
         # Save the flow
         self.write()
@@ -1571,7 +1564,7 @@ class FlowManager:
                     read = True
                 except json.JSONDecodeError as exc:
                     tries += 1
-                    if tries > 5:    
+                    if tries > 5:
                         read = True
                         logging.getLogger("Horus").error(
                             "Error reading recent flows file: %s", str(exc)

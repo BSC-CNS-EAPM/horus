@@ -15,6 +15,7 @@ import json
 import shutil
 import datetime
 from pydantic import ValidationError
+from contextlib import contextmanager
 import re
 
 # For downloading plugins
@@ -1381,14 +1382,26 @@ class PluginManager(metaclass=HorusSingleton):
         errorMSG = ""
         outputs = None
 
+        # Set the working directory with a context manager
+        @contextmanager
+        def chdir(path):
+            """Context manager for changing the current working directory."""
+            currDir = os.getcwd()  # Save the current directory
+            try:
+                os.chdir(path)  # Change to the desired directory
+                yield  # Yield control back to the block inside the context manager
+            finally:
+                os.chdir(currDir)  # Restore the original directory when done
+
+        flowDir = block.flow.flowWorkDir(block.flow.path if block.flow.path else ".")
+
         # Calcultate the time the block takes
         startTime = datetime.datetime.now().timestamp()
         try:
             with PluginDeps(plugin._path):
-                outputs = block()
-                # Execute the block
-                # outputs = PluginDeps.subprocessBlock(block)
-        except Exception as e:  # pylint: disable=broad-exception-caught
+                with chdir(flowDir):
+                    outputs = block()
+        except Exception as e:
 
             # Get the full traceback onyl for development / debug mode
             from App import AppDelegate

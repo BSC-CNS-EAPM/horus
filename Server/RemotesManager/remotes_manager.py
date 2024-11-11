@@ -184,11 +184,14 @@ class RemotesAPI:
         """
         return self.command("echo $HOME")
 
-    def command(self, command: str) -> str:  # pylint: disable=method-hidden
+    def command(
+        self, command: str, timeout: t.Optional[int] = 10
+    ) -> str:  # pylint: disable=method-hidden
         """
         Runs a command on the remote (or locally).
 
         :param command: The command to run.
+        :param timeout: The timeout in seconds.
         :return: The output of the command.
         """
 
@@ -204,7 +207,7 @@ class RemotesAPI:
                     stderr=subprocess.PIPE,
                 )
 
-                process.wait(timeout=10)
+                process.wait(timeout=timeout)
 
                 # If the command failed, raise an exception
                 if process.returncode != 0:
@@ -234,6 +237,10 @@ class RemotesAPI:
         # tries to acces sys.stdin which is not available because is mocked
         # with PrintCapturer)
         try:
+
+            # Update the command with the timeout
+            command = f"timeout {timeout} {command}"
+
             out = self.conn.run(command, hide=True, in_stream=False)
         except Exception as exc:
             logging.getLogger("Horus").debug(
@@ -263,14 +270,14 @@ class RemotesAPI:
         # Save the old command
         oldCommand = self.command
 
-        def remoteCommandHook(command: str):
+        def remoteCommandHook(command: str, *args, **kwargs):
             """
             Hook for the remoteCommand function.
             """
 
             newCommand = f"cd {path} && {command}"
 
-            return oldCommand(newCommand)
+            return oldCommand(newCommand, *args, **kwargs)
 
         # Hook the command function
         self.command = remoteCommandHook

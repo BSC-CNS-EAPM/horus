@@ -43,14 +43,15 @@ class PluginRemote:
         self._remote = remote
         self.cd = self._remote.cd
 
-    def remoteCommand(self, command: str):
+    def remoteCommand(self, command: str, timeout: typing.Optional[int] = None):
         """
         Executes a command on the remote.
         The output of the command will be returned.
 
         :param command: The command to execute.
+        :param timeout: The timeout in seconds. None for no timeout.
         """
-        output = self._remote.command(command)
+        output = self._remote.command(command, timeout)
 
         return output
 
