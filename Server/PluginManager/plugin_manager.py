@@ -661,10 +661,7 @@ class PluginManager(metaclass=HorusSingleton):
         except DefaultPluginConfigException:
             return None
         except Exception as e:
-            # import traceback
-
             logging.getLogger("Horus").error("Error loading plugin '%s'. %s", pluginPath, str(e))
-            # logging.getLogger("Horus").error("%s", traceback.format_exc())
             raise e
 
         # Check that the plugin is not already loaded
