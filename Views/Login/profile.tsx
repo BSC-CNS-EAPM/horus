@@ -80,7 +80,7 @@ export default function Profile() {
 
     if (data.ok) {
       await horusAlert(
-        "An email has been sent to your email address with instructions",
+        "An email has been sent to your email address with instructions"
       );
     } else {
       await horusAlert(data.msg || "An error occurred. Try again later.");
@@ -90,7 +90,7 @@ export default function Profile() {
   const deleteAccount = async () => {
     if (
       !(await horusConfirm(
-        "Are you sure you want to delete your account? This action is irreversible.",
+        "Are you sure you want to delete your account? This action is irreversible."
       ))
     ) {
       return;

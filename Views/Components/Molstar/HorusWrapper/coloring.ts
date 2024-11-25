@@ -27,7 +27,7 @@ export function createProteopediaCustomTheme(colors: number[]) {
     colors: PD.ObjectList(
       { color: PD.Color(Color(0xffffff)) },
       ({ color }) => Color.toHexString(color),
-      { defaultValue: colors.map((c) => ({ color: Color(c) })) },
+      { defaultValue: colors.map((c) => ({ color: Color(c) })) }
     ),
   };
   type ProteopediaCustomColorThemeParams =
@@ -59,7 +59,7 @@ export function createProteopediaCustomTheme(colors: number[]) {
 
   function ProteopediaCustomColorTheme(
     ctx: ThemeDataContext,
-    props: PD.Values<ProteopediaCustomColorThemeParams>,
+    props: PD.Values<ProteopediaCustomColorThemeParams>
   ): ColorTheme<ProteopediaCustomColorThemeParams> {
     let color: LocationColor;
 

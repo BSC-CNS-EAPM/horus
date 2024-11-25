@@ -6,7 +6,6 @@ importantly, it manages the execution of the individual blocks of the plugins.
 
 # Standard imports
 import os
-import signal
 import sys
 import typing
 import io
@@ -136,15 +135,13 @@ class PluginManager(metaclass=HorusSingleton):
         # directory as the executable bundle
         try:
             bundleDir = sys._MEIPASS  # type: ignore
-            self.defaultPluginsDir = os.path.join(bundleDir, "DefaultPlugins")
+            self.defaultPluginsDir = os.path.abspath(os.path.join(bundleDir, "DefaultPlugins"))
         except AttributeError:
             # We are not in a bundle, use the AppSupport/DefaultPlugins directory
             self.defaultPluginsDir = os.path.join(self.appSupportDir, "DefaultPlugins")
 
         # If the environment varialbe HORUS_DEFAULT_PLUGINS_DIR is set, use that
-        self.defaultPluginsDir = os.path.abspath(
-            os.getenv("HORUS_DEFAULT_PLUGINS_DIR") or self.defaultPluginsDir
-        )
+        self.defaultPluginsDir = os.getenv("HORUS_DEFAULT_PLUGINS_DIR") or self.defaultPluginsDir
 
         logging.getLogger("Horus").info("Default plugins directory: %s", self.defaultPluginsDir)
 
@@ -153,8 +150,8 @@ class PluginManager(metaclass=HorusSingleton):
 
         # Defines the plugins directory, which should be in the AppSupport directory
         # If the environment varialbe HORUS_PLUGINS_DIR is set, use that
-        self.pluginsDir = os.path.abspath(
-            os.getenv("HORUS_PLUGINS_DIR") or os.path.join(self.appSupportDir, "Plugins")
+        self.pluginsDir = os.getenv("HORUS_PLUGINS_DIR") or os.path.join(
+            self.appSupportDir, "Plugins"
         )
 
         logging.getLogger("Horus").info("Plugins directory: %s", self.pluginsDir)
@@ -629,8 +626,6 @@ class PluginManager(metaclass=HorusSingleton):
                 errorPlugin._path = pth
                 self.errorPlugins.append(errorPlugin)
 
-                logging.getLogger("Horus").error("Error loading plugin '%s': %s", pth, str(e))
-
         logging.getLogger("Horus").info(
             "%i plugins initialized: %s.",
             len(self.loadedPlugins),
@@ -685,6 +680,7 @@ class PluginManager(metaclass=HorusSingleton):
                 error = (
                     f"Plugin with ID '{plugin.id}' already exists. Plugins must have unique IDs."
                 )
+                print(error)
                 raise ValueError(error)
             except PluginNotFoundError:
                 self.loadedPlugins.append(plugin)
@@ -1052,6 +1048,79 @@ class PluginManager(metaclass=HorusSingleton):
 
             raise Exception(msg)
 
+        # First check that the user has a valid
+        # python interpreter when the app is frozen
+        # Unfortunately, PyInstaller does not include
+        # the python interpreter in the bundle, therefore
+        # to install dependencies we need to use the system
+        # python interpreter. If the user does not have a
+        # valid python interpreter, we cannot install dependencies
+        # and we need to raise an exception.
+        interpreter: str = "python"
+        try:
+            interpreter = str(self.horusSettings.getSetting("dependenciesInterpreter").value)
+        except Exception as e:
+            msg = f"Could not get the python interpreter from the user settings: {e}"
+            msg += "\nDefaulting to system python interpreter."
+            print(msg)
+
+        # Check if the python interpreter is valid
+        try:
+            p = subprocess.Popen(
+                [interpreter, "--version"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                stdin=subprocess.PIPE,
+            )
+        except Exception as e:
+            raise Exception(
+                f"Could not execute '{interpreter}' command. {e}."
+                + " Make sure you have selected a valid interpreter in the settings."
+            ) from e
+
+        # Wait for the process to finish
+        p.wait()
+
+        # Get the result
+        if p.stdout is None:
+            raise Exception("Could not get the intalled python interpreter version.")
+
+        version = p.stdout.read().decode("utf-8").strip().split(" ")[-1]
+
+        try:
+            appPythonVersion = AppDelegate().APP_INFO["PYTHON_VERSION"]
+        except Exception as exc:
+            raise Exception(f"Could not get the python version from the app info: {exc}") from exc
+
+        exceptionMsg = (
+            "In order to install additional dependencies, "
+            "you need to have a valid python interpreter "
+            f"installed on your system with python v{appPythonVersion}. "
+            "You can select a specific interpreter in the settings."
+        )
+
+        # Check the return code
+        if p.returncode != 0 and p.returncode is not None:
+            raise Exception(exceptionMsg)
+
+        # Check that the major and minor version of python matches
+        major = version.split(".")[0]
+        minor = version.split(".")[1]
+
+        appVersionMajor = appPythonVersion.split(".")[0]
+        appVersionMinor = appPythonVersion.split(".")[1]
+
+        majorMatches = major == appVersionMajor
+        minorMatches = minor == appVersionMinor
+
+        # Both major and minor versions must match (eg. 3.9.12 == 3.9.15)
+        # Patch versions are ignored
+        bothMatch = majorMatches and minorMatches
+
+        if not bothMatch:
+            exceptionMsg += f" (Currently detected python v{version})"
+            raise Exception(exceptionMsg)
+
         # Get the PATH environment variable
         path = os.environ.get("PATH", None)
 
@@ -1077,15 +1146,11 @@ class PluginManager(metaclass=HorusSingleton):
         else:
             noDependencies = False
 
-        pip = (
-            [os.path.join(AppDelegate().bundleDir, "pip", "pip")]
-            if AppDelegate().isCompiled
-            else ["python", "-m", "pip"]
-        )
-
         # The command to install dependencies with pip
         command = [
-            *pip,
+            interpreter,
+            "-m",
+            "pip",
             "install",
             *dep.split(" "),
             "--prefix",
@@ -1329,14 +1394,13 @@ class PluginManager(metaclass=HorusSingleton):
 
         # Calcultate the time the block takes
         startTime = datetime.datetime.now().timestamp()
-        exception: typing.Union[None, Exception] = None
         try:
             with PluginDeps(plugin._path):
                 with chdir(flowDir):
-                    outputs = PluginDeps.subprocessBlock(block)
+                    outputs = block()
         except Exception as e:
 
-            # Get the full traceback only for development / debug mode
+            # Get the full traceback onyl for development / debug mode
             from App import AppDelegate
 
             if AppDelegate().debug or self.horusSettings.getSetting("developmentMode").value:
@@ -1345,12 +1409,8 @@ class PluginManager(metaclass=HorusSingleton):
                 errorMSG = traceback.format_exc()
             else:
                 errorMSG = str(e)
-            
-            if hasattr(e, "message"):
-                exception = type(e)(e.message + errorMSG) # type: ignore
-            else:
-                exception = e
-                
+
+            error = True
         finally:
             # Calculate the final time
             finalTime = datetime.datetime.now().timestamp()
@@ -1384,8 +1444,8 @@ class PluginManager(metaclass=HorusSingleton):
                     "============================================================================="
                 )
 
-        if exception:
-            raise exception
+        if error:
+            raise Exception(errorMSG)
 
         # Return the output of the block
         return outputs
@@ -1401,7 +1461,6 @@ class PluginManager(metaclass=HorusSingleton):
             "deps": getFullPluginDepsDir(p._path),
             "pluginDir": p._path,
             "hidden": pg.hidden,
-            "logo": p.logo,
         }
 
     def _getDevelopmentPage(self):
@@ -1823,17 +1882,9 @@ class PluginDeps:
             # Block error
             error = None
 
-            def handleStoppedFlow():
-                from Server.FlowManager import StoppedFlowException
-
-                raise StoppedFlowException
-
-            # Signal catcher for sigterm
-            signal.signal(signal.SIGTERM, lambda s, f: handleStoppedFlow())
-
             # Try to execute the block
             try:
-                outputs = forkedBlock()                
+                outputs = forkedBlock()
             except BaseException as e:
                 error = e
 
@@ -1848,11 +1899,7 @@ class PluginDeps:
                 }
             )
 
-        proc = ctx.Process(target=target, args=[block])
-        proc.start()
-
-        # Forwrard sigterm to child process
-        signal.signal(signal.SIGTERM, lambda x, y: proc.terminate())
+        ctx.Process(target=target, args=[block]).start()
 
         result = q.get()
 

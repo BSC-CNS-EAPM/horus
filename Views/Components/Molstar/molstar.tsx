@@ -36,7 +36,7 @@ export default function Molstar({ options }: { options?: MolstarInitOptions }) {
     >
       <div
         id="home-molstar"
-        className="home-molstar"
+        className="home-molstar zoom-in-animation"
         ref={parent}
         style={{
           position: "relative",

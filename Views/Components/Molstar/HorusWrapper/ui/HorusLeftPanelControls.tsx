@@ -44,7 +44,7 @@ export class CustomImportControls extends PluginUIComponent<{
 }> {
   override componentDidMount() {
     this.subscribe(this.plugin.state.behaviors.events.changed, () =>
-      this.forceUpdate(),
+      this.forceUpdate()
     );
   }
 
@@ -55,7 +55,7 @@ export class CustomImportControls extends PluginUIComponent<{
         <Controls
           initiallyCollapsed={this.props.initiallyCollapsed}
           key={key}
-        />,
+        />
       );
     });
     return controls.length > 0 ? <>{controls}</> : null;
@@ -100,7 +100,7 @@ export class HorusLeftPanelControls extends PluginUIComponent<
   set = (tab: HorusLeftPanelTypes) => {
     if (this.state.tab === tab) {
       this.setState({ tab: "none" }, () =>
-        this.plugin.behaviors.layout.leftPanelTabName.next("none"),
+        this.plugin.behaviors.layout.leftPanelTabName.next("none")
       );
       PluginCommands.Layout.Update(this.plugin, {
         state: {
@@ -115,8 +115,8 @@ export class HorusLeftPanelControls extends PluginUIComponent<
 
     this.setState({ tab }, () =>
       this.plugin.behaviors.layout.leftPanelTabName.next(
-        tab as LeftPanelTabName,
-      ),
+        tab as LeftPanelTabName
+      )
     );
     if (this.plugin.layout.state.regionState.left !== "full") {
       PluginCommands.Layout.Update(this.plugin, {
@@ -292,20 +292,20 @@ class FullSettings extends PluginUIComponent {
 
   override componentDidMount() {
     this.subscribe(this.plugin.events.canvas3d.settingsUpdated, () =>
-      this.forceUpdate(),
+      this.forceUpdate()
     );
     this.subscribe(this.plugin.layout.events.updated, () => this.forceUpdate());
 
     if (this.plugin.canvas3d) {
       this.subscribe(
         this.plugin.canvas3d.camera.stateChanged.pipe(
-          throttleTime(500, undefined, { leading: true, trailing: true }),
+          throttleTime(500, undefined, { leading: true, trailing: true })
         ),
         (state) => {
           if (state.radiusMax !== undefined || state.radius !== undefined) {
             this.forceUpdate();
           }
-        },
+        }
       );
     }
   }
@@ -357,7 +357,7 @@ class RemoveAllButton extends PluginUIComponent<object> {
 
   override render() {
     const count = this.plugin.state.data.tree.children.get(
-      StateTransform.RootRef,
+      StateTransform.RootRef
     ).size;
     if (count === 0) return null;
     return (

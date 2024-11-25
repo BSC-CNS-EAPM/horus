@@ -232,7 +232,7 @@ export function saveFile(file: File) {
         bubbles: true,
         cancelable: true,
         view: window,
-      }),
+      })
     );
 
     // Remove link from body

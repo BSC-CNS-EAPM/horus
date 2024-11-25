@@ -22,11 +22,7 @@
     "category": "Flow",
     "value": "Curved",
     "type": "string[]",
-    "allowedValues": [
-      "Straight",
-      "Curved",
-      "Extra curved"
-    ]
+    "allowedValues": ["Straight", "Curved", "Extra curved"]
   },
   "developmentMode": {
     "name": "Development mode",
@@ -48,7 +44,7 @@
   },
   "molstarHidden": {
     "name": "Mol* hidden",
-    "description": "Whether to start the app with the Mol* panel initialized or not. This can improve the performance of the application.",
+    "description": "Whether to start the app with the Mol* panel visible or not.",
     "category": "Molstar",
     "value": true,
     "type": "boolean",
@@ -61,13 +57,6 @@
     "value": 10,
     "type": "integer",
     "desktopOnly": true
-  },
-  "collapseBlocks": {
-    "name": "Collapse blocks",
-    "description": "Collapse the block registry panel by default.",
-    "category": "Flow",
-    "value": true,
-    "type": "boolean"
   },
   "automaticConcurrentFlows": {
     "name": "Automatic concurrent flows",

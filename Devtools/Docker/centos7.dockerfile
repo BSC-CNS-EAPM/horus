@@ -22,7 +22,19 @@ RUN dnf install -y \
     zip \
     unzip \
     bzip2
-    
+
+# Install GTK even though on Rocky QT will be used
+# RUN dnf install -y \
+#     gobject-introspection-devel \
+#     cairo-gobject-devel \
+#     pkg-config \
+#     gtk3-devel \
+#     webkit2gtk3-devel \
+#     libcanberra-gtk3 \
+#     PackageKit-gtk3-module \
+#     glib2-devel \
+#     dbus-glib-devel
+
 # QT
 RUN dnf install -y python3-qt5
 

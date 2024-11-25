@@ -45,7 +45,7 @@ export default function ConfigRemotes() {
 
   const handleNewRemote = () => {
     handleSubView(
-      <DetailedRemote key="new-remote" updateRemotes={returnToMainView} />,
+      <DetailedRemote key="new-remote" updateRemotes={returnToMainView} />
     );
   };
 
@@ -144,7 +144,7 @@ function RemoteListView(props: RemoteListProps) {
           remote={remote}
           handleEdit={(remote) =>
             handleSubView(
-              <DetailedRemote remote={remote} updateRemotes={updateRemotes} />,
+              <DetailedRemote remote={remote} updateRemotes={updateRemotes} />
             )
           }
           updateList={updateRemotes}
@@ -244,7 +244,7 @@ interface DetailedRemoteViewProps {
 
 function DetailedRemote(props: DetailedRemoteViewProps) {
   const [remoteData, setRemoteData] = useState<Remote | null>(
-    props.remote ?? null,
+    props.remote ?? null
   );
 
   const horusAlert = useAlert();
@@ -305,7 +305,7 @@ function RemoteVariablesView(props: RemoteVariablesViewProps) {
 
   const filterNullValue = (
     event: ChangeEvent<HTMLInputElement>,
-    setter: (value: string | null) => void,
+    setter: (value: string | null) => void
   ) => {
     const value = event.target.value;
 
@@ -357,7 +357,7 @@ function RemoteVariablesView(props: RemoteVariablesViewProps) {
             value={remoteData?.host}
             onChange={(event) =>
               filterNullValue(event, (value) =>
-                setRemoteData({ ...remoteData, host: value } as Remote),
+                setRemoteData({ ...remoteData, host: value } as Remote)
               )
             }
           />
@@ -372,7 +372,7 @@ function RemoteVariablesView(props: RemoteVariablesViewProps) {
             value={remoteData?.username}
             onChange={(event) =>
               filterNullValue(event, (value) =>
-                setRemoteData({ ...remoteData, username: value } as Remote),
+                setRemoteData({ ...remoteData, username: value } as Remote)
               )
             }
           />
@@ -387,7 +387,7 @@ function RemoteVariablesView(props: RemoteVariablesViewProps) {
             value={remoteData?.port}
             onChange={(event) =>
               filterNullValue(event, (value) =>
-                setRemoteData({ ...remoteData, port: value } as Remote),
+                setRemoteData({ ...remoteData, port: value } as Remote)
               )
             }
           />
@@ -408,7 +408,7 @@ function RemoteVariablesView(props: RemoteVariablesViewProps) {
             value={remoteData?.password}
             onChange={(event) =>
               filterNullValue(event, (value) =>
-                setRemoteData({ ...remoteData, password: value } as Remote),
+                setRemoteData({ ...remoteData, password: value } as Remote)
               )
             }
           />
@@ -424,7 +424,7 @@ function RemoteVariablesView(props: RemoteVariablesViewProps) {
               value={remoteData?.keyPath}
               onChange={(event) =>
                 filterNullValue(event, (value) =>
-                  setRemoteData({ ...remoteData, keyPath: value } as Remote),
+                  setRemoteData({ ...remoteData, keyPath: value } as Remote)
                 )
               }
             />
@@ -450,7 +450,7 @@ function RemoteVariablesView(props: RemoteVariablesViewProps) {
             value={remoteData?.proxyCommand}
             onChange={(event) =>
               filterNullValue(event, (value) =>
-                setRemoteData({ ...remoteData, proxyCommand: value } as Remote),
+                setRemoteData({ ...remoteData, proxyCommand: value } as Remote)
               )
             }
           />
@@ -465,7 +465,7 @@ function RemoteVariablesView(props: RemoteVariablesViewProps) {
             value={remoteData?.workDir}
             onChange={(event) =>
               filterNullValue(event, (value) =>
-                setRemoteData({ ...remoteData, workDir: value } as Remote),
+                setRemoteData({ ...remoteData, workDir: value } as Remote)
               )
             }
           />

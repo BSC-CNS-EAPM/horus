@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 
 // Views
 import HorusContainer from "../HorusContainer/horus_container";
+import WorkingView from "./working_view";
 import RecentUserFlows, {
   PredefinedFlows,
   useGetRecentFlows,
@@ -33,8 +34,6 @@ import UserIcon from "../Toolbar/Icons/User";
 // Import the horus logo
 import Logo from "../logo";
 import MolStarIcon from "../Toolbar/Icons/MolStar";
-import { Link } from "react-router-dom";
-import { navigateTo } from "@/Utils/navigationService";
 
 type SplashModal = {
   body: React.ReactNode;
@@ -57,7 +56,7 @@ export default function SplashScreen() {
   return (
     <>
       <WelcomeToHorus setModalContent={updateModalContent} />
-      <div className="splash-container h-full flex flex-col justify-center gap-4 items-center">
+      <div className="splash-container h-full grid place-items-center gap-4 items-center">
         <div className="flex flex-row flex-wrap justify-center items-center w-full gap-8 zoom-in-animation text-white">
           <div className="flex gap-2 p-2 flex-wrap justify-center flex-direction-splash-buttons">
             <CreateNewFlow />
@@ -72,6 +71,7 @@ export default function SplashScreen() {
             )}
             <ManageSettings setModalContent={updateModalContent} />
           </div>
+          <div className="vertical-splash-separator" />
           <div className="flex flex-row flex-wrap gap-2 justify-center">
             {window.horusInternal.mode === "webapp" ? (
               <PredefinedFlowsSplash />
@@ -106,7 +106,7 @@ function ModalView(props: {
       maxContentSize={{
         width: "80vw",
       }}
-      onHide={(props.modal.allowBlurClose ?? true) ? props.onHide : () => {}}
+      onHide={props.modal.allowBlurClose ?? true ? props.onHide : () => {}}
     >
       {props.modal.body}
     </BlurredModal>
@@ -168,56 +168,69 @@ function WelcomeToHorus(props: {
 }
 
 function CreateNewFlow() {
+  const handleCreateNewFlow = () => {
+    // Set the startWorking view
+    const startWorkingEvent = new CustomEvent("start-working", {
+      detail: <WorkingView />,
+    });
+
+    window.dispatchEvent(startWorkingEvent);
+  };
+
   return (
-    <Link to="/flow?new">
-      <HorusContainer
-        className="zoom-on-hover"
-        style={{
-          cursor: "pointer",
-        }}
-      >
-        <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full w-[150px]">
-          <NewFlowIcon className="w-6 h-6 icon" />
-          New flow
-        </div>
-      </HorusContainer>
-    </Link>
+    <HorusContainer onClick={handleCreateNewFlow} className="zoom-on-hover">
+      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full cursor-default w-[150px]">
+        <NewFlowIcon className="w-6 h-6 icon" />
+        New flow
+      </div>
+    </HorusContainer>
   );
 }
 
 function OpenMolstar() {
+  const handleOpenMolstar = () => {
+    // Set the startWorking view
+    const startWorkingEvent = new CustomEvent("start-working", {
+      detail: <WorkingView molstar={true} />,
+    });
+
+    window.dispatchEvent(startWorkingEvent);
+  };
+
   return (
-    <Link to="/flow?molstar">
-      <HorusContainer
-        className="zoom-on-hover"
-        style={{
-          cursor: "pointer",
-        }}
-      >
-        <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full w-[150px]">
-          <MolStarIcon className="w-6 h-6 icon" />
-          Viewer
-        </div>
-      </HorusContainer>
-    </Link>
+    <HorusContainer onClick={handleOpenMolstar} className="zoom-on-hover">
+      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full cursor-default w-[150px]">
+        <MolStarIcon className="w-6 h-6 icon" />
+        Viewer
+      </div>
+    </HorusContainer>
   );
 }
 
 function OpenFlow() {
+  const handleOpenFlow = () => {
+    // Set the startWorking view
+    const startWorkingEvent = new CustomEvent("start-working", {
+      detail: (
+        <WorkingView
+          flowToOpen={{
+            savedID: "open",
+            path: "open",
+          }}
+        />
+      ),
+    });
+
+    window.dispatchEvent(startWorkingEvent);
+  };
+
   return (
-    <Link to="/flow?open=true&flowID=open">
-      <HorusContainer
-        className="zoom-on-hover"
-        style={{
-          cursor: "pointer",
-        }}
-      >
-        <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full w-[150px]">
-          <OpenFlowIcon className="w-6 h-6 icon" />
-          Open flow
-        </div>
-      </HorusContainer>
-    </Link>
+    <HorusContainer onClick={handleOpenFlow} className="zoom-on-hover">
+      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full cursor-default w-[150px]">
+        <OpenFlowIcon className="w-6 h-6 icon" />
+        Open flow
+      </div>
+    </HorusContainer>
   );
 }
 
@@ -234,7 +247,7 @@ function ManageTemplates(props: ButtonOpensModalProps) {
 
   return (
     <HorusContainer className="zoom-on-hover" onClick={setModalContent}>
-      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full w-[150px]">
+      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full cursor-default w-[150px]">
         <TemplateIcon className="w-6 h-6 icon" />
         Templates
       </div>
@@ -251,7 +264,7 @@ function ManagePlugins(props: ButtonOpensModalProps) {
 
   return (
     <HorusContainer className="zoom-on-hover" onClick={setModalContent}>
-      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full w-[150px]">
+      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full cursor-default w-[150px]">
         <PluginsIcon className="w-6 h-6 icon" />
         Plugins
       </div>
@@ -270,7 +283,7 @@ function ManageRemotes(props: ButtonOpensModalProps) {
 
   return (
     <HorusContainer className="zoom-on-hover" onClick={setModalContent}>
-      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full w-[150px]">
+      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full cursor-default w-[150px]">
         <ServerIcon className="w-6 h-6 icon" />
         Remotes
       </div>
@@ -288,7 +301,7 @@ function ManageSettings(props: ButtonOpensModalProps) {
 
   return (
     <HorusContainer className="zoom-on-hover" onClick={setModalContent}>
-      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full w-[150px]">
+      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full cursor-default w-[150px]">
         <SettingsIcon className="w-6 h-6 icon" />
         Settings
       </div>
@@ -398,6 +411,15 @@ function ExploreExtensions() {
   // Filter the pages to have at max 10
   const pagesToShow = pages.filter((page) => !page.hidden).slice(0, 10);
 
+  const loadPage = (page: PluginPage) => {
+    // Set the startWorking view
+    const startWorkingEvent = new CustomEvent("start-working", {
+      detail: <WorkingView extensionToOpen={page} />,
+    });
+
+    window.dispatchEvent(startWorkingEvent);
+  };
+
   return (
     <ScrollableViewWelcome.Root>
       <ScrollableViewWelcome.Header>
@@ -410,12 +432,7 @@ function ExploreExtensions() {
               No extensions
             </div>
           ) : (
-            <PluginPagesView
-              pages={pagesToShow}
-              overrideLoadPage={(page) => {
-                navigateTo(`/flow?ext=${page.name}&url=${page.url}`);
-              }}
-            />
+            <PluginPagesView pages={pagesToShow} overrideLoadPage={loadPage} />
           )}
         </div>
       </ScrollableViewWelcome.Body>

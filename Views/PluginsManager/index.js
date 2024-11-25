@@ -24,7 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <BrowserRouter>
           <PluginManager />
         </BrowserRouter>
-      </React.StrictMode>,
+      </React.StrictMode>
     );
   }
 });

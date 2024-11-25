@@ -1,13 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { LazyLog } from "@melloware/react-logviewer";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import AppButton from "../appbutton";
-import { BlurredModal, HorusPopover } from "../reusable";
+import { HorusPopover } from "../reusable";
+import RotatingLines from "../RotatingLines/rotatinglines";
+import HorusSwitch from "../Switch/switch";
 import SaveIcon from "../Toolbar/Icons/Save";
-import * as monaco from "monaco-editor";
-import { Editor } from "@monaco-editor/react";
+import StopIcon from "../Toolbar/Icons/Stop";
+import CenterView from "../Toolbar/Icons/CenterView";
 
 type HorusLazyLogProps = {
   logText: string;
+  keepDisabled?: boolean;
   filename?: string;
 };
 
@@ -16,26 +20,23 @@ export function HorusLazyLog(props: HorusLazyLogProps) {
 
   const parsedLogText = logText || "No logs";
 
+  const [internalText, setInternalText] = useState<string>(parsedLogText);
+  const [logging, setLogging] = useState<boolean>(true);
   const [fullScreen, setFullScreen] = useState<boolean>(false);
 
-  const [isAtBottom, setIsAtBottom] = useState<boolean>(false);
-  const codeRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
+  useEffect(() => {
+    setLogging(!props.keepDisabled);
+  }, [props.keepDisabled]);
 
   useEffect(() => {
-    if (!codeRef.current) return;
-
-    if (isAtBottom) {
-      const editor = codeRef.current;
-      const model = editor.getModel();
-      if (model) {
-        editor.revealLine(model.getLineCount());
-      }
+    if (logging) {
+      setInternalText(parsedLogText);
     }
-  }, [isAtBottom, parsedLogText]);
+  }, [parsedLogText, logging]);
 
   const LoggingView = (
     <div
-      className="flex flex-col h-full relative"
+      className="flex flex-col h-full p-2"
       style={
         fullScreen
           ? {
@@ -51,10 +52,50 @@ export function HorusLazyLog(props: HorusLazyLogProps) {
           position: "absolute",
           marginTop: "0.5rem",
           marginLeft: "0.5rem",
-          right: "1.5rem",
-          zIndex: 1001,
         }}
       >
+        <HorusPopover
+          trigger={
+            <div className="flex flex-row items-center gap-2">
+              <HorusSwitch
+                enabled={logging}
+                setEnabled={setLogging}
+                disabled={props.keepDisabled}
+              >
+                Live logs
+              </HorusSwitch>
+
+              <AppButton
+                disabled={props.keepDisabled}
+                action={() => {
+                  setLogging(!logging);
+                }}
+              >
+                <div className="flex flex-row gap-2 items-center">
+                  {logging ? (
+                    <>
+                      Logging... <RotatingLines size={"1.5rem"} />
+                    </>
+                  ) : (
+                    <>
+                      <StopIcon color="var(--red-error)" /> Stopped
+                    </>
+                  )}
+                </div>
+              </AppButton>
+            </div>
+          }
+        >
+          <div
+            className="hover-description p-2"
+            style={{
+              position: "absolute",
+              transform: "translateX(100px) translateY(10px)",
+            }}
+          >
+            Disable live logging to interact with the text
+          </div>
+        </HorusPopover>
         <HorusPopover
           trigger={
             <AppButton
@@ -64,7 +105,7 @@ export function HorusLazyLog(props: HorusLazyLogProps) {
                   `${filename ?? "logs.log"}`,
                   {
                     type: "text/plain",
-                  },
+                  }
                 );
                 window.horus.saveFile(file);
               }}
@@ -74,52 +115,57 @@ export function HorusLazyLog(props: HorusLazyLogProps) {
           }
         >
           <div
-            className="hover-description"
+            className="hover-description p-2"
             style={{
               position: "absolute",
-              transform: "translateX(-30px) translateY(10px)",
+              transform: "translateX(70px) translateY(10px)",
             }}
           >
             Save logs
           </div>
         </HorusPopover>
+        <HorusPopover
+          trigger={
+            <AppButton
+              action={() => {
+                setFullScreen(!fullScreen);
+              }}
+            >
+              <CenterView />
+            </AppButton>
+          }
+        >
+          <div
+            className="hover-description p-2"
+            style={{
+              position: "absolute",
+              transform: "translateX(70px) translateY(10px)",
+            }}
+          >
+            Toggle fullscreen
+          </div>
+        </HorusPopover>
       </div>
 
-      <Editor
-        value={logText}
-        language="plaintext"
-        options={{
-          readOnly: true,
-          minimap: { enabled: false },
-          scrollBeyondLastLine: false,
-        }}
-        onMount={(editor) => {
-          codeRef.current = editor;
-          editor.onDidScrollChange(() => {
-            const scrollHeight = editor.getScrollHeight();
-            const scrollTop = editor.getScrollTop();
-            const clientHeight = editor.getLayoutInfo().height;
-            setIsAtBottom(scrollTop + clientHeight === scrollHeight);
-          });
-        }}
-      />
+      <div className="h-full overflow-hidden rounded-xl">
+        <LazyLog
+          style={{
+            pointerEvents: logging ? "none" : "auto",
+          }}
+          caseInsensitive
+          enableHotKeys
+          enableSearch
+          extraLines={1}
+          selectableLines
+          text={internalText}
+          follow={logging}
+        />
+      </div>
     </div>
   );
 
   if (fullScreen) {
-    return createPortal(
-      <BlurredModal
-        onHide={() => setFullScreen(false)}
-        show
-        maxContentSize={{
-          width: "95%",
-          height: "95%",
-        }}
-      >
-        {LoggingView}
-      </BlurredModal>,
-      document.documentElement,
-    );
+    return createPortal(LoggingView, document.documentElement);
   }
 
   return LoggingView;

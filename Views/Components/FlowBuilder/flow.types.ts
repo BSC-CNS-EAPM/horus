@@ -1,5 +1,3 @@
-import { SerializedDockview } from "dockview-react";
-
 type AllowedPlatforms = "universal" | "macos_intel" | "macos_arm" | "linux";
 
 export type HorusPlugin = {
@@ -27,15 +25,10 @@ export type HorusPlugin = {
 export type PluginPage = {
   name: string;
   url: string;
-  description?: string;
-  hidden?: boolean;
-  id?: string;
-  plugin?: string;
-  placedID?: number;
-  logo?: string;
-  data?: any;
-  dataID?: number;
-  onFocus?: () => void;
+  description: string;
+  hidden: boolean;
+  id: string;
+  plugin: string;
 };
 
 export enum PluginVariableTypes {
@@ -121,6 +114,14 @@ export type VariableConnection = {
   currentCycle: number;
 };
 
+export type ExtensionsToOpen = {
+  title: string;
+  pluginID: string;
+  pageID: string;
+  url: string;
+  data: any;
+};
+
 export type Block = {
   // Basic info about the block
   id: string;
@@ -128,7 +129,6 @@ export type Block = {
   description: string;
   plugin: HorusPlugin;
   type: BlockTypes;
-  category: string | null;
 
   // Variables, inputs, outputs
   variables: Array<PluginVariable>;
@@ -150,7 +150,7 @@ export type Block = {
   isConnecting: boolean;
   tryingToConnect: PluginVariable | null;
   finishedExecution: boolean;
-  extensionsToOpen: Array<PluginPage>;
+  extensionsToOpen: Array<ExtensionsToOpen>;
   time: number;
   externalURL?: string;
 
@@ -225,8 +225,6 @@ export enum FlowStatus {
    * The flow is queued.
    */
   QUEUED = "QUEUED",
-
-  UNSAVED = "UNSAVED",
 }
 
 /**
@@ -299,11 +297,6 @@ export type Flow = {
    * True when the user wants to store the flow as a preset
    */
   template?: boolean;
-
-  /**
-   * The serialized dock panels
-   */
-  panels?: SerializedDockview;
 };
 
 export enum DraggableEntity {

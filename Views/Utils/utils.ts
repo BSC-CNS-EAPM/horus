@@ -195,16 +195,12 @@ async function openWindow(name: string, url: string) {
 const fetchInternals = async () => {
   try {
     const response = await horusGet("/api/internal");
-    window.horusInternal = {
-      ...window.horusInternal,
-      ...(await response.json()),
-    };
+    window.horusInternal = await response.json();
   } catch (err) {
     alert(
       `Could not detect running mode. Expect errors while running the app. ${err}`
     );
     window.horusInternal = {
-      ...window.horusInternal,
       isDesktop: false,
       mode: "server",
       debug: false,

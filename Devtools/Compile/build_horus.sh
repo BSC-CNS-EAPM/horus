@@ -14,13 +14,8 @@ fi
 # Build the horus API
 sh Devtools/Compile/build_horusapi.sh
 
-# Compile the Horus code. If this fails, exit
+# Compile the Horus code
 python Devtools/Compile/compile.py build_ext
-
-if [ $? -ne 0 ]; then
-    echo "Compilation failed"
-    exit 1
-fi
 
 # Bundle the app
 pyinstaller Devtools/Compile/build.spec --noconfirm

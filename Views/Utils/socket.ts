@@ -7,7 +7,7 @@ export const socket = io({
 
 // When connected, store the sid into the window
 socket.on("connect", () => {
-  window.socketiosid = socket.id ?? null;
+  window.socketiosid = socket.id;
 });
 
 // When disconnected, remove the sid from the window
