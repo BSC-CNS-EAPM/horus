@@ -1,7 +1,16 @@
 #!/bin/bash
 
+if command -v bunx &> /dev/null; then
+    RUNNER="bunx"
+elif command -v npx &> /dev/null; then
+    RUNNER="npx"
+else
+    echo "Error: Neither bunx nor npx is installed."
+    exit 1
+fi
+
 # Check for Typescript errors
-if bunx tsc --noEmit --skipLibCheck Views/**/*.ts Views/**/*.tsx --jsx react-jsx; then
+if $RUNNER tsc --noEmit --skipLibCheck --project tsconfig.json; then
     echo "No TypeScript errors found."
 else
     echo "TypeScript errors found."
@@ -9,7 +18,7 @@ else
 fi
 
 # Check for eslint errors
-if bunx eslint Views/ --ignore-pattern Static; then
+if $RUNNER eslint Views/ --ignore-pattern Static; then
     echo "No ESLint errors found."
 else
     echo "ESLint errors found."
@@ -17,7 +26,7 @@ else
 fi
 
 # Run prettier (does not affect the pipeline, just formatting)
-bunx prettier --write Views/
+$RUNNER prettier --write Views/ --ignore-pattern "Views/Static/**"
 
 # Check for Python linting errors with pylint
 if pylint App Server HorusAPI --fail-under 9.5; then

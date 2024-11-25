@@ -43,6 +43,11 @@ export async function fetchSettings(
   // Store the settings
   window.horusSettings = data.settings as HorusSettingsObject;
 
+  // Update the settings context
+  if (window.horusInternal?.updateSettings) {
+    window.horusInternal?.updateSettings(data.settings);
+  }
+
   // Apply some instant settings
   // Parse the dark mode
   if (window.horusSettings["darkMode"]?.value) {
@@ -97,13 +102,16 @@ function useSettings(forAdmin?: boolean) {
       // Group settings by .category
       let groupedSettings: Record<string, PluginVariable[]> = {};
       if (parsedSettings !== null) {
-        groupedSettings = parsedSettings.reduce((acc, setting) => {
-          if (!acc[setting.category]) {
-            acc[setting.category] = [];
-          }
-          acc[setting.category]!.push(setting);
-          return acc;
-        }, {} as Record<string, PluginVariable[]>);
+        groupedSettings = parsedSettings.reduce(
+          (acc, setting) => {
+            if (!acc[setting.category]) {
+              acc[setting.category] = [];
+            }
+            acc[setting.category]!.push(setting);
+            return acc;
+          },
+          {} as Record<string, PluginVariable[]>
+        );
       }
 
       // Set the settings and the gruped variables
@@ -223,7 +231,6 @@ function SettingsView({ forAdmin }: { forAdmin?: boolean }) {
 
     for (const [category, settings] of Object.entries(groupedSettings)) {
       const variableViews = settings.map((setting) => {
-        console.log("key: " + setting.id);
         return (
           <PluginVariableView
             key={setting.id}

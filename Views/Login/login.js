@@ -9,6 +9,7 @@ import "../CSS/main.css";
 import "../CSS/colors.css";
 import "../CSS/animations.css";
 import "../CSS/font.css";
+import "../CSS/login.css";
 
 import "../Components/FlowBuilder/Blocks/block.css";
 import "../PluginsManager/plugin_manager.css";

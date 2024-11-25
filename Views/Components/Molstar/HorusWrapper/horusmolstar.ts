@@ -131,11 +131,6 @@ export default class HorusMolstar {
   constructor(target: HTMLDivElement, options?: MolstarInitOptions) {
     this.target = target;
     this.initPlugin(options);
-
-    // Init also the Smiles2D manager, as it will be always coupled with Mol*
-    if (!window.smiles) {
-      window.smiles = new HorusSmilesManager();
-    }
   }
 
   private async initPlugin(options?: MolstarInitOptions) {
@@ -274,11 +269,6 @@ export default class HorusMolstar {
    */
   public async reset() {
     await this.initPlugin();
-
-    // reset the Smiles2D manager too
-    if (window.smiles) {
-      window.smiles.reset();
-    }
   }
 
   /**
@@ -1041,9 +1031,8 @@ export default class HorusMolstar {
       "pdb"
     );
     const model = await this.plugin!.builders.structure.createModel(trajectory);
-    const structure = await this.plugin!.builders.structure.createStructure(
-      model
-    );
+    const structure =
+      await this.plugin!.builders.structure.createStructure(model);
 
     const components = {
       polymer: await this.plugin!.builders.structure.tryCreateComponentStatic(
@@ -1201,9 +1190,7 @@ export default class HorusMolstar {
 
   structures(): StructureRef[] {
     if (!this.plugin || !this.plugin.managers.structure.hierarchy.current) {
-      throw new Error(
-        "Plugin is not properly initialized. Cannot retrieve structures."
-      );
+      return [];
     }
 
     return this.plugin.managers.structure.hierarchy.current.structures;
@@ -1307,9 +1294,13 @@ export default class HorusMolstar {
 
   // Will search iteratibely until finding the actual label of the structure (the one on the root)
   public getLabelFromStructureRef(refID: string) {
-    return this.plugin?.state.data.cells.get(
-      this.getStructureRootIDFromStructureSourceRef(refID)
-    )!.obj!.label;
+    try {
+      return this.plugin?.state.data.cells.get(
+        this.getStructureRootIDFromStructureSourceRef(refID)
+      )!.obj!.label;
+    } catch (error) {
+      return "Unknown";
+    }
   }
 
   /**
@@ -1782,9 +1773,9 @@ export default class HorusMolstar {
    * @throws {Error} If there's an issue removing the shape or committing the change.
    */
   public async removeShape(ref: string) {
-    const builder = this.plugin!.state.data.build();
-    builder.delete(ref);
-    builder.commit();
+    const builder = this.plugin?.state.data.build();
+    builder?.delete(ref);
+    builder?.commit();
   }
 
   /**

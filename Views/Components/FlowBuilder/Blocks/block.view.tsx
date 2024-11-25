@@ -1,6 +1,5 @@
 // React
-import { useState, useEffect, useRef, ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { useState, useEffect, useRef, ReactNode, useContext } from "react";
 
 // Horus components
 import RotatingLines from "../../RotatingLines/rotatinglines";
@@ -12,14 +11,10 @@ import { modifierKey } from "../../Toolbar/toolbar";
 
 // Variables
 import { PluginVariableView } from "../Variables/variables";
-import {
-  VariableModalView,
-  PlacedBlockVariables,
-} from "../Variables/variable_connections";
-import { BlockLogsModalView } from "../Logs/logs_connections";
+import { PlacedBlockVariables } from "../Variables/variable_connections";
 
 // Typescript types
-import { Block, BlockTypes, ExtensionsToOpen, PluginPage } from "../flow.types";
+import { Block, BlockTypes } from "../flow.types";
 
 // Block style
 import "./block.css";
@@ -35,11 +30,15 @@ import LogFileIcon from "../../Toolbar/Icons/LogFile";
 import CheckMark from "../../Toolbar/Icons/CheckMark";
 import ErrorIcon from "../../Toolbar/Icons/Error";
 import PlayIcon from "../../Toolbar/Icons/Play";
-import { GLOBAL_IDS } from "../../../Utils/globals";
 import PausedIcon from "../../Toolbar/Icons/Paused";
 import ErrorLogFile from "../../Toolbar/Icons/ErrorLogFile";
-import { socket } from "../../../Utils/socket";
 import ExternalIcon from "../../Toolbar/Icons/External";
+import {
+  addPanel,
+  DockContext,
+  PANEL_REGISTRY,
+} from "@/Components/MainApp/PanelView";
+import { SettingsContext } from "@/Main/app";
 
 export function BlockView(props: BlockViewProps) {
   const { block, blockHooks, isFlowActive } = props;
@@ -48,7 +47,6 @@ export function BlockView(props: BlockViewProps) {
 
   return (
     <BlockWrapper blockState={blockState} block={block}>
-      <BlockVariablesModalView block={block} blockState={blockState} />
       <BlockExtensionsView block={block} />
       <BlockBox block={block} blockState={blockState}>
         <BlockTopBar>
@@ -99,7 +97,7 @@ function BlockBox({
       {...blockState.div.attributes}
       role={`block-${blockState.div.style.cursor}`}
       id={`placed-${block.placedID}`}
-      className={`plugin-block ${block.isPlaced && "plugin-block-placed"} ${
+      className={`plugin-block ${block.isPlaced && "plugin-block-placed "} ${
         block.error && "plugin-block-failed"
       }`}
     >
@@ -189,31 +187,13 @@ export function BlockRemotes(props: BlockRemotesProps) {
 }
 
 function BlockExtensionsView(props: { block: Block }) {
-  const block = props.block;
+  const { dockApi } = useContext(DockContext);
 
-  const [shown, setShown] = useState(true);
+  const block = props.block;
 
   if (block.extensionsToOpen.length === 0) {
     return null;
   }
-
-  const openExtension = (extension: ExtensionsToOpen) => {
-    // Emit an extension event to the iFrame
-    const reconstructedPage: PluginPage = {
-      name: extension.title,
-      url: extension.url,
-      plugin: extension.pluginID,
-      id: extension.pageID,
-      description: "Block extension",
-      hidden: false,
-    };
-
-    const event = new CustomEvent("loadExtension", {
-      detail: { page: reconstructedPage, data: extension.data },
-    });
-
-    window.dispatchEvent(event);
-  };
 
   return (
     <div
@@ -230,30 +210,24 @@ function BlockExtensionsView(props: { block: Block }) {
             key={index}
             className="w-full mb-2 extensions-box cursor-pointer"
             style={{
-              top: shown ? `-${(index + 1) * 2}rem` : 0,
-              opacity: shown ? 1 : 0,
-              transition: "opacity 0.2s ease-in-out, top 0.2s ease-in-out",
+              top: `-${(index + 1) * 2}rem`,
             }}
             onClick={() => {
-              if (shown) {
-                openExtension(extension);
-              }
+              addPanel({
+                dockApi,
+                component: PANEL_REGISTRY.extensions.component,
+                panelID: `extensions-${props.block.placedID}-${extension.dataID}`,
+                params: {
+                  ...extension,
+                  placedID: props.block.placedID,
+                },
+              });
             }}
           >
-            {extension.title ?? "Open results"}
+            {extension.name ?? "Open results"}
           </div>
         );
       })}
-      {/* <div className="w-full flex flex-row justify-between extensions-box px-2">
-        Extensions
-        <div
-          onClick={() => {
-            setShown(!shown);
-          }}
-        >
-          <MovingChevron down={shown} />
-        </div>
-      </div> */}
     </div>
   );
 }
@@ -321,6 +295,8 @@ function BlockTime(props: { time?: number }) {
 }
 
 function BlockNameAndPlacedID({ block }: { block: Block }) {
+  const horusSettings = useContext(SettingsContext);
+
   return (
     <div
       className="block-name break-word flex flex-row gap-2 items-start"
@@ -329,11 +305,8 @@ function BlockNameAndPlacedID({ block }: { block: Block }) {
       }}
     >
       <BreakLongUnderscoreNames name={block.name} />
-      {block.isPlaced && window.horusSettings["showPlacedID"]?.value && (
-        <span className="text-gray-400" style={{}}>
-          {" "}
-          {block.placedID}
-        </span>
+      {block.isPlaced && horusSettings?.["showPlacedID"]?.value && (
+        <span className="text-gray-400"> {block.placedID}</span>
       )}
     </div>
   );
@@ -412,12 +385,6 @@ function BlockTopBar({ children }: { children: React.ReactNode }) {
   );
 }
 
-type LogsData = {
-  message: string;
-  blockID: string;
-  placedID: number;
-};
-
 function BlockLogs({
   block,
   blockState,
@@ -425,44 +392,8 @@ function BlockLogs({
   block: Block;
   blockState: BlockViewState;
 }) {
-  const [updatedBlockLogs, setUpdatedBlockLogs] = useState(block.blockLogs);
-
-  // Setup a socket listener for the "blockLogs" event
-  useEffect(() => {
-    const parseLogs = (logs: LogsData) => {
-      const { blockID, placedID, message } = logs;
-
-      if (blockID === block.id && placedID === block.placedID) {
-        setUpdatedBlockLogs((latestLogs) => {
-          return latestLogs + message;
-        });
-      }
-    };
-    socket.on("blockLogs", parseLogs);
-
-    return () => {
-      socket.off("blockLogs", parseLogs);
-    };
-  }, [block.id, block.placedID]);
-  useEffect(() => {
-    setUpdatedBlockLogs(block.blockLogs);
-  }, [block.blockLogs]);
-
-  const blockLogsView = blockState.blockViewHooks.blockLogsModal
-    ? createPortal(
-        <BlockLogsModalView
-          block={{ ...block, blockLogs: updatedBlockLogs }}
-          handleClose={() => {
-            blockState.blockViewHooks.toggleBlockLogsModal();
-          }}
-        />,
-        document.getElementById(GLOBAL_IDS.FLOW_BUILDER_DIV)!
-      )
-    : null;
-
   return (
     <>
-      {blockLogsView}
       <HorusPopover
         triggerClassName="pointer-events-auto"
         trigger={
@@ -607,33 +538,10 @@ interface PlayBlockButtonProps {
   onClick: (resetFlow: boolean) => void;
 }
 
-function BlockVariablesModalView({
-  block,
-  blockState,
-}: {
-  block: Block;
-  blockState: BlockViewState;
-}) {
-  // Create a portal to show the variables modal on top of the flow builder
-  if (blockState.blockViewHooks.variablesModal) {
-    return createPortal(
-      <VariableModalView
-        block={block}
-        handleChange={blockState.blockViewHooks.handleVariableChange}
-        handleClose={() => {
-          blockState.blockViewHooks.toggleVariablesModal();
-        }}
-      />,
-      document.getElementById(GLOBAL_IDS.FLOW_BUILDER_DIV)!
-    );
-  }
-
-  return null;
-}
-
 function BlockVariablesButton({ onClick }: { onClick: () => void }) {
   return (
     <HorusPopover
+      triggerClassName="pointer-events-auto"
       trigger={
         <button
           onClick={onClick}
@@ -643,7 +551,7 @@ function BlockVariablesButton({ onClick }: { onClick: () => void }) {
             right: "-1px",
           }}
         >
-          <SettingsIcon className="w-5 h-5" />
+          <SettingsIcon className="w-5 h-5 cursor-pointer" />
         </button>
       }
     >
@@ -688,6 +596,7 @@ function PlayBlockButton({
 }: PlayBlockButtonProps) {
   const [executeDescription, setExecuteDescription] = useState("Execute block");
   const isModifierPressed = useRef(false);
+  const buttonRef = useRef<HTMLDivElement>(null);
 
   const handleClick = () => {
     onClick(isModifierPressed.current);
@@ -696,28 +605,28 @@ function PlayBlockButton({
   // If the user presses the "Alt / option" key, change the description to
   // "Reset flow and execute block"
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.getModifierState(modifierKey)) {
+    const handleKeyDown = (event?: KeyboardEvent) => {
+      if (event?.getModifierState(modifierKey)) {
         setExecuteDescription("Reset flow and execute block");
         isModifierPressed.current = true;
       }
     };
 
-    const handleKeyUp = (event: KeyboardEvent) => {
-      if (!event.getModifierState(modifierKey)) {
+    const handleKeyUp = (event?: KeyboardEvent) => {
+      if (!event?.getModifierState(modifierKey)) {
         setExecuteDescription("Execute block");
         isModifierPressed.current = false;
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("keyup", handleKeyUp);
 
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("keyup", handleKeyUp);
     };
-  }, []);
+  }, [buttonRef]);
 
   if (isRunning && isPaused) {
     return (

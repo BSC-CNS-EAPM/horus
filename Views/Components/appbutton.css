@@ -68,7 +68,6 @@
 }
 
 .app-button {
-  cursor: default !important;
   border: 1px solid #ccc;
   border-radius: 5px;
   outline: none;
@@ -83,11 +82,12 @@
   transition: background 0.2s ease-in-out;
   /* margin-bottom: 0.3rem; */
   background: white;
-
+  user-select: none;
   /* If the text does not fit, donot place it on a newline... */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  cursor: pointer;
 }
 
 .app-button:disabled {
