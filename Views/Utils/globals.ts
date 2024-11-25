@@ -29,6 +29,7 @@ declare global {
         allowDemoUser: boolean;
         uploadSize: number;
       };
+      updateSettings: (settings: HorusSettingsObject) => void;
     };
     // Socket connection ID
     socketiosid: string | null;
@@ -39,7 +40,7 @@ declare global {
     // Settings
     horusSettings: HorusSettingsObject;
     // Molstar
-    molstar: HorusMolstar;
+    molstar?: HorusMolstar;
     // Smiles
     smiles?: HorusSmilesManager;
     // Console
@@ -56,6 +57,8 @@ declare global {
       openExtensionFilePicker?: (options: ExtensionsFilePickerOptions) => void;
       saveFile: (file: File) => void;
       getFile: (path: string) => Promise<Blob>;
+      setTabTitle?: (tabTitle: string) => void;
+      closeTab?: () => void;
     };
     // JSME viewer
     JSApplet: any;

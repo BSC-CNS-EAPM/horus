@@ -95,7 +95,9 @@
 }
 
 .zoom-on-hover {
-  transition: transform 0.2s ease-in-out, background-size 1s ease;
+  transition:
+    transform 0.2s ease-in-out,
+    background-size 1s ease;
 }
 
 .zoom-on-hover:hover {

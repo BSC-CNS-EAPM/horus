@@ -6,31 +6,14 @@ import { horusGet } from "../../Utils/utils";
 
 // Horus components
 import { FlowStatusView } from "./flow_status";
-import WorkingView from "../MainApp/working_view";
 import { Flow } from "../FlowBuilder/flow.types";
 import { FileData } from "chonky";
 import { useAlert } from "../HorusPrompt/horus_alert";
 import { BreakLongUnderscoreNames } from "../FlowBuilder/Blocks/block.view";
+import { Link } from "react-router-dom";
 
 type RecentUserFlowProps = {
   flows: Flow[];
-};
-
-export const openFlow = (flow: Flow) => {
-  // Set the working view
-  const startWorkingEvent = new CustomEvent("start-working", {
-    detail: (
-      <WorkingView
-        flowToOpen={{
-          savedID: flow.savedID!,
-          path: flow.path!,
-          template: flow.template,
-        }}
-      />
-    ),
-  });
-
-  window.dispatchEvent(startWorkingEvent);
 };
 
 export default function RecentUserFlows(props: RecentUserFlowProps) {
@@ -66,15 +49,19 @@ export default function RecentUserFlows(props: RecentUserFlowProps) {
     return <div>Unknown path</div>;
   };
 
+  const getURL = (flow: Flow) => {
+    const open = window.location.search.includes("open=true") ? "yes" : "true";
+    return `/flow?open=${open}&flowID=${flow.savedID}&path=${flow.path}`;
+  };
+
   return (
     <div className="flex flex-col gap-1">
       {flows?.length > 0 ? (
         flows.map((flow) => (
-          <div
+          <Link
+            role="button"
+            to={getURL(flow)}
             key={flow.savedID ?? "Unknown flow ID"}
-            onClick={() => {
-              openFlow(flow);
-            }}
             className="predefined-flow w-full h-full max-w-[380px]"
           >
             <div className="flex flex-row justify-between">
@@ -88,7 +75,7 @@ export default function RecentUserFlows(props: RecentUserFlowProps) {
             <div className="predefined-flow-plugin break-keep	">
               {<ParsedFlowPath flow={flow} />}
             </div>
-          </div>
+          </Link>
         ))
       ) : (
         <div className="predefined-flow-name">No recent flows</div>
@@ -98,21 +85,20 @@ export default function RecentUserFlows(props: RecentUserFlowProps) {
 }
 
 export function PredefinedFlows(props: RecentUserFlowProps) {
+  const getURL = (flow: Flow) => {
+    const open = window.location.search.includes("open=true") ? "yes" : "true";
+    return `/flow?open=${open}&flowID=${flow.savedID}`;
+  };
+
   return (
     <div className="flex flex-col gap-1">
       {props.flows?.map((flow) => (
-        <div
-          key={flow.savedID}
-          onClick={() => {
-            openFlow(flow);
-          }}
-          className="predefined-flow"
-        >
+        <Link to={getURL(flow)} key={flow.savedID} className="predefined-flow">
           <div className="predefined-flow-name max-w-[380px] cut-text">
             <BreakLongUnderscoreNames name={flow.name} />
           </div>
           <div className="predefined-flow-plugin">{flow.pluginName}</div>
-        </div>
+        </Link>
       ))}
     </div>
   );
@@ -123,7 +109,7 @@ export type CorruptedFlow = FileData & {
 };
 
 export function useGetRecentFlows(
-  webAppFlows: boolean = false
+  webAppFlows: boolean = false,
 ): [
   boolean,
   Flow[],
@@ -132,7 +118,7 @@ export function useGetRecentFlows(
   () => Promise<void>,
   (active: boolean) => void,
   FileData[],
-  CorruptedFlow[]
+  CorruptedFlow[],
 ] {
   const [fetchingRecents, setFetchingRecents] = useState(true);
   const [recentFlows, setRecentFlows] = useState<Flow[]>([]);
@@ -229,7 +215,7 @@ export function useGetRecentFlows(
         interval.current = setInterval(internalGetRecentFlows, 10000);
       }
     },
-    [internalGetRecentFlows]
+    [internalGetRecentFlows],
   );
 
   useEffect(() => {

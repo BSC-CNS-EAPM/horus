@@ -1154,6 +1154,11 @@ class PluginBlock:
     The block will be dirty on subsequent runs without a reset.
     """
 
+    category: typing.Union[None, str] = None
+    """
+    The category of the block
+    """
+
     def _parseID(self, id: str) -> str:
         """
         Parses the ID of the block.
@@ -1178,6 +1183,7 @@ class PluginBlock:
         blockType: PluginBlockTypes = PluginBlockTypes.BASE,
         id: typing.Optional[str] = None,
         externalURL: typing.Optional[str] = None,
+        category: typing.Optional[str] = None,
     ):
         """
         Initialize a PluginBlock.
@@ -1218,6 +1224,11 @@ class PluginBlock:
         self.externalURL = externalURL
         """
         The external URL of the block for documentation purposes.
+        """
+
+        self.category = category
+        """
+        The category of the block inside the plugin. None by default.
         """
 
         # Verify all Variable IDs are unique
@@ -1262,9 +1273,7 @@ class PluginBlock:
         """
 
         if len(inputs) > 0 and len(inputGroups) > 0:
-            raise Exception(  # pylint: disable=broad-exception-raised
-                "A block can only have inputs or input groups, not both."
-            )
+            raise Exception("A block can only have inputs or input groups, not both.")
 
         if len(inputs) > 0 and len(inputGroups) == 0:
             inputGroups = [VariableGroup("default", "Default", "The default input group", inputs)]
@@ -1303,9 +1312,7 @@ class PluginBlock:
             self._inputGroups[ig.id] = ig
 
         if blockType not in (PluginBlockTypes):
-            raise Exception(  # pylint: disable=broad-exception-raised
-                f"Invalid block type {blockType}. Allowed types: {PluginBlockTypes}"
-            )
+            raise Exception(f"Invalid block type {blockType}. Allowed types: {PluginBlockTypes}")
 
         self.TYPE: PluginBlockTypes = blockType  # pylint: disable=invalid-name
         """
@@ -1569,6 +1576,7 @@ class PluginBlock:
         finishedExecution: bool = blockJSON.get("finishedExecution", True)
         selectedInputGroup: str = blockJSON.get("selectedInputGroup", "default")
         selectedRemote: str = blockJSON.get("selectedRemote", "Local")
+        self.category = blockJSON.get("category", None)
         extensionsToOpen: typing.List[typing.Dict[str, typing.Any]] = blockJSON.get(
             "extensionsToOpen", []
         )
@@ -1597,7 +1605,7 @@ class PluginBlock:
             currentCycle = connection.get("currentCycle", 0)
 
             if origin is None or destination is None:
-                raise Exception("Invalid flow object.")  # pylint: disable=broad-exception-raised
+                raise Exception("Invalid flow object.")
 
             # Gather the origin variable info
             originPlacedID = origin.get("placedID", None)
@@ -1707,6 +1715,7 @@ class PluginBlock:
             "time": self.time,
             "extraData": self.extraData,
             "dirty": self.dirty,
+            "category": self.category
         }
 
     def _toDict(self):
@@ -1794,9 +1803,7 @@ class PluginConfig(PluginBlock):
         """
         # Raise an error if the variables are empty
         if len(variables) == 0:
-            raise Exception(  # pylint: disable=broad-exception-raised
-                "A PluginConfig must have at least one variable."
-            )
+            raise Exception("A PluginConfig must have at least one variable.")
 
         super().__init__(
             name, description, action, variables, blockType=PluginBlockTypes.CONFIG, id=id
@@ -1827,6 +1834,7 @@ class InputBlock(PluginBlock):
         action: typing.Optional[typing.Callable] = None,
         id: typing.Optional[str] = None,
         externalURL: typing.Optional[str] = None,
+        category: typing.Optional[str] = None
     ):
         """
         :param name: The name of the block.
@@ -1836,11 +1844,12 @@ class InputBlock(PluginBlock):
         :param action: The action of the block. Will be run when storing the config.
         :param id: The id of the block.
         :param externalURL: The external URL of the block for documentation purposes.
+        :param category: The category of the block inside the plugin.
         """
 
         # Check that the variable is a PluginVariable instance
         if not isinstance(variable, PluginVariable):
-            raise Exception(  # pylint: disable=broad-exception-raised
+            raise Exception(
                 f"The input variable of block {name} must be a single PluginVariable instance."
             )
 
@@ -1854,6 +1863,7 @@ class InputBlock(PluginBlock):
             blockType=PluginBlockTypes.INPUT,
             id=id,
             externalURL=externalURL,
+            category=category,
         )
 
     # Override the __call__ method to return
@@ -1973,6 +1983,7 @@ class SlurmBlock(PluginBlock):
         id: typing.Optional[str] = None,
         failOnSlurmError: bool = True,
         externalURL: typing.Optional[str] = None,
+        category: typing.Optional[str] = None,
     ):
         """
         :param name: The name of the block.
@@ -1998,6 +2009,7 @@ class SlurmBlock(PluginBlock):
             blockType=PluginBlockTypes.SLURM,
             id=id,
             externalURL=externalURL,
+            category=category
         )
         self.initalAction = initialAction
         self.finalAction = finalAction

@@ -13,8 +13,6 @@ dependencies:
       - pyobjc==9.1.1; sys_platform == 'darwin'
       - flask-socketio==5.4.1
       - flask_session==0.8.0
-      - eventlet==0.33.3
-      - gevent==22.10.2
       - Cython==3.0.2
       - pytest==7.3.1
       - pytest-mock==3.11.1

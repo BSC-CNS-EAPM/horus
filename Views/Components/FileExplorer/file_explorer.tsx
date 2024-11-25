@@ -17,11 +17,11 @@ import { BlurredModal } from "../reusable";
 setChonkyDefaults({ iconComponent: ChonkyIconFA });
 
 import { FileBrowser, FileList, FileNavbar, FileToolbar } from "chonky";
-import { FlowContext } from "../FlowBuilder/flow.view";
 
 import { GLOBAL_IDS } from "../../Utils/globals";
 import { useAlert } from "../HorusPrompt/horus_alert";
 import { usePrompt } from "../HorusPrompt/horus_prompt";
+import { FlowBuilderContext } from "../MainApp/PanelView";
 
 function getDirOfPath(path?: string | null) {
   if (!path) return null;
@@ -44,7 +44,7 @@ function useServerExplorer(
 
   // Needed for opening the file explore routside a flow
   // for example, in the plugin installer page
-  openOutsideFlowContext: boolean = false
+  openOutsideFlowContext: boolean = false,
 ) {
   const [files, setFiles] = useState<FileArray>([null]);
   const [folderChain, setFolderChain] = useState<FileArray>([null]);
@@ -56,7 +56,7 @@ function useServerExplorer(
     text: "",
   });
 
-  const flowContext = useContext(FlowContext);
+  const flowBuilderContext = useContext(FlowBuilderContext);
 
   const currentPath = useRef(null);
 
@@ -67,7 +67,7 @@ function useServerExplorer(
       openPath?: string,
       options?: {
         setGoToPathAsSelected: boolean;
-      }
+      },
     ) => {
       const header = {
         "Content-Type": "application/json",
@@ -76,7 +76,7 @@ function useServerExplorer(
 
       if (
         window.horusInternal.webApp &&
-        !flowContext?.path &&
+        !flowBuilderContext?.flow?.flow?.path &&
         !openDirectly &&
         !openOutsideFlowContext
       ) {
@@ -99,10 +99,12 @@ function useServerExplorer(
 
       const body = JSON.stringify({
         path:
-          openPath ?? currentPath.current ?? getDirOfPath(flowContext?.path),
+          openPath ??
+          currentPath.current ??
+          getDirOfPath(flowBuilderContext?.flow?.flow?.path),
         extensions: extensions,
         openFolder: openFolder,
-        flowContextPath: flowContext?.path,
+        flowContextPath: flowBuilderContext?.flow?.flow?.path,
         obfuscate: !openDirectly,
         openOutsideFlowContext: openOutsideFlowContext,
       });
@@ -145,14 +147,14 @@ function useServerExplorer(
       extensions,
       openFolder,
       selectedFile,
-      flowContext,
+      flowBuilderContext,
       setOpen,
       folderChain,
       openDirectly,
       files,
       onFileSelect,
       openOutsideFlowContext,
-    ]
+    ],
   );
 
   const handleFileAction = (action: FileActionState) => {
@@ -219,13 +221,13 @@ function useServerExplorer(
     const body = JSON.stringify({
       path: currentPath.current,
       folderName: folderName,
-      flowContextPath: flowContext?.path,
+      flowContextPath: flowBuilderContext?.flow?.flow?.path,
     });
 
     const response = await horusPost(
       "/api/filepicker/createfolder",
       header,
-      body
+      body,
     );
 
     const data = await response.json();
@@ -235,7 +237,7 @@ function useServerExplorer(
     }
 
     fetchFolders();
-  }, [currentPath, fetchFolders, flowContext?.path]);
+  }, [currentPath, fetchFolders, flowBuilderContext?.flow?.flow?.path]);
 
   const resetActionFiles = useCallback(() => {
     setActionFilesActive({
@@ -276,7 +278,7 @@ function useServerExplorer(
         await horusAlert(
           `The filze size exceeds the maximum of ${
             window.horusInternal.webApp?.uploadSize ?? 2
-          } MB`
+          } MB`,
         );
         return;
       }
@@ -284,7 +286,10 @@ function useServerExplorer(
       const formData = new FormData();
       formData.append("files", files[i]!);
       formData.append("path", currentPath.current!);
-      formData.append("flowContextPath", flowContext?.path ?? "");
+      formData.append(
+        "flowContextPath",
+        flowBuilderContext?.flow?.flow?.path ?? "",
+      );
 
       // Check if its size is more than the maximum allowed
       setActionFilesActive({
@@ -302,7 +307,7 @@ function useServerExplorer(
             ...currentText,
             progress: percentage,
           }));
-        }
+        },
       );
 
       if (!data.ok) {
@@ -314,7 +319,12 @@ function useServerExplorer(
     fetchFolders();
 
     resetActionFiles();
-  }, [currentPath, fetchFolders, resetActionFiles, flowContext?.path]);
+  }, [
+    currentPath,
+    fetchFolders,
+    resetActionFiles,
+    flowBuilderContext?.flow?.flow?.path,
+  ]);
 
   const downloadFiles = useCallback(
     async (filePaths: FileData[]) => {
@@ -335,13 +345,13 @@ function useServerExplorer(
 
         const body = JSON.stringify({
           path: filePath["path"],
-          flowContextPath: flowContext?.path,
+          flowContextPath: flowBuilderContext?.flow?.flow?.path,
         });
 
         const response = await horusPost(
           "/api/filepicker/download",
           header,
-          body
+          body,
         );
 
         if (response.headers.get("content-type") === "application/json") {
@@ -378,7 +388,7 @@ function useServerExplorer(
       }
       resetActionFiles();
     },
-    [resetActionFiles, flowContext?.path]
+    [resetActionFiles, flowBuilderContext?.flow?.flow?.path],
   );
 
   const deleteFiles = useCallback(
@@ -386,8 +396,8 @@ function useServerExplorer(
       filePaths: [
         {
           path: string;
-        }
-      ]
+        },
+      ],
     ) => {
       const header = {
         "Content-Type": "application/json",
@@ -406,13 +416,13 @@ function useServerExplorer(
 
         const body = JSON.stringify({
           path: filePath.path,
-          flowContextPath: flowContext?.path,
+          flowContextPath: flowBuilderContext?.flow?.flow?.path,
         });
 
         const response = await horusPost(
           "/api/filepicker/delete",
           header,
-          body
+          body,
         );
 
         const data = await response.json();
@@ -425,7 +435,7 @@ function useServerExplorer(
 
       resetActionFiles();
     },
-    [resetActionFiles, flowContext?.path]
+    [resetActionFiles, flowBuilderContext?.flow?.flow?.path],
   );
 
   return {
@@ -521,12 +531,12 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
     setOpen,
     fileProps?.allowedExtensions,
     fileProps?.openDirectly,
-    fileProps?.openOutsideFlowContext
+    fileProps?.openOutsideFlowContext,
   );
 
   useEffect(() => {
     setSelectedIsDir(
-      selectedFile?.isDir === undefined ? false : selectedFile.isDir
+      selectedFile?.isDir === undefined ? false : selectedFile.isDir,
     );
   }, [selectedFile]);
 
@@ -641,7 +651,7 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
                     if (lastPart && lastPart.length > 0) {
                       // Find the folder to autocomplete
                       const folder = folders.find((f) =>
-                        f?.name.includes(lastPart)
+                        f?.name.includes(lastPart),
                       );
                       if (folder) {
                         // If the folder was fully completed, then do nothing
@@ -777,7 +787,7 @@ function useDesktopExplorer(
   openFolder: boolean,
   onFileSelect: (path: string) => void,
   onFileConfirm: (path: string) => void,
-  allowedExtensions?: string[]
+  allowedExtensions?: string[],
 ) {
   const openFilePicker = async () => {
     const header = {
@@ -814,7 +824,7 @@ function DesktopFileExplorer(props: FileExplorerProps) {
     openFolder,
     props.onFileSelect ? props.onFileSelect : (_) => _,
     props.onFileConfirm ? props.onFileConfirm : (_) => _,
-    props.allowedExtensions
+    props.allowedExtensions,
   );
 
   useEffect(() => {
@@ -845,7 +855,7 @@ export type ExtensionsFilePickerOptions = Omit<
 
 function openExtensionFilePicker(options: ExtensionsFilePickerOptions) {
   let globalFilePicker = document.getElementById(
-    GLOBAL_IDS.EXTENSIONS_FILEPICKER
+    GLOBAL_IDS.EXTENSIONS_FILEPICKER,
   );
 
   if (globalFilePicker) {

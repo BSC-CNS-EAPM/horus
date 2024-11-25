@@ -16,11 +16,14 @@ import EyeIcon from "../Toolbar/Icons/Eye";
 import LogFile from "../Toolbar/Icons/LogFile";
 import MolStarIcon from "../Toolbar/Icons/MolStar";
 import SaveIcon from "../Toolbar/Icons/Save";
-import { ToolbarMenu, ToolBarMenuProps } from "../Toolbar/toolbar";
 import { SmilesView } from "./SmilesComponent";
 import { SmilesList } from "./SmilesList";
-import { HorusSmilesType, SmilesEvents } from "./SmilesWrapper/horusSmiles";
+import HorusSmilesManager, {
+  HorusSmilesType,
+  SmilesEvents,
+} from "./SmilesWrapper/horusSmiles";
 import { GreenOverlay } from "../GreenOverlay/GreenOverlay";
+import { ToolbarMenu, ToolBarMenuProps } from "../Toolbar/ToolbarItem";
 
 const SMILES_GRID_WIDTH = 200;
 const SMILES_GRID_HEIGTH = 150;
@@ -31,9 +34,14 @@ export const CannotEdit3D =
   "This SMILES comes from a 3D structure. It cannot be modified from here. Use the Mol* panel to remove / edit it. In order to manipulate a SMILES coming from a structure, first duplicate it using the 'Selection' > 'Duplicate selected' tool.";
 
 export function SmilesGrid() {
+  // Init the smiles manager
+  if (!window.smiles) {
+    window.smiles = new HorusSmilesManager();
+  }
+
   const [availableSmiles, setAvailableSmiles] = useState<HorusSmilesType[]>([]);
   const [editingSmiles, setEditingSmiles] = useState<HorusSmilesType | null>(
-    null
+    null,
   );
   const [loadingFile, setLoadingFile] = useState<boolean>(false);
   const [currentGroup, setCurrentGroup] = useState<string | undefined>();
@@ -52,7 +60,7 @@ export function SmilesGrid() {
     // Add an evenet listener
     window.addEventListener(
       SmilesEvents.STATE,
-      updateAvailableSmilesEventListener
+      updateAvailableSmilesEventListener,
     );
 
     return () => {
@@ -61,7 +69,7 @@ export function SmilesGrid() {
 
       window.removeEventListener(
         SmilesEvents.STATE,
-        updateAvailableSmilesEventListener
+        updateAvailableSmilesEventListener,
       );
     };
   }, []);
@@ -73,7 +81,7 @@ export function SmilesGrid() {
           return newSmiles;
         }
         return s;
-      })
+      }),
     );
   };
 
@@ -105,7 +113,10 @@ export function SmilesGrid() {
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    setIsHoveringFile(true);
+
+    if (e.dataTransfer.types[0] === "Files") {
+      setIsHoveringFile(true);
+    }
   };
 
   const [viewMode, setViewMode] = useState<ViewMode>("list");
@@ -117,7 +128,7 @@ export function SmilesGrid() {
       setPreviewSmiles(false);
       setAlertShownAtLeastOnce(true);
       horusAlert(
-        `Disabled SMILES preview due to the list being too large. Click 'View' -> 'Toggle SMILES preview' to enable previews again at the cost of performance.`
+        `Disabled SMILES preview due to the list being too large. Click 'View' -> 'Toggle SMILES preview' to enable previews again at the cost of performance.`,
       );
     }
   }, [availableSmiles, alertShownAtLeastOnce]);
@@ -321,7 +332,7 @@ function _GroupingVirtualizedOfSmilesView(props: InternalSmilesGridViewProps) {
                     setEditingSmiles={props.setEditingSmiles}
                     isScrolling={!isVisible}
                     previewSmiles={props.previewSmiles}
-                  />
+                  />,
                 );
               }
               return (
@@ -509,7 +520,7 @@ function SmilesToolBox(props: {
 
   const getSDFFile = async () => {
     const fileName = await horusPrompt(
-      "Enter the name of the file to save the converted SDF"
+      "Enter the name of the file to save the converted SDF",
     );
 
     const sdfContents = await window.smiles?.convertSelectedToSDF();
@@ -566,8 +577,8 @@ function SmilesToolBox(props: {
           const istoBeselected = s.structureRef
             ? false
             : s.group === props.currentGroup
-            ? true
-            : false;
+              ? true
+              : false;
 
           if (istoBeselected) return { ...s, selected: false };
 
@@ -595,7 +606,7 @@ function SmilesToolBox(props: {
                 return { ...s, group: newGroup };
               }
               return s;
-            })
+            }),
           );
         }
       },
@@ -607,7 +618,7 @@ function SmilesToolBox(props: {
         const newProperty = await horusPrompt("Enter new property name");
         if (!newProperty) return;
         const propertyValue = await horusPrompt(
-          "Enter new property value (leave blank for none)"
+          "Enter new property value (leave blank for none)",
         );
         window.smiles?.addPropertyToSelected(newProperty, propertyValue);
       },
@@ -664,13 +675,24 @@ function SmilesToolBox(props: {
       onClick: async () => {
         setBusy("Converting...");
 
+        // Open the Molstar panel if not already open
+        document.dispatchEvent(
+          new CustomEvent("addPanel", {
+            detail: {
+              component: "molstar",
+              panelID: "molstar",
+              noFocus: true,
+            },
+          }),
+        );
+
         setTimeout(async () => {
           try {
             const file = await getSDFFile();
 
             if (!file) return;
 
-            await window.molstar.loadMoleculeFile(file);
+            await window?.molstar?.loadMoleculeFile(file);
           } finally {
             setBusy(null);
           }
@@ -704,7 +726,7 @@ function SmilesToolBox(props: {
       disabled: !window.smiles?.getSelectedSmiles().length,
       onClick: async () => {
         const fileName = await horusPrompt(
-          "Enter the name of the file to save the SMILES"
+          "Enter the name of the file to save the SMILES",
         );
         const selectedSmiles = window.smiles?.getSelectedSmiles();
 
@@ -728,7 +750,7 @@ function SmilesToolBox(props: {
       disabled: !window.smiles?.getSelectedSmiles().length,
       onClick: async () => {
         const fileName = await horusPrompt(
-          "Enter the CSV file name to save the SMILES"
+          "Enter the CSV file name to save the SMILES",
         );
         const selectedSmiles = window.smiles?.getSelectedSmiles();
 
@@ -738,8 +760,8 @@ function SmilesToolBox(props: {
           new Set(
             selectedSmiles
               .flatMap((s) => Object.keys(s.properties || {}))
-              .filter((p) => p)
-          )
+              .filter((p) => p),
+          ),
         );
 
         const header = ["SMILES", "label", ...properties];
@@ -807,7 +829,7 @@ function SmilesToolBox(props: {
               : true;
 
             window.smiles?.newEmptyMolecule(
-              isGroupEditable ? props.currentGroup : "Horus"
+              isGroupEditable ? props.currentGroup : "Horus",
             );
           }}
         />
@@ -839,7 +861,7 @@ function EditSmilesModal(props: {
   isShowingList: boolean;
 }) {
   const [smilesState, setSmilesState] = useState<HorusSmilesType | null>(
-    props.smiles
+    props.smiles,
   );
 
   useEffect(() => {

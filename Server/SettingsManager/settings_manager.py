@@ -309,10 +309,21 @@ class SettingsManager:
 
             # If the setting already exists, raise an exception
             if newSetting.id in self.settings:
-                raise Exception(
-                    f"The setting {newSetting.id} is duplicated.\
-                    Make sure that each setting has a unique ID."
+                logging.getLogger("Horus").error(
+                    "The setting %s is duplicated.\
+                    Make sure that each setting has a unique ID.",
+                    newSetting.id,
                 )
+
+                logging.getLogger("Horus").debug(
+                    "TODO: Use a SQL database to store the settings to prevent race conditions and thread safety issues"
+                )
+
+                continue
+                # raise Exception(
+                #     f"The setting {newSetting.id} is duplicated.\
+                #     Make sure that each setting has a unique ID."
+                # )
 
             # Add the setting to the settings list
             self.settings[newSetting.id] = newSetting

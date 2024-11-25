@@ -1,11 +1,20 @@
 // React
-import { useState, useEffect, useRef, CSSProperties } from "react";
+import { useState, useEffect, useRef, CSSProperties, useContext } from "react";
 
 // TS types
 import { Block, PluginVariable } from "../flow.types";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { BlockHooks } from "../flow.hooks";
 import { useXarrow } from "react-xarrows";
+import {
+  addPanel,
+  DockContext,
+  PANEL_REGISTRY,
+} from "@/Components/MainApp/PanelView";
+
+export function blockLogsPanelID(block: Block) {
+  return `${PANEL_REGISTRY.blockLogs.id}-${block.id}-${block.placedID}`;
+}
 
 export type BlockViewProps = {
   block: Block;
@@ -26,9 +35,7 @@ export type BlockViewState = {
   blockViewHooks: {
     isInfoHovering: boolean;
     setIsInfoHovering: React.Dispatch<React.SetStateAction<boolean>>;
-    variablesModal: boolean;
     toggleVariablesModal: () => void;
-    blockLogsModal: boolean;
     toggleBlockLogsModal: () => void;
     handleVariableChange: (value: any, id: string, groupID?: string) => void;
     handleSelectedInputGroupChange: (direction: "up" | "down") => void;
@@ -50,21 +57,16 @@ export function useBlockView({
 
   const ref = useRef<HTMLDivElement | null>(null);
 
-  // When the block variables are shown, disable drag
-  const [disableDrag, setDisableDrag] = useState(false);
+  const { dockApi } = useContext(DockContext);
 
   // Track hovering on info button to display the description instead of the plugin
   const [isInfoHovering, setIsInfoHovering] = useState(false);
-
-  const [variablesModal, setVariablesModal] = useState(false);
-  const [blockLogsModal, setBlockLogsModal] = useState(false);
 
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: block.placedID ? `${block.placedID}-${block.id}` : block.id,
     data: {
       block: block,
     },
-    disabled: disableDrag,
   });
 
   const { setNodeRef: setDropRef } = useDroppable({
@@ -76,17 +78,29 @@ export function useBlockView({
 
   const toggleVariablesModal = () => {
     // Open the variables modal
-    if (setDisableDrag) {
-      setDisableDrag(!variablesModal);
-    }
-    setVariablesModal(!variablesModal);
+    addPanel({
+      dockApi,
+      component: PANEL_REGISTRY.blockVariables.component,
+      panelID: `${PANEL_REGISTRY.blockVariables.id}-${block.id}-${block.placedID}`,
+      params: {
+        placedID: block.placedID,
+        block: block,
+        handleVariableChange,
+      },
+    });
   };
 
   const toggleBlockLogsModal = () => {
-    if (setDisableDrag) {
-      setDisableDrag(!blockLogsModal);
-    }
-    setBlockLogsModal(!blockLogsModal);
+    // Open the block logs modal
+    addPanel({
+      dockApi,
+      component: PANEL_REGISTRY.blockLogs.component,
+      panelID: blockLogsPanelID(block),
+      params: {
+        placedID: block.placedID,
+        block: block,
+      },
+    });
   };
 
   const handleSelectedInputGroupChange = (direction: "up" | "down") => {
@@ -133,9 +147,8 @@ export function useBlockView({
   };
 
   const handleVariableChange = (value: any, id: string, groupID?: string) => {
-
     if (isFlowActive) {
-      return
+      return;
     }
 
     let hasChanged = false;
@@ -210,9 +223,7 @@ export function useBlockView({
     blockViewHooks: {
       isInfoHovering: isInfoHovering,
       setIsInfoHovering: setIsInfoHovering,
-      variablesModal,
       toggleVariablesModal: toggleVariablesModal,
-      blockLogsModal: blockLogsModal,
       toggleBlockLogsModal: toggleBlockLogsModal,
       handleVariableChange: handleVariableChange,
       handleSelectedInputGroupChange: handleSelectedInputGroupChange,

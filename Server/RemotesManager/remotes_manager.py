@@ -119,15 +119,13 @@ class RemotesAPI:
         # Check if connection details are provided
         if not self.isLocal:
             if self.host is None:
-                raise Exception("No hostname provided.")  # pylint: disable=broad-exception-raised
+                raise Exception("No hostname provided.")
             if self.port is None:
-                raise Exception("No port provided.")  # pylint: disable=broad-exception-raised
+                raise Exception("No port provided.")
             if self.username is None:
-                raise Exception("No username provided.")  # pylint: disable=broad-exception-raised
+                raise Exception("No username provided.")
             if self.password is None and self.key is None:
-                raise Exception(  # pylint: disable=broad-exception-raised
-                    "No password or key provided."
-                )
+                raise Exception("No password or key provided.")
 
             # Set kwargs for connection
             connect_kwargs = {}  # pylint: disable=invalid-name
@@ -160,9 +158,7 @@ class RemotesAPI:
                         f"Could not connect to the remote {self.host}: {exc}"
                     ) from exc
             else:
-                raise Exception(  # pylint: disable=broad-exception-raised
-                    "No connection method provided."
-                )
+                raise Exception("No connection method provided.")
 
         if "~" in self.workDir:
             # Replace the ~ with the user home directory for compatibility
@@ -212,13 +208,9 @@ class RemotesAPI:
                 # If the command failed, raise an exception
                 if process.returncode != 0:
                     if process.stderr is not None:
-                        raise Exception(  # pylint: disable=broad-exception-raised
-                            process.stderr.read().decode("utf-8").strip()
-                        )
+                        raise Exception(process.stderr.read().decode("utf-8").strip())
                     else:
-                        raise Exception(
-                            "Command failed."
-                        )  # pylint: disable=broad-exception-raised
+                        raise Exception("Command failed.")
 
                 # Return the stdout and stderr as a string
                 if process.stdout is not None:
@@ -244,13 +236,16 @@ class RemotesAPI:
             out = self.conn.run(command, hide=True, in_stream=False)
         except Exception as exc:
             logging.getLogger("Horus").debug(
-                "Error running command %s on remote %s: %s", command, self.name, str(exc)
+                "Error running command %s on remote %s: %s",
+                command,
+                self.name,
+                str(exc),
             )
             raise exc
 
         # If the command failed, raise an exception
         if out.failed:
-            raise Exception(out.stderr.strip())  # pylint: disable=broad-exception-raised
+            raise Exception(out.stderr.strip())
 
         out = str(out.stdout.strip())
 
@@ -295,20 +290,19 @@ class RemotesAPI:
             logging.getLogger("Horus").error(
                 "Error getting data from %s to %s: %s", source, destination, str(exc)
             )
-            raise Exception(  # pylint: disable=broad-exception-raised
-                f"Error transferring data from {self.remoteName}: {exc}"
-            ) from exc
+            raise Exception(f"Error transferring data from {self.remoteName}: {exc}") from exc
 
     def _internalTransferTo(self, source: str, destination: str):
         try:
             self.conn.put(source, destination)
         except BaseException as exc:
             logging.getLogger("Horus").error(
-                "Error transferring data from %s to %s: %s", source, destination, str(exc)
+                "Error transferring data from %s to %s: %s",
+                source,
+                destination,
+                str(exc),
             )
-            raise Exception(  # pylint: disable=broad-exception-raised
-                f"Error transferring data to {self.remoteName}: {exc}"
-            ) from exc
+            raise Exception(f"Error transferring data to {self.remoteName}: {exc}") from exc
 
     def transferTo(self, source: str, destination: str) -> str:
         """
@@ -576,9 +570,7 @@ class RemotesAPI:
         queue = self.readQueue()
 
         if self._flowSavedID is None:
-            raise Exception(  # pylint: disable=broad-exception-raised
-                f"Cannot save jobID '{jobID}'. Flow ID not set."
-            )
+            raise Exception(f"Cannot save jobID '{jobID}'. Flow ID not set.")
 
         # Create the entry for the flow in the queue storage if it does not exist
         if self._flowSavedID not in queue:
@@ -636,9 +628,7 @@ class RemotesAPI:
         try:
             self.command(f"test -f {script}")
         except Exception as exc:
-            raise Exception(  # pylint: disable=broad-exception-raised
-                f"Script {script} does not exist."
-            ) from exc
+            raise Exception(f"Script {script} does not exist.") from exc
 
         command = f"sbatch {script}"
 
@@ -656,18 +646,14 @@ class RemotesAPI:
             jobID = int(out.split(" ")[-1].strip())
         except Exception as exc:
             logging.getLogger("Horus").error("Error submitting job: %s.", str(exc))
-            raise Exception(  # pylint: disable=broad-exception-raised
-                "Error submitting job. Could not get job ID."
-            ) from exc
+            raise Exception("Error submitting job. Could not get job ID.") from exc
 
         # Save the job as running into the active jobs file
         try:
             self.saveJob(jobID)
         except Exception as exc:
             logging.getLogger("Horus").error("Error saving job with ID %s: %s.", jobID, str(exc))
-            raise Exception(  # pylint: disable=broad-exception-raised
-                f"Error saving job with ID {jobID} to the queue storage."
-            ) from exc
+            raise Exception(f"Error saving job with ID {jobID} to the queue storage.") from exc
 
         return jobID
 
@@ -684,15 +670,13 @@ class RemotesAPI:
         """
 
         if self._resetRemoteBlock:
-            raise ResetRemoteException(  # pylint: disable=broad-exception-raised
-                "Remote block was resetted."
-            )
+            raise ResetRemoteException("Remote block was resetted.")
 
         if self._flowSavedID is None:
-            raise Exception("Flow ID not set.")  # pylint: disable=broad-exception-raised
+            raise Exception("Flow ID not set.")
 
         if self._blockPlacedID is None:
-            raise Exception("Block placedID not set.")  # pylint: disable=broad-exception-raised
+            raise Exception("Block placedID not set.")
 
         status = self.getRemoteBlockStatus(self._flowSavedID, self._blockPlacedID)
 
@@ -958,7 +942,10 @@ class RemotesAPI:
         return status
 
     def updateQueue(
-        self, savedFlowID: str, jobID: t.Optional[int] = None, status: t.Optional[str] = None
+        self,
+        savedFlowID: str,
+        jobID: t.Optional[int] = None,
+        status: t.Optional[str] = None,
     ) -> t.Dict[str, t.List[t.Dict[str, t.Any]]]:
         """
         Updates the queue storage with the current status of the jobs
@@ -981,17 +968,13 @@ class RemotesAPI:
 
             # If the job ID is not set, raise an exception
             if queueJobID is None:
-                raise Exception(  # pylint: disable=broad-exception-raised
-                    "Corrupted queue storage: job ID not set."
-                )
+                raise Exception("Corrupted queue storage: job ID not set.")
 
             remote = job.get("remote", None)
 
             # If the remote is not set, raise an exception
             if remote is None:
-                raise Exception(  # pylint: disable=broad-exception-raised
-                    "Corrupted queue storage: remote not set."
-                )
+                raise Exception("Corrupted queue storage: remote not set.")
 
             # If the connected remote is not the same as
             # the remote the jobs are running on, raise an exception
@@ -1074,9 +1057,7 @@ class RemotesAPI:
 
             # If the job ID is not set, raise an exception
             if jobID is None:
-                raise Exception(  # pylint: disable=broad-exception-raised
-                    "Corrupted queue storage: job ID not set."
-                )
+                raise Exception("Corrupted queue storage: job ID not set.")
 
             # Cancel the job if its running or queued
             status = job.get("status", None)

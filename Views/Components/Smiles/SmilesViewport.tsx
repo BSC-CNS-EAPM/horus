@@ -4,10 +4,11 @@ import EyeIcon from "../Toolbar/Icons/Eye";
 import EyeDashIcon from "../Toolbar/Icons/EyeDash";
 import { SmilesView } from "./SmilesComponent";
 import { HorusSmilesType, SmilesEvents } from "./SmilesWrapper/horusSmiles";
+import { PANEL_REGISTRY } from "../MainApp/PanelView";
 
 export function Smiles2DMolstarViewportComponent() {
   const [currentSmiles, setCurrentSmiles] = useState<HorusSmilesType | null>(
-    null
+    null,
   );
   const [availableSmiles, setAvailableSmiles] = useState<HorusSmilesType[]>([]);
   const [hidden, setHidden] = useState<boolean>(false);
@@ -15,7 +16,7 @@ export function Smiles2DMolstarViewportComponent() {
   useEffect(() => {
     const updateSmilesEventListener = () => {
       setAvailableSmiles(
-        window.smiles?.getSmilesList().filter((s) => s.structureRef) ?? []
+        window.smiles?.getSmilesList().filter((s) => s.structureRef) ?? [],
       );
       setCurrentSmiles(window.smiles?.getCurrentSmiles() ?? null);
     };
@@ -81,7 +82,7 @@ export function Smiles2DMolstarViewportComponent() {
                     const residueNum =
                       currentSmiles.structureRef.residue.residue;
                     const chain = currentSmiles.structureRef.residue.chainID;
-                    window.molstar.focus(label, residueNum, chain);
+                    window?.molstar?.focus(label, residueNum, chain);
                   }
                 },
               }}
@@ -96,8 +97,14 @@ export function Smiles2DMolstarViewportComponent() {
               }}
               smiles={currentSmiles?.smi}
               onClickEdit={() => {
-                // Send an event to open / close the grid view of the smiles
-                window.dispatchEvent(new CustomEvent("toggleSmilesGrid"));
+                document.dispatchEvent(
+                  new CustomEvent("addPanel", {
+                    detail: {
+                      component: PANEL_REGISTRY.smiles.component,
+                      panelID: PANEL_REGISTRY.smiles.id,
+                    },
+                  }),
+                );
               }}
             />
           </div>
@@ -109,7 +116,7 @@ export function Smiles2DMolstarViewportComponent() {
                 const smilesID = e.target.value;
 
                 const wantedSmiles = availableSmiles.find(
-                  (smi) => smi.id === smilesID
+                  (smi) => smi.id === smilesID,
                 );
 
                 if (!wantedSmiles) return;
@@ -124,7 +131,7 @@ export function Smiles2DMolstarViewportComponent() {
                       <option key={smi.id} value={smi.id}>
                         {`${smi.label} - ${
                           window.molstar?.getLabelFromStructureRef(
-                            smi.structureRef?.id ?? ""
+                            smi.structureRef?.id ?? "",
                           ) ?? "Unknown"
                         }` || "Unnamed SMILES"}
                       </option>

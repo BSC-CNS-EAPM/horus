@@ -4,6 +4,7 @@ ExtensionAPI module
 
 import logging
 import os
+import random
 
 # Import types only in development
 # pyright: reportUnboundVariable=false
@@ -62,7 +63,9 @@ class Extensions(metaclass=SingletonMeta):
             "pluginID": pluginID,
             "pageID": pageID,
             "data": data,
-            "title": title,
+            "name": title,
+            # Here we cannot track how many times the extension is opened, so we generate a random number
+            "dataID": random.randint(0, 100000),
         }
 
         self._emitAction("openExtension", extensionData)
@@ -93,12 +96,17 @@ class Extensions(metaclass=SingletonMeta):
             "pluginID": pluginID,
             "pageID": pageID,
             "data": data,
-            "title": title,
+            "name": title,
+            "blockID": self._flow.currentExecuting,
         }
 
         # Add the extension results to the current executing block
         if self._flow.currentExecuting is not None:
             block = self._flow.findBlockByPlacedID(self._flow.currentExecuting)
+
+            # Generate unique ID for each extension
+            extensionData["dataID"] = len(block._extensionsToOpen)
+
             block._extensionsToOpen.append(extensionData)
         else:
             raise Exception("Could not store extension results. No block is currently running")
@@ -131,7 +139,12 @@ class Extensions(metaclass=SingletonMeta):
                 title=title,
             )
         else:
-            self.open(pluginID="horus", pageID="html_loader", data={"html": html, "type": type})
+            self.open(
+                pluginID="horus",
+                pageID="html_loader",
+                data={"html": html, "type": type},
+                title=title,
+            )
 
     def loadImage(self, image: str, title: str, store: bool = True) -> None:
         """
@@ -153,7 +166,7 @@ class Extensions(metaclass=SingletonMeta):
                 pluginID="horus", pageID="image_loader", data={"image": image}, title=title
             )
         else:
-            self.open(pluginID="horus", pageID="image_loader", data={"image": image})
+            self.open(pluginID="horus", pageID="image_loader", data={"image": image}, title=title)
 
     def loadText(self, text: str, title: str, store: bool = True) -> None:
         """
@@ -175,7 +188,7 @@ class Extensions(metaclass=SingletonMeta):
                 pluginID="horus", pageID="html_loader", data={"html": text}, title=title
             )
         else:
-            self.open(pluginID="horus", pageID="html_loader", data={"html": text})
+            self.open(pluginID="horus", pageID="html_loader", data={"html": text}, title=title)
 
     def loadCSV(self, csv: str, title: str, store: bool = True) -> None:
         """
@@ -197,7 +210,7 @@ class Extensions(metaclass=SingletonMeta):
                 pluginID="horus", pageID="csv_loader", data={"csv": csv}, title=title
             )
         else:
-            self.open(pluginID="horus", pageID="csv_loader", data={"csv": csv})
+            self.open(pluginID="horus", pageID="csv_loader", data={"csv": csv}, title=title)
 
     def loadPlot(self, plotCSV: str, title: str, store: bool = True) -> None:
         """
@@ -219,7 +232,7 @@ class Extensions(metaclass=SingletonMeta):
                 pluginID="horus", pageID="plot_loader", data={"plot": plotCSV}, title=title
             )
         else:
-            self.open(pluginID="horus", pageID="plot_loader", data={"plot": plotCSV})
+            self.open(pluginID="horus", pageID="plot_loader", data={"plot": plotCSV}, title=title)
 
     def loadPDF(self, pdf: str, title: str, store: bool = True) -> None:
         """
@@ -241,4 +254,4 @@ class Extensions(metaclass=SingletonMeta):
                 pluginID="horus", pageID="pdf_loader", data={"pdf": pdf}, title=title
             )
         else:
-            self.open(pluginID="horus", pageID="pdf_loader", data={"pdf": pdf})
+            self.open(pluginID="horus", pageID="pdf_loader", data={"pdf": pdf}, title=title)

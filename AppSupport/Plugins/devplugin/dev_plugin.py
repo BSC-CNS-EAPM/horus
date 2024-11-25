@@ -118,11 +118,15 @@ def openExtension(block: PluginBlock):
     ext = Extensions()
 
     ext.open(
-        "nbdsuite", "nbdresults", data={"path": "/Users/cdominguez/Downloads/3RLQ/input.yaml"}
+        "nbdsuite",
+        "nbdresults",
+        data={"path": "/Users/cdominguez/Downloads/3RLQ/input.yaml"},
     )
 
     ext.storeExtensionResults(
-        "nbdsuite", "nbdresults", data={"path": "/Users/cdominguez/Downloads/3RLQ/input.yaml"}
+        "nbdsuite",
+        "nbdresults",
+        data={"path": "/Users/cdominguez/Downloads/3RLQ/input.yaml"},
     )
 
     ext.storeExtensionResults(
@@ -146,7 +150,9 @@ plugin.addBlock(openExtensionBlock)
 
 def noInputBlockAction(block: PluginBlock):
     print("this block has no inputs: ", block.inputs)
-    print("This block has no input groups: ", block.selectedInputGroup, block._inputGroups)
+    print(
+        "This block has no input groups: ", block.selectedInputGroup, block._inputGroups
+    )
     print("This block has no variables: ", block.variables)
     print("This block has no outputs: ", block.outputs)
 
@@ -246,7 +252,9 @@ def molviewSpecAciton(block: PluginBlock):
     mvs = mol.mvs
     builder = mvs.create_builder()
     (
-        builder.download(url="https://www.ebi.ac.uk/pdbe/entry-files/download/1cbs_updated.cif")
+        builder.download(
+            url="https://www.ebi.ac.uk/pdbe/entry-files/download/1cbs_updated.cif"
+        )
         .parse(format="mmcif")
         .assembly_structure(assembly_id="1")
         .component()
@@ -373,6 +381,8 @@ slurmBlockTest = SlurmBlock(
         )
     ],
     id="slurm_block_test",
+        category="Slurm",
+
 )
 
 
@@ -422,6 +432,7 @@ slurmBlockFailes = SlurmBlock(
     finalAction=finalTestSlurmBlockAction,
     id="slurm_block_test_fail",
     failOnSlurmError=False,
+    category="Slurm",
 )
 
 plugin.addBlock(slurmBlockTest)
@@ -432,7 +443,10 @@ extension_input_variable = PluginVariable(
 )
 
 extension_output_variable = PluginVariable(
-    id="extensions_output", name="output", description="output", type=VariableTypes.STRING
+    id="extensions_output",
+    name="output",
+    description="output",
+    type=VariableTypes.STRING,
 )
 
 
@@ -456,7 +470,9 @@ def testExtensionsShortcuts(block: PluginBlock):
 
     Extensions().loadHTML(html, title="Some HTML")
 
-    block.setOutput(extension_output_variable.id, block.inputs[extension_input_variable.id])
+    block.setOutput(
+        extension_output_variable.id, block.inputs[extension_input_variable.id]
+    )
 
 
 def finalAction(block: PluginBlock):
@@ -491,6 +507,7 @@ testExtensionsShortcutsBlock = SlurmBlock(
     inputs=[extension_input_variable],
     variables=[some_toggle_variable],
     outputs=[extension_output_variable],
+    category="Slurm",
 )
 
 plugin.addBlock(testExtensionsShortcutsBlock)
@@ -545,7 +562,10 @@ def checkPluginPathAction(block: PluginBlock):
 
 
 pluginPathActionBlock = PluginBlock(
-    id="pluginPath", name="Plugin path", description="Plugin path", action=checkPluginPathAction
+    id="pluginPath",
+    name="Plugin path",
+    description="Plugin path",
+    action=checkPluginPathAction,
 )
 
 plugin.addBlock(pluginPathActionBlock)
@@ -685,6 +705,7 @@ input_block_variable_list = InputBlock(
     description="Input block variable list",
     variable=variable_list_multiple,
     action=None,
+    category="input",
 )
 
 plugin.addBlock(input_block_variable_list)
@@ -701,6 +722,7 @@ input_block_string_list = InputBlock(
         allowedValues=[VariableTypes.STRING],
     ),
     action=None,
+    category="input",
 )
 
 plugin.addBlock(input_block_string_list)
@@ -813,6 +835,7 @@ fail_on_even_block = PluginBlock(
     action=fail_on_even_action,
     inputs=[input_output_even],
     outputs=[input_output_even],
+    category="Other blocks"
 )
 
 plugin.addBlock(fail_on_even_block)
@@ -847,6 +870,8 @@ dirty_block_block = PluginBlock(
     action=dirty_block,
     inputs=[input_output_even],
     outputs=[input_output_even],
+        category="Other blocks"
+
 )
 
 plugin.addBlock(dirty_block_block)
@@ -931,6 +956,8 @@ multiple_list_block = PluginBlock(
         multiple_allowed_list,
         # unallowed_variable_list,
     ],
+        category="Other blocks"
+
 )
 
 plugin.addBlock(multiple_list_block)

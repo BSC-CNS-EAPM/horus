@@ -42,7 +42,6 @@ from flask import Flask, after_this_request, request, Response
 from flask_socketio import SocketIO, join_room, leave_room
 from flask_cors import CORS
 import flask_login
-import eventlet.wsgi
 
 
 # Werkzeug secure filenames
@@ -224,9 +223,7 @@ class HorusServer:
             try:
                 sock.bind((localIp or self.host, self.port))
             except OSError as ose:
-                raise Exception(  # pylint: disable=broad-exception-raised
-                    f"Adress {self.baseURL} is already in use"
-                ) from ose
+                raise Exception(f"Adress {self.baseURL} is already in use") from ose
 
         logging.getLogger("Horus").info("Host: %s", self.host)
         logging.getLogger("Horus").info("Port: %s", self.port)
@@ -322,13 +319,9 @@ class HorusServer:
             try:
                 return webview.token
             except ImportError as impe:
-                raise Exception(  # pylint: disable=broad-exception-raised
-                    "Error: webview module not found"
-                ) from impe
+                raise Exception("Error: webview module not found") from impe
             except AttributeError as attre:
-                raise Exception(  # pylint: disable=broad-exception-raised
-                    "Error: webview.token attribute not found"
-                ) from attre
+                raise Exception("Error: webview.token attribute not found") from attre
 
         return str(random.randint(1, 100000000))
 
@@ -358,11 +351,10 @@ class HorusServer:
         if hasattr(sys, "_MEIPASS"):
             bundleDir = sys._MEIPASS  # type: ignore pylint: disable=protected-access
             guiDir = os.path.join(bundleDir, "GUI")
+            if not os.path.exists(guiDir):
+                raise FileNotFoundError("GUI directory not found")
         else:
             guiDir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "GUI"))
-
-        if not os.path.exists(guiDir):
-            raise FileNotFoundError("GUI directory not found")
 
         return guiDir
 
@@ -446,7 +438,7 @@ class HorusServer:
             __name__,
             static_folder=self.guiDir,
             template_folder=self.guiDir,
-            static_url_path="/",
+            # static_url_path="/",
         )
 
         # If we are on webapp mode
@@ -487,6 +479,12 @@ class HorusServer:
 
         @wraps(func)
         def wrapper(*args, **kwargs):
+
+            # If the user is asking for a static file, just send it
+            static_path = os.path.join(str(self.server.static_folder), request.path.lstrip("/"))
+            if os.path.isfile(static_path):
+                return func(*args, **kwargs)
+
             # If we are on webapp mode, and we require users to be logged in
             # this wrapper will prevent access to the route if the user is not logged in
             if self.webAppManager and self.webAppManager.userManagement.requireRegistration:
@@ -848,9 +846,7 @@ class HorusServer:
                 if self.desktop:
                     flow = self.flowManager.openFlow()
                 else:
-                    raise Exception(  # pylint: disable=broad-exception-raised
-                        "This function is only available on desktop mode."
-                    )
+                    raise Exception("This function is only available on desktop mode.")
 
                 # Get the flow JSON
                 flowJson = flow.encode(minimal=False)
@@ -971,7 +967,7 @@ class HorusServer:
             try:
                 data = request.get_json()
                 if data is None:
-                    raise Exception("No data provided")  # pylint: disable=broad-exception-raised
+                    raise Exception("No data provided")
                 savedID = data.get("savedID", None)
                 path = data.get("path", None)
                 if path is not None:
@@ -985,9 +981,7 @@ class HorusServer:
 
                 else:
                     if savedID is None:
-                        raise Exception(  # pylint: disable=broad-exception-raised
-                            "No savedID provided"
-                        )
+                        raise Exception("No savedID provided")
 
                     template = data.get("template", False)
 
@@ -1145,19 +1139,9 @@ class HorusServer:
 
                 return flask.jsonify(success)
 
+            # Read the Mol* and Smiles state. Those can be none if the user did not open the Viewer
             file = request.files.get("molstarState", None)
             smilesState = request.form.get("smilesState", None)
-
-            if file is None or smilesState is None:
-                success = {
-                    "ok": False,
-                    "msg": "No molstar or smiles state provided",
-                }
-
-                return flask.jsonify(success)
-
-            # Load the smiles state json
-            smilesState = flask.json.loads(smilesState)
 
             try:
 
@@ -1168,13 +1152,16 @@ class HorusServer:
 
                 # Open the flow
                 flow = self.flowManager.openFlowFromPath(flowPath)
-
-                # Seek the stream at the starting byte to load it
-                file.stream.seek(0)
-                molState = file.stream.read()
                 flow.pendingActions = []
                 flow.pendingSmilesActions = []
-                flow.write(molState, smilesState)
+
+                # Seek the stream at the starting byte to load it
+                molState = None
+                if file:
+                    file.stream.seek(0)
+                    molState = file.stream.read()
+
+                flow.write(molState, flask.json.loads(smilesState) if smilesState else None)
 
                 success = {
                     "ok": True,
@@ -1260,6 +1247,22 @@ class HorusServer:
 
             AppDelegate().openAppSupportDir()
             return "OK"
+
+        @self.server.route("/api/plugins/logo", methods=["GET"])
+        def getPluginLogo():
+            pluginID = request.args.get("pluginID", None)
+
+            if pluginID is None:
+                return flask.jsonify({"ok": False, "msg": "Plugin ID not provided."})
+
+            plugin = self.pluginManager._getPluginByID(pluginID)
+
+            if plugin is None:
+                return flask.jsonify(
+                    {"ok": False, "msg": "Plugin with id '" + pluginID + "' not found."}
+                )
+
+            return flask.jsonify({"ok": True, "logo": plugin.logo})
 
         @self.server.route("/api/plugins/list", methods=["GET"])
         @self.verifyLogin
@@ -1961,7 +1964,7 @@ class HorusServer:
         def setting(settingID):
             try:
                 setting = self.settingsManager.getSetting(settingID)
-            except Exception as exc:  # pylint: disable=broad-exception-raised
+            except Exception as exc:
                 return flask.jsonify({"ok": False, "msg": str(exc)})
 
             return flask.jsonify({"ok": True, "setting": setting.toDict()})
@@ -2007,19 +2010,11 @@ class HorusServer:
             return flask.jsonify({"ok": False, "msg": "Not allowed"})
 
         # View routes
-        @self.server.route("/")
+        @self.server.route("/", defaults={"path": ""})
+        @self.server.route("/<path:path>")
         @self.verifyLogin
-        def index():
-
-            # Get the query string
-            shemsu = request.args.get("shemsu", None)
-
-            if shemsu is not None:
-                if shemsu == webview.token:
-                    # Starting server in browser mode
-                    return flask.render_template("Main/index.html", shemsu=shemsu)
-
-            return flask.render_template("Main/index.html")
+        def index(path):
+            return self.server.send_static_file(path if path else "Main/index.html")
 
         @self.server.route("/plugins/", methods=["GET"])
         @self.noWebApp
@@ -2065,7 +2060,7 @@ class HorusServer:
             self.server,
             self.baseURL,
             cors_allowed_origins=self.origins,
-            async_mode="eventlet",
+            async_mode="threading",
             manage_session=False,
         )
 
@@ -2280,6 +2275,8 @@ class HorusServer:
         @self.server.errorhandler(404)
         def pageNotFound(error):
 
+            logging.getLogger("Horus").error("Page not found: %s", str(error))
+
             # If the page if for an extension /plugins/pages/...
             if "/plugins/pages/" in request.path:
                 errorMSG = (
@@ -2292,9 +2289,12 @@ class HorusServer:
                 # Log the full request
                 horusLogger.error("Request: %s", str(request))
 
-                return flask.render_template("Error/error.html", errormsg=errorMSG)
+                return flask.render_template(
+                    "Error/error.html", errormsg="Page not found: " + errorMSG
+                )
 
-            return flask.redirect("/")
+            # We need to return the index page for our react-router app to work
+            return self.server.send_static_file("Main/index.html")
 
         # Setup a template not found error
         @self.server.route("/error")
@@ -2431,7 +2431,6 @@ class HorusServer:
 
         @self.server.route("/users/login", methods=["GET", "POST"])
         def login():
-
             if not self.webAppManager:
                 return flask.redirect("/")
 
@@ -3283,9 +3282,11 @@ class HorusServer:
             "debug": debug,
             "use_reloader": useReloader,
             "log_output": self.debug,
+            "allow_unsafe_werkzeug": True,
         }
 
-        # Start the server if not on web app mode
+        # Start the server
+        # runArgs.update({"allow_unsafe_werkzeug": True})
         self.socketio.run(self.server, **runArgs)
 
     _maxConcurrentFlows: int = 1
@@ -3433,11 +3434,10 @@ class HorusSocket(SocketIO):
 
     def run(self, server, **runArgs):  # pylint: disable=arguments-differ
 
-        def hook_get_logger(*args):
-            return logging.getLogger("eventlet")
+        # Disable flask's cli logging
+        import flask.cli as cli
 
-        # Inject the Horus logger as the eventlet logger
-        eventlet.wsgi.get_logger = hook_get_logger
+        cli.show_server_banner = lambda *x: None
 
         super().run(server, **runArgs)
 
@@ -3512,7 +3512,6 @@ class HorusSocket(SocketIO):
             logging.getLogger("Horus").debug(
                 "Emitting event %s to room %s", event, kwargs["room"]
             )
-
             return oldEmit(event, *args, **kwargs)
 
         self.emit = newEmit
