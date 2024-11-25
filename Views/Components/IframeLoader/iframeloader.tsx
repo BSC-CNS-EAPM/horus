@@ -1,5 +1,5 @@
 // React
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 // TS
 import { GLOBAL_IDS } from "../../Utils/globals";
@@ -8,22 +8,14 @@ import { GLOBAL_IDS } from "../../Utils/globals";
 import RotatingLines from "../RotatingLines/rotatinglines";
 import { PluginPage } from "../FlowBuilder/flow.types";
 
-function IFrameLoader({
-  page,
-  data,
-  onFocus,
-}: {
-  page: PluginPage;
-  data: any;
-  onFocus?: () => void;
-}) {
+function IFrameLoader({ page, data }: { page: PluginPage; data: any }) {
   const fixedURL = () => {
     // Do not fix the url for the development page
     if (page.id === "development" && page.plugin === "Horus") {
       return page.url;
     }
 
-    let domain = window.origin;
+    let domain = window.location.href;
 
     // Remove the final slash
     if (domain.endsWith("/")) {
@@ -35,44 +27,33 @@ function IFrameLoader({
 
   const [loading, setLoading] = useState(true);
 
-  const uniqueID = useRef(Math.random().toString(36).slice(2));
-  const iframeID = `${GLOBAL_IDS.EXTENSIONS_IFRAME}-${uniqueID.current}`;
+  const handleLoad = () => {
+    setLoading(false);
+  };
 
   useEffect(() => {
     window.extensionData = data;
 
-    const handleLoad = () => {
-      setLoading(false);
-    };
-
-    const iframe = document.getElementById(iframeID) as HTMLIFrameElement;
-
-    if (!iframe) {
-      return;
-    }
-
+    const iframe = document.getElementById(
+      GLOBAL_IDS.EXTENSIONS_IFRAME
+    ) as HTMLIFrameElement;
     iframe.addEventListener("load", handleLoad);
     return () => {
       iframe.removeEventListener("load", handleLoad);
     };
-  }, [page, data, iframeID]);
+  }, [page, data]);
 
   return (
-    <div
-      id="iframe-loader"
-      className="h-full w-full p-0 m-0"
-      onMouseEnter={onFocus}
-    >
+    <div id="iframe-loader" className="h-full w-full p-0 m-0">
       {loading && (
         <div className="flex flex-col items-center justify-center h-full">
-          {page.logo && <img src={page.logo} className="w-36" />}
           <RotatingLines size={"100px"} />
           Loading {page.name}
         </div>
       )}
       <iframe
         // id={`${url}-${pagename}`}
-        id={iframeID}
+        id={GLOBAL_IDS.EXTENSIONS_IFRAME}
         sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-downloads allow-modals allow-top-navigation"
         // If the url does not start with the current domain, add It in order to prevent http / https errors
         // Prevent double backslashes //

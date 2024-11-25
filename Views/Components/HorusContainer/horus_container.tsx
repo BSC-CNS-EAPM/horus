@@ -13,10 +13,6 @@ function _HorusContainer(props: HorusContainerProps, ref: any) {
     <div
       {...props}
       ref={ref}
-      style={{
-        cursor: props.onClick ? "pointer" : "auto",
-        ...props.style,
-      }}
       className={`${props.className} horus-container animated-gradient`}
     >
       {props.children}

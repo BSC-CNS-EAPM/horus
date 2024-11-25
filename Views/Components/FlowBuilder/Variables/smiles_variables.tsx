@@ -1,18 +1,13 @@
-import { useCallback, useContext, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { VariableViewProps } from "./variables";
 import {
   HorusSmilesType,
   SmilesEvents,
 } from "../../Smiles/SmilesWrapper/horusSmiles";
+import { SearchComponent } from "../../Toolbar/toolbar";
 import { NotFoundView } from "./molstar_variables";
 import AppButton from "../../appbutton";
 import { BreakLongUnderscoreNames } from "../Blocks/block.view";
-import { SearchComponent } from "@/Components/Search/Search";
-import {
-  addPanel,
-  DockContext,
-  PANEL_REGISTRY,
-} from "@/Components/MainApp/PanelView";
 
 function filterSmiles(structures: HorusSmilesType[], query?: string) {
   if (!query) {
@@ -22,7 +17,7 @@ function filterSmiles(structures: HorusSmilesType[], query?: string) {
   return structures.filter(
     (structure) =>
       structure.label.toLowerCase().includes(query.toLowerCase()) ||
-      structure.group?.toLowerCase().includes(query.toLowerCase()),
+      structure.group?.toLowerCase().includes(query.toLowerCase())
   );
 }
 
@@ -33,13 +28,13 @@ function useSmilesFilter() {
   const setCurrentFilter = (query: string) => {
     _setCurrentFilter(query);
     setFilteredSmiles(
-      filterSmiles(window.smiles?.getSmilesList() ?? [], query),
+      filterSmiles(window.smiles?.getSmilesList() ?? [], query)
     );
   };
 
   const refreshStructures = useCallback(() => {
     setFilteredSmiles(
-      filterSmiles(window.smiles?.getSmilesList() ?? [], currentFilter),
+      filterSmiles(window.smiles?.getSmilesList() ?? [], currentFilter)
     );
   }, [currentFilter]);
 
@@ -64,8 +59,6 @@ function useSmilesFilter() {
 }
 
 export function SmilesVariableView(props: VariableViewProps) {
-  const dockContext = useContext(DockContext);
-
   const { setCurrentFilter, filteredStructures } = useSmilesFilter();
 
   const [usingSelectedSmiles, setUsingSelectedSmiles] = useState(false);
@@ -80,7 +73,7 @@ export function SmilesVariableView(props: VariableViewProps) {
 
       if (props.currentValue) {
         const currentSelected = props.currentValue.flatMap(
-          (s: HorusSmilesType) => s.id,
+          (s: HorusSmilesType) => s.id
         );
 
         if (!window.smiles) {
@@ -146,14 +139,10 @@ export function SmilesVariableView(props: VariableViewProps) {
         {usingSelectedSmiles && (
           <AppButton
             action={() => {
-              addPanel({
-                dockApi: dockContext.dockApi,
-                component: PANEL_REGISTRY.smiles.component,
-                panelID: PANEL_REGISTRY.smiles.id,
-              });
+              window.dispatchEvent(new CustomEvent("toggleSmilesGrid"));
             }}
           >
-            Open SMILES viewer
+            Toggle SMILES viewer
           </AppButton>
         )}
       </div>
@@ -209,8 +198,8 @@ function SelectMultipleSmiles({
             e.target.checked
               ? [...(currentValue ?? []), smiles]
               : (currentValue ?? []).filter(
-                  (s: HorusSmilesType) => s.id !== smiles.id,
-                ),
+                  (s: HorusSmilesType) => s.id !== smiles.id
+                )
           )
         }
       />

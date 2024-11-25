@@ -43,7 +43,7 @@ function EmptyMolstarHelp() {
 
   useEffect(() => {
     const checkEmpty = () => {
-      setIsEmpty((window.molstar?.structures().length ?? 0) === 0);
+      setIsEmpty(window.molstar.structures().length === 0);
     };
 
     window.addEventListener(MolstarEvents.STATE, checkEmpty);

@@ -1,11 +1,12 @@
 // React
-import { CSSProperties, useContext, useEffect, useRef, useState } from "react";
+import { CSSProperties, useEffect, useRef, useState } from "react";
 
 // Horus components
 import Xarrow from "react-xarrows";
 import AppButton from "../../appbutton";
-import { HorusPopover } from "../../reusable";
+import { BlurredModal, HorusPopover } from "../../reusable";
 import SidebarView from "../../SidebarView/sidebar_view";
+import { SearchComponent } from "../../Toolbar/toolbar";
 import {
   PluginVariableView,
   SimpleVariableView,
@@ -29,9 +30,6 @@ import LockIcon from "../../Toolbar/Icons/Lock";
 // Hooks
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { BlockHooks } from "../flow.hooks";
-import { SearchComponent } from "@/Components/Search/Search";
-import { FlowBuilderContext } from "@/Components/MainApp/PanelView";
-import { SettingsContext } from "@/Main/app";
 
 export function getBlockVarPair(
   block: Block,
@@ -49,23 +47,14 @@ export function getBlockVarPair(
 
 type VariableModalViewProps = {
   block: Block;
-  handleVariableChange: (value: any, id: string, groupID?: string) => void;
+  handleChange: (value: any, id: string, groupID?: string) => void;
+  handleClose?: () => void;
 };
 
-export function VariableSetupView(props: VariableModalViewProps) {
-  const { block, handleVariableChange } = props;
+export function VariableModalView(props: VariableModalViewProps) {
+  const { block, handleChange } = props;
 
-  const flowBuilderState = useContext(FlowBuilderContext);
-
-  const isFlowActive = flowBuilderState?.flow.isFlowActive;
-
-  const variables: PluginVariable[] = block.variables.map((variable) => {
-    return {
-      ...variable,
-      placedID: block.placedID,
-      disabled: !!isFlowActive,
-    };
-  });
+  const variables = block.variables;
 
   const [filteredVariables, setFilteredVariables] = useState(variables);
 
@@ -100,7 +89,7 @@ export function VariableSetupView(props: VariableModalViewProps) {
           <PluginVariableView
             key={gVar.id}
             variable={gVar}
-            onChange={handleVariableChange}
+            onChange={handleChange}
             customClass="w-fit"
           />
         );
@@ -109,34 +98,70 @@ export function VariableSetupView(props: VariableModalViewProps) {
         <div className="flex flex-col gap-2 flex-wrap">{variableViews}</div>,
       ];
     }
+
+    // // Add a section for the inputs
+    // groupedViews["Block inputs"] = [
+    //   <div className="flex flex-col gap-2 flex-wrap">
+    //     <InputView groups={block.inputs} />
+    //   </div>,
+    // ];
+
+    // // And for the outputs
+    // groupedViews["Block outputs"] = [
+    //   <div className="flex flex-col gap-2 flex-wrap">
+    //     {block.outputs.map((variable, index) => (
+    //       <SimpleVariableView
+    //         key={
+    //           variable.id + "-" + index + "-" + block.id + "-" + block.placedID
+    //         }
+    //         variable={variable}
+    //       />
+    //     ))}
+    //   </div>,
+    // ];
+
     return groupedViews;
   };
 
   return (
-    <div className="flex flex-col h-full p-2">
-      <div className="sticky top-0 z-10">
-        <div className="variables-modal-title-search gap-2 justify-between">
-          <div
-            className="font-semibold text-3xl break-all"
-            style={{
-              color: "var(--digital-grey-IV)",
-            }}
-          >
-            {block.name}
+    <BlurredModal
+      show
+      onHide={() => {
+        props?.handleClose?.();
+      }}
+      maxContentSize={{
+        height: "95%",
+        width: "95%",
+      }}
+    >
+      <div className="flex flex-col h-full">
+        <div className="sticky top-0 z-10">
+          <div className="variables-modal-title-search gap-2 justify-between">
+            <div
+              className="font-semibold text-3xl break-all"
+              style={{
+                color: "var(--digital-grey-IV)",
+              }}
+            >
+              {block.name}
+            </div>
+            <div className="flex flex-row gap-2">
+              <SearchComponent
+                placeholder="Search variables"
+                onChange={filterVariables}
+              />
+              {props.handleClose && (
+                <AppButton action={props.handleClose}>Close</AppButton>
+              )}
+            </div>
           </div>
-          <div className="flex flex-row gap-2">
-            <SearchComponent
-              placeholder="Search variables"
-              onChange={filterVariables}
-            />
-          </div>
+          <hr className="my-4 p-0"></hr>
         </div>
-        <hr className="my-4 p-0"></hr>
+        {block.variables && block.variables.length > 0 && (
+          <SidebarView views={getGroupedVariables()} />
+        )}
       </div>
-      {block.variables && block.variables.length > 0 && (
-        <SidebarView views={getGroupedVariables()} />
-      )}
-    </div>
+    </BlurredModal>
   );
 }
 
@@ -162,7 +187,6 @@ function OutputVariableBallConnector({
     pointerEvents: variable.disabled ? "none" : "auto",
   };
   let scale = 1;
-
   if (transform) {
     // Get the scale of the flow canvas
     const flowCanvas = document.getElementById(DroppableEntity.SCALED_CANVAS)!;
@@ -188,9 +212,7 @@ function OutputVariableBallConnector({
     }
   }, [ref]);
 
-  const settings = useContext(SettingsContext);
-
-  const arrowAppareance = settings?.["arrowLook"]?.value ?? "Curved";
+  const arrowAppareance = window.horusSettings["arrowLook"]?.value ?? "Curved";
   const path =
     arrowAppareance === "Curved" || arrowAppareance === "Extra curved"
       ? "smooth"
@@ -217,21 +239,6 @@ function OutputVariableBallConnector({
 
   return (
     <div id={id} className="w-full h-full">
-      {transform && (
-        <Xarrow
-          SVGcanvasStyle={{
-            scale: `${scale}`,
-          }}
-          start={id}
-          end={ref}
-          endAnchor={"right"}
-          dashness={{ animation: -2 }}
-          color={arrowColor}
-          headShape={"circle"}
-          path={path}
-          curveness={curveness}
-        />
-      )}
       <HorusPopover
         cancelStyle
         triggerClassName={`flex flex-row gap-1 align-center items-center justify-between variable-squared h-full w-full ${
@@ -249,7 +256,21 @@ function OutputVariableBallConnector({
               {...listeners}
               {...attributes}
             >
-              {transform ? null : variable.disabled ? (
+              {transform ? (
+                <Xarrow
+                  SVGcanvasStyle={{
+                    scale: `${scale}`,
+                  }}
+                  start={id}
+                  end={ref}
+                  endAnchor={"right"}
+                  dashness={{ animation: -2 }}
+                  color={arrowColor}
+                  headShape={"circle"}
+                  path={path}
+                  curveness={curveness}
+                />
+              ) : variable.disabled ? (
                 <LockIcon />
               ) : (
                 <Chevron direction="right" />

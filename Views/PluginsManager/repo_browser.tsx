@@ -1,6 +1,11 @@
 import { useState } from "react";
+import { SearchComponent } from "../Components/Toolbar/toolbar";
 import { PluginInstallProps } from "./plugin_manager";
-import { useQuery } from "@tanstack/react-query";
+import {
+  useQuery,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 import { horusGet } from "../Utils/utils";
 import { HorusPlugin } from "../Components/FlowBuilder/flow.types";
 import RotatingLines from "../Components/RotatingLines/rotatinglines";
@@ -13,15 +18,20 @@ import InfoIcon from "../Components/Toolbar/Icons/Info";
 import CloudDownload from "../Components/Toolbar/Icons/CloudDownload";
 import SettingsIcon from "../Components/Toolbar/Icons/Settings";
 import LogFile from "../Components/Toolbar/Icons/LogFile";
-import { SearchComponent } from "@/Components/Search/Search";
 
 type DatabasePlugin = HorusPlugin & {
   downloads: number;
   latest_version: string;
 };
 
+const queryClient = new QueryClient();
+
 export function PluginBrowserRoot(props: PluginInstallProps) {
-  return <RepoBrowser {...props} />;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <RepoBrowser {...props} />
+    </QueryClientProvider>
+  );
 }
 
 function RepoBrowser(props: PluginInstallProps) {

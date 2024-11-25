@@ -5,7 +5,6 @@ import CheckMark from "../Toolbar/Icons/CheckMark";
 import ChronoIcon from "../Toolbar/Icons/Chrono";
 import StopIcon from "../Toolbar/Icons/Stop";
 import PausedIcon from "../Toolbar/Icons/Paused";
-import SaveIcon from "../Toolbar/Icons/Save";
 
 type FlowStatusViewProps = {
   status: FlowStatus;
@@ -31,8 +30,6 @@ function FlowStatusView(props: FlowStatusViewProps) {
       return <CancellingFlowStatus />;
     case FlowStatus.IDLE:
       return <IdleFlowStatus />;
-    case FlowStatus.UNSAVED:
-      return <UnsavedFlowStatus />;
     default:
       return null;
   }
@@ -66,15 +63,6 @@ function FlowStatusBase(props: FlowStatusBaseProps) {
     >
       {props.children}
     </div>
-  );
-}
-
-function UnsavedFlowStatus() {
-  return (
-    <FlowStatusBase color="orange">
-      <div>Unsaved</div>
-      <SaveIcon />
-    </FlowStatusBase>
   );
 }
 

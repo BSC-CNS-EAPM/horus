@@ -5,7 +5,7 @@ import { useDroppable } from "@dnd-kit/core";
 import { DroppableEntity, Flow, FlowStatus } from "../flow.types";
 
 // Hooks
-import { FlowHooks, HandleMouseHooks, useFlowShortcuts } from "../flow.hooks";
+import { FlowHooks, HandleMouseHooks } from "../flow.hooks";
 
 // Icons
 import ZoomInIcon from "../../Toolbar/Icons/ZoomIn";
@@ -14,17 +14,10 @@ import Slider from "rc-slider";
 
 // Flow status view and stop button
 import StopIcon from "../../Toolbar/Icons/Stop";
+import SaveIcon from "../../Toolbar/Icons/Save";
 import { FlowStatusView } from "../../FlowStatus/flow_status";
 import { FlowElapsed } from "../../FlowStatus/flow_elapsed";
-import NewFlowIcon from "@/Components/Toolbar/Icons/New";
-import AppButton from "@/Components/appbutton";
-import {
-  DockContext,
-  PANEL_REGISTRY,
-  togglePanel,
-} from "@/Components/MainApp/PanelView";
-import { useContext } from "react";
-import { HorusPopover } from "@/Components/reusable";
+import { saveEvent } from "../../Toolbar/toolbar";
 
 type FlowCanvasProps = {
   flowHooks: FlowHooks;
@@ -43,16 +36,16 @@ export function FlowCanvas(props: FlowCanvasProps) {
   });
 
   return (
-    <>
+    <div className="current-flow" id="current-flow">
       <FlowTopBar flowHooks={props.flowHooks} />
       <div
         className="flow-canvas"
         ref={setNodeRef}
         id={DroppableEntity.CANVAS.valueOf()}
-        onMouseDown={mouseHooks.handleMouseDown as any}
-        onMouseUp={mouseHooks.handleMouseUp as any}
-        onMouseLeave={mouseHooks.handleMouseUp as any}
-        onMouseMove={mouseHooks.handleMousePan as any}
+        onMouseDown={mouseHooks.handleMouseDown}
+        onMouseUp={mouseHooks.handleMouseUp}
+        onMouseLeave={mouseHooks.handleMouseUp}
+        onMouseMove={mouseHooks.handleMousePan}
       >
         <div
           style={{
@@ -63,55 +56,7 @@ export function FlowCanvas(props: FlowCanvasProps) {
           {children}
         </div>
       </div>
-      <FlowBottomToolbar flowHooks={props.flowHooks} />
-    </>
-  );
-}
-
-function FlowBottomToolbar({ flowHooks }: { flowHooks: FlowHooks }) {
-  const { dockApi } = useContext(DockContext);
-
-  return (
-    <div
-      className="flex flex-row items-end justify-between gap-2 w-full p-2"
-      style={{
-        position: "absolute",
-        bottom: 0,
-      }}
-    >
-      <div
-        id="add-block"
-        style={{
-          paddingTop: "0.5rem",
-          paddingBottom: "0.5rem",
-        }}
-      >
-        <HorusPopover
-          trigger={
-            <AppButton
-              action={() => {
-                togglePanel({
-                  dockApi,
-                  panelID: PANEL_REGISTRY.blockRegistry.id,
-                  component: PANEL_REGISTRY.blockRegistry.component,
-                });
-              }}
-            >
-              <NewFlowIcon />
-            </AppButton>
-          }
-        >
-          <div
-            className="hover-description"
-            style={{
-              transform: "translateY(-70px) translateX(70px)",
-            }}
-          >
-            Toggle the Block Registry panel
-          </div>
-        </HorusPopover>
-      </div>
-      <CanvasZoom flowHooks={flowHooks} />
+      <CanvasZoom flowHooks={props.flowHooks} />
     </div>
   );
 }
@@ -120,7 +65,14 @@ function CanvasZoom({ flowHooks }: { flowHooks: FlowHooks }) {
   const { handleScaleChange, scale } = flowHooks;
 
   return (
-    <div className="flex flex-row gap-2 w-48 items-center justify-center">
+    <div
+      className="flex flex-row gap-2 w-48 items-center justify-center"
+      style={{
+        position: "absolute",
+        bottom: "10px",
+        right: "10px",
+      }}
+    >
       <div
         className="app-button bg-white"
         onClick={() => {
@@ -170,7 +122,7 @@ function FlowTopBar(props: { flowHooks: FlowHooks }) {
   const hasActions = hasPendingActions || hasPendingSmilesActions;
 
   return (
-    <div className="absolute flex flex-row top-bar-flow-reciver gap-2 p-2">
+    <div className="flex flex-row top-bar-flow-reciver gap-2">
       <FlowNameInput
         flow={flow}
         saved={saved}
@@ -201,7 +153,7 @@ function FlowNameInput({
     <input
       style={{
         borderColor: saved ? "var(--digital-grey-IV)" : "orange",
-        width: "100%",
+        minWidth: "200px",
       }}
       className="flow-name flow-title"
       type="text"
@@ -272,8 +224,6 @@ function FlowStatusControl({
 }
 
 function FlowStatusIcons({ flow, saved }: { flow: Flow; saved: boolean }) {
-  const shortcuts = useFlowShortcuts();
-
   return (
     <div className="flex flex-row gap-1 items-center justify-center">
       {(flow.status === FlowStatus.RUNNING ||
@@ -292,15 +242,15 @@ function FlowStatusIcons({ flow, saved }: { flow: Flow; saved: boolean }) {
         </div>
       ) : (
         <div
-          onClick={() => {
-            shortcuts.preHandleSave();
-          }}
+          onClick={saveEvent}
           className="flex flex-row gap-2"
           style={{
+            color: "orange",
             cursor: "pointer",
           }}
         >
-          <FlowStatusView status={FlowStatus.UNSAVED} />
+          <SaveIcon />
+          <div>Unsaved</div>
         </div>
       )}
     </div>

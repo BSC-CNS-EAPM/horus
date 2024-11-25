@@ -2,6 +2,12 @@
 App Delegate
 """
 
+# Critical import. Necessary to make multithreading work
+# # properly.
+# import eventlet
+
+# eventlet.monkey_patch()
+
 # Basic imports
 import sys
 import os
@@ -33,6 +39,7 @@ else:
 # Server
 from Server import HorusServer
 from HorusAPI import HorusSingleton, __version__
+
 
 # Add to the pythonpath the path of the project
 sys.path.append("../")
@@ -106,7 +113,7 @@ class HorusLogger:
         self.horus.setLevel(logging.NOTSET)
 
         # Create new logger for stdout and stderr
-        self.capturer = logging.getLogger("print")
+        self.capturer = logging.getLogger("Capturer")
         self.capturer.setLevel(logging.NOTSET)
 
         class FilterCapturer(logging.Filter):
@@ -183,22 +190,13 @@ class HorusLogger:
                 # Define the colors for the log levels
                 logLevelColor = self.COLOR_CODES.get(record.levelname, "")
 
-                oldFormat = self._style._fmt
-                if record.name == "print" and record.levelno < logging.ERROR:
-
-                    # Exclude the log level for the capturer
-                    formatStr = oldFormat.replace(" - %(levelname)s", "")
-                    self._style._fmt = formatStr
-
+                if record.name == "Capturer" and record.levelno < logging.ERROR:
                     # Apply the white color for the capturer
                     logLevelColor = self.CAPTURER_COLOR
 
                 # Apply the colors
                 formatted = super().format(record)
                 colored = f"{logLevelColor}{formatted}{self.RESET_CODE}"
-
-                # Restore the old format
-                self._style._fmt = oldFormat
 
                 return colored
 
@@ -228,23 +226,13 @@ class HorusLogger:
             """
 
             def __init__(
-                self,
-                level: int,
-                capturer: logging.Logger,
-                oldStdOutErr,
-                debug: bool = False,
-                verbose: bool = False,
+                self, level: int, capturer: logging.Logger, oldStdOutErr, debug: bool = False
             ) -> None:
                 self.debug = debug
                 """
                 Controls whether to print the logs to the old stdout and stderr
 
                 Needed in debug mode orthewise will be printed twice
-                """
-
-                self.verbose = verbose
-                """
-                Controls whether to print the logs to the old stdout and stderr
                 """
 
                 self.level = level
@@ -270,8 +258,7 @@ class HorusLogger:
                 Hook into the default stdout and stderr class
                 """
                 try:
-
-                    if not self.debug and not self.verbose:
+                    if not self.debug:
                         self.oldStdOutErr.write(message)
 
                     # Remove empty lines
@@ -287,12 +274,8 @@ class HorusLogger:
                     pass
 
         # Set as the new stdout and stderr the capturer
-        sys.stdout = FakeWriter(
-            logging.INFO, self.capturer, oldStdout, debug=self.debug, verbose=self.verbose
-        )
-        sys.stderr = FakeWriter(
-            logging.ERROR, self.capturer, oldStderr, debug=self.debug, verbose=self.verbose
-        )
+        sys.stdout = FakeWriter(logging.INFO, self.capturer, oldStdout, debug=self.debug)
+        sys.stderr = FakeWriter(logging.ERROR, self.capturer, oldStderr, debug=self.debug)
 
         # If we are on debug, print all the loggers to the old stdout and stderr
         if self.debug or self.verbose:
@@ -409,16 +392,6 @@ class AppDelegate(metaclass=HorusSingleton):
         """
 
         return getattr(sys, "frozen", False)
-
-    @property
-    def bundleDir(self) -> str:
-        """
-        Returns the bundle directory.
-
-        If uncompiled, it returns the current working directory
-        """
-
-        return getattr(sys, "_MEIPASS", os.getcwd())
 
     APP_INFO: typing.Dict[str, typing.Any] = {}
     """
@@ -648,7 +621,9 @@ class AppDelegate(metaclass=HorusSingleton):
                 if appSupportDir is not None:
                     appSupportDir = os.path.join(appSupportDir, appFolderName)
                 else:
-                    raise Exception("APPDATA environment variable not set")
+                    raise Exception(  # pylint: disable=broad-exception-raised
+                        "APPDATA environment variable not set"
+                    )
             elif self.platform == "linux":
                 appSupportDir = os.path.join(
                     os.path.expanduser("~"),
@@ -657,7 +632,9 @@ class AppDelegate(metaclass=HorusSingleton):
                     appFolderName,
                 )
             else:
-                raise Exception(f"Unsupported platform {self.platform}")
+                raise Exception(  # pylint: disable=broad-exception-raised
+                    f"Unsupported platform {self.platform}"
+                )
 
         else:
             # If we are not in a frozen executable,
@@ -1331,6 +1308,9 @@ def launchApp():
         # This is a blocking process.
         app.applicationDidFinishLaunching()
 
+        # Execute after the app is terminated
+        app.applicationWillTerminate()
+
     except BaseException as exc:
         import traceback
 
@@ -1340,7 +1320,3 @@ def launchApp():
 
         # Re-raise the exception, this is needed for flask auto-reload to work
         raise exc
-
-    finally:
-        # Execute after the app is terminated
-        app.applicationWillTerminate()

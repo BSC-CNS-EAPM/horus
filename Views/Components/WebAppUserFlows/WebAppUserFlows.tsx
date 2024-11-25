@@ -1,6 +1,10 @@
 // Components
 import { FlowStatusView } from "../FlowStatus/flow_status";
-import { CorruptedFlow, useGetRecentFlows } from "../FlowStatus/recent_flows";
+import {
+  CorruptedFlow,
+  openFlow,
+  useGetRecentFlows,
+} from "../FlowStatus/recent_flows";
 import RotatingLines from "../RotatingLines/rotatinglines";
 import HorusContainer from "../HorusContainer/horus_container";
 import { BlurredModal } from "../reusable";
@@ -27,7 +31,6 @@ import { horusPost } from "../../Utils/utils";
 import { FileData } from "chonky";
 import { useAlert } from "../HorusPrompt/horus_alert";
 import { useConfirm } from "../HorusPrompt/horus_confirm";
-import { Link } from "react-router-dom";
 
 export default function WebAppUserFlows() {
   // Get the recent flows with the custom hook
@@ -260,7 +263,7 @@ function CorruptedFlowView(props: {
         onClick={async () => {
           if (
             await horusConfirm(
-              "Do you want to delete this corrupted flow? This action is irreversible.",
+              "Do you want to delete this corrupted flow? This action is irreversible."
             )
           ) {
             deleteFile();
@@ -356,7 +359,7 @@ function OtherFileView(props: {
         <FlowSize size={props.directory.size} />
       </div>
       <div>
-        {props.directory.isDir ? "Folder" : (props.directory.ext ?? "Unknown")}
+        {props.directory.isDir ? "Folder" : props.directory.ext ?? "Unknown"}
       </div>
       <CloudDownload
         className="cursor-pointer w-6 h-6"
@@ -370,7 +373,7 @@ function OtherFileView(props: {
         onClick={async () => {
           if (
             await horusConfirm(
-              "Do you want to delete this file? This action is irreversible.",
+              "Do you want to delete this file? This action is irreversible."
             )
           ) {
             deleteFile();
@@ -404,9 +407,12 @@ function FlowRowView({
       <div className="text-center flex justify-center items-baseline">
         <FlowStatusView status={flow.status} />
       </div>
-      <Link to={`/flow?open=true&flowID=${flow.savedID}&path=${flow.path}`}>
-        <OpenFlowIcon className="cursor-pointer w-6 h-6" />
-      </Link>
+      <OpenFlowIcon
+        className="cursor-pointer w-6 h-6"
+        onClick={() => {
+          openFlow(flow);
+        }}
+      />
       <FlowClone flow={flow} getFlows={getFlows} />
       <FlowDownload flow={flow} />
       <DeleteFlow flow={flow} getFlows={getFlows} />

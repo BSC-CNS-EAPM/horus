@@ -6,25 +6,36 @@ import { FlowStatusView } from "../../FlowStatus/flow_status";
 
 // TS types
 import { Block, BlockTypes, FlowStatus } from "../flow.types";
+import AppButton from "../../appbutton";
+import { BlurredModal } from "../../reusable";
 import { HorusLazyLog } from "../../HorusLazyLog/HorusLazyLog";
 
-type BlockLogsViewProps = {
+type BlockLogsModalViewProps = {
   block: Block;
+  handleClose: () => void;
 };
 
-export type LogsData = {
-  message: string;
-  blockID: string;
-  placedID: number;
-};
+export function BlockLogsModalView(props: BlockLogsModalViewProps) {
+  const { block, handleClose } = props;
 
-export function BlockLogsView(props: BlockLogsViewProps) {
-  const { block } = props;
-
-  return block.type === BlockTypes.SLURM ? (
-    <SlurmOutputModalView block={block} />
-  ) : (
-    <RegularBlockLogs block={block} />
+  return (
+    <BlurredModal
+      show
+      noMargin={block.type !== BlockTypes.SLURM}
+      onHide={() => {
+        handleClose?.();
+      }}
+      maxContentSize={{
+        height: "90%",
+        width: "90%",
+      }}
+    >
+      {block.type === BlockTypes.SLURM ? (
+        <SlurmOutputModalView block={block} handleClose={handleClose} />
+      ) : (
+        <RegularBlockLogs block={block} />
+      )}
+    </BlurredModal>
   );
 }
 
@@ -32,12 +43,19 @@ function RegularBlockLogs({ block }: { block: Block }) {
   return (
     <HorusLazyLog
       logText={block.blockLogs ?? "No logs"}
+      keepDisabled={!block.isRunning}
       filename={`${block.id}-${block.placedID}.log`}
     />
   );
 }
 
-function SlurmOutputModalView({ block }: { block: Block }) {
+function SlurmOutputModalView({
+  block,
+  handleClose,
+}: {
+  block: Block;
+  handleClose: () => void;
+}) {
   const groupedViews: Record<string, React.ReactNode[]> = {};
 
   const worldList = () => {
@@ -121,6 +139,7 @@ function SlurmOutputModalView({ block }: { block: Block }) {
         {block.stdOut ? (
           <HorusLazyLog
             logText={block.stdOut}
+            keepDisabled={!block.isRunning}
             filename={`${block.id}-${block.placedID}-slurm.out`}
           />
         ) : (
@@ -146,6 +165,7 @@ function SlurmOutputModalView({ block }: { block: Block }) {
         {block.stdErr ? (
           <HorusLazyLog
             logText={block.stdErr}
+            keepDisabled={!block.isRunning}
             filename={`${block.id}-${block.placedID}-slurm.err`}
           />
         ) : (
@@ -160,7 +180,7 @@ function SlurmOutputModalView({ block }: { block: Block }) {
   };
 
   return (
-    <div className="flex flex-col h-full p-2">
+    <div className="flex flex-col h-full">
       <div className="sticky top-0 z-10">
         <div className="variables-modal-title-search">
           <div
@@ -173,6 +193,7 @@ function SlurmOutputModalView({ block }: { block: Block }) {
           </div>
           <div className="flex flex-row gap-4 items-center">
             {parsedStatus()}
+            <AppButton action={handleClose}>Close</AppButton>
           </div>
         </div>
         <hr className="my-4 p-0"></hr>

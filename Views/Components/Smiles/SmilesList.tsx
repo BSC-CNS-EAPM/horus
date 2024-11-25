@@ -197,7 +197,7 @@ export function SmilesList(props: {
     if (!api) return;
 
     const selectedData = new Set<string>(
-      availableSmiles.filter((s) => s.selected).map((s) => s.id),
+      availableSmiles.filter((s) => s.selected).map((s) => s.id)
     );
     const nodesToSelect: IRowNode[] = [];
     api.forEachNode((node: IRowNode) => {

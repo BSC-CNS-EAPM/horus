@@ -1,31 +1,30 @@
 // Create the main window view
 import { createRoot } from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
 
 // Polyfills
 import "core-js/stable";
 import "regenerator-runtime/runtime";
 
+import { App } from "./app";
+
 // Import CSS
 import "../CSS/main.css";
-import { StrictMode } from "react";
-import { HorusRouter } from "./Router";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-let container: HTMLElement | null = null;
-const queryClient = new QueryClient();
+let container = null;
 
 document.addEventListener("DOMContentLoaded", () => {
   if (!container) {
     // check if createRoot has already been called
-    container = document.getElementById("horusRoot")!;
+    container = document.getElementById("horusRoot");
     const root = createRoot(container);
     root.render(
       // StrictMode is not compatible with XArrows, disable in production, enable in debug
-      <StrictMode>
-        <QueryClientProvider client={queryClient}>
-          <HorusRouter />
-        </QueryClientProvider>
-      </StrictMode>
+      // <React.StrictMode>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+      // </React.StrictMode>
     );
   }
 });
