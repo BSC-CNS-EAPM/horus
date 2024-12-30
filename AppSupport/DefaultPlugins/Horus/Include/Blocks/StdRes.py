@@ -14,4 +14,5 @@ stdResBlock = InputBlock(
     action=None,
     variable=stdResidueVariable,
     id="standard_residue",
+    category="Structures"
 )

@@ -1,0 +1,8 @@
+.smiles-grid-editor {
+  background: var(--broken-white);
+}
+
+.smiles-grid-editor input,
+.smiles-grid-editor textarea {
+  background: white;
+}

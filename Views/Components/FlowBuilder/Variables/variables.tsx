@@ -1,9 +1,10 @@
 // React
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useContext } from "react";
 
 // Horus TS types
 import {
   CustomVariable,
+  PluginPage,
   PluginVariable,
   PluginVariableTypes,
   VariableGroup,
@@ -15,9 +16,6 @@ import Slider from "rc-slider";
 import HorusSwitch from "../../Switch/switch";
 import { HorusFileExplorer } from "../../FileExplorer/file_explorer";
 import LockIcon from "../../Toolbar/Icons/Lock";
-
-// Utility function to open an extension
-import { loadPage } from "../../Toolbar/extensions_list";
 
 // Styles
 import "rc-slider/assets/index.css";
@@ -43,6 +41,12 @@ import { SmilesVariableView } from "./smiles_variables";
 import ErrorIcon from "../../Toolbar/Icons/Error";
 import TrashIcon from "../../Toolbar/Icons/Trash";
 import { BreakLongUnderscoreNames } from "../Blocks/block.view";
+import {
+  addPanel,
+  DockContext,
+  FlowBuilderContext,
+  PANEL_REGISTRY,
+} from "@/Components/MainApp/PanelView";
 
 type PluginVariableViewProps = {
   variable: PluginVariable;
@@ -57,6 +61,9 @@ type PluginVariableViewProps = {
 
 export function PluginVariableView(props: PluginVariableViewProps) {
   const { variable, onChange, hideName } = props;
+  const flowContext = useContext(FlowBuilderContext);
+
+  const isFlowActive = !!flowContext?.flow.isFlowActive;
 
   const handleChange = (value: any, id?: string, groupID?: string) => {
     if (!variable.disabled) {
@@ -87,7 +94,7 @@ export function PluginVariableView(props: PluginVariableViewProps) {
         variable={variable}
         hideName={hideName ?? false}
         hideDescription={props.hideDescription ?? false}
-        isFlowActive={props.isFlowActive}
+        isFlowActive={isFlowActive}
       />
     );
   }
@@ -95,19 +102,19 @@ export function PluginVariableView(props: PluginVariableViewProps) {
   return (
     <div
       className={`${
-        variable.disabled
-          ? "cursor-not-allowed "
-          : props.isFlowActive
-          ? "cursor-wait "
-          : ""
-      } ${
         props.applyStyle === false
-          ? props.customClass ?? "flex-auto w-full"
+          ? (props.customClass ?? "flex-auto w-full")
           : "plugin-variable animated-gradient border-none"
       }`}
       style={{
         ...widthStyle,
-        pointerEvents: variable.disabled ? "none" : "auto",
+        opacity: isFlowActive ? 0.5 : 1,
+        // pointerEvents: variable.disabled ? "none" : "auto",
+        cursor: isFlowActive
+          ? "wait"
+          : variable.disabled
+            ? "not-allowed"
+            : "auto",
       }}
     >
       <div className="flex flex-row w-full justify-between">
@@ -132,12 +139,14 @@ export function PluginVariableView(props: PluginVariableViewProps) {
             </span>
           )}
           {variable.disabled && (
-            <LockIcon
-              style={{
-                display: "inline",
-                transform: "translateY(-3px)",
-              }}
-            />
+            <span>
+              <LockIcon
+                style={{
+                  display: "inline",
+                  transform: "translateY(-3px)",
+                }}
+              />
+            </span>
           )}
         </div>
         {!variable.value && variable.required && (
@@ -149,14 +158,13 @@ export function PluginVariableView(props: PluginVariableViewProps) {
       <div
         className={`plugin-variable-value flex justify-start w-full`}
         style={{
-          pointerEvents:
-            variable.disabled || props.isFlowActive ? "none" : "auto",
+          pointerEvents: variable.disabled || isFlowActive ? "none" : "auto",
         }}
       >
         <VariableRenderer
           variable={variable}
           onChange={handleChange}
-          isFlowActive={props.isFlowActive}
+          isFlowActive={isFlowActive}
         />
       </div>
     </div>
@@ -180,7 +188,7 @@ function VariableListView(props: VariableViewProps) {
           acc[variable.id] = variable.defaultValue ?? null;
         }
         return acc;
-      }, {})
+      }, {}),
     );
     onChange(newValues);
   };
@@ -196,7 +204,7 @@ function VariableListView(props: VariableViewProps) {
     index: number,
     value: any,
     id: string,
-    groupID?: string
+    groupID?: string,
   ) => {
     // Update the corresponding index on the values array
     const newValues = [...currentValue];
@@ -242,7 +250,7 @@ function VariableListView(props: VariableViewProps) {
     <div key="delete" className="w-[100px] text-center">
       Delete
       <hr></hr>
-    </div>
+    </div>,
   );
 
   const colsNum = cols.length;
@@ -603,7 +611,7 @@ function DropdownVariableView({
       variableToRender.allowedValues
     ) {
       onChange(
-        variableToRender.defaultValue ?? variableToRender?.allowedValues[0]
+        variableToRender.defaultValue ?? variableToRender?.allowedValues[0],
       );
     }
   }, [
@@ -770,8 +778,8 @@ function IntegerFloatVariableView(props: VariableViewProps) {
       if (variable.allowedValues) {
         setNumberMessage(
           `The value must be one of the following: ${variable.allowedValues.join(
-            ", "
-          )}`
+            ", ",
+          )}`,
         );
       }
     }
@@ -1039,6 +1047,8 @@ function CustomVariableRenderer(props: {
   variable: CustomVariable;
   onChange: (value: any) => void;
 }) {
+  const { dockApi } = useContext(DockContext);
+
   const setupWindowVariables = () => {
     // Load into the window the getVariable and setVariable functions
     window.horus.getVariable = () => {
@@ -1050,21 +1060,24 @@ function CustomVariableRenderer(props: {
     };
   };
 
-  const openCustomPage = () => {
-    setupWindowVariables();
-    loadPage(props.variable.customPage, props.variable.placedID);
-  };
-
-  useEffect(() => {
-    return () => {
-      loadPage(undefined, props.variable.placedID);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   return (
     <div className="w-full flex flex-col gap-2 items-center justify-center p-2">
-      <AppButton action={openCustomPage}>{props.variable.name}</AppButton>
+      <AppButton
+        action={() => {
+          addPanel({
+            dockApi,
+            component: PANEL_REGISTRY.blockVariablesExtension.component,
+            panelID: `variable-${props.variable.id}-${props.variable.placedID}`,
+            params: {
+              ...props.variable.customPage,
+              placedID: props.variable.placedID,
+              onFocus: setupWindowVariables,
+            } as PluginPage,
+          });
+        }}
+      >
+        {props.variable.name}
+      </AppButton>
     </div>
   );
 }

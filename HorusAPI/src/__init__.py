@@ -27,7 +27,7 @@ from .extensions import Extensions
 
 # Export the utility SingletonMeta class
 from .utils import SingletonMeta as HorusSingleton
-from .utils import TempFile, ResetRemoteException
+from .utils import TempFile, ResetRemoteException, getUserFolder
 from .utils import initPlugin
 
 # Set the exported modules
@@ -54,6 +54,7 @@ __all__ = [
     "ResetRemoteException",
     "PluginMetaModel",
     "PlatformType",
+    "getUserFolder",
 ]
 
 # Set the module name

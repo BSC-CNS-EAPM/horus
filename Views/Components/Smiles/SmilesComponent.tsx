@@ -1,4 +1,4 @@
-import { CSSProperties, PureComponent } from "react";
+import { CSSProperties, DetailedHTMLProps, HTMLAttributes, PureComponent } from "react";
 import HorusSmilesManager from "./SmilesWrapper/horusSmiles";
 
 function getRandomInt(min: number, max: number) {
@@ -220,7 +220,10 @@ type SmilesViewProps = {
   removePolygon?: boolean;
   onChange?: (jsmeEvent: JSMEEvent) => void;
   onClickEdit?: () => void;
-  containerProps?: JSX.IntrinsicElements["div"];
+  containerProps?: DetailedHTMLProps<
+    HTMLAttributes<HTMLDivElement>,
+    HTMLDivElement
+>
 };
 
 type JSMEApplet = {
@@ -280,28 +283,33 @@ export class SmilesView extends PureComponent {
       optionParameters[key as keyof JSMEParameters] = value;
     });
 
-    const jsmeApplet: JSMEApplet = new window.JSApplet.JSME(
-      this.id,
-      this.props.width,
-      this.props.height,
-      optionParameters
-    );
+    // If the applet was already loaded, reset it
 
-    jsmeApplet.setCallBack("AfterStructureModified", (jsmeEvent: JSMEEvent) => {
-      this.drawnSmiles = jsmeEvent.src.smiles();
-
-      if (this.props.onChange) {
-        this.props.onChange(jsmeEvent);
-      }
-    });
-
-    if (this.props.smiles) {
-      await jsmeApplet.readGenericMolecularInput(
-        HorusSmilesManager.cleanSmiles(this.props.smiles || "")
+    if (!this.jsmeApplet) {
+      this.jsmeApplet = new window.JSApplet.JSME(
+        this.id,
+        this.props.width,
+        this.props.height,
+        optionParameters
       );
     }
 
-    this.jsmeApplet = jsmeApplet;
+    this.jsmeApplet!.setCallBack(
+      "AfterStructureModified",
+      (jsmeEvent: JSMEEvent) => {
+        this.drawnSmiles = jsmeEvent.src.smiles();
+
+        if (this.props.onChange) {
+          this.props.onChange(jsmeEvent);
+        }
+      }
+    );
+
+    if (this.props.smiles) {
+      await this.jsmeApplet!.readGenericMolecularInput(
+        HorusSmilesManager.cleanSmiles(this.props.smiles || "")
+      );
+    }
 
     // Remove the blue "drag and drop" icon that appears by default
     if (this.props.removePolygon !== false) {

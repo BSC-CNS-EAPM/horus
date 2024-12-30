@@ -41,4 +41,6 @@ smilesBlock = InputBlock(
     variable=smilesVariable,
     output=smilesOutput,
     id="smiles",
+        category="Structures"
+
 )

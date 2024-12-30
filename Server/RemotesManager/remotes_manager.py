@@ -119,15 +119,13 @@ class RemotesAPI:
         # Check if connection details are provided
         if not self.isLocal:
             if self.host is None:
-                raise Exception("No hostname provided.")  # pylint: disable=broad-exception-raised
+                raise Exception("No hostname provided.")
             if self.port is None:
-                raise Exception("No port provided.")  # pylint: disable=broad-exception-raised
+                raise Exception("No port provided.")
             if self.username is None:
-                raise Exception("No username provided.")  # pylint: disable=broad-exception-raised
+                raise Exception("No username provided.")
             if self.password is None and self.key is None:
-                raise Exception(  # pylint: disable=broad-exception-raised
-                    "No password or key provided."
-                )
+                raise Exception("No password or key provided.")
 
             # Set kwargs for connection
             connect_kwargs = {}  # pylint: disable=invalid-name
@@ -160,9 +158,7 @@ class RemotesAPI:
                         f"Could not connect to the remote {self.host}: {exc}"
                     ) from exc
             else:
-                raise Exception(  # pylint: disable=broad-exception-raised
-                    "No connection method provided."
-                )
+                raise Exception("No connection method provided.")
 
         if "~" in self.workDir:
             # Replace the ~ with the user home directory for compatibility
@@ -185,7 +181,7 @@ class RemotesAPI:
         return self.command("echo $HOME")
 
     def command(
-        self, command: str, timeout: t.Optional[int] = 10
+        self, command: str, timeout: t.Optional[int] = None, forceLocal: bool = False
     ) -> str:  # pylint: disable=method-hidden
         """
         Runs a command on the remote (or locally).
@@ -195,10 +191,9 @@ class RemotesAPI:
         :return: The output of the command.
         """
 
-        logging.getLogger("Horus").info("Running command: %s on remote %s", command, self.name)
-
-        if self.isLocal:
+        if self.isLocal or forceLocal:
             # Run command locally
+            logging.getLogger("Horus").info("Running command: '%s' on local machine,", command)
             try:
                 process = subprocess.Popen(
                     command,
@@ -212,13 +207,9 @@ class RemotesAPI:
                 # If the command failed, raise an exception
                 if process.returncode != 0:
                     if process.stderr is not None:
-                        raise Exception(  # pylint: disable=broad-exception-raised
-                            process.stderr.read().decode("utf-8").strip()
-                        )
+                        raise Exception(process.stderr.read().decode("utf-8").strip())
                     else:
-                        raise Exception(
-                            "Command failed."
-                        )  # pylint: disable=broad-exception-raised
+                        raise Exception("Command failed.")
 
                 # Return the stdout and stderr as a string
                 if process.stdout is not None:
@@ -228,51 +219,133 @@ class RemotesAPI:
                 else:
                     return str(f"Command {command} executed successfully.")
             except subprocess.TimeoutExpired as te:
-                logging.getLogger("Horus").error("Timeout when performing the above command.")
-                raise Exception("Command failed.") from te
+                logging.getLogger("Horus").error("Command timed out: %s", command)
+                raise Exception("Command timed out.") from te
 
         # Run command on remote
         # Hide is needed to avoid the output to be printed on the console
         # in_stream is needed to avoid fabric raising OSError (fabric
         # tries to acces sys.stdin which is not available because is mocked
         # with PrintCapturer)
+        logging.getLogger("Horus").info(
+            "Running command: '%s' on remote '%s'.", command, self.name
+        )
+        channel = None
         try:
 
+            if not hasattr(self.conn, "transport"):
+                # Execute the command the old way
+                return self._oldCommand(command, timeout)
+
+            if not self.conn.transport:
+                raise Exception("Connection is not open.")
+
+            # Get a new channel from the SSH connection
+            channel = self.conn.transport.open_session()
+
+            # Set timeout if specified
+            if timeout is not None:
+                channel.settimeout(timeout)
+
+            # Construct command to source bashrc and execute the actual command
+            bash_command = f'bash -l -c "source ~/.bashrc 2>/dev/null || source /etc/bash.bashrc 2>/dev/null; {command}"'
+
+            # Add timeout if specified for the command itself
+            if timeout is not None:
+                bash_command = f"timeout {timeout} {bash_command}"
+
+            # Request a pseudo-terminal
+            channel.get_pty()
+
+            # Execute the command
+            channel.exec_command(bash_command)
+
+            # Read output
+            stdout = channel.makefile("r", -1)
+            stderr = channel.makefile_stderr("r", -1)
+
+            # Wait for command to complete
+            exit_status = channel.recv_exit_status()
+
+            # Get output
+            stdout_str = stdout.read().strip()
+            stderr_str = stderr.read().strip()
+
+            # Close file objects
+            stdout.close()
+            stderr.close()
+
+            if exit_status != 0:
+                logging.getLogger("Horus").error(
+                    "Command failed on remote %s with status %d: %s",
+                    self.name,
+                    exit_status,
+                    stderr_str,
+                )
+                raise Exception(stderr_str)
+
+            logging.getLogger("Horus").debug("Remote command output: %s", stdout_str)
+            return stdout_str.decode("utf-8")
+
+        except Exception as exc:
+            logging.getLogger("Horus").debug(
+                "Error running command %s on remote %s: %s",
+                command,
+                self.name,
+                str(exc),
+            )
+            raise exc
+
+        finally:
+            # Ensure channel is properly closed
+            if channel is not None:
+                try:
+                    channel.close()
+                except:
+                    pass
+
+    def _oldCommand(self, command: str, timeout: t.Optional[int] = None):
+        # Run command on remote
+        # Hide is needed to avoid the output to be printed on the console
+        # in_stream is needed to avoid fabric raising OSError (fabric
+        # tries to acces sys.stdin which is not available because is mocked
+        # with PrintCapturer)
+        try:
             # Update the command with the timeout
             command = "timeout {timeout} {command}".format(timeout=timeout, command=command)
 
             out = self.conn.run(command, hide=True, in_stream=False)
+
+            # If the command failed, raise an exception
+            if out.failed:
+                raise Exception(out.stderr.strip())  # pylint: disable=broad-exception-raised
+
+            out = str(out.stdout.strip())
+
+            logging.getLogger("Horus").debug("Remote command output: %s", out)
+
+            # Return the stdout and stderr as a string
+            return out
         except Exception as exc:
             logging.getLogger("Horus").debug(
                 "Error running command %s on remote %s: %s", command, self.name, str(exc)
             )
             raise exc
 
-        # If the command failed, raise an exception
-        if out.failed:
-            raise Exception(out.stderr.strip())  # pylint: disable=broad-exception-raised
-
-        out = str(out.stdout.strip())
-
-        logging.getLogger("Horus").debug("Remote command output: %s", out)
-
-        # Return the stdout and stderr as a string
-        return out
-
     @contextlib.contextmanager
     def cd(self, path: str):
         """
         Context manager to change directory on the remote.
 
-        Works with the remoteCommand, submitJob and send/get data functions.
+        Works with the command, submitJob and send/get data functions.
         """
 
         # Save the old command
         oldCommand = self.command
 
-        def remoteCommandHook(command: str, *args, **kwargs):
+        def commandHook(command: str, *args, **kwargs):
             """
-            Hook for the remoteCommand function.
+            Hook for the command function.
             """
 
             newCommand = f"cd {path} && {command}"
@@ -280,7 +353,7 @@ class RemotesAPI:
             return oldCommand(newCommand, *args, **kwargs)
 
         # Hook the command function
-        self.command = remoteCommandHook
+        self.command = commandHook
 
         try:
             yield
@@ -295,20 +368,19 @@ class RemotesAPI:
             logging.getLogger("Horus").error(
                 "Error getting data from %s to %s: %s", source, destination, str(exc)
             )
-            raise Exception(  # pylint: disable=broad-exception-raised
-                f"Error transferring data from {self.remoteName}: {exc}"
-            ) from exc
+            raise Exception(f"Error transferring data from {self.remoteName}: {exc}") from exc
 
     def _internalTransferTo(self, source: str, destination: str):
         try:
             self.conn.put(source, destination)
         except BaseException as exc:
             logging.getLogger("Horus").error(
-                "Error transferring data from %s to %s: %s", source, destination, str(exc)
+                "Error transferring data from %s to %s: %s",
+                source,
+                destination,
+                str(exc),
             )
-            raise Exception(  # pylint: disable=broad-exception-raised
-                f"Error transferring data to {self.remoteName}: {exc}"
-            ) from exc
+            raise Exception(f"Error transferring data to {self.remoteName}: {exc}") from exc
 
     def transferTo(self, source: str, destination: str) -> str:
         """
@@ -340,9 +412,10 @@ class RemotesAPI:
             return os.path.join(destination, os.path.basename(source))
 
         # Check if the source is a folder
+        source = os.path.abspath(source)
         if os.path.isdir(source):
-            # Then zip the folder
 
+            # Then zip the folder
             logging.getLogger("Horus").info("Zipping local folder %s", source)
 
             # Get the folder name
@@ -413,6 +486,7 @@ class RemotesAPI:
         logging.getLogger("Horus").info("Transferring data from %s to %s", source, destination)
 
         # Check if the source is a folder
+        destination = os.path.abspath(destination)
         try:
             self.command(f"test -d {source}")
 
@@ -576,9 +650,7 @@ class RemotesAPI:
         queue = self.readQueue()
 
         if self._flowSavedID is None:
-            raise Exception(  # pylint: disable=broad-exception-raised
-                f"Cannot save jobID '{jobID}'. Flow ID not set."
-            )
+            raise Exception(f"Cannot save jobID '{jobID}'. Flow ID not set.")
 
         # Create the entry for the flow in the queue storage if it does not exist
         if self._flowSavedID not in queue:
@@ -636,9 +708,7 @@ class RemotesAPI:
         try:
             self.command(f"test -f {script}")
         except Exception as exc:
-            raise Exception(  # pylint: disable=broad-exception-raised
-                f"Script {script} does not exist."
-            ) from exc
+            raise Exception(f"Script {script} does not exist.") from exc
 
         command = f"sbatch {script}"
 
@@ -656,18 +726,14 @@ class RemotesAPI:
             jobID = int(out.split(" ")[-1].strip())
         except Exception as exc:
             logging.getLogger("Horus").error("Error submitting job: %s.", str(exc))
-            raise Exception(  # pylint: disable=broad-exception-raised
-                "Error submitting job. Could not get job ID."
-            ) from exc
+            raise Exception("Error submitting job. Could not get job ID.") from exc
 
         # Save the job as running into the active jobs file
         try:
             self.saveJob(jobID)
         except Exception as exc:
             logging.getLogger("Horus").error("Error saving job with ID %s: %s.", jobID, str(exc))
-            raise Exception(  # pylint: disable=broad-exception-raised
-                f"Error saving job with ID {jobID} to the queue storage."
-            ) from exc
+            raise Exception(f"Error saving job with ID {jobID} to the queue storage.") from exc
 
         return jobID
 
@@ -684,15 +750,13 @@ class RemotesAPI:
         """
 
         if self._resetRemoteBlock:
-            raise ResetRemoteException(  # pylint: disable=broad-exception-raised
-                "Remote block was resetted."
-            )
+            raise ResetRemoteException("Remote block was resetted.")
 
         if self._flowSavedID is None:
-            raise Exception("Flow ID not set.")  # pylint: disable=broad-exception-raised
+            raise Exception("Flow ID not set.")
 
         if self._blockPlacedID is None:
-            raise Exception("Block placedID not set.")  # pylint: disable=broad-exception-raised
+            raise Exception("Block placedID not set.")
 
         status = self.getRemoteBlockStatus(self._flowSavedID, self._blockPlacedID)
 
@@ -958,7 +1022,10 @@ class RemotesAPI:
         return status
 
     def updateQueue(
-        self, savedFlowID: str, jobID: t.Optional[int] = None, status: t.Optional[str] = None
+        self,
+        savedFlowID: str,
+        jobID: t.Optional[int] = None,
+        status: t.Optional[str] = None,
     ) -> t.Dict[str, t.List[t.Dict[str, t.Any]]]:
         """
         Updates the queue storage with the current status of the jobs
@@ -981,17 +1048,13 @@ class RemotesAPI:
 
             # If the job ID is not set, raise an exception
             if queueJobID is None:
-                raise Exception(  # pylint: disable=broad-exception-raised
-                    "Corrupted queue storage: job ID not set."
-                )
+                raise Exception("Corrupted queue storage: job ID not set.")
 
             remote = job.get("remote", None)
 
             # If the remote is not set, raise an exception
             if remote is None:
-                raise Exception(  # pylint: disable=broad-exception-raised
-                    "Corrupted queue storage: remote not set."
-                )
+                raise Exception("Corrupted queue storage: remote not set.")
 
             # If the connected remote is not the same as
             # the remote the jobs are running on, raise an exception
@@ -1074,9 +1137,7 @@ class RemotesAPI:
 
             # If the job ID is not set, raise an exception
             if jobID is None:
-                raise Exception(  # pylint: disable=broad-exception-raised
-                    "Corrupted queue storage: job ID not set."
-                )
+                raise Exception("Corrupted queue storage: job ID not set.")
 
             # Cancel the job if its running or queued
             status = job.get("status", None)

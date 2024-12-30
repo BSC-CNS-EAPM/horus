@@ -1,6 +1,8 @@
 // Molstar wrapper
 import HorusMolstar from "../Components/Molstar/HorusWrapper/horusmolstar";
-import HorusSmilesManager from "../Components/Smiles/SmilesWrapper/horusSmiles";
+import HorusSmilesManager, {
+  HorusSmilesType,
+} from "../Components/Smiles/SmilesWrapper/horusSmiles";
 
 // The settings object type
 import { HorusSettingsObject } from "../Settings/setting";
@@ -10,12 +12,15 @@ import { ExtensionsFilePickerOptions } from "../Components/FileExplorer/file_exp
 // @ts-ignore
 import Terminal from "react-console-emulator";
 import { getFile, saveFile } from "../Components/reusable";
+import { PluginPageExtensionEvent } from "@/Components/FlowBuilder/flow.types";
 
 export {};
 
 // Declare global, window variables for the whole app
 declare global {
   interface Window {
+    // Under root path
+    __HORUS_ROOT__: string;
     // App mode
     horusInternal: {
       isDesktop: boolean;
@@ -29,6 +34,7 @@ declare global {
         allowDemoUser: boolean;
         uploadSize: number;
       };
+      updateSettings: (settings: HorusSettingsObject) => void;
     };
     // Socket connection ID
     socketiosid: string | null;
@@ -39,7 +45,7 @@ declare global {
     // Settings
     horusSettings: HorusSettingsObject;
     // Molstar
-    molstar: HorusMolstar;
+    molstar?: HorusMolstar;
     // Smiles
     smiles?: HorusSmilesManager;
     // Console
@@ -53,9 +59,16 @@ declare global {
       setVariable?: (value: any) => void;
       getFlow?: () => any;
       setFlow?: (value: any) => void;
+      setExtraData?: (key: string, value: any) => void;
+      getExtraData?: (key: string) => any;
       openExtensionFilePicker?: (options: ExtensionsFilePickerOptions) => void;
       saveFile: (file: File) => void;
       getFile: (path: string) => Promise<Blob>;
+      setTabTitle?: (tabTitle: string) => void;
+      closeTab?: () => void;
+      openPanel?: openPanel;
+      closePanel?: (id: string) => void;
+      addExtensions?: (e: PluginPageExtensionEvent) => void;
     };
     // JSME viewer
     JSApplet: any;
@@ -65,6 +78,25 @@ declare global {
     extensionData: any;
   }
 }
+
+export type openPanel = {
+  (type: "flow" | "molstar" | "smiles" | "terminal"): void;
+  (
+    type: "moleculePlotter",
+    id: string,
+    params: { smilesToPlot: HorusSmilesType[] }
+  ): void;
+  (
+    type: "extensions",
+    id: string,
+    params: {
+      name: string;
+      plugin: string;
+      id: string;
+      data?: any;
+    }
+  ): void;
+};
 
 export enum GLOBAL_IDS {
   FLOW_BUILDER_DIV = "flow-builder-div",

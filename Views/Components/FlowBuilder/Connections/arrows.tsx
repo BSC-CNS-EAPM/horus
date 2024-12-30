@@ -10,6 +10,7 @@ import { DroppableEntity, VariableConnection } from "../flow.types";
 import { BlockVarPair } from "../flow.types";
 import { BlockHooks } from "../flow.hooks";
 import { compareAllowedValues } from "../Variables/variable_connections";
+import { useSettings } from "@/Main/app";
 
 type ConnectedArrows = {
   blockHooks: BlockHooks;
@@ -21,6 +22,8 @@ export function ConnectedArrows(props: ConnectedArrows) {
   const start = `output-drag-${props.connection.origin.variableID}-${props.connection.origin.placedID}-connector`;
   const end = `connect-${props.connection.destination.variableID}-${props.connection.destination.placedID}`;
 
+  const settings = useSettings();
+
   const [isHovering, setIsHovering] = useState<boolean>(false);
 
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({
@@ -28,29 +31,7 @@ export function ConnectedArrows(props: ConnectedArrows) {
     y: 0,
   });
 
-  const [isPlaced, setIsPlaced] = useState<boolean>(false);
-
-  const [shown, setShown] = useState<boolean>(true);
-
-  const delayedRender = async () => {
-    setShown(false);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    setShown(true);
-  };
-
-  // Re-render to fit to the new flow canvas scale
-  useEffect(() => {
-    delayedRender();
-  }, [props.scale]);
-
-  // Do not show thea nimation when the arrow is first connected
-  useEffect(() => {
-    new Promise((resolve) => setTimeout(resolve, 1000)).then(() => {
-      setIsPlaced(true);
-    });
-  }, []);
-
-  const arrowAppareance = window.horusSettings["arrowLook"]?.value ?? "Curved";
+  const arrowAppareance = settings?.["arrowLook"]?.value ?? "Curved";
   const path =
     arrowAppareance === "Curved" || arrowAppareance === "Extra curved"
       ? "smooth"
@@ -78,14 +59,6 @@ export function ConnectedArrows(props: ConnectedArrows) {
   return (
     <div
       key={`arrow-container-${start + end}`}
-      style={
-        isPlaced
-          ? {
-              opacity: shown ? 1 : 0,
-              transition: shown ? "opacity 0.5s ease-in-out" : "none",
-            }
-          : {}
-      }
       className="absolute"
       onMouseOver={(event) => {
         if (isHovering) return;

@@ -28,7 +28,7 @@ from .src import SmilesAPI
 from .src import Extensions
 
 # Export the utility SingletonMeta class
-from .src import HorusSingleton, TempFile, ResetRemoteException
+from .src import HorusSingleton, TempFile, ResetRemoteException, getUserFolder
 
 # Export the initPlugin function
 from .src import initPlugin

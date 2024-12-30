@@ -79,6 +79,33 @@ class MolstarAPI(metaclass=SingletonMeta):
 
         self._emitAction("loadMolecule", data)
 
+    def loadTrajectory(
+        self, topology: str, trajectory: str, label: typing.Optional[str] = None
+    ) -> None:
+        """
+        Adds the given trajectory file to Mol*
+
+        :param topology: The path to the topology file
+        :param trajectory: The path to the trajectory file
+        :param label: The label for the trajectory. Optional. Defaults to the filename
+        """
+
+        topology = os.path.abspath(topology)
+        trajectory = os.path.abspath(trajectory)
+
+        data = {
+            "type": "loadTrajectory",
+            "data": {
+                "topology": topology,
+                "topologyFileName": os.path.basename(topology),
+                "trajectory": trajectory,
+                "trajectoryFileName": os.path.basename(trajectory),
+                "label": label if label else os.path.basename(topology),
+            },
+        }
+
+        self._emitAction("loadTrajectory", data)
+
     def loadMVJS(self, mvjs: typing.Dict[str, typing.Any], replaceExisting: bool = False) -> None:
         """
         Loads a molviewspec session into Mol*

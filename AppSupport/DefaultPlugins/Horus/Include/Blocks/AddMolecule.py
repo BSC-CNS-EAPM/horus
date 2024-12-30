@@ -99,7 +99,22 @@ visualizeMoleculeinput = PluginVariable(
     id="file",
     description="The structure file to visualize.",
     type=VariableTypes.FILE,
-    allowedValues=["*"],
+    allowedValues=[
+        "top",
+        "psf",
+        "prmtop",
+        "mmcif",
+        "cifCore",
+        "pdb",
+        "pdbqt",
+        "gro",
+        "xyz",
+        "lammps_data",
+        "lammps_traj_data",
+        "mol",
+        "sdf",
+        "mol2",
+    ],
 )
 
 visualizeMoleculefolder = PluginVariable(
@@ -129,4 +144,5 @@ addMoleculeBlock = PluginBlock(
     description="Adds a structure to Mol* from a file or all structures from a folder path.",
     action=addMolecule,
     inputGroups=[visualizeMoleculefileGroup, visualizeMoleculefolderGroup],
+    category="Structures",
 )

@@ -4,6 +4,12 @@ function getShemsuToken() {
   return window.pywebview?.token || window.parent?.pywebview?.token;
 }
 
+export function getBaseURL(url: string): string {
+  // Inserts the base URL into the URL object
+  return window.__HORUS_ROOT__ + url;
+  
+}
+
 // Tokenize the urls with the shemsu token
 async function horusGet(
   url: string,
@@ -22,7 +28,7 @@ async function horusGet(
     }, timeout * 1000);
   }
 
-  const fetchPromise = fetch(url, {
+  const fetchPromise = fetch(getBaseURL(url), {
     method: "GET",
     headers: {
       socketiosid: window.socketiosid || parent.socketiosid || null,
@@ -74,7 +80,7 @@ async function horusPost(
     }, timeout * 1000);
   }
 
-  const fetchPromise = fetch(url, {
+  const fetchPromise = fetch(getBaseURL(url), {
     method: "POST",
     headers: {
       shemsu: shemsu || getShemsuToken(),
@@ -132,7 +138,7 @@ async function horusDelete({
     }, timeout * 1000);
   }
 
-  const fetchPromise = fetch(url, {
+  const fetchPromise = fetch(getBaseURL(url), {
     method: "DELETE",
     headers: {
       shemsu: shemsu || getShemsuToken(),
@@ -195,12 +201,17 @@ async function openWindow(name: string, url: string) {
 const fetchInternals = async () => {
   try {
     const response = await horusGet("/api/internal");
-    window.horusInternal = await response.json();
+    window.horusInternal = {
+      ...window.horusInternal,
+      ...(await response.json()),
+    };
+
   } catch (err) {
     alert(
       `Could not detect running mode. Expect errors while running the app. ${err}`
     );
     window.horusInternal = {
+      ...window.horusInternal,
       isDesktop: false,
       mode: "server",
       debug: false,
@@ -240,7 +251,7 @@ export async function fetchWithProgress(
   options: RequestInit,
   onProgress: (percentage: number) => void
 ): Promise<Response> {
-  const response = await fetch(url, options);
+  const response = await fetch(getBaseURL(url), options);
 
   if (!response.body) {
     throw new Error("ReadableStream not supported in this browser.");
@@ -297,7 +308,7 @@ export function POSTUploadWithProgress(
 ) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", url);
+    xhr.open("POST", getBaseURL(url));
 
     // Set the response type
     xhr.responseType = "json";
@@ -331,3 +342,8 @@ export function POSTUploadWithProgress(
     xhr.send(formData);
   });
 }
+
+export function delay(ms: number) {
+  return new Promise((res) => setTimeout(res, ms));
+}
+

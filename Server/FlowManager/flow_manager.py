@@ -94,19 +94,10 @@ class ErrorRunningBlock(BlocksException):
     """
 
 
-class StoppedFlowException(BlocksException):
+class StoppedFlowException(Exception):
     """
     Stops the flow from executing
     """
-
-    message: str = (
-        "The flow was stopped gracefully. "
-        "Once the current block finishes executing, "
-        "the flow will stop."
-    )
-
-    def __init__(self, block: Block):
-        super().__init__(block, self.message)
 
 
 class VariableConnectionNotFound(Exception):
@@ -173,6 +164,11 @@ class Flow:
     """
     Whether the flow can be executed or not. This depends on the flow
     having GhostBlocks
+    """
+
+    extraData: dict[str, typing.Any] = {}
+    """
+    Extra data to be saved with the flow. Ideally for storing extension data.
     """
 
     @property
@@ -250,6 +246,13 @@ class Flow:
     For example, any SmilesAPI action that needs to be executed on JS side
     """
 
+    pendingExtensions: typing.List[typing.Dict[str, typing.Any]] = []
+    """
+    A list of pending actions to be sent to the frontend when the flow is opened
+
+    This is used when using the Extensions().open method
+    """
+
     size: typing.Optional[float] = None
     """
     The size of the folder that the flow is in (MB)
@@ -268,6 +271,11 @@ class Flow:
     elapsed: float = 0
     """
     The elapsed time of the flow. This is the accumulated time for all the runs
+    """
+
+    panels: typing.Union[dict, None] = None
+    """
+    The serialized panels view
     """
 
     FLOW_FILE: str = "flow.json"
@@ -357,6 +365,8 @@ class Flow:
         self.terminalOutput = flow.get("terminalOutput", [])
         self.pendingActions = flow.get("pendingActions", [])
         self.pendingSmilesActions = flow.get("pendingSmilesActions", [])
+        self.pendingExtensions = flow.get("pendingExtensions", [])
+        self.extraData = flow.get("extraData", {})
 
         # Get the flow size and time
         self.size = flow.get("size", None)
@@ -382,6 +392,9 @@ class Flow:
         blocksJSON = flow.get("blocks", [])
         self.blocks = self.parseBlocks(blocksJSON)
 
+        # Read the panels
+        self.panels = flow.get("panels", None)
+
     def parseBlocks(
         self, blocksJSON: typing.List[typing.Dict[str, typing.Any]]
     ) -> typing.List[Block]:
@@ -398,9 +411,7 @@ class Flow:
             blockID = block.get("id", None)
 
             if blockID is None:
-                raise Exception(  # pylint: disable=broad-exception-raised
-                    "A block does not have an ID."
-                )
+                raise Exception("A block does not have an ID.")
 
             # Get the block class
             try:
@@ -545,6 +556,9 @@ class Flow:
             "terminalOutput": self.terminalOutput,
             "pendingActions": self.pendingActions,
             "pendingSmilesActions": self.pendingSmilesActions,
+            "pendingExtensions": self.pendingExtensions,
+            "panels": self.panels,
+            "extraData": self.extraData,
         }
 
         return flow
@@ -728,9 +742,7 @@ class Flow:
             if block.id == blockID:
                 return block
 
-        raise Exception(  # pylint: disable=broad-exception-raised
-            f"Block with ID '{blockID}' not found."
-        )
+        raise Exception(f"Block with ID '{blockID}' not found.")
 
     def findBlockByPlacedID(self, placedID: int) -> Block:
         """
@@ -741,9 +753,7 @@ class Flow:
             if block._placedID == placedID:
                 return block
 
-        raise Exception(  # pylint: disable=broad-exception-raised
-            f"Block with placedID '{placedID}' not found."
-        )
+        raise Exception(f"Block with placedID '{placedID}' not found.")
 
     _socket: typing.Optional["HorusSocket"] = None
     _pluginManager: typing.Optional[PluginManager] = None
@@ -774,9 +784,7 @@ class Flow:
         # Check for the plugin manager instance.
         # If it doesn't exist, we cannot execute the blocks
         if self._pluginManager is None:
-            raise Exception(  # pylint: disable=broad-exception-raised
-                "The plugin manager is not instantiated."
-            )
+            raise Exception("The plugin manager is not instantiated.")
 
         # Find the block to run by its placedID in the flow
         blockToRun = self.findBlockByPlacedID(placedID)
@@ -787,7 +795,7 @@ class Flow:
         # If the flow is stopped, raise an exception
         if self.status == self.FlowStatus.STOPPED:
             self.currentExecuting = None
-            raise StoppedFlowException(blockToRun)
+            raise StoppedFlowException
 
         # If the block is already executed, return its outputs.
         # Except for when we are ressetting the flow run
@@ -829,9 +837,7 @@ class Flow:
 
             # Placed blocks always have a placedID > 0
             if variablePlacedID is None or variablePlacedID == 0:
-                raise Exception(  # pylint: disable=broad-exception-raised
-                    "The block does not have a valid placedID"
-                )
+                raise Exception("The block does not have a valid placedID")
 
             # If its a cyclic connection, verify that the non-cyclic block has been executed
             if connection.isCyclic and comesFromCyclic:
@@ -859,9 +865,7 @@ class Flow:
             # This is only for the whole outputs dictionary itself, as the inidvidual
             # variable values can be None
             if outputs is None:
-                raise Exception(  # pylint: disable=broad-exception-raised
-                    "A connected variable block produced no outputs"
-                )
+                raise Exception("A connected variable block produced no outputs")
 
             # Update the inputs dictionary with the outputs of the block
             # Setting the correct keys for each block
@@ -903,7 +907,9 @@ class Flow:
                     else False
                 ),
             )
-        except Exception as exc:  # pylint: disable=broad-exception-raised
+        except StoppedFlowException as e:
+            raise e
+        except Exception as exc:
             # If an error was raised during the execution of the block
             # update acordingly the block's state
             self.currentExecuting = None
@@ -947,7 +953,7 @@ class Flow:
                 # Then we need to update the frontend and the flow too
                 self.write()
 
-            except Exception as exc:  # pylint: disable=broad-exception-raised
+            except Exception as exc:
                 self.currentExecuting = None
 
                 # Raise again a special "ErrorRunningBlock" exception
@@ -984,7 +990,7 @@ class Flow:
                         else False
                     ),
                 )
-            except Exception as exc:  # pylint: disable=broad-exception-raised
+            except Exception as exc:
                 # If an error was raised during the execution of the block
                 # update acordingly the block's state
                 self.currentExecuting = None
@@ -1007,9 +1013,7 @@ class Flow:
 
     def _runNextBlocks(self, placedID: int, resetRemoteBlock: bool = False):
         if self._pluginManager is None:
-            raise Exception(  # pylint: disable=broad-exception-raised
-                "The plugin manager is not instantiated."
-            )
+            raise Exception("The plugin manager is not instantiated.")
 
         blockToRun = self.findBlockByPlacedID(placedID)
 
@@ -1049,9 +1053,7 @@ class Flow:
             nextPlacedID = nextBlock._placedID
 
             if nextPlacedID is None or nextPlacedID == 0:
-                raise Exception(  # pylint: disable=broad-exception-raised
-                    "The block does not have a valid placedID"
-                )
+                raise Exception("The block does not have a valid placedID")
 
             # If the connection is cyclic, run the cyclic blocks
             if nextConnection.isCyclic:
@@ -1109,6 +1111,12 @@ class Flow:
         # Clean the pending smiles actions
         self.pendingSmilesActions = []
 
+        # Clean the pending extensions
+        self.pendingExtensions = []
+
+        # Clean the extra data
+        self.extraData = {}
+
         # Restore the time
         self.elapsed = 0
 
@@ -1140,25 +1148,9 @@ class Flow:
         # Cast the savedID
         self.savedID = typing.cast(str, self.savedID)
 
-        flowResumed = False
-        if placedID is None and self.currentExecuting is not None:
-            # If this method was called without a placedID,
-            # resume the flow execution from the latest executed block
-            placedID = self.currentExecuting
-            flowResumed = True
-        elif resetFlow:
+        if placedID and resetFlow:
             # Set all blocks as not executed because a new run is starting
             self.reset()
-
-        if placedID is None:
-
-            # Stop the flow
-            self.stop("No block to start the execution from.", fail=True)
-
-            raise Exception(  # pylint: disable=broad-exception-raised
-                "No placedID was provided for the run of the flow. "
-                + "The flow cannot be resumed as no current executing block is set for this flow."
-            )
 
         # Reset just the block that is going to be executed
         # only if the self.currentExecuting is None
@@ -1167,12 +1159,27 @@ class Flow:
         # the block. For example, a paused SlurmBlock
         # should not be resetted, as the status of the job
         # would be lost
+        flowResumed = False
         blockSelectedToRun: typing.Optional["Block"] = None
-        if self.currentExecuting is None:
+        if placedID:
             blockSelectedToRun = self.findBlockByPlacedID(placedID)
             blockSelectedToRun._cleanRun(cleanCycles=False)
-        else:
+        elif self.currentExecuting is not None:
+            # If this method was called without a placedID,
+            # resume the flow execution from the latest executed block
+            flowResumed = True
+            placedID = self.currentExecuting
             blockSelectedToRun = self.findBlockByPlacedID(self.currentExecuting)
+
+        if blockSelectedToRun is None or placedID is None:
+
+            # Stop the flow
+            self.stop("No block to start the execution from.", fail=True)
+
+            raise Exception(
+                "No placedID was provided for the run of the flow. "
+                + "The flow cannot be resumed as no current executing block is set for this flow."
+            )
 
         # Set the block as running
         blockSelectedToRun._isRunning = True
@@ -1258,11 +1265,11 @@ class Flow:
                 )
                 self._runNextBlocks(placedID)
                 self.status = self.FlowStatus.FINISHED
+            except StoppedFlowException:
+                self.stop()
             except ErrorRunningBlock:
                 self.status = self.FlowStatus.ERROR
-            except StoppedFlowException:
-                self.status = self.FlowStatus.STOPPED
-            except Exception:  # pylint: disable=broad-exception-raised
+            except BaseException:
                 import traceback
 
                 logging.getLogger("Horus").error(
@@ -1311,9 +1318,9 @@ class Flow:
             return None
 
         # Get the folder of the flow
-        folder = os.path.dirname(self.path)
+        folder = self.flowWorkDir(self.path)
 
-        return FileExplorer.computePathSize(folder)
+        return FileExplorer.computePathSize(folder) + FileExplorer.computePathSize(self.path)
 
     def stop(self, message: str = "The flow was stopped.", fail: bool = False):
         """
@@ -1640,9 +1647,7 @@ class FlowManager:
         savedID = flow.savedID
 
         if savedID is None:
-            raise Exception(  # pylint: disable=broad-exception-raised
-                "The flow does not have a savedID"
-            )
+            raise Exception("The flow does not have a savedID")
 
         # Check if a flow with the same path already exists
         for (
@@ -1691,9 +1696,7 @@ class FlowManager:
                 break
 
         if flow is None:
-            raise Exception(  # pylint: disable=broad-exception-raised
-                "The savedID does not exist"
-            )
+            raise Exception("The savedID does not exist")
 
         return flow.encode()
 
@@ -1720,9 +1723,7 @@ class FlowManager:
         flowPath = flow.path
 
         if flowPath is None:
-            raise Exception(  # pylint: disable=broad-exception-raised
-                f"The flow '{flow.name}' does not have a path"
-            )
+            raise Exception(f"The flow '{flow.name}' does not have a path")
 
         # Read the savedID from the file if it exists
         overwriteCaution = False
@@ -1778,9 +1779,7 @@ class FlowManager:
         overwrite = flow.get("overwrite", False)
 
         if not isinstance(overwrite, bool):
-            raise Exception(  # pylint: disable=broad-exception-raised
-                "The overwrite parameter must be a boolean."
-            )
+            raise Exception("The overwrite parameter must be a boolean.")
 
         # Init the flow instance
         flowInstance = Flow(flow)
@@ -1808,9 +1807,7 @@ class FlowManager:
 
                 # Check if the user selected a path
                 if not flowPath:
-                    raise NoPathSelected(
-                        "No path selected."
-                    )  # pylint: disable=broad-exception-raised
+                    raise NoPathSelected("No path selected.")
 
                 # Append the extension if not present
                 if not flowPath.endswith(".flow"):
@@ -1835,9 +1832,7 @@ class FlowManager:
 
         # Check that the file exists
         if not os.path.exists(flowPath):
-            raise Exception(  # pylint: disable=broad-exception-raised
-                "The flow file does not exist"
-            )
+            raise Exception("The flow file does not exist")
 
         # Read the flow file
         flow = Flow.read(flowPath)
@@ -1876,12 +1871,10 @@ class FlowManager:
                 if isinstance(flowPath, tuple):
                     flowPath = flowPath[0]
                 return self.openFlowFromPath(str(flowPath))
-            raise NoPathSelected("No path selected.")  # pylint: disable=broad-exception-raised
+            raise NoPathSelected("No path selected.")
         else:
             # WIP implement server user folders
-            raise Exception(  # pylint: disable=broad-exception-raised
-                "Not implemented yet on server mode."
-            )
+            raise Exception("Not implemented yet on server mode.")
 
     def loadPredefinedFlow(self, savedID: str):
         """
@@ -1895,7 +1888,7 @@ class FlowManager:
                 loadedFLow = self.openFlowFromPath(pFlow["path"], addToRecents=False)
                 break
         if not loadedFLow:
-            raise Exception("Flow not found.")  # pylint: disable=broad-exception-raised
+            raise Exception("Flow not found.")
 
         # Replace the savedID and the flow path so
         # the forntend can save it to another location
@@ -1944,9 +1937,7 @@ class FlowManager:
                         isProcessAlive = False
 
                 if isProcessAlive:
-                    raise Exception(  # pylint: disable=broad-exception-raised
-                        "The flow is already running."
-                    )
+                    raise Exception("The flow is already running.")
                 else:
                     # Remove the flow from the running flows list
                     self._flowProcesses.pop(runningFlowPath)
@@ -1997,7 +1988,8 @@ class FlowManager:
         """
 
         # Remove the process
-        self._flowProcesses.pop(flowPath)
+        if flowPath in self._flowProcesses:
+            self._flowProcesses.pop(flowPath)
 
     def pauseAllFlows(self):
         """
@@ -2042,15 +2034,7 @@ class FlowManager:
         updatedFlowToStop = Flow.read(flowPath)
 
         # Kill the flow process
-        self._killFlow(updatedFlowToStop)
-
-        # Set the flow status to stopped
-        updatedFlowToStop.stop()
-
-        # Save the flow
-        updatedFlowToStop.write()
-
-        return updatedFlowToStop
+        return self._killFlow(updatedFlowToStop)
 
     def pauseFlow(self, flowPath: str):
         """
@@ -2091,15 +2075,35 @@ class FlowManager:
 
         if process is not None and process.is_alive():
             logging.getLogger("Horus").debug("Flow PID: %s", process.pid)
-            process.kill()
-            process.join()
 
-            # Remove the flow from the running flows list
-            self._flowProcesses.pop(flow.path)
+            process.terminate()
+
+            # Try to terminate the flow process, if after 10 seconds
+            # its not terminated, kill it
+            process.join(timeout=10)
+
+            if process.is_alive():
+                logging.getLogger("Horus").error(
+                    "Flow process did not terminate. Killing process..."
+                )
+                process.kill()
+
+                # Set the flow status to stopped
+                flow.stop()
+
+                # Save the flow
+                flow.write()
+            else:
+                # Re read the flow after sucessfuclly terminated to get the updated blocklogs...
+                flow = Flow.read(flow.path)
+
+            # Remove the flow from the running flows list if it was not removed automatically
+            # during the gracefully flow stop
+            if flow.path in self._flowProcesses:
+                self._flowProcesses.pop(flow.path)
 
             # Unlock the semaphore to allow queued flows to run
             # Only if the flow was running
-
             if flow.status == flow.FlowStatus.RUNNING:
                 from App import AppDelegate
 
@@ -2107,6 +2111,14 @@ class FlowManager:
 
         else:
             logging.getLogger("Horus").debug("Flow %s is not running", flow.path)
+
+            # Set the flow status to stopped
+            flow.stop()
+
+            # Save the flow
+            flow.write()
+
+        return flow
 
     def compressFlow(self, flow: "Flow") -> str:
         """
@@ -2195,7 +2207,7 @@ class FlowManager:
                 loadedTemplate = tFlow
                 break
         if not loadedTemplate:
-            raise Exception("Template not found.")  # pylint: disable=broad-exception-raised
+            raise Exception("Template not found.")
 
         return loadedTemplate
 

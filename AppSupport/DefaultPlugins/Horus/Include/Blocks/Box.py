@@ -14,4 +14,5 @@ boxBlock = InputBlock(
     description="Select coordinates and size of a box in a structure",
     action=None,
     variable=boxVariable,
+    category="Structures"
 )

@@ -8,8 +8,8 @@
 #SBATCH --time=01:00:00
 
 # Clean the build folder using the singularity image
-echo "Running bun run clean-all using Node from Rocky image..."
-singularity exec --bind .:/app docker://chdominguez/horus_rocky bun run clean-all
+echo "Running npm run clean-all using Node from Rocky image..."
+singularity exec --bind .:/app docker://chdominguez/horus_rocky npm run clean-all
 
 # Build Horus for Rocky Linux 8
 echo "Building Horus for Rocky Linux 8..."
@@ -17,8 +17,8 @@ singularity run --bind .:/app docker://chdominguez/horus_rocky
 echo "Finished building Horus for Rocky Linux 8"
 
 # Clean the compiled files
-echo "Running bun run clean-build using Node from Rocky image..."
-singularity exec --bind .:/app docker://chdominguez/horus_rocky bun run clean-build
+echo "Running npm run clean-build using Node from Rocky image..."
+singularity exec --bind .:/app docker://chdominguez/horus_rocky npm run clean-build
 
 # Build for Ubuntu 22.04
 echo "Building Horus for Ubuntu 22.04..."
@@ -26,8 +26,8 @@ singularity run --bind .:/app docker://chdominguez/horus_ubuntu
 echo "Finished building Horus for Ubuntu 22.04"
 
 # Clean the compiled files
-echo "Running bun run clean-build using Node from Rocky image..."
-singularity exec --bind .:/app docker://chdominguez/horus_ubuntu bun run clean-build
+echo "Running npm run clean-build using Node from horus_ubuntu image..."
+singularity exec --bind .:/app docker://chdominguez/horus_ubuntu npm run clean-build
 
 # Build for Ubuntu 14.04
 echo "Building Horus on Ubuntu 14.04 (Universal linux, no-pywebview)..."
