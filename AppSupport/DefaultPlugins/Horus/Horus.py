@@ -92,6 +92,11 @@ plugin.addBlock(strucBlock)
 # Add the multipleStructure block to the plugin
 plugin.addBlock(multStrucBlock)
 
+from Blocks.LoadTrajectory import loadTrajectoryBlock  # type: ignore
+
+# Add the loadTrajectory block to the plugin
+plugin.addBlock(loadTrajectoryBlock)
+
 from Blocks.Box import boxBlock  # type: ignore
 
 plugin.addBlock(boxBlock)

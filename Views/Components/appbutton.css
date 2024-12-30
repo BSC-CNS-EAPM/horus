@@ -68,26 +68,23 @@
 }
 
 .app-button {
-  cursor: default !important;
   border: 1px solid #ccc;
   border-radius: 5px;
   outline: none;
   height: 1.75rem;
   /* margin-top: 0.1rem; */
-  padding: 0.5rem;
+  padding-inline: 0.5rem;
   align-items: center;
-  justify-content: left;
-  display: flex;
-  flex-direction: row;
   /* Animate the background when hovering */
   transition: background 0.2s ease-in-out;
   /* margin-bottom: 0.3rem; */
   background: white;
-
+  user-select: none;
   /* If the text does not fit, donot place it on a newline... */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  cursor: pointer;
 }
 
 .app-button:disabled {

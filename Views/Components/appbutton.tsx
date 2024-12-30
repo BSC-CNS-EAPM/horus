@@ -19,7 +19,6 @@ function AppButton(props: AppButtonProps) {
 
   // First div necessary for padding
   return (
-    <div>
       <button
         title={props?.title}
         type={props.type}
@@ -35,7 +34,6 @@ function AppButton(props: AppButtonProps) {
         {props?.text}
         {props?.children}
       </button>
-    </div>
   );
 }
 

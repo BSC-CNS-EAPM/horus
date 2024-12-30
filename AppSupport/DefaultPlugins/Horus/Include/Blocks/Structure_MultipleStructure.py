@@ -155,6 +155,7 @@ strucBlock = InputBlock(
     action=saveStructure,
     variable=structureVariable,
     output=structureVariableOutput,
+    category="Structures",
 )
 
 
@@ -166,4 +167,5 @@ multStrucBlock = InputBlock(
     action=saveMultipleStructure,
     variable=multipleStructureVariable,
     output=multipleStructureVariableOutput,
+    category="Structures",
 )

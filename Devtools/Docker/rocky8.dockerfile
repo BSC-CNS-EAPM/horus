@@ -39,15 +39,6 @@ RUN curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xvj bi
 # NodeJS 18, needed to fix parcel runtime
 RUN dnf module install -y nodejs:18
 
-# Bun
-RUN curl -fsSL https://bun.sh/install | bash
-
-# Move the installation of bun from /root/.bun to /.bun
-RUN mv /root/.bun /
-
-# Add bun to PATH
-ENV PATH /.bun/bin:$PATH
-
 # Set the working directory in the container once everything is installed
 WORKDIR /app
 

@@ -14,4 +14,5 @@ atomBlock = InputBlock(
     action=None,
     variable=atomsVariable,
     id="atoms",
+    category="Structures"
 )

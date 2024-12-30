@@ -14,4 +14,5 @@ residueBlock = InputBlock(
     action=None,
     variable=residueVariable,
     id="residue",
+    category="Structures"
 )

@@ -1,5 +1,5 @@
 // React
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 
 // Horus web-server
 import { socket } from "../../Utils/socket";
@@ -8,14 +8,8 @@ import { horusGet } from "../../Utils/utils";
 // Horus imports
 import { PluginPage } from "../FlowBuilder/flow.types";
 import { BreakLongUnderscoreNames } from "../FlowBuilder/Blocks/block.view";
-
-export const loadPage = async (page?: PluginPage, blockIDCustom?: number) => {
-  // Emit an event to the iframe
-  const event = new CustomEvent("loadExtension", {
-    detail: { page: page, blockIDCustom: blockIDCustom },
-  });
-  window.dispatchEvent(event);
-};
+import Chevron from "./Icons/Chevron";
+import { addPanel, DockContext, PANEL_REGISTRY } from "../MainApp/PanelView";
 
 type PluginPageViewProps = {
   pages: Array<PluginPage>;
@@ -24,6 +18,8 @@ type PluginPageViewProps = {
 
 export default function PluginPagesView(props: PluginPageViewProps) {
   const { pages } = props;
+
+  const { dockApi } = useContext(DockContext);
 
   if (pages.length === 0) {
     return null;
@@ -35,21 +31,47 @@ export default function PluginPagesView(props: PluginPageViewProps) {
         ?.filter((page) => !page.hidden)
         .map((page) => (
           <div
-            key={page.id}
+            role="button"
             onClick={() => {
               if (props.overrideLoadPage) {
                 props.overrideLoadPage(page);
               } else {
-                loadPage(page);
+                if (dockApi) {
+                  addPanel({
+                    dockApi: dockApi,
+                    component: PANEL_REGISTRY.extensions.component,
+                    panelID: `extensions-${page.id}-${Math.floor(
+                      Math.random() * 100000,
+                    )}`,
+                    params: page,
+                  });
+                }
               }
             }}
-            className="predefined-flow"
+            className="predefined-flow gap-2 flex items-center flex-row flex-nowrap"
           >
-            <div className="predefined-flow-name max-w-[380px] cut-text">
-              <BreakLongUnderscoreNames name={page.name} />
-            </div>
-            <div className="predefined-flow-plugin max-w-[380px] cut-text">
-              <BreakLongUnderscoreNames name={page.description} />
+            {page.logo ? (
+              <img src={page.logo} alt={page.name} className="w-8 h-8" />
+            ) : (
+              <Chevron
+                direction="right"
+                className="w-8 h-8"
+                color="black"
+                style={{
+                  transform: "translateX(-2px)",
+                }}
+              />
+            )}
+            <div key={page.id}>
+              <div className="predefined-flow-name max-w-[350px] cut-text">
+                <BreakLongUnderscoreNames name={page.name} />
+              </div>
+              <div className="predefined-flow-plugin max-w-[350px] cut-text">
+                <BreakLongUnderscoreNames
+                  name={page.description ?? "Extension"}
+                />{" "}
+                - {page.plugin ?? "Unknown"}
+              </div>
             </div>
           </div>
         ))}

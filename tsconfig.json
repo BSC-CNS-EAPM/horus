@@ -19,9 +19,9 @@
         // https://eslint.org/docs/rules/consistent-return ?
         "noFallthroughCasesInSwitch": true,
         // https://eslint.org/docs/rules/no-fallthrough
-        "noUnusedLocals": true,
+        "noUnusedLocals": false,
         // https://eslint.org/docs/rules/no-unused-vars
-        "noUnusedParameters": true,
+        "noUnusedParameters": false,
         // https://eslint.org/docs/rules/no-unused-vars#args
         "allowUnreachableCode": false,
         // https://eslint.org/docs/rules/no-unreachable ?
@@ -32,8 +32,16 @@
         "suppressExcessPropertyErrors": false,
         "suppressImplicitAnyIndexErrors": false,
         "noStrictGenericChecks": false,
+        "downlevelIteration": true,
         "jsx": "react-jsx",
-        "target": "ES5"
+        "paths": {
+            "@/*": [
+                "./Views/*"
+            ],
+            "@resources/*": [
+                "./Resources/*"
+            ]
+        }
     },
     "include": [
         "Views/**/*"

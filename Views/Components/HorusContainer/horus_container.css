@@ -15,3 +15,13 @@
   border-radius: 10px;
   box-shadow: 0 10px 10px 5px var(--shadow);
 }
+
+.orange-container {
+  height: fit-content;
+  padding: 5px;
+  background: var(--grey-white);
+  border-radius: 10px;
+  box-shadow: 0 1px 15px 1px var(--shadow);
+  color: white;
+  background: var(--gradient-gray);
+}

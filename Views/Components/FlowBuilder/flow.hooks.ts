@@ -1,6 +1,14 @@
 // React
-import { useRef, useState, useEffect, useMemo, useCallback } from "react";
-import type { DragEvent, MouseEvent, PointerEvent } from "react";
+import {
+  useRef,
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useContext,
+} from "react";
+import type { DragEvent, PointerEvent } from "react";
+import { DockviewApi } from "dockview";
 
 // Drag and drop toolkit
 import {
@@ -17,6 +25,7 @@ import {
 
 // Horus web-server
 import {
+  delay,
   fetchWithProgress,
   horusGet,
   horusPost,
@@ -42,7 +51,19 @@ import {
   HorusSmilesManagerState,
   SmilesEvents,
 } from "../Smiles/SmilesWrapper/horusSmiles";
+import { useLocation } from "react-router";
+import {
+  addBlockRegistryGroup,
+  addPanel,
+  closeAllPanels,
+  FlowBuilderContext,
+  PANEL_REGISTRY,
+} from "../MainApp/PanelView";
+import { navigateTo } from "@/Utils/navigationService";
 import { MolstarEvents } from "../Molstar/HorusWrapper/horusmolstar";
+import { LogsData } from "./Logs/logs_connections";
+import { blockLogsPanelID } from "./Blocks/block.hooks";
+import { GLOBAL_IDS } from "@/Utils/globals";
 
 /**
  * An extended "PointerSensor" that prevent some
@@ -148,7 +169,7 @@ function moveBlock(
  *
  * @returns An object containing the sensors and measuring configuration for DND.
  */
-function useDNDTweaks(): {
+export function useDNDTweaks(): {
   sensors: SensorDescriptor<SensorOptions>[];
   measuring: MeasuringConfiguration;
 } {
@@ -186,18 +207,28 @@ function newFlowObject(): Flow {
     terminalOutput: [],
     pendingActions: [],
     pendingSmilesActions: [],
+    pendingExtensions: [],
     elapsed: 0,
   };
 }
 
 // Create a new flow builder hook
-export function useFlowBuilder() {
+export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
   // Initialize the drag and drop tweaks
   const dndTweaks = useDNDTweaks();
 
   // Store the state of the flow
   const [flow, setFlow] = useState<Flow>(newFlowObject());
-  const [saved, setSaved] = useState<boolean>(true);
+
+  useEffect(() => {
+    if (dockApi) {
+      const flowPanel = dockApi.getPanel("flow");
+      flowPanel?.api.updateParameters({ status: flow.status });
+      flowPanel?.api.setTitle(flow.name);
+    }
+  }, [flow, dockApi]);
+
+  const saved = flow.status !== FlowStatus.UNSAVED;
 
   // The arow connections
   const blockConnections = useMemo<VariableConnection[]>(() => {
@@ -270,14 +301,13 @@ export function useFlowBuilder() {
         return;
       }
 
-      const handledFlow: Flow = { ...newFlow, status: FlowStatus.IDLE };
+      const handledFlow: Flow = { ...newFlow, status: FlowStatus.UNSAVED };
       setFlow((currentFlow) => {
         if (updateHistory) {
           handleHistoryChange(currentFlow);
         }
         return handledFlow;
       });
-      setSaved(false);
     },
     [isFlowActive]
   );
@@ -301,7 +331,11 @@ export function useFlowBuilder() {
 
       if (window.smiles) {
         const smilesState = await window.smiles.saveState();
-        formData.append("smilesState", JSON.stringify(smilesState));
+        const smilesStateFile = new File(
+          [JSON.stringify(smilesState)],
+          "smilesState.json"
+        );
+        formData.append("smilesState", smilesStateFile, "smilesState.json");
       }
 
       // Use the helper function to upload with progress tracking
@@ -309,7 +343,7 @@ export function useFlowBuilder() {
         "/api/updatemolstate",
         formData,
         (percentage) => {
-          setFlowText(`Saving Mol* state: ${percentage.toFixed(0)}%`);
+          setFlowText(`Saving structures: ${percentage.toFixed(0)}%`);
         }
       );
 
@@ -323,6 +357,7 @@ export function useFlowBuilder() {
           ...currentFlow,
           pendingActions: [],
           pendingSmilesActions: [],
+          pendingExtensions: [],
         };
       });
     } catch (e) {
@@ -330,7 +365,7 @@ export function useFlowBuilder() {
     }
     // Disable horusAlert and horusConfirm hook warning
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [flow.path]);
+  }, [flow]);
 
   const downloadMolstarState = useCallback(
     async (flowPath?: string) => {
@@ -378,7 +413,7 @@ export function useFlowBuilder() {
           } else if (contentType.includes("application/octet-stream")) {
             // If the response is a file (binary data), handle it as a Blob
             await response.blob().then(async (blob) => {
-              await window.molstar.snapshot.set(blob);
+              await window?.molstar?.snapshot.set(blob);
             });
           } else {
             horusAlert("Error downloading Mol* state: Invalid content type.");
@@ -396,7 +431,7 @@ export function useFlowBuilder() {
   );
 
   const internalLoadFlow = useCallback(
-    async (openedFlow: Flow) => {
+    async (openedFlow: Flow, isDefault: boolean) => {
       // Exit the socket flow room
       socket.emit("leaveFlow", flow.savedID);
 
@@ -404,7 +439,10 @@ export function useFlowBuilder() {
       socket.emit("joinFlow", openedFlow.savedID);
 
       // Set the flow state
-      setFlow(openedFlow);
+      setFlow({
+        ...openedFlow,
+        status: isDefault ? FlowStatus.UNSAVED : openedFlow.status,
+      });
 
       // Set the placedIDCounter
       // Search for the highest placedID in the blocks and subblocks
@@ -425,40 +463,9 @@ export function useFlowBuilder() {
         );
       }
 
-      // Apply any pending MolstarAPI actions if present
-      let hasToUpdate = false;
-      if (window.molstar) {
-        if (openedFlow.pendingActions && openedFlow.pendingActions.length > 0) {
-          hasToUpdate = true;
-          for (const action of openedFlow.pendingActions) {
-            await window.molstar?.applyAction(action);
-          }
-        }
-      }
-
-      if (window.smiles) {
-        if (
-          openedFlow.pendingSmilesActions &&
-          openedFlow.pendingSmilesActions.length > 0
-        ) {
-          hasToUpdate = true;
-          for (const action of openedFlow.pendingSmilesActions) {
-            await window.smiles?.applyAction(action);
-          }
-        }
-      }
-
-      if (hasToUpdate) {
-        // Save the mol* state after applying the actions
+      if (await applyActions(openedFlow)) {
+        // Save the mol* state after applying the actions (will clear the extensionActions too)
         await updateMolstarState();
-      }
-
-      // Set the block connections
-      const blockConnections: VariableConnection[] = [];
-      for (const block of openedFlow.blocks) {
-        for (const variableConnection of block.variableConnections) {
-          blockConnections.push(variableConnection);
-        }
       }
     },
     [flow.savedID, updateMolstarState]
@@ -470,7 +477,7 @@ export function useFlowBuilder() {
     async (
       openRecent: {
         savedID: string | null;
-        path: string;
+        path?: string;
         template?: boolean;
       } | null = null,
       openFile?: File
@@ -488,6 +495,20 @@ export function useFlowBuilder() {
       ) {
         return;
       }
+
+      // Always focus the flow panel when opening a flow
+      let flowPanel = dockApi?.getPanel("flow");
+
+      // if the panel does not exists, create it
+      if (!flowPanel) {
+        flowPanel = addPanel({
+          dockApi: dockApi,
+          component: PANEL_REGISTRY.flow.component,
+          panelID: PANEL_REGISTRY.flow.id,
+        });
+      }
+
+      flowPanel?.focus();
 
       isLoadingFlow.current = true;
       setFlowText("Opening flow...");
@@ -523,7 +544,7 @@ export function useFlowBuilder() {
             Accept: "application/json",
           };
 
-          if (openRecent.path === undefined || openRecent.template) {
+          if (!openRecent.path || openRecent.template) {
             isDefaultFlow = true;
           }
 
@@ -600,14 +621,38 @@ export function useFlowBuilder() {
           return;
         }
 
-        // Set the molstar state at the beggining in case blocks need structures
-        // If it has the new molstar state, open it
-        setFlowText("Loading Mol* state...");
-        await downloadMolstarState(openedFlow.path!);
+        // Load the panels
+        const serializedPanels = openedFlow.panels;
+        if (serializedPanels && dockApi) {
+          setFlowText("Restoring panels...");
+          try {
+            dockApi.fromJSON(serializedPanels);
+
+            // Remove panels associated with block variables, as when restored, they will lack
+            // the onChange handler and other properties related to the block
+            const removeComponents = [
+              PANEL_REGISTRY.blockLogs.component,
+              PANEL_REGISTRY.blockVariables.component,
+              PANEL_REGISTRY.blockVariablesExtension.component,
+              PANEL_REGISTRY.codeEditor.component,
+              PANEL_REGISTRY.horusPlugins.component,
+              PANEL_REGISTRY.horusRemotes.component,
+              PANEL_REGISTRY.horusSettings.component,
+            ];
+            dockApi.panels.map((panel) => {
+              if (removeComponents.includes(panel.api.component)) {
+                dockApi.removePanel(panel);
+              }
+            });
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+          } catch (error) {
+            horusAlert("Failed to restore panels");
+          }
+        }
 
         // If smiles state, open it
-        setFlowText("Loading SMILES state...");
         if (window.smiles && data.smilesState) {
+          setFlowText("Loading SMILES state...");
           try {
             // Parse the smiles only if its a string
             // Skip if already an object
@@ -619,9 +664,18 @@ export function useFlowBuilder() {
             }
 
             window.smiles.restoreState(smilesState);
+            await delay(500);
           } catch (error) {
             await horusAlert(`Failed to load SMILES state. ${error}`);
           }
+        }
+
+        // Set the molstar state at the beggining in case blocks need structures
+        // If it has the new molstar state, open it
+        if (window.molstar?.plugin) {
+          setFlowText("Loading Mol* state...");
+          await downloadMolstarState(openedFlow.path!);
+          await delay(500);
         }
 
         // If we are dropping a file, do not set the path
@@ -630,10 +684,8 @@ export function useFlowBuilder() {
           openedFlow.path = null;
         }
 
-        await internalLoadFlow(openedFlow);
-
-        // Set the saved state
-        setSaved(!isDefaultFlow);
+        setFlowText("Loading blocks...");
+        await internalLoadFlow(openedFlow, isDefaultFlow);
 
         // Reset the history
         resetHistory();
@@ -644,7 +696,7 @@ export function useFlowBuilder() {
     },
     // Disable horusAlert and horusConfirm hook warning
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [saved, resetHistory, setSaved, internalLoadFlow]
+    [saved, resetHistory, internalLoadFlow, dockApi]
   );
 
   // State for the server file picker
@@ -667,9 +719,8 @@ export function useFlowBuilder() {
     };
   }, [loadFlow]);
 
-  const [fileProps, setFileProps] = useState<FileExplorerProps>(
-    serverPickerFlow()
-  );
+  const [fileProps, setFileProps] =
+    useState<FileExplorerProps>(serverPickerFlow());
 
   const [scale, setScale] = useState<number>(1);
 
@@ -685,24 +736,6 @@ export function useFlowBuilder() {
 
     setScale(newScaleNumber);
   }
-
-  // function handleMouseWheel(event: WheelEvent) {
-  //   event.preventDefault();
-
-  //   // If the modifier key is pressed, scale the view
-  //   if (event.getModifierState(modifierKey)) {
-  //     if (event.deltaY > 0) {
-  //       handleScaleChange(scale - 0.1);
-  //     } else {
-  //       handleScaleChange(scale + 0.1);
-  //     }
-  //     // Otherwise, pan the view
-  //   } else {
-  //     const deltaX = -event.deltaX;
-  //     const deltaY = -event.deltaY;
-  //     moveBlocksPan(deltaX * (1 / scale), deltaY * (1 / scale));
-  //   }
-  // }
 
   const serializeFlow = useCallback((): Flow => {
     return {
@@ -732,22 +765,33 @@ export function useFlowBuilder() {
       setFlowLoading(true);
 
       // The serialization of the flow to save
-      const saveContents = flowToSave ? flowToSave : serializeFlow();
+      const saveContents: Flow = {
+        ...(flowToSave ? flowToSave : serializeFlow()),
+        status: FlowStatus.IDLE,
+        panels: dockApi?.toJSON(),
+      };
 
       try {
         // Prepare the body for the save request
         const body = new FormData();
-        body.append("flowData", JSON.stringify(saveContents));
 
-        // Set the headers so that flask correctly accepts the form data
-        const headers = {
-          Accept: "application/json",
-        };
+        // Save the flowData as a file, instead of form data
+        // This is required for the server to be able to read it
+        const flowFile = new File([JSON.stringify(saveContents)], "flow.json", {
+          type: "application/json",
+        });
+
+        body.append("flowData", flowFile);
+
+        // // Set the headers so that flask correctly accepts the form data
+        // const headers = {
+        //   Accept: "application/json",
+        // };
 
         // Post the flow to the server
         const response = await horusPost(
           "/api/saveflow",
-          headers,
+          undefined,
           body,
           undefined
         );
@@ -797,12 +841,21 @@ export function useFlowBuilder() {
 
           // Create a new form data object
           const overwriteBody = new FormData();
-          overwriteBody.append("flowData", JSON.stringify(overwriteContents));
+
+          const overwriteFile = new File(
+            [JSON.stringify(overwriteContents)],
+            "flow.json",
+            {
+              type: "application/json",
+            }
+          );
+
+          overwriteBody.append("flowData", overwriteFile);
 
           // Send the request again
           const overwriteResponse = await horusPost(
             "/api/saveflow",
-            headers,
+            undefined,
             overwriteBody,
             undefined
           );
@@ -818,10 +871,11 @@ export function useFlowBuilder() {
         // If everything went well, update the flow state
         socket.emit("leaveFlow", saveContents.savedID);
 
-        handleFlowChange({
+        setFlow({
           ...saveContents,
           savedID: savedFlow.savedID,
           path: savedFlow.path,
+          status: FlowStatus.IDLE,
         });
 
         latestPath.current = savedFlow.path;
@@ -829,13 +883,19 @@ export function useFlowBuilder() {
         // Join the room with the new savedID
         socket.emit("joinFlow", savedFlow.savedID);
 
-        (!flowToSave?.template || saved) && setSaved(true);
+        // Update the URL with the flowID
+        const newURL = `/flow?open=true&flowID=${savedFlow.savedID}&path=${savedFlow.path}`;
+
+        window.history.replaceState({}, document.title, newURL);
 
         // Update the molstar state
-        setFlowText("Getting Mol* state...");
+        setFlowText("Getting structures state...");
         await updateMolstarState();
 
         return savedFlow as Flow;
+      } catch (error) {
+        alert(`Error saving the flow: ${error}`);
+        return null;
       } finally {
         // Reset the state of the loading flow when everything is done
         isSaving.current = false;
@@ -844,26 +904,32 @@ export function useFlowBuilder() {
     },
     // Disable horusAlert hook warning
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [serializeFlow, handleFlowChange, saved]
+    [serializeFlow, handleFlowChange, saved, dockApi]
   );
 
-  const serverPickerFolder = useCallback(() => {
-    return {
-      openFolder: true,
-      onFileSelect: () => {},
-      onFileConfirm: async (path: string) => {
-        const flowToSave = flow;
-        const strippedFlowName = flowToSave.name.replace(/[^a-zA-Z0-9]/g, "_");
+  const serverPickerFolder = useCallback(
+    (flowName?: string) => {
+      return {
+        openFolder: true,
+        onFileSelect: () => {},
+        onFileConfirm: async (path: string) => {
+          const flowToSave = { ...flow, name: flowName ?? flow.name };
+          const strippedFlowName = flowToSave.name.replace(
+            /[^a-zA-Z0-9]/g,
+            "_"
+          );
 
-        // append the flow name
-        flowToSave.path = path + "/" + strippedFlowName + ".flow";
-        flowToSave.savedID = null;
+          // append the flow name
+          flowToSave.path = path + "/" + strippedFlowName + ".flow";
+          flowToSave.savedID = null;
 
-        // Save the flow
-        await handleSave(flowToSave);
-      },
-    };
-  }, [flow, handleSave]);
+          // Save the flow
+          await handleSave(flowToSave);
+        },
+      };
+    },
+    [flow, handleSave]
+  );
 
   // Helper function that should be called every time any block changes
   // It updates the flow state and the saved state efficiently
@@ -1052,30 +1118,17 @@ export function useFlowBuilder() {
     }
   };
 
-  // Update the mouse position
-  const handleMouseMove = (event: MouseEvent) => {
-    const scaledCanvas = document.getElementById(DroppableEntity.SCALED_CANVAS);
-
-    if (!scaledCanvas) {
-      return;
-    }
-
-    const scaledRect = scaledCanvas.getBoundingClientRect();
-
-    mousePos.current = {
-      x: event.clientX - scaledRect.x,
-      y: event.clientY - scaledRect.y,
-    };
-  };
-
   // Drag & drop flows
   const [isDraggingFlowFile, setIsDraggingFlowFile] = useState(false);
 
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    // If its dragging a .flow file,
-    // set the overlay to active
-    setIsDraggingFlowFile(true);
+
+    if (event.dataTransfer.types[0] === "Files") {
+      // If its dragging a .flow file,
+      // set the overlay to active
+      setIsDraggingFlowFile(true);
+    }
   };
 
   const handleDragDropEnd = (event: DragEvent<HTMLDivElement>) => {
@@ -1095,6 +1148,12 @@ export function useFlowBuilder() {
   };
 
   const handleDelete = async (block: Block) => {
+    dockApi?.panels.map((panel) => {
+      if (panel?.params?.["placedID"] === block.placedID) {
+        dockApi?.removePanel(panel);
+      }
+    });
+
     // Check first if the block to delete is connected to a variable wich also
     // has a cyclic connection
     for (const variableConnection of block.variableConnections) {
@@ -1478,67 +1537,39 @@ export function useFlowBuilder() {
         const parsedFlow: Flow = {
           ...recivedFlow,
           blocks: recivedFlow.blocks.map((block) => {
-            return {
+            const newBlock = {
               ...block,
               position: currentFlow.blocks.find(
                 (b) => b.placedID === block.placedID
               )?.position ?? { x: 0, y: 0 },
             };
+
+            // Update the params if the blocklogs panel is opened
+            const panel = dockApi?.getPanel(blockLogsPanelID(newBlock));
+            panel?.api.updateParameters({ block: newBlock });
+
+            return newBlock;
           }),
         };
 
-        const applyActions = async () => {
+        (async () => {
           // Check for any pending actions if the flow has finished
           if (recivedFlow.status !== FlowStatus.RUNNING) {
-            let hasToUpdate = false;
-            if (
-              recivedFlow.pendingActions &&
-              recivedFlow.pendingActions.length > 0
-            ) {
-              hasToUpdate = true;
-              for (const action of recivedFlow.pendingActions) {
-                await window.molstar?.applyAction(action);
-              }
-            }
-
-            if (
-              recivedFlow.pendingSmilesActions &&
-              recivedFlow.pendingSmilesActions.length > 0
-            ) {
-              hasToUpdate = true;
-              for (const action of recivedFlow.pendingSmilesActions) {
-                await window.smiles?.applyAction(action);
-              }
-            }
-
-            if (hasToUpdate) {
+            if (await applyActions(recivedFlow)) {
               // Save the mol* state after applying the actions
               // Wait artificaially 500ms for the mol* state to be updated
               await new Promise((resolve) => setTimeout(resolve, 1000));
               await updateMolstarState();
             }
           }
-        };
-
-        applyActions();
+        })();
 
         return parsedFlow;
       });
     },
-    [updateMolstarState]
+
+    [updateMolstarState, dockApi]
   );
-
-  async function fetchRemotes() {
-    const response = await horusGet("/api/remotes/names");
-    const data = await response.json();
-
-    if (!data.ok) {
-      await horusAlert(data.msg);
-      return;
-    }
-
-    setRemotesOptions(data.remotes);
-  }
 
   // Handle a new flow.
   const handleNewFlow = useCallback(async () => {
@@ -1561,7 +1592,6 @@ export function useFlowBuilder() {
 
     setFlow(newFlowObject());
     placedIDCounter.current = 1;
-    setSaved(true);
 
     resetHistory();
 
@@ -1572,9 +1602,27 @@ export function useFlowBuilder() {
     window.horusTerm.storedMessages = [];
 
     setFlowLoading(false);
+
+    // Clean the url
+    navigateTo("/flow");
+
+    // Reset the panels
+    if (dockApi) {
+      closeAllPanels({ dockApi });
+
+      // Add back the block registry & flow panels
+      addPanel({
+        dockApi,
+        component: PANEL_REGISTRY.flow.component,
+        panelID: PANEL_REGISTRY.flow.id,
+      });
+
+      addBlockRegistryGroup(dockApi);
+    }
+
     // Disable horusConfirm hook warning
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [flow.savedID, saved, resetHistory]);
+  }, [flow.savedID, saved, resetHistory, dockApi]);
 
   /**
    * Handles the undo functionality by reverting to the previous state of the flow.
@@ -1629,14 +1677,23 @@ export function useFlowBuilder() {
   }, [flow, past, future, handleFlowChange]);
 
   const handleOpenFlow = useCallback(
-    (e: CustomEvent<{ savedID: string; path: string; template: boolean }>) => {
-      const hasPath = e.detail.path !== undefined;
-      const hasSavedID = e.detail.savedID !== undefined;
-      if (!window.horusInternal.isDesktop && !hasPath && !hasSavedID) {
-        setFileProps(serverPickerFlow());
-        setServerFilePickerOpen(true);
+    (props?: { path?: string; savedID?: string; template?: boolean }) => {
+      if (props || !window.horusInternal.isDesktop) {
+        const { path, savedID, template } = props ?? {};
+        const hasPath = path !== undefined;
+        const hasSavedID = savedID !== undefined;
+        if (!window.horusInternal.isDesktop && !hasPath && !hasSavedID) {
+          setFileProps(serverPickerFlow());
+          setServerFilePickerOpen(true);
+        } else {
+          loadFlow({
+            savedID: savedID ?? null,
+            path,
+            template: template,
+          });
+        }
       } else {
-        loadFlow(Object.keys(e.detail).length === 0 ? null : e.detail);
+        loadFlow();
       }
     },
     [loadFlow, serverPickerFlow]
@@ -1646,6 +1703,27 @@ export function useFlowBuilder() {
   // to select the saving folder
   const preHandleSave = useCallback(
     async (comesFromExecuteBlock: boolean = false, flowToSave?: Flow) => {
+      // If the flowBuilder pane is not opened, ask for the flow name if none defined
+      if (!flow.path) {
+        if (!dockApi?.getPanel(PANEL_REGISTRY.flow.id)) {
+          const newName = await horusPrompt("New flow name...");
+
+          if (!newName) {
+            return;
+          }
+
+          if (flowToSave) {
+            flowToSave.name = newName;
+          } else {
+            flowToSave = { ...flow, name: newName };
+          }
+
+          setFileProps(serverPickerFolder(newName));
+          setServerFilePickerOpen(true);
+          return;
+        }
+      }
+
       if (window.horusInternal.mode === "webapp") {
         // On webapp mode, flows are saved on the server
         // The server assigns the path, therefore we do not need to open the file picker
@@ -1797,20 +1875,6 @@ export function useFlowBuilder() {
   }, [flow.blocks, moveBlocksPan, setScale]);
 
   function handleMouseUp(element: MouseEvent) {
-    const canvas = document.getElementById(DroppableEntity.CANVAS);
-
-    if (!canvas) {
-      return;
-    }
-
-    const canvasRect = canvas.getBoundingClientRect();
-
-    // Set the mouse position to the current position
-    mousePos.current = {
-      x: element.clientX - canvasRect.left,
-      y: element.clientY - canvasRect.top,
-    };
-
     setIsPanning(false);
     document.onselectstart = function () {
       return true;
@@ -2016,115 +2080,89 @@ export function useFlowBuilder() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flow.path, preHandleSave]);
 
-  const handleMoleculeChange = useCallback(() => {
-    // If we are on a new flow or the flow is active return
-    if (isFlowActive) {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!dockApi) {
       return;
     }
 
-    if (!flow.savedID || !flow.path) {
-      // For new flows, allow to set unsaved if we added 1 molecule
-      const molecules = window.molstar.structures();
-      const smiles = window.smiles?.getSmilesList() ?? [];
-      if (molecules.length > 0 || smiles.length > 0) {
-        setSaved(false);
-      }
-    } else {
-      setSaved(false);
+    const urlProps = new URLSearchParams(location.search);
+
+    if (!urlProps.has("open")) {
+      return;
     }
-  }, [flow.savedID, flow.path, isFlowActive]);
 
-  // Remove the event listeners
-  const removeListeners = useCallback(() => {
-    window.removeEventListener("newFlow", handleNewFlow);
+    if (urlProps.get("flowID") === "open" || !urlProps.has("flowID")) {
+      handleOpenFlow();
+    } else {
+      handleOpenFlow({
+        savedID: urlProps.get("flowID") ?? undefined,
+        path: urlProps.get("path") ?? undefined,
+        template: !!urlProps.get("template"),
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search, dockApi]);
 
-    // @ts-ignore
-    window.removeEventListener("openFlow", handleOpenFlow);
-    // @ts-ignore
-    window.removeEventListener("saveFlow", preHandleSave);
-    window.removeEventListener("saveFlowAs", handleSaveAs);
-    window.removeEventListener("saveTemplate", handleSaveTemplate);
-    window.removeEventListener("centerView", centerView);
-    window.removeEventListener("resetFlow", resetFlow);
-    window.removeEventListener("pauseFlow", pauseFlow);
+  useEffect(() => {
+    const moleculeChangeListener = () => {
+      setFlow((currentFlow) => {
+        return {
+          ...currentFlow,
+          status: FlowStatus.UNSAVED,
+        };
+      });
+    };
 
-    window.removeEventListener("undo", handleUndo);
-    window.removeEventListener("redo", handleRedo);
-    window.removeEventListener("toggleFileExplorer", toggleFileExplorer);
+    const updateMousePos = (e: MouseEvent) => {
+      // Get the bounding box of the div
+      const div = document.getElementById(
+        GLOBAL_IDS.FLOW_BUILDER_DIV
+      ) as HTMLDivElement;
 
-    window.removeEventListener(MolstarEvents.STATE, handleMoleculeChange);
-    window.removeEventListener(SmilesEvents.STATE, handleMoleculeChange);
-  }, [
-    handleNewFlow,
-    handleOpenFlow,
-    preHandleSave,
-    handleSaveAs,
-    handleSaveTemplate,
-    centerView,
-    resetFlow,
-    pauseFlow,
-    handleUndo,
-    handleRedo,
-    handleMoleculeChange,
-  ]);
+      if (!div) {
+        return;
+      }
 
-  const addListeners = useCallback(() => {
-    // Add an event listeners for flow control
-    window.addEventListener("undo", handleUndo);
-    window.addEventListener("redo", handleRedo);
+      const rect = div.getBoundingClientRect();
 
-    // Add an event listener to clear all the state when the "New" button is clicked in the toolbar
-    window.addEventListener("newFlow", handleNewFlow);
+      // Calculate the center of the div
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
 
-    // Add an event listener to open a flow when the "Open" button is clicked in the toolbar
-    // @ts-ignore
-    window.addEventListener("openFlow", handleOpenFlow);
+      // Calculate the relative mouse position
+      const relativeX = e.clientX - centerX; // X relative to the center
+      const relativeY = e.clientY - centerY; // Y relative to the center
 
-    // Add an event listener to save a flow when the "Save" button is clicked in the toolbar
-    // @ts-ignore
-    window.addEventListener("saveFlow", preHandleSave);
+      // Update the mouse position+
+      mousePos.current = {
+        x: relativeX,
+        y: relativeY,
+      };
+    };
 
-    // Add an event listener to save a flow when the "Save As.." button is clicked in the toolbar
-    window.addEventListener("saveFlowAs", handleSaveAs);
+    // Add a listener for tracking the mouse position
+    window.addEventListener("mousemove", updateMousePos);
 
-    // Add an event listener to save a flow as a template
-    window.addEventListener("saveTemplate", handleSaveTemplate);
+    // Add the molecules listener
+    window.addEventListener(MolstarEvents.STATE, moleculeChangeListener);
+    window.addEventListener(SmilesEvents.STATE, moleculeChangeListener);
 
-    // Add an event listener for the center view button
-    window.addEventListener("centerView", centerView);
+    return () => {
+      // Remove the mouse position listener
+      window.removeEventListener("mousemove", updateMousePos);
 
-    // Add an event listener for the reset flow button
-    window.addEventListener("resetFlow", resetFlow);
-
-    // Add an event listener for the pause flow button
-    window.addEventListener("pauseFlow", pauseFlow);
-
-    // Event for the fileExplorer
-    window.addEventListener("toggleFileExplorer", toggleFileExplorer);
-
-    // Event for the molecules state
-    window.addEventListener(MolstarEvents.STATE, handleMoleculeChange);
-
-    // Event for the molecules state
-    window.addEventListener(SmilesEvents.STATE, handleMoleculeChange);
-  }, [
-    handleUndo,
-    handleRedo,
-    handleNewFlow,
-    handleOpenFlow,
-    preHandleSave,
-    handleSaveAs,
-    handleSaveTemplate,
-    centerView,
-    pauseFlow,
-    resetFlow,
-    handleMoleculeChange,
-  ]);
+      // Remove the molecules listener
+      window.removeEventListener(MolstarEvents.STATE, moleculeChangeListener);
+      window.removeEventListener(SmilesEvents.STATE, moleculeChangeListener);
+    };
+  }, []);
 
   useEffect(() => {
     // Update the window.horus.getFlow function
     window.horus.getFlow = () => {
-      return { ...flow, saved: saved };
+      return flow;
     };
 
     // Update the window.horus.setFlow function
@@ -2132,31 +2170,74 @@ export function useFlowBuilder() {
       setFlow(flow);
     };
 
-    // When the socket.io connects, we need to join the flow room
-    // In case the server was lost, socket.io will try to reconnect
-    // therefore we need to join the room again so that the flow is always
-    // updated
-
-    // Update the flow event listeners
-    removeListeners();
-    addListeners();
-
-    // Clean the event listener when the component is unmounted
-    return () => {
-      removeListeners();
+    // Add a new function to store extraData to the flow
+    window.horus.setExtraData = (key: string, value: any) => {
+      setFlow((currentFlow) => {
+        return {
+          ...currentFlow,
+          extraData: {
+            ...currentFlow.extraData,
+            [key]: value,
+          },
+        };
+      });
     };
-  }, [flow, scale, saved, addListeners, removeListeners]);
+
+    // Add a new function to get extraData from the flow
+    window.horus.getExtraData = (key: string) => {
+      return flow.extraData?.[key];
+    };
+  }, [flow]);
+
+  const updateBlockLogs = useCallback(
+    (logs: LogsData) => {
+      const { blockID, placedID, message } = logs;
+
+      setFlow((currentFlow) => {
+        return {
+          ...currentFlow,
+          blocks: currentFlow.blocks.map((b) => {
+            if (blockID === b.id && placedID === b.placedID) {
+              b.blockLogs += message;
+
+              // Update the params if the blocklogs panel is opened
+              const panel = dockApi?.getPanel(blockLogsPanelID(b));
+
+              panel?.api.updateParameters({ block: b });
+            }
+            return b;
+          }),
+        };
+      });
+    },
+    [dockApi]
+  );
+
+  // Setup a socket listener for the "blockLogs" event
+  useEffect(() => {
+    socket.on("blockLogs", updateBlockLogs);
+    return () => {
+      socket.off("blockLogs", updateBlockLogs);
+    };
+  }, [updateBlockLogs]);
 
   // Fetch the remotes only one time after the component is mounted
   useEffect(() => {
+    async function fetchRemotes() {
+      const response = await horusGet("/api/remotes/names");
+      const data = await response.json();
+
+      if (!data.ok) {
+        await horusAlert(data.msg);
+        return;
+      }
+
+      setRemotesOptions(data.remotes);
+    }
+
     fetchRemotes();
 
-    // When the component unmounts, set the flow as "saved" to prevent bugs when opening new ones
-    return () => {
-      setSaved(true);
-    };
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line
   }, []);
 
   return {
@@ -2176,6 +2257,20 @@ export function useFlowBuilder() {
       stopFlow,
       centerView,
       handleScaleChange,
+    },
+    shortcuts: {
+      stopFlow,
+      handleUndo,
+      handleRedo,
+      handleNewFlow,
+      handleOpenFlow,
+      preHandleSave,
+      handleSaveAs,
+      handleSaveTemplate,
+      centerView,
+      pauseFlow,
+      resetFlow,
+      toggleFileExplorer,
     },
     block: {
       connectingVariable,
@@ -2198,7 +2293,6 @@ export function useFlowBuilder() {
       handleMouseDown,
       handleMousePan,
       handleMouseUp,
-      handleMouseMove,
       handleDragOver,
       handleDrop,
       handleDragDropEnd,
@@ -2215,6 +2309,57 @@ export function useFlowBuilder() {
       setShowFileExplorer,
     },
   };
+}
+
+async function applyActions(flow: Flow) {
+  // Apply any pending MolstarAPI actions if present
+  let hasToUpdate = false;
+  if (flow.pendingActions && flow.pendingActions.length > 0) {
+    hasToUpdate = true;
+
+    // Open the Mol* panel if not already open
+    let tries = 0;
+    while (!window?.molstar?.plugin?.isInitialized && tries < 10) {
+      window?.horus?.openPanel?.("molstar");
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      tries++;
+    }
+    for (const action of flow.pendingActions) {
+      await window.molstar?.applyAction(action);
+    }
+  }
+
+  if (flow.pendingSmilesActions && flow.pendingSmilesActions.length > 0) {
+    hasToUpdate = true;
+
+    // Open the Smiles panel if not already open
+    let tries = 0;
+    while (!window?.smiles && tries < 10) {
+      window?.horus?.openPanel?.("smiles");
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      tries++;
+    }
+
+    for (const action of flow.pendingSmilesActions) {
+      await window.smiles?.applyAction(action);
+    }
+  }
+
+  if (flow.pendingExtensions && flow.pendingExtensions.length > 0) {
+    hasToUpdate = true;
+    for (const action of flow.pendingExtensions) {
+      await window.horus?.addExtensions?.({...action, bypass: true});
+    }
+  }
+
+  return hasToUpdate;
+}
+
+export function useFlowShortcuts() {
+  const { shortcuts } = useContext(FlowBuilderContext)!;
+
+  return shortcuts;
 }
 
 export type FlowBuilderHooks = ReturnType<typeof useFlowBuilder>;

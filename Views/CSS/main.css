@@ -13,6 +13,14 @@ html {
   overflow: hidden;
 }
 
+div {
+  user-select: none;
+}
+
+.monaco-editor div {
+  user-select: auto;
+}
+
 div[role="block-grab"] {
   cursor: grab;
 }
@@ -22,11 +30,11 @@ div[role="block-grabbing"] {
 }
 
 div[role="button"] {
-  cursor: auto;
+  cursor: pointer;
 }
 
 button {
-  cursor: default;
+  cursor: pointer;
 }
 
 /* Disable any outline for all inputs */
@@ -260,30 +268,6 @@ select:hover {
   border: 2px solid #ccc;
   color: #fff;
   cursor: not-allowed;
-}
-
-.app-button {
-  cursor: default !important;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  outline: none;
-  height: 1.75rem;
-  /* margin-top: 0.1rem; */
-  padding: 0.5rem;
-  align-items: center;
-  justify-content: left;
-  display: flex;
-  flex-direction: row;
-  /* Animate the background when hovering */
-  transition: background 0.2s ease-in-out;
-  /* margin-bottom: 0.3rem; */
-}
-
-/* Change the font size of the app-button if the screen space is low */
-@media (max-width: 900px) {
-  .app-button {
-    font-size: 0.8rem;
-  }
 }
 
 .flow-status {

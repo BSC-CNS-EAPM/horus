@@ -17,7 +17,7 @@ def checkPathIsFolder(block: InputBlock):
 
     if block.remote.name != "Local":
         try:
-            block.remote.remoteCommand("test -d " + folderVariableValue)
+            block.remote.command("test -d " + folderVariableValue)
         except Exception:
             print(f"Provided path '{folderVariableValue}' is not a folder on the remote server.")
     elif not os.path.exists(folderVariableValue) and not os.path.isdir(folderVariableValue):
@@ -33,4 +33,6 @@ folderBlock = InputBlock(
     action=checkPathIsFolder,
     variable=folderVariable,
     id="folder",
+            category="Files"
+
 )

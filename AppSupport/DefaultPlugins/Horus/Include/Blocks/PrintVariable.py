@@ -55,4 +55,5 @@ printBlock = PluginBlock(
     variables=[customMessage, printBlockPlacedID],
     outputs=[outputVariable],
     id="print_variable",
+    category="Misc"
 )

@@ -14,4 +14,5 @@ sphereBlock = InputBlock(
     action=None,
     variable=sphereVariable,
     id="sphere",
+    category="Structures"
 )
