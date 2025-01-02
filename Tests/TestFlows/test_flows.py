@@ -737,7 +737,7 @@ def test_flow_run_flow_post_full_app(plugin_manager):
             output = p.stdout.read()
 
             if (
-                "You must have either QT or GTK with Python extensions installed in order to use pywebview"
+                "Failed to start the window management system."
                 in output
             ):
                 import warnings
