@@ -37,7 +37,7 @@ def test_checkPlugin():
         )
     try:
         # Call the _checkPlugin function
-        plugin = pluginManager._checkPlugin(pluginDir)
+        plugin = pluginManager._checkPlugin(os.path.abspath(pluginDir))
     except Exception as e:
         raise e
     finally:
@@ -166,7 +166,7 @@ def test_install_plugin_load_failure(mocker):
         )
 
     try:
-        pluginManager._checkPlugin(pluginDir)
+        pluginManager._checkPlugin(os.path.abspath(pluginDir))
 
         # If the plugin is valid, raise an exception
         raise Exception(
@@ -326,7 +326,7 @@ def test_install_dep_internal_frozen_app(mocker):
 
 
 # Create a mock plugin file
-pluginDir = "Tests/TestPluginManager/Plugins/"
+pluginDir = os.path.abspath("Tests/TestPluginManager/Plugins/")
 
 
 def test_no_dependencies_install(mocker):

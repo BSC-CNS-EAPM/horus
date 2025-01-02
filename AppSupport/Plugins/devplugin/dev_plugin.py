@@ -150,9 +150,7 @@ plugin.addBlock(openExtensionBlock)
 
 def noInputBlockAction(block: PluginBlock):
     print("this block has no inputs: ", block.inputs)
-    print(
-        "This block has no input groups: ", block.selectedInputGroup, block._inputGroups
-    )
+    print("This block has no input groups: ", block.selectedInputGroup, block._inputGroups)
     print("This block has no variables: ", block.variables)
     print("This block has no outputs: ", block.outputs)
 
@@ -252,9 +250,7 @@ def molviewSpecAciton(block: PluginBlock):
     mvs = mol.mvs
     builder = mvs.create_builder()
     (
-        builder.download(
-            url="https://www.ebi.ac.uk/pdbe/entry-files/download/1cbs_updated.cif"
-        )
+        builder.download(url="https://www.ebi.ac.uk/pdbe/entry-files/download/1cbs_updated.cif")
         .parse(format="mmcif")
         .assembly_structure(assembly_id="1")
         .component()
@@ -350,13 +346,15 @@ sleep {timeToWait}
 
     print("Job ID: ", jobID)
 
-    block.setOutput("time_to_wait", timeToWait)
-
 
 def finalTestSlurmBlockAction(block: SlurmBlock):
     print("Test slurm block final action")
 
     print("Status of slurm job: ", block.status)
+
+    timeToWait = int(block.inputs.get("timeToWait", 0) or 0)
+
+    block.setOutput("time_to_wait", timeToWait)
 
 
 slurmBlockTest = SlurmBlock(
@@ -381,9 +379,28 @@ slurmBlockTest = SlurmBlock(
         )
     ],
     id="slurm_block_test",
-        category="Slurm",
-
+    category="Slurm",
 )
+
+
+def multipleSlurmTest(block: SlurmBlock):
+    print("sending 1")
+    testSlurmBlockAction(block)
+
+    print("Sending 2")
+    testSlurmBlockAction(block)
+
+
+multipleSlurmTestBlock = SlurmBlock(
+    name="Multiple slurm block test",
+    description="Slurm block test",
+    initialAction=multipleSlurmTest,
+    inputs=[timeToWaitVar],
+    finalAction=lambda block: None,
+    category="Slurm",
+)
+
+plugin.addBlock(multipleSlurmTestBlock)
 
 
 def testSlurmBlockFailedAction(block: SlurmBlock):
@@ -470,9 +487,7 @@ def testExtensionsShortcuts(block: PluginBlock):
 
     Extensions().loadHTML(html, title="Some HTML")
 
-    block.setOutput(
-        extension_output_variable.id, block.inputs[extension_input_variable.id]
-    )
+    block.setOutput(extension_output_variable.id, block.inputs[extension_input_variable.id])
 
 
 def finalAction(block: PluginBlock):
@@ -835,7 +850,7 @@ fail_on_even_block = PluginBlock(
     action=fail_on_even_action,
     inputs=[input_output_even],
     outputs=[input_output_even],
-    category="Other blocks"
+    category="Other blocks",
 )
 
 plugin.addBlock(fail_on_even_block)
@@ -870,8 +885,7 @@ dirty_block_block = PluginBlock(
     action=dirty_block,
     inputs=[input_output_even],
     outputs=[input_output_even],
-        category="Other blocks"
-
+    category="Other blocks",
 )
 
 plugin.addBlock(dirty_block_block)
@@ -956,8 +970,7 @@ multiple_list_block = PluginBlock(
         multiple_allowed_list,
         # unallowed_variable_list,
     ],
-        category="Other blocks"
-
+    category="Other blocks",
 )
 
 plugin.addBlock(multiple_list_block)

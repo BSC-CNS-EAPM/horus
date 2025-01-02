@@ -959,7 +959,10 @@ class Flow:
                 # Raise again a special "ErrorRunningBlock" exception
                 raise ErrorRunningBlock(blockToRun, str(exc)) from exc
 
-            if blockToRun.status != SlurmBlock.Status.COMPLETED:
+            if (
+                blockToRun.status != SlurmBlock.Status.COMPLETED
+                and blockToRun.status != SlurmBlock.Status.IDLE
+            ):
                 if blockToRun.failOnSlurmError:
                     self.currentExecuting = None
                     raise ErrorRunningBlock(

@@ -656,27 +656,27 @@ class RemotesAPI:
         if self._flowSavedID not in queue:
             queue[self._flowSavedID] = []
 
-        # Update the list of jobs for the flow
-        # only if there is not a job for the same remote / block / jobID
-        remove_index = []
-        for index, currentQueue in enumerate(queue[self._flowSavedID]):
-            if (
-                currentQueue["remote"] == self.remoteName
-                and currentQueue["jobID"] == jobID
-                and currentQueue["blockPlacedID"] == self._blockPlacedID
-            ):
-                logging.getLogger("Horus").error(
-                    "Trying to append an already existing job to the internal job queue. This may result in errors."
-                )
+        # # Update the list of jobs for the flow
+        # # only if there is not a job for the same remote / block / jobID
+        # remove_index = []
+        # for index, currentQueue in enumerate(queue[self._flowSavedID]):
+        #     if (
+        #         currentQueue["remote"] == self.remoteName
+        #         and currentQueue["jobID"] == jobID
+        #         and currentQueue["blockPlacedID"] == self._blockPlacedID
+        #     ):
+        #         logging.getLogger("Horus").error(
+        #             "Trying to append an already existing job to the internal job queue. This may result in errors."
+        #         )
 
-            # Remove any entry with the same blockPlacedID to only have 1 jobID per block
-            if currentQueue["blockPlacedID"] == self._blockPlacedID:
-                remove_index.append(index)
-                # queue[self._flowSavedID].pop(index)
+        #     # Remove any entry with the same blockPlacedID to only have 1 jobID per block
+        #     if currentQueue["blockPlacedID"] == self._blockPlacedID:
+        #         remove_index.append(index)
+        #         # queue[self._flowSavedID].pop(index)
 
-        queue[self._flowSavedID] = [
-            q for i, q in enumerate(queue[self._flowSavedID]) if i not in remove_index
-        ]
+        # queue[self._flowSavedID] = [
+        #     q for i, q in enumerate(queue[self._flowSavedID]) if i not in remove_index
+        # ]
 
         queue[self._flowSavedID].append(
             {
@@ -766,20 +766,13 @@ class RemotesAPI:
 
         return True
 
-    def getRemoteBlockStatus(self, flowSavedID: str, blockPlacedID: int) -> str:
-        """
-        Returns the status of a remote block (running, queued, failed, completed)
-
-        :param flowSavedID: The ID of the flow.
-        :param blockPlacedID: The placed ID of the block.
-        """
-
+    def _getJobsStatus(self, flowSavedID: str, blockPlacedID: int):
         # Get the status of the job
         queue = self.readQueue()
 
         jobs = queue.get(flowSavedID, None)
 
-        if jobs is None:
+        if jobs is None or len(jobs) == 0:
             # The slurm block did not send any job to a slurm queue
             # returning COMPLETED will make the SlurmBlock to execute
             # its finalAction function.
@@ -791,9 +784,16 @@ class RemotesAPI:
             jobID = None
             if job["blockPlacedID"] == blockPlacedID:
                 jobID = job["jobID"]
+            else:
+                continue
 
             if jobID is None:
                 statuses.append("COMPLETED")
+                continue
+
+            # Do not check blocks that are not running
+            if job["status"] != "RUNNING" and job["status"] != "PENDING":
+                statuses.append(job["status"])
                 continue
 
             # Get the job status
@@ -804,6 +804,18 @@ class RemotesAPI:
 
             # Append the status
             statuses.append(status)
+
+        return statuses
+
+    def getRemoteBlockStatus(self, flowSavedID: str, blockPlacedID: int) -> str:
+        """
+        Returns the status of a remote block (running, queued, failed, completed)
+
+        :param flowSavedID: The ID of the flow.
+        :param blockPlacedID: The placed ID of the block.
+        """
+
+        statuses = self._getJobsStatus(flowSavedID, blockPlacedID)
 
         # If any of the jobs is out of memory, return OUT_OF_ME
         if any([s == "OUT_OF_ME" for s in statuses]):
@@ -867,30 +879,11 @@ class RemotesAPI:
         return time
 
     def getRemoteBlockLogs(
-        self, flowSavedID: str, blockPlacedID: int
+        self, jobID: int
     ) -> tuple[t.Union[str, None], t.Union[str, None], t.Union[str, None]]:
         """
         Retrieves from slurm the stdout, stderr and the detailed status
         """
-
-        # Get the status of the job
-        queue = self.readQueue()
-        jobs = queue.get(flowSavedID, None)
-
-        if jobs is None:
-            # The slurm block did not send any job to a slurm queue
-            # returning COMPLETED will make the SlurmBlock to execute
-            # its finalAction function.
-            return (None, None, None)
-
-        for job in jobs:
-            # Get the jobID
-            jobID = None
-            if job["blockPlacedID"] == blockPlacedID:
-                jobID = job["jobID"]
-
-        if jobID is None:
-            return (None, None, None)
 
         stdout = self._getSlurmStd("StdOut", jobID)
         stderr = self._getSlurmStd("StdErr", jobID)
@@ -1003,10 +996,7 @@ class RemotesAPI:
         if jobs is None:
             return None
 
-        for job in jobs:
-            # Get the jobID
-            if job["blockPlacedID"] == blockPlacedID:
-                return job["jobID"]
+        return [j["jobID"] for j in jobs if j["blockPlacedID"] == blockPlacedID]
 
     def getJobStatus(self, jobID: int):
         """
@@ -1156,6 +1146,33 @@ class RemotesAPI:
 
         with open(self.queueStoragePath, "w", encoding="utf-8") as file:
             json.dump(queue, file, indent=4)
+
+    def deleteJobsForBlock(self, flowID: str, blockPlacedID: int):
+        """
+        Delete jobs for a block.
+
+        :param blockID: The ID of the block.
+        """
+
+        # Read the queue
+        queue = self.readQueue()
+
+        # Delete the jobs from the queue storage
+        try:
+            q = queue[flowID]
+
+            newQ = []
+            for job in q:
+                if job["blockPlacedID"] != blockPlacedID:
+                    newQ.append(job)
+
+            # Update the flow queue
+            queue[flowID] = newQ
+
+            # Save the queue storage
+            self.writeQueue(queue)
+        except KeyError:
+            pass
 
     def deleteFlowFromQueue(self, flowID: str):
         """

@@ -113,9 +113,14 @@ class PluginManager(metaclass=HorusSingleton):
         appSupportDir: typing.Optional[str] = None,
     ):
         if appSupportDir is None:
-            raise Exception("AppSupport directory not provided in PluginManager init call.")
 
-        self.appSupportDir = appSupportDir
+            from App import AppDelegate
+
+            self.appSupportDir = AppDelegate().appSupportDir
+
+            # raise Exception("AppSupport directory not provided in PluginManager init call.")
+        else:
+            self.appSupportDir = appSupportDir
 
         # Get the plugins and dependencies directory
         self._pluginsDepsDir()
@@ -784,9 +789,16 @@ class PluginManager(metaclass=HorusSingleton):
             if depsDir is not None and pluginMeta.get("dependencies", None):
                 self._installDependencies(pluginMeta, pluginDir)
 
-            return PluginDeps.subprocessCall(
-                self._internalLoadPluginInModule, pluginPath, entryPoint
-            )
+            orDir = os.getcwd()
+            try:
+                pluginDirPath = os.path.dirname(pluginPath)
+                os.chdir(pluginDirPath)
+                return PluginDeps.subprocessCall(
+                    self._internalLoadPluginInModule, pluginPath, entryPoint
+                )
+            finally:
+                # Change the directory back
+                os.chdir(orDir)
 
     def assertPluginValidForThisPlatform(
         self,
@@ -840,46 +852,36 @@ class PluginManager(metaclass=HorusSingleton):
         """
 
         # Load the plugin file and obtain the plugin variable
-        pluginPath = os.path.abspath(pluginPath)
-        pluginDirPath = os.path.dirname(pluginPath)
         spec = importlib.util.spec_from_file_location("pluginFile", pluginPath)
         if spec is None:
             raise Exception(f"Failed to create module spec for {entryPoint}")
 
-        orDir = os.getcwd()
-        try:
-            # Change the directory to the plugin directory
-            os.chdir(pluginDirPath)
+        # Read and load the python file
+        pluginModule = importlib.util.module_from_spec(spec)
 
-            # Read and load the python file
-            pluginModule = importlib.util.module_from_spec(spec)
+        # Load the entry point
+        spec.loader.exec_module(pluginModule)  # type: ignore
 
-            # Load the entry point
-            spec.loader.exec_module(pluginModule)  # type: ignore
+        # Check that the plugin variable exists
+        if not hasattr(pluginModule, "plugin"):
+            raise Exception("The plugin has not declared a plugin variable.")
 
-            # Check that the plugin variable exists
-            if not hasattr(pluginModule, "plugin"):
-                raise Exception("The plugin has not declared a plugin variable.")
+        # Check that the plugin variable is a Plugin instance
+        if not isinstance(pluginModule.plugin, Plugin):
+            raise Exception("The plugin does not contain a valid plugin instance.")
 
-            # Check that the plugin variable is a Plugin instance
-            if not isinstance(pluginModule.plugin, Plugin):
-                raise Exception("The plugin does not contain a valid plugin instance.")
+        # Check that the plugin variable has a name
+        if not pluginModule.plugin.pluginMeta.name:
+            raise Exception("The plugin does not have a valid name.")
 
-            # Check that the plugin variable has a name
-            if not pluginModule.plugin.pluginMeta.name:
-                raise Exception("The plugin does not have a valid name.")
+        # Check if the plugin is a default plugin
+        if pluginPath.startswith(self.defaultPluginsDir):
+            pluginModule.plugin.default = True
+        else:
+            pluginModule.plugin.default = False
 
-            # Check if the plugin is a default plugin
-            if pluginPath.startswith(self.defaultPluginsDir):
-                pluginModule.plugin.default = True
-            else:
-                pluginModule.plugin.default = False
-
-            # Return the loaded plugin instace
-            return pluginModule.plugin
-        finally:
-            # Change the directory back
-            os.chdir(orDir)
+        # Return the loaded plugin instace
+        return pluginModule.plugin
 
     def _installDependencies(self, pluginMeta: typing.Dict[str, str], pluginPath: str):
         """
@@ -1226,8 +1228,9 @@ class PluginManager(metaclass=HorusSingleton):
         Method specific for running the block through the Flow class.
         """
 
-        # Clean the block logs
-        block.blockLogs = ""
+        # Clean the block logs, except if its second slurm
+        if not isFirstSlurm:
+            block.blockLogs = ""
 
         logging.getLogger("Horus").info("Executing block %s", block.id)
 
@@ -1291,6 +1294,10 @@ class PluginManager(metaclass=HorusSingleton):
             # we need to skip the first execution of the block
             if block.status != block.Status.IDLE and isFirstSlurm:
                 return
+
+            # If is first slurm, remove from the remote manager queue all of the jobIDs that were submitted for this block
+            if isFirstSlurm and rAPI:
+                rAPI.deleteJobsForBlock(flowID, block._placedID if block._placedID else 1)
 
         # Execute the block
         error = False
