@@ -7,6 +7,9 @@ import { FlowStatusView } from "../../FlowStatus/flow_status";
 // TS types
 import { Block, BlockTypes, FlowStatus } from "../flow.types";
 import { HorusLazyLog } from "../../HorusLazyLog/HorusLazyLog";
+import { HorusViewTabs, Tab } from "@/Components/Tabs";
+import { ReactNode } from "react";
+import LogFile from "@/Components/Toolbar/Icons/LogFile";
 
 type BlockLogsViewProps = {
   block: Block;
@@ -38,10 +41,81 @@ function RegularBlockLogs({ block }: { block: Block }) {
 }
 
 function SlurmOutputModalView({ block }: { block: Block }) {
+  const tabs = () => {
+    const t: { [key: string]: Tab } = {};
+
+    t["logs"] = {
+      title: "Block",
+      icon: <LogFile />,
+      view: <RegularBlockLogs block={block} />,
+    };
+
+    block.jobID?.forEach((jobID) => {
+      const words = block.detailedStatus?.[jobID]?.split(" ");
+      let status = words?.find((word) => word.startsWith("JobState="));
+      status = status?.split("=")[1] ?? "Unknown";
+
+      const parsedStatus = () => {
+        // We need to use a different flow status for slurm
+        // because for the IDLE we do not want to use the "Saved" status
+        switch (status) {
+          case "COMPLETED":
+            return <FlowStatusView status={FlowStatus.FINISHED} />;
+          case "FAILED":
+            return <FlowStatusView status={FlowStatus.ERROR} />;
+          case "PENDING":
+            return <FlowStatusView status={FlowStatus.QUEUED} />;
+          case "RUNNING":
+            return <FlowStatusView status={FlowStatus.RUNNING} />;
+          case "CANCELLED":
+            return <FlowStatusView status={FlowStatus.STOPPED} />;
+          default:
+            return <div className="font-semibold">Status: {status} </div>;
+        }
+      };
+
+      const statusNode = parsedStatus();
+
+      t[jobID] = {
+        title: `${jobID}`,
+        icon: statusNode,
+        view: (
+          <SingleSlurmJobView
+            block={block}
+            jobID={jobID}
+            detailedStatus={block.detailedStatus?.[jobID]}
+            status={statusNode}
+            stdOut={block.stdOut?.[jobID]}
+            stdErr={block.stdErr?.[jobID]}
+          />
+        ),
+      };
+    });
+    return t;
+  };
+
+  return <HorusViewTabs tabs={tabs()} />;
+}
+
+function SingleSlurmJobView({
+  block,
+  jobID,
+  status,
+  detailedStatus,
+  stdOut,
+  stdErr,
+}: {
+  block: Block;
+  jobID: number;
+  status: ReactNode;
+  detailedStatus?: string;
+  stdOut?: string;
+  stdErr?: string;
+}) {
   const groupedViews: Record<string, React.ReactNode[]> = {};
 
   const worldList = () => {
-    const words = block?.detailedStatus?.split(" ");
+    const words = detailedStatus?.split(" ");
     return (
       <div>
         {words?.map((word) => {
@@ -62,28 +136,7 @@ function SlurmOutputModalView({ block }: { block: Block }) {
     );
   };
 
-  const parsedStatus = () => {
-    // We need to use a different flow status for slurm
-    // because for the IDLE we do not want to use the "Saved" status
-    switch (block.status) {
-      case "COMPLETED":
-        return <FlowStatusView status={FlowStatus.FINISHED} />;
-      case "FAILED":
-        return <FlowStatusView status={FlowStatus.ERROR} />;
-      case "PENDING":
-        return <FlowStatusView status={FlowStatus.QUEUED} />;
-      case "RUNNING":
-        return <FlowStatusView status={FlowStatus.RUNNING} />;
-      case "CANCELLED":
-        return <FlowStatusView status={FlowStatus.STOPPED} />;
-      default:
-        return <div className="font-semibold">Status: {block.status} </div>;
-    }
-  };
-
   const getGroupedVariables = () => {
-    groupedViews["Block logs"] = [<RegularBlockLogs block={block} />];
-
     groupedViews["Slurm status"] = [
       <div
         className="flex flex-row gap-2 flex-wrap p-2"
@@ -120,8 +173,8 @@ function SlurmOutputModalView({ block }: { block: Block }) {
       >
         {block.stdOut ? (
           <HorusLazyLog
-            logText={block.stdOut}
-            filename={`${block.id}-${block.placedID}-slurm.out`}
+            logText={stdOut ?? ""}
+            filename={`${block.id}-${block.placedID}-${jobID}-slurm.out`}
           />
         ) : (
           <span className="text-center w-full grid place-items-center h-full">
@@ -145,8 +198,8 @@ function SlurmOutputModalView({ block }: { block: Block }) {
       >
         {block.stdErr ? (
           <HorusLazyLog
-            logText={block.stdErr}
-            filename={`${block.id}-${block.placedID}-slurm.err`}
+            logText={stdErr ?? ""}
+            filename={`${block.id}-${block.placedID}-${jobID}-slurm.err`}
           />
         ) : (
           <span className="text-center w-full grid place-items-center h-full">
@@ -169,11 +222,9 @@ function SlurmOutputModalView({ block }: { block: Block }) {
               color: "var(--digital-grey-IV)",
             }}
           >
-            {block.name} - {block.jobID ?? "No job ID"}
+            {block.name} - {jobID ?? "No job ID"}
           </div>
-          <div className="flex flex-row gap-4 items-center">
-            {parsedStatus()}
-          </div>
+          <div className="flex flex-row gap-4 items-center">{status}</div>
         </div>
         <hr className="my-4 p-0"></hr>
       </div>

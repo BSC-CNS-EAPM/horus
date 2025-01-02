@@ -173,11 +173,19 @@ export type Block = {
   variableConnectionsReference: Array<VariableConnection>;
 
   // Slurm blocks
-  waitingForJob: boolean;
   status: string;
-  stdOut?: string;
-  stdErr?: string;
-  detailedStatus?: string;
+  waitingForJob: boolean;
+  jobStatus: {
+    [key: number]: string;};
+  stdOut?: {
+    [key: number]: string;};
+
+  stdErr?: {
+    [key: number]: string;
+  };
+  detailedStatus?: {
+    [key: number]: string;
+  };
   jobID: Array<number>;
 
   // Remote connection

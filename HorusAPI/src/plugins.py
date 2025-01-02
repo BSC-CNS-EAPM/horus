@@ -47,13 +47,15 @@ class PluginRemote:
         """
         Deprecated. Use command instead.
         """
-        
+
         print("WARNING: remoteCommand is deprecated. Use command instead.")
         print("If you are not the developer of this plugin, ignore this warning.")
 
         return self.command(command, timeout)
-    
-    def command(self, command: str, timeout: typing.Optional[int] = None, forceLocal: bool = False):
+
+    def command(
+        self, command: str, timeout: typing.Optional[int] = None, forceLocal: bool = False
+    ):
         """
         Executes a command on the remote.
         The output of the command will be returned.
@@ -1728,7 +1730,7 @@ class PluginBlock:
             "time": self.time,
             "extraData": self.extraData,
             "dirty": self.dirty,
-            "category": self.category
+            "category": self.category,
         }
 
     def _toDict(self):
@@ -1847,7 +1849,7 @@ class InputBlock(PluginBlock):
         action: typing.Optional[typing.Callable] = None,
         id: typing.Optional[str] = None,
         externalURL: typing.Optional[str] = None,
-        category: typing.Optional[str] = None
+        category: typing.Optional[str] = None,
     ):
         """
         :param name: The name of the block.
@@ -1902,7 +1904,7 @@ class SlurmBlock(PluginBlock):
     one before the job is submitted and one after the job is completed.
     """
 
-    jobID: typing.Optional[int] = None
+    jobID: typing.Optional[list[int]] = None
     """
     The Job ID of the job.
     """
@@ -1957,15 +1959,15 @@ class SlurmBlock(PluginBlock):
     """
     The status of the block.
     """
-    stdOut: typing.Optional[str] = None
+    stdOut: typing.Optional[dict[int, str]] = None
     """
     The standard output a slurm job.
     """
-    stdErr: typing.Optional[str] = None
+    stdErr: typing.Optional[dict[int, str]] = None
     """
     The standard error a slurm job.
     """
-    detailedStatus: typing.Optional[str] = None
+    detailedStatus: typing.Optional[dict[int, str]] = None
     """
     Status and aditional information of a slurm job.
     """
@@ -2022,7 +2024,7 @@ class SlurmBlock(PluginBlock):
             blockType=PluginBlockTypes.SLURM,
             id=id,
             externalURL=externalURL,
-            category=category
+            category=category,
         )
         self.initalAction = initialAction
         self.finalAction = finalAction
@@ -2062,17 +2064,35 @@ class SlurmBlock(PluginBlock):
             # Set also the jobIDs of this block
             self.jobID = self.remote._remote.getJobIDfromBlock(self.flow.savedID, self._placedID)
 
-            # Get Slurm status and logging info
-            try:
-                self.stdOut, self.stdErr, self.detailedStatus = (
-                    self.remote._remote.getRemoteBlockLogs(self.flow.savedID, self._placedID)
-                )
-            except Exception as e:
-                logging.getLogger("Horus").error(
-                    "Could not parse latest SlurmBlock logs: %s", str(e)
-                )
+            if not self.jobID or len(self.jobID) == 0:
+                self.status = self.Status.IDLE
+            else:
+                # Get Slurm status and logging info
+                if not self.stdOut:
+                    self.stdOut = {}
 
-            self.time += self.remote._remote.getRemoteBlockTime(self.flow.savedID, self._placedID)
+                if not self.stdErr:
+                    self.stdErr = {}
+
+                if not self.detailedStatus:
+                    self.detailedStatus = {}
+
+                for j in self.jobID:
+                    try:
+                        stdOut, stdErr, detailedStatus = self.remote._remote.getRemoteBlockLogs(j)
+
+                        self.stdOut[j] = stdOut
+                        self.stdErr[j] = stdErr
+                        self.detailedStatus[j] = detailedStatus
+
+                    except Exception as e:
+                        logging.getLogger("Horus").error(
+                            "Could not parse latest SlurmBlock logs: %s", str(e)
+                        )
+
+                self.time += self.remote._remote.getRemoteBlockTime(
+                    self.flow.savedID, self._placedID
+                )
         except AttributeError as attre:
             logging.getLogger("Horus").error("Could not parse SlurmBlock status: %s", str(attre))
             self.status = self.Status.IDLE
