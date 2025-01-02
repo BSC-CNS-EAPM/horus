@@ -37,7 +37,7 @@ def test_checkPlugin():
         )
     try:
         # Call the _checkPlugin function
-        plugin = pluginManager._checkPlugin(pluginDir)
+        plugin = pluginManager._checkPlugin(os.path.abspath(pluginDir))
     except Exception as e:
         raise e
     finally:
@@ -166,7 +166,7 @@ def test_install_plugin_load_failure(mocker):
         )
 
     try:
-        pluginManager._checkPlugin(pluginDir)
+        pluginManager._checkPlugin(os.path.abspath(pluginDir))
 
         # If the plugin is valid, raise an exception
         raise Exception(
@@ -236,8 +236,8 @@ def test_install_dep_internal_success(mocker):
     assert last_call_kwargs["stderr"] == subprocess.STDOUT
     assert last_call_kwargs["stdin"] == subprocess.DEVNULL
 
-    # Verify that subprocess.Popen was called twice
-    assert subprocess.Popen.call_count == 2  # type: ignore
+    # Verify that subprocess.Popen was called once
+    assert subprocess.Popen.call_count == 1  # type: ignore
 
     del pluginManager
 
@@ -287,7 +287,6 @@ def test_install_dep_internal_frozen_app(mocker):
         # to simulate a successful installation
         mock_popen = mocker.Mock()
         mock_popen.returncode = 0
-        mock_popen.stdout.read.return_value = b"Python 3.9.16"
         mocker.patch("subprocess.Popen", return_value=mock_popen)
 
         # Mock the with ... as ... statement for popen
@@ -301,12 +300,13 @@ def test_install_dep_internal_frozen_app(mocker):
         with pytest.raises(Exception, match="'Mock' object is not iterable"):
             pluginManager._installDepInternal(dep_to_install, deps_dir)
 
+    # With embedded pip the call now is on the meipass (uncompiled is the cwd) + pip/pip
+    pipPath = os.path.join(os.getcwd(), "pip", "pip")
+
     # Check the arguments of the last call to subprocess.Popen
     last_call_args, last_call_kwargs = subprocess.Popen.call_args  # type: ignore
     assert last_call_args[0] == [
-        "python",
-        "-m",
-        "pip",
+        pipPath,
         "install",
         "dep",
         "--prefix",
@@ -319,14 +319,14 @@ def test_install_dep_internal_frozen_app(mocker):
     assert last_call_kwargs["stderr"] == subprocess.STDOUT
     assert last_call_kwargs["stdin"] == subprocess.DEVNULL
 
-    # Verify that subprocess.Popen was called exactly twice
-    assert subprocess.Popen.call_count == 2  # type: ignore
+    # Verify that subprocess.Popen was called exactly once
+    assert subprocess.Popen.call_count == 1  # type: ignore
 
     del pluginManager
 
 
 # Create a mock plugin file
-pluginDir = "Tests/TestPluginManager/Plugins/"
+pluginDir = os.path.abspath("Tests/TestPluginManager/Plugins/")
 
 
 def test_no_dependencies_install(mocker):

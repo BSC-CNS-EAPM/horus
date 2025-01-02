@@ -86,8 +86,10 @@ class TempFile:
     def _tmpDir(self):
         # Assign the path of the tmp folder
         # to the current python working directory
-        tmpName = "tmp"
-        return os.path.join(os.getcwd(), tmpName)
+
+        user_folder = getUserFolder()
+
+        return os.path.join(user_folder, "tmp")
 
     def __repr__(self):
         return self.name
@@ -151,6 +153,22 @@ class TempFile:
         import shutil
 
         shutil.rmtree(self.tmpFolder)
+
+
+def getUserFolder():
+    # On WebApp mode, create the folder in the user's directory
+    from App import AppDelegate
+
+    if AppDelegate().server._isForUser:
+        import flask_login  # type: ignore
+
+        user = flask_login.current_user
+
+        user_folder = user.appSupportDir
+    else:
+        user_folder = AppDelegate().appSupportDir
+
+    return user_folder
 
 
 class ResetRemoteException(Exception):

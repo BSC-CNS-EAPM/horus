@@ -79,4 +79,6 @@ sendDataBlock = PluginBlock(
     action=sendData,
     inputGroups=[fileInputGroup, folderInputGroup],
     id="send_data",
+        category="Files"
+
 )

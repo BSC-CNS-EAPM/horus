@@ -14,4 +14,5 @@ stringBlock = InputBlock(
     action=None,
     variable=inputString,
     id="string",
+    category="Inputs"
 )

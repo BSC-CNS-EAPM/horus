@@ -115,5 +115,16 @@
                 "3000"
             ]
         },
+        {
+            "name": "Debug Tests",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "Tests/",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
     ]
 }

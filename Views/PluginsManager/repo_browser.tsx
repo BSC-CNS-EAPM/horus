@@ -1,11 +1,6 @@
 import { useState } from "react";
-import { SearchComponent } from "../Components/Toolbar/toolbar";
 import { PluginInstallProps } from "./plugin_manager";
-import {
-  useQuery,
-  QueryClient,
-  QueryClientProvider,
-} from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { horusGet } from "../Utils/utils";
 import { HorusPlugin } from "../Components/FlowBuilder/flow.types";
 import RotatingLines from "../Components/RotatingLines/rotatinglines";
@@ -18,20 +13,15 @@ import InfoIcon from "../Components/Toolbar/Icons/Info";
 import CloudDownload from "../Components/Toolbar/Icons/CloudDownload";
 import SettingsIcon from "../Components/Toolbar/Icons/Settings";
 import LogFile from "../Components/Toolbar/Icons/LogFile";
+import { SearchComponent } from "@/Components/Search/Search";
 
 type DatabasePlugin = HorusPlugin & {
   downloads: number;
   latest_version: string;
 };
 
-const queryClient = new QueryClient();
-
 export function PluginBrowserRoot(props: PluginInstallProps) {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <RepoBrowser {...props} />
-    </QueryClientProvider>
-  );
+  return <RepoBrowser {...props} />;
 }
 
 function RepoBrowser(props: PluginInstallProps) {
@@ -98,6 +88,7 @@ function _RepoBrowser(
           onEnter={() => refetch()}
         />
         <AppButton
+          className="min-w-[200px]"
           action={() => {
             const button = document.createElement("a");
             button.target = "_blank";
@@ -170,66 +161,84 @@ function PluginInRepo({
               </AppButton>
             </a>
           </div>
-          <div className="flex flex-col gap-2 h-full">
-            {isInstalled ? (
-              <AppButton
-                disabled={plugin.latest_version === isInstalled.version}
-                className="grid grid-cols-[80px_20px] gap-2"
-                style={{
-                  width: "100px",
-                  color:
-                    isInstalled.version !== plugin.latest_version
-                      ? "orange"
-                      : "green",
-                }}
-                action={() => {
-                  const pluginURL = `pluginID://${plugin.id}`;
-                  onInstall(pluginURL);
-                }}
-              >
-                <span className="font-semibold">
-                  {plugin.latest_version !== isInstalled.version
-                    ? "Update"
-                    : "Installed"}
-                </span>
-                {plugin.latest_version !== isInstalled.version ? (
-                  <ErrorIcon className="w-10 h-10" />
-                ) : (
-                  <CheckMark className="w-10 h-10" />
-                )}
-              </AppButton>
-            ) : (
-              <AppButton
-                className="grid grid-cols-[80px_20px] gap-2"
-                style={{ color: "black", width: "100px" }}
-                action={() => {
-                  const pluginURL = `pluginID://${plugin.id}`;
-                  onInstall(pluginURL);
-                }}
-              >
-                <span className="font-semibold w-[90px]">Install</span>
-                <SettingsIcon className="w-10 h-10" />
-              </AppButton>
-            )}
-            <AppButton
-              style={{ color: "black", width: "100px", font: "semibold" }}
-              className="grid grid-cols-[80px_20px] gap-2"
-            >
-              <span className="font-semibold w-[90px]">
-                {plugin.latest_version}
-              </span>
-              <LogFile className="w-10 h-10" />
-            </AppButton>
-            <AppButton
-              style={{ color: "black", width: "100px" }}
-              className="grid grid-cols-[80px_20px] gap-2"
-            >
-              <span className="font-semibold w-[90px]">{plugin.downloads}</span>
-              <CloudDownload className="w-10 h-10" />
-            </AppButton>
-          </div>
+          <RightSidePluginDownload
+            isInstalled={isInstalled}
+            plugin={plugin}
+            onInstall={onInstall}
+          />
         </div>
       </div>
+    </div>
+  );
+}
+
+function RightSidePluginDownload({
+  isInstalled,
+  plugin,
+  onInstall,
+}: {
+  isInstalled?: HorusPlugin;
+  plugin: DatabasePlugin;
+  onInstall: (file: string) => void;
+}) {
+  const width = "120px";
+  const spanClassName = "font-semibold w-[90px]";
+  return (
+    <div className="flex flex-col gap-2 h-full">
+      {isInstalled ? (
+        <AppButton
+          disabled={plugin.latest_version === isInstalled.version}
+          className="gap-2 flex flex-row flex-nowrap justify-between"
+          style={{
+            width: width,
+            color:
+              isInstalled.version !== plugin.latest_version
+                ? "orange"
+                : "green",
+          }}
+          action={() => {
+            const pluginURL = `pluginID://${plugin.id}`;
+            onInstall(pluginURL);
+          }}
+        >
+          <span className={spanClassName}>
+            {plugin.latest_version !== isInstalled.version
+              ? "Update"
+              : "Installed"}
+          </span>
+          {plugin.latest_version !== isInstalled.version ? (
+            <ErrorIcon className="w-6 h-6" />
+          ) : (
+            <CheckMark className="w-6 h-6" />
+          )}
+        </AppButton>
+      ) : (
+        <AppButton
+          className="gap-2 flex flex-row flex-nowrap justify-between"
+          style={{ color: "black", width: width }}
+          action={() => {
+            const pluginURL = `pluginID://${plugin.id}`;
+            onInstall(pluginURL);
+          }}
+        >
+          <span className={spanClassName}>Install</span>
+          <SettingsIcon className="w-6 h-6" />
+        </AppButton>
+      )}
+      <AppButton
+        style={{ color: "black", width: width, font: "semibold" }}
+        className="gap-2 flex flex-row flex-nowrap justify-between"
+      >
+        <span className={spanClassName}>{plugin.latest_version}</span>
+        <LogFile className="w-6 h-6" />
+      </AppButton>
+      <AppButton
+        style={{ color: "black", width: width }}
+        className="gap-2 flex flex-row flex-nowrap justify-between"
+      >
+        <span className={spanClassName}>{plugin.downloads}</span>
+        <CloudDownload className="w-6 h-6" />
+      </AppButton>
     </div>
   );
 }

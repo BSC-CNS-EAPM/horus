@@ -194,6 +194,175 @@ trying to get files to which the user does not have acces to will throw an error
     // will be so to the current working directory in which Horus is being executed.
     const blob = await parent.horus.getFile("/path/to/my/file")
 
+Managing tabs, panes and views
+------------------------------
+You can edit, open and close other panels using the embedded functions:
+
+.. code-block:: javascript
+
+    // You can edit the current panel tab name
+    parent.horus.setTabTitle("Modified!")
+
+    // Or close it
+    parent.horus.closeTab()
+
+    // The available panels are "molstar", "flow", "smiles" and "extensions"
+    // The openPanel functions requires 1 positional argument for the "molstar", "flow" and "smiles" panels
+    // (only the panel type). For example, to open the Molstar panel
+    parent.horus.openPanel("molstar")
+
+    // For the extensions, you will need to give two more arguments, 
+    // the ID of the panel (can be any string to identify the panel) and
+    // the parameters for correctly loading the extension. Those parameters are 
+    // the name of the panel, the plugin ID that provides the the extension and the
+    // extension ID. Finally, you can pass any data inside the params argument.
+    parent.horus.openPanel("extensions", "results_1", { // The id will be results_1
+      name: "My cool results", // The title of the tab
+      plugin: "horus", // The plugin that provides the view
+      id: "html_loader", // The ID of the view, in this case, the embedded html_loader
+      data: { // The contents. This can vary depending on the extenions. Please look at your plugin documentation to know about your extension parameters.
+        html: "<pre style='white-space: pre-wrap; font-family: sans-serif;'>Hello results!</pre>",
+      },
+    });
+
+    // To close the flow panel. Give the panel ID
+    parent.horus.closePanel("results_1")
+
+Storing data in the flow
+------------------------
+
+To store data in the flow, use the built-in functions :bdg-secondary-line:`setExtraData()` and :bdg-secondary-line:`getExtraData()`:
+
+.. code-block:: javascript
+
+    // To store data in the current flow, you will 
+    // need to give a unique key which will identify your value
+    parent.horus.setExtraData("my_key", "my_value")
+
+    // To obtain the value, just use your key
+    const value = parent.horus.getExtraData("my_key")
+
+You can also modify the :bdg-secondary-line:`extraData` property during flow execution from the block instance:
+
+.. code-block:: python
+
+    # Not to be confused with the block.extraData property!
+    block.flow.extraData["my_key"] = "my_value"
+
+
+Managing SMILES and Mol*
+------------------------
+
+The Horus Mol* and SMILES instances are exposed in the parent window object which is accessible inside extensions.
+
+.. code-block:: javascript
+
+    // Mol*
+
+    // Resets the viewer
+    parent.molstar.reset();
+
+    // Updates the background
+    parent.molstar.setBackground(hexColor: string);
+
+    // Focuses a specific residue in a structure
+    parent.molstar.focus(
+        structureLabel?: string,
+        residueNumber?: number,
+        chain?: string,
+        surroundRadius: number = 0
+    );
+
+    // Loads a file
+    parent.molstar.loadMoleculeFile(
+        file: File,
+        options?: {
+            label?: string;
+        }
+    );
+
+    // Loads a trajectory from a topology and coordinates file
+    parent.molstar.loadTrajectory({
+        topology: File;
+        trajectory: File;
+        label?: string;
+    });
+
+    // Returns a list of the loaded structures
+    parent.molstar.listStructures();
+
+    // Returns a list of hetero atoms.
+    parent.molstar.listHeteroAtoms(label?: string)
+
+    // Returns a list of hetero residues
+    parent.molstar.listHeteroRes(label?: string)
+
+    // Returns a list of standard residues
+    parent.molstar.listStandardRes(label?: string)
+    
+    // Returns a list of chains
+    parent.molstar.listChains(label?: string);
+
+    // Adds a sphere/box at a specific location
+    parent.molstar.addSphere(
+        position: {
+          x: number;
+          y: number;
+          z: number;
+        },
+        radius: number,
+        opacity?: number,
+        color?: Color
+    );
+
+    // The positions represent each dimension of the box
+    parent.molstar.addBox(
+        position: {
+            x0: number;
+            y0: number;
+            z0: number;
+            x1: number;
+            y1: number;
+            z1: number;
+            x2: number;
+            y2: number;
+            z2: number;
+            x3: number;
+            y3: number;
+            z3: number;
+        },
+        radiusScale: number,
+        radialSegments: number,
+        opacity?: number,
+        color?: Color,
+    );
+    
+    // SMILES
+
+    // Returns the current list of smiles
+    parent.smiles.getSmilesList()
+
+    // Sets a new list of smiles. Use the same format as the return type of getSmilesList
+    parent.smiles.setSmilesList(newSmilesList)
+
+    // Resets the manager
+    parent.smiles.reset()
+
+    // Loads CSV, SDF or SMI files
+    parent.smiles.loadFiles(file: File | FileList);
+    
+    // Loads a SMILES string and adds it to the list of SMILES structures.
+    parent.smiles.loadSmilesString(smiles: string,
+    options?: {
+      label?: string;
+      extraInfo?: string;
+      group?: string;
+    });
+
+    // To obtain the value, just use your key
+    const value = parent.horus.getExtraData("my_key")
+
+
 Default extensions
 ------------------
 

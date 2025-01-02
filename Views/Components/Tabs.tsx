@@ -27,8 +27,20 @@ export function HorusViewTabs({ tabs, disabled, onTabChange }: TabsProps) {
     setCurrentTab(tab);
   };
 
+  const getCurrentTab = () => {
+    let t = tabs[currentTab];
+
+    if (!t) {
+      // Default to first tab
+      setCurrentTab(tabKeys[0]!);
+      t = tabs[tabKeys[0]!]!;
+    }
+
+    return t;
+  };
+
   return (
-    <div className="overflow-hidden space-y-[-1px]">
+    <div className="overflow-hidden space-y-[-1px] h-full">
       <TabSelector
         tabs={tabs}
         currentTab={currentTab}
@@ -39,8 +51,11 @@ export function HorusViewTabs({ tabs, disabled, onTabChange }: TabsProps) {
         className={`p-4 bg-gray-100 rounded-b-lg rounded-tr-lg ${
           currentTab === tabKeys[0] ? "" : "rounded-tl-lg"
         }`}
+        style={{
+          height: "calc(100% - 2.5rem)",
+        }}
       >
-        {tabs[currentTab]!.view}
+        {getCurrentTab().view}
       </div>
     </div>
   );

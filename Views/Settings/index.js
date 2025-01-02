@@ -24,7 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <BrowserRouter>
           <SettingsView />
         </BrowserRouter>
-      </React.StrictMode>
+      </React.StrictMode>,
     );
   }
 });

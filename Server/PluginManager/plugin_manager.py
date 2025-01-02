@@ -6,6 +6,7 @@ importantly, it manages the execution of the individual blocks of the plugins.
 
 # Standard imports
 import os
+import signal
 import sys
 import typing
 import io
@@ -112,9 +113,14 @@ class PluginManager(metaclass=HorusSingleton):
         appSupportDir: typing.Optional[str] = None,
     ):
         if appSupportDir is None:
-            raise Exception("AppSupport directory not provided in PluginManager init call.")
 
-        self.appSupportDir = appSupportDir
+            from App import AppDelegate
+
+            self.appSupportDir = AppDelegate().appSupportDir
+
+            # raise Exception("AppSupport directory not provided in PluginManager init call.")
+        else:
+            self.appSupportDir = appSupportDir
 
         # Get the plugins and dependencies directory
         self._pluginsDepsDir()
@@ -135,13 +141,15 @@ class PluginManager(metaclass=HorusSingleton):
         # directory as the executable bundle
         try:
             bundleDir = sys._MEIPASS  # type: ignore
-            self.defaultPluginsDir = os.path.abspath(os.path.join(bundleDir, "DefaultPlugins"))
+            self.defaultPluginsDir = os.path.join(bundleDir, "DefaultPlugins")
         except AttributeError:
             # We are not in a bundle, use the AppSupport/DefaultPlugins directory
             self.defaultPluginsDir = os.path.join(self.appSupportDir, "DefaultPlugins")
 
         # If the environment varialbe HORUS_DEFAULT_PLUGINS_DIR is set, use that
-        self.defaultPluginsDir = os.getenv("HORUS_DEFAULT_PLUGINS_DIR") or self.defaultPluginsDir
+        self.defaultPluginsDir = os.path.abspath(
+            os.getenv("HORUS_DEFAULT_PLUGINS_DIR") or self.defaultPluginsDir
+        )
 
         logging.getLogger("Horus").info("Default plugins directory: %s", self.defaultPluginsDir)
 
@@ -150,8 +158,8 @@ class PluginManager(metaclass=HorusSingleton):
 
         # Defines the plugins directory, which should be in the AppSupport directory
         # If the environment varialbe HORUS_PLUGINS_DIR is set, use that
-        self.pluginsDir = os.getenv("HORUS_PLUGINS_DIR") or os.path.join(
-            self.appSupportDir, "Plugins"
+        self.pluginsDir = os.path.abspath(
+            os.getenv("HORUS_PLUGINS_DIR") or os.path.join(self.appSupportDir, "Plugins")
         )
 
         logging.getLogger("Horus").info("Plugins directory: %s", self.pluginsDir)
@@ -179,36 +187,38 @@ class PluginManager(metaclass=HorusSingleton):
         if not files:
             return
 
-        downloadDir = os.path.join(self.appSupportDir, "plugin_downloads")
-
         with PrintSocketCapturer(socketio, "installPluginDep"):
-            try:
-                for f in files:  # pylint: disable=invalid-name
-                    # If the file isa plugin URL from the web, download it
-                    if f.startswith("https://") or f.startswith("http://"):
-                        print("Downloading plugin from URL...")
-
-                        os.makedirs(downloadDir, exist_ok=True)
-
-                        f = self._downloadPluginFromURL(f, downloadDir)
-
-                    # If the file is a plugin from the plugin repo (starts with pluginID://)
-                    # then download the specific version
-                    # for this system
-                    if f.startswith("pluginID://"):
-                        pluginID = f.split("://")[1]
-                        os.makedirs(downloadDir, exist_ok=True)
-                        f = self._downloadPluginFromRepo(pluginID, downloadDir)
-
-                    print("Installing plugin: " + f)
-                    self._installPlugin(f)
-            finally:
-                if os.path.exists(downloadDir):
-                    shutil.rmtree(downloadDir, ignore_errors=True)
+            self._loopPluginsToInstall(files)
 
         self.reloadPlugins()
 
         socketio.emit("pluginChanges")
+
+    def _loopPluginsToInstall(self, files: typing.Sequence[str], asDefault: bool = False):
+        downloadDir = os.path.join(self.appSupportDir, "plugin_downloads")
+        for f in files:  # pylint: disable=invalid-name
+            try:
+                # If the file is a plugin URL from the web, download it
+                if f.startswith("https://") or f.startswith("http://"):
+                    print("Downloading plugin from URL...")
+
+                    os.makedirs(downloadDir, exist_ok=True)
+
+                    f = self._downloadPluginFromURL(f, downloadDir)
+
+                # If the file is a plugin from the plugin repo (starts with pluginID://)
+                # then download the specific version
+                # for this system
+                if f.startswith("pluginID://"):
+                    pluginID = f.split("://")[1]
+                    os.makedirs(downloadDir, exist_ok=True)
+                    f = self._downloadPluginFromRepo(pluginID, downloadDir)
+
+                print("Installing plugin: " + f)
+                self._installPlugin(f, asDefault)
+            finally:
+                if os.path.exists(downloadDir):
+                    shutil.rmtree(downloadDir, ignore_errors=True)
 
     def _downloadPluginFromRepo(self, pluginID: str, downloadDir: str) -> str:
         """
@@ -626,6 +636,8 @@ class PluginManager(metaclass=HorusSingleton):
                 errorPlugin._path = pth
                 self.errorPlugins.append(errorPlugin)
 
+                logging.getLogger("Horus").error("Error loading plugin '%s': %s", pth, str(e))
+
         logging.getLogger("Horus").info(
             "%i plugins initialized: %s.",
             len(self.loadedPlugins),
@@ -680,7 +692,6 @@ class PluginManager(metaclass=HorusSingleton):
                 error = (
                     f"Plugin with ID '{plugin.id}' already exists. Plugins must have unique IDs."
                 )
-                print(error)
                 raise ValueError(error)
             except PluginNotFoundError:
                 self.loadedPlugins.append(plugin)
@@ -778,9 +789,16 @@ class PluginManager(metaclass=HorusSingleton):
             if depsDir is not None and pluginMeta.get("dependencies", None):
                 self._installDependencies(pluginMeta, pluginDir)
 
-            return PluginDeps.subprocessCall(
-                self._internalLoadPluginInModule, pluginPath, entryPoint
-            )
+            orDir = os.getcwd()
+            try:
+                pluginDirPath = os.path.dirname(pluginPath)
+                os.chdir(pluginDirPath)
+                return PluginDeps.subprocessCall(
+                    self._internalLoadPluginInModule, pluginPath, entryPoint
+                )
+            finally:
+                # Change the directory back
+                os.chdir(orDir)
 
     def assertPluginValidForThisPlatform(
         self,
@@ -1048,79 +1066,6 @@ class PluginManager(metaclass=HorusSingleton):
 
             raise Exception(msg)
 
-        # First check that the user has a valid
-        # python interpreter when the app is frozen
-        # Unfortunately, PyInstaller does not include
-        # the python interpreter in the bundle, therefore
-        # to install dependencies we need to use the system
-        # python interpreter. If the user does not have a
-        # valid python interpreter, we cannot install dependencies
-        # and we need to raise an exception.
-        interpreter: str = "python"
-        try:
-            interpreter = str(self.horusSettings.getSetting("dependenciesInterpreter").value)
-        except Exception as e:
-            msg = f"Could not get the python interpreter from the user settings: {e}"
-            msg += "\nDefaulting to system python interpreter."
-            print(msg)
-
-        # Check if the python interpreter is valid
-        try:
-            p = subprocess.Popen(
-                [interpreter, "--version"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                stdin=subprocess.PIPE,
-            )
-        except Exception as e:
-            raise Exception(
-                f"Could not execute '{interpreter}' command. {e}."
-                + " Make sure you have selected a valid interpreter in the settings."
-            ) from e
-
-        # Wait for the process to finish
-        p.wait()
-
-        # Get the result
-        if p.stdout is None:
-            raise Exception("Could not get the intalled python interpreter version.")
-
-        version = p.stdout.read().decode("utf-8").strip().split(" ")[-1]
-
-        try:
-            appPythonVersion = AppDelegate().APP_INFO["PYTHON_VERSION"]
-        except Exception as exc:
-            raise Exception(f"Could not get the python version from the app info: {exc}") from exc
-
-        exceptionMsg = (
-            "In order to install additional dependencies, "
-            "you need to have a valid python interpreter "
-            f"installed on your system with python v{appPythonVersion}. "
-            "You can select a specific interpreter in the settings."
-        )
-
-        # Check the return code
-        if p.returncode != 0 and p.returncode is not None:
-            raise Exception(exceptionMsg)
-
-        # Check that the major and minor version of python matches
-        major = version.split(".")[0]
-        minor = version.split(".")[1]
-
-        appVersionMajor = appPythonVersion.split(".")[0]
-        appVersionMinor = appPythonVersion.split(".")[1]
-
-        majorMatches = major == appVersionMajor
-        minorMatches = minor == appVersionMinor
-
-        # Both major and minor versions must match (eg. 3.9.12 == 3.9.15)
-        # Patch versions are ignored
-        bothMatch = majorMatches and minorMatches
-
-        if not bothMatch:
-            exceptionMsg += f" (Currently detected python v{version})"
-            raise Exception(exceptionMsg)
-
         # Get the PATH environment variable
         path = os.environ.get("PATH", None)
 
@@ -1146,11 +1091,15 @@ class PluginManager(metaclass=HorusSingleton):
         else:
             noDependencies = False
 
+        pip = (
+            [os.path.join(AppDelegate().bundleDir, "pip", "pip")]
+            if AppDelegate().isCompiled
+            else ["python", "-m", "pip"]
+        )
+
         # The command to install dependencies with pip
         command = [
-            interpreter,
-            "-m",
-            "pip",
+            *pip,
             "install",
             *dep.split(" "),
             "--prefix",
@@ -1279,8 +1228,9 @@ class PluginManager(metaclass=HorusSingleton):
         Method specific for running the block through the Flow class.
         """
 
-        # Clean the block logs
-        block.blockLogs = ""
+        # Clean the block logs, except if its second slurm
+        if not isFirstSlurm:
+            block.blockLogs = ""
 
         logging.getLogger("Horus").info("Executing block %s", block.id)
 
@@ -1322,57 +1272,32 @@ class PluginManager(metaclass=HorusSingleton):
                 "============================================================================\n"
             )
 
-        try:
-            remoteManager = RemotesManager(currentUser.appSupportDir)
-        except AttributeError:
-            remoteManager = RemotesManager(self.appSupportDir)
-
-        # If the selected remote of the block does not exist, set it to Local
-        if not remoteManager.remoteExists(block.selectedRemote):
-            logging.getLogger("Horus").warning(
-                "The selected remote '%s' for block '%s' does not exist. "
-                + "Setting it to 'Local'",
-                block.selectedRemote,
-                block.name,
-            )
-
-            block.selectedRemote = "Local"
-
-        if block.selectedRemote != "Local":
-            msg = "Connecting to remote '%s'..." % block.selectedRemote
-            print(msg)
-            logging.getLogger("Horus").info(msg)
-
-        remoteManager.connectRemote(block.selectedRemote)
-        rAPI = remoteManager.remote
-
-        if rAPI is None:
-            raise Exception(
-                "Error while getting the remote instance."
-            )  #  pylint: disable=broad-exception-raised
-
-        rAPI._blockID = block.id  # pylint: disable=protected-access
-        rAPI._blockPlacedID = block._placedID  # pylint: disable=protected-access
-        rAPI._flowSavedID = flowID  # pylint: disable=protected-access
-        rAPI._resetRemoteBlock = resetRemoteBlock  # pylint: disable=protected-access
-
-        if block.selectedRemote != "Local":
-            msg = "Successfully connected to remote '%s'" % block.selectedRemote
-            print(msg)
-            logging.getLogger("Horus").info(msg)
-
-        # Update the block with the remote configuration
-        block._setRemote(rAPI)  # pylint: disable=protected-access
+        appSupportDir = self.appSupportDir
+        if hasattr(currentUser, "appSupportDir"):
+            appSupportDir = currentUser.appSupportDir
 
         # Set the block plugin path
         block.pluginDir = plugin._path
 
         # If its a slurm block, check if the job has finished
         if isinstance(block, SlurmBlock):
+
+            # In order to check the slurm status, we need to connect to the remote here
+            remoteManager = RemotesManager(appSupportDir)
+            remoteManager.connectRemote(block.selectedRemote)
+
+            rAPI = remoteManager.remote
+
+            block._setRemote(rAPI)
+
             # If we are unpausing a flow that sent a slurm calculation,
             # we need to skip the first execution of the block
             if block.status != block.Status.IDLE and isFirstSlurm:
                 return
+
+            # If is first slurm, remove from the remote manager queue all of the jobIDs that were submitted for this block
+            if isFirstSlurm and rAPI:
+                rAPI.deleteJobsForBlock(flowID, block._placedID if block._placedID else 1)
 
         # Execute the block
         error = False
@@ -1394,13 +1319,15 @@ class PluginManager(metaclass=HorusSingleton):
 
         # Calcultate the time the block takes
         startTime = datetime.datetime.now().timestamp()
+        exception: typing.Union[None, Exception] = None
         try:
             with PluginDeps(plugin._path):
                 with chdir(flowDir):
-                    outputs = block()
+                    # Paramiko does not work on subprocess! Need to update to connect inside the block subprocess isntead
+                    outputs = PluginDeps.subprocessBlock(block, appSupportDir, resetRemoteBlock)
         except Exception as e:
 
-            # Get the full traceback onyl for development / debug mode
+            # Get the full traceback only for development / debug mode
             from App import AppDelegate
 
             if AppDelegate().debug or self.horusSettings.getSetting("developmentMode").value:
@@ -1410,7 +1337,11 @@ class PluginManager(metaclass=HorusSingleton):
             else:
                 errorMSG = str(e)
 
-            error = True
+            if hasattr(e, "message"):
+                exception = type(e)(e.message + errorMSG)  # type: ignore
+            else:
+                exception = e
+
         finally:
             # Calculate the final time
             finalTime = datetime.datetime.now().timestamp()
@@ -1444,8 +1375,8 @@ class PluginManager(metaclass=HorusSingleton):
                     "============================================================================="
                 )
 
-        if error:
-            raise Exception(errorMSG)
+        if exception:
+            raise exception
 
         # Return the output of the block
         return outputs
@@ -1461,6 +1392,7 @@ class PluginManager(metaclass=HorusSingleton):
             "deps": getFullPluginDepsDir(p._path),
             "pluginDir": p._path,
             "hidden": pg.hidden,
+            "logo": p.logo,
         }
 
     def _getDevelopmentPage(self):
@@ -1858,19 +1790,17 @@ class PluginDeps:
         return result
 
     @classmethod
-    def subprocessBlock(cls, block: PluginBlock):
+    def subprocessBlock(cls, block: PluginBlock, appSupportDir: str, resetRemote: bool):
         """
         Calls the given block's action in a subprocess.
         Returns the result and the updated block.
 
-        Why? Because each block can import libraries from their dependencies. We want these
-        libraries to be only loaded within the scope of the block's action. This way, we can
-        avoid conflicts between libraries of different blocks.
+        The remote connection is established within the subprocess to ensure Paramiko
+        works correctly. This avoids issues with Paramiko's requirement to run in the
+        same process where the connection was established.
         """
-
         # Fork the current context to execute the block in a subprocess
         ctx = mp.context.ForkContext()
-
         # Setup a queue to communicate with the subprocess, only 1 element
         q = ctx.Queue(1)
 
@@ -1878,46 +1808,110 @@ class PluginDeps:
         def target(forkedBlock: PluginBlock):
             # Block outputs
             outputs = None
-
             # Block error
             error = None
 
-            # Try to execute the block
+            def handleStoppedFlow():
+                from Server.FlowManager import StoppedFlowException
+
+                raise StoppedFlowException
+
+            # Signal catcher for sigterm
+            signal.signal(signal.SIGTERM, lambda s, f: handleStoppedFlow())
+
             try:
+                # Establish remote connection inside the subprocess
+                try:
+                    remoteManager = RemotesManager(appSupportDir)
+
+                    # If the selected remote doesn't exist, set it to Local
+                    if not remoteManager.remoteExists(forkedBlock.selectedRemote):
+                        logging.getLogger("Horus").warning(
+                            "The selected remote '%s' for block '%s' does not exist. "
+                            + "Setting it to 'Local'",
+                            forkedBlock.selectedRemote,
+                            forkedBlock.name,
+                        )
+                        forkedBlock.selectedRemote = "Local"
+
+                    if forkedBlock.selectedRemote != "Local":
+                        msg = f"Connecting to remote '{forkedBlock.selectedRemote}'..."
+                        print(msg)
+                        logging.getLogger("Horus").info(msg)
+
+                    remoteManager.connectRemote(forkedBlock.selectedRemote)
+                    rAPI = remoteManager.remote
+
+                    if rAPI is None:
+                        raise Exception("Error while getting the remote instance.")
+
+                    # Set remote-specific attributes
+                    rAPI._blockID = forkedBlock.id
+                    rAPI._blockPlacedID = forkedBlock._placedID
+                    rAPI._flowSavedID = forkedBlock.flow.savedID
+                    rAPI._resetRemoteBlock = resetRemote
+
+                    if forkedBlock.selectedRemote != "Local":
+                        msg = f"Successfully connected to remote '{forkedBlock.selectedRemote}'"
+                        print(msg)
+                        logging.getLogger("Horus").info(msg)
+
+                    # Update the block with the remote configuration
+                    forkedBlock._setRemote(rAPI)
+
+                except Exception as e:
+                    error = e
+                    raise
+
+                # Execute the block
                 outputs = forkedBlock()
+
             except BaseException as e:
                 error = e
 
-            q.put(
-                {
-                    "pendingActions": forkedBlock.flow.pendingActions,
-                    "pendingSmilesActions": forkedBlock.flow.pendingSmilesActions,
-                    "terminalOutput": forkedBlock.flow.terminalOutput,
-                    "block": forkedBlock._minimalEncode(),
-                    "outputs": outputs,
-                    "error": error,
-                }
-            )
+            finally:
+                # Always ensure we put the result in the queue
+                q.put(
+                    {
+                        "pendingActions": forkedBlock.flow.pendingActions,
+                        "pendingSmilesActions": forkedBlock.flow.pendingSmilesActions,
+                        "pendingExtensions": forkedBlock.flow.pendingExtensions,
+                        "extraData": forkedBlock.flow.extraData,
+                        "terminalOutput": forkedBlock.flow.terminalOutput,
+                        "block": forkedBlock._minimalEncode(),
+                        "outputs": outputs,
+                        "error": error,
+                    }
+                )
 
-        ctx.Process(target=target, args=[block]).start()
+        # Start the subprocess
+        proc = ctx.Process(target=target, args=[block])
+        proc.start()
 
+        # Forward sigterm to child process
+        signal.signal(signal.SIGTERM, lambda x, y: proc.terminate())
+
+        # Get the result from the subprocess
         result = q.get()
 
         # Update the block to get the updated outputVariables, extraData...
         updatedBlock = result["block"]
         block._parseInternalVariables(updatedBlock)
 
-        # Update the terminal output of the block
+        # Update the flow attributes
         block.flow.terminalOutput.clear()
         block.flow.terminalOutput.extend(result["terminalOutput"])
 
-        # Update the pending actions of the block
         block.flow.pendingActions.clear()
         block.flow.pendingActions.extend(result["pendingActions"])
 
-        # Update the pending smiles actions of the block
         block.flow.pendingSmilesActions.clear()
         block.flow.pendingSmilesActions.extend(result["pendingSmilesActions"])
+
+        block.flow.pendingExtensions.clear()
+        block.flow.pendingExtensions.extend(result["pendingExtensions"])
+
+        block.flow.extraData = result["extraData"]
 
         # If there was an error, raise it
         if result["error"] is not None:

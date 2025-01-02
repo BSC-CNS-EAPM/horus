@@ -1,13 +1,18 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { VariableViewProps } from "./variables";
 import {
   HorusSmilesType,
   SmilesEvents,
 } from "../../Smiles/SmilesWrapper/horusSmiles";
-import { SearchComponent } from "../../Toolbar/toolbar";
 import { NotFoundView } from "./molstar_variables";
 import AppButton from "../../appbutton";
 import { BreakLongUnderscoreNames } from "../Blocks/block.view";
+import { SearchComponent } from "@/Components/Search/Search";
+import {
+  addPanel,
+  DockContext,
+  PANEL_REGISTRY,
+} from "@/Components/MainApp/PanelView";
 
 function filterSmiles(structures: HorusSmilesType[], query?: string) {
   if (!query) {
@@ -59,6 +64,8 @@ function useSmilesFilter() {
 }
 
 export function SmilesVariableView(props: VariableViewProps) {
+  const dockContext = useContext(DockContext);
+
   const { setCurrentFilter, filteredStructures } = useSmilesFilter();
 
   const [usingSelectedSmiles, setUsingSelectedSmiles] = useState(false);
@@ -109,6 +116,9 @@ export function SmilesVariableView(props: VariableViewProps) {
               showIcon={false}
             />
             <AppButton
+              style={{
+                minWidth: 40,
+              }}
               action={() => {
                 props.onChange(filteredStructures);
               }}
@@ -116,6 +126,9 @@ export function SmilesVariableView(props: VariableViewProps) {
               All
             </AppButton>
             <AppButton
+              style={{
+                minWidth: 60,
+              }}
               action={() => {
                 props.onChange(null);
               }}
@@ -125,6 +138,9 @@ export function SmilesVariableView(props: VariableViewProps) {
           </>
         )}
         <AppButton
+          style={{
+            minWidth: 105,
+          }}
           action={() => {
             if (usingSelectedSmiles) {
               props.onChange(null);
@@ -139,10 +155,14 @@ export function SmilesVariableView(props: VariableViewProps) {
         {usingSelectedSmiles && (
           <AppButton
             action={() => {
-              window.dispatchEvent(new CustomEvent("toggleSmilesGrid"));
+              addPanel({
+                dockApi: dockContext.dockApi,
+                component: PANEL_REGISTRY.smiles.component,
+                panelID: PANEL_REGISTRY.smiles.id,
+              });
             }}
           >
-            Toggle SMILES viewer
+            Open SMILES viewer
           </AppButton>
         )}
       </div>

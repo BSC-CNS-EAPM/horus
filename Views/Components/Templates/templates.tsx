@@ -7,12 +7,10 @@ import { Flow } from "../FlowBuilder/flow.types";
 
 // Horus utils
 import { horusDelete, horusGet } from "../../Utils/utils";
-import { openFlow } from "../FlowStatus/recent_flows";
 
 // Components
 import RotatingLines from "../RotatingLines/rotatinglines";
-import { SearchComponent } from "../Toolbar/toolbar";
-import { BlurredModal } from "../reusable";
+import { BlurredModal, HorusLink } from "../reusable";
 
 // Icons
 import TrashIcon from "../Toolbar/Icons/Trash";
@@ -21,6 +19,7 @@ import OpenFlowIcon from "../Toolbar/Icons/Open";
 // CSS
 import "./templates.css";
 import { useAlert } from "../HorusPrompt/horus_alert";
+import { SearchComponent } from "../Search/Search";
 
 function useTemplates() {
   const [fetchingTemplates, setFetchingTemplates] = useState(false);
@@ -31,8 +30,8 @@ function useTemplates() {
   const filterTemplates = useCallback(() => {
     setFilteredTemplates(
       templates.filter((t) =>
-        t.name.toLowerCase().includes(filterTerm.toLowerCase())
-      )
+        t.name.toLowerCase().includes(filterTerm.toLowerCase()),
+      ),
     );
   }, [filterTerm, templates]);
 
@@ -157,12 +156,9 @@ export function Template({
     <>
       <div className="text-center">{flow.name}</div>
       <div className="text-center">{flow.date}</div>
-      <OpenFlowIcon
-        className="w-6 h-6 cursor-pointer"
-        onClick={() => {
-          openFlow(flow);
-        }}
-      />
+      <HorusLink to={`/flow?open=true&flowID=${flow.savedID}&template=true`}>
+        <OpenFlowIcon className="w-6 h-6 cursor-pointer" />
+      </HorusLink>
       <TrashIcon
         onClick={() => {
           DeleteTemplateModal({ flow, getTemplates });
@@ -190,7 +186,7 @@ function DeleteTemplateModal({
   // Render the modal
   render(
     <_DeleteTemplateModal flow={flow} getTemplates={getTemplates} />,
-    modal
+    modal,
   );
 }
 

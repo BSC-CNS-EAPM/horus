@@ -15,7 +15,7 @@ type SidebarViewProps = {
 
 export default function SidebarView(props: SidebarViewProps) {
   const [currentCategory, setCurrentCategory] = useState<string>(
-    Object.keys(props.views)[0]!
+    Object.keys(props.views)[0]!,
   );
 
   return (

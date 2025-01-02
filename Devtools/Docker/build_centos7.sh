@@ -2,7 +2,7 @@
 
 # Make sure the GUI folder is present
 if [ ! -d "GUI" ]; then
-    echo "GUI folder not found. Please run 'bun run buildparcel' first from a compatible system."
+    echo "GUI folder not found. Please run 'npm run buildparcel' first from a compatible system."
     exit 1
 fi
 

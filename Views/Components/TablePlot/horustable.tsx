@@ -3,6 +3,7 @@ import { AgGridReact } from "ag-grid-react"; // React Data Grid Component
 import { AgGridEvent, GridOptions } from "ag-grid-community";
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-quartz.css";
+import "./table.css";
 
 type HorusTableProps = {
   rows: any[];

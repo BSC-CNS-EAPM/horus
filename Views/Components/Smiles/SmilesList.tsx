@@ -1,11 +1,43 @@
 import { ColDef, IRowNode, SelectionChangedEvent } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { HorusTable } from "../TablePlot/horustable";
 import { SmilesView } from "./SmilesComponent";
 import { CannotEdit3D, NoPreviewSmilesView } from "./SmilesGrid";
 import { HorusSmilesType } from "./SmilesWrapper/horusSmiles";
 import { useAlert } from "../HorusPrompt/horus_alert";
+
+function getPropertiesSet(smiles: HorusSmilesType[]) {
+  const properties = new Set<string>();
+
+  smiles.forEach((smile: HorusSmilesType) => {
+    if (!smile.properties) return;
+
+    Object.keys(smile.properties).forEach((key) => {
+      if (properties.has(key)) return;
+      properties.add(key);
+    });
+  });
+
+  return properties;
+}
+
+function getPropertiesAsColDef(properties: Set<string>): ColDef[] {
+  const colDef: ColDef[] = [];
+  properties.forEach((property) => {
+    colDef.push({
+      // @ts-ignore
+      isProperty: true,
+      field: property,
+      filter: "agNumberColumnFilter",
+      sortable: true,
+      editable: true,
+      valueGetter: (params: { data: HorusSmilesType }) =>
+        params.data.properties?.[property] ?? null,
+    });
+  });
+  return colDef;
+}
 
 export function SmilesList(props: {
   availableSmiles: HorusSmilesType[];
@@ -13,12 +45,14 @@ export function SmilesList(props: {
   onClickEdit: (smiles: HorusSmilesType) => void;
   previewSmiles: boolean;
 }) {
-  const { availableSmiles, updateExistingSmiles, onClickEdit } = props;
+  const { availableSmiles, updateExistingSmiles, onClickEdit, previewSmiles } =
+    props;
 
   const tableRef = useRef<AgGridReact | null>(null);
+  const horusAlert = useAlert();
 
-  const columns = useMemo(() => {
-    const columns: ColDef[] = [
+  const BASIC_COLDEF = useMemo<ColDef[]>(() => {
+    return [
       {
         width: 50,
         checkboxSelection: true,
@@ -38,31 +72,30 @@ export function SmilesList(props: {
         cellRenderer: (params: any) => {
           const data = params.data as HorusSmilesType;
 
-          if (props.previewSmiles) {
+          if (!previewSmiles)
             return (
-              <SmilesView
-                width={"180px"}
-                height={"50px"}
-                smiles={data.smi}
-                removePolygon={true}
-                containerProps={{
-                  onClick: () => {
-                    onClickEdit(data);
-                  },
+              <NoPreviewSmilesView
+                smiles={data}
+                onClickEdit={() => {
+                  onClickEdit(data);
                 }}
-                options={{
-                  depict: true,
-                  zoom: false,
-                }}
-              ></SmilesView>
+              />
             );
-          }
 
           return (
-            <NoPreviewSmilesView
-              smiles={data}
-              onClickEdit={() => {
-                onClickEdit(data);
+            <SmilesView
+              width={"180px"}
+              height={"50px"}
+              smiles={data.smi}
+              removePolygon={false}
+              containerProps={{
+                onClick: () => {
+                  onClickEdit?.(data);
+                },
+              }}
+              options={{
+                depict: true,
+                zoom: false,
               }}
             />
           );
@@ -112,40 +145,9 @@ export function SmilesList(props: {
         },
       },
     ];
+  }, [onClickEdit, previewSmiles]);
 
-    const addedProperties = new Set<string>();
-
-    const addProperties = (smile: HorusSmilesType) => {
-      if (!smile.properties) return;
-
-      Object.keys(smile.properties).forEach((key) => {
-        if (!addedProperties.has(key)) {
-          addedProperties.add(key);
-          columns.push({
-            // @ts-ignore
-            isProperty: true,
-            field: key,
-            filter: "agNumberColumnFilter",
-            sortable: true,
-            editable: true,
-            valueGetter: (params: any) => {
-              const data = params.data as HorusSmilesType;
-
-              if (!data.properties) return null;
-
-              return data.properties[key];
-            },
-          });
-        }
-      });
-    };
-
-    availableSmiles.forEach(addProperties);
-
-    return columns;
-  }, [availableSmiles, onClickEdit]);
-
-  const horusAlert = useAlert();
+  const [additionalProperties, setAdditionalProperties] = useState<ColDef[]>();
 
   const handleRowEditingStarted = (event: any) => {
     // If the molecule comes from 3D structure, do not allow editing
@@ -192,6 +194,14 @@ export function SmilesList(props: {
   };
 
   useEffect(() => {
+    setTimeout(async () => {
+      const properties = getPropertiesSet(availableSmiles);
+      const propertiesAsColDef = getPropertiesAsColDef(properties);
+      setAdditionalProperties(propertiesAsColDef);
+    }, 100);
+  }, [availableSmiles]);
+
+  useEffect(() => {
     const api = tableRef.current?.api;
 
     if (!api) return;
@@ -212,15 +222,22 @@ export function SmilesList(props: {
     });
   }, [tableRef, availableSmiles]);
 
+  const columnDefs = useMemo(
+    () => BASIC_COLDEF.concat(additionalProperties ?? []),
+    [BASIC_COLDEF, additionalProperties]
+  );
+
   return (
     <HorusTable
       ref={tableRef}
-      columnDefs={columns}
+      columnDefs={columnDefs}
       rows={availableSmiles}
       gridProps={{
+        getRowId: (e: any) => e.data.id,
         singleClickEdit: true,
-        rowBuffer: 0,
-        onRowSelected: handleRowSelected,
+        suppressRowVirtualisation: false,
+        suppressColumnVirtualisation: true,
+        onSelectionChanged: handleRowSelected,
         suppressPropertyNamesCheck: true,
         rowSelection: "multiple",
         suppressRowClickSelection: true,

@@ -50,4 +50,5 @@ mergeVariablesBlock = PluginBlock(
     inputs=[input1, input2],
     outputs=[outputVariable],
     id="merge_variables_block",
+    category="Misc",
 )

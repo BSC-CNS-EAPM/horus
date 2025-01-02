@@ -1,13 +1,9 @@
 // Components
 import { FlowStatusView } from "../FlowStatus/flow_status";
-import {
-  CorruptedFlow,
-  openFlow,
-  useGetRecentFlows,
-} from "../FlowStatus/recent_flows";
+import { CorruptedFlow, useGetRecentFlows } from "../FlowStatus/recent_flows";
 import RotatingLines from "../RotatingLines/rotatinglines";
 import HorusContainer from "../HorusContainer/horus_container";
-import { BlurredModal } from "../reusable";
+import { BlurredModal, HorusLink } from "../reusable";
 import { FlowElapsed } from "../FlowStatus/flow_elapsed";
 
 // Icons
@@ -34,16 +30,13 @@ import { useConfirm } from "../HorusPrompt/horus_confirm";
 
 export default function WebAppUserFlows() {
   // Get the recent flows with the custom hook
-  const [
-    fetchingRecents,
+  const {
+    isLoading: fetchingRecents,
     recentFlows,
-    ,
-    ,
-    getFlows,
-    ,
     otherDirectories,
     corruptedFlows,
-  ] = useGetRecentFlows(true);
+    refetch: getFlows,
+  } = useGetRecentFlows(true);
 
   const [hasFetchedInitally, setHasFetchedInitally] = useState(false);
 
@@ -170,7 +163,7 @@ export default function WebAppUserFlows() {
 
 function CorruptedFlowView(props: {
   corruptedFlow: CorruptedFlow;
-  getFlows: () => Promise<void>;
+  getFlows: () => void;
 }) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -277,10 +270,7 @@ function CorruptedFlowView(props: {
   );
 }
 
-function OtherFileView(props: {
-  directory: FileData;
-  getFlows: () => Promise<void>;
-}) {
+function OtherFileView(props: { directory: FileData; getFlows: () => void }) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -359,7 +349,7 @@ function OtherFileView(props: {
         <FlowSize size={props.directory.size} />
       </div>
       <div>
-        {props.directory.isDir ? "Folder" : props.directory.ext ?? "Unknown"}
+        {props.directory.isDir ? "Folder" : (props.directory.ext ?? "Unknown")}
       </div>
       <CloudDownload
         className="cursor-pointer w-6 h-6"
@@ -387,13 +377,7 @@ function OtherFileView(props: {
   );
 }
 
-function FlowRowView({
-  flow,
-  getFlows,
-}: {
-  flow: Flow;
-  getFlows: () => Promise<void>;
-}) {
+function FlowRowView({ flow, getFlows }: { flow: Flow; getFlows: () => void }) {
   return (
     <>
       <div className="text-center">{flow.name}</div>
@@ -407,12 +391,11 @@ function FlowRowView({
       <div className="text-center flex justify-center items-baseline">
         <FlowStatusView status={flow.status} />
       </div>
-      <OpenFlowIcon
-        className="cursor-pointer w-6 h-6"
-        onClick={() => {
-          openFlow(flow);
-        }}
-      />
+      <HorusLink
+        to={`/flow?open=true&flowID=${flow.savedID}&path=${flow.path}`}
+      >
+        <OpenFlowIcon className="cursor-pointer w-6 h-6" />
+      </HorusLink>
       <FlowClone flow={flow} getFlows={getFlows} />
       <FlowDownload flow={flow} />
       <DeleteFlow flow={flow} getFlows={getFlows} />
@@ -420,13 +403,7 @@ function FlowRowView({
   );
 }
 
-function DeleteFlow({
-  flow,
-  getFlows,
-}: {
-  flow: Flow;
-  getFlows: () => Promise<void>;
-}) {
+function DeleteFlow({ flow, getFlows }: { flow: Flow; getFlows: () => void }) {
   if (flow.status === FlowStatus.RUNNING || flow.status === FlowStatus.QUEUED) {
     return <div>-</div>;
   }
@@ -510,13 +487,7 @@ function FlowDownload({ flow }: { flow: Flow }) {
   );
 }
 
-function FlowClone({
-  flow,
-  getFlows,
-}: {
-  flow: Flow;
-  getFlows: () => Promise<void>;
-}) {
+function FlowClone({ flow, getFlows }: { flow: Flow; getFlows: () => void }) {
   const [isCloning, setIsCloning] = useState(false);
 
   const horusAlert = useAlert();
@@ -588,7 +559,7 @@ function DeleteFlowModal({
   getFlows,
 }: {
   flow: Flow;
-  getFlows: () => Promise<void>;
+  getFlows: () => void;
 }) {
   // Attach the modal to the body of the document
   const modal = document.createElement("div") as HTMLDivElement;
@@ -603,7 +574,7 @@ function _DeleteFlowModal({
   getFlows,
 }: {
   flow: Flow;
-  getFlows: () => Promise<void>;
+  getFlows: () => void;
 }) {
   const [isDeleting, setIsDeleting] = useState(false);
 

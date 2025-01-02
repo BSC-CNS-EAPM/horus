@@ -104,4 +104,6 @@ pythonCodeBlock = PluginBlock(
     variables=[environmentVariable, codeVariable],
     outputs=[outputVariable],
     id=codeVariable.id,
+        category="Code",
+
 )

@@ -1,36 +1,18 @@
 // React imports
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 // Horus web-server
 import { horusGet } from "../../Utils/utils";
 
 // Horus components
 import { FlowStatusView } from "./flow_status";
-import WorkingView from "../MainApp/working_view";
 import { Flow } from "../FlowBuilder/flow.types";
 import { FileData } from "chonky";
-import { useAlert } from "../HorusPrompt/horus_alert";
 import { BreakLongUnderscoreNames } from "../FlowBuilder/Blocks/block.view";
+import { HorusLink } from "../reusable";
 
 type RecentUserFlowProps = {
   flows: Flow[];
-};
-
-export const openFlow = (flow: Flow) => {
-  // Set the working view
-  const startWorkingEvent = new CustomEvent("start-working", {
-    detail: (
-      <WorkingView
-        flowToOpen={{
-          savedID: flow.savedID!,
-          path: flow.path!,
-          template: flow.template,
-        }}
-      />
-    ),
-  });
-
-  window.dispatchEvent(startWorkingEvent);
 };
 
 export default function RecentUserFlows(props: RecentUserFlowProps) {
@@ -45,7 +27,6 @@ export default function RecentUserFlows(props: RecentUserFlowProps) {
       // For the first element we dont want to show it empty
       // For the last element we dont want to show the file name
       path.shift();
-      path.pop();
       return (
         <div className="flex flex-row gap-1 overflow-x-auto justify-start">
           {path.map((p, index) => {
@@ -66,15 +47,19 @@ export default function RecentUserFlows(props: RecentUserFlowProps) {
     return <div>Unknown path</div>;
   };
 
+  const getURL = (flow: Flow) => {
+    const open = window.location.search.includes("open=true") ? "yes" : "true";
+    return `/flow?open=${open}&flowID=${flow.savedID}&path=${flow.path}`;
+  };
+
   return (
     <div className="flex flex-col gap-1">
       {flows?.length > 0 ? (
         flows.map((flow) => (
-          <div
+          <HorusLink
+            role="button"
+            to={getURL(flow)}
             key={flow.savedID ?? "Unknown flow ID"}
-            onClick={() => {
-              openFlow(flow);
-            }}
             className="predefined-flow w-full h-full max-w-[380px]"
           >
             <div className="flex flex-row justify-between">
@@ -88,7 +73,7 @@ export default function RecentUserFlows(props: RecentUserFlowProps) {
             <div className="predefined-flow-plugin break-keep	">
               {<ParsedFlowPath flow={flow} />}
             </div>
-          </div>
+          </HorusLink>
         ))
       ) : (
         <div className="predefined-flow-name">No recent flows</div>
@@ -98,21 +83,24 @@ export default function RecentUserFlows(props: RecentUserFlowProps) {
 }
 
 export function PredefinedFlows(props: RecentUserFlowProps) {
+  const getURL = (flow: Flow) => {
+    const open = window.location.search.includes("open=true") ? "yes" : "true";
+    return `/flow?open=${open}&flowID=${flow.savedID}`;
+  };
+
   return (
     <div className="flex flex-col gap-1">
       {props.flows?.map((flow) => (
-        <div
+        <HorusLink
+          to={getURL(flow)}
           key={flow.savedID}
-          onClick={() => {
-            openFlow(flow);
-          }}
           className="predefined-flow"
         >
           <div className="predefined-flow-name max-w-[380px] cut-text">
             <BreakLongUnderscoreNames name={flow.name} />
           </div>
           <div className="predefined-flow-plugin">{flow.pluginName}</div>
-        </div>
+        </HorusLink>
       ))}
     </div>
   );
@@ -122,139 +110,70 @@ export type CorruptedFlow = FileData & {
   reason: string;
 };
 
-export function useGetRecentFlows(
-  webAppFlows: boolean = false
-): [
-  boolean,
-  Flow[],
-  Flow[],
-  Flow[],
-  () => Promise<void>,
-  (active: boolean) => void,
-  FileData[],
-  CorruptedFlow[]
-] {
-  const [fetchingRecents, setFetchingRecents] = useState(true);
-  const [recentFlows, setRecentFlows] = useState<Flow[]>([]);
-  const [otherDirectories, setOtherDirectories] = useState<FileData[]>([]);
-  const [corruptedFlows, setCorruptedFlows] = useState<CorruptedFlow[]>([]);
-  const [predefinedFlows, setPredefinedFlows] = useState<Flow[]>([]);
-  const [templates, setTemplates] = useState<Flow[]>([]);
-  const interval = useRef<Timer | null>(null);
-
-  const internalGetRecentFlows = useCallback(async () => {
-    let recentFlowsResponse;
-    if (webAppFlows) {
-      recentFlowsResponse = await horusGet("/users/flows");
-    } else {
-      recentFlowsResponse = await horusGet("/api/recentflows");
-    }
-
-    if (!recentFlowsResponse) {
-      return;
-    }
-
-    try {
-      const recentFlowsData = await recentFlowsResponse.json();
-      if (!recentFlowsData.ok) {
-        return;
-      }
-
-      const flows: Flow[] = recentFlowsData.flows;
-
-      // Sort the flows by the flow.date field (yyyy-mm-dd hh:mm:ss)
-      flows.sort((a: Flow, b: Flow) => {
-        const dateA = new Date(a.date);
-        const dateB = new Date(b.date);
-
-        return dateB.getTime() - dateA.getTime();
-      });
-
-      setRecentFlows(flows);
-      setOtherDirectories(recentFlowsData.otherDirectories ?? []);
-      setCorruptedFlows(recentFlowsData.corruptedFlows ?? []);
-    } catch (error) {
-      console.error(error);
-    }
-  }, [webAppFlows]);
-
-  const getTemplates = useCallback(async () => {
-    const response = await horusGet("/api/templates");
-
-    const data = await response.json();
-
-    if (data.ok) {
-      setTemplates((data?.templates as Flow[]) ?? []);
-    }
-  }, []);
-
-  const horusAlert = useAlert();
-
-  const getFlows = useCallback(async () => {
-    setFetchingRecents(true);
-
-    const responsePredefined = await horusGet("/api/plugins/flows");
-
-    if (!responsePredefined) {
-      return;
-    }
-
-    const data = await responsePredefined.json();
-
-    if (!responsePredefined.ok) {
-      await horusAlert("Error getting flows: " + data.msg);
-      return;
-    }
-
-    setPredefinedFlows(data.flows);
-
-    // Fetch the recent flows
-    await internalGetRecentFlows();
-
-    // Fetch the templates
-    await getTemplates();
-
-    setFetchingRecents(false);
-  }, [internalGetRecentFlows, getTemplates]);
-
-  // Toggle the interval
-  const toggleInterval = useCallback(
-    (active: boolean) => {
-      // Clear the interval if it was set
-      if (interval.current) {
-        clearInterval(interval.current);
-      }
-      // If active, set the interval
-      if (active) {
-        interval.current = setInterval(internalGetRecentFlows, 10000);
-      }
+export function useGetRecentFlows(webAppFlows: boolean = false): {
+  isLoading: boolean;
+  recentFlows: Flow[];
+  presetFlows: Flow[];
+  templates: Flow[];
+  otherDirectories: FileData[];
+  corruptedFlows: CorruptedFlow[];
+  refetch: () => void;
+} {
+  // Fetch recent flows
+  const {
+    data: recentFlowsData,
+    isLoading: fetchingRecents,
+    refetch,
+  } = useQuery({
+    queryKey: ["recentFlows", webAppFlows],
+    queryFn: async () => {
+      const endpoint = webAppFlows ? "/users/flows" : "/api/recentflows";
+      const response = await horusGet(endpoint);
+      const data = await response.json();
+      if (!data.ok) throw new Error(data.msg || "Failed to fetch recent flows");
+      const flows = data.flows.sort(
+        (a: Flow, b: Flow) =>
+          new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+      return {
+        flows,
+        otherDirectories: data.otherDirectories || [],
+        corruptedFlows: data.corruptedFlows || [],
+      };
     },
-    [internalGetRecentFlows]
-  );
+    refetchInterval: 10000,
+  });
 
-  useEffect(() => {
-    // Get the recent flows every 10 seconds
-    toggleInterval(true);
+  // Fetch predefined flows
+  const { data: predefinedFlowsData } = useQuery({
+    queryKey: ["predefinedFlows"],
+    queryFn: async () => {
+      const response = await horusGet("/api/plugins/flows");
+      const data = await response.json();
+      if (!data.ok)
+        throw new Error(data.msg || "Failed to fetch predefined flows");
+      return data.flows;
+    },
+  });
 
-    return () => {
-      toggleInterval(false);
-    };
-  }, [toggleInterval]);
+  // Fetch templates
+  const { data: templatesData } = useQuery({
+    queryKey: ["templates"],
+    queryFn: async () => {
+      const response = await horusGet("/api/templates");
+      const data = await response.json();
+      if (!data.ok) throw new Error(data.msg || "Failed to fetch templates");
+      return data.templates || [];
+    },
+  });
 
-  // Get the flows
-  useEffect(() => {
-    getFlows();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  return [
-    fetchingRecents,
-    recentFlows,
-    predefinedFlows,
-    templates,
-    getFlows,
-    toggleInterval,
-    otherDirectories,
-    corruptedFlows,
-  ];
+  return {
+    isLoading: fetchingRecents,
+    recentFlows: recentFlowsData?.flows || [],
+    presetFlows: predefinedFlowsData || [],
+    templates: templatesData || [],
+    otherDirectories: recentFlowsData?.otherDirectories || [],
+    corruptedFlows: recentFlowsData?.corruptedFlows || [],
+    refetch,
+  };
 }

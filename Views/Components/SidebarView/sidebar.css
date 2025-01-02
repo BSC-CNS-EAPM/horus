@@ -12,6 +12,5 @@
 .sidebar-item {
   padding: 0.5rem;
   border-radius: 0.5rem;
-  cursor: default;
-  text-wrap: wrap;
+  word-wrap: wrap;
 }
