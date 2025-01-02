@@ -880,7 +880,13 @@ class AppDelegate(metaclass=HorusSingleton):
         self.openWindow("Horus", url=homeURL, wo=windowOptions)
 
         # Start the webview
-        webview.start(debug=self.debug, menu=self._menus(), gui=guiBacked())  # type: ignore
+        try:
+            webview.start(debug=self.debug, menu=self._menus(), gui=guiBacked())  # type: ignore
+        except Exception as e:
+            logging.getLogger("Horus").critical(
+                "Failed to start the window management system. Try launching Horus in server mode (--server)"
+            )
+            raise e
 
     def _startServerMode(self):
         """
@@ -1100,6 +1106,7 @@ def parseArgs() -> tuple[dict, dict, dict]:
         help="Debug URL. An URL to open instead of the default Horus interface. "
         "For development only.",
     )
+    parser.add_argument("--app", "-a", action="store_true", help="Run in app mode.")
     parser.add_argument("--browser", "-b", action="store_true", help="Run in browser mode.")
     parser.add_argument("--server", "-s", action="store_true", help="Run in server mode.")
     parser.add_argument("--webapp", "-w", action="store_true", help="Run in webapp mode.")
@@ -1189,6 +1196,8 @@ def parseArgs() -> tuple[dict, dict, dict]:
         mode = "server"
     elif args.webapp:
         mode = "webapp"
+    elif args.app:
+        mode = "app"
     else:
         if envMode is not None:
             mode = envMode
