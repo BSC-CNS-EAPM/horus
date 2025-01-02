@@ -23,3 +23,9 @@ as a JavaScript file for clarity, but take into account that the configuration f
 
 .. literalinclude:: horus.config.template.js
   :language: javascript
+
+
+Public flows
+============
+
+The Horus WebApp instance can have a public flows directory. The flows inside that folder will be displayed as "Preset flows" alognside flows that come from plugins. To setup this folder, just use the following environment variable: **HORUS_PUBLIC_FLOWS=/path/to/public/flows/dir**.

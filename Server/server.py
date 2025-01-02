@@ -55,7 +55,7 @@ import requests
 import webview
 
 # Flow manager
-from Server.FlowManager import FlowManager, OverwriteException, NoPathSelected, Flow
+from Server.FlowManager import FlowManager, OverwriteException, NoPathSelected, Flow, NoPublicFlow
 
 # Settings manager
 from Server.SettingsManager import SettingsManager
@@ -1027,7 +1027,7 @@ class HorusServer:
                         path = str(UserFileExplorer(path, currentUser).getAbsolutePath())
 
                     # Load the flow from the path
-                    flow = self.flowManager.openFlowFromPath(path)
+                    flow = self.flowManager.openFlowFromPath(path, addToRecents=False)
 
                 else:
                     if savedID is None:
@@ -1038,7 +1038,13 @@ class HorusServer:
                     if template:
                         flow = self.flowManager.loadTemplateFlow(savedID)
                     else:
-                        flow = self.flowManager.loadPredefinedFlow(savedID)
+
+                        # If the Plugin is "Public" try to search it on the
+                        # public flows
+                        try:
+                            flow = self.flowManager.loadPublicFlow(savedID)
+                        except NoPublicFlow:
+                            flow = self.flowManager.loadPredefinedFlow(savedID)
 
                 # Get the smilesState
                 smilesState = flow.getSmilesState()
@@ -1125,7 +1131,7 @@ class HorusServer:
                     flowPath = str(UserFileExplorer(flowPath, currentUser).getAbsolutePath())
 
                 # Load the flow from the path
-                flow = self.flowManager.openFlowFromPath(flowPath)
+                flow = self.flowManager.openFlowFromPath(flowPath, addToRecents=False)
 
                 # Get the molstarState zip file
                 molstarState = flow.getMolstarState()
@@ -1201,7 +1207,7 @@ class HorusServer:
                     flowPath = str(UserFileExplorer(flowPath, currentUser).getAbsolutePath())
 
                 # Open the flow
-                flow = self.flowManager.openFlowFromPath(flowPath)
+                flow = self.flowManager.openFlowFromPath(flowPath, addToRecents=False)
                 flow.pendingActions = []
                 flow.pendingSmilesActions = []
                 flow.pendingExtensions = []
@@ -1381,7 +1387,7 @@ class HorusServer:
                 if self._isForUser:
                     flowPath = str(UserFileExplorer(flowPath, currentUser).getAbsolutePath())
 
-                flow = self.flowManager.openFlowFromPath(flowPath)
+                flow = self.flowManager.openFlowFromPath(flowPath, addToRecents=False)
                 flow.reset()
 
                 # Obfuscate the path in webapp mode
@@ -1519,7 +1525,7 @@ class HorusServer:
                 # with the flow elapsed time and size
                 if self.webAppManager is not None and self.webAppManager.db is not None:
                     # Load the flow
-                    flow = self.flowManager.openFlowFromPath(flowPath)
+                    flow = self.flowManager.openFlowFromPath(flowPath, addToRecents=False)
 
                     # Update the database
                     self.webAppManager.db.updateFlowForUser(flow)
@@ -1561,14 +1567,18 @@ class HorusServer:
         def listFlows():
 
             try:
+                # Load the plugin preset flows
                 flows = self.pluginManager.listFlows()
+                flows += self.flowManager.listPublicFlows()
 
                 # If on webapp mode, filter the flows that cannot be executed
                 # by the user
                 if self._isForUser and self.webAppManager is not None and not currentUser.admin:
                     filteredFlows = []
                     for flow in flows:
-                        flowInstance = self.flowManager.openFlowFromPath(flow["path"])
+                        flowInstance = self.flowManager.openFlowFromPath(
+                            flow["path"], addToRecents=False
+                        )
                         try:
                             if self.webAppManager.userGroupsManager is not None:
 
@@ -2839,7 +2849,9 @@ class HorusServer:
                     flowPath = os.path.join(dirPath, flowDir + ".flow")
                     if os.path.exists(flowPath):
                         try:
-                            flowInstances.append(self.flowManager.openFlowFromPath(flowPath))
+                            flowInstances.append(
+                                self.flowManager.openFlowFromPath(flowPath, addToRecents=False)
+                            )
                         except Exception as exc:
                             logging.getLogger("Horus").error(
                                 "Could not open user flow at %s: %s", flowPath, str(exc)
@@ -2926,7 +2938,7 @@ class HorusServer:
                 flowPath = str(UserFileExplorer(flowPath, currentUser).getAbsolutePath())
 
                 # Load the flow from the data
-                flow = self.flowManager.openFlowFromPath(flowPath)
+                flow = self.flowManager.openFlowFromPath(flowPath, addToRecents=False)
 
                 if not flow.path:
                     return flask.jsonify({"ok": False, "msg": "The flow does not have a path"})
@@ -2971,7 +2983,7 @@ class HorusServer:
                 flowPath = str(UserFileExplorer(flowPath, currentUser).getAbsolutePath())
 
                 # Load the flow from the data
-                flow = self.flowManager.openFlowFromPath(flowPath)
+                flow = self.flowManager.openFlowFromPath(flowPath, addToRecents=False)
 
                 if not flow.path:
                     return flask.jsonify({"ok": False, "msg": "Flow path is not defined."})
@@ -2991,7 +3003,9 @@ class HorusServer:
                     newFlow = shutil.copyfile(flow.path, newFlow)
 
                     # Update the new flow date
-                    newFlowInstance = self.flowManager.openFlowFromPath(newFlow)
+                    newFlowInstance = self.flowManager.openFlowFromPath(
+                        newFlow, addToRecents=False
+                    )
                     newFlowInstance.date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
                     # Write the new flow to its path
@@ -3039,7 +3053,7 @@ class HorusServer:
                     flowPath = str(UserFileExplorer(flowPath, currentUser).getAbsolutePath())
 
                     # Open the flow
-                    flow = self.flowManager.openFlowFromPath(flowPath)
+                    flow = self.flowManager.openFlowFromPath(flowPath, addToRecents=False)
 
                     # Obfuscate the path
                     flow._skipPath = relativePath

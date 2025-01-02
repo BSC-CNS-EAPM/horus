@@ -27,7 +27,6 @@ export default function RecentUserFlows(props: RecentUserFlowProps) {
       // For the first element we dont want to show it empty
       // For the last element we dont want to show the file name
       path.shift();
-      path.pop();
       return (
         <div className="flex flex-row gap-1 overflow-x-auto justify-start">
           {path.map((p, index) => {
