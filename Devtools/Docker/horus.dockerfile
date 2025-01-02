@@ -4,6 +4,9 @@ FROM node:18-bullseye AS builder
 # Avoid prompts from apt
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Add permissions to the tmp folder
+RUN mkdir -p /tmp && chmod 777 /tmp
+
 # Update and install system dependencies with error handling
 RUN apt-get update -y && \
     apt-get install -y --no-install-recommends \
