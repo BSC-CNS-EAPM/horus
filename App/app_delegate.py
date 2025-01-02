@@ -269,6 +269,7 @@ class HorusLogger:
                 """
                 Hook into the default stdout and stderr class
                 """
+
                 try:
 
                     if not self.debug and not self.verbose:
@@ -882,11 +883,10 @@ class AppDelegate(metaclass=HorusSingleton):
         # Start the webview
         try:
             webview.start(debug=self.debug, menu=self._menus(), gui=guiBacked())  # type: ignore
-        except Exception as e:
+        except webview.WebViewException as e:
             logging.getLogger("Horus").critical(
                 "Failed to start the window management system. Try launching Horus in server mode (--server)"
             )
-            raise e
 
     def _startServerMode(self):
         """
