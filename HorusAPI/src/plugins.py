@@ -2532,13 +2532,9 @@ class Plugin:
                     continue
 
                 # Add the flow to the list
-                flowInfo = {
-                    "name": flow.name,
-                    "path": flow.path,
-                    "pluginID": self.id,
-                    "pluginName": self.pluginMeta.name,
-                    "savedID": flow.savedID,
-                }
+                flowInfo = Flow.flowProperties(
+                    flow, pluginID=self.id, pluginName=self.pluginMeta.name
+                )
                 flows.append(flowInfo)
 
         return flows

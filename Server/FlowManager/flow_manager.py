@@ -171,6 +171,22 @@ class Flow:
     Extra data to be saved with the flow. Ideally for storing extension data.
     """
 
+    @classmethod
+    def flowProperties(cls, flow: "Flow", pluginID: str, pluginName: str):
+        """
+        Returns a JSON with the basic flow properties
+
+        Useful for listing the flows using the pluginManager.listFlows() function
+        """
+
+        return {
+            "name": flow.name,
+            "path": flow.path,
+            "pluginID": pluginID,
+            "pluginName": pluginName,
+            "savedID": flow.savedID,
+        }
+
     @property
     def path(self) -> typing.Optional[str]:
         """
@@ -2241,3 +2257,66 @@ class FlowManager:
         templates.sort(key=sortByName)
 
         return templates
+
+    def listPublicFlows(self) -> list[dict]:
+        """
+        Lists all flows in the public flows directory if configured
+        """
+        publicFlows: list[dict] = []
+
+        templates_env_folder = os.getenv("HORUS_PUBLIC_FLOWS")
+
+        if not templates_env_folder or not os.path.exists(templates_env_folder):
+            return publicFlows
+
+        for f in os.listdir(templates_env_folder):
+            if f.endswith(".flow"):
+                filePath = os.path.join(templates_env_folder, f)
+
+                try:
+                    flow = Flow.read(filePath)
+                    # Mark as preset so it can't be overwritten
+                    flow.isPreset = True
+                    publicFlows.append(
+                        Flow.flowProperties(flow, pluginID="Public", pluginName="Public")
+                    )
+                except Exception as exc:
+                    logging.getLogger("Horus").error(
+                        "Error reading public flow %s: %s", filePath, exc
+                    )
+                    continue
+
+        # Sort alphabetically
+        publicFlows.sort(key=lambda f: f["name"])
+        return publicFlows
+
+    def loadPublicFlow(self, savedID: str) -> Flow:
+        """
+        Loads a public flow by its savedID
+
+        :param savedID: The savedID of the flow to load
+        :returns: The loaded flow
+        :raises: Exception if flow not found
+        """
+        publicFlows = self.listPublicFlows()
+        loadedFlow = None
+
+        for flow in publicFlows:
+            if flow["savedID"] == savedID:
+                loadedFlow = self.openFlowFromPath(flow["path"], addToRecents=False)
+                break
+
+        if not loadedFlow:
+            raise NoPublicFlow("Public flow not found")
+
+        # Reset path and ID so it can be saved as a new flow
+        loadedFlow.path = None
+        loadedFlow.savedID = None
+
+        return loadedFlow
+
+
+class NoPublicFlow(Exception):
+    """
+    The flow could not be found in the public folder
+    """

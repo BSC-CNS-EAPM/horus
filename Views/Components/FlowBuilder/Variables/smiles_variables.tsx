@@ -22,7 +22,7 @@ function filterSmiles(structures: HorusSmilesType[], query?: string) {
   return structures.filter(
     (structure) =>
       structure.label.toLowerCase().includes(query.toLowerCase()) ||
-      structure.group?.toLowerCase().includes(query.toLowerCase()),
+      structure.group?.toLowerCase().includes(query.toLowerCase())
   );
 }
 
@@ -33,13 +33,13 @@ function useSmilesFilter() {
   const setCurrentFilter = (query: string) => {
     _setCurrentFilter(query);
     setFilteredSmiles(
-      filterSmiles(window.smiles?.getSmilesList() ?? [], query),
+      filterSmiles(window.smiles?.getSmilesList() ?? [], query)
     );
   };
 
   const refreshStructures = useCallback(() => {
     setFilteredSmiles(
-      filterSmiles(window.smiles?.getSmilesList() ?? [], currentFilter),
+      filterSmiles(window.smiles?.getSmilesList() ?? [], currentFilter)
     );
   }, [currentFilter]);
 
@@ -80,7 +80,7 @@ export function SmilesVariableView(props: VariableViewProps) {
 
       if (props.currentValue) {
         const currentSelected = props.currentValue.flatMap(
-          (s: HorusSmilesType) => s.id,
+          (s: HorusSmilesType) => s.id
         );
 
         if (!window.smiles) {
@@ -116,6 +116,9 @@ export function SmilesVariableView(props: VariableViewProps) {
               showIcon={false}
             />
             <AppButton
+              style={{
+                minWidth: 40,
+              }}
               action={() => {
                 props.onChange(filteredStructures);
               }}
@@ -123,6 +126,9 @@ export function SmilesVariableView(props: VariableViewProps) {
               All
             </AppButton>
             <AppButton
+              style={{
+                minWidth: 60,
+              }}
               action={() => {
                 props.onChange(null);
               }}
@@ -132,6 +138,9 @@ export function SmilesVariableView(props: VariableViewProps) {
           </>
         )}
         <AppButton
+          style={{
+            minWidth: 105,
+          }}
           action={() => {
             if (usingSelectedSmiles) {
               props.onChange(null);
@@ -209,8 +218,8 @@ function SelectMultipleSmiles({
             e.target.checked
               ? [...(currentValue ?? []), smiles]
               : (currentValue ?? []).filter(
-                  (s: HorusSmilesType) => s.id !== smiles.id,
-                ),
+                  (s: HorusSmilesType) => s.id !== smiles.id
+                )
           )
         }
       />
