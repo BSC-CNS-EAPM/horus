@@ -14,4 +14,5 @@ chainBlock = InputBlock(
     action=None,
     variable=chainsVariable,
     id="chains",
+    category="Structures",
 )

@@ -118,11 +118,15 @@ def openExtension(block: PluginBlock):
     ext = Extensions()
 
     ext.open(
-        "nbdsuite", "nbdresults", data={"path": "/Users/cdominguez/Downloads/3RLQ/input.yaml"}
+        "nbdsuite",
+        "nbdresults",
+        data={"path": "/Users/cdominguez/Downloads/3RLQ/input.yaml"},
     )
 
     ext.storeExtensionResults(
-        "nbdsuite", "nbdresults", data={"path": "/Users/cdominguez/Downloads/3RLQ/input.yaml"}
+        "nbdsuite",
+        "nbdresults",
+        data={"path": "/Users/cdominguez/Downloads/3RLQ/input.yaml"},
     )
 
     ext.storeExtensionResults(
@@ -342,13 +346,15 @@ sleep {timeToWait}
 
     print("Job ID: ", jobID)
 
-    block.setOutput("time_to_wait", timeToWait)
-
 
 def finalTestSlurmBlockAction(block: SlurmBlock):
     print("Test slurm block final action")
 
     print("Status of slurm job: ", block.status)
+
+    timeToWait = int(block.inputs.get("timeToWait", 0) or 0)
+
+    block.setOutput("time_to_wait", timeToWait)
 
 
 slurmBlockTest = SlurmBlock(
@@ -373,7 +379,28 @@ slurmBlockTest = SlurmBlock(
         )
     ],
     id="slurm_block_test",
+    category="Slurm",
 )
+
+
+def multipleSlurmTest(block: SlurmBlock):
+    print("sending 1")
+    testSlurmBlockAction(block)
+
+    print("Sending 2")
+    testSlurmBlockAction(block)
+
+
+multipleSlurmTestBlock = SlurmBlock(
+    name="Multiple slurm block test",
+    description="Slurm block test",
+    initialAction=multipleSlurmTest,
+    inputs=[timeToWaitVar],
+    finalAction=lambda block: None,
+    category="Slurm",
+)
+
+plugin.addBlock(multipleSlurmTestBlock)
 
 
 def testSlurmBlockFailedAction(block: SlurmBlock):
@@ -422,6 +449,7 @@ slurmBlockFailes = SlurmBlock(
     finalAction=finalTestSlurmBlockAction,
     id="slurm_block_test_fail",
     failOnSlurmError=False,
+    category="Slurm",
 )
 
 plugin.addBlock(slurmBlockTest)
@@ -432,7 +460,10 @@ extension_input_variable = PluginVariable(
 )
 
 extension_output_variable = PluginVariable(
-    id="extensions_output", name="output", description="output", type=VariableTypes.STRING
+    id="extensions_output",
+    name="output",
+    description="output",
+    type=VariableTypes.STRING,
 )
 
 
@@ -491,6 +522,7 @@ testExtensionsShortcutsBlock = SlurmBlock(
     inputs=[extension_input_variable],
     variables=[some_toggle_variable],
     outputs=[extension_output_variable],
+    category="Slurm",
 )
 
 plugin.addBlock(testExtensionsShortcutsBlock)
@@ -545,7 +577,10 @@ def checkPluginPathAction(block: PluginBlock):
 
 
 pluginPathActionBlock = PluginBlock(
-    id="pluginPath", name="Plugin path", description="Plugin path", action=checkPluginPathAction
+    id="pluginPath",
+    name="Plugin path",
+    description="Plugin path",
+    action=checkPluginPathAction,
 )
 
 plugin.addBlock(pluginPathActionBlock)
@@ -685,6 +720,7 @@ input_block_variable_list = InputBlock(
     description="Input block variable list",
     variable=variable_list_multiple,
     action=None,
+    category="input",
 )
 
 plugin.addBlock(input_block_variable_list)
@@ -701,6 +737,7 @@ input_block_string_list = InputBlock(
         allowedValues=[VariableTypes.STRING],
     ),
     action=None,
+    category="input",
 )
 
 plugin.addBlock(input_block_string_list)
@@ -813,6 +850,7 @@ fail_on_even_block = PluginBlock(
     action=fail_on_even_action,
     inputs=[input_output_even],
     outputs=[input_output_even],
+    category="Other blocks",
 )
 
 plugin.addBlock(fail_on_even_block)
@@ -847,6 +885,7 @@ dirty_block_block = PluginBlock(
     action=dirty_block,
     inputs=[input_output_even],
     outputs=[input_output_even],
+    category="Other blocks",
 )
 
 plugin.addBlock(dirty_block_block)
@@ -931,6 +970,7 @@ multiple_list_block = PluginBlock(
         multiple_allowed_list,
         # unallowed_variable_list,
     ],
+    category="Other blocks",
 )
 
 plugin.addBlock(multiple_list_block)

@@ -3,6 +3,7 @@ import { Popover } from "@headlessui/react";
 import Chevron from "./Toolbar/Icons/Chevron";
 import { horusPost } from "../Utils/utils";
 import { createPortal } from "react-dom";
+import { Link, LinkProps } from "react-router-dom";
 
 type HorusPopoverProps = {
   trigger: React.ReactNode;
@@ -243,7 +244,9 @@ export function saveFile(file: File) {
 // Will download the file (if its available for the user)
 // and return the Blob
 export function getFile(path: string) {
-  const url = new URL(window.location.origin + "/api/filepicker/download");
+  const url = new URL(
+    window.location.origin + window.__HORUS_ROOT__ + "/api/filepicker/download"
+  );
 
   url.searchParams.append("path", path);
 
@@ -263,4 +266,8 @@ export function getFile(path: string) {
         reject(err);
       });
   });
+}
+
+export function HorusLink(props: LinkProps) {
+  return <Link {...props} to={window.__HORUS_ROOT__ + props.to} />;
 }

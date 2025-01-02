@@ -26,15 +26,6 @@ libglib2.0-dev
 # Install micromamba
 RUN curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xvj bin/micromamba
 
-# Bun
-RUN curl -fsSL https://bun.sh/install | bash
-
-# Move the installation of bun from /root/.bun to /.bun
-RUN mv /root/.bun /
-
-# Add bun to PATH
-ENV PATH /.bun/bin:$PATH
-
 # NodeJS 18, needed to fix parcel runtime
 RUN apt-get install -y ca-certificates curl gnupg
 RUN mkdir -p /etc/apt/keyrings

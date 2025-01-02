@@ -14,4 +14,6 @@ heteroResBlock = InputBlock(
     action=None,
     variable=heteroResidueVariable,
     id="hetero_residue",
+            category="Structures"
+
 )

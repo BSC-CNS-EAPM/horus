@@ -148,9 +148,6 @@ GUI/
 # PyInstaller files
 .eggs/
 
-# Package lock
-package-lock.json
-
 # Plugins config
 AppSupport/Plugins/*/config/
 

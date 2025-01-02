@@ -26624,9 +26624,9 @@ var OpenBabelModule = (function () {
         var fetchedCallback = null;
         var fetched = Module["getPreloadedPackage"]
           ? Module["getPreloadedPackage"](
-              REMOTE_PACKAGE_NAME,
-              REMOTE_PACKAGE_SIZE
-            )
+            REMOTE_PACKAGE_NAME,
+            REMOTE_PACKAGE_SIZE
+          )
           : null;
         if (!fetched)
           fetchRemotePackage(
@@ -26659,7 +26659,7 @@ var OpenBabelModule = (function () {
               this.requests[name] = this;
               Module["addRunDependency"]("fp " + this.name);
             },
-            send: function () {},
+            send: function () { },
             onload: function () {
               var byteArray = this.byteArray.subarray(this.start, this.end);
               this.finish(byteArray);
@@ -26774,7 +26774,7 @@ var OpenBabelModule = (function () {
       ENVIRONMENT_HAS_NODE && !ENVIRONMENT_IS_WEB && !ENVIRONMENT_IS_WORKER;
     ENVIRONMENT_IS_SHELL =
       !ENVIRONMENT_IS_WEB && !ENVIRONMENT_IS_NODE && !ENVIRONMENT_IS_WORKER;
-    var scriptDirectory = "";
+    var scriptDirectory = self.baseURL + "/Static/obabel/";
     function locateFile(path) {
       if (Module["locateFile"]) {
         return Module["locateFile"](path, scriptDirectory);
@@ -26851,7 +26851,7 @@ var OpenBabelModule = (function () {
       }
     } else if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) {
       if (ENVIRONMENT_IS_WORKER) {
-        scriptDirectory = self.location.href;
+        scriptDirectory = self.baseURL + "/Static/obabel/";
       } else if (document.currentScript) {
         scriptDirectory = document.currentScript.src;
       }
@@ -26955,7 +26955,7 @@ var OpenBabelModule = (function () {
       "f64-rem": function (x, y) {
         return x % y;
       },
-      debugger: function () {},
+      debugger: function () { },
     };
     var functionPointers = new Array(0);
     var tempRet0 = 0;
@@ -26989,15 +26989,15 @@ var OpenBabelModule = (function () {
           (tempI64 = [
             value >>> 0,
             ((tempDouble = value),
-            +Math_abs(tempDouble) >= 1
-              ? tempDouble > 0
-                ? (Math_min(+Math_floor(tempDouble / 4294967296), 4294967295) |
+              +Math_abs(tempDouble) >= 1
+                ? tempDouble > 0
+                  ? (Math_min(+Math_floor(tempDouble / 4294967296), 4294967295) |
                     0) >>>
                   0
-                : ~~+Math_ceil(
+                  : ~~+Math_ceil(
                     (tempDouble - +(~~tempDouble >>> 0)) / 4294967296
                   ) >>> 0
-              : 0),
+                : 0),
           ]),
             (HEAP32[ptr >> 2] = tempI64[0]),
             (HEAP32[(ptr + 4) >> 2] = tempI64[1]);
@@ -27502,13 +27502,13 @@ var OpenBabelModule = (function () {
     function ___assert_fail(condition, filename, line, func) {
       abort(
         "Assertion failed: " +
-          UTF8ToString(condition) +
-          ", at: " +
-          [
-            filename ? UTF8ToString(filename) : "unknown filename",
-            line,
-            func ? UTF8ToString(func) : "unknown function",
-          ]
+        UTF8ToString(condition) +
+        ", at: " +
+        [
+          filename ? UTF8ToString(filename) : "unknown filename",
+          line,
+          func ? UTF8ToString(func) : "unknown function",
+        ]
       );
     }
     var ENV = {};
@@ -27614,7 +27614,7 @@ var OpenBabelModule = (function () {
       }
       throw ptr;
     }
-    function ___lock() {}
+    function ___lock() { }
     function ___setErrNo(value) {
       if (Module["___errno_location"])
         HEAP32[Module["___errno_location"]() >> 2] = value;
@@ -27754,8 +27754,8 @@ var OpenBabelModule = (function () {
     };
     var TTY = {
       ttys: [],
-      init: function () {},
-      shutdown: function () {},
+      init: function () { },
+      shutdown: function () { },
       register: function (dev, ops) {
         TTY.ttys[dev] = { input: [], output: [], ops: ops };
         FS.registerDevice(dev, TTY.stream_ops);
@@ -27996,7 +27996,7 @@ var OpenBabelModule = (function () {
         newCapacity = Math.max(
           newCapacity,
           (prevCapacity * (prevCapacity < CAPACITY_DOUBLING_MAX ? 2 : 1.125)) |
-            0
+          0
         );
         if (prevCapacity != 0) newCapacity = Math.max(newCapacity, 256);
         var oldContents = node.contents;
@@ -28076,7 +28076,7 @@ var OpenBabelModule = (function () {
             var new_node;
             try {
               new_node = FS.lookupNode(new_dir, new_name);
-            } catch (e) {}
+            } catch (e) { }
             if (new_node) {
               for (var i in new_node.contents) {
                 throw new FS.ErrnoError(55);
@@ -29361,7 +29361,7 @@ var OpenBabelModule = (function () {
         try {
           var node = FS.lookupNode(dir, name);
           return 20;
-        } catch (e) {}
+        } catch (e) { }
         return FS.nodePermissions(dir, "wx");
       },
       mayDelete: function (dir, name, isdir) {
@@ -29418,7 +29418,7 @@ var OpenBabelModule = (function () {
       },
       createStream: function (stream, fd_start, fd_end) {
         if (!FS.FSStream) {
-          FS.FSStream = function () {};
+          FS.FSStream = function () { };
           FS.FSStream.prototype = {};
           Object.defineProperties(FS.FSStream.prototype, {
             object: {
@@ -29505,8 +29505,8 @@ var OpenBabelModule = (function () {
         if (FS.syncFSRequests > 1) {
           console.log(
             "warning: " +
-              FS.syncFSRequests +
-              " FS.syncfs operations in flight at once, probably just doing extra work"
+            FS.syncFSRequests +
+            " FS.syncfs operations in flight at once, probably just doing extra work"
           );
         }
         var mounts = FS.getMounts(FS.root.mount);
@@ -29693,7 +29693,7 @@ var OpenBabelModule = (function () {
         var new_node;
         try {
           new_node = FS.lookupNode(new_dir, new_name);
-        } catch (e) {}
+        } catch (e) { }
         if (old_node === new_node) {
           return;
         }
@@ -29730,11 +29730,11 @@ var OpenBabelModule = (function () {
         } catch (e) {
           console.log(
             "FS.trackingDelegate['willMovePath']('" +
-              old_path +
-              "', '" +
-              new_path +
-              "') threw an exception: " +
-              e.message
+            old_path +
+            "', '" +
+            new_path +
+            "') threw an exception: " +
+            e.message
           );
         }
         FS.hashRemoveNode(old_node);
@@ -29751,11 +29751,11 @@ var OpenBabelModule = (function () {
         } catch (e) {
           console.log(
             "FS.trackingDelegate['onMovePath']('" +
-              old_path +
-              "', '" +
-              new_path +
-              "') threw an exception: " +
-              e.message
+            old_path +
+            "', '" +
+            new_path +
+            "') threw an exception: " +
+            e.message
           );
         }
       },
@@ -29781,9 +29781,9 @@ var OpenBabelModule = (function () {
         } catch (e) {
           console.log(
             "FS.trackingDelegate['willDeletePath']('" +
-              path +
-              "') threw an exception: " +
-              e.message
+            path +
+            "') threw an exception: " +
+            e.message
           );
         }
         parent.node_ops.rmdir(parent, name);
@@ -29794,9 +29794,9 @@ var OpenBabelModule = (function () {
         } catch (e) {
           console.log(
             "FS.trackingDelegate['onDeletePath']('" +
-              path +
-              "') threw an exception: " +
-              e.message
+            path +
+            "') threw an exception: " +
+            e.message
           );
         }
       },
@@ -29830,9 +29830,9 @@ var OpenBabelModule = (function () {
         } catch (e) {
           console.log(
             "FS.trackingDelegate['willDeletePath']('" +
-              path +
-              "') threw an exception: " +
-              e.message
+            path +
+            "') threw an exception: " +
+            e.message
           );
         }
         parent.node_ops.unlink(parent, name);
@@ -29843,9 +29843,9 @@ var OpenBabelModule = (function () {
         } catch (e) {
           console.log(
             "FS.trackingDelegate['onDeletePath']('" +
-              path +
-              "') threw an exception: " +
-              e.message
+            path +
+            "') threw an exception: " +
+            e.message
           );
         }
       },
@@ -29986,7 +29986,7 @@ var OpenBabelModule = (function () {
           try {
             var lookup = FS.lookupPath(path, { follow: !(flags & 131072) });
             node = lookup.node;
-          } catch (e) {}
+          } catch (e) { }
         }
         var created = false;
         if (flags & 64) {
@@ -30056,9 +30056,9 @@ var OpenBabelModule = (function () {
         } catch (e) {
           console.log(
             "FS.trackingDelegate['onOpenFile']('" +
-              path +
-              "', flags) threw an exception: " +
-              e.message
+            path +
+            "', flags) threw an exception: " +
+            e.message
           );
         }
         return stream;
@@ -30168,9 +30168,9 @@ var OpenBabelModule = (function () {
         } catch (e) {
           console.log(
             "FS.trackingDelegate['onWriteToFile']('" +
-              stream.path +
-              "') threw an exception: " +
-              e.message
+            stream.path +
+            "') threw an exception: " +
+            e.message
           );
         }
         return bytesWritten;
@@ -30327,7 +30327,7 @@ var OpenBabelModule = (function () {
             random_device = function () {
               return crypto_module["randomBytes"](1)[0];
             };
-          } catch (e) {}
+          } catch (e) { }
         } else {
         }
         if (!random_device) {
@@ -30474,7 +30474,7 @@ var OpenBabelModule = (function () {
         try {
           var lookup = FS.lookupPath(path, { follow: !dontResolveLastLink });
           path = lookup.path;
-        } catch (e) {}
+        } catch (e) { }
         var ret = {
           isRoot: false,
           exists: false,
@@ -30520,7 +30520,7 @@ var OpenBabelModule = (function () {
           var current = PATH.join2(parent, part);
           try {
             FS.mkdir(current);
-          } catch (e) {}
+          } catch (e) { }
           parent = current;
         }
         return current;
@@ -30536,9 +30536,9 @@ var OpenBabelModule = (function () {
       createDataFile: function (parent, name, data, canRead, canWrite, canOwn) {
         var path = name
           ? PATH.join2(
-              typeof parent === "string" ? parent : FS.getPath(parent),
-              name
-            )
+            typeof parent === "string" ? parent : FS.getPath(parent),
+            name
+          )
           : parent;
         var mode = FS.getMode(canRead, canWrite);
         var node = FS.create(path, mode);
@@ -30681,10 +30681,10 @@ var OpenBabelModule = (function () {
               if (from > to)
                 throw new Error(
                   "invalid range (" +
-                    from +
-                    ", " +
-                    to +
-                    ") or no bytes requested!"
+                  from +
+                  ", " +
+                  to +
+                  ") or no bytes requested!"
                 );
               if (to > datalength - 1)
                 throw new Error(
@@ -30887,8 +30887,8 @@ var OpenBabelModule = (function () {
       DB_VERSION: 20,
       DB_STORE_NAME: "FILE_DATA",
       saveFilesToDB: function (paths, onload, onerror) {
-        onload = onload || function () {};
-        onerror = onerror || function () {};
+        onload = onload || function () { };
+        onerror = onerror || function () { };
         var indexedDB = FS.indexedDB();
         try {
           var openRequest = indexedDB.open(FS.DB_NAME(), FS.DB_VERSION);
@@ -30930,8 +30930,8 @@ var OpenBabelModule = (function () {
         openRequest.onerror = onerror;
       },
       loadFilesFromDB: function (paths, onload, onerror) {
-        onload = onload || function () {};
-        onerror = onerror || function () {};
+        onload = onload || function () { };
+        onerror = onerror || function () { };
         var indexedDB = FS.indexedDB();
         try {
           var openRequest = indexedDB.open(FS.DB_NAME(), FS.DB_VERSION);
@@ -31025,15 +31025,15 @@ var OpenBabelModule = (function () {
         (tempI64 = [
           stat.size >>> 0,
           ((tempDouble = stat.size),
-          +Math_abs(tempDouble) >= 1
-            ? tempDouble > 0
-              ? (Math_min(+Math_floor(tempDouble / 4294967296), 4294967295) |
+            +Math_abs(tempDouble) >= 1
+              ? tempDouble > 0
+                ? (Math_min(+Math_floor(tempDouble / 4294967296), 4294967295) |
                   0) >>>
                 0
-              : ~~+Math_ceil(
+                : ~~+Math_ceil(
                   (tempDouble - +(~~tempDouble >>> 0)) / 4294967296
                 ) >>> 0
-            : 0),
+              : 0),
         ]),
           (HEAP32[(buf + 40) >> 2] = tempI64[0]),
           (HEAP32[(buf + 44) >> 2] = tempI64[1]);
@@ -31048,15 +31048,15 @@ var OpenBabelModule = (function () {
         (tempI64 = [
           stat.ino >>> 0,
           ((tempDouble = stat.ino),
-          +Math_abs(tempDouble) >= 1
-            ? tempDouble > 0
-              ? (Math_min(+Math_floor(tempDouble / 4294967296), 4294967295) |
+            +Math_abs(tempDouble) >= 1
+              ? tempDouble > 0
+                ? (Math_min(+Math_floor(tempDouble / 4294967296), 4294967295) |
                   0) >>>
                 0
-              : ~~+Math_ceil(
+                : ~~+Math_ceil(
                   (tempDouble - +(~~tempDouble >>> 0)) / 4294967296
                 ) >>> 0
-            : 0),
+              : 0),
         ]),
           (HEAP32[(buf + 80) >> 2] = tempI64[0]),
           (HEAP32[(buf + 84) >> 2] = tempI64[1]);
@@ -31198,15 +31198,15 @@ var OpenBabelModule = (function () {
         (tempI64 = [
           stream.position >>> 0,
           ((tempDouble = stream.position),
-          +Math_abs(tempDouble) >= 1
-            ? tempDouble > 0
-              ? (Math_min(+Math_floor(tempDouble / 4294967296), 4294967295) |
+            +Math_abs(tempDouble) >= 1
+              ? tempDouble > 0
+                ? (Math_min(+Math_floor(tempDouble / 4294967296), 4294967295) |
                   0) >>>
                 0
-              : ~~+Math_ceil(
+                : ~~+Math_ceil(
                   (tempDouble - +(~~tempDouble >>> 0)) / 4294967296
                 ) >>> 0
-            : 0),
+              : 0),
         ]),
           (HEAP32[result >> 2] = tempI64[0]),
           (HEAP32[(result + 4) >> 2] = tempI64[1]);
@@ -31388,7 +31388,7 @@ var OpenBabelModule = (function () {
         return -e.errno;
       }
     }
-    function ___unlock() {}
+    function ___unlock() { }
     function _fd_close(fd) {
       try {
         var stream = SYSCALLS.getStreamFromFD(fd);
@@ -31451,11 +31451,11 @@ var OpenBabelModule = (function () {
       return new Function(
         "body",
         "return function " +
-          name +
-          "() {\n" +
-          '    "use strict";' +
-          "    return body.apply(this, arguments);\n" +
-          "};\n"
+        name +
+        "() {\n" +
+        '    "use strict";' +
+        "    return body.apply(this, arguments);\n" +
+        "};\n"
       )(body);
     }
     function extendError(baseErrorType, errorName) {
@@ -31740,7 +31740,7 @@ var OpenBabelModule = (function () {
       throwBindingError(getInstanceTypeName(obj) + " instance already deleted");
     }
     var finalizationGroup = false;
-    function detachFinalizer(handle) {}
+    function detachFinalizer(handle) { }
     function runDestructor($$) {
       if ($$.smartPtr) {
         $$.smartPtrType.rawDestructor($$.smartPtr);
@@ -31846,7 +31846,7 @@ var OpenBabelModule = (function () {
       ClassHandle.prototype["isDeleted"] = ClassHandle_isDeleted;
       ClassHandle.prototype["deleteLater"] = ClassHandle_deleteLater;
     }
-    function ClassHandle() {}
+    function ClassHandle() { }
     var registeredPointers = {};
     function ensureOverloadTable(proto, methodName, humanName) {
       if (undefined === proto[methodName].overloadTable) {
@@ -31857,12 +31857,12 @@ var OpenBabelModule = (function () {
           ) {
             throwBindingError(
               "Function '" +
-                humanName +
-                "' called with an invalid number of arguments (" +
-                arguments.length +
-                ") - expects one of (" +
-                proto[methodName].overloadTable +
-                ")!"
+              humanName +
+              "' called with an invalid number of arguments (" +
+              arguments.length +
+              ") - expects one of (" +
+              proto[methodName].overloadTable +
+              ")!"
             );
           }
           return proto[methodName].overloadTable[arguments.length].apply(
@@ -31887,8 +31887,8 @@ var OpenBabelModule = (function () {
         if (Module.hasOwnProperty(numArguments)) {
           throwBindingError(
             "Cannot register multiple overloads of a function with the same number of arguments (" +
-              numArguments +
-              ")!"
+            numArguments +
+            ")!"
           );
         }
         Module[name].overloadTable[numArguments] = value;
@@ -31924,9 +31924,9 @@ var OpenBabelModule = (function () {
         if (!ptrClass.upcast) {
           throwBindingError(
             "Expected null or instance of " +
-              desiredClass.name +
-              ", got an instance of " +
-              ptrClass.name
+            desiredClass.name +
+            ", got an instance of " +
+            ptrClass.name
           );
         }
         ptr = ptrClass.upcast(ptr);
@@ -31984,11 +31984,11 @@ var OpenBabelModule = (function () {
       if (!this.isConst && handle.$$.ptrType.isConst) {
         throwBindingError(
           "Cannot convert argument of type " +
-            (handle.$$.smartPtrType
-              ? handle.$$.smartPtrType.name
-              : handle.$$.ptrType.name) +
-            " to parameter type " +
-            this.name
+          (handle.$$.smartPtrType
+            ? handle.$$.smartPtrType.name
+            : handle.$$.ptrType.name) +
+          " to parameter type " +
+          this.name
         );
       }
       var handleClass = handle.$$.ptrType.registeredClass;
@@ -32004,11 +32004,11 @@ var OpenBabelModule = (function () {
             } else {
               throwBindingError(
                 "Cannot convert argument of type " +
-                  (handle.$$.smartPtrType
-                    ? handle.$$.smartPtrType.name
-                    : handle.$$.ptrType.name) +
-                  " to parameter type " +
-                  this.name
+                (handle.$$.smartPtrType
+                  ? handle.$$.smartPtrType.name
+                  : handle.$$.ptrType.name) +
+                " to parameter type " +
+                this.name
               );
             }
             break;
@@ -32057,9 +32057,9 @@ var OpenBabelModule = (function () {
       if (handle.$$.ptrType.isConst) {
         throwBindingError(
           "Cannot convert argument of type " +
-            handle.$$.ptrType.name +
-            " to parameter type " +
-            this.name
+          handle.$$.ptrType.name +
+          " to parameter type " +
+          this.name
         );
       }
       var handleClass = handle.$$.ptrType.registeredClass;
@@ -32316,9 +32316,9 @@ var OpenBabelModule = (function () {
       if (typeof fp !== "function") {
         throwBindingError(
           "unknown function pointer with signature " +
-            signature +
-            ": " +
-            rawFunction
+          signature +
+          ": " +
+          rawFunction
         );
       }
       return fp;
@@ -32413,12 +32413,12 @@ var OpenBabelModule = (function () {
             if (undefined === body) {
               throw new BindingError(
                 "Tried to invoke ctor of " +
-                  name +
-                  " with invalid number of parameters (" +
-                  arguments.length +
-                  ") - expected (" +
-                  Object.keys(registeredClass.constructor_body).toString() +
-                  ") parameters instead!"
+                name +
+                " with invalid number of parameters (" +
+                arguments.length +
+                ") - expected (" +
+                Object.keys(registeredClass.constructor_body).toString() +
+                ") parameters instead!"
               );
             }
             return body.apply(this, arguments);
@@ -32471,13 +32471,13 @@ var OpenBabelModule = (function () {
       if (!(constructor instanceof Function)) {
         throw new TypeError(
           "new_ called with constructor type " +
-            typeof constructor +
-            " which is not a function"
+          typeof constructor +
+          " which is not a function"
         );
       }
       var dummy = createNamedFunction(
         constructor.name || "unknownFunctionName",
-        function () {}
+        function () { }
       );
       dummy.prototype = constructor.prototype;
       var obj = new dummy();
@@ -32685,10 +32685,10 @@ var OpenBabelModule = (function () {
         ) {
           throw new BindingError(
             "Cannot register multiple constructors with identical number of parameters (" +
-              (argCount - 1) +
-              ") for class '" +
-              classType.name +
-              "'! Overload resolution is currently only performed using the parameter count, not actual type info!"
+            (argCount - 1) +
+            ") for class '" +
+            classType.name +
+            "'! Overload resolution is currently only performed using the parameter count, not actual type info!"
           );
         }
         classType.registeredClass.constructor_body[argCount - 1] =
@@ -32704,10 +32704,10 @@ var OpenBabelModule = (function () {
               if (arguments.length !== argCount - 1) {
                 throwBindingError(
                   humanName +
-                    " called with " +
-                    arguments.length +
-                    " arguments, expected " +
-                    (argCount - 1)
+                  " called with " +
+                  arguments.length +
+                  " arguments, expected " +
+                  (argCount - 1)
                 );
               }
               var destructors = [];
@@ -32886,7 +32886,7 @@ var OpenBabelModule = (function () {
     function __embind_register_enum(rawType, name, size, isSigned) {
       var shift = getShiftFromSize(size);
       name = readLatin1String(name);
-      function ctor() {}
+      function ctor() { }
       ctor.values = {};
       registerType(rawType, {
         name: name,
@@ -32921,7 +32921,7 @@ var OpenBabelModule = (function () {
         constructor: {
           value: createNamedFunction(
             enumType.name + "_" + name,
-            function () {}
+            function () { }
           ),
         },
       });
@@ -33010,27 +33010,27 @@ var OpenBabelModule = (function () {
         case 0:
           return signed
             ? function readS8FromPointer(pointer) {
-                return HEAP8[pointer];
-              }
+              return HEAP8[pointer];
+            }
             : function readU8FromPointer(pointer) {
-                return HEAPU8[pointer];
-              };
+              return HEAPU8[pointer];
+            };
         case 1:
           return signed
             ? function readS16FromPointer(pointer) {
-                return HEAP16[pointer >> 1];
-              }
+              return HEAP16[pointer >> 1];
+            }
             : function readU16FromPointer(pointer) {
-                return HEAPU16[pointer >> 1];
-              };
+              return HEAPU16[pointer >> 1];
+            };
         case 2:
           return signed
             ? function readS32FromPointer(pointer) {
-                return HEAP32[pointer >> 2];
-              }
+              return HEAP32[pointer >> 2];
+            }
             : function readU32FromPointer(pointer) {
-                return HEAPU32[pointer >> 2];
-              };
+              return HEAPU32[pointer >> 2];
+            };
         default:
           throw new TypeError("Unknown integer type: " + name);
       }
@@ -33069,14 +33069,14 @@ var OpenBabelModule = (function () {
           if (value < minRange || value > maxRange) {
             throw new TypeError(
               'Passing a number "' +
-                _embind_repr(value) +
-                '" from JS side to C/C++ side to an argument of type "' +
-                name +
-                '", which is outside the valid range [' +
-                minRange +
-                ", " +
-                maxRange +
-                "]!"
+              _embind_repr(value) +
+              '" from JS side to C/C++ side to an argument of type "' +
+              name +
+              '", which is outside the valid range [' +
+              minRange +
+              ", " +
+              maxRange +
+              "]!"
             );
           }
           return isUnsignedType ? value >>> 0 : value | 0;
@@ -33350,7 +33350,7 @@ var OpenBabelModule = (function () {
         wasmMemory.grow((size - buffer.byteLength + 65535) >> 16);
         updateGlobalBufferAndViews(wasmMemory.buffer);
         return 1;
-      } catch (e) {}
+      } catch (e) { }
     }
     function _emscripten_resize_heap(requestedSize) {
       var oldSize = _emscripten_get_heap_size();
@@ -33687,12 +33687,12 @@ var OpenBabelModule = (function () {
         "%j": function (date) {
           return leadingNulls(
             date.tm_mday +
-              __arraySum(
-                __isLeapYear(date.tm_year + 1900)
-                  ? __MONTH_DAYS_LEAP
-                  : __MONTH_DAYS_REGULAR,
-                date.tm_mon - 1
-              ),
+            __arraySum(
+              __isLeapYear(date.tm_year + 1900)
+                ? __MONTH_DAYS_LEAP
+                : __MONTH_DAYS_REGULAR,
+              date.tm_mon - 1
+            ),
             3
           );
         },
@@ -33783,9 +33783,9 @@ var OpenBabelModule = (function () {
             janFirst.getDay() === 1
               ? janFirst
               : __addDays(
-                  janFirst,
-                  janFirst.getDay() === 0 ? 1 : 7 - janFirst.getDay() + 1
-                );
+                janFirst,
+                janFirst.getDay() === 0 ? 1 : 7 - janFirst.getDay() + 1
+              );
           var endDate = new Date(
             date.tm_year + 1900,
             date.tm_mon,

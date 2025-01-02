@@ -7,7 +7,6 @@ import { fetchDesktop, horusGet, horusPost } from "../Utils/utils";
 
 // Components
 import { HorusFileExplorer } from "../Components/FileExplorer/file_explorer";
-import { SearchComponent } from "../Components/Toolbar/toolbar";
 import { PluginVariableView } from "../Components/FlowBuilder/Variables/variables";
 import AppButton from "../Components/appbutton";
 import RotatingLines from "../Components/RotatingLines/rotatinglines";
@@ -34,6 +33,7 @@ import { PluginBrowserRoot } from "./repo_browser";
 import { HorusViewTabs, Tab } from "../Components/Tabs";
 import RemoteIcon from "../Components/Toolbar/Icons/Remote";
 import { HorusLazyLog } from "../Components/HorusLazyLog/HorusLazyLog";
+import { SearchComponent } from "@/Components/Search/Search";
 
 type ConfigBlockType = Array<{
   remote: string;
@@ -448,9 +448,7 @@ function PluginCard(props: PluginCardProps) {
             <div className="flex flex-row items-baseline gap-2">
               <div>
                 <span className="text-xl font-semibold">{plugin.name}</span>
-                {!error && (
-                  <span> - {plugin.description}</span>
-                )}
+                {!error && <span> - {plugin.description}</span>}
               </div>
             </div>
             {!error ? (
@@ -648,7 +646,12 @@ export function PluginManager() {
   };
 
   return (
-    <div className="overflow-hidden w-full">
+    <div
+      className="w-full h-full"
+      style={{
+        overflowY: "auto",
+      }}
+    >
       <div className="flex flex-col">
         <div className="plugin-manager-title flex">
           <div
@@ -869,7 +872,6 @@ function InstallingPluginView({
           >
             <HorusLazyLog
               logText={text}
-              keepDisabled={!isInstalling}
               filename={
                 getFileName(selectedFile)
                   ? `${getFileName(selectedFile)}.log`
@@ -954,6 +956,7 @@ function ManualFileSelectionInstall({
           }}
         />
         <AppButton
+          className="min-w-[90px]"
           disabled={!selectedFile}
           action={() => {
             onPluginInstall(selectedFile!);

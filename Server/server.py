@@ -42,7 +42,6 @@ from flask import Flask, after_this_request, request, Response
 from flask_socketio import SocketIO, join_room, leave_room
 from flask_cors import CORS
 import flask_login
-import eventlet.wsgi
 
 
 # Werkzeug secure filenames
@@ -56,7 +55,7 @@ import requests
 import webview
 
 # Flow manager
-from Server.FlowManager import FlowManager, OverwriteException, NoPathSelected, Flow
+from Server.FlowManager import FlowManager, OverwriteException, NoPathSelected, Flow, NoPublicFlow
 
 # Settings manager
 from Server.SettingsManager import SettingsManager
@@ -169,6 +168,7 @@ class HorusServer:
         appSupportDir=None,
         host=None,
         port=None,
+        root=None,
     ):
 
         # Mode of the server
@@ -197,11 +197,14 @@ class HorusServer:
         else:
             self.appSupportDir = appSupportDir
 
+        # Get the root path
+        self.horusRoot = root or ""
+
         # Basic Flask setup
         self.debug = debug
         self.host = host if host else "localhost"
         self.port = port if port else self._getFreePort()
-        self.baseURL = f"http://{self.host}:{self.port}"
+        self.baseURL = f"http://{self.host}:{self.port}{self.horusRoot}"
 
         # If we are running on host 0.0.0.0, get the real base URL
         localIp = None
@@ -216,7 +219,7 @@ class HorusServer:
                 )
                 localIp = "localhost"
 
-            self.baseURL = f"http://{localIp}:{self.port}"
+            self.baseURL = f"http://{localIp}:{self.port}{self.horusRoot}"
 
         # Check that the baseURL is not in use
         if not self.debug:
@@ -224,9 +227,7 @@ class HorusServer:
             try:
                 sock.bind((localIp or self.host, self.port))
             except OSError as ose:
-                raise Exception(  # pylint: disable=broad-exception-raised
-                    f"Adress {self.baseURL} is already in use"
-                ) from ose
+                raise Exception(f"Adress {self.baseURL} is already in use") from ose
 
         logging.getLogger("Horus").info("Host: %s", self.host)
         logging.getLogger("Horus").info("Port: %s", self.port)
@@ -322,13 +323,9 @@ class HorusServer:
             try:
                 return webview.token
             except ImportError as impe:
-                raise Exception(  # pylint: disable=broad-exception-raised
-                    "Error: webview module not found"
-                ) from impe
+                raise Exception("Error: webview module not found") from impe
             except AttributeError as attre:
-                raise Exception(  # pylint: disable=broad-exception-raised
-                    "Error: webview.token attribute not found"
-                ) from attre
+                raise Exception("Error: webview.token attribute not found") from attre
 
         return str(random.randint(1, 100000000))
 
@@ -358,11 +355,10 @@ class HorusServer:
         if hasattr(sys, "_MEIPASS"):
             bundleDir = sys._MEIPASS  # type: ignore pylint: disable=protected-access
             guiDir = os.path.join(bundleDir, "GUI")
+            if not os.path.exists(guiDir):
+                raise FileNotFoundError("GUI directory not found")
         else:
             guiDir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "GUI"))
-
-        if not os.path.exists(guiDir):
-            raise FileNotFoundError("GUI directory not found")
 
         return guiDir
 
@@ -441,12 +437,51 @@ class HorusServer:
         # Disable werkzeug logging when not in debug mode
         # logging.getLogger("werkzeug").disabled = not self.debug
 
+        from flask.sansio.scaffold import setupmethod, T_route
+
+        class HorusFlask(flask.Flask):
+            def __init__(self, *args, **kwargs):
+                self.horusRoot = kwargs.pop("horusRoot")
+
+                # Hook the flask.redirect method
+                if self.horusRoot:
+
+                    oldRedirect = flask.redirect
+
+                    def newRedirect(*args, **kwargs):
+
+                        url: str = args[0]
+                        if url == "/":
+                            url = self.horusRoot
+                        else:
+                            url = self.horusRoot + url
+
+                        # Add the rootpath to the redirect
+                        return oldRedirect(url, **kwargs)
+
+                    flask.redirect = newRedirect
+
+                super().__init__(*args, **kwargs)
+
+            @setupmethod
+            def route(
+                self, rule: str, **options: typing.Any
+            ) -> typing.Callable[[T_route], T_route]:
+                def decorator(f: T_route) -> T_route:
+                    endpoint = options.pop("endpoint", None)
+                    fullRule = self.horusRoot + rule
+                    self.add_url_rule(fullRule, endpoint, f, **options)
+                    return f
+
+                return decorator
+
         # Setup the server
-        server = flask.Flask(
+        server = HorusFlask(
             __name__,
             static_folder=self.guiDir,
             template_folder=self.guiDir,
-            static_url_path="/",
+            static_url_path=self.horusRoot + "/static",
+            horusRoot=self.horusRoot,
         )
 
         # If we are on webapp mode
@@ -487,6 +522,12 @@ class HorusServer:
 
         @wraps(func)
         def wrapper(*args, **kwargs):
+
+            # If the user is asking for a static file, just send it
+            static_path = os.path.join(str(self.server.static_folder), request.path.lstrip("/"))
+            if os.path.isfile(static_path):
+                return func(*args, **kwargs)
+
             # If we are on webapp mode, and we require users to be logged in
             # this wrapper will prevent access to the route if the user is not logged in
             if self.webAppManager and self.webAppManager.userManagement.requireRegistration:
@@ -711,10 +752,9 @@ class HorusServer:
 
             # Parse the request data
             request.get_data()
-            data = request.form
             files = request.files
 
-            if data is None or files is None:
+            if files is None:
                 success = {
                     "ok": False,
                     "msg": "No data provided",
@@ -722,8 +762,19 @@ class HorusServer:
 
                 return flask.jsonify(success)
 
-            # Get the flow data and the molstar state
-            flowData = data.get("flowData", None)
+            # Get the flow data from the file
+            flowDataFile = files.get("flowData", None)
+
+            if flowDataFile is None:
+                success = {
+                    "ok": False,
+                    "msg": "No flowData provided",
+                }
+
+                return flask.jsonify(success)
+
+            # Parse the data string as JSON
+            flowData = flask.json.loads(flowDataFile.stream.read().decode("utf-8"))
 
             if flowData is None:
                 success = {
@@ -733,14 +784,11 @@ class HorusServer:
 
                 return flask.jsonify(success)
 
-            # Parse the data string as JSON
-            flowData = flask.json.loads(flowData)
-
             # Get and parse the smilesState
-            smilesState = data.get("smilesState", None)
+            smilesState = files.get("smilesState", None)
 
             if smilesState is not None:
-                smilesState = flask.json.loads(smilesState)
+                smilesState = flask.json.loads(smilesState.stream.read().decode("utf-8"))
 
             # Get if the user wants to store this flow as a template
             saveAsTemplate = flowData.get("template", False)
@@ -848,9 +896,7 @@ class HorusServer:
                 if self.desktop:
                     flow = self.flowManager.openFlow()
                 else:
-                    raise Exception(  # pylint: disable=broad-exception-raised
-                        "This function is only available on desktop mode."
-                    )
+                    raise Exception("This function is only available on desktop mode.")
 
                 # Get the flow JSON
                 flowJson = flow.encode(minimal=False)
@@ -971,7 +1017,7 @@ class HorusServer:
             try:
                 data = request.get_json()
                 if data is None:
-                    raise Exception("No data provided")  # pylint: disable=broad-exception-raised
+                    raise Exception("No data provided")
                 savedID = data.get("savedID", None)
                 path = data.get("path", None)
                 if path is not None:
@@ -981,20 +1027,24 @@ class HorusServer:
                         path = str(UserFileExplorer(path, currentUser).getAbsolutePath())
 
                     # Load the flow from the path
-                    flow = self.flowManager.openFlowFromPath(path)
+                    flow = self.flowManager.openFlowFromPath(path, addToRecents=False)
 
                 else:
                     if savedID is None:
-                        raise Exception(  # pylint: disable=broad-exception-raised
-                            "No savedID provided"
-                        )
+                        raise Exception("No savedID provided")
 
                     template = data.get("template", False)
 
                     if template:
                         flow = self.flowManager.loadTemplateFlow(savedID)
                     else:
-                        flow = self.flowManager.loadPredefinedFlow(savedID)
+
+                        # If the Plugin is "Public" try to search it on the
+                        # public flows
+                        try:
+                            flow = self.flowManager.loadPublicFlow(savedID)
+                        except NoPublicFlow:
+                            flow = self.flowManager.loadPredefinedFlow(savedID)
 
                 # Get the smilesState
                 smilesState = flow.getSmilesState()
@@ -1081,9 +1131,9 @@ class HorusServer:
                     flowPath = str(UserFileExplorer(flowPath, currentUser).getAbsolutePath())
 
                 # Load the flow from the path
-                flow = self.flowManager.openFlowFromPath(flowPath)
+                flow = self.flowManager.openFlowFromPath(flowPath, addToRecents=False)
 
-                # Get the molstarStte zip file
+                # Get the molstarState zip file
                 molstarState = flow.getMolstarState()
 
                 # Delete the tarfile after the download
@@ -1145,19 +1195,9 @@ class HorusServer:
 
                 return flask.jsonify(success)
 
-            file = request.files.get("molstarState", None)
-            smilesState = request.form.get("smilesState", None)
-
-            if file is None or smilesState is None:
-                success = {
-                    "ok": False,
-                    "msg": "No molstar or smiles state provided",
-                }
-
-                return flask.jsonify(success)
-
-            # Load the smiles state json
-            smilesState = flask.json.loads(smilesState)
+            # Read the Mol* and Smiles state. Those can be none if the user did not open the Viewer
+            molFile = request.files.get("molstarState", None)
+            smilesState = request.files.get("smilesState", None)
 
             try:
 
@@ -1167,14 +1207,25 @@ class HorusServer:
                     flowPath = str(UserFileExplorer(flowPath, currentUser).getAbsolutePath())
 
                 # Open the flow
-                flow = self.flowManager.openFlowFromPath(flowPath)
-
-                # Seek the stream at the starting byte to load it
-                file.stream.seek(0)
-                molState = file.stream.read()
+                flow = self.flowManager.openFlowFromPath(flowPath, addToRecents=False)
                 flow.pendingActions = []
                 flow.pendingSmilesActions = []
-                flow.write(molState, smilesState)
+                flow.pendingExtensions = []
+
+                # Seek the stream at the starting byte to load it
+                molState = None
+                if molFile:
+                    molFile.stream.seek(0)
+                    molState = molFile.stream.read()
+
+                flow.write(
+                    molState,
+                    (
+                        flask.json.loads(smilesState.stream.read().decode("utf-8"))
+                        if smilesState
+                        else None
+                    ),
+                )
 
                 success = {
                     "ok": True,
@@ -1261,6 +1312,22 @@ class HorusServer:
             AppDelegate().openAppSupportDir()
             return "OK"
 
+        @self.server.route("/api/plugins/logo", methods=["GET"])
+        def getPluginLogo():
+            pluginID = request.args.get("pluginID", None)
+
+            if pluginID is None:
+                return flask.jsonify({"ok": False, "msg": "Plugin ID not provided."})
+
+            plugin = self.pluginManager._getPluginByID(pluginID)
+
+            if plugin is None:
+                return flask.jsonify(
+                    {"ok": False, "msg": "Plugin with id '" + pluginID + "' not found."}
+                )
+
+            return flask.jsonify({"ok": True, "logo": plugin.logo})
+
         @self.server.route("/api/plugins/list", methods=["GET"])
         @self.verifyLogin
         def listPlugins():
@@ -1276,13 +1343,15 @@ class HorusServer:
 
             # Filter the blocks based on the user
             # Admins have access to all
-            if (
-                self._isForUser
-                and self.webAppManager is not None
-                and self.webAppManager.userGroupsManager is not None
-                and not currentUser.admin
-            ):
-                blocks = self.webAppManager.userGroupsManager.getBlocksForUser()
+            if self._isForUser and self.webAppManager is not None and not currentUser.admin:
+                if self.webAppManager.userGroupsManager is not None:
+                    blocks = self.webAppManager.userGroupsManager.getBlocksForUser()
+                else:
+                    blocks = [
+                        b
+                        for b in self.pluginManager.getBlocks()
+                        if b["id"] not in self.webAppManager.userManagement.forbiddenBlocks
+                    ]
             else:
                 blocks = self.pluginManager.getBlocks()
 
@@ -1318,7 +1387,7 @@ class HorusServer:
                 if self._isForUser:
                     flowPath = str(UserFileExplorer(flowPath, currentUser).getAbsolutePath())
 
-                flow = self.flowManager.openFlowFromPath(flowPath)
+                flow = self.flowManager.openFlowFromPath(flowPath, addToRecents=False)
                 flow.reset()
 
                 # Obfuscate the path in webapp mode
@@ -1375,13 +1444,15 @@ class HorusServer:
                 flow._skipPath = relativePath if self._isForUser else None
 
                 # Before running the flow, check that the blocks are available for the user
-                if (
-                    self._isForUser
-                    and self.webAppManager is not None
-                    and self.webAppManager.userGroupsManager is not None
-                    and not currentUser.admin
-                ):
-                    self.webAppManager.userGroupsManager.verifyFlowCanBeExecuted(flow)
+                if self._isForUser and self.webAppManager is not None and not currentUser.admin:
+                    if self.webAppManager.userGroupsManager is not None:
+                        self.webAppManager.userGroupsManager.verifyFlowCanBeExecuted(flow)
+                    else:
+                        for block in flow.blocks:
+                            if block.id in self.webAppManager.userManagement.forbiddenBlocks:
+                                raise ValueError(
+                                    f"Cannot execute flow: '{block.id}' is not allowed."
+                                )
 
                 # Run the flow
                 self.flowManager.runFlow(
@@ -1454,7 +1525,7 @@ class HorusServer:
                 # with the flow elapsed time and size
                 if self.webAppManager is not None and self.webAppManager.db is not None:
                     # Load the flow
-                    flow = self.flowManager.openFlowFromPath(flowPath)
+                    flow = self.flowManager.openFlowFromPath(flowPath, addToRecents=False)
 
                     # Update the database
                     self.webAppManager.db.updateFlowForUser(flow)
@@ -1494,24 +1565,34 @@ class HorusServer:
         @self.server.route("/api/plugins/flows", methods=["GET"])
         @self.verifyLogin
         def listFlows():
+
             try:
+                # Load the plugin preset flows
                 flows = self.pluginManager.listFlows()
+                flows += self.flowManager.listPublicFlows()
 
                 # If on webapp mode, filter the flows that cannot be executed
                 # by the user
-                if (
-                    self._isForUser
-                    and self.webAppManager is not None
-                    and self.webAppManager.userGroupsManager is not None
-                    and not currentUser.admin
-                ):
+                if self._isForUser and self.webAppManager is not None and not currentUser.admin:
                     filteredFlows = []
                     for flow in flows:
-                        flowInstance = self.flowManager.openFlowFromPath(flow["path"])
+                        flowInstance = self.flowManager.openFlowFromPath(
+                            flow["path"], addToRecents=False
+                        )
                         try:
-                            self.webAppManager.userGroupsManager.verifyFlowCanBeExecuted(
-                                flowInstance
-                            )
+                            if self.webAppManager.userGroupsManager is not None:
+
+                                self.webAppManager.userGroupsManager.verifyFlowCanBeExecuted(
+                                    flowInstance
+                                )
+                            else:
+                                for block in flowInstance.blocks:
+                                    if (
+                                        block.id
+                                        in self.webAppManager.userManagement.forbiddenBlocks
+                                    ):
+                                        raise ValueError
+
                             filteredFlows.append(flow)
                         except ValueError:
                             pass
@@ -1961,7 +2042,7 @@ class HorusServer:
         def setting(settingID):
             try:
                 setting = self.settingsManager.getSetting(settingID)
-            except Exception as exc:  # pylint: disable=broad-exception-raised
+            except Exception as exc:
                 return flask.jsonify({"ok": False, "msg": str(exc)})
 
             return flask.jsonify({"ok": True, "setting": setting.toDict()})
@@ -2010,16 +2091,11 @@ class HorusServer:
         @self.server.route("/")
         @self.verifyLogin
         def index():
+            return flask.render_template("Main/index.html", horusRoot=self.horusRoot)
 
-            # Get the query string
-            shemsu = request.args.get("shemsu", None)
-
-            if shemsu is not None:
-                if shemsu == webview.token:
-                    # Starting server in browser mode
-                    return flask.render_template("Main/index.html", shemsu=shemsu)
-
-            return flask.render_template("Main/index.html")
+        @self.server.route("/<path:path>")
+        def resources(path):
+            return self.server.send_static_file(path)
 
         @self.server.route("/plugins/", methods=["GET"])
         @self.noWebApp
@@ -2064,8 +2140,9 @@ class HorusServer:
         self.socketio = HorusSocket(
             self.server,
             self.baseURL,
+            self.horusRoot,
             cors_allowed_origins=self.origins,
-            async_mode="eventlet",
+            async_mode="threading",
             manage_session=False,
         )
 
@@ -2280,6 +2357,8 @@ class HorusServer:
         @self.server.errorhandler(404)
         def pageNotFound(error):
 
+            logging.getLogger("Horus").error("Page %s not found: %s", request.path, str(error))
+
             # If the page if for an extension /plugins/pages/...
             if "/plugins/pages/" in request.path:
                 errorMSG = (
@@ -2292,9 +2371,15 @@ class HorusServer:
                 # Log the full request
                 horusLogger.error("Request: %s", str(request))
 
-                return flask.render_template("Error/error.html", errormsg=errorMSG)
+                return flask.render_template(
+                    "Error/error.html", errormsg="Page not found: " + errorMSG
+                )
 
-            return flask.redirect("/")
+            if not request.path.startswith(self.horusRoot):
+                return flask.redirect("/")
+
+            # We need to return the index page for our react-router app to work
+            return flask.render_template("Main/index.html", horusRoot=self.horusRoot)
 
         # Setup a template not found error
         @self.server.route("/error")
@@ -2431,7 +2516,6 @@ class HorusServer:
 
         @self.server.route("/users/login", methods=["GET", "POST"])
         def login():
-
             if not self.webAppManager:
                 return flask.redirect("/")
 
@@ -2765,7 +2849,9 @@ class HorusServer:
                     flowPath = os.path.join(dirPath, flowDir + ".flow")
                     if os.path.exists(flowPath):
                         try:
-                            flowInstances.append(self.flowManager.openFlowFromPath(flowPath))
+                            flowInstances.append(
+                                self.flowManager.openFlowFromPath(flowPath, addToRecents=False)
+                            )
                         except Exception as exc:
                             logging.getLogger("Horus").error(
                                 "Could not open user flow at %s: %s", flowPath, str(exc)
@@ -2852,7 +2938,7 @@ class HorusServer:
                 flowPath = str(UserFileExplorer(flowPath, currentUser).getAbsolutePath())
 
                 # Load the flow from the data
-                flow = self.flowManager.openFlowFromPath(flowPath)
+                flow = self.flowManager.openFlowFromPath(flowPath, addToRecents=False)
 
                 if not flow.path:
                     return flask.jsonify({"ok": False, "msg": "The flow does not have a path"})
@@ -2897,7 +2983,7 @@ class HorusServer:
                 flowPath = str(UserFileExplorer(flowPath, currentUser).getAbsolutePath())
 
                 # Load the flow from the data
-                flow = self.flowManager.openFlowFromPath(flowPath)
+                flow = self.flowManager.openFlowFromPath(flowPath, addToRecents=False)
 
                 if not flow.path:
                     return flask.jsonify({"ok": False, "msg": "Flow path is not defined."})
@@ -2917,7 +3003,9 @@ class HorusServer:
                     newFlow = shutil.copyfile(flow.path, newFlow)
 
                     # Update the new flow date
-                    newFlowInstance = self.flowManager.openFlowFromPath(newFlow)
+                    newFlowInstance = self.flowManager.openFlowFromPath(
+                        newFlow, addToRecents=False
+                    )
                     newFlowInstance.date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
                     # Write the new flow to its path
@@ -2965,7 +3053,7 @@ class HorusServer:
                     flowPath = str(UserFileExplorer(flowPath, currentUser).getAbsolutePath())
 
                     # Open the flow
-                    flow = self.flowManager.openFlowFromPath(flowPath)
+                    flow = self.flowManager.openFlowFromPath(flowPath, addToRecents=False)
 
                     # Obfuscate the path
                     flow._skipPath = relativePath
@@ -3283,9 +3371,10 @@ class HorusServer:
             "debug": debug,
             "use_reloader": useReloader,
             "log_output": self.debug,
+            "allow_unsafe_werkzeug": True,
         }
 
-        # Start the server if not on web app mode
+        # Start the server
         self.socketio.run(self.server, **runArgs)
 
     _maxConcurrentFlows: int = 1
@@ -3407,10 +3496,11 @@ class HorusSocket(SocketIO):
         self,
         server: Flask,
         baseURL: str,
+        horusRoot: str,
         *,
         manage_session: bool = True,
         channel: str = "flask-socketio",
-        path: str = "socket.io",
+        path: str = "/socket.io",
         resource: str = "socket.io",
         **kwargs,
     ) -> None:
@@ -3418,7 +3508,7 @@ class HorusSocket(SocketIO):
             server,
             manage_session=manage_session,
             channel=channel,
-            path=path,
+            path=horusRoot + path,
             resource=resource,
             **kwargs,
         )
@@ -3433,11 +3523,10 @@ class HorusSocket(SocketIO):
 
     def run(self, server, **runArgs):  # pylint: disable=arguments-differ
 
-        def hook_get_logger(*args):
-            return logging.getLogger("eventlet")
+        # Disable flask's cli logging
+        import flask.cli as cli
 
-        # Inject the Horus logger as the eventlet logger
-        eventlet.wsgi.get_logger = hook_get_logger
+        cli.show_server_banner = lambda *x: None
 
         super().run(server, **runArgs)
 
@@ -3512,7 +3601,6 @@ class HorusSocket(SocketIO):
             logging.getLogger("Horus").debug(
                 "Emitting event %s to room %s", event, kwargs["room"]
             )
-
             return oldEmit(event, *args, **kwargs)
 
         self.emit = newEmit

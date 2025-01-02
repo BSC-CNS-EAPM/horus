@@ -2,12 +2,6 @@
 App Delegate
 """
 
-# Critical import. Necessary to make multithreading work
-# # properly.
-# import eventlet
-
-# eventlet.monkey_patch()
-
 # Basic imports
 import sys
 import os
@@ -39,7 +33,6 @@ else:
 # Server
 from Server import HorusServer
 from HorusAPI import HorusSingleton, __version__
-
 
 # Add to the pythonpath the path of the project
 sys.path.append("../")
@@ -113,7 +106,7 @@ class HorusLogger:
         self.horus.setLevel(logging.NOTSET)
 
         # Create new logger for stdout and stderr
-        self.capturer = logging.getLogger("Capturer")
+        self.capturer = logging.getLogger("print")
         self.capturer.setLevel(logging.NOTSET)
 
         class FilterCapturer(logging.Filter):
@@ -190,13 +183,22 @@ class HorusLogger:
                 # Define the colors for the log levels
                 logLevelColor = self.COLOR_CODES.get(record.levelname, "")
 
-                if record.name == "Capturer" and record.levelno < logging.ERROR:
+                oldFormat = self._style._fmt
+                if record.name == "print" and record.levelno < logging.ERROR:
+
+                    # Exclude the log level for the capturer
+                    formatStr = oldFormat.replace(" - %(levelname)s", "")
+                    self._style._fmt = formatStr
+
                     # Apply the white color for the capturer
                     logLevelColor = self.CAPTURER_COLOR
 
                 # Apply the colors
                 formatted = super().format(record)
                 colored = f"{logLevelColor}{formatted}{self.RESET_CODE}"
+
+                # Restore the old format
+                self._style._fmt = oldFormat
 
                 return colored
 
@@ -226,13 +228,23 @@ class HorusLogger:
             """
 
             def __init__(
-                self, level: int, capturer: logging.Logger, oldStdOutErr, debug: bool = False
+                self,
+                level: int,
+                capturer: logging.Logger,
+                oldStdOutErr,
+                debug: bool = False,
+                verbose: bool = False,
             ) -> None:
                 self.debug = debug
                 """
                 Controls whether to print the logs to the old stdout and stderr
 
                 Needed in debug mode orthewise will be printed twice
+                """
+
+                self.verbose = verbose
+                """
+                Controls whether to print the logs to the old stdout and stderr
                 """
 
                 self.level = level
@@ -257,8 +269,10 @@ class HorusLogger:
                 """
                 Hook into the default stdout and stderr class
                 """
+
                 try:
-                    if not self.debug:
+
+                    if not self.debug and not self.verbose:
                         self.oldStdOutErr.write(message)
 
                     # Remove empty lines
@@ -274,8 +288,12 @@ class HorusLogger:
                     pass
 
         # Set as the new stdout and stderr the capturer
-        sys.stdout = FakeWriter(logging.INFO, self.capturer, oldStdout, debug=self.debug)
-        sys.stderr = FakeWriter(logging.ERROR, self.capturer, oldStderr, debug=self.debug)
+        sys.stdout = FakeWriter(
+            logging.INFO, self.capturer, oldStdout, debug=self.debug, verbose=self.verbose
+        )
+        sys.stderr = FakeWriter(
+            logging.ERROR, self.capturer, oldStderr, debug=self.debug, verbose=self.verbose
+        )
 
         # If we are on debug, print all the loggers to the old stdout and stderr
         if self.debug or self.verbose:
@@ -393,6 +411,16 @@ class AppDelegate(metaclass=HorusSingleton):
 
         return getattr(sys, "frozen", False)
 
+    @property
+    def bundleDir(self) -> str:
+        """
+        Returns the bundle directory.
+
+        If uncompiled, it returns the current working directory
+        """
+
+        return getattr(sys, "_MEIPASS", os.getcwd())
+
     APP_INFO: typing.Dict[str, typing.Any] = {}
     """
     Stores relevant information about the app, such as
@@ -463,6 +491,7 @@ class AppDelegate(metaclass=HorusSingleton):
         debugURL: typing.Optional[str] = None,
         host: typing.Optional[str] = None,
         port: typing.Optional[int] = None,
+        root: typing.Optional[str] = None,
         verbose: bool = False,
     ):
         """
@@ -474,6 +503,7 @@ class AppDelegate(metaclass=HorusSingleton):
         self.debugURL = debugURL
         self.host = host
         self.port = port
+        self.root = root
         self.verbose = verbose
 
         self.desktop = self.mode == "app" or self.mode == "browser"
@@ -533,6 +563,7 @@ class AppDelegate(metaclass=HorusSingleton):
             mode=self.mode,
             appSupportDir=self.appSupportDir,
             host=self.host,
+            root=self.root,
             port=self.port,
         )
 
@@ -621,9 +652,7 @@ class AppDelegate(metaclass=HorusSingleton):
                 if appSupportDir is not None:
                     appSupportDir = os.path.join(appSupportDir, appFolderName)
                 else:
-                    raise Exception(  # pylint: disable=broad-exception-raised
-                        "APPDATA environment variable not set"
-                    )
+                    raise Exception("APPDATA environment variable not set")
             elif self.platform == "linux":
                 appSupportDir = os.path.join(
                     os.path.expanduser("~"),
@@ -632,9 +661,7 @@ class AppDelegate(metaclass=HorusSingleton):
                     appFolderName,
                 )
             else:
-                raise Exception(  # pylint: disable=broad-exception-raised
-                    f"Unsupported platform {self.platform}"
-                )
+                raise Exception(f"Unsupported platform {self.platform}")
 
         else:
             # If we are not in a frozen executable,
@@ -854,7 +881,12 @@ class AppDelegate(metaclass=HorusSingleton):
         self.openWindow("Horus", url=homeURL, wo=windowOptions)
 
         # Start the webview
-        webview.start(debug=self.debug, menu=self._menus(), gui=guiBacked())  # type: ignore
+        try:
+            webview.start(debug=self.debug, menu=self._menus(), gui=guiBacked())  # type: ignore
+        except webview.WebViewException as e:
+            logging.getLogger("Horus").critical(
+                "Failed to start the window management system. Try launching Horus in server mode (--server)"
+            )
 
     def _startServerMode(self):
         """
@@ -1074,6 +1106,7 @@ def parseArgs() -> tuple[dict, dict, dict]:
         help="Debug URL. An URL to open instead of the default Horus interface. "
         "For development only.",
     )
+    parser.add_argument("--app", "-a", action="store_true", help="Run in app mode.")
     parser.add_argument("--browser", "-b", action="store_true", help="Run in browser mode.")
     parser.add_argument("--server", "-s", action="store_true", help="Run in server mode.")
     parser.add_argument("--webapp", "-w", action="store_true", help="Run in webapp mode.")
@@ -1086,6 +1119,12 @@ def parseArgs() -> tuple[dict, dict, dict]:
     parser.add_argument(
         "--host", "-h", help="Set a specific host for the server. Defaults to 'localhost'."
     )
+
+    parser.add_argument(
+        "--root",
+        help="Set a specific base url path for the server. Defaults to '/'",
+    )
+
     parser.add_argument(
         "--flow",
         "-f",
@@ -1157,6 +1196,8 @@ def parseArgs() -> tuple[dict, dict, dict]:
         mode = "server"
     elif args.webapp:
         mode = "webapp"
+    elif args.app:
+        mode = "app"
     else:
         if envMode is not None:
             mode = envMode
@@ -1192,6 +1233,17 @@ def parseArgs() -> tuple[dict, dict, dict]:
     elif envHost is not None:
         host = envHost
 
+    # Check for the --root flag
+    root = None
+    envRoot = os.getenv("HORUS_ROOT")
+    if args.root:
+        root = args.root
+        if root is None or root == "":
+            print("No root provided. Usage: --root <root>")
+            sys.exit(1)
+    elif envRoot is not None:
+        root = envRoot
+
     # Check for the --flow (-f) flag to run a flow instead of the app
     # The -f flag should be followed by the path to the flow and the
     # intex of the block to run -i <index>
@@ -1214,6 +1266,7 @@ def parseArgs() -> tuple[dict, dict, dict]:
         "debugURL": debugURL,
         "host": host,
         "port": port,
+        "root": root,
         "verbose": True if args.verbose else False,
     }
 
@@ -1270,7 +1323,7 @@ def installPluginInsteadOfLaunch(app: AppDelegate, pluginArgs: dict):
 
         asDefault = pluginArgs.get("asDefault", False)
 
-        app.server.pluginManager._installPlugin(pluginPath, asDefault)
+        app.server.pluginManager._loopPluginsToInstall([pluginPath], asDefault=asDefault)
 
         # Exit
         sys.exit(0)
@@ -1308,9 +1361,6 @@ def launchApp():
         # This is a blocking process.
         app.applicationDidFinishLaunching()
 
-        # Execute after the app is terminated
-        app.applicationWillTerminate()
-
     except BaseException as exc:
         import traceback
 
@@ -1320,3 +1370,7 @@ def launchApp():
 
         # Re-raise the exception, this is needed for flask auto-reload to work
         raise exc
+
+    finally:
+        # Execute after the app is terminated
+        app.applicationWillTerminate()

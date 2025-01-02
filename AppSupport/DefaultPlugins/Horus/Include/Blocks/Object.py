@@ -31,4 +31,5 @@ objectBlock = InputBlock(
     action=verifyJSON,
     variable=objectVariable,
     id=objectVariable.id,
+    category="Code",
 )

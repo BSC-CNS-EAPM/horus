@@ -39,7 +39,7 @@ import { Axes3D } from "molstar/lib/mol-math/geometry";
 const DockingBoxVisuals = {
   box: (
     ctx: RepresentationContext,
-    getParams: RepresentationParamsGetter<Structure, DockingBoxParams>
+    getParams: RepresentationParamsGetter<Structure, DockingBoxParams>,
   ) =>
     UnitsRepresentation("Docking box mesh", ctx, getParams, DockingBoxVisual),
 };
@@ -112,7 +112,7 @@ function DockingBoxVisual(materialId: number): UnitsVisual<DockingBoxParams> {
           structureGroup.group.units.length,
 
           1,
-          () => NullLocation // We do not have any actual information to attach to the box
+          () => NullLocation, // We do not have any actual information to attach to the box
         );
       },
 
@@ -121,7 +121,7 @@ function DockingBoxVisual(materialId: number): UnitsVisual<DockingBoxParams> {
       getLoci: (
         pickingId: PickingId,
         structureGroup: StructureGroup,
-        id: number
+        id: number,
       ) => {
         const { objectId } = pickingId;
         if (objectId !== id) return EmptyLoci; // Return EmptyLoci if the call was not for us
@@ -142,7 +142,7 @@ function DockingBoxVisual(materialId: number): UnitsVisual<DockingBoxParams> {
 
           // Function that creates a label for the Loci. The label is displayed in the UI when the user hovers over
           // the graphical object represented by this Loci.
-          () => "Box"
+          () => "Box",
         );
 
         // You may also just return EmptyLoci. This will make the box non-interactable
@@ -153,7 +153,7 @@ function DockingBoxVisual(materialId: number): UnitsVisual<DockingBoxParams> {
       eachLocation: (
         loci: Loci,
         structureGroup: StructureGroup,
-        apply: (interval: Interval) => boolean
+        apply: (interval: Interval) => boolean,
       ) => {
         if (loci.kind === "data-loci" && loci.tag === "box-data-loci") {
           // This is a nasty hack that will highlight all boxs just to demonstrate what happens
@@ -166,7 +166,7 @@ function DockingBoxVisual(materialId: number): UnitsVisual<DockingBoxParams> {
       setUpdateState: (
         state: VisualUpdateState,
         newProps: PD.Values<DockingBoxParams>,
-        currentProps: PD.Values<DockingBoxParams>
+        currentProps: PD.Values<DockingBoxParams>,
       ) => {
         state.createGeometry =
           newProps.x0 !== currentProps.x0 ||
@@ -186,7 +186,7 @@ function DockingBoxVisual(materialId: number): UnitsVisual<DockingBoxParams> {
           newProps.radialSegments !== currentProps.radialSegments;
       },
     },
-    materialId
+    materialId,
   );
 }
 
@@ -194,7 +194,7 @@ export type DockingBoxRepresentation =
   StructureRepresentation<DockingBoxParams>;
 export function ConfalPyramidsRepresentation(
   ctx: RepresentationContext,
-  getParams: RepresentationParamsGetter<Structure, DockingBoxParams>
+  getParams: RepresentationParamsGetter<Structure, DockingBoxParams>,
 ): DockingBoxRepresentation {
   const repr = Representation.createMulti(
     "Confal Pyramids",
@@ -204,7 +204,7 @@ export function ConfalPyramidsRepresentation(
     DockingBoxVisuals as unknown as Representation.Def<
       Structure,
       DockingBoxParams
-    >
+    >,
   );
   return repr;
 }
@@ -221,7 +221,7 @@ export const DockingBoxRepresentationProvider = StructureRepresentationProvider(
     defaultColorTheme: { name: "uniform" },
     defaultSizeTheme: { name: "uniform" },
     isApplicable: (structure: Structure) => true, // Assume that we can always draw a box
-  }
+  },
 );
 
 function createDockingBoxMesh(
@@ -230,7 +230,7 @@ function createDockingBoxMesh(
   structure: Structure,
   theme: Theme,
   props: PD.Values<DockingBoxParams>,
-  mesh?: Mesh
+  mesh?: Mesh,
 ) {
   const mb = MeshBuilder.createState(16, 16, mesh);
 
@@ -270,7 +270,7 @@ async function addBoxTo(
     color: Color;
     alpha: number;
     radialSegments: number;
-  }
+  },
 ) {
   const struc = await ms.builders.structure.representation.addRepresentation(
     structure,
@@ -278,7 +278,7 @@ async function addBoxTo(
       type: "box" as any, // Coerce TypeScript into accepting the representation name
       typeParams: box,
       colorParams: box.color ? { value: box.color } : void 0,
-    } as StructureRepresentationProps
+    } as StructureRepresentationProps,
   );
 
   return struc.ref;

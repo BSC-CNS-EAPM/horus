@@ -40,7 +40,7 @@ export const EvolutionaryConservation = CustomElementProperty.create<number>({
     const id = model.entryId.toLowerCase();
     const url = Asset.getUrlAsset(
       ctx.assetManager,
-      `https://proteopedia.org/cgi-bin/cnsrf?${id}`
+      `https://proteopedia.org/cgi-bin/cnsrf?${id}`,
     );
     const json = await ctx.assetManager
       .resolve(url, "json")
@@ -65,7 +65,7 @@ export const EvolutionaryConservation = CustomElementProperty.create<number>({
     for (let rI = 0 as ResidueIndex; rI < residueCount; rI++) {
       const cI = chainIndex[residueOffsets[rI] as ElementIndex];
       const key = `${model.atomicHierarchy.chains.auth_asym_id.value(
-        cI as ChainIndex
+        cI as ChainIndex,
       )} ${model.atomicHierarchy.residues.auth_seq_id.value(rI)}`;
       if (!conservationMap.has(key)) continue;
       const ann = conservationMap.get(key)!;

@@ -23,7 +23,6 @@ import AppButton from "../Components/appbutton";
 import { BlurredModal } from "../Components/reusable";
 import { SettingsView, fetchSettings } from "../Settings/settings";
 import { PluginManager } from "../PluginsManager/plugin_manager";
-import { SearchComponent } from "../Components/Toolbar/toolbar";
 import { HorusTable } from "../Components/TablePlot/horustable";
 
 // Icons
@@ -40,6 +39,7 @@ import TrashIcon from "../Components/Toolbar/Icons/Trash";
 import { Block, PluginPage } from "../Components/FlowBuilder/flow.types";
 import { useAlert } from "../Components/HorusPrompt/horus_alert";
 import { HorusLazyLog } from "../Components/HorusLazyLog/HorusLazyLog";
+import { SearchComponent } from "@/Components/Search/Search";
 
 type Database = {
   users: UsersDatabase[];
@@ -84,7 +84,7 @@ const AdminContext = createContext<AdminContextType | null>(null);
 
 export function AdminTools() {
   const [currentView, _setCurrentView] = useState<ReactNode>(
-    <UsersTableView />
+    <UsersTableView />,
   );
 
   const setCurrentView = (v: ReactNode) => {
@@ -159,7 +159,7 @@ function _UserTable({
     const response = await horusPost(
       `/users/admintools/modifyuser`,
       null,
-      newQuotaToSend
+      newQuotaToSend,
     );
 
     if (!response) {
@@ -281,13 +281,8 @@ function FlowsTableView() {
 function HorusLogs() {
   const logsInterval = useRef<Timer | null>(null);
   const [logs, setLogs] = useState<string>("Loading...");
-  const [logging, setLogging] = useState(true);
 
   const getLogs = useCallback(async () => {
-    if (!logging) {
-      return;
-    }
-
     const response = await horusGet("/users/admintools/getlogs");
     const logsText = await response.text();
     setLogs(logsText);
@@ -301,7 +296,7 @@ function HorusLogs() {
       const logsText = await response.text();
       setLogs(logsText);
     }, 10000);
-  }, [logging]);
+  }, []);
 
   useEffect(() => {
     // Get the first logs
@@ -341,7 +336,7 @@ function ManageUsers() {
         adminContext?.setCurrentView(<UsersTableView />);
       }}
     >
-      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full cursor-default w-[150px]">
+      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full w-[150px]">
         <UserIcon className="w-6 h-6 icon" />
         Users
       </div>
@@ -359,7 +354,7 @@ function ManageLogs() {
         adminContext?.setCurrentView(<HorusLogs />);
       }}
     >
-      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full cursor-default w-[150px]">
+      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full w-[150px]">
         <LogFile className="w-6 h-6 icon" />
         Logs
       </div>
@@ -377,7 +372,7 @@ function ManageFlows() {
         adminContext?.setCurrentView(<FlowsTableView />);
       }}
     >
-      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full cursor-default w-[150px]">
+      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full w-[150px]">
         <NewFlowIcon className="w-6 h-6 icon" />
         Flows
       </div>
@@ -429,7 +424,7 @@ function ManagePlugins() {
         adminContext?.setCurrentView(<PluginManager />);
       }}
     >
-      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full cursor-default w-[150px]">
+      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full w-[150px]">
         <PluginsIcon className="w-6 h-6 icon" />
         Plugins
       </div>
@@ -447,7 +442,7 @@ function ManageSettings() {
         adminContext?.setCurrentView(<SettingsView forAdmin={true} />);
       }}
     >
-      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full cursor-default w-[150px]">
+      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full w-[150px]">
         <SettingsIcon className="w-6 h-6 icon" />
         App settings
       </div>
@@ -465,7 +460,7 @@ function ManageGroups() {
         adminContext?.setCurrentView(<GroupDatabaseView />);
       }}
     >
-      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full cursor-default w-[150px]">
+      <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full w-[150px]">
         <CenterView className="w-6 h-6 icon" />
         Group settings
       </div>
@@ -496,7 +491,7 @@ function GroupDatabaseView() {
       const response = await horusPost(
         "/users/admintools/add_group",
         null,
-        JSON.stringify({ group: g })
+        JSON.stringify({ group: g }),
       );
 
       const data = await response.json();
@@ -717,7 +712,7 @@ export function BlockViewModify(props: {
       JSON.stringify({
         group,
         blockIDs: editedBlocks.map((b) => b.id),
-      })
+      }),
     );
 
     const data = await response.json();
@@ -770,7 +765,7 @@ export function BlockViewModify(props: {
           action={() => {
             // Create an array of filtered blocks that are not already in the set
             const blocksToAdd = filteredBlocks.filter(
-              (f) => !editedBlocks.find((e) => e.id === f.id)
+              (f) => !editedBlocks.find((e) => e.id === f.id),
             );
 
             // Concatenate the unique filtered blocks to the current edited blocks
@@ -783,7 +778,7 @@ export function BlockViewModify(props: {
           action={() => {
             setEditedBlocks((editedBlocks) => {
               return editedBlocks.filter(
-                (b) => !filteredBlocks.find((f) => f.id === b.id)
+                (b) => !filteredBlocks.find((f) => f.id === b.id),
               );
             });
           }}
@@ -819,8 +814,8 @@ export function BlockViewModify(props: {
                     e.target.checked
                       ? [...(editedBlocks ?? []), filteredB]
                       : (editedBlocks ?? []).filter(
-                          (blo: Block) => blo.id !== filteredB.id
-                        )
+                          (blo: Block) => blo.id !== filteredB.id,
+                        ),
                   )
                 }
               />
@@ -914,7 +909,7 @@ export function ExtensionViewModify(props: {
       JSON.stringify({
         group,
         pages: editedPages.map((b) => b.id),
-      })
+      }),
     );
 
     const data = await response.json();
@@ -927,7 +922,7 @@ export function ExtensionViewModify(props: {
   }, [editedPages, group, getDatabase]);
 
   useEffect(() => {
-    setFilteredPages(allPages.filter((b) => b.id.includes(currentFilter)));
+    setFilteredPages(allPages.filter((b) => b.id?.includes(currentFilter)));
   }, [currentFilter, allPages]);
 
   useEffect(() => {
@@ -967,7 +962,7 @@ export function ExtensionViewModify(props: {
           action={() => {
             // Create an array of filtered blocks that are not already in the set
             const blocksToAdd = filteredPages.filter(
-              (f) => !editedPages.find((e) => e.id === f.id)
+              (f) => !editedPages.find((e) => e.id === f.id),
             );
 
             // Concatenate the unique filtered blocks to the current edited blocks
@@ -980,7 +975,7 @@ export function ExtensionViewModify(props: {
           action={() => {
             setEditedPages((editedPages) => {
               return editedPages.filter(
-                (b) => !filteredPages.find((f) => f.id === b.id)
+                (b) => !filteredPages.find((f) => f.id === b.id),
               );
             });
           }}
@@ -1016,8 +1011,8 @@ export function ExtensionViewModify(props: {
                     e.target.checked
                       ? [...(editedPages ?? []), filteredP]
                       : (editedPages ?? []).filter(
-                          (blo: PluginPage) => blo.id !== filteredP.id
-                        )
+                          (blo: PluginPage) => blo.id !== filteredP.id,
+                        ),
                   )
                 }
               />

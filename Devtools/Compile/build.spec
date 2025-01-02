@@ -3,11 +3,23 @@ PyInstaller build script for Horus
 """
 
 import os
-import imp  # pylint: disable=deprecated-module
 import shutil
 import sys
 
+
+# Before compiling horus, we need to bundle pip to be used by Horus
+# in the plugin manager to install plugin dependencies
+print(f"Bundling pip...")
+
+os.system(f"pyinstaller {os.path.join('Devtools', 'Compile', 'pip.spec')}")
+
+print("Done bundling pip!")
+
+
 currentDir = os.getcwd()
+
+# Move the generated pip executable to the dist folder
+bundled_pip = os.path.join(currentDir, "dist", "pip")
 
 # Main App script
 entry_point = [os.path.join(currentDir, "Horus.py")]
@@ -94,6 +106,7 @@ shutil.copy(horus_logo, "AppSupport/DefaultPlugins/Horus/logo.png")
 default_settings = os.path.join(currentDir, "App", "default_settings.json")
 
 datas = [
+    (bundled_pip, "pip"),
     (gui_folder, "GUI"),
     (cython_folder, "."),
     (default_plugins_folder, "DefaultPlugins"),
@@ -136,15 +149,12 @@ imports = [
     "ssl",
 ]
 
+imports += ["engineio", "engineio.async_drivers.threading"]
+
 # Add all the submodules required by flask_socketio
 imports += [
     "flask_socketio",
     "flask_cors",
-    "engineio.async_drivers.eventlet",
-    "eventlet",
-    "eventlet.hubs.epolls",
-    "eventlet.hubs.kqueue",
-    "eventlet.hubs.selects",
     "dns",
     "dns.dnssec",
     "dns.e164",
@@ -217,6 +227,7 @@ a = Analysis(  # type: ignore pylint: disable=undefined-variable
     pathex=[],
     binaries=binaries,
     datas=datas,
+    options=[("OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES", None, "OPTION")],
     # Include the default libraries
     hiddenimports=imports,
     hookspath=[],

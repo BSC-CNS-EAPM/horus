@@ -5,7 +5,7 @@ Test file for Flows
 import os
 import json
 import requests
-import sys
+import random
 import pytest
 import time
 from multiprocess import Process  # type: ignore pylint: disable=no-name-in-module
@@ -352,7 +352,7 @@ def test_extensions_on_blocks(flow_appDelegate):
 
         assert extension1["data"] is not None
         assert extension1["url"] is not None
-        assert extension1["title"] == "Results"
+        assert extension1["name"] == "Results"
     finally:
         # Restore the flow by copying the .bak file to the original file
         os.system(f"mv {path}.bak {path}")
@@ -663,6 +663,8 @@ def test_block_plugin_dir_inside_action(plugin_manager):
 # Test a flow run by sending a post request to a server
 def test_flow_run_flow_post_full_app(plugin_manager):
 
+    port = str(random.randint(3000, 9000))
+
     path = os.path.join(os.path.dirname(__file__), "test_flow.flow")
 
     # Backup the flow
@@ -670,7 +672,7 @@ def test_flow_run_flow_post_full_app(plugin_manager):
 
     # Must be in app / browser mode in order to test the multiprocessing component of flows
     p = subprocess.Popen(
-        ["python", "Horus.py", "--host", "localhost", "--port", "3124"],
+        ["python", "Horus.py", "--host", "localhost", "--port", port],
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -679,7 +681,7 @@ def test_flow_run_flow_post_full_app(plugin_manager):
     # Wait for the server to start
     time.sleep(5)
 
-    baseURL = "http://localhost:3124"
+    baseURL = f"http://localhost:{port}"
 
     # Check that the server is running
     try:
@@ -703,6 +705,7 @@ def test_flow_run_flow_post_full_app(plugin_manager):
             pytest.fail("Request failed with status code: " + str(response.status_code))
 
         # Wait for the flow to finish
+        time.sleep(1)
         flowTries = 0
         while flowTries < 5:
             flow = Flow.read(path)
@@ -734,7 +737,7 @@ def test_flow_run_flow_post_full_app(plugin_manager):
             output = p.stdout.read()
 
             if (
-                "You must have either QT or GTK with Python extensions installed in order to use pywebview"
+                "Failed to start the window management system."
                 in output
             ):
                 import warnings

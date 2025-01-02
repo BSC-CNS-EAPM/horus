@@ -203,23 +203,24 @@ the specified :bdg-secondary-line:`PluginPage`. For more information about :bdg-
     :align: center
 
 Inside the custom view, the variable and the flow can be accessed in JavaScript
-using the :bdg-secondary-line:`window.horus` object. For example:
+using the :bdg-secondary-line:`parent.horus` object. For example:
 
 .. code-block:: javascript
 
     // Get the current state of the variable which opened the custom view
-    const variable = window.horus.getVariable();
+    const variable = parent.horus.getVariable();
 
     // Set a new value for the variable
-    window.horus.setVariable("new_value");
+    parent.horus.setVariable("new_value");
 
     // Get the current state of the flow
-    const newFlow = window.horus.getFlow();
+    const newFlow = parent.horus.getFlow();
 
     // For example, modify the title of the flow
     newFlow.title = "New title";
 
     // Set a new value for the flow
-    window.horus.setFlow(newFlow)
+    parent.horus.setFlow(newFlow)
 
+More information about extensions can be seen at :ref:`extensions` section.
 

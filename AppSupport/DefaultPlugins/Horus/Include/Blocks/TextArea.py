@@ -14,4 +14,5 @@ textAreaBlock = InputBlock(
     action=None,
     variable=inputArea,
     id="text_area",
+    category="Inputs",
 )

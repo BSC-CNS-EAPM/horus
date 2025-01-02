@@ -1,8 +1,10 @@
+import { PANEL_REGISTRY } from "@/Components/MainApp/PanelView";
 import {
   AtomInfo,
   MolInfo,
   MolstarEvents,
 } from "../../Molstar/HorusWrapper/horusmolstar";
+import { delay } from "@/Utils/utils";
 
 export type HorusSmilesType = {
   id: string;
@@ -10,12 +12,19 @@ export type HorusSmilesType = {
   smi: string;
   structureRef?: {
     id: string;
+    rootRef: string;
     residue?: AtomInfo;
+    molecule: _3DMolecule;
   };
   extraInfo?: string;
   selected?: boolean;
   group?: string;
   properties?: Record<string, any>;
+};
+
+type _3DMolecule = {
+  contents: string;
+  format: string;
 };
 
 const PROPERTIES_NOT_ALLOWED = [
@@ -28,9 +37,12 @@ const PROPERTIES_NOT_ALLOWED = [
   "properties",
 ];
 
+const TRIM_REGEX = /[\r\n\u2028\u2029]+/g;
+
 // Smiles events
 export enum SmilesEvents {
   STATE = "smiles-state-event",
+  CONVERSIONS = "smiles-conversions-event",
 }
 
 export type HorusSmilesManagerState = {
@@ -42,6 +54,25 @@ export type HorusSmilesManagerState = {
 export default class HorusSmilesManager {
   private _smilesList: HorusSmilesType[];
   private _currentSmiles: HorusSmilesType | null;
+  private _convertingMolecules = 0;
+  private openBabelWorker: Worker;
+
+  // Define a setter for the convertingMolecules property
+  public set convertingMolecules(value: number) {
+    this._convertingMolecules = value;
+
+    // Emit the CONVERSIONS event
+    window.dispatchEvent(
+      new CustomEvent(SmilesEvents.CONVERSIONS, {
+        detail: value,
+      })
+    );
+  }
+
+  // Define a getter for the convertingMolecules property
+  public get convertingMolecules(): number {
+    return this._convertingMolecules;
+  }
 
   smilesID = 0;
 
@@ -60,14 +91,24 @@ export default class HorusSmilesManager {
     this._currentSmiles = null;
     this.loadedRefs = [];
 
-    // initialize the OpenBabelModule
-    // @ts-ignore
-    window.obabel = OpenBabelModule();
+    this.openBabelWorker = new Worker(
+      // @ts-ignore
+      new URL("./moleculeConverter.worker.js", import.meta.url)
+    );
+
+    const constructedSmilesEventUpdater =
+      this.updateSmilesFromMolstarEvent.bind(this);
+
+    window.removeEventListener(
+      MolstarEvents.STATE,
+      constructedSmilesEventUpdater
+    );
 
     // Add an event listener from Mol* state in order to update the smiles list
-    window.addEventListener(MolstarEvents.STATE, () => {
-      this.updateSmilesFromMolstarEvent();
-    });
+    window.addEventListener(MolstarEvents.STATE, constructedSmilesEventUpdater);
+
+    // Load the initial molstar state
+    this.updateSmilesFromMolstarEvent();
   }
 
   /**
@@ -109,22 +150,22 @@ export default class HorusSmilesManager {
    */
   private async updateSmilesFromMolstarEvent() {
     // Gather the new structures
-    const structures = window.molstar.listStructures();
+    const structures = window?.molstar?.listStructures() ?? [];
     const newStructures = structures.filter(
-      (s) => !this.loadedRefs.includes(s.id)
+      (s) => !this.loadedRefs.includes(s.rootRef)
     );
 
     // If a structure was removed, filter from the loadedRefs
-    const refs = structures.map((s) => s.id);
+    const refs = structures.map((s) => s.rootRef);
     const removedRefs = this.loadedRefs.filter((ref) => !refs.includes(ref));
 
     newStructures.forEach((s) => {
       this.addLigandsFromStructure(s);
-      this.loadedRefs.push(s.id);
+      this.loadedRefs.push(s.rootRef);
     });
 
     removedRefs.forEach((ref) => {
-      if (this._currentSmiles?.structureRef?.id === ref) {
+      if (this._currentSmiles?.structureRef?.rootRef === ref) {
         this._currentSmiles = null;
       }
 
@@ -254,19 +295,21 @@ export default class HorusSmilesManager {
   private removeSmilesFromRef(sourceRef: string) {
     this.setSmilesList(
       this.getSmilesList().filter((smi) => {
-        return smi.structureRef?.id !== sourceRef;
+        return smi.structureRef?.rootRef !== sourceRef;
       })
     );
   }
 
   private updateLabelGroupAfterMolstarState() {
     // Get all the labels from Mol*
-    const currentLabels = window.molstar.listStructures().map((ref) => {
-      return {
-        id: ref.id,
-        label: ref.label,
-      };
-    });
+    const currentLabels = (window?.molstar?.listStructures() ?? []).map(
+      (ref) => {
+        return {
+          rootRef: ref.rootRef,
+          label: ref.label,
+        };
+      }
+    );
 
     // Now update the groups
     this.setSmilesList(
@@ -275,7 +318,7 @@ export default class HorusSmilesManager {
           ...smi,
           group:
             currentLabels.find((label) => {
-              return label.id === smi.structureRef?.id;
+              return label.rootRef === smi.structureRef?.rootRef;
             })?.label ?? smi.group,
         };
       })
@@ -379,56 +422,32 @@ export default class HorusSmilesManager {
     // Get the atoms from the reference
     const structureLabel = structure.label;
 
-    let smilesToAdd: HorusSmilesType[] = [];
-
     // If the structure is not a SDF, list the hetero atoms
     // If its SDF, split the file and convert it using the OpenBabel module
     if (structure.format === "sdf") {
-      smilesToAdd = await this.parseSDFFileAsSmiles(
-        structure.fileContents,
-        structure.label
-      ).then((smiles) =>
-        smiles.map((s) => ({
-          ...s,
-          structureRef: {
-            id: structure.id,
-            residue: { label: structureLabel } as AtomInfo,
-          },
-        }))
-      );
+      this.parseMolstarSDFFileAsSmiles(structure);
     } else {
       const heteroAtomsList =
-        window.molstar.listHeteroAtoms(structureLabel)[structure.id];
+        window?.molstar?.listHeteroAtoms(structureLabel)[structure.id] ?? [];
       if (!heteroAtomsList) {
         return;
       }
 
       const groupedAtoms = this.splitAtomsByLigand(heteroAtomsList);
 
-      if (Object.keys(groupedAtoms).length > 5) {
-        console.error(
-          "Too many ligands to convert to SMILES. Skipping past 5..."
-        );
-
-        for (const key of Object.keys(groupedAtoms)) {
-          if (Object.keys(groupedAtoms).indexOf(key) > 5) {
-            delete groupedAtoms[key];
-          }
-        }
-      }
-
+      this.convertingMolecules += Object.keys(groupedAtoms).length;
       for (const key of Object.keys(groupedAtoms)) {
         // Generate a XYZ file
         const atomFile = this.buildXYZFileFromAtomInfoList(groupedAtoms[key]!);
 
         // First convert to PDB
-        const pdbFile = await moleculeConverter(atomFile, {
+        const pdbFile = await this.moleculeConverter(atomFile, {
           inputFormat: "xyz",
           outputFormat: "pdb",
         });
 
         // Then to Mol
-        const molFile = await moleculeConverter(pdbFile, {
+        const molFile = await this.moleculeConverter(pdbFile, {
           inputFormat: "pdb",
           outputFormat: "mol",
           generate2D: true,
@@ -436,24 +455,34 @@ export default class HorusSmilesManager {
 
         // Finally to SMILES
         const smiles = HorusSmilesManager.cleanSmiles(
-          await moleculeConverter(molFile, {
+          await this.moleculeConverter(molFile, {
             inputFormat: "mol",
             outputFormat: "smiles",
+            decreaseConvertingMolecules: true,
           })
         );
 
-        smilesToAdd.push({
-          id: this.getNewID(),
-          label: key,
-          smi: smiles,
-          structureRef: { id: structure.id, residue: groupedAtoms[key]![0]! },
-          group: structureLabel,
-        });
+        // Add the new smiles
+        this.setSmilesList([
+          ...this.getSmilesList(),
+          {
+            id: this.getNewID(),
+            label: key,
+            smi: smiles,
+            structureRef: {
+              id: structure.id,
+              rootRef: structure.rootRef,
+              residue: groupedAtoms[key]![0]!,
+              molecule: {
+                contents: pdbFile,
+                format: "pdb",
+              },
+            },
+            group: structureLabel,
+          },
+        ]);
       }
     }
-
-    // Add the new smiles
-    this.setSmilesList([...this.getSmilesList(), ...smilesToAdd]);
   }
 
   private parseSingleSmilesStringAsMolecule(smiles: string, group?: string) {
@@ -522,7 +551,27 @@ export default class HorusSmilesManager {
       return;
     }
 
-    await new Promise((resolve) => {
+    if (file.name.endsWith(".sdf")) {
+      // Open the molstar panel
+      document.dispatchEvent(
+        new CustomEvent("addPanel", {
+          detail: {
+            component: PANEL_REGISTRY.molstar.component,
+            panelID: PANEL_REGISTRY.molstar.id,
+          },
+        })
+      );
+
+      while (!window.molstar?.plugin) {
+        // Wait for molstar to load
+        await delay(100);
+      }
+
+      // Load the file in molstar
+      return await window.molstar?.loadMoleculeFile(file);
+    }
+
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = async () => {
         const contents = (reader.result as string) ?? "";
@@ -531,15 +580,15 @@ export default class HorusSmilesManager {
 
         // If its a .CSV
         if (file.name.endsWith(".csv")) {
-          parsedSmiles = this.parseCSVSmilesString(contents, file.name);
+          try {
+            parsedSmiles = this.parseCSVSmilesString(contents, file.name);
+          } catch (error) {
+            reject(error);
+          }
         }
 
         if (file.name.endsWith(".smi")) {
           parsedSmiles = this.parseSMISmilesString(contents, file.name);
-        }
-
-        if (file.name.endsWith(".sdf")) {
-          parsedSmiles = await this.parseSDFFileAsSmiles(contents, file.name);
         }
 
         this.setSmilesList([...this.getSmilesList(), ...parsedSmiles]);
@@ -711,34 +760,63 @@ export default class HorusSmilesManager {
    * @param {string} [group] - Optional group value for the parsed molecules.
    * @return {HorusSmilesType[]} An array of parsed HorusSmilesType objects.
    */
-  private async parseSDFFileAsSmiles(fileContents: string, group?: string) {
-    // Split the SDF by the separator $$$$
-    const molecules = fileContents.split("$$$$");
-
-    // Loop through the molecules
-    const smilesList: HorusSmilesType[] = [];
-    for (const molecule of molecules) {
-      const moleculeData = molecule.trim();
-      if (moleculeData.length > 0) {
-        const smiles = await moleculeConverter(moleculeData, {
-          inputFormat: "sdf",
-          outputFormat: "smi",
-          generate2D: true,
-        });
-
-        const horusSmiles = await this.parseSingleSmilesStringAsMolecule(
-          smiles,
-          group
-        );
-
-        smilesList.push({
-          ...horusSmiles,
-          extraInfo: moleculeData,
-        });
-      }
+  private async parseMolstarSDFFileAsSmiles(structure: MolInfo) {
+    if (!structure.fileContents) {
+      return [];
     }
 
-    return smilesList;
+    // Split the SDF by the separator $$$$
+    const molecules = structure.fileContents
+      .split("$$$$")
+      .map((v) => v.trim())
+      .filter((v) => !!v);
+
+    this.convertingMolecules += molecules.length;
+
+    // Create an array of promises for converting and parsing molecules concurrently
+    return molecules.forEach((m) => {
+      this.moleculeConverter(m, {
+        inputFormat: "sdf",
+        outputFormat: "smi",
+        generate2D: true,
+        decreaseConvertingMolecules: true,
+      }).then((s) => {
+        const horusSmiles = this.parseSingleSmilesStringAsMolecule(
+          s,
+          structure.label
+        );
+
+        this.setSmilesList([
+          ...this.getSmilesList(),
+          {
+            ...horusSmiles,
+            properties: this.readSDFData(m),
+            structureRef: {
+              id: structure.id,
+              rootRef: structure.rootRef,
+              residue: { label: structure.label } as AtomInfo,
+              molecule: {
+                contents: m,
+                format: "sdf",
+              },
+            },
+          } as HorusSmilesType,
+        ]);
+      });
+    });
+  }
+
+  private readSDFData(molecule: string) {
+    const data: any = {};
+    Array.from(
+      molecule.matchAll(/>\s*<([^>]+)>\s*\(1\)\s*\n([^\n]+)/g)
+    ).forEach((match: RegExpMatchArray) => {
+      if (!match[1] || !match[2]) {
+        return;
+      }
+      data[match[1]] = match[2];
+    });
+    return data;
   }
 
   /**
@@ -751,16 +829,25 @@ export default class HorusSmilesManager {
 
     // Generate a .smi file
     let sdfContents = "";
+    this.convertingMolecules += selectedSmiles.filter(
+      (s) => s.structureRef?.molecule.format !== "sdf"
+    ).length;
     for (const smiles of selectedSmiles) {
-      const fileContents = `${smiles.smi} ${smiles.label}\n`;
+      let currentSDF;
+      // If the molecule already has a SDF type, return that
+      if (smiles.structureRef?.molecule?.format === "sdf") {
+        currentSDF = smiles.structureRef.molecule.contents;
+      } else {
+        const fileContents = `${smiles.smi} ${smiles.label}\n`;
+        currentSDF = await this.moleculeConverter(fileContents, {
+          inputFormat: "smiles",
+          outputFormat: "sdf",
+          generate3D: true,
+          decreaseConvertingMolecules: true,
+        });
+      }
 
-      const sdf = await moleculeConverter(fileContents, {
-        inputFormat: "smiles",
-        outputFormat: "sdf",
-        generate3D: true,
-      });
-
-      sdfContents += `${sdf}`;
+      sdfContents += `${currentSDF} \n\n$$$$\n`;
     }
     return sdfContents;
   }
@@ -819,6 +906,40 @@ export default class HorusSmilesManager {
     return this.getSmilesList().filter((s) => s.selected);
   }
 
+  /*
+  Generate the contents of a .csv file
+  Returns a string
+  */
+  public toCSV() {
+    const selectedSmiles = this.getSelectedSmiles();
+
+    if (!selectedSmiles) return "";
+
+    const properties = Array.from(
+      new Set(
+        selectedSmiles
+          .flatMap((s) => Object.keys(s.properties || {}))
+          .filter((p) => p)
+      )
+    );
+
+    const safeProperty = (p: string) =>
+      p.replace(/,/g, "_").replace(TRIM_REGEX, "").trim();
+
+    const header = ["SMILES", "label", ...properties];
+    const data = [
+      ...selectedSmiles.map((s) => [
+        s.smi,
+        s.label.replace(TRIM_REGEX, "").trim(),
+        ...properties.map((p) => safeProperty(s.properties?.[p] || "")),
+      ]),
+    ];
+
+    const csv = [header, ...data].map((row) => row.join(",")).join("\n");
+
+    return csv;
+  }
+
   actionsQueue: Array<{
     id: string;
     type: string;
@@ -855,8 +976,12 @@ export default class HorusSmilesManager {
           break;
         case "addCSV":
           const fileContents: string = data.fileContents;
-          newSmiles = this.parseCSVSmilesString(fileContents, group);
-          this.setSmilesList([...this.getSmilesList(), ...newSmiles]);
+          try {
+            newSmiles = this.parseCSVSmilesString(fileContents, group);
+            this.setSmilesList([...this.getSmilesList(), ...newSmiles]);
+          } catch (error) {
+            console.error(error);
+          }
           break;
         case "addSmilesWithData":
           newSmiles = this.parseVerifyAddSmiles(data);
@@ -897,6 +1022,70 @@ export default class HorusSmilesManager {
     // Remove all whitespaces and end-of-line characters
     return smiles.replace(/\s/g, "").replace(/\n/g, "").trim();
   }
+
+  private conversionPromises: Map<
+    string,
+    {
+      resolve: (value: string) => void;
+      reject: (reason: any) => void;
+    }
+  > = new Map();
+
+  private generateConversionId(): string {
+    return `conv_${Math.random().toString(36).substr(2, 9)}_${Date.now()}`;
+  }
+
+  private async moleculeConverter(
+    molecule: string,
+    options: {
+      inputFormat: string;
+      outputFormat: string;
+      generate2D?: boolean;
+      generate3D?: boolean;
+      decreaseConvertingMolecules?: boolean;
+    }
+  ): Promise<string> {
+    const conversionId = this.generateConversionId();
+
+    const promise = new Promise<string>((resolve, reject) => {
+      this.conversionPromises.set(conversionId, { resolve, reject });
+    });
+
+    // Set up message handler if not already done
+    if (!this.openBabelWorker.onmessage) {
+      this.openBabelWorker.onmessage = (event) => {
+        const { result, error, conversionId } = event.data;
+        const promiseHandlers = this.conversionPromises.get(conversionId);
+
+        if (promiseHandlers) {
+          if (error) {
+            promiseHandlers.reject(error);
+          } else {
+            promiseHandlers.resolve(result);
+          }
+          this.conversionPromises.delete(conversionId);
+        }
+      };
+
+      this.openBabelWorker.onerror = (error) => {
+        // Handle general worker errors
+        console.error("Worker error:", error);
+      };
+    }
+
+    this.openBabelWorker.postMessage({
+      molecule,
+      options,
+      conversionId,
+      baseURL: location.origin + window.__HORUS_ROOT__,
+    });
+
+    return promise.finally(() => {
+      if (options.decreaseConvertingMolecules && this.convertingMolecules > 0) {
+        this.convertingMolecules--;
+      }
+    });
+  }
 }
 
 function makeid(length: number) {
@@ -910,35 +1099,4 @@ function makeid(length: number) {
     counter += 1;
   }
   return result;
-}
-
-async function moleculeConverter(
-  molecule: string,
-  options: {
-    inputFormat: string;
-    outputFormat: string;
-    generate2D?: boolean;
-    generate3D?: boolean;
-  }
-): Promise<string> {
-  return await new Promise((resolve) => {
-    const conversion = new window.obabel.ObConversionWrapper();
-
-    conversion.setInFormat("", options.inputFormat);
-    const mol = new window.obabel.OBMol();
-    conversion.readString(mol, molecule);
-    conversion.setOutFormat("", options.outputFormat);
-
-    if (options.generate2D) {
-      const gen2d = window.obabel.OBOp.FindType("gen2d");
-      gen2d.Do(mol, "");
-    }
-
-    if (options.generate3D) {
-      const gen3d = window.obabel.OBOp.FindType("gen3d");
-      gen3d.Do(mol, "");
-    }
-
-    resolve(conversion.writeString(mol, false));
-  });
 }

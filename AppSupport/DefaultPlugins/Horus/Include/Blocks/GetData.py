@@ -52,4 +52,6 @@ getDataBlock = PluginBlock(
     inputs=[inputPath],
     variables=[destinationPath],
     id="get_data",
+            category="Files"
+
 )

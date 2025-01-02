@@ -554,6 +554,11 @@ class UserManagement:
     Wether admin tools should be present or not.
     """
 
+    forbiddenBlocks: list[str]
+    """
+    List of forbidden blocks IDs.
+    """
+
     def __init__(
         self,
         rawUserManagement: Dict[str, Any],
@@ -612,6 +617,17 @@ class UserManagement:
         )
 
         self.fileManagement = FileManagement(rawUserManagement.get("fileManagement", {}))
+
+        self.forbiddenBlocks = rawUserManagement.get("forbiddenBlocks", [])
+        if self.requireRegistration and len(self.forbiddenBlocks) > 1:
+            raise ValueError(
+                "Forbidden blocks property is intended for non-registration servers that do not have Admin Users."
+                + " Modify the configuration file to remove the forbiddenBlocks option."
+                + " On registration servers, forbidden blocks can be configured in the Admin Panel."
+            )
+        else:
+            logging.getLogger("Horus").info("Forbidden blocks: %s", str(self.forbiddenBlocks))
+
         anonymousQuotas = rawUserManagement.get("anonymousQuotas")
 
         if self.requireRegistration and anonymousQuotas is not None:

@@ -16,7 +16,7 @@
   position: relative;
   transition: transform 0.2s ease-in-out;
   height: 100%;
-  padding: 10px;
+  padding: 2px 5px 2px 10px;
   border: 1px solid var(--pop-code);
 }
 
@@ -47,6 +47,7 @@
 
 .plugin-block-placed {
   width: 350px !important;
+  padding: 10px;
 }
 
 .plugin-block-onair {
@@ -94,6 +95,7 @@
   font-size: 1rem;
   background: transparent;
   color: black;
+  user-select: none;
 }
 .plugin-variable-value select,
 .plugin-variable-value input,
@@ -151,8 +153,6 @@
 
 .block-sidebar {
   /* Add a right border */
-  border-right: 1px solid black;
-  width: 15rem;
   z-index: 1;
   /* padding-top: 1rem;
   padding-inline: 1rem; */
@@ -164,8 +164,7 @@
 .current-flow {
   background-color: var(--grey-white);
   border-radius: 5px;
-  padding: 1rem;
-  width: calc(100% - 15rem);
+  width: 100%;
   overflow: hidden;
   z-index: 0;
 }
@@ -178,21 +177,21 @@
 
 .top-bar-flow-reciver {
   z-index: 10;
-  position: relative;
+  width: 100%;
 }
 
 .flow-canvas {
   height: 100%;
-  position: relative;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  display: grid;
+  place-items: center;
+  background: var(--broken-white);
+  overflow: hidden;
+  /* position: relative; */
 }
 
 .scaled-flow-canvas {
   transform-origin: center;
   transition: transform 0.1s ease-in-out;
-  position: absolute;
 }
 
 /* Set all the inputs to 100% width */
@@ -252,7 +251,9 @@
   right: 0;
   top: 5rem;
   opacity: 0;
-  transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+  transition:
+    opacity 0.2s ease-in-out,
+    transform 0.2s ease-in-out;
   transform: translateY(-100%);
   background-color: whitesmoke;
   border-radius: 5px;

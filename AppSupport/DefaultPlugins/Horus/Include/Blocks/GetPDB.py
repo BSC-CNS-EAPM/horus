@@ -61,4 +61,6 @@ getPDBBlock = InputBlock(
     variable=pdbID,
     output=structureOutput,
     id="get_pdb",
+            category="Files"
+
 )

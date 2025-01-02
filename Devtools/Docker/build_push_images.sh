@@ -1,15 +1,8 @@
 #!/bin/bash
 
 # This script will automatically build the docker images and push them to the docker hub
+# Those iamges are just for building Horus, the standalone Horus image is built in another script
 # if you are not Christian Dominguez, please do not use this script!
-
-echo "Building and pushing Horus Docker images"
-echo "If you are not Christian Dominguez, please do not use this script and cancel it now"
-
-# Wait 5 seconds
-sleep 5
-
-echo "Hello Christian, let's start building and pushing the images"
 
 # Build Rocky 8
 docker build -t horus_rocky -f Devtools/Docker/rocky8.dockerfile .

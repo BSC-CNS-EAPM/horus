@@ -31,6 +31,7 @@ import { ObjectKeys } from "molstar/lib/mol-util/type-helpers";
 import { PluginSpec } from "molstar/lib/mol-plugin/spec";
 import { StructureRef } from "molstar/lib/mol-plugin-state/manager/structure/hierarchy-state";
 import { Vec3 } from "molstar/lib/mol-math/linear-algebra";
+import { Expression } from "molstar/lib/mol-script/language/expression";
 
 // Import the molviewspec library
 import { loadMVS } from "molstar/lib/extensions/mvs/load";
@@ -40,10 +41,12 @@ import { StateObjectSelector } from "molstar/lib/mol-state";
 import { BuiltInTrajectoryFormats } from "molstar/lib/mol-plugin-state/formats/trajectory";
 import { HorusMolstarViewportComponent } from "./ui/viewport";
 import { HorusLeftPanelControls } from "./ui/HorusLeftPanelControls";
-
-// Import the HorusSmilesManager
-import HorusSmilesManager from "../../Smiles/SmilesWrapper/horusSmiles";
-import { Expression } from "molstar/lib/mol-script/language/expression";
+import {
+  ModelFromTrajectory,
+  TrajectoryFromModelAndCoordinates,
+} from "molstar/lib/mol-plugin-state/transforms/model";
+import { getFileNameInfo } from "molstar/lib/mol-util/file-info";
+import { Task } from "molstar/lib/mol-task";
 
 // Definition of useful types
 export type AtomInfo = {
@@ -76,9 +79,10 @@ export type BondInfo = {
 export type MolInfo = {
   id: string;
   label: string;
-  fileContents: string;
+  fileContents: string | null;
   fileName: string;
   format: string;
+  rootRef: string;
 };
 
 export type MolstarClickEventDetail = {
@@ -131,11 +135,6 @@ export default class HorusMolstar {
   constructor(target: HTMLDivElement, options?: MolstarInitOptions) {
     this.target = target;
     this.initPlugin(options);
-
-    // Init also the Smiles2D manager, as it will be always coupled with Mol*
-    if (!window.smiles) {
-      window.smiles = new HorusSmilesManager();
-    }
   }
 
   private async initPlugin(options?: MolstarInitOptions) {
@@ -274,11 +273,6 @@ export default class HorusMolstar {
    */
   public async reset() {
     await this.initPlugin();
-
-    // reset the Smiles2D manager too
-    if (window.smiles) {
-      window.smiles.reset();
-    }
   }
 
   /**
@@ -1023,7 +1017,109 @@ export default class HorusMolstar {
       );
     }
   }
+  /**
+   * Loads a trajectory using a topology file and a coordinates file
+   *
+   * @param topology File representing the topology/model structure
+   * @param coordinates File representing the trajectory coordinates
+   * @param label Optional label for the loaded trajectory
+   * @returns Promise resolving to the loaded trajectory
+   */
+  public async loadTrajectory({
+    topology,
+    trajectory,
+    label = "Loaded Trajectory",
+  }: {
+    topology: File;
+    trajectory: File;
+    label?: string;
+  }) {
+    if (!this.plugin) {
+      throw new Error("Plugin is not initialized");
+    }
 
+    const t = Task.create("Load Trajectory", (taskCtx) => {
+      const ctx = this.plugin!;
+
+      return this.state
+        .transaction(async () => {
+          const processFile = async (file: Asset.File | null) => {
+            if (!file) throw new Error("No file selected");
+
+            const info = getFileNameInfo(file.file?.name ?? "");
+            const isBinary = ctx.dataFormats.binaryExtensions.has(info.ext);
+            const { data } = await ctx.builders.data.readFile({
+              file,
+              isBinary,
+              label,
+            });
+
+            // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
+            const provider = ctx.dataFormats.auto(info, data.cell?.obj!);
+
+            if (!provider) {
+              ctx.log.warn(
+                `LoadTrajectory: could not find data provider for '${info.ext}'`
+              );
+              await ctx.state.data.build().delete(data).commit();
+              return;
+            }
+
+            return provider.parse(ctx, data);
+          };
+
+          try {
+            const modelParsed = await processFile(Asset.File(topology));
+
+            let model;
+            if ("trajectory" in modelParsed) {
+              model = await this.state
+                .build()
+                .to(modelParsed.trajectory)
+                .apply(ModelFromTrajectory, { modelIndex: 0 })
+                .commit();
+            } else {
+              model = modelParsed.topology;
+            }
+
+            const coordinates = await processFile(Asset.File(trajectory));
+
+            const dependsOn = [model.ref, coordinates.ref];
+            const traj = this.state
+              .build()
+              .toRoot()
+              .apply(
+                TrajectoryFromModelAndCoordinates,
+                {
+                  modelRef: model.ref,
+                  coordinatesRef: coordinates.ref,
+                },
+                { dependsOn }
+              )
+              .apply(StateTransforms.Model.ModelFromTrajectory, {
+                modelIndex: 0,
+              });
+
+            await this.state.updateTree(traj).runInContext(taskCtx);
+            const structure = await ctx.builders.structure.createStructure(
+              traj.selector
+            );
+            await ctx.builders.structure.representation.applyPreset(
+              structure,
+              "auto"
+            );
+          } catch (e) {
+            console.error(e);
+            ctx.log.error(`Error loading trajectory`);
+          }
+        })
+        .runInContext(taskCtx);
+    });
+    // Run the task
+    return this.plugin.runTask(t, { useOverlay: true });
+  }
+
+  // Deprecated method
   async loadPDBString(pdbString: string, label: string) {
     console.warn(
       "loadPDBString will be soon deprecated use loadMoleculeString instead."
@@ -1041,9 +1137,8 @@ export default class HorusMolstar {
       "pdb"
     );
     const model = await this.plugin!.builders.structure.createModel(trajectory);
-    const structure = await this.plugin!.builders.structure.createStructure(
-      model
-    );
+    const structure =
+      await this.plugin!.builders.structure.createStructure(model);
 
     const components = {
       polymer: await this.plugin!.builders.structure.tryCreateComponentStatic(
@@ -1201,9 +1296,7 @@ export default class HorusMolstar {
 
   structures(): StructureRef[] {
     if (!this.plugin || !this.plugin.managers.structure.hierarchy.current) {
-      throw new Error(
-        "Plugin is not properly initialized. Cannot retrieve structures."
-      );
+      return [];
     }
 
     return this.plugin.managers.structure.hierarchy.current.structures;
@@ -1307,9 +1400,13 @@ export default class HorusMolstar {
 
   // Will search iteratibely until finding the actual label of the structure (the one on the root)
   public getLabelFromStructureRef(refID: string) {
-    return this.plugin?.state.data.cells.get(
-      this.getStructureRootIDFromStructureSourceRef(refID)
-    )!.obj!.label;
+    try {
+      return this.plugin?.state.data.cells.get(
+        this.getStructureRootIDFromStructureSourceRef(refID)
+      )!.obj!.label;
+    } catch (error) {
+      return "Unknown";
+    }
   }
 
   /**
@@ -1336,10 +1433,9 @@ export default class HorusMolstar {
 
         const molInfo = {
           id: structure.cell.sourceRef!,
-          label: this.getLabelFromStructureRef(rootRef),
+          rootRef: rootRef,
+          label: this.getLabelFromStructureRef(rootRef) ?? "Unknown",
           ...this.getFileAsHexStringFromRootRef(rootRef),
-        } as MolInfo & {
-          fileContents: string | null;
         };
 
         if (molInfo.fileContents !== null) {
@@ -1782,9 +1878,9 @@ export default class HorusMolstar {
    * @throws {Error} If there's an issue removing the shape or committing the change.
    */
   public async removeShape(ref: string) {
-    const builder = this.plugin!.state.data.build();
-    builder.delete(ref);
-    builder.commit();
+    const builder = this.plugin?.state.data.build();
+    builder?.delete(ref);
+    builder?.commit();
   }
 
   /**
@@ -1913,12 +2009,20 @@ export default class HorusMolstar {
 
     try {
       switch (type) {
+        case "loadTrajectory":
+          const topology = await window.horus.getFile(data.topology);
+          const trajectory = await window.horus.getFile(data.trajectory);
+          const label = data.label;
+
+          await this.loadTrajectory({
+            topology: new File([topology], data.topologyFileName),
+            trajectory: new File([trajectory], data.trajectoryFileName),
+            label,
+          });
+          break;
+
         case "addMolecule":
-          const blob = await window.horus
-            .getFile(data.molContent)
-            .catch((e) => {
-              throw e;
-            });
+          const blob = await window.horus.getFile(data.molContent);
           await this.loadMoleculeFile(new File([blob], data.fileName), {
             label: data.label,
           });

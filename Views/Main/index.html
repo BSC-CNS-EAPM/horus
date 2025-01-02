@@ -1,21 +1,26 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <head>
     <title>Horus</title>
 
-    <!-- Load the React app (necessary for parcel detecting the files) -->
-    <script src="index.js" type="module" id="js-id"></script>
+    <script>
+      window.__HORUS_ROOT__ = "{{ horusRoot }}";
 
-    <!-- OpenBabel -->
-    <script
-      src="/Static/obabel/openbabel.js"
-      type="module"
-      id="js-obabel"
-    ></script>
+      if (
+        window.__HORUS_ROOT__.startsWith("{{") &&
+        window.__HORUS_ROOT__.endsWith("}}")
+      ) {
+        // Flask is not called to render the template, therefore we need to manually set the root for development mode
+        window.__HORUS_ROOT__ = "";
+      }
+    </script>
+
+    <!-- Load the React app (necessary for parcel detecting the files) -->
+    <script src="index.tsx" type="module" id="js-id"></script>
 
     <!-- JSME -->
     <script
-      src="/Static/JSME/jsme.nocache.js"
+      src="{{ horusRoot }}/Static/JSME/jsme.nocache.js"
       type="module"
       id="js-jsme"
     ></script>
@@ -48,17 +53,6 @@
     <meta name="application-name" content="Horus" />
     <meta name="msapplication-TileColor" content="#2b5797" />
     <meta name="theme-color" content="#2b5797" />
-
-    <script>
-      // Load the token from jinja2 variable
-      const token = "{{ shemsu }}";
-      if (token) {
-        window.pywebview = window.pywebview || {};
-        window.pywebview.token = token;
-      }
-      // Remove from the url the token
-      window.history.replaceState({}, document.title, "/");
-    </script>
   </head>
 
   <body>
