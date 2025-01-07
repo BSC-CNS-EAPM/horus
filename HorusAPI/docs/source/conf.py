@@ -7,7 +7,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "Horus"
-copyright = "2024, BSC | Barcelona Supercomputing Center"
+copyright = "2025, BSC | Barcelona Supercomputing Center"
 author = "Barcelona Supercomputing Center"
 
 # HorusAPI source path

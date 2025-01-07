@@ -49,7 +49,7 @@ export default function LoginRegister() {
         setMessages({ ok: false, msg: "" });
       }
     },
-    [],
+    []
   );
 
   const isFirstRender = useRef(true);
@@ -137,7 +137,7 @@ export default function LoginRegister() {
       >
         {getCurrentView()}
       </div>
-      <p className="mt-5 mb-3 text-muted">&copy; 2024 - Horus</p>
+      <p className="mt-5 mb-3 text-muted">&copy; 2025 - Horus</p>
     </div>
   );
 }
@@ -355,7 +355,7 @@ function Register({
         setMessages(
           parsedFields["email"]
             ? { ok: false, msg: "Password is required" }
-            : { ok: false, msg: "Email is required" },
+            : { ok: false, msg: "Email is required" }
         );
         return;
       }
