@@ -172,7 +172,6 @@ export default function HorusToolbar() {
   const menus: ToolBarMenuProps[] = [
     {
       name: "Home",
-      link: "/",
       onClick: async () => {
         if (flowContext && !flowContext.flow.saved) {
           if (

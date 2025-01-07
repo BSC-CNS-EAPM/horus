@@ -47,18 +47,10 @@ USER root
 WORKDIR /app
 
 # Create directory with proper permissions
-RUN mkdir -p /bin/Horus && \
-    chown -R mambauser:mambauser /bin/Horus
+RUN mkdir -p /bin/Horus
 
 # Copy the built application from the builder stage
 COPY --from=builder /app/dist/Horus /bin/Horus
-
-# Set permissions for the binary
-RUN chown -R mambauser:mambauser /bin/Horus && \
-    chmod +x /bin/Horus/Horus
-
-# Switch back to the mambauser
-USER mambauser
 
 # Set the entrypoint to your application
 ENTRYPOINT ["/bin/Horus/Horus"]

@@ -38,6 +38,7 @@ In addition to command-line options, Horus allows configuration through the foll
 - **HORUS_DEFAULT_PLUGINS_DIR**: Defines the path for default plugins that cannot be uninstalled. The default Horus plugin is located here. By default, this is set to ``app_support_dir/DefaultPlugins``.
 - **HORUS_PLUGINS_DIR**: Indicates the directory for user-installed plugins. By default, this points to ``app_support_dir/Plugins``.
 - **HORUS_PUBLIC_FLOWS**: Directory for public flows. Intended to be used in WebApp mode.
+- **HORUS_ROOT**: Root path where the server runs. Defaults to "/".
 - **HORUS_GUI**: Sets the GUI backend to be used. Available options are QT and GTK (Linux only), or Cocoa (macOS).
 - **HORUS_MODE**: Specifies the application mode. Valid values are ``app``, ``browser``, ``server``, or ``webapp``.
 - **HORUS_PORT**: Defines the port for the Horus server.
