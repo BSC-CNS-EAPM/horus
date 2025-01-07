@@ -23,7 +23,7 @@ function IFrameLoader({
       return page.url;
     }
 
-    let domain = window.origin;
+    let domain = window.origin + window.__HORUS_ROOT__;
 
     // Remove the final slash
     if (domain.endsWith("/")) {
