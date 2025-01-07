@@ -11,7 +11,13 @@ import RotatingLines from "../Components/RotatingLines/rotatinglines";
 // Hooks
 import { fetchSettings } from "../Settings/settings";
 import { fetchDesktop } from "../Utils/utils";
-import { Outlet, useNavigate } from "react-router";
+import {
+  NavigateFunction,
+  NavigateOptions,
+  Outlet,
+  To,
+  useNavigate,
+} from "react-router";
 import { setNavigate } from "@/Utils/navigationService";
 import HorusContainer from "@/Components/HorusContainer/horus_container";
 import { HorusSettingsObject } from "@/Settings/setting";
@@ -93,7 +99,19 @@ export function App() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    setNavigate(navigate);
+    const updatedNavigate: NavigateFunction = (
+      toOrDelta: To | number,
+      options?: NavigateOptions
+    ) => {
+      if (typeof toOrDelta === "number") {
+        navigate(toOrDelta);
+      } else {
+        const fixedURL = window.__HORUS_ROOT__ + toOrDelta;
+        navigate(fixedURL, options);
+      }
+    };
+
+    setNavigate(updatedNavigate);
   }, [navigate]);
 
   if (!isHorusLoaded) {

@@ -10,10 +10,6 @@ eval "$(micromamba shell hook --shell bash)"
 
 echo "Starting the build process for Rocky Linux 8"
 
-# Install node_modules requirements
-echo "Installing frontend requirements"
-npm i
-
 # Reinstall the conda environment
 echo "Reinstalling the conda environment"
 set +e
@@ -30,7 +26,7 @@ python -m pip install pywebview[qt]==5.0.5
 
 # Build horus
 echo "Building horus"
-npm run build
+source Devtools/Compile/build_horus.sh
 
 # Create the packages
 echo "Creating the packages"
