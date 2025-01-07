@@ -14,7 +14,6 @@ pip_dist_path = None
 for d in sys.path:
     if d.endswith("site-packages"):
         pip_dist_path = d
-        break
 
 if pip_dist_path is None:
     raise Exception("Could not find pip dist path")
