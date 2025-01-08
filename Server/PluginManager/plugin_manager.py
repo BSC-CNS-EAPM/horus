@@ -1229,7 +1229,7 @@ class PluginManager(metaclass=HorusSingleton):
         """
 
         # Clean the block logs, except if its second slurm
-        if not isFirstSlurm:
+        if isFirstSlurm:
             block.blockLogs = ""
 
         logging.getLogger("Horus").info("Executing block %s", block.id)
