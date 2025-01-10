@@ -492,7 +492,10 @@ class PluginManager(metaclass=HorusSingleton):
                         loadedPlugin._saveConfig(newConfigPath, currentConfig)
 
                 # Remove the old plugin
-                self.loadedPlugins.remove(self._getPluginByID(loadedPlugin.id))
+                try:
+                    self.loadedPlugins.remove(self._getPluginByID(loadedPlugin.id))
+                except (ValueError, PluginNotFoundError):
+                    pass
 
                 print("Deleting old plugin version...")
                 # Remove the old plugin folder
