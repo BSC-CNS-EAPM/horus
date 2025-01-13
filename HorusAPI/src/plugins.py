@@ -424,7 +424,35 @@ class VariableTypes(str, Enum):
     - structure: The structure object variable where the atom is located.
     This last variable contains the properties of the STRUCTURE variable.
     """
+
     BOX = "box"
+    """
+    A box to be rendered in Mol*.
+
+    Will render as an interactive box viewer. The user can select the center and the size of each
+    side of the box.
+
+    This variable will return a dictionary with the following keys:
+    {
+        "metrics": {
+            "x0": 0,
+            "x1": 5,
+            "x2": 0,
+            "x3": 0,
+            "y0": 0,
+            "y1": 0,
+            "y2": 5,
+            "y3": 0,
+            "z0": 0,
+            "z1": 0,
+            "z2": 0,
+            "z3": 5
+        },
+        "radialSegments": 2,
+        "radiusScale": 5,
+    }
+    """
+
     SPHERE = "sphere"
     """
     A sphere to be rendered in Mol*.
