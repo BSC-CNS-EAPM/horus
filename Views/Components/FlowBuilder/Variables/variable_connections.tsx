@@ -63,7 +63,7 @@ export function VariableSetupView(props: VariableModalViewProps) {
     return {
       ...variable,
       placedID: block.placedID,
-      disabled: !!isFlowActive,
+      disabled: !!isFlowActive || variable.disabled,
     };
   });
 
