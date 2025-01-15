@@ -1412,7 +1412,7 @@ class PluginManager(metaclass=HorusSingleton):
         try:
             with PluginDeps(plugin._path):
                 with chdir(flowDir):
-                    # Paramiko does not work on subprocess! Need to update to connect inside the block subprocess isntead
+                    # Paramiko does not work on subprocess! Need to update to connect inside the block subprocess instead
                     outputs = PluginDeps.subprocessBlock(block, appSupportDir, resetRemoteBlock)
         except Exception as e:
 
