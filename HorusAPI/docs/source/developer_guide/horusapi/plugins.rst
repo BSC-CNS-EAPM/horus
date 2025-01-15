@@ -49,7 +49,7 @@ This is a JSON object that represents a plugin for the Horus app. The object con
 - ``maxHorusVersion``: The maximum Horus version required in order to run the plugin (optional).
 - ``platforms``: A list of the platforms where this plugin runs. Allowed values are "universal", "linux", "macos_intel" and "macos_arm". Defaults to "universal" if not specified (optional).
 - ``externalURL``: An URL that links to the Plugin's webpage or documentation (optional).
-- ``dependencies``: An array of strings that contains the PyPI dependencies of the plugin. This dependencies can be declared as DEPENDENCY==VERSION or using the --no-deps (DEPENDENCY==VERSION --no-deps) flag which will allow to install the dependency without installing the others that are necessary for it (optional).
+- ``dependencies``: An array of strings that contains the PyPI dependencies of the plugin. This dependencies can be declared as DEPENDENCY==VERSION or using the --no-deps flag (DEPENDENCY==VERSION --no-deps) which will allow to install the dependency without installing the others that are necessary for it, or using the --isolated flag (DEPENDENCY==VERSION --isolated) which will install that dependency separately from the others (optional).
 
 Dependencies of plugins
 -----------------------

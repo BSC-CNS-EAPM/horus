@@ -1,7 +1,7 @@
 {
   "dependenciesInterpreter": {
     "name": "Python interpreter",
-    "description": "Python interpreter path to use for dependencies installation",
+    "description": "Python interpreter path to use for dependencies installation. Only required for special packages that need to be compiled from source. Must be python 3.9.",
     "category": "Dependencies",
     "value": "python",
     "type": "file",
