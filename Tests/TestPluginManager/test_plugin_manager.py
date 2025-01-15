@@ -214,7 +214,8 @@ def test_install_dep_internal_success(mocker):
     deps_dir = "/path/to/"
 
     with pytest.raises(
-        Exception, match="Dependency dep could not be installed: 'Mock' object is not iterable"
+        Exception,
+        match="Failed to install dependency dep. External interpreter error: 'Mock' object is not iterable",
     ):
         pluginManager._installDepInternal(dep_to_install, deps_dir)
 
@@ -237,7 +238,7 @@ def test_install_dep_internal_success(mocker):
     assert last_call_kwargs["stdin"] == subprocess.DEVNULL
 
     # Verify that subprocess.Popen was called once
-    assert subprocess.Popen.call_count == 1  # type: ignore
+    assert subprocess.Popen.call_count == 3  # type: ignore
 
     del pluginManager
 
@@ -297,15 +298,15 @@ def test_install_dep_internal_frozen_app(mocker):
         dep_to_install = "dep"
         deps_dir = "/path/to/"
 
-        with pytest.raises(Exception, match="'Mock' object is not iterable"):
+        with pytest.raises(Exception, match="'Mock' object is not subscriptable"):
             pluginManager._installDepInternal(dep_to_install, deps_dir)
 
     # With embedded pip the call now is on the meipass (uncompiled is the cwd) + pip/pip
     pipPath = os.path.join(os.getcwd(), "pip", "pip")
 
-    # Check the arguments of the last call to subprocess.Popen
-    last_call_args, last_call_kwargs = subprocess.Popen.call_args  # type: ignore
-    assert last_call_args[0] == [
+    # Check the arguments of the internal pip call to subprocess.Popen
+    second_last_call_args, second_last_call_kwargs = subprocess.Popen.call_args_list[-2]  # type: ignore
+    assert second_last_call_args[0] == [
         pipPath,
         "install",
         "dep",
@@ -315,12 +316,12 @@ def test_install_dep_internal_frozen_app(mocker):
         "--no-input",
         "--ignore-installed",
     ]
-    assert last_call_kwargs["stdout"] == subprocess.PIPE
-    assert last_call_kwargs["stderr"] == subprocess.STDOUT
-    assert last_call_kwargs["stdin"] == subprocess.DEVNULL
+    assert second_last_call_kwargs["stdout"] == subprocess.PIPE
+    assert second_last_call_kwargs["stderr"] == subprocess.STDOUT
+    assert second_last_call_kwargs["stdin"] == subprocess.DEVNULL
 
-    # Verify that subprocess.Popen was called exactly once
-    assert subprocess.Popen.call_count == 1  # type: ignore
+    # Verify that subprocess.Popen was called exactly twice (one for each method internal pip & external python)
+    assert subprocess.Popen.call_count == 2  # type: ignore
 
     del pluginManager
 

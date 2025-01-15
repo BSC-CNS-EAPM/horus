@@ -958,7 +958,7 @@ class PluginManager(metaclass=HorusSingleton):
         depsToInstallStringList = []
         currentString = None
         for dep in dependencies:
-            parsedDep = dep.replace(" --no-deps", "")
+            parsedDep = dep.replace(" --no-deps", "").replace(" --isolated", "")
             versionSpecs = None
             if not parsedDep.startswith("git+"):
                 try:
@@ -982,11 +982,12 @@ class PluginManager(metaclass=HorusSingleton):
                 else:
                     continue
 
-            if "--no-deps" in dep:
+            if "--no-deps" in dep or "--isolated" in dep:
                 if currentString:
                     depsToInstallStringList.append(currentString)
                     currentString = None
-                depsToInstallStringList.append(dep)
+                cleanDep = dep.replace(" --isolated", "") if "--isolated" in dep else dep
+                depsToInstallStringList.append(cleanDep)
             else:
                 if currentString:
                     currentString += " " + dep
@@ -1094,7 +1095,7 @@ class PluginManager(metaclass=HorusSingleton):
         else:
             noDependencies = False
 
-        pip = (
+        interpreter = (
             [os.path.join(AppDelegate().bundleDir, "pip", "pip")]
             if AppDelegate().isCompiled
             else ["python", "-m", "pip"]
@@ -1102,7 +1103,6 @@ class PluginManager(metaclass=HorusSingleton):
 
         # The command to install dependencies with pip
         command = [
-            *pip,
             "install",
             *dep.split(" "),
             "--prefix",
@@ -1114,12 +1114,98 @@ class PluginManager(metaclass=HorusSingleton):
         ]
 
         try:
-            callPopen(command, env=env)
+            callPopen([*interpreter, *command], env=env)
         except Exception as exc:
-            msg = f"Dependency {dep} could not be installed: {str(exc)}"
-            print(msg)
+
+            # Some python packages require to be builded from source, and the bundled pip cannot handle this.
+            # For such cases, Horus will use the python interpreter set in the settings.
+            interpreter = [self._getExternalInterpreter(), "-m", "pip"]
+
+            msg = f"Dependency {dep} could not be installed using embedded pip: {str(exc)}\n"
+            msg += f"Trying with external python interpreter '{' '.join(interpreter)}'."
             logging.getLogger("Horus").error(msg)
-            raise Exception(msg) from exc
+
+            try:
+                callPopen([*interpreter, *command], env=env)
+            except Exception as exc2:
+                msg = (
+                    f"Failed to install dependency {dep}. External interpreter error: {str(exc2)}"
+                )
+                raise Exception(msg)
+
+    def _getExternalInterpreter(self) -> str:
+        """
+        This method checks and verifies the defined interpreter set in the settings.
+        """
+
+        from App import AppDelegate
+
+        interpreter: str = "python"
+        try:
+            interpreter = str(self.horusSettings.getSetting("dependenciesInterpreter").value)
+        except Exception as e:
+            msg = f"Could not get the python interpreter from the user settings: {e}"
+            msg += "\nDefaulting to current python interpreter."
+            print(msg)
+
+        # Check if the python interpreter is valid
+        try:
+            p = subprocess.Popen(
+                [interpreter, "--version"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                stdin=subprocess.PIPE,
+            )
+        except Exception as e:
+            raise Exception(
+                f"Could not execute '{interpreter}' command. {e}."
+                + " Make sure you have selected a valid interpreter in the settings."
+            ) from e
+
+        # Wait for the process to finish
+        p.wait()
+
+        # Get the result
+        if p.stdout is None:
+            raise Exception("Could not get the intalled python interpreter version.")
+
+        version = p.stdout.read().decode("utf-8").strip().split(" ")[-1]
+
+        try:
+            appPythonVersion = AppDelegate().APP_INFO["PYTHON_VERSION"]
+        except Exception as exc:
+            raise Exception(f"Could not get the python version from the app info: {exc}") from exc
+
+        exceptionMsg = (
+            "In order to install additional dependencies, "
+            "you need to have a valid python interpreter "
+            f"installed on your system with python v{appPythonVersion}. "
+            "You can select a specific interpreter in the settings."
+        )
+
+        # Check the return code
+        if p.returncode != 0 and p.returncode is not None:
+            raise Exception(exceptionMsg)
+
+        # Check that the major and minor version of python matches
+        major = version.split(".")[0]
+        minor = version.split(".")[1]
+
+        appVersionMajor = appPythonVersion.split(".")[0]
+        appVersionMinor = appPythonVersion.split(".")[1]
+
+        majorMatches = major == appVersionMajor
+        minorMatches = minor == appVersionMinor
+
+        # Both major and minor versions must match (eg. 3.9.12 == 3.9.15)
+        # Patch versions are ignored
+        bothMatch = majorMatches and minorMatches
+
+        if not bothMatch:
+            exceptionMsg += f" (Currently detected python v{version})"
+            raise Exception(exceptionMsg)
+
+        return interpreter
 
     def getPlugins(self) -> dict:
         """
@@ -1957,7 +2043,7 @@ def callPopen(command: list[str], cwd: str = ".", env: typing.Optional[dict] = N
 
         # Check the return code
         if p.returncode != 0 and p.returncode is not None:
-            raise Exception(f"{command} failed")
+            raise Exception(f"Command failed: '{' '.join(command)}'")
 
 
 def getFullPluginDepsDir(pluginPath: str, full=True) -> str:
