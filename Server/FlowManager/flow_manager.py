@@ -1202,6 +1202,7 @@ class Flow:
 
         # Set the block as running
         blockSelectedToRun._isRunning = True
+        blockSelectedToRun._finishedExecution = False
 
         if not self.canExecute:
 
@@ -1240,8 +1241,9 @@ class Flow:
         self.status = self.FlowStatus.RUNNING
 
         # Reset the time
-        self.startedTime = datetime.datetime.now()
-        self.finishedTime = None
+        if not flowResumed:
+            self.startedTime = datetime.datetime.now()
+            self.finishedTime = None
 
         # Send the flow to the frontend if a socket is provided
         if self._socket is not None:
@@ -1397,7 +1399,6 @@ class Flow:
                 block._finishedExecution = True
                 block.error = True
                 block.blockLogs += f"\nERROR: {message}"
-                block._finishedExecution = True
 
         # Update the flow size and the finished time
         self.size = self._computeSize()
@@ -2068,7 +2069,7 @@ class FlowManager:
         updatedFlowToPause = Flow.read(flowPath)
 
         # Kill the flow process
-        self._killFlow(updatedFlowToPause)
+        self._killFlow(updatedFlowToPause, stop=False)
 
         # Set the flow status to paused
         updatedFlowToPause.status = Flow.FlowStatus.PAUSED
@@ -2079,7 +2080,7 @@ class FlowManager:
 
         return updatedFlowToPause
 
-    def _killFlow(self, flow: Flow):
+    def _killFlow(self, flow: Flow, stop: bool = True):
         """
         Internal function to kill running flows
         """
@@ -2095,26 +2096,31 @@ class FlowManager:
         if process is not None and process.is_alive():
             logging.getLogger("Horus").debug("Flow PID: %s", process.pid)
 
-            process.terminate()
+            if stop:
+                process.terminate()
 
-            # Try to terminate the flow process, if after 10 seconds
-            # its not terminated, kill it
-            process.join(timeout=10)
+                # Try to terminate the flow process, if after 10 seconds
+                # its not terminated, kill it
+                process.join(timeout=10)
 
-            if process.is_alive():
-                logging.getLogger("Horus").error(
-                    "Flow process did not terminate. Killing process..."
-                )
-                process.kill()
+                if process.is_alive():
+                    logging.getLogger("Horus").error(
+                        "Flow process did not terminate. Killing process..."
+                    )
+                    process.kill()
 
-                # Set the flow status to stopped
-                flow.stop()
+                    # Set the flow status to stopped
+                    flow.stop()
 
-                # Save the flow
-                flow.write()
+                    # Save the flow
+                    flow.write()
+                else:
+                    # Re read the flow after sucessfuclly terminated to get the updated blocklogs...
+                    flow = Flow.read(flow.path)
             else:
-                # Re read the flow after sucessfuclly terminated to get the updated blocklogs...
-                flow = Flow.read(flow.path)
+                # Just kill the process immediately
+                process.kill()
+                process.join()
 
             # Remove the flow from the running flows list if it was not removed automatically
             # during the gracefully flow stop
@@ -2131,11 +2137,12 @@ class FlowManager:
         else:
             logging.getLogger("Horus").debug("Flow %s is not running", flow.path)
 
-            # Set the flow status to stopped
-            flow.stop()
+            if stop:
+                # Set the flow status to stopped
+                flow.stop()
 
-            # Save the flow
-            flow.write()
+                # Save the flow
+                flow.write()
 
         return flow
 
