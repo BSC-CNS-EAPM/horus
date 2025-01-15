@@ -1956,7 +1956,9 @@ class PluginDeps:
                 outputs = forkedBlock()
 
             except BaseException as e:
-                error = e
+                # Here we need to convert the exception because it may be a Class which does not exist
+                # outside of the forked context
+                error = Exception(str(e))
 
             finally:
                 # Always ensure we put the result in the queue
