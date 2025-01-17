@@ -37,6 +37,7 @@ import { Expression } from "molstar/lib/mol-script/language/expression";
 import { loadMVS } from "molstar/lib/extensions/mvs/load";
 import { MVSData } from "molstar/lib/extensions/mvs/mvs-data";
 import { MolViewSpec } from "molstar/lib/extensions/mvs/behavior";
+import { Mp4Export } from "molstar/lib/extensions/mp4-export";
 import { StateObjectSelector } from "molstar/lib/mol-state";
 import { BuiltInTrajectoryFormats } from "molstar/lib/mol-plugin-state/formats/trajectory";
 import { HorusMolstarViewportComponent } from "./ui/viewport";
@@ -141,6 +142,7 @@ export default class HorusMolstar {
     const ExtensionMap = {
       // @ts-ignore
       mvs: PluginSpec.Behavior(MolViewSpec),
+      "mp4-export": PluginSpec.Behavior(Mp4Export),
     };
 
     this.plugin = await createPluginUI({
