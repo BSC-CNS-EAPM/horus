@@ -86,7 +86,7 @@
     "desktopOnly": true
   },
   "maxConcurrentFlows": {
-    "name": "Max concurrent flows",
+    "name": "Concurrent flows",
     "description": "If set to 0, the number of concurrent flows will be unlimited. This setting is only used if 'Automatic concurrent flows' is disabled. Changing this setting will require a restart of the application.",
     "category": "Advanced",
     "value": 0,

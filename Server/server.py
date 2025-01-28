@@ -3382,7 +3382,7 @@ class HorusServer:
     The maximum number of concurrent flows that the server can run
     """
 
-    taskSemaphore: "Semaphore"
+    taskSemaphore: typing.Union["Semaphore", None] = None
     """
     A semaphore to queue the background tasks
     according to the number of cores
@@ -3393,28 +3393,38 @@ class HorusServer:
         Assings the maxConcurrentFlows to the semaphore
         """
 
-        # Read from the general settings the maximum number of concurrent flows
-        automatic = self.settingsManager.getSetting("automaticConcurrentFlows").value
+        try:
 
-        # Assign the maximum number of running flows
-        maxConcurrentFlows = 1  # Default to 1
-
-        if automatic:
-            try:
-                maxConcurrentFlows = len(os.sched_getaffinity(0)) - 1  # type: ignore
-            except AttributeError:
-                maxConcurrentFlows = mp.cpu_count() - 1
-        else:
             # Read from the general settings the maximum number of concurrent flows
-            maxConcurrentFlows = self.settingsManager.getSetting("maxConcurrentFlows").value
+            automatic = self.settingsManager.getSetting("automaticConcurrentFlows").value
 
-        # Make sure we have at least one flow, even on potato computers
-        self._maxConcurrentFlows = maxConcurrentFlows if maxConcurrentFlows > 0 else 1
+            # Assign the maximum number of running flows
+            maxConcurrentFlows = 1  # Default to 1
 
-        self.taskSemaphore = mp.Semaphore(self._maxConcurrentFlows)
-        logging.getLogger("Horus").info(
-            "Maximum number of concurrent flows: %s", maxConcurrentFlows
-        )
+            if automatic:
+                try:
+                    maxConcurrentFlows = len(os.sched_getaffinity(0)) - 1  # type: ignore
+                except AttributeError:
+                    maxConcurrentFlows = mp.cpu_count() - 1
+            else:
+                # Read from the general settings the maximum number of concurrent flows
+                maxConcurrentFlows = self.settingsManager.getSetting("maxConcurrentFlows").value
+
+                if maxConcurrentFlows == 0:
+                    # Unlimited flows
+                    self.taskSemaphore = None
+                    self._maxConcurrentFlows = 0
+                    return
+
+            # Make sure we have at least one flow, even on potato computers
+            self._maxConcurrentFlows = maxConcurrentFlows if maxConcurrentFlows > 0 else 1
+
+            self.taskSemaphore = mp.Semaphore(self._maxConcurrentFlows)
+        finally:
+            logging.getLogger("Horus").info(
+                "Maximum number of concurrent flows: %s",
+                self._maxConcurrentFlows if self._maxConcurrentFlows != 0 else "Unlimited",
+            )
 
     def backgroundRun(self, func: typing.Callable):
         """
@@ -3426,9 +3436,14 @@ class HorusServer:
 
         # Define a function to run the request on
         def requestRunner(environment, semaphore):
-            with semaphore:
+            if semaphore:
+                with semaphore:
+                    with self.server.request_context(environment):
+                        func()
+            else:
                 with self.server.request_context(environment):
-                    func()
+                        func()
+
 
         # Start a new process for the flowRunner function
         process = mp.Process(  # pylint: disable=not-callable
