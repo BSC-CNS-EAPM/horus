@@ -1,6 +1,7 @@
 import threading
 import os
 import typing
+import asyncio
 
 
 # Define the SingletonMeta class for the AppDelegate and MolstarAPI classes
@@ -256,3 +257,15 @@ def initPlugin():
     print(
         "Visit https://horus.bsc.es/repo for instructions on how to upload your plugin to the public repository."
     )
+
+
+T = typing.TypeVar("T")  # Create a generic type variable
+
+
+def callAsync(coro: typing.Coroutine[typing.Any, typing.Any, T]) -> T:
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+    else:
+        return loop.run_until_complete(coro)

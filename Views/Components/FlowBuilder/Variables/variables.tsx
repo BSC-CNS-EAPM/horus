@@ -188,7 +188,7 @@ function VariableListView(props: VariableViewProps) {
           acc[variable.id] = variable.defaultValue ?? null;
         }
         return acc;
-      }, {}),
+      }, {})
     );
     onChange(newValues);
   };
@@ -204,7 +204,7 @@ function VariableListView(props: VariableViewProps) {
     index: number,
     value: any,
     id: string,
-    groupID?: string,
+    groupID?: string
   ) => {
     // Update the corresponding index on the values array
     const newValues = [...currentValue];
@@ -250,7 +250,7 @@ function VariableListView(props: VariableViewProps) {
     <div key="delete" className="w-[100px] text-center">
       Delete
       <hr></hr>
-    </div>,
+    </div>
   );
 
   const colsNum = cols.length;
@@ -381,6 +381,14 @@ function VariableRenderer(props: {
     case PluginVariableTypes.ANY:
       return (
         <StringVariableView
+          currentValue={currentValue}
+          variable={variableToRender}
+          onChange={handleVariableChangeInternal}
+        />
+      );
+    case PluginVariableTypes.PASSWORD:
+      return (
+        <PasswordVariableView
           currentValue={currentValue}
           variable={variableToRender}
           onChange={handleVariableChangeInternal}
@@ -611,7 +619,7 @@ function DropdownVariableView({
       variableToRender.allowedValues
     ) {
       onChange(
-        variableToRender.defaultValue ?? variableToRender?.allowedValues[0],
+        variableToRender.defaultValue ?? variableToRender?.allowedValues[0]
       );
     }
   }, [
@@ -713,6 +721,20 @@ function StringVariableView(props: VariableViewProps) {
   );
 }
 
+function PasswordVariableView(props: VariableViewProps) {
+  return (
+    <input
+      className="plugin-variable-value"
+      id={props.variable.id}
+      type="password"
+      autoComplete="off"
+      placeholder={props.variable.placeholder ?? ""}
+      value={(props.currentValue as string) ?? ""}
+      onChange={(e) => props.onChange(e.target.value)}
+    />
+  );
+}
+
 function TextAreaVariableView(props: VariableViewProps) {
   return (
     <textarea
@@ -778,8 +800,8 @@ function IntegerFloatVariableView(props: VariableViewProps) {
       if (variable.allowedValues) {
         setNumberMessage(
           `The value must be one of the following: ${variable.allowedValues.join(
-            ", ",
-          )}`,
+            ", "
+          )}`
         );
       }
     }

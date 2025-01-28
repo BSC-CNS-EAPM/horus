@@ -1,15 +1,15 @@
 // React
-import { ChangeEvent, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 // Horus web-server
 import { horusPost, horusGet } from "../Utils/utils";
 
 // Horus components
 import AppButton from "../Components/appbutton";
-import HorusContainer from "../Components/HorusContainer/horus_container";
 import RotatingLines from "../Components/RotatingLines/rotatinglines";
 import BackArrowIcon from "../Components/Toolbar/Icons/BackArrow";
-import { HorusFileExplorer } from "../Components/FileExplorer/file_explorer";
+import { PluginVariableTypes } from "@/Components/FlowBuilder/flow.types";
+import { PluginVariableView } from "@/Components/FlowBuilder/Variables/variables";
 
 // TS type
 import { Remote } from "./remote";
@@ -17,19 +17,20 @@ import { Remote } from "./remote";
 // CSS
 import "../Components/FlowBuilder/Blocks/block.css";
 import "../PluginsManager/plugin_manager.css";
-import { useAlert } from "../Components/HorusPrompt/horus_alert";
+
+const NEW_REMOTE = "New remote";
+const SAVE_REMOTE = "Save remote";
+const UPDATE_REMOTE = "Update remote";
+const SAVE_AS = "Save as new remote";
+const BUTTON_ID = "save-remote-button";
 
 export default function ConfigRemotes() {
   const [fetchingRemotes, setFetchingRemotes] = useState<boolean>(false);
   const [remotes, setRemotes] = useState<Remote[] | null>(null);
-
+  const [editingRemote, setEditingRemote] = useState<Remote | null>(null);
   const [subView, setSubView] = useState<React.ReactNode | null>(null);
 
   const getRemotes = async () => {
-    // if (subView !== null) {
-    //   setSubView(null);
-    // }
-
     setFetchingRemotes(true);
     const response = await horusGet("/api/remotes/list");
     const fetchedRemotes = await response.json();
@@ -45,13 +46,38 @@ export default function ConfigRemotes() {
 
   const handleNewRemote = () => {
     handleSubView(
-      <DetailedRemote key="new-remote" updateRemotes={returnToMainView} />,
+      <DetailedRemote key="new-remote" setEditingRemote={setEditingRemote} />
     );
   };
 
   const returnToMainView = () => {
     getRemotes();
+    setEditingRemote(null);
     setSubView(null);
+    const btn = document.getElementById(BUTTON_ID);
+    if (btn) {
+      btn.innerHTML = NEW_REMOTE;
+    }
+  };
+
+  const handleRemoteEdit = async (remoteData: Remote) => {
+    const header = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    };
+
+    const body = JSON.stringify(remoteData);
+
+    const response = await horusPost("/api/remotes/configure", header, body);
+
+    const data = await response.json();
+
+    if (!data.ok) {
+      await alert("Failed to configure remote: " + data.msg);
+      return;
+    }
+
+    returnToMainView();
   };
 
   useEffect(() => {
@@ -77,7 +103,28 @@ export default function ConfigRemotes() {
             Remotes
           </div>
           <div className="flex flex-row gap-2 mr-2">
-            <AppButton action={handleNewRemote}>New remote</AppButton>
+            {subView && editingRemote && (
+              <AppButton
+                id={BUTTON_ID}
+                style={{
+                  background: subView ? "orange" : undefined,
+                }}
+                action={
+                  subView && editingRemote
+                    ? () => {
+                        handleRemoteEdit(editingRemote);
+                      }
+                    : handleNewRemote
+                }
+              >
+                {subView ? SAVE_REMOTE : NEW_REMOTE}
+              </AppButton>
+            )}
+            {!subView && (
+              <AppButton id={BUTTON_ID} action={handleNewRemote}>
+                {NEW_REMOTE}
+              </AppButton>
+            )}
             <a
               className="app-button text-black text-decoration-none"
               href="https://horus.bsc.es/docs/developer_guide/horusapi/remotes.html"
@@ -101,7 +148,8 @@ export default function ConfigRemotes() {
             remotes={remotes ?? []}
             isLoading={fetchingRemotes}
             handleSubView={handleSubView}
-            updateRemotes={returnToMainView}
+            returnToMainView={returnToMainView}
+            setEditingRemote={setEditingRemote}
           />
         )}
       </div>
@@ -113,11 +161,12 @@ type RemoteListProps = {
   remotes: Remote[];
   isLoading: boolean;
   handleSubView(subView: React.ReactNode): void;
-  updateRemotes(): void;
+  returnToMainView(): void;
+  setEditingRemote(remote: Remote): void;
 };
 
 function RemoteListView(props: RemoteListProps) {
-  const { remotes, handleSubView, updateRemotes } = props;
+  const { remotes, handleSubView, returnToMainView, setEditingRemote } = props;
 
   if (props.isLoading) {
     return (
@@ -144,10 +193,13 @@ function RemoteListView(props: RemoteListProps) {
           remote={remote}
           handleEdit={(remote) =>
             handleSubView(
-              <DetailedRemote remote={remote} updateRemotes={updateRemotes} />,
+              <DetailedRemote
+                remote={remote}
+                setEditingRemote={setEditingRemote}
+              />
             )
           }
-          updateList={updateRemotes}
+          updateList={returnToMainView}
         />
       ))}
     </div>
@@ -162,8 +214,6 @@ interface RemoteViewProps {
 
 function RemoteView(props: RemoteViewProps) {
   const remote = props.remote;
-
-  const horusAlert = useAlert();
 
   const handleDelete = async () => {
     const data = {
@@ -180,7 +230,7 @@ function RemoteView(props: RemoteViewProps) {
     const response = await horusPost("/api/remotes/delete", header, body);
 
     if (!response.ok) {
-      await horusAlert("Failed to delete remote");
+      await alert("Failed to delete remote");
     } else {
       props.updateList();
     }
@@ -239,47 +289,28 @@ function RemoteView(props: RemoteViewProps) {
 
 interface DetailedRemoteViewProps {
   remote?: Remote;
-  updateRemotes(): void;
+  setEditingRemote(remote: Remote): void;
 }
 
 function DetailedRemote(props: DetailedRemoteViewProps) {
-  const [remoteData, setRemoteData] = useState<Remote | null>(
-    props.remote ?? null,
+  const [remoteData, _setRemoteData] = useState<Remote | null>(
+    props.remote ?? null
   );
 
-  const horusAlert = useAlert();
-
-  const handleSubmit = async () => {
-    const header = {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    };
-
-    const body = JSON.stringify(remoteData);
-
-    const response = await horusPost("/api/remotes/configure", header, body);
-
-    const data = await response.json();
-
-    if (!data.ok) {
-      await horusAlert("Failed to configure remote: " + data.msg);
-      return;
-    }
-
-    props.updateRemotes();
-  };
+  const setRemoteData = useCallback(
+    (remote: Remote) => {
+      props?.setEditingRemote && props.setEditingRemote(remote);
+      _setRemoteData(remote);
+    },
+    [props]
+  );
 
   return (
     <div className="flex flex-col gap-2 h-full w-full justify-center items-center">
-      <div className="w-full flex flex-col gap-2">
-        <RemoteVariablesView
-          remoteData={remoteData}
-          setRemoteData={setRemoteData}
-        />
-      </div>
-      <AppButton id="save-remote-button" action={handleSubmit}>
-        Save remote
-      </AppButton>
+      <RemoteVariablesView
+        remoteData={remoteData}
+        setRemoteData={setRemoteData}
+      />
     </div>
   );
 }
@@ -290,186 +321,212 @@ type RemoteVariablesViewProps = {
 };
 
 function RemoteVariablesView(props: RemoteVariablesViewProps) {
-  const { remoteData, setRemoteData } = props;
+  const { remoteData, setRemoteData: _setRemoteData } = props;
+
+  const setRemoteData = (remoteData: Remote) => {
+    // For any value that is an empty string, set it to null
+    Object.keys(remoteData).forEach((key) => {
+      const value = remoteData[key as keyof Remote];
+      if (value === "") {
+        // @ts-ignore
+        remoteData[key] = null;
+      }
+    });
+    _setRemoteData(remoteData);
+  };
 
   const originalName = useRef(remoteData?.name);
 
-  useEffect(() => {
-    const saveButton = document.getElementById("save-remote-button")!;
-    if (!originalName.current) {
-      saveButton.innerHTML = "Save remote";
-    } else {
-      saveButton.innerHTML = "Update remote";
-    }
-  }, []);
-
-  const filterNullValue = (
-    event: ChangeEvent<HTMLInputElement>,
-    setter: (value: string | null) => void,
-  ) => {
-    const value = event.target.value;
-
-    if (value === "") {
-      setter(null);
-    } else {
-      setter(value);
-    }
-  };
-
   return (
     <div className="w-full flex flex-col gap-2">
-      <div className="flex flex-row gap-2 flex-wrap">
-        <HorusContainer className="p-2 flex-auto">
-          <div className="plugin-variable-name">Name</div>
-          <input
-            id="remote-name"
-            className="underlined-variable text-center"
-            type="text"
-            placeholder="The name of the remote"
-            value={remoteData?.name}
-            onChange={(event) =>
-              filterNullValue(event, (value) => {
-                setRemoteData({ ...remoteData, name: value } as Remote);
+      <div className="flex flex-col gap-2">
+        <PluginVariableView
+          variable={{
+            name: "Name",
+            id: "remote-name",
+            description: "The name of the remote",
+            type: PluginVariableTypes.STRING,
+            value: remoteData?.name,
+            placedID: 0,
+            allowedValues: [],
+            defaultValue: "",
+            category: "Remote",
+            disabled: false,
+            required: true,
+          }}
+          onChange={(value) => {
+            setRemoteData({ ...remoteData, name: value } as Remote);
+            if (!originalName.current) return;
 
-                if (!originalName.current) {
-                  return;
-                }
+            const saveButton = document.getElementById(BUTTON_ID);
 
-                // Change the "Save remote" button for "Save as new remote"
-                const saveButton =
-                  document.getElementById("save-remote-button")!;
-                if (value !== originalName.current) {
-                  saveButton.innerHTML = "Save as a new remote";
-                } else {
-                  saveButton.innerHTML = "Update remote";
-                }
-              })
+            if (!saveButton) {
+              return;
             }
-          />
-        </HorusContainer>
-        <HorusContainer className="p-2 flex-auto">
-          <div className="plugin-variable-name">Host</div>
-          <input
-            id="remote-host"
-            className="underlined-variable text-center"
-            type="text"
-            placeholder="The host of the remote"
-            value={remoteData?.host}
-            onChange={(event) =>
-              filterNullValue(event, (value) =>
-                setRemoteData({ ...remoteData, host: value } as Remote),
-              )
+
+            if (value !== originalName.current) {
+              saveButton.innerHTML = SAVE_AS;
+            } else {
+              saveButton.innerHTML = UPDATE_REMOTE;
             }
-          />
-        </HorusContainer>
-        <HorusContainer className="p-2 flex-auto">
-          <div className="plugin-variable-name">Username</div>
-          <input
-            id="remote-username"
-            className="underlined-variable text-center"
-            type="text"
-            placeholder="Your username on the remote"
-            value={remoteData?.username}
-            onChange={(event) =>
-              filterNullValue(event, (value) =>
-                setRemoteData({ ...remoteData, username: value } as Remote),
-              )
-            }
-          />
-        </HorusContainer>
-        <HorusContainer className="p-2 flex-auto">
-          <div className="plugin-variable-name">Port</div>
-          <input
-            id="remote-port"
-            className="underlined-variable text-center"
-            type="text"
-            placeholder="The port of the remote"
-            value={remoteData?.port}
-            onChange={(event) =>
-              filterNullValue(event, (value) =>
-                setRemoteData({ ...remoteData, port: value } as Remote),
-              )
-            }
-          />
-        </HorusContainer>
-      </div>
-      <div className="flex flex-row gap-2 flex-wrap">
-        <HorusContainer className="p-2 flex-1 flex flex-col justify-center min-w-[25rem] h-full">
-          <div className="plugin-variable-name">Password</div>
-          <input
-            id="remote-password"
-            className="underlined-variable text-center"
-            type="password"
-            placeholder="Optional if using key file"
-            aria-hidden
-            // Prevent browser from autofilling password
-            // Disable autocomplete
-            autoComplete="new-password"
-            value={remoteData?.password}
-            onChange={(event) =>
-              filterNullValue(event, (value) =>
-                setRemoteData({ ...remoteData, password: value } as Remote),
-              )
-            }
-          />
-        </HorusContainer>
-        <HorusContainer className="p-2 flex-1 min-w-[25rem]">
-          <div className="plugin-variable-name">Key file</div>
-          <div className="flex flex-row gap-2 w-full items-center">
-            <input
-              id="remote-key-path"
-              className="underlined-variable text-center"
-              type="text"
-              placeholder="Optional if using password"
-              value={remoteData?.keyPath}
-              onChange={(event) =>
-                filterNullValue(event, (value) =>
-                  setRemoteData({ ...remoteData, keyPath: value } as Remote),
-                )
-              }
-            />
-            <HorusFileExplorer
-              onFileConfirm={(path) =>
-                setRemoteData({ ...remoteData, keyPath: path } as Remote)
-              }
-              onFileSelect={() => {}}
-            >
-              <div className="w-20 text-black">Browse...</div>
-            </HorusFileExplorer>
-          </div>
-        </HorusContainer>
-      </div>
-      <div className="flex flex-row gap-2 flex-wrap">
-        <HorusContainer className="p-2 flex-1 min-w-[25rem]">
-          <div className="plugin-variable-name">ProxyCommand</div>
-          <input
-            id="remote-proxy-command"
-            className="underlined-variable text-center"
-            type="text"
-            placeholder="A proxy command to use (optional)"
-            value={remoteData?.proxyCommand}
-            onChange={(event) =>
-              filterNullValue(event, (value) =>
-                setRemoteData({ ...remoteData, proxyCommand: value } as Remote),
-              )
-            }
-          />
-        </HorusContainer>
-        <HorusContainer className="p-2 flex-1 min-w-[25rem]">
-          <div className="plugin-variable-name">Working directory</div>
-          <input
-            id="remote-work-dir"
-            className="underlined-variable text-center"
-            type="text"
-            placeholder="Specify a working directory on the remote (optional)"
-            value={remoteData?.workDir}
-            onChange={(event) =>
-              filterNullValue(event, (value) =>
-                setRemoteData({ ...remoteData, workDir: value } as Remote),
-              )
-            }
-          />
-        </HorusContainer>
+          }}
+        />
+
+        <PluginVariableView
+          variable={{
+            name: "Host",
+            id: "remote-host",
+            description: "The host of the remote",
+            type: PluginVariableTypes.STRING,
+            value: remoteData?.host,
+            placedID: 1,
+            allowedValues: [],
+            defaultValue: "",
+            category: "Remote",
+            disabled: false,
+            required: true,
+          }}
+          onChange={(value) =>
+            setRemoteData({ ...remoteData, host: value } as Remote)
+          }
+        />
+
+        <PluginVariableView
+          variable={{
+            name: "Username",
+            id: "remote-username",
+            description: "Your username on the remote",
+            type: PluginVariableTypes.STRING,
+            value: remoteData?.username,
+            placedID: 2,
+            allowedValues: [],
+            defaultValue: "",
+            category: "Remote",
+            disabled: false,
+            required: true,
+          }}
+          onChange={(value) =>
+            setRemoteData({ ...remoteData, username: value } as Remote)
+          }
+        />
+
+        <PluginVariableView
+          variable={{
+            name: "Port",
+            id: "remote-port",
+            description: "The port of the remote",
+            type: PluginVariableTypes.STRING,
+            value: remoteData?.port,
+            placedID: 3,
+            allowedValues: [],
+            defaultValue: "",
+            category: "Remote",
+            disabled: false,
+            required: true,
+          }}
+          onChange={(value) =>
+            setRemoteData({ ...remoteData, port: value } as Remote)
+          }
+        />
+
+        <PluginVariableView
+          variable={{
+            name: "Password",
+            id: "remote-password",
+            description: "Optional if using key file",
+            type: PluginVariableTypes.PASSWORD,
+            value: remoteData?.password,
+            placedID: 4,
+            allowedValues: [],
+            defaultValue: "",
+            category: "Remote",
+            disabled: false,
+            required: false,
+            placeholder: "Optional if using key file",
+          }}
+          onChange={(value) =>
+            setRemoteData({ ...remoteData, password: value } as Remote)
+          }
+        />
+
+        <PluginVariableView
+          variable={{
+            name: "Key file",
+            id: "remote-key-path",
+            description: "Optional if using password",
+            type: PluginVariableTypes.FILE,
+            value: remoteData?.keyPath,
+            placedID: 5,
+            allowedValues: [],
+            defaultValue: "",
+            category: "Remote",
+            disabled: false,
+            required: false,
+            placeholder: "Optional if using password",
+          }}
+          onChange={(value) =>
+            setRemoteData({ ...remoteData, keyPath: value } as Remote)
+          }
+        />
+
+        <PluginVariableView
+          variable={{
+            name: "ProxyCommand",
+            id: "remote-proxy-command",
+            description: "A proxy command to use (optional)",
+            type: PluginVariableTypes.STRING,
+            value: remoteData?.proxyCommand,
+            placedID: 6,
+            allowedValues: [],
+            defaultValue: "",
+            category: "Remote",
+            disabled: false,
+            required: false,
+          }}
+          onChange={(value) =>
+            setRemoteData({ ...remoteData, proxyCommand: value } as Remote)
+          }
+        />
+
+        <PluginVariableView
+          variable={{
+            name: "Working directory",
+            id: "remote-work-dir",
+            description: "Specify a working directory on the remote (optional)",
+            type: PluginVariableTypes.STRING,
+            value: remoteData?.workDir,
+            placedID: 7,
+            allowedValues: [],
+            defaultValue: "",
+            category: "Remote",
+            disabled: false,
+            required: false,
+            placeholder: "~/.horus",
+          }}
+          onChange={(value) =>
+            setRemoteData({ ...remoteData, workDir: value } as Remote)
+          }
+        />
+
+        <PluginVariableView
+          variable={{
+            name: "Load profile",
+            id: "remote-load-profile",
+            description:
+              "When enabled, tries to load ~/.bashrc or /etc/bash.bashrc when executing commands. This can slow down command execution.",
+            type: PluginVariableTypes.BOOLEAN,
+            value: remoteData?.loadProfile,
+            placedID: 8,
+            allowedValues: [],
+            defaultValue: false,
+            category: "Remote",
+            disabled: false,
+            required: false,
+          }}
+          onChange={(value) =>
+            setRemoteData({ ...remoteData, loadProfile: value } as Remote)
+          }
+        />
       </div>
     </div>
   );

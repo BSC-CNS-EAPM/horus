@@ -639,7 +639,8 @@ class PluginManager(metaclass=HorusSingleton):
                 errorPlugin._path = pth
                 self.errorPlugins.append(errorPlugin)
 
-                logging.getLogger("Horus").error("Error loading plugin '%s': %s", pth, str(e))
+                # No need to log here as it is already logged in _loadPlugin
+                # logging.getLogger("Horus").error("Error loading plugin '%s': %s", pth, str(e))
 
         logging.getLogger("Horus").info(
             "%i plugins initialized: %s.",
@@ -854,16 +855,35 @@ class PluginManager(metaclass=HorusSingleton):
         PluginDeps in order to not mess the imported modules between plugins
         """
 
-        # Load the plugin file and obtain the plugin variable
-        spec = importlib.util.spec_from_file_location("pluginFile", pluginPath)
-        if spec is None:
-            raise Exception(f"Failed to create module spec for {entryPoint}")
+        try:
+            # Load the plugin file and obtain the plugin variable
+            spec = importlib.util.spec_from_file_location("pluginFile", pluginPath)
+            if spec is None:
+                raise Exception(f"Failed to create module spec for {entryPoint}")
 
-        # Read and load the python file
-        pluginModule = importlib.util.module_from_spec(spec)
+            # Read and load the python file
+            pluginModule = importlib.util.module_from_spec(spec)
 
-        # Load the entry point
-        spec.loader.exec_module(pluginModule)  # type: ignore
+            # Load the entry point
+            spec.loader.exec_module(pluginModule)  # type: ignore
+        except BaseException as e:
+            import traceback
+
+            # Extract the last exception from the traceback
+            lastException = traceback.format_exception(None, e, e.__traceback__)
+            filteredExc = []
+            allow = False
+            for ex in lastException:
+
+                if allow:
+                    filteredExc.append(ex)
+
+                if "<frozen importlib._bootstrap>" in ex:
+                    allow = True
+
+            logging.getLogger("Horus").error("".join(filteredExc))
+
+            raise e
 
         # Check that the plugin variable exists
         if not hasattr(pluginModule, "plugin"):

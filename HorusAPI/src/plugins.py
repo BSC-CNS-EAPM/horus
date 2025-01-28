@@ -1,22 +1,25 @@
+# Future imports
 from __future__ import annotations
-import typing
-import json
-import os
-import time
-from enum import Enum
-from copy import deepcopy
-import contextlib
-import logging
-import re
+
+# Python standard library imports
 import base64
+import contextlib
+import json
+import logging
+import os
+import re
 import shutil
+import time
+import typing
+from copy import deepcopy
+from enum import Enum
 from typing import Any, Dict, List
 
 from pydantic import (  # pylint: disable=no-name-in-module. # Somehow pylint does not recognize BaseModel
     BaseModel,
 )
 
-from .utils import ResetRemoteException
+from .utils import ResetRemoteException, callAsync
 
 if typing.TYPE_CHECKING:
     from Server.FlowManager import Flow
@@ -99,7 +102,7 @@ class PluginRemote:
 
         return self._remote.transferFrom(source, destination)
 
-    def submitJob(self, script: str, changeDir: bool = True) -> int:
+    def submitJob(self, script: str, changeDir: bool = True) -> str:
         """
         Submit a slurm job to the queue system of the cluster (SLURM)
 
@@ -258,9 +261,12 @@ class VariableTypes(str, Enum):
 
     TEXT_AREA = "text_area"
     """
-    A large text like a paragraph, can contain multiple lines. like "Hello world \n Hello planet".
+    A large text like a paragraph, can contain multiple lines.
+    
+    :code:`"Hello world \\\\n Hello planet"`.
     
     Will render as a text input.
+    
     """
 
     NUMBER = "number"
@@ -313,6 +319,7 @@ class VariableTypes(str, Enum):
 
     Will render as a slider.
     Use allowedValues to define: [min, max, step].
+
     - The first number in the list is the minimum value.
     - The second number in the list is the maximum value.
     - The third number in the list is the step.
@@ -327,6 +334,7 @@ class VariableTypes(str, Enum):
     Will render as a slider with tho dragging handles. Used to define
     a range between to points.
     Use allowedValues to define: [min, max, step].
+
     - The first number in the list is the minimum value.
     - The second number in the list is the maximum value.
     - The third number in the list is the step.
@@ -356,6 +364,7 @@ class VariableTypes(str, Enum):
 
     Will render as a list of checkboxes with the list of loaded structures.
     The type of the variable will be a list of dicts with the following data:
+
     - id: The ID of the structure.
     - name: The name of the structure.
     - type: The type of the structure (CIF, PDB...).
@@ -368,6 +377,7 @@ class VariableTypes(str, Enum):
 
     Will render as a list of radio buttons with the list of loaded structures.
     The type of the variable will be a dict with the following data:
+
     - id: The ID of the structure.
     - name: The name of the structure.
     - type: The type of the structure (CIF, PDB...).
@@ -380,6 +390,7 @@ class VariableTypes(str, Enum):
 
     Will render as a list of hetero residues.
     The type of the variable will be a dictionary with the following keys:
+
     - index: The index of the residue in the structure.
     - name: The name of the residue.
     - atoms: The list of atoms in the residue.
@@ -393,6 +404,7 @@ class VariableTypes(str, Enum):
 
     Will render as a dropdown with the list of standard residues.
     The type of the variable will be a dictionary with the following keys:
+
     - index: The index of the residue in the structure.
     - name: The name of the residue.
     - atoms: The list of atoms in the residue.
@@ -418,6 +430,7 @@ class VariableTypes(str, Enum):
 
     Will render as a dropdown with the list of chains.
     The type of the variable will be a dictionary with the following keys:
+
     - index: The index of the chain in the structure.
     - name: The name of the chain.
     - residues: The list of residues in the chain.
@@ -433,24 +446,28 @@ class VariableTypes(str, Enum):
     side of the box.
 
     This variable will return a dictionary with the following keys:
-    {
-        "metrics": {
-            "x0": 0,
-            "x1": 5,
-            "x2": 0,
-            "x3": 0,
-            "y0": 0,
-            "y1": 0,
-            "y2": 5,
-            "y3": 0,
-            "z0": 0,
-            "z1": 0,
-            "z2": 0,
-            "z3": 5
-        },
-        "radialSegments": 2,
-        "radiusScale": 5,
-    }
+
+    .. code-block:: python 
+
+        {
+            "metrics": {
+                "x0": 0,
+                "x1": 5,
+                "x2": 0,
+                "x3": 0,
+                "y0": 0,
+                "y1": 0,
+                "y2": 5,
+                "y3": 0,
+                "z0": 0,
+                "z1": 0,
+                "z2": 0,
+                "z3": 5
+            },
+            "radialSegments": 2,
+            "radiusScale": 5,
+        }
+
     """
 
     SPHERE = "sphere"
@@ -460,6 +477,7 @@ class VariableTypes(str, Enum):
     Will render as an interactive sphere viewer. The user can select the
     center and the radius of the sphere.
     The type of the variable will be a dictionary with the following keys:
+
     - center: The center of the sphere as a list of floats [x, y, z].
     - radius: The radius of the sphere as a float.
     """
@@ -1932,7 +1950,7 @@ class SlurmBlock(PluginBlock):
     one before the job is submitted and one after the job is completed.
     """
 
-    jobID: typing.Optional[list[int]] = None
+    jobID: typing.Optional[list[str]] = None
     """
     The Job ID of the job.
     """
@@ -1987,17 +2005,25 @@ class SlurmBlock(PluginBlock):
     """
     The status of the block.
     """
-    stdOut: typing.Optional[dict[int, str]] = None
+
+    stdOut: typing.Optional[dict[str, str]] = None
     """
     The standard output a slurm job.
     """
-    stdErr: typing.Optional[dict[int, str]] = None
+
+    stdErr: typing.Optional[dict[str, str]] = None
     """
     The standard error a slurm job.
     """
-    detailedStatus: typing.Optional[dict[int, str]] = None
+
+    detailedStatus: typing.Optional[dict[str, str]] = None
     """
     Status and aditional information of a slurm job.
+    """
+
+    submissionScript: typing.Optional[dict[str, str]] = None
+    """
+    The submitted batch script for each job ID
     """
 
     failOnSlurmError: bool = True
@@ -2084,13 +2110,17 @@ class SlurmBlock(PluginBlock):
             # Tell the remote which is the current block by its placedID
             self.remote._remote._blockPlacedID = self._placedID
 
+            # Set also the jobIDs of this block
+            self.jobID = callAsync(
+                self.remote._remote.getJobIDfromBlock(self.flow.savedID, self._placedID)
+            )
+
             # Get the current status of the job submited by the block
             # and parse the status to the block
-            status = self.remote._remote.getRemoteBlockStatus(self.flow.savedID, self._placedID)
+            status = callAsync(
+                self.remote._remote.getRemoteBlockStatus(self.flow.savedID, self._placedID)
+            )
             self.status = self.Status(status)
-
-            # Set also the jobIDs of this block
-            self.jobID = self.remote._remote.getJobIDfromBlock(self.flow.savedID, self._placedID)
 
             if not self.jobID or len(self.jobID) == 0:
                 self.status = self.Status.IDLE
@@ -2105,17 +2135,27 @@ class SlurmBlock(PluginBlock):
                 if not self.detailedStatus:
                     self.detailedStatus = {}
 
-                for j in self.jobID:
-                    try:
-                        stdOut, stdErr, detailedStatus = self.remote._remote.getRemoteBlockLogs(j)
+                if not self.submissionScript:
+                    self.submissionScript = {}
 
+                # Create tasks for each job
+                for j in self.jobID:
+
+                    # Run all tasks concurrently and wait for results
+                    try:
+                        stdOut, stdErr, slurmScript, detailedStatus = callAsync(
+                            self.remote._remote.getRemoteBlockLogs(j, self.flow.savedID)
+                        )
+
+                        # Process results
                         self.stdOut[j] = stdOut
                         self.stdErr[j] = stdErr
                         self.detailedStatus[j] = detailedStatus
+                        self.submissionScript[j] = slurmScript
 
                     except Exception as e:
                         logging.getLogger("Horus").error(
-                            "Could not parse latest SlurmBlock logs: %s", str(e)
+                            f"Could not parse latest SlurmBlock logs: %s", str(e)
                         )
 
                 self.time += self.remote._remote.getRemoteBlockTime(
@@ -2188,6 +2228,7 @@ class SlurmBlock(PluginBlock):
         minimalBlock["jobID"] = self.jobID
         minimalBlock["stdOut"] = self.stdOut
         minimalBlock["stdErr"] = self.stdErr
+        minimalBlock["submissionScript"] = self.submissionScript
         minimalBlock["detailedStatus"] = self.detailedStatus
         minimalBlock["executeSecondAction"] = self._executeSecondAction
         return minimalBlock
@@ -2199,6 +2240,7 @@ class SlurmBlock(PluginBlock):
         status = blockJSON.get("status", self.Status.IDLE)
         stdOut = blockJSON.get("stdOut", None)
         stdErr = blockJSON.get("stdErr", None)
+        submissionScript = blockJSON.get("submissionScript", None)
         detailedStatus = blockJSON.get("detailedStatus", None)
         jobID = blockJSON.get("jobID", None)
         executeSecondAction = blockJSON.get("executeSecondAction", False)
@@ -2207,6 +2249,7 @@ class SlurmBlock(PluginBlock):
         self.jobID = jobID
         self.stdOut = stdOut
         self.stdErr = stdErr
+        self.submissionScript = submissionScript
         self.detailedStatus = detailedStatus
         self._executeSecondAction = executeSecondAction
 

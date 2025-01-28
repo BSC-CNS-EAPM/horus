@@ -9,10 +9,11 @@ import { Editor } from "@monaco-editor/react";
 type HorusLazyLogProps = {
   logText: string;
   filename?: string;
+  format?: "shell" | "log" | "json";
 };
 
 export function HorusLazyLog(props: HorusLazyLogProps) {
-  const { logText, filename } = props;
+  const { logText, filename, format = "shell" } = props;
 
   const parsedLogText = logText || "No logs";
 
@@ -64,7 +65,7 @@ export function HorusLazyLog(props: HorusLazyLogProps) {
                   `${filename ?? "logs.log"}`,
                   {
                     type: "text/plain",
-                  },
+                  }
                 );
                 window.horus.saveFile(file);
               }}
@@ -87,7 +88,7 @@ export function HorusLazyLog(props: HorusLazyLogProps) {
 
       <Editor
         value={logText}
-        language="plaintext"
+        language={format}
         options={{
           readOnly: true,
           minimap: { enabled: false },
@@ -118,7 +119,7 @@ export function HorusLazyLog(props: HorusLazyLogProps) {
       >
         {LoggingView}
       </BlurredModal>,
-      document.documentElement,
+      document.documentElement
     );
   }
 
