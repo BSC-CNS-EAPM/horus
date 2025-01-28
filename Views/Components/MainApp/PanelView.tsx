@@ -113,9 +113,6 @@ const FLOW_PANEL: AddPanelOptions = {
   renderer: "onlyWhenVisible",
   tabComponent: "flow",
   floating: false,
-  position: {
-    direction: "right",
-  },
 };
 
 const TERMINAL_PANEL: AddPanelOptions = {
@@ -160,9 +157,6 @@ const BLOCK_VARIABLES_PANEL: AddPanelOptions = {
   renderer: "onlyWhenVisible",
   tabComponent: "editableTab",
   floating: false,
-  position: {
-    direction: "right",
-  },
 };
 
 const BLOCK_VARIABLES_PANEL_EXTENSION: AddPanelOptions = {
@@ -178,9 +172,6 @@ const BLOCK_LOGS_PANEL: AddPanelOptions = {
   renderer: "onlyWhenVisible",
   tabComponent: "editableTab",
   floating: false,
-  position: {
-    direction: "right",
-  },
 };
 
 const CODE_EDITOR_PANEL: AddPanelOptions = {
@@ -189,9 +180,6 @@ const CODE_EDITOR_PANEL: AddPanelOptions = {
   component: "codeEditor",
   renderer: "onlyWhenVisible",
   floating: false,
-  position: {
-    direction: "right",
-  },
 };
 
 const BLOCK_REGISTRY_PANEL: AddPanelOptions = {
@@ -782,7 +770,10 @@ export function HorusPanelView() {
 
     const addExtensions = (e: PluginPageExtensionEvent) => {
       // Only add the extension if the current flow is the opened one
-      if (e?.bypass !== true && flowBuilderState.flow.flow.savedID !== e.savedID) {
+      if (
+        e?.bypass !== true &&
+        flowBuilderState.flow.flow.savedID !== e.savedID
+      ) {
         return;
       }
 
