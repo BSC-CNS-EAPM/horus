@@ -75,6 +75,7 @@ export enum PluginVariableTypes {
   CUSTOM = "custom",
   CHECKBOX = "checkbox",
   RADIO = "radio",
+  PASSWORD = "PASSWORD",
 }
 
 export type PluginVariable = {
@@ -176,17 +177,22 @@ export type Block = {
   status: string;
   waitingForJob: boolean;
   jobStatus: {
-    [key: number]: string;};
+    [key: string]: string;
+  };
   stdOut?: {
-    [key: number]: string;};
+    [key: string]: string;
+  };
 
   stdErr?: {
-    [key: number]: string;
+    [key: string]: string;
+  };
+  submissionScript?: {
+    [key: string]: string;
   };
   detailedStatus?: {
-    [key: number]: string;
+    [key: string]: string;
   };
-  jobID: Array<number>;
+  jobID: Array<string>;
 
   // Remote connection
   selectedRemote: string;

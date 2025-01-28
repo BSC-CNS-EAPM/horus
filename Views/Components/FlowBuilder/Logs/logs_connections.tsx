@@ -87,6 +87,7 @@ function SlurmOutputModalView({ block }: { block: Block }) {
             status={statusNode}
             stdOut={block.stdOut?.[jobID]}
             stdErr={block.stdErr?.[jobID]}
+            submission={block.submissionScript?.[jobID]}
           />
         ),
       };
@@ -94,7 +95,7 @@ function SlurmOutputModalView({ block }: { block: Block }) {
     return t;
   };
 
-  return <HorusViewTabs tabs={tabs()} />;
+  return <SidebarView tabs={tabs()} />;
 }
 
 function SingleSlurmJobView({
@@ -104,15 +105,17 @@ function SingleSlurmJobView({
   detailedStatus,
   stdOut,
   stdErr,
+  submission,
 }: {
   block: Block;
-  jobID: number;
+  jobID: string;
   status: ReactNode;
   detailedStatus?: string;
   stdOut?: string;
   stdErr?: string;
+  submission?: string;
 }) {
-  const groupedViews: Record<string, React.ReactNode[]> = {};
+  const groupedViews: Record<string, Tab> = {};
 
   const worldList = () => {
     const words = detailedStatus?.split(" ");
@@ -137,83 +140,121 @@ function SingleSlurmJobView({
   };
 
   const getGroupedVariables = () => {
-    groupedViews["Slurm status"] = [
-      <div
-        className="flex flex-row gap-2 flex-wrap p-2"
-        style={{
-          background: "var(--grey-white)",
-          borderRadius: "10px",
-          borderColor: "lightgray",
-          fontFamily: "Poppins",
-          height: "100%",
-          overflowY: "auto",
-        }}
-      >
-        {block.detailedStatus ? (
-          worldList()
-        ) : (
-          <span className="text-center w-full grid place-items-center h-full">
-            No job status
-          </span>
-        )}
-      </div>,
-    ];
+    groupedViews["Slurm status"] = {
+      title: "Status",
+      view: (
+        <div
+          className="flex flex-row flex-wrap p-2"
+          style={{
+            background: "var(--grey-white)",
+            borderRadius: "10px",
+            borderColor: "lightgray",
+            fontFamily: "Poppins",
+            height: "100%",
+            overflowY: "auto",
+          }}
+        >
+          {block.detailedStatus ? (
+            worldList()
+          ) : (
+            <span className="text-center w-full grid place-items-center h-full">
+              No job status
+            </span>
+          )}
+        </div>
+      ),
+    };
 
-    groupedViews["Slurm output"] = [
-      <div
-        key={"slurm-output"}
-        style={{
-          background: "var(--grey-white)",
-          borderRadius: "10px",
-          borderColor: "lightgray",
-          fontFamily: "Poppins",
-          overflow: "hidden",
-          height: "100%",
-        }}
-      >
-        {block.stdOut ? (
-          <HorusLazyLog
-            logText={stdOut ?? ""}
-            filename={`${block.id}-${block.placedID}-${jobID}-slurm.out`}
-          />
-        ) : (
-          <span className="text-center w-full grid place-items-center h-full">
-            No output during execution
-          </span>
-        )}
-      </div>,
-    ];
+    groupedViews["Slurm script"] = {
+      title: "Script",
+      view: (
+        <div
+          key={"slurm-script"}
+          style={{
+            background: "var(--grey-white)",
+            borderRadius: "10px",
+            borderColor: "lightgray",
+            fontFamily: "Poppins",
+            overflow: "hidden",
+            height: "100%",
+          }}
+        >
+          {block.stdOut ? (
+            <HorusLazyLog
+              logText={submission ?? ""}
+              filename={`${block.id}-${block.placedID}-${jobID}-slurm.sh`}
+              format="shell"
+            />
+          ) : (
+            <span className="text-center w-full grid place-items-center h-full">
+              No submission script
+            </span>
+          )}
+        </div>
+      ),
+    };
 
-    groupedViews["Slurm error"] = [
-      <div
-        key={"slurm-error"}
-        style={{
-          background: "var(--grey-white)",
-          borderRadius: "10px",
-          borderColor: "lightgray",
-          fontFamily: "Poppins",
-          overflow: "hidden",
-          height: "100%",
-        }}
-      >
-        {block.stdErr ? (
-          <HorusLazyLog
-            logText={stdErr ?? ""}
-            filename={`${block.id}-${block.placedID}-${jobID}-slurm.err`}
-          />
-        ) : (
-          <span className="text-center w-full grid place-items-center h-full">
-            No errors during execution
-          </span>
-        )}
-      </div>,
-    ];
+    groupedViews["Slurm output"] = {
+      title: "Output",
+      view: (
+        <div
+          key={"slurm-output"}
+          style={{
+            background: "var(--grey-white)",
+            borderRadius: "10px",
+            borderColor: "lightgray",
+            fontFamily: "Poppins",
+            overflow: "hidden",
+            height: "100%",
+          }}
+        >
+          {block.stdOut ? (
+            <HorusLazyLog
+              logText={stdOut ?? ""}
+              filename={`${block.id}-${block.placedID}-${jobID}-slurm.out`}
+            />
+          ) : (
+            <span className="text-center w-full grid place-items-center h-full">
+              No output during execution
+            </span>
+          )}
+        </div>
+      ),
+    };
+
+    groupedViews["Slurm error"] = {
+      title: "Error",
+      view: (
+        <div
+          key={"slurm-error"}
+          style={{
+            background: "var(--grey-white)",
+            borderRadius: "10px",
+            borderColor: "lightgray",
+            fontFamily: "Poppins",
+            overflow: "hidden",
+            height: "100%",
+          }}
+        >
+          {block.stdErr ? (
+            <HorusLazyLog
+              logText={stdErr ?? ""}
+              filename={`${block.id}-${block.placedID}-${jobID}-slurm.err`}
+            />
+          ) : (
+            <span className="text-center w-full grid place-items-center h-full">
+              No errors during execution
+            </span>
+          )}
+        </div>
+      ),
+    };
 
     return groupedViews;
   };
 
   return (
-    <div className="flex flex-col h-full p-2">
+    <div className="flex flex-col h-full py-2">
       <div className="sticky top-0 z-10">
         <div className="variables-modal-title-search">
           <div
@@ -228,7 +269,7 @@ function SingleSlurmJobView({
         </div>
         <hr className="my-4 p-0"></hr>
       </div>
-      <SidebarView views={getGroupedVariables()} />
+      <HorusViewTabs tabs={getGroupedVariables()} />
     </div>
   );
 }

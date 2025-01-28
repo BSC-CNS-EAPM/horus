@@ -3442,8 +3442,13 @@ class HorusServer:
                         func()
             else:
                 with self.server.request_context(environment):
+                    try:
                         func()
-
+                    except KeyboardInterrupt:
+                        # Do not log when we pause flows by ^C
+                        return
+                    except BaseException as e:
+                        logging.getLogger("Horus").error(str(e))
 
         # Start a new process for the flowRunner function
         process = mp.Process(  # pylint: disable=not-callable

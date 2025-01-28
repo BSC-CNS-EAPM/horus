@@ -1,21 +1,47 @@
 // React
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 // Components
 import { BreakLongUnderscoreNames } from "../FlowBuilder/Blocks/block.view";
+import { Tab } from "../Tabs";
 
 // Styles
 import "./sidebar.css";
 
 type SidebarViewProps = {
-  views: {
-    [key: string]: React.ReactNode[];
+  views?: {
+    [key: string]: JSX.Element[] | React.ReactNode[];
+  };
+  tabs?: {
+    [key: string]: Tab;
   };
 };
 
 export default function SidebarView(props: SidebarViewProps) {
-  const [currentCategory, setCurrentCategory] = useState<string>(
-    Object.keys(props.views)[0]!,
+  const { views, tabs } = props;
+
+  const parsedViews = useMemo(() => {
+    if (tabs) {
+      return tabs;
+    }
+
+    // Convert views to tabs
+    const newTabs: {
+      [key: string]: Tab;
+    } = {};
+
+    for (const k in views) {
+      newTabs[k] = {
+        view: views[k]![0]! as JSX.Element,
+        title: k,
+      };
+    }
+
+    return newTabs;
+  }, [views, tabs]);
+
+  const [currentCategory, setCurrentCategory] = useState(
+    Object.keys(parsedViews)[0]!
   );
 
   return (
@@ -23,11 +49,11 @@ export default function SidebarView(props: SidebarViewProps) {
       <div className="flex flex-row w-full h-full">
         <SidebarLeft
           selectedCategory={currentCategory}
-          categories={Object.keys(props.views)}
+          categories={parsedViews}
           setCurrentCategory={setCurrentCategory}
         />
-        <div className="w-full p-2 overflow-y-auto">
-          {props.views[currentCategory]}
+        <div className="w-full overflow-y-auto">
+          {parsedViews[currentCategory]?.view ?? "Nothing to see here..."}
         </div>
       </div>
     </div>
@@ -35,22 +61,19 @@ export default function SidebarView(props: SidebarViewProps) {
 }
 
 function SidebarLeft(props: {
-  categories: string[];
+  categories: {
+    [key: string]: Tab;
+  };
   selectedCategory: string;
   setCurrentCategory: React.Dispatch<React.SetStateAction<string>>;
 }) {
   const { selectedCategory, categories, setCurrentCategory } = props;
 
   return (
-    <div
-      className="p-2 flex flex-col gap-1 overflow-y-auto"
-      style={{
-        width: "15rem",
-      }}
-    >
-      {categories.map((category) => (
+    <div className="min-w-[200px] p-2 flex flex-col gap-1 overflow-y-auto">
+      {Object.keys(categories).map((category) => (
         <div
-          className={`break-word sidebar-item animated-gradient ${
+          className={`break-word sidebar-item animated-gradient flex flex-row gap-2 ${
             selectedCategory === category
               ? "sidebar-selected"
               : "sidebar-unselected"
@@ -60,7 +83,10 @@ function SidebarLeft(props: {
           }}
           key={category}
         >
-          <BreakLongUnderscoreNames name={category} />
+          {categories[category]?.icon}
+          <BreakLongUnderscoreNames
+            name={categories[category]?.title ?? "Unnamed"}
+          />
         </div>
       ))}
     </div>

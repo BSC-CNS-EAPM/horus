@@ -13,6 +13,8 @@ import logging
 import hashlib
 import re
 
+from HorusAPI import callAsync
+
 # Multiprocess module, a fork of multiprocessing with enhancements
 # Cast the multiprocess module as the multiprocessing module
 # in order to have type chekings / autocompletion
@@ -975,6 +977,10 @@ class Flow:
                 # Raise again a special "ErrorRunningBlock" exception
                 raise ErrorRunningBlock(blockToRun, str(exc)) from exc
 
+            # The block is no longer waiting for job, parse the final status
+            # (this has to be done here to parse the slum error and out)
+            blockToRun.parseStatus()
+
             if (
                 blockToRun.status != SlurmBlock.Status.COMPLETED
                 and blockToRun.status != SlurmBlock.Status.IDLE
@@ -1290,6 +1296,8 @@ class Flow:
                 self.stop()
             except ErrorRunningBlock:
                 self.status = self.FlowStatus.ERROR
+            except KeyboardInterrupt as ke:
+                raise ke
             except BaseException:
                 import traceback
 
@@ -1369,11 +1377,9 @@ class Flow:
                     rAPI = remoteManager.remote
 
                     if rAPI is None:
-                        raise Exception(
-                            "No cluster selected."
-                        )  #  pylint: disable=broad-exception-raised
-
-                    rAPI.cancelJobs(self.savedID)
+                        raise Exception("No cluster selected.")
+                    # Cancel the jobs synchronously
+                    callAsync(rAPI.cancelJobs(self.savedID))
 
                     # Parse the failed status
                     block._setRemote(rAPI)
@@ -1987,8 +1993,6 @@ class FlowManager:
 
                 logging.getLogger("Horus").info("Flow %s completed", flow.name)
             except KeyboardInterrupt:
-                print("Keyboard interrupt detected. Pausing flow.")
-
                 # Exit the process
                 sys.exit(0)
 
@@ -2016,6 +2020,9 @@ class FlowManager:
         Pauses all running flows
         """
 
+        # Print a newline for better terminal output during ^C KeyboardInterrutps
+        print("\n")
+
         # Iterate through the running flows dict
         # In order to not modify the dict while iterating,
         # we copy the keys to a list
@@ -2025,6 +2032,7 @@ class FlowManager:
             while not read:
                 try:
                     # Read the latest status of the flow and pause it
+                    print(f"Pausing running flow {flowPath}")
                     flow = self.pauseFlow(flowPath)
                     read = True
                 except Exception:
