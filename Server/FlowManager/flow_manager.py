@@ -2140,7 +2140,9 @@ class FlowManager:
             if flow.status == flow.FlowStatus.RUNNING:
                 from App import AppDelegate
 
-                AppDelegate().server.taskSemaphore.release()
+                ts = AppDelegate().server.taskSemaphore
+                if ts is not None:
+                    ts.release()
 
         else:
             logging.getLogger("Horus").debug("Flow %s is not running", flow.path)

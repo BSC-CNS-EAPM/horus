@@ -1,5 +1,5 @@
 // React
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 // Components
 import { BreakLongUnderscoreNames } from "../FlowBuilder/Blocks/block.view";
@@ -44,6 +44,12 @@ export default function SidebarView(props: SidebarViewProps) {
     Object.keys(parsedViews)[0]!
   );
 
+  useEffect(() => {
+    if (!currentCategory && Object.keys(parsedViews).length) {
+      setCurrentCategory(Object.keys(parsedViews)[0]!);
+    }
+  }, [parsedViews, currentCategory]);
+
   return (
     <div className="h-full w-full overflow-hidden">
       <div className="flex flex-row w-full h-full">
@@ -53,7 +59,9 @@ export default function SidebarView(props: SidebarViewProps) {
           setCurrentCategory={setCurrentCategory}
         />
         <div className="w-full overflow-y-auto">
-          {parsedViews[currentCategory]?.view ?? "Nothing to see here..."}
+          {parsedViews[currentCategory]?.view ?? (
+            <div className="grid place-items-center h-full">Empty view</div>
+          )}
         </div>
       </div>
     </div>

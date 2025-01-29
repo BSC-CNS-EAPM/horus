@@ -155,7 +155,6 @@ const BLOCK_VARIABLES_PANEL: AddPanelOptions = {
   title: "Block Variables",
   component: "blockVariables",
   renderer: "onlyWhenVisible",
-  tabComponent: "editableTab",
   floating: false,
 };
 
@@ -170,7 +169,6 @@ const BLOCK_LOGS_PANEL: AddPanelOptions = {
   title: "Block Logs",
   component: "blockLogs",
   renderer: "onlyWhenVisible",
-  tabComponent: "editableTab",
   floating: false,
 };
 
