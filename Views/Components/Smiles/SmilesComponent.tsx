@@ -1,4 +1,9 @@
-import { CSSProperties, DetailedHTMLProps, HTMLAttributes, PureComponent } from "react";
+import {
+  CSSProperties,
+  DetailedHTMLProps,
+  HTMLAttributes,
+  PureComponent,
+} from "react";
 import HorusSmilesManager from "./SmilesWrapper/horusSmiles";
 
 function getRandomInt(min: number, max: number) {
@@ -223,7 +228,7 @@ type SmilesViewProps = {
   containerProps?: DetailedHTMLProps<
     HTMLAttributes<HTMLDivElement>,
     HTMLDivElement
->
+  >;
 };
 
 type JSMEApplet = {
@@ -286,6 +291,11 @@ export class SmilesView extends PureComponent {
     // If the applet was already loaded, reset it
 
     if (!this.jsmeApplet) {
+      if (!window.JSApplet || !window.JSApplet.JSME) {
+        console.error("JSME not loaded");
+        return;
+      }
+
       this.jsmeApplet = new window.JSApplet.JSME(
         this.id,
         this.props.width,
