@@ -706,7 +706,9 @@ class RemotesAPI:
             stdout_task = self._getSlurmStd(STDOUT_FILE, j, flowID)
             stderr_task = self._getSlurmStd(STDERR_FILE, j, flowID)
             submission_task = self._getSlurmStd(SUBMISSION_FILE, j, flowID)
-            stdout_result, stderr_result, submission_result = await asyncio.gather(stdout_task, stderr_task, submission_task)
+            stdout_result, stderr_result, submission_result = await asyncio.gather(
+                stdout_task, stderr_task, submission_task
+            )
             stdout_path = stdout_result[1]
             stderr_path = stderr_result[1]
             submission_path = submission_result[1]
@@ -722,7 +724,7 @@ class RemotesAPI:
                 "submitDate": datetime.datetime.now().timestamp(),
                 STDOUT_FILE: stdout_path,
                 STDERR_FILE: stderr_path,
-                SUBMISSION_FILE: submission_path
+                SUBMISSION_FILE: submission_path,
             }
 
         # Process all jobs concurrently
@@ -1066,13 +1068,10 @@ class RemotesAPI:
                 # Store the stdPath in the jobQueue
                 self._updateStdPathForJob(stdPath, file, jobID, flowID)
 
-            # Run blocking command in thread pool
             std = self.command(f"cat {stdPath}", timeout=15)
-            if std.strip() == "":
-                std = f"{file} is empty"
-        except Exception as e:
+        except Exception:
             stdPath = None
-            std = str(e)
+            std = ""
 
         return std, stdPath
 
