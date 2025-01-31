@@ -1240,8 +1240,8 @@ class PluginManager(metaclass=HorusSingleton):
         # IS NOT AVAILABLE ON WEBAPP MODE
         remoteList = RemotesManager(self.appSupportDir).listRemotes(includeLocal=True)
 
-        try:
-            for p in self.loadedPlugins:
+        for p in self.loadedPlugins:
+            try:
                 info = p.pluginMeta.dict()
                 info["id"] = p.id
                 info["blocks"] = self._getBlocksFromList(p, p.blocks)
@@ -1259,16 +1259,20 @@ class PluginManager(metaclass=HorusSingleton):
                             }
                         )
                 listedPlugins.append(info)
-            for ep in self.errorPlugins:
-                info = ep.pluginMeta.dict()
-                info["id"] = ep.id
-                info["blocks"] = []
-                info["default"] = ep.default
-                info["logo"] = ep.logo
-                info["config"] = []
-                errorPlugins.append(info)
-        except Exception as exc:
-            raise Exception(f"Could not get the plugins: {str(exc)}") from exc
+            except Exception as exc:
+                logging.getLogger("Horus").error(
+                    f"Could not get a plugin: {str(exc)}",
+                )
+
+        for ep in self.errorPlugins:
+            info = ep.pluginMeta.dict()
+            info["id"] = ep.id
+            info["blocks"] = []
+            info["default"] = ep.default
+            info["logo"] = ep.logo
+            info["config"] = []
+            errorPlugins.append(info)
+
         return {"plugins": listedPlugins, "errors": errorPlugins}
 
     def _getBlocksFromList(self, plugin: Plugin, blockList: typing.List[PluginBlock]):
