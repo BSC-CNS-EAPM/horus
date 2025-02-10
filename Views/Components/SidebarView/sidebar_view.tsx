@@ -45,7 +45,9 @@ export default function SidebarView(props: SidebarViewProps) {
   );
 
   useEffect(() => {
-    if (!currentCategory && Object.keys(parsedViews).length) {
+    const viewKeys = Object.keys(parsedViews);
+
+    if (!viewKeys.includes(currentCategory) && viewKeys.length) {
       setCurrentCategory(Object.keys(parsedViews)[0]!);
     }
   }, [parsedViews, currentCategory]);

@@ -55,6 +55,7 @@ from HorusAPI import (
     BlockNotFoundError,
     PlatformType,
     __version__ as HorusAPIVersion,
+    Status,
 )
 
 # Import the RemoteManager for the block's remote
@@ -1396,21 +1397,14 @@ class PluginManager(metaclass=HorusSingleton):
         if isinstance(block, SlurmBlock):
 
             # In order to check the slurm status, we need to connect to the remote here
-            remoteManager = RemotesManager(appSupportDir)
-            remoteManager.connectRemote(block.selectedRemote)
-
-            rAPI = remoteManager.remote
-
-            block._setRemote(rAPI)
+            # This will also work as a firewall in order to cach connection errors, and pause the flow instead of
+            # stopping it
+            block._setRemote(RemotesManager(appSupportDir).getRemoteAPI(block.selectedRemote))
 
             # If we are unpausing a flow that sent a slurm calculation,
             # we need to skip the first execution of the block
-            if block.status != block.Status.IDLE and isFirstSlurm:
+            if block.status != Status.IDLE and isFirstSlurm:
                 return
-
-            # If is first slurm, remove from the remote manager queue all of the jobIDs that were submitted for this block
-            if isFirstSlurm and rAPI:
-                rAPI.deleteJobsForBlock(flowID, block._placedID if block._placedID else 1)
 
         # Execute the block
         error = False
@@ -1952,17 +1946,7 @@ class PluginDeps:
                         print(msg)
                         logging.getLogger("Horus").info(msg)
 
-                    remoteManager.connectRemote(forkedBlock.selectedRemote)
-                    rAPI = remoteManager.remote
-
-                    if rAPI is None:
-                        raise Exception("Error while getting the remote instance.")
-
-                    # Set remote-specific attributes
-                    rAPI._blockID = forkedBlock.id
-                    rAPI._blockPlacedID = forkedBlock._placedID
-                    rAPI._flowSavedID = forkedBlock.flow.savedID
-                    rAPI._resetRemoteBlock = resetRemote
+                    rAPI = remoteManager.getRemoteAPI(forkedBlock.selectedRemote)
 
                     if forkedBlock.selectedRemote != "Local":
                         msg = f"Successfully connected to remote '{forkedBlock.selectedRemote}'"
@@ -1980,7 +1964,7 @@ class PluginDeps:
                 outputs = forkedBlock()
 
             except BaseException as e:
-                # Here we need to convert the exception because it may be a Class which does not exist
+                # Here we need to convert the exception because it may be a class which does not exist
                 # outside of the forked context
                 error = Exception(str(e))
 

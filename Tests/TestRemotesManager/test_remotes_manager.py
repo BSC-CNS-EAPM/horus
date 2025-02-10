@@ -88,7 +88,7 @@ def test_transfer_to_local(mock_remotes_api_local):
 
         # Assert that subprocess.run was called with the correct arguments
         mock_run.assert_any_call(
-            "cp -r /tmp/path/to/local/file.txt /tmp/remote/path", shell=True, stdout=-1, stderr=-2
+            "cp -r /tmp/path/to/local/file.txt /tmp/remote/path", shell=True, stdout=-1, stderr=-1
         )
 
 
@@ -116,7 +116,7 @@ def test_transfer_from_local(mock_remotes_api_local):
 
         # Assert that subprocess.run was called with the correct arguments
         mock_run.assert_any_call(
-            "cp -r /tmp/path/to/local/file.txt /tmp/remote/path", shell=True, stdout=-1, stderr=-2
+            "cp -r /tmp/path/to/local/file.txt /tmp/remote/path", shell=True, stdout=-1, stderr=-1
         )
 
 

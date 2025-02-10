@@ -126,5 +126,37 @@
             "console": "integratedTerminal",
             "justMyCode": false
         },
+        {
+            "name": "Debug Tests",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "Tests/",
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "Debug Selected Test",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "Tests/",
+                "-k",
+                "${input:pickTest}"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+    ],
+    "inputs": [
+        {
+            "id": "pickTest",
+            "description": "Test function name",
+            "default": "test_flow_run_flow_post_full_app",
+            "type": "promptString"
+        }
     ]
 }

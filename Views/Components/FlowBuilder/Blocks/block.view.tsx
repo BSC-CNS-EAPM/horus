@@ -12,16 +12,23 @@ import {
 import RotatingLines from "../../RotatingLines/rotatinglines";
 import ServerIcon from "../../Toolbar/Icons/Server";
 import { HorusPopover } from "../../reusable";
+import AppButton from "@/Components/appbutton";
+import {
+  addPanel,
+  DockContext,
+  PANEL_REGISTRY,
+} from "@/Components/MainApp/PanelView";
 
 // Utilities
 import { modifierKey } from "../../Toolbar/toolbar";
+import { useSettings } from "@/Main/app";
 
 // Variables
 import { PluginVariableView } from "../Variables/variables";
 import { PlacedBlockVariables } from "../Variables/variable_connections";
 
 // Typescript types
-import { Block, BlockTypes } from "../flow.types";
+import { Block, BlockTypes, Status } from "../flow.types";
 
 // Block style
 import "./block.css";
@@ -40,12 +47,7 @@ import PlayIcon from "../../Toolbar/Icons/Play";
 import PausedIcon from "../../Toolbar/Icons/Paused";
 import ErrorLogFile from "../../Toolbar/Icons/ErrorLogFile";
 import ExternalIcon from "../../Toolbar/Icons/External";
-import {
-  addPanel,
-  DockContext,
-  PANEL_REGISTRY,
-} from "@/Components/MainApp/PanelView";
-import { useSettings } from "@/Main/app";
+import Chevron from "@/Components/Toolbar/Icons/Chevron";
 
 export function BlockView(
   props: BlockViewProps & { extraStyle?: CSSProperties }
@@ -84,6 +86,7 @@ export function BlockView(
         />
         <BlockRemotes block={block} blockHooks={blockHooks} />
         <BlockBody
+          blockHooks={blockHooks}
           block={block}
           blockState={blockState}
           isFlowActive={isFlowActive}
@@ -377,7 +380,10 @@ function BlockToolbar({
               isRunning={block.isRunning}
               isPaused={isPaused ?? false}
               onClick={(resetFlow) => {
-                blockHooks?.executeFlow(block.placedID, resetFlow);
+                blockHooks?.executeFlow({
+                  placedID: block.placedID,
+                  resetFlow,
+                });
               }}
             />
           )}
@@ -506,10 +512,12 @@ function BlockBody({
   block,
   blockState,
   isFlowActive,
+  blockHooks,
 }: {
   block: Block;
   blockState: BlockViewState;
   isFlowActive?: boolean;
+  blockHooks?: BlockHooks;
 }) {
   if (!block.isPlaced) {
     return null;
@@ -531,8 +539,36 @@ function BlockBody({
         );
       case BlockTypes.SLURM:
         return (
-          <div className="remote-block-cloud border-t border-gray-300 pt-1">
-            <ServerIcon /> Slurm Block - {block.status}
+          <div className="border-t border-gray-300 pt-1 flex flex-row justify-between items-center">
+            <div className="remote-block-cloud ">
+              <ServerIcon /> Slurm Block - {block.status}
+            </div>
+            {block.status === Status.FAILED && !block.isRunning && (
+              <span className="remote-block-cloud items-center gap-0">
+                <Chevron direction="right" />
+                <HorusPopover
+                  cancelStyle
+                  trigger={
+                    <AppButton
+                      action={() => {
+                        blockHooks?.executeFlow({
+                          placedID: block.placedID,
+                          resetFlow: false,
+                          continueSlurm: true,
+                        });
+                      }}
+                    >
+                      Continue
+                    </AppButton>
+                  }
+                >
+                  <div className="hover-description mt-2">
+                    Continue the block on the second action even if the SLURM
+                    job failed
+                  </div>
+                </HorusPopover>
+              </span>
+            )}
           </div>
         );
       case BlockTypes.GHOST:
@@ -669,7 +705,6 @@ function PlayBlockButton({
         style={{
           position: "relative",
           top: "-1px",
-          right: "-3px",
         }}
       />
     );

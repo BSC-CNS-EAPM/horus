@@ -4,6 +4,7 @@ Test file for Flows
 
 import os
 import json
+from typing import cast
 import requests
 import random
 import pytest
@@ -11,6 +12,7 @@ import time
 from multiprocess import Process  # type: ignore pylint: disable=no-name-in-module
 import subprocess
 
+from HorusAPI.src.plugins import SlurmBlock, Status
 from Server.FlowManager.flow_manager import Flow, FlowManager
 from Server.PluginManager.plugin_manager import PluginManager
 from HorusAPI import PluginBlock as Block
@@ -477,6 +479,10 @@ def test_slurm_flow_second_action(flow_appDelegate):
     try:
         flow = Flow.read(path)
 
+        # Set the block 1 to be completed, due to compatibility issues when the code has been updated
+        b = cast(SlurmBlock, flow.findBlockByPlacedID(1))
+        b.status = Status.COMPLETED
+
         flow.terminalOutput = []
 
         flow.run(resetFlow=False)
@@ -736,10 +742,7 @@ def test_flow_run_flow_post_full_app(plugin_manager):
         if p.stdout:
             output = p.stdout.read()
 
-            if (
-                "Failed to start the window management system."
-                in output
-            ):
+            if "Failed to start the window management system." in output:
                 import warnings
 
                 warnings.warn("Please test this function in a Windowed computer")
