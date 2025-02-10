@@ -196,7 +196,15 @@ export function BlockRegistry() {
               value={search}
               placeholder="Search blocks..."
               onChange={(event) => {
-                setSearch(event.target.value);
+                const value = event.target.value;
+
+                if (value) {
+                  setShowAllSignal(showAllSignal + 1);
+                } else {
+                  setCollapseAllSignal(collapseAllSignal + 1);
+                }
+
+                setSearch(value);
               }}
               showIcon={false}
             />

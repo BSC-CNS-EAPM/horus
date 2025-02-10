@@ -172,7 +172,7 @@ function FlowTopBar(props: { flowHooks: FlowHooks }) {
     hasPendingActions || hasPendingSmilesActions || hasExtensions;
 
   return (
-    <div className="absolute flex flex-row top-bar-flow-reciver gap-2 p-2">
+    <div className="overflow-hidden absolute flex flex-row top-bar-flow-reciver gap-2 p-2">
       <FlowNameInput
         flow={flow}
         saved={saved}
@@ -244,7 +244,7 @@ function FlowStatusControl({
   saved: boolean;
   hasActions: boolean;
   stopFlow: () => void;
-  resumeFlow: () => void;
+  resumeFlow: (options?: any) => void;
 }) {
   return (
     <div

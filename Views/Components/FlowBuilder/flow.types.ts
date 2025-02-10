@@ -174,29 +174,99 @@ export type Block = {
   variableConnectionsReference: Array<VariableConnection>;
 
   // Slurm blocks
-  status: string;
-  waitingForJob: boolean;
-  jobStatus: {
-    [key: string]: string;
-  };
-  stdOut?: {
-    [key: string]: string;
-  };
-
-  stdErr?: {
-    [key: string]: string;
-  };
-  submissionScript?: {
-    [key: string]: string;
-  };
-  detailedStatus?: {
-    [key: string]: string;
-  };
-  jobID: Array<string>;
+  status: Status;
+  jobs: SlurmJob[];
 
   // Remote connection
   selectedRemote: string;
 };
+
+export type SlurmJob = {
+  JobId: string;
+  ArrayJobId?: string;
+  ArrayTaskId?: string;
+  JobName: string;
+  UserId: string;
+  GroupId: string;
+  JobState: Status;
+  ExitCode: string;
+  Nodes?: string;
+  SubmitTime?: Date;
+  StartTime?: Date;
+  EndTime?: Date;
+  ElapsedTime?: string;
+  WorkDir?: string;
+  Command?: string;
+  StdoutPath?: string;
+  StderrPath?: string;
+  StdOutContent?: string;
+  StdErrContent?: string;
+  SubmissionScript?: string;
+};
+
+export enum Status {
+  BOOT_FAIL = "BOOT_FAIL", // BF
+  CANCELLED = "CANCELLED", // CA
+  CANCELLING = "CANCELLING", // C
+  COMPLETED = "COMPLETED", // CD
+  CONFIGURING = "CONFIGURING", // CF
+  COMPLETING = "COMPLETING", // CG
+  DEADLINE = "DEADLINE", // DL
+  FAILED = "FAILED", // F
+  NODE_FAIL = "NODE_FAIL", // NF
+  OUT_OF_ME = "OUT_OF_ME", // OM
+  PENDING = "PENDING", // PD
+  PREEMPTED = "PREEMPTED", // PR
+  RUNNING = "RUNNING", // R
+  RESV_DEL_HOLD = "RESV_DEL_HOLD", // RD
+  REQUEUE_FED = "REQUEUE_FED", // RF
+  REQUEUE_HOLD = "REQUEUE_HOLD", // RH
+  REQUEUED = "REQUEUED", // RQ
+  RESIZING = "RESIZING", // RS
+  REVOKED = "REVOKED", // RV
+  SIGNALING = "SIGNALING", // SI
+  SPECIAL_EXIT = "SPECIAL_EXIT", // SE
+  STAGE_OUT = "STAGE_OUT", // SO
+  STOPPED = "STOPPED", // ST
+  SUSPENDED = "SUSPENDED", // SS
+  TIMEOUT = "TIMEOUT", // TO
+  UNKNOWN = "UNKNOWN",
+  IDLE = "IDLE",
+}
+
+export class JobStatus {
+  static RUNNING_STATUSES(): Status[] {
+    return [
+      Status.RUNNING,
+      Status.PENDING,
+      Status.CANCELLING,
+      Status.CONFIGURING,
+      Status.COMPLETING,
+      Status.RESIZING,
+      Status.SIGNALING,
+    ];
+  }
+
+  static FAILED_STATUSES(): Status[] {
+    return [
+      Status.FAILED,
+      Status.CANCELLED,
+      Status.BOOT_FAIL,
+      Status.NODE_FAIL,
+      Status.DEADLINE,
+      Status.OUT_OF_ME,
+      Status.TIMEOUT,
+      Status.PREEMPTED,
+      Status.REVOKED,
+      Status.STOPPED,
+      Status.SPECIAL_EXIT,
+    ];
+  }
+
+  static FINISHED_STATUSES(): Status[] {
+    return [Status.COMPLETED, Status.IDLE];
+  }
+}
 
 export type BlockVarPair = {
   placedID: number;

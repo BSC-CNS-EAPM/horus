@@ -81,7 +81,7 @@
     "name": "Automatic concurrent flows",
     "description": "Whether to automatically set the maximum number of concurrent flows based on the number of available cores. Changing this setting will require a restart of the application.",
     "category": "Advanced",
-    "value": true,
+    "value": false,
     "type": "boolean",
     "desktopOnly": true
   },

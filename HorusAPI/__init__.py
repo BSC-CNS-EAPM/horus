@@ -16,6 +16,8 @@ from .src import (
     VariableList,
     PluginMetaModel,
     PlatformType,
+    SlurmJob,
+    Status,
 )
 
 # Export the Molstar API
@@ -28,7 +30,7 @@ from .src import SmilesAPI
 from .src import Extensions
 
 # Export the utility SingletonMeta class
-from .src import HorusSingleton, TempFile, ResetRemoteException, getUserFolder, callAsync
+from .src import HorusSingleton, TempFile, ResetRemoteException, getUserFolder
 
 # Export the initPlugin function
 from .src import initPlugin

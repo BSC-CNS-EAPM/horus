@@ -1,7 +1,5 @@
 import time
 
-from sqlalchemy import String
-
 from HorusAPI import (
     InputBlock,
     SlurmBlock,
@@ -330,15 +328,22 @@ sleep {timeToWait}
     
 """
 
-    with open("test.sh", "w") as f:
+    if block.extraData.get("submits") is None:
+        block.extraData["submits"] = 0
+
+    n = block.extraData["submits"]
+    block.extraData["submits"] += 1
+
+    file = f"test_{n}"
+    with open(file, "w") as f:
         f.write(script)
 
     # Upload the script to the remote
     import os
 
-    finalPath = os.path.join(block.remote.workDir, "test.sh")
+    finalPath = os.path.join(block.remote.workDir, file)
     try:
-        finalPath = block.remote.sendData("test.sh", block.remote.workDir)
+        finalPath = block.remote.sendData(file, block.remote.workDir)
     except Exception as e:
         print("Error uploading script: ", e)
 
@@ -384,17 +389,70 @@ slurmBlockTest = SlurmBlock(
 
 
 def multipleSlurmTest(block: SlurmBlock):
-    print("sending 1")
-    testSlurmBlockAction(block)
+    quantity = int(block.variables["quantity"] or 5)
 
-    print("Sending 2")
-    testSlurmBlockAction(block)
+    # Submit test job to the current remote
+    script = """#!/bin/bash
+#SBATCH --qos="short"
+#SBATCH --partition="short"
+#SBATCH --job-name="tunnel"
+#SBATCH --time=2:00:00     # walltime
+#SBATCH --ntasks=8  # number of cores
+#SBATCH --mem-per-cpu=1GB
+#SBATCH --output="slurm-%j.out"   # STDOUT output file
+#SBATCH --error="slurm-%j.err"   # STDERR error file
 
+start_time=$(date +%s)
+iterations=0
+max_iterations=10
+
+while [ $iterations -lt $max_iterations ]; do
+    elapsed=$(( $(date +%s) - start_time ))
+    echo "Elapsed time: ${elapsed} seconds"
+    sleep 10
+    ((iterations++))
+done
+
+echo "Script finished after $max_iterations iterations."
+
+
+"""
+
+    import os
+
+    paths = []
+    remote_folder = os.path.join(block.remote.workDir, "tests")
+    # Remove the folder
+    block.remote.command(f"rm -rf {remote_folder}")
+    for n in range(quantity):
+        file = f"test_{n}"
+        with open(file, "w") as f:
+            f.write(script)
+
+        paths.append(file)
+
+    # Upload the folder to the remote
+    remote_folder = block.remote.sendData(os.getcwd(), remote_folder)
+
+    paths = [os.path.join(remote_folder, path) for path in paths]
+
+    jobID = block.remote.submitJob(paths)
+
+    print("Submitted jobs: ", "\n".join(jobID))
+
+
+quantity_variable = PluginVariable(
+    id="quantity",
+    name="Quantity",
+    description="How many jobs to submit",
+    type=VariableTypes.NUMBER,
+)
 
 multipleSlurmTestBlock = SlurmBlock(
     name="Multiple slurm block test",
     description="Slurm block test",
     initialAction=multipleSlurmTest,
+    variables=[quantity_variable],
     inputs=[timeToWaitVar],
     finalAction=lambda block: None,
     category="Slurm",

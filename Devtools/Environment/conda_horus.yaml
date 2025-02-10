@@ -1,39 +1,39 @@
 name: horus
 channels:
-  - conda-forge
+- conda-forge
 dependencies:
-  - python=3.9.16
-  - pip=23.1.2
-  - pip:
-      - pyinstaller==6.8.0
-      - flask==3.0.3
-      - requests==2.29.0
-      - pywebview==5.0.5
-      - flask-cors==5.0.0
-      - dnspython
-      - pyobjc==9.1.1; sys_platform == 'darwin'
-      - flask-socketio==5.4.1
-      - flask_session==0.8.0
-      - Cython==3.0.2
-      - pytest==7.3.1
-      - pytest-mock==3.11.1
-      - fabric==3.1.0
-      - sphinx==7.2.5
-      - pydata_sphinx_theme==0.13.3
-      - sphinx_design==0.5.0
-      - nbsphinx==0.9.3
-      - sphinx_copybutton==0.5.2
-      - mypy==1.8
-      - multiprocess==0.70.17
-      - pathvalidate==3.2.0
-      - pydantic==1.10.13
-      - molviewspec==0.1.3
-      - pylint==3.0.3
-      - black==24.2.0
-      - pyright==1.1.351
-      - sqlalchemy==2.0.27
-      - flask-login==0.6.3
-      - APScheduler==3.10.4
-      - zope==5.9
-      - locust==2.29.0
-      - twine==5.1.1
+- python=3.9.16
+- pip=23.1.2
+- pip:
+  - pyinstaller==6.8.0
+  - flask==3.0.3
+  - requests==2.29.0
+  - pywebview==5.0.5
+  - flask-cors==5.0.0
+  - dnspython
+  - pyobjc==9.1.1; sys_platform == 'darwin'
+  - flask-socketio==5.4.1
+  - flask_session==0.8.0
+  - Cython==3.0.2
+  - pytest==7.3.1
+  - pytest-mock==3.11.1
+  - fabric==3.1.0
+  - sphinx==7.2.5
+  - pydata_sphinx_theme==0.13.3
+  - sphinx_design==0.5.0
+  - nbsphinx==0.9.3
+  - sphinx_copybutton==0.5.2
+  - mypy==1.8
+  - multiprocess==0.70.17
+  - pathvalidate==3.2.0
+  - pydantic==1.10.13
+  - molviewspec==1.0.0
+  - pylint==3.0.3
+  - black==24.2.0
+  - pyright==1.1.351
+  - sqlalchemy==2.0.27
+  - flask-login==0.6.3
+  - APScheduler==3.10.4
+  - zope==5.9
+  - locust==2.29.0
+  - twine==5.1.1

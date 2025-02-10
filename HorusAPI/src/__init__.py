@@ -16,6 +16,8 @@ from .plugins import (
     VariableList,
     PluginMetaModel,
     PlatformType,
+    SlurmJob,
+    Status,
 )
 
 # Export the Molstar API
@@ -27,7 +29,7 @@ from .extensions import Extensions
 
 # Export the utility SingletonMeta class
 from .utils import SingletonMeta as HorusSingleton
-from .utils import TempFile, ResetRemoteException, getUserFolder, initPlugin, callAsync
+from .utils import TempFile, ResetRemoteException, getUserFolder, initPlugin
 
 # Set the exported modules
 __all__ = [
@@ -55,7 +57,8 @@ __all__ = [
     "PlatformType",
     "getUserFolder",
     "initPlugin",
-    "callAsync",
+    "SlurmJob",
+    "Status",
 ]
 
 # Set the module name

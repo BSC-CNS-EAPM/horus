@@ -1419,6 +1419,7 @@ class HorusServer:
                 placedID = data.get("placedID", None)
                 resetRemoteBlock = data.get("resetRemote", False)
                 resetFlow = data.get("resetFlow", True)
+                continueSlurm = data.get("continueSlurm", False)
 
                 # Open the flow
                 flow = self.flowManager.openFlowFromPath(flowPath)
@@ -1426,13 +1427,7 @@ class HorusServer:
                 # If resetFlow is True, reset the remote too
                 if resetFlow:
                     resetRemoteBlock = True
-
-                    # Instantiate a local rAPI
-                    from Server.RemotesManager import RemotesAPI
-
-                    rAPI = RemotesAPI()
                     flow.savedID = typing.cast(str, flow.savedID)
-                    rAPI.deleteFlowFromQueue(flow.savedID)
 
                 # If we are on webappmode, register the flow
                 # into the database for the current user
@@ -1456,7 +1451,7 @@ class HorusServer:
 
                 # Run the flow
                 self.flowManager.runFlow(
-                    flow, placedID, resetRemoteBlock, self.socketio, resetFlow
+                    flow, placedID, resetRemoteBlock, self.socketio, resetFlow, continueSlurm
                 )
 
                 success = {
@@ -1472,6 +1467,30 @@ class HorusServer:
                 }
 
             return flask.jsonify(success)
+
+        @self.server.route("/api/plugins/cancel-job", methods=["GET"])
+        @self.verifyLogin
+        def cancelJob():
+
+            jobID = request.args.get("jobID")
+            remote = request.args.get("remote")
+
+            if not jobID or not remote:
+                return flask.make_response({"ok": False, "msg": "Missing parameters."}, 400)
+
+            if not self.remoteManager.remoteExists(remote):
+                return flask.make_response(
+                    {"ok": False, "msg": f"Remote {remote} does not exist."}, 400
+                )
+
+            # Connect to the remote and cancel the job
+            try:
+                rAPI = self.remoteManager.getRemoteAPI(remote)
+                out = rAPI.command(f"scancel {jobID}")
+            except Exception as e:
+                return flask.make_response({"ok": False, "msg": str(e)}, 400)
+
+            return flask.make_response({"ok": True, "msg": f"Job cancelled: {out}."}, 200)
 
         @self.server.route("/api/plugins/stopflow", methods=["POST"])
         @self.verifyLogin

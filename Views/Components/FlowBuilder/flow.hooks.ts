@@ -1531,6 +1531,12 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
           return currentFlow;
         }
 
+        if (
+          currentFlow.status === FlowStatus.CANCELLING &&
+          recivedFlow.status !== FlowStatus.STOPPED
+        ) {
+          return currentFlow;
+        }
         // Do not update the position of the blocks
         // This is because the user might be panning the view
         // during the flow execution
@@ -1903,7 +1909,17 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
   const latestPath = useRef<string | null>(null);
 
-  async function executeFlow(placedID?: number, resetFlow: boolean = false) {
+  async function executeFlow(options?: {
+    placedID?: number;
+    resetFlow?: boolean;
+    continueSlurm?: boolean;
+  }) {
+    const {
+      placedID = undefined,
+      resetFlow = false,
+      continueSlurm = false,
+    } = { ...options };
+
     if (isExecutingInProcess.current) {
       return;
     }
@@ -1942,8 +1958,9 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         null,
         JSON.stringify({
           flowPath: updatedFlowPath,
-          placedID: placedID,
-          resetFlow: resetFlow,
+          placedID,
+          resetFlow,
+          continueSlurm,
         })
       );
 
@@ -2349,7 +2366,7 @@ async function applyActions(flow: Flow) {
   if (flow.pendingExtensions && flow.pendingExtensions.length > 0) {
     hasToUpdate = true;
     for (const action of flow.pendingExtensions) {
-      await window.horus?.addExtensions?.({...action, bypass: true});
+      await window.horus?.addExtensions?.({ ...action, bypass: true });
     }
   }
 
