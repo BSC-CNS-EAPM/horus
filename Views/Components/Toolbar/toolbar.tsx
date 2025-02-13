@@ -316,9 +316,9 @@ export default function HorusToolbar() {
           keyShortcut: `${modifierKeyLogo}${shiftKeyLogo}M`,
         },
         {
-          name: "Toggle Mol*",
+          name: "Open Mol*",
           onClick: () => {
-            togglePanel({
+            addPanel({
               dockApi: dockApi,
               component: PANEL_REGISTRY.molstar.component,
               panelID: PANEL_REGISTRY.molstar.id,
@@ -329,10 +329,10 @@ export default function HorusToolbar() {
           keyShortcut: `${modifierKeyLogo}${shiftKeyLogo}M`,
         },
         {
-          name: "Toggle SMILES",
+          name: "Open SMILES",
           svgPath: <SmilesIcon />,
           onClick: () => {
-            togglePanel({
+            addPanel({
               dockApi: dockApi,
               component: PANEL_REGISTRY.smiles.component,
               panelID: PANEL_REGISTRY.smiles.id,

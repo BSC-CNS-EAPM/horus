@@ -8,6 +8,7 @@ import {
   AddPanelOptions,
   DockviewPanelApi,
   IDockviewHeaderActionsProps,
+  IDockviewDefaultTabProps,
 } from "dockview";
 import { CloseButton } from "dockview/dist/esm/svg";
 import "dockview/dist/styles/dockview.css";
@@ -78,6 +79,7 @@ const MOLSTAR_PANEL: AddPanelOptions = {
   position: {
     direction: "right",
   },
+  tabComponent: "confirmClose",
 };
 
 const SMILES_PANEL: AddPanelOptions = {
@@ -89,6 +91,7 @@ const SMILES_PANEL: AddPanelOptions = {
   position: {
     direction: "right",
   },
+  tabComponent: "confirmClose",
 };
 
 const ERROR_PANEL: AddPanelOptions = {
@@ -391,6 +394,41 @@ function ExtensionsTab(
   return <EditableTitleTab {...props} icon={extensionIcon} />;
 }
 
+function BaseTab(props: IDockviewDefaultTabProps) {
+  const icon = PANEL_ICONS[props.api.component] ?? null;
+  return (
+    <span className="dv-default-tab">
+      {icon}
+      <DockviewDefaultTab {...props} />
+    </span>
+  );
+}
+
+function ConfirmCloseTab(props: IDockviewDefaultTabProps) {
+  const onPointerDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+  }, []);
+
+  const confirmClose = async () => {
+    if (await confirm(`Are you sure you want to close this tab?`)) {
+      props.api.close();
+    }
+  };
+
+  return (
+    <span className="dv-default-tab">
+      <BaseTab {...props} hideClose />
+      <div
+        className="ml-2 dv-default-tab-action"
+        onPointerDown={onPointerDown}
+        onClick={confirmClose}
+      >
+        <CloseButton />
+      </div>
+    </span>
+  );
+}
+
 const headerComponents = {
   extensionsTab: ExtensionsTab,
   editableTab: (props: IDockviewPanelHeaderProps) => {
@@ -398,15 +436,8 @@ const headerComponents = {
     return <EditableTitleTab {...props} icon={icon} />;
   },
   flow: FlowTab,
-  default: (props: IDockviewPanelHeaderProps) => {
-    const icon = PANEL_ICONS[props.api.component] ?? null;
-    return (
-      <span className="dv-default-tab">
-        {icon}
-        <DockviewDefaultTab {...props} />
-      </span>
-    );
-  },
+  confirmClose: ConfirmCloseTab,
+  default: BaseTab,
 };
 
 export function addBlockRegistryGroup(api: DockviewApi) {

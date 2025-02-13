@@ -3,7 +3,6 @@ Settings manager for the Horus app
 """
 
 import os
-from textwrap import indent
 import typing
 import json
 import sys
