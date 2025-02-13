@@ -3,6 +3,7 @@ Settings manager for the Horus app
 """
 
 import os
+from textwrap import indent
 import typing
 import json
 import sys
@@ -236,32 +237,30 @@ class SettingsManager:
                 fileSettings[key] = value
                 newChanges = True
                 logging.getLogger("Horus").info("Added setting %s to the settings file", key)
+                continue
 
             # If the description, name or category of a setting has changed, update it
-            if (
-                fileSettings[key]["description"] != value["description"]
-                or fileSettings[key]["name"] != value["name"]
-                or fileSettings[key]["category"] != value["category"]
+            if any(
+                fileSettings[key].get(k) != value.get(k)
+                for k in {"description", "name", "category", "type", "allowedValues"}
+                if k in fileSettings[key] and k in value
             ):
-                fileSettings[key]["description"] = value["description"]
-                fileSettings[key]["name"] = value["name"]
-                fileSettings[key]["category"] = value["category"]
-                newChanges = True
 
-                logging.getLogger("Horus").info(
-                    "Updated setting description, category or name for %s in the settings file",
-                    key,
-                )
+                # If the difference comes form the allowedValues between null and [], then pass, as for
+                # compatibility purposes null is needed instead of []
+                if fileSettings.get("allowedValues") == None and value.get("allowedValues") == []:
+                    pass
+                else:
+                    fileSettings[key] = value
+                    newChanges = True
 
-            # If the type of a setting has changed, update it along the value
-            if fileSettings[key]["type"] != value["type"]:
-                fileSettings[key]["type"] = value["type"]
-                fileSettings[key]["value"] = value["value"]
-                newChanges = True
+                    print(json.dumps(fileSettings[key], indent=4))
+                    print(json.dumps(value, indent=4))
 
-                logging.getLogger("Horus").info(
-                    "Updated setting value for %s in the settings file", key
-                )
+                    logging.getLogger("Horus").info(
+                        "Updated setting '%s'",
+                        key,
+                    )
 
         if newChanges:
             with open(self.userSettingsPath, "w", encoding="utf-8") as f:

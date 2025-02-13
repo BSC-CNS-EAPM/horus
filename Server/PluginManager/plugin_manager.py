@@ -1135,18 +1135,21 @@ class PluginManager(metaclass=HorusSingleton):
         ]
 
         try:
+            # Here the embedded pip will be "python" in uncompiled mode! Remember...
             callPopen([*interpreter, *command], env=env)
         except Exception as exc:
 
-            # Some python packages require to be builded from source, and the bundled pip cannot handle this.
-            # For such cases, Horus will use the python interpreter set in the settings.
-            interpreter = [self._getExternalInterpreter(), "-m", "pip"]
-
-            msg = f"Dependency {dep} could not be installed using embedded pip: {str(exc)}\n"
-            msg += f"Trying with external python interpreter '{' '.join(interpreter)}'."
-            logging.getLogger("Horus").error(msg)
+            logging.getLogger("Horus").error(
+                f"Dependency {dep} could not be installed using embedded pip: {str(exc)}"
+            )
 
             try:
+                # Some python packages need to be built from source, and the bundled pip cannot handle this.
+                # For such cases, Horus will use the python interpreter set in the settings.
+                interpreter = [self._getExternalInterpreter(), "-m", "pip"]
+                logging.getLogger("Horus").error(
+                    f"Trying with external python interpreter '{' '.join(interpreter)}'."
+                )
                 callPopen([*interpreter, *command], env=env)
             except Exception as exc2:
                 msg = (
@@ -1165,8 +1168,8 @@ class PluginManager(metaclass=HorusSingleton):
         try:
             interpreter = str(self.horusSettings.getSetting("dependenciesInterpreter").value)
         except Exception as e:
-            msg = f"Could not get the python interpreter from the user settings: {e}"
-            msg += "\nDefaulting to current python interpreter."
+            msg = f"Could not get the python interpreter from the user settings: {e}. "
+            msg += "Defaulting to path 'python' interpreter."
             print(msg)
 
         # Check if the python interpreter is valid
