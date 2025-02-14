@@ -300,3 +300,7 @@ select:hover {
   user-select: text;
   -webkit-user-select: text;
 }
+
+.dv-tabs-container {
+  scrollbar-width: auto !important;
+}
