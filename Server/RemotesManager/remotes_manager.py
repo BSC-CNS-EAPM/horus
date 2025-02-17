@@ -217,21 +217,22 @@ class RemotesAPI:
         if self.isLocal or forceLocal:
             # Run command locally
             logging.getLogger("Horus").info("Running command: '%s' on local machine,", command)
-            process = subprocess.Popen(
-                command,
-                shell=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-
             failed = False
             try:
-                process.wait(timeout=timeout)
+                process = subprocess.run(
+                    command,
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    stdin=None,
+                    timeout=timeout,
+                    text=True,
+                )
             except subprocess.TimeoutExpired as te:
                 failed = True
 
-            out = process.stdout.read().decode("utf-8").strip() if process.stdout else ""
-            err = process.stderr.read().decode("utf-8").strip() if process.stderr else ""
+            out = process.stdout.strip() if process.stdout else ""
+            err = process.stderr.strip() if process.stderr else ""
             logging.getLogger("Horus").debug("Local command output: %s", out)
 
             if failed:
