@@ -66,7 +66,11 @@ class PluginRemote:
         return self.command(command, timeout)
 
     def command(
-        self, command: str, timeout: typing.Optional[int] = None, forceLocal: bool = False
+        self,
+        command: str,
+        timeout: typing.Optional[int] = None,
+        forceLocal: bool = False,
+        mergeStdErr: bool = True,
     ):
         """
         Executes a command on the remote.
@@ -75,10 +79,11 @@ class PluginRemote:
         :param command: The command to execute.
         :param timeout: The timeout in seconds. None for no timeout.
         :param forceLocal: If True, the command will be executed locally even if the block has a remote selected.
+        :param mergeStdErr: If True (default) will append the stdErr of the command to the output.
 
         :return: The output of the command.
         """
-        output = self._remote.command(command, timeout, forceLocal)
+        output = self._remote.command(command, timeout, forceLocal, mergeStdErr)
 
         return output
 
@@ -2238,7 +2243,9 @@ class SlurmJob(HorusPydanticModel):
         commands = []
         for script in scripts:
             scontrolCmd = SlurmJob.SCONTROL_COMMAND("$jobid")
-            command = "jobid=$(sbatch {} | awk '{{print $4}}'); {}".format(script, scontrolCmd)
+            command = "jobid=$(sbatch {} | awk '{{print $4}}'); if [ -z \"$jobid\" ]; then exit 1; fi; {}".format(
+                script, scontrolCmd
+            )
 
             if changeDir:
                 changeDirTo = os.path.dirname(script) or "."

@@ -82,7 +82,7 @@ class BlocksException(Exception):
 
         # Set the block as with the error
         self.block.error = True
-        self.block.blockLogs += f"\nERROR: {message}"
+        self.block.blockLogs += f"\n{message}"
         self.block._isRunning = False
         self.block._finishedExecution = True
 
@@ -1403,7 +1403,7 @@ class Flow:
                 block._isRunning = False
                 block._finishedExecution = True
                 block.error = True
-                block.blockLogs += f"\nERROR: {message}"
+                block.blockLogs += f"\n{message}"
 
         # Update the flow size and the finished time
         self.size = self._computeSize()

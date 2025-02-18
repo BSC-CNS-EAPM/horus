@@ -205,13 +205,20 @@ class RemotesAPI:
         return self.command("echo $HOME")
 
     def command(
-        self, command: str, timeout: t.Optional[int] = None, forceLocal: bool = False
+        self,
+        command: str,
+        timeout: t.Optional[int] = None,
+        forceLocal: bool = False,
+        mergeStdErr: bool = True,
     ) -> str:  # pylint: disable=method-hidden
         """
         Runs a command on the remote (or locally).
 
         :param command: The command to run.
         :param timeout: The timeout in seconds.
+        :param forceLocal: If True, the command will be executed locally even if the block has a remote selected.
+        :param mergeStdErr: If True (default) will append the stdErr of the command to the output.
+
         :return: The output of the command.
         """
 
@@ -235,6 +242,7 @@ class RemotesAPI:
             out = process.stdout.strip() if process.stdout else ""
             err = process.stderr.strip() if process.stderr else ""
             logging.getLogger("Horus").debug("Local command output: %s", out)
+            logging.getLogger("Horus").debug("Local command error: %s", err)
 
             if failed:
                 logging.getLogger("Horus").error("Command timed out: %s", command)
@@ -247,7 +255,7 @@ class RemotesAPI:
                 )
 
             # Return the stdout and stderr as a string
-            return out
+            return out + "\n" + err if mergeStdErr else out
 
         # Run command on remote
         # Hide is needed to avoid the output to be printed on the console

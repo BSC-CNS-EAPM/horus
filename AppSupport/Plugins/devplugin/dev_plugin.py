@@ -303,16 +303,13 @@ flowInsideBlockBlock = PluginBlock(
 plugin.addBlock(flowInsideBlockBlock)
 
 
-def testSlurmBlockAction(block: SlurmBlock):
-
-    print("Test slurm block action")
-
-    print("is local?", block.remote.isLocal)
-
-    timeToWait = int(block.inputs.get("timeToWait", 0) or 0)
-
-    # Submit test job to the current remote
-    script = f"""#!/bin/bash
+script_variable = PluginVariable(
+    id="script_variable",
+    name="Slurm script",
+    description="Slurm script",
+    type=VariableTypes.CODE,
+    allowedValues=["shell"],
+    defaultValue="""#!/bin/bash
 #SBATCH --qos="short"
 #SBATCH --partition="short"
 #SBATCH --job-name="tunnel"
@@ -322,11 +319,20 @@ def testSlurmBlockAction(block: SlurmBlock):
 
 echo "Hello world"
 
-# Wait
-sleep {timeToWait}
+""",
+)
 
-    
-"""
+
+def testSlurmBlockAction(block: SlurmBlock):
+
+    print("Test slurm block action")
+
+    print("is local?", block.remote.isLocal)
+
+    timeToWait = int(block.inputs.get("timeToWait", 0) or 0)
+
+    # Submit test job to the current remote
+    script = block.variables[script_variable.id] + f"\n\nsleep {timeToWait}\n"
 
     if block.extraData.get("submits") is None:
         block.extraData["submits"] = 0
@@ -383,6 +389,7 @@ slurmBlockTest = SlurmBlock(
             type=VariableTypes.NUMBER,
         )
     ],
+    variables=[script_variable],
     id="slurm_block_test",
     category="Slurm",
 )
