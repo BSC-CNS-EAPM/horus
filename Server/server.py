@@ -1943,7 +1943,7 @@ class HorusServer:
             else:
                 errorMSG = (
                     "ERROR: File picker is already implemented."
-                    + " If you are seeing this, something went wrong."
+                    + " If you are seeing this, something went very wrong."
                 )
                 logging.getLogger("Horus").error(errorMSG)
                 selFile = errorMSG
