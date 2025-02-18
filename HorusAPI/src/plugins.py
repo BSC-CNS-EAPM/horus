@@ -2521,6 +2521,7 @@ class PluginMetaModel(BaseModel):
     platforms: typing.Optional[PlatformType] = ["universal"]
     externalURL: typing.Optional[str]
     dependencies: typing.Optional[typing.List[str]] = []
+    pluginRequires: typing.Optional[typing.List[str]] = []
 
 
 class Plugin:

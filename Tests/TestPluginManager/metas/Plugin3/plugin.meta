@@ -1,0 +1,12 @@
+{
+    "id": "C",
+    "name": "Plugin C",
+    "description": "",
+    "author": "",
+    "version": "",
+    "pluginFile": "",
+    "pluginRequires": [
+        "A",
+        "B"
+    ]
+}
