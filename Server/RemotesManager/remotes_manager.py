@@ -5,6 +5,7 @@ remote connections to the run Slurm blocks.
 
 # Standard library imports
 import contextlib
+from genericpath import isfile
 import json
 import logging
 import os
@@ -451,7 +452,7 @@ class RemotesAPI:
 
         if self.isLocal:
             self.command(f"cp -r {source} {destination}")
-            return os.path.join(destination, os.path.basename(source))
+            return destination
 
         # Check if the source is a folder
         source = os.path.abspath(source)
@@ -531,7 +532,7 @@ class RemotesAPI:
             self.command(f"mkdir -p {containerFolder}")
 
             self.command(f"cp -r {source} {destination}")
-            return os.path.join(destination, os.path.basename(source))
+            return destination
 
         logging.getLogger("Horus").info("Transferring data from %s to %s", source, destination)
 

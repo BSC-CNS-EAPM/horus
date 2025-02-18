@@ -1,3 +1,4 @@
+from HorusAPI.src.plugins import PluginMetaModel
 from Server.PluginManager import PluginManager
 from Server.RemotesManager import RemotesManager
 from HorusAPI import Plugin
@@ -800,3 +801,38 @@ def test_plugin_downgrade():
         installedPath = os.path.join(pluginManager.pluginsDir, "test_plugin")
         if os.path.exists(installedPath):
             shutil.rmtree(installedPath)
+
+
+@pytest.fixture
+def PluginManagerSorter():
+    """
+    Initiate a dummy AppDelegate
+    """
+    return PluginManager("AppSupport")
+
+
+metas_path = os.path.join("Tests/TestPluginManager/metas")
+
+
+def test_successful_sort(PluginManagerSorter: PluginManager):
+
+    paths = [
+        os.path.join(metas_path, "Plugin3"),
+        os.path.join(metas_path, "Plugin1"),
+        os.path.join(metas_path, "Plugin2"),
+    ]
+
+    sorted_plugins = PluginManagerSorter._getPluginsImportOrder(paths)
+
+    # The correct order should be 1 -> 2 -> 3
+    assert [os.path.basename(p) for p in sorted_plugins] == ["Plugin1", "Plugin2", "Plugin3"]
+
+
+def test_circular_dependency(PluginManagerSorter: PluginManager):
+    paths = [
+        os.path.join(metas_path, "Plugin4"),
+        os.path.join(metas_path, "Plugin5"),
+    ]
+
+    with pytest.raises(ValueError, match="Circular dependency detected"):
+        PluginManagerSorter._getPluginsImportOrder(paths)

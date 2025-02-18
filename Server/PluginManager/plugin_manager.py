@@ -5,6 +5,7 @@ importantly, it manages the execution of the individual blocks of the plugins.
 """
 
 # Standard imports
+from collections import defaultdict, deque
 import os
 import signal
 import sys
@@ -15,7 +16,7 @@ import logging
 import json
 import shutil
 import datetime
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 from contextlib import contextmanager
 import re
 
@@ -167,6 +168,10 @@ class PluginManager(metaclass=HorusSingleton):
 
         if not os.path.exists(self.pluginsDir):
             os.makedirs(self.pluginsDir, exist_ok=True)
+
+        # Add the plugins dir to the pythonpath to access other plugins from plugins
+        sys.path.append(self.defaultPluginsDir)
+        sys.path.append(self.pluginsDir)
 
     def installPlugin(self, socketio: SocketIO, file: typing.Optional[str] = None):
         """
@@ -576,8 +581,12 @@ class PluginManager(metaclass=HorusSingleton):
         # Remove the plugin folder
         try:
             self._preRemovePlugin(pluginPath)
-            shutil.rmtree(pluginPath, ignore_errors=True)
             self._postRemovePlugin(pluginPath)
+
+            # Delete the config and the plugin
+            shutil.rmtree(os.path.join(self.appSupportDir, "config", plugin.id))
+            shutil.rmtree(pluginPath, ignore_errors=True)
+
         except Exception as exc:
             raise Exception(f"{exc}. Try restarting the app") from exc
 
@@ -618,7 +627,8 @@ class PluginManager(metaclass=HorusSingleton):
         self.loadedPlugins: list[Plugin] = []
         self.errorPlugins: list[Plugin] = []
         pluginPaths = self._listPluginsPaths()
-        for pth in pluginPaths:
+
+        for pth in self._getPluginsImportOrder(pluginPaths):
             try:
                 self._loadPlugin(pth)
             except Exception as e:
@@ -658,6 +668,61 @@ class PluginManager(metaclass=HorusSingleton):
 
         self.pluginChanges = False
 
+    def _getPluginsImportOrder(self, pluginPaths: list[str]) -> list[str]:
+        """
+        Based on each plugin's pluginRequires metadata,
+        set the correct order for import order
+        """
+
+        class MetaPath(BaseModel):
+            meta: PluginMetaModel
+            p: str
+
+        # Get the metadata for all plugins
+        metas = [
+            MetaPath(**{"meta": self._loadPluginMeta(p), "p": p})
+            for p in pluginPaths
+            if self._loadPluginMeta(p) is not None
+        ]
+
+        # Build a graph based on plugin dependencies
+        graph = defaultdict(list)
+        in_degree = {meta.meta.id: 0 for meta in metas}
+
+        for meta in metas:
+            for dep in meta.meta.pluginRequires or []:
+                graph[dep].append(meta.meta.id)
+                in_degree[meta.meta.id] += 1
+
+        # Collect plugins with no dependencies
+        queue = deque([meta for meta in metas if in_degree[meta.meta.id] == 0])
+        sorted_plugins: list[str] = []
+
+        while queue:
+            current = queue.popleft()
+            sorted_plugins.append(current.p)
+
+            for dependent in graph[current.meta.id]:
+                in_degree[dependent] -= 1
+                if in_degree[dependent] == 0:
+                    queue.append(next(m for m in metas if m.meta.id == dependent))
+
+        if len(sorted_plugins) != len(metas):
+
+            repeated = ""
+            # Get the wrong values
+            for p in sorted_plugins:
+                c = sorted_plugins.count(p)
+                if c > 1:
+                    repeated += f"{p} was required {c} times. "
+
+            raise ValueError(
+                "Circular dependency detected among plugins. If you are the developer of such plugins, please update the plugin.meta file accordingly."
+                f" Errors were found for the following plugins: {repeated}"
+            )
+
+        return sorted_plugins
+
     def _loadPlugin(
         self, pluginPath: str, appendToLoaded: bool = True
     ) -> typing.Optional[Plugin]:
@@ -672,6 +737,10 @@ class PluginManager(metaclass=HorusSingleton):
 
         try:
             plugin = self._checkPlugin(pluginPath)
+
+            if not plugin:
+                return None
+
             logging.getLogger("Horus").info(
                 "Loaded plugin '%s' with ID '%s'", plugin.pluginMeta.name, plugin.id
             )
@@ -704,33 +773,31 @@ class PluginManager(metaclass=HorusSingleton):
         # Return the plugin in case its needed
         return plugin
 
-    def _checkPlugin(self, pluginDir) -> Plugin:
+    def _loadPluginMeta(self, pluginDir: str) -> typing.Union[PluginMetaModel, None]:
         """
-        Checks if a plugin is valid.
-
-        :param pluginPath: The path to the plugin folder
+        Loads the PluginMeta from the given path
         """
 
-        # Load the plugin.meta
         pluginMetaPath = os.path.join(pluginDir, "plugin.meta")
-        logging.getLogger("Horus").debug("Loading plugin meta: %s", pluginMetaPath)
 
         if not os.path.exists(pluginMetaPath):
             # If the plugin.meta does not exist, but the plugin is in the default plugins
             # then we can assume that this folder is just the config folder of the plugin
 
-            pluginID = os.path.basename(pluginDir)
-            try:
-                self._getPluginByID(pluginID)
-            except PluginNotFoundError as e:
-                # A exception is raised here if the plugin is not loaded
-                # That means that there is a folder in the Plugins directory that does
-                # not correspond with any plugin configuration nor loaded plugin.
-                # Because the directory also does not  contain a plugin.meta file
-                # it will get ignored.
-                raise PluginMetaNotFound("The plugin does not contain a plugin.meta file.") from e
+            return None
 
-            raise DefaultPluginConfigException
+            # pluginID = os.path.basename(pluginDir)
+            # try:
+            #     self._getPluginByID(pluginID)
+            # except PluginNotFoundError as e:
+            #     # A exception is raised here if the plugin is not loaded
+            #     # That means that there is a folder in the Plugins directory that does
+            #     # not correspond with any plugin configuration nor loaded plugin.
+            #     # Because the directory also does not  contain a plugin.meta file
+            #     # it will get ignored.
+            #     raise PluginMetaNotFound("The plugin does not contain a plugin.meta file.") from e
+
+            # raise DefaultPluginConfigException
 
         # Load the plugin.meta
         with open(pluginMetaPath, "r", encoding="utf-8") as f:
@@ -741,13 +808,15 @@ class PluginManager(metaclass=HorusSingleton):
 
         # Check that the plugin.meta is valid with the schema
         try:
-            pluginMeta = PluginMetaModel(**pluginMeta)
+            pluginMetaModel = PluginMetaModel(**pluginMeta)
 
             self.assertPluginValidForThisPlatform(
-                pluginMeta.minHorusVersion, pluginMeta.maxHorusVersion, pluginMeta.platforms
+                pluginMetaModel.minHorusVersion,
+                pluginMetaModel.maxHorusVersion,
+                pluginMetaModel.platforms,
             )
 
-            pluginMeta = pluginMeta.dict()
+            return pluginMetaModel
 
         except ValidationError as e:
             for error in e.errors():
@@ -757,10 +826,26 @@ class PluginManager(metaclass=HorusSingleton):
         except Exception as e:
             raise ValueError(f"Invalid plugin meta '{pluginMetaPath}'. {e}") from e
 
+    def _checkPlugin(self, pluginDir) -> typing.Union[Plugin, None]:
+        """
+        Checks if a plugin is valid.
+
+        :param pluginPath: The path to the plugin folder
+        """
+
+        # Load the plugin.meta
+        logging.getLogger("Horus").debug("Loading plugin meta at: %s", pluginDir)
+        pluginMetaModel = self._loadPluginMeta(pluginDir)
+
+        if not pluginMetaModel:
+            return None
+
+        pluginMeta = pluginMetaModel.dict()
+
         # Dependencies for the plugin, there they will be installed
         # inside a /lib/pythonX.X/site-packages folder
         # (view the getFullPluginDepsDir function)
-        depsDir = getFullPluginDepsDir(pluginDir)
+        depsDir = PluginDepsBase.getFullPluginDepsDir(pluginDir)
 
         # Create the deps folder
         if not os.path.exists(depsDir):
@@ -788,7 +873,12 @@ class PluginManager(metaclass=HorusSingleton):
 
         pluginPath = os.path.join(pluginDir, entryPoint)
 
-        with PluginDeps(pluginDir):
+        requirementsPaths = [
+            os.path.join(self._getPluginByID(p)._path)
+            for p in pluginMetaModel.pluginRequires or []
+        ]
+
+        with PluginDepsBase([pluginDir] + requirementsPaths):
 
             # Install dependencies if the deps dir exists
             if depsDir is not None and pluginMeta.get("dependencies", None):
@@ -798,7 +888,7 @@ class PluginManager(metaclass=HorusSingleton):
             try:
                 pluginDirPath = os.path.dirname(pluginPath)
                 os.chdir(pluginDirPath)
-                return PluginDeps.subprocessCall(
+                return SubprocessManager.subprocessCall(
                     self._internalLoadPluginInModule, pluginPath, entryPoint
                 )
             finally:
@@ -917,7 +1007,7 @@ class PluginManager(metaclass=HorusSingleton):
 
         dependencies = pluginMeta.get("dependencies", [])
         pluginName = pluginMeta.get("name", "Unknown")
-        fullDepsDir = getFullPluginDepsDir(pluginPath)
+        fullDepsDir = PluginDepsBase.getFullPluginDepsDir(pluginPath)
 
         # Create a new working set that includes the custom directory
         pluginWorkingSet = pkg_resources.WorkingSet(entries=[fullDepsDir])
@@ -1028,7 +1118,7 @@ class PluginManager(metaclass=HorusSingleton):
         if os.path.isfile(preInstPath):
             print("Executing pre-install script")
             try:
-                callPopen(["sh", preInstPath], cwd=pluginDir)
+                SubprocessManager.callPopen(["sh", preInstPath], cwd=pluginDir)
             except Exception as e:
                 raise Exception("Error running pre-install script") from e
 
@@ -1037,7 +1127,7 @@ class PluginManager(metaclass=HorusSingleton):
         if os.path.isfile(postInstPath):
             print("Executing post-install script")
             try:
-                callPopen(["sh", postInstPath], cwd=pluginDir)
+                SubprocessManager.callPopen(["sh", postInstPath], cwd=pluginDir)
             except Exception as e:
                 raise Exception("Error running post-install script") from e
 
@@ -1046,7 +1136,7 @@ class PluginManager(metaclass=HorusSingleton):
         if os.path.isfile(preRMPath):
             print("Executing pre-remove script")
             try:
-                callPopen(["sh", preRMPath], cwd=pluginDir)
+                SubprocessManager.callPopen(["sh", preRMPath], cwd=pluginDir)
             except Exception as e:
                 raise Exception("Error running pre-remove script") from e
 
@@ -1055,7 +1145,7 @@ class PluginManager(metaclass=HorusSingleton):
         if os.path.isfile(postRMPath):
             print("Executing post-remove script")
             try:
-                callPopen(["sh", postRMPath], cwd=pluginDir)
+                SubprocessManager.callPopen(["sh", postRMPath], cwd=pluginDir)
             except Exception as e:
                 raise Exception("Error running post-remove script") from e
 
@@ -1105,7 +1195,7 @@ class PluginManager(metaclass=HorusSingleton):
 
         # Define the environment variables to correctly run the external python interpreter
         env = {
-            "PYTHONPATH": getFullPluginDepsDir(pluginPath),
+            "PYTHONPATH": PluginDepsBase.getFullPluginDepsDir(pluginPath),
             "PATH": path,
         }
 
@@ -1127,7 +1217,7 @@ class PluginManager(metaclass=HorusSingleton):
             "install",
             *dep.split(" "),
             "--prefix",
-            getFullPluginDepsDir(pluginPath, full=False),
+            PluginDepsBase.getFullPluginDepsDir(pluginPath, full=False),
             "--upgrade",
             "--no-input",
             "--ignore-installed",
@@ -1136,7 +1226,7 @@ class PluginManager(metaclass=HorusSingleton):
 
         try:
             # Here the embedded pip will be "python" in uncompiled mode! Remember...
-            callPopen([*interpreter, *command], env=env)
+            SubprocessManager.callPopen([*interpreter, *command], env=env)
         except Exception as exc:
 
             logging.getLogger("Horus").error(
@@ -1150,7 +1240,7 @@ class PluginManager(metaclass=HorusSingleton):
                 logging.getLogger("Horus").error(
                     f"Trying with external python interpreter '{' '.join(interpreter)}'."
                 )
-                callPopen([*interpreter, *command], env=env)
+                SubprocessManager.callPopen([*interpreter, *command], env=env)
             except Exception as exc2:
                 msg = (
                     f"Failed to install dependency {dep}. External interpreter error: {str(exc2)}"
@@ -1431,10 +1521,12 @@ class PluginManager(metaclass=HorusSingleton):
         startTime = datetime.datetime.now().timestamp()
         exception: typing.Union[None, Exception] = None
         try:
-            with PluginDeps(plugin._path):
+            with PluginDepsPlugin(plugin):
                 with chdir(flowDir):
                     # Paramiko does not work on subprocess! Need to update to connect inside the block subprocess instead
-                    outputs = PluginDeps.subprocessBlock(block, appSupportDir, resetRemoteBlock)
+                    outputs = SubprocessManager.subprocessBlock(
+                        block, appSupportDir, resetRemoteBlock
+                    )
         except Exception as e:
 
             # Get the full traceback only for development / debug mode
@@ -1499,7 +1591,7 @@ class PluginManager(metaclass=HorusSingleton):
             "description": pg.description,
             "html": f"{p._path}/Pages/{pg.html}",
             "url": f"/plugins/pages/{pg.id}",
-            "deps": getFullPluginDepsDir(p._path),
+            "deps": PluginDepsBase.getFullPluginDepsDir(p._path),
             "pluginDir": p._path,
             "hidden": pg.hidden,
             "logo": p.logo,
@@ -1594,7 +1686,7 @@ class PluginManager(metaclass=HorusSingleton):
         # pluginID = block.id.split(".")[0]
         # plugin = self._getPluginByID(pluginID)
 
-        configDir = os.path.join(plugin._path, "config")
+        configDir = os.path.join(self.appSupportDir, "config", plugin.id)
 
         # Create it only if the plugin needs configs
         if not os.path.exists(configDir):
@@ -1607,11 +1699,6 @@ class PluginManager(metaclass=HorusSingleton):
                 logging.getLogger("Horus").warning(error)
 
                 raise Exception(error) from ose
-
-        # If the config folder is inside a default plugin (read-only)
-        # move it to the user's app support dir
-        if plugin.default:
-            configDir = os.path.join(self.pluginsDir, plugin.id, "config")
 
         # Find the block config file
         pluginConfigFile = os.path.join(configDir, f"{plugin.id}_{remote}.json")
@@ -1778,7 +1865,7 @@ class PrintSocketCapturer(PrintCapturer):
         self.socketio.sleep(0)
 
 
-class PluginDeps:
+class PluginDepsBase:
     """
     Enters a context where the dependencies of a plugin are added to the PYTHONPATH.
     """
@@ -1788,15 +1875,29 @@ class PluginDeps:
     The initial python path before entering the context.
     """
 
+    paths: list[str]
+    """
+    Extra paths to be added from the other plugins requirements
+    """
+
     intialModules: dict[str, ModuleType]
     """
     The initial modules before entering the context.
     """
 
-    def __init__(self, pluginDir: str):
+    def __init__(self, paths: list[str]):
+        """
+        Will add the specified plugin folder to the python path including:
+
+        - The Include folder
+        - The deps folder
+        - Recursively, the same for the pluginRequires
+        """
+
+        self.paths = paths
+
         self.initialPath = sys.path.copy()
         self.intialModules = sys.modules.copy()
-        self.pluginDir = pluginDir
 
     def __enter__(self):
         self._includeDepsPath()
@@ -1810,64 +1911,132 @@ class PluginDeps:
         """
         Adds the deps folder of the plugin to the python path.
         """
-        depsDir = getFullPluginDepsDir(self.pluginDir)
-        includeDir = os.path.join(self.pluginDir, "Include")
-        sys.path.insert(0, depsDir)
-        sys.path.insert(0, includeDir)
 
-        # Once pyinstaller is compiled, distributions inside the deps
-        # directory are not correctly detected by pkg_resources.
-        # To fix this, we need to add the deps directory to the
-        # pkg_resources working set
+        def addPath(path: str):
+            depsDir = PluginDepsBase.getFullPluginDepsDir(path)
+            includeDir = os.path.join(path, "Include")
+            sys.path.insert(0, depsDir)
+            sys.path.insert(0, includeDir)
 
-        # Add the deps directory to the working set
-        pkg_resources.working_set.add_entry(depsDir)
+            # Once pyinstaller is compiled, distributions inside the deps
+            # directory are not correctly detected by pkg_resources.
+            # To fix this, we need to add the deps directory to the
+            # pkg_resources working set
 
-        # Add the include directory to the working set
-        pkg_resources.working_set.add_entry(includeDir)
+            # Add the deps directory to the working set
+            pkg_resources.working_set.add_entry(depsDir)
+
+            # Add the include directory to the working set
+            pkg_resources.working_set.add_entry(includeDir)
+
+        for p in self.paths:
+            addPath(p)
 
     def _removeDepsPath(self):
         """
         Removes the deps folder of the plugin from the python path.
         """
-        depsDir = getFullPluginDepsDir(self.pluginDir)
-        includeDir = os.path.join(self.pluginDir, "Include")
 
-        # Remove them also from the sys.modules
-        # WARNING: With the creation of subprocessBlock and subprocessCall,
-        # this should not be necessary anymore. But we will leave just in case.
-        for key, module in list(sys.modules.items()):
+        def removePath(path: str):
+            depsDir = PluginDepsBase.getFullPluginDepsDir(path)
+            includeDir = os.path.join(path, "Include")
 
-            # Check if its a new module, otherwise skip it because it is required by Horus
-            if key in self.intialModules:
-                continue
+            # Remove them also from the sys.modules
+            # WARNING: With the creation of subprocessBlock and subprocessCall,
+            # this should not be necessary anymore. But we will leave just in case.
+            for key, module in list(sys.modules.items()):
 
-            # Get the module path
-            modulePath = module.__file__ if hasattr(module, "__file__") else None
-
-            # If the module is in the deps folder, remove it
-            if modulePath is not None and (
-                modulePath.startswith(includeDir) or modulePath.startswith(depsDir)
-            ):
+                # Check if its a new module, otherwise skip it because it is required by Horus
                 if key in self.intialModules:
-                    logging.getLogger("Horus").warning(
-                        "Module %s used by plugin %s is in the App default modules. "
-                        + "The App version was used instead of the Plugin version.",
-                        key,
-                        self.pluginDir,
-                    )
+                    continue
 
-            # Unload the module
-            del sys.modules[key]
+                # Get the module path
+                modulePath = module.__file__ if hasattr(module, "__file__") else None
 
-        # Restore the initial python path
-        sys.path = self.initialPath
+                # If the module is in the deps folder, remove it
+                if modulePath is not None and (
+                    modulePath.startswith(includeDir) or modulePath.startswith(depsDir)
+                ):
+                    if key in self.intialModules:
+                        logging.getLogger("Horus").warning(
+                            "Module %s used by plugin %s is in the App default modules. "
+                            + "The App version was used instead of the Plugin version.",
+                            key,
+                            path,
+                        )
 
-        # Remove the deps directory from the working set
-        pkg_resources.working_set.entries.remove(depsDir)
+                # Unload the module
+                del sys.modules[key]
 
-        # Remove the include directory from the working set
-        pkg_resources.working_set.entries.remove(includeDir)
+            # Restore the initial python path
+            sys.path = self.initialPath
+
+            # Remove the deps directory from the working set
+            pkg_resources.working_set.entries.remove(depsDir)
+
+            # Remove the include directory from the working set
+            pkg_resources.working_set.entries.remove(includeDir)
+
+        for p in self.paths:
+            removePath(p)
+
+    @staticmethod
+    def getFullPluginDepsDir(pluginPath: str, full=True) -> str:
+        """
+        Returns the true path to the dependencies directory for a given
+        plugin for appending to PYTHONPATH.
+
+        Args:
+            pluginPath (str): The path to the plugin directory.
+
+        Returns:
+            str: The path to the dependencies directory.
+
+        The dependencies directory is located at {pluginPath}/deps/lib/{pythonVersion}/site-packages,
+        where {pythonVersion} is the first three characters of the Python version.
+
+        This function creates the dependencies directory if it does not already exist.
+
+        Example:
+            >>> getPluginDepsDir("/path/to/plugin")
+            "/path/to/plugin/deps/lib/python3.9/site-packages"
+        """
+        # We need to return a path of the form {pluginPath}/lib/python{pythonVersion}/site-packages
+        depsDir = os.path.join(pluginPath, "deps")
+
+        if not full:
+            return depsDir
+
+        # Get the python version
+        pythonVersion = sys.version[:3]
+
+        # Return the path
+        return os.path.join(depsDir, "lib", "python" + str(pythonVersion), "site-packages")
+
+
+class PluginDepsPlugin(PluginDepsBase):
+    """
+    Pass a plugin instance to the deps
+    """
+
+    def __init__(self, plugin: Plugin):
+
+        # Get the paths from the plugin + the pluginRequirements
+
+        paths = [plugin._path]
+
+        pManager = PluginManager()
+        for r in plugin.pluginMeta.pluginRequires or []:
+            try:
+                requirement = pManager._getPluginByID(r)
+                paths.append(requirement._path)
+            except PluginNotFoundError:
+                pass
+
+        super().__init__(paths)
+
+
+class SubprocessManager:
 
     @classmethod
     def subprocessCall(cls, fn, *args, **kwargs):
@@ -2022,71 +2191,38 @@ class PluginDeps:
         # If everything went well, return the outputs
         return result["outputs"]
 
+    @staticmethod
+    def callPopen(command: list[str], cwd: str = ".", env: typing.Optional[dict] = None):
+        """
+        Calls subprocess.Popen with a context manager and prints the STDOUT and STDERR
 
-def callPopen(command: list[str], cwd: str = ".", env: typing.Optional[dict] = None):
-    """
-    Calls subprocess.Popen with a context manager and prints the STDOUT and STDERR
+        Raises an Exception if command fails
 
-    Raises an Exception if command fails
+        Params
+        ------
+        - command: list[str]: a list of strings indicating the command and its arguments
+        - cwd: str: The current working directory. Default = "."
+        - env: dict: A dictionary containing environment variables for the command. Default = None
+        """
+        with subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            stdin=subprocess.DEVNULL,
+            cwd=cwd,
+            text=True,
+            env=env,
+        ) as p:
+            # Print the output
+            if p.stdout is None:
+                raise Exception(f"Could not get the output of {command}.")
 
-    Params
-    ------
-    - command: list[str]: a list of strings indicating the command and its arguments
-    - cwd: str: The current working directory. Default = "."
-    - env: dict: A dictionary containing environment variables for the command. Default = None
-    """
-    with subprocess.Popen(
-        command,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        stdin=subprocess.DEVNULL,
-        cwd=cwd,
-        text=True,
-        env=env,
-    ) as p:
-        # Print the output
-        if p.stdout is None:
-            raise Exception(f"Could not get the output of {command}.")
+            for line in p.stdout:
+                print(line, end="")
 
-        for line in p.stdout:
-            print(line, end="")
+            # Wait for the process to finish
+            p.wait()
 
-        # Wait for the process to finish
-        p.wait()
-
-        # Check the return code
-        if p.returncode != 0 and p.returncode is not None:
-            raise Exception(f"Command failed: '{' '.join(command)}'")
-
-
-def getFullPluginDepsDir(pluginPath: str, full=True) -> str:
-    """
-    Returns the true path to the dependencies directory for a given
-    plugin for appending to PYTHONPATH.
-
-    Args:
-        pluginPath (str): The path to the plugin directory.
-
-    Returns:
-        str: The path to the dependencies directory.
-
-    The dependencies directory is located at {pluginPath}/deps/lib/{pythonVersion}/site-packages,
-    where {pythonVersion} is the first three characters of the Python version.
-
-    This function creates the dependencies directory if it does not already exist.
-
-    Example:
-        >>> getPluginDepsDir("/path/to/plugin")
-        "/path/to/plugin/deps/lib/python3.9/site-packages"
-    """
-    # We need to return a path of the form {pluginPath}/lib/python{pythonVersion}/site-packages
-    depsDir = os.path.join(pluginPath, "deps")
-
-    if not full:
-        return depsDir
-
-    # Get the python version
-    pythonVersion = sys.version[:3]
-
-    # Return the path
-    return os.path.join(depsDir, "lib", "python" + str(pythonVersion), "site-packages")
+            # Check the return code
+            if p.returncode != 0 and p.returncode is not None:
+                raise Exception(f"Command failed: '{' '.join(command)}'")

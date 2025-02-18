@@ -6,6 +6,28 @@ import os
 from HorusAPI import PluginVariable, PluginBlock, VariableTypes
 
 
+inputPath = PluginVariable(
+    name="Path",
+    id="path",
+    description="The path in the remote to download the data from.",
+    type=VariableTypes.STRING,
+)
+
+destinationPath = PluginVariable(
+    name="Destination path",
+    id="destinationPath",
+    description="The path to save the data to. (Default to current directory)",
+    type=VariableTypes.STRING,
+)
+
+destination_path_output = PluginVariable(
+    id="destination_output",
+    name="Local destination path",
+    description="Full path to downloaded file",
+    type=VariableTypes.STRING,
+)
+
+
 # Create a block that adds a given pdb to Mol*
 def getData(block: PluginBlock):
     """
@@ -26,24 +48,12 @@ def getData(block: PluginBlock):
         os.makedirs(destinationPathValue)
 
     # Get the data
-    block.remote.getData(inputPathValue, destinationPathValue)
+    destinationPathValue = block.remote.getData(inputPathValue, destinationPathValue)
 
     print(f"Data saved at current directory ({destinationPathValue})")
 
+    block.setOutput(destination_path_output.id, destinationPathValue)
 
-inputPath = PluginVariable(
-    name="Path",
-    id="path",
-    description="The path in the remote to download the data from.",
-    type=VariableTypes.STRING,
-)
-
-destinationPath = PluginVariable(
-    name="Destination path",
-    id="destinationPath",
-    description="The path to save the data to. (Default to current directory)",
-    type=VariableTypes.STRING,
-)
 
 getDataBlock = PluginBlock(
     name="Get data",
@@ -51,7 +61,7 @@ getDataBlock = PluginBlock(
     action=getData,
     inputs=[inputPath],
     variables=[destinationPath],
+    outputs=[destination_path_output],
     id="get_data",
-            category="Files"
-
+    category="Files",
 )

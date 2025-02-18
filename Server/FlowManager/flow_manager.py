@@ -239,7 +239,7 @@ class Flow:
     """
 
     # WARNING: Properties added here may be updated by the blocks during their actions.
-    # Please if you add any property here, make sure to update the PluginDeps.subprocessBlock
+    # Please if you add any property here, make sure to update the SubprocessManager.subprocessBlock
     # classmethod to include the new property in the subprocess block
 
     terminalOutput: typing.List[str]

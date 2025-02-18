@@ -64,7 +64,7 @@ def mock_remotes_api_local():
 def test_transfer_to_local(mock_remotes_api_local):
 
     # Mock the subprocess.run function
-    with patch("subprocess.Popen", return_value=MagicMock(returncode=0)) as mock_run:
+    with patch("subprocess.run", return_value=MagicMock(returncode=0)) as mock_run:
 
         source_path = "/tmp/path/to/local/file.txt"
 
@@ -73,8 +73,7 @@ def test_transfer_to_local(mock_remotes_api_local):
         with open(source_path, "w") as f:
             f.write("Test content")
 
-        destination_path = "/tmp/remote/path"
-        expected_path = "/tmp/remote/path/file.txt"
+        destination_path = "/tmp/remote/file.txt"
 
         # Mocking internal transfer function
         mock_remotes_api_local._internalTransferTo = MagicMock()
@@ -83,26 +82,31 @@ def test_transfer_to_local(mock_remotes_api_local):
         result = mock_remotes_api_local.transferTo(source_path, destination_path)
 
         # Assertions
-        assert result == expected_path
+        assert result == destination_path
         mock_remotes_api_local._internalTransferTo.assert_not_called()
 
         # Assert that subprocess.run was called with the correct arguments
         mock_run.assert_any_call(
-            "cp -r /tmp/path/to/local/file.txt /tmp/remote/path", shell=True, stdout=-1, stderr=-1
+            f"cp -r {source_path} {destination_path}",
+            shell=True,
+            stdout=-1,
+            stderr=-1,
+            stdin=None,
+            timeout=None,
+            text=True,
         )
 
 
 def test_transfer_from_local(mock_remotes_api_local):
     source_path = "/tmp/path/to/local/file.txt"
-    destination_path = "/tmp/remote/path"
-    expected_path = "/tmp/remote/path/file.txt"
+    destination_path = "/tmp/remote/path/file.txt"
 
     # Create the source path
     os.makedirs(os.path.dirname(source_path), exist_ok=True)
     with open(source_path, "w") as f:
         f.write("Test content")
 
-    with patch("subprocess.Popen", return_value=MagicMock(returncode=0)) as mock_run:
+    with patch("subprocess.run", return_value=MagicMock(returncode=0)) as mock_run:
 
         # Mocking internal transfer function
         mock_remotes_api_local._internalTransferFrom = MagicMock()
@@ -111,12 +115,18 @@ def test_transfer_from_local(mock_remotes_api_local):
         result = mock_remotes_api_local.transferFrom(source_path, destination_path)
 
         # Assertions
-        assert result == expected_path
+        assert result == destination_path
         mock_remotes_api_local._internalTransferFrom.assert_not_called()
 
         # Assert that subprocess.run was called with the correct arguments
         mock_run.assert_any_call(
-            "cp -r /tmp/path/to/local/file.txt /tmp/remote/path", shell=True, stdout=-1, stderr=-1
+            f"cp -r {source_path} {destination_path}",
+            shell=True,
+            stdout=-1,
+            stderr=-1,
+            stdin=None,
+            timeout=None,
+            text=True,
         )
 
 
