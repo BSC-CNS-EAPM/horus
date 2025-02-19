@@ -5,7 +5,6 @@ remote connections to the run Slurm blocks.
 
 # Standard library imports
 import contextlib
-from genericpath import isfile
 import json
 import logging
 import os
@@ -124,16 +123,21 @@ class RemotesAPI:
             return
 
         # Set the remote details
-        self.name = selectedRemote.get("name", "Unnamed Remote")
-        self.host = selectedRemote.get("host", None)
-        self.port = selectedRemote.get("port", 22)
-        self.username = selectedRemote.get("username", None)
-        self.password = selectedRemote.get("password", None)
-        self.key = selectedRemote.get("keyPath", None)
-        self.proxyCommand = selectedRemote.get("proxyCommand", None)
-        self.remoteName = selectedRemote.get("name", "Unnamed Remote")
-        self.workDir = selectedRemote.get("workDir", "~/.horus/")
-        self.loadProfile = selectedRemote.get("loadProfile", False)
+        self.name = selectedRemote.get("name") or "Unnamed Remote"
+        host = selectedRemote.get("host")
+
+        if not host:
+            raise ValueError(f"Invalid host for remote {selectedRemote}")
+
+        self.host = host
+        self.port = selectedRemote.get("port") or 22
+        self.username = selectedRemote.get("username") or None
+        self.password = selectedRemote.get("password") or None
+        self.key = selectedRemote.get("keyPath") or None
+        self.proxyCommand = selectedRemote.get("proxyCommand") or None
+        self.remoteName = selectedRemote.get("name") or "Unnamed Remote"
+        self.workDir = selectedRemote.get("workDir") or self.workDir
+        self.loadProfile = selectedRemote.get("loadProfile") or self.loadProfile
 
     def connect(self):
         """
