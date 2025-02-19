@@ -2194,11 +2194,12 @@ class HorusServer:
         Setup the plugin pages
         """
 
-        from Server.PluginManager import PluginDepsBase, SubprocessManager
+        from HorusAPI import PluginPage
+        from Server.PluginManager import PluginDepsPlugin, SubprocessManager
 
         # Create a wrapper function to add to
         # python path the plugin deps folder
-        def viewFunctionWrapper(func, page, endPoint):
+        def viewFunctionWrapper(func, page: PluginPage, endPoint):
             @wraps(func)
             def wrapper(*args, **kwargs):
                 try:
@@ -2214,7 +2215,10 @@ class HorusServer:
                             page._pageInfo["id"]
                         )
 
-                    with PluginDepsBase(page._pageInfo["pluginDir"]):
+                    # Get the plugin ID
+                    p = self.pluginManager._getPluginByID(page._pageInfo["pluginID"])
+
+                    with PluginDepsPlugin(p):
                         result = SubprocessManager.subprocessCall(
                             endPoint.function, *args, **kwargs
                         )

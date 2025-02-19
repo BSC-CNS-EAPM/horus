@@ -1587,6 +1587,7 @@ class PluginManager(metaclass=HorusSingleton):
         return {
             "id": pg.id,
             "plugin": p.pluginMeta.name,
+            "pluginID": p.id,
             "name": pg.name,
             "description": pg.description,
             "html": f"{p._path}/Pages/{pg.html}",
@@ -1624,7 +1625,7 @@ class PluginManager(metaclass=HorusSingleton):
         else:
             return None
 
-    def getPagesObject(self):
+    def getPagesObject(self) -> list[PluginPage]:
         """
         Returns a list of all the pages of all the plugins as Pages instances.
         """
