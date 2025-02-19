@@ -744,6 +744,7 @@ class PluginVariable:
         }
 
         if not minimal:
+            varDict["defaultValue"] = self.defaultValue
             varDict["name"] = self.name
             varDict["category"] = self.category
             varDict["description"] = self.description
