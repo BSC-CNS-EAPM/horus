@@ -2194,7 +2194,7 @@ class SlurmJob(HorusPydanticModel):
                 # Check with sacct
                 try:
                     self.state = Status(
-                        remote.command(f"sacct -j {self.job_id} -o 'JobID' --noheader -X")
+                        remote.command(f"sacct -j {self.job_id} -o 'State' --noheader -X")
                     )
                 except CommandFailed as e:
                     # Assume The job has ended
