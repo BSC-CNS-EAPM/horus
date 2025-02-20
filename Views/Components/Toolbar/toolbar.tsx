@@ -88,7 +88,7 @@ export default function HorusToolbar() {
   }, [dockApi]);
 
   const toggleSmiles = useCallback(() => {
-    togglePanel({
+    addPanel({
       dockApi: dockApi,
       component: PANEL_REGISTRY.smiles.component,
       panelID: PANEL_REGISTRY.smiles.id,
@@ -96,7 +96,7 @@ export default function HorusToolbar() {
   }, [dockApi]);
 
   const toggleMolstar = useCallback(() => {
-    togglePanel({
+    addPanel({
       dockApi: dockApi,
       component: PANEL_REGISTRY.molstar.component,
       panelID: PANEL_REGISTRY.molstar.id,
