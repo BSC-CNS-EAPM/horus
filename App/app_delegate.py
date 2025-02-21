@@ -535,23 +535,20 @@ class AppDelegate(metaclass=HorusSingleton):
 
         # If we are on macOS, set the enviornment to disable some thread safety
         # This is needed for subprocessing the blocks
-        if self.platform == "darwin" and not "OBJC_DISABLE_INITIALIZE_FORK_SAFETY" in os.environ:
+        if self.platform == "darwin" and not "DARWIN_RESTARTED" in os.environ:
             print("Appliying environment patches for macOS thread safety issues.")
 
-            os.putenv("OBJC_DISABLE_INITIALIZE_FORK_SAFETY", "YES")
-            os.putenv("DISABLE_SPRING", "YES")
             os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
             os.environ["DISABLE_SPRING"] = "YES"
+            os.environ["DARWIN_RESTARTED"] = "YES"
 
-            if self.isCompiled:
+            # Restart the appplication to make sure that all changes are applied
+            p = subprocess.Popen(
+                [sys.executable, *sys.argv],
+                env={**os.environ, "PYINSTALLER_RESET_ENVIRONMENT": "1"},
+            )
 
-                # Restart the appplication to make sure that all changes are applied
-                subprocess.Popen(
-                    [sys.executable], env={**os.environ, "PYINSTALLER_RESET_ENVIRONMENT": "1"}
-                )
-            else:
-                subprocess.Popen([sys.executable, *sys.argv])
-
+            p.wait()
             sys.exit(0)
 
         # Always use fork for multiprocesses, as flows need this to work properly
