@@ -669,7 +669,10 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
         // If we are dropping a file, do not set the path
         // Except for App mode, in that case leave the path
-        if (openFile && !window.horusInternal.isDesktop) {
+        if (
+          (openFile && !window.horusInternal.isDesktop) ||
+          openedFlow.isPreset
+        ) {
           openedFlow.path = null;
         }
 

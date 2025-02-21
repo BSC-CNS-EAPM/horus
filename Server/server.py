@@ -1049,12 +1049,12 @@ class HorusServer:
                 # Get the smilesState
                 smilesState = flow.getSmilesState()
 
-                # On webapp mode, remove the full path
-                if self._isForUser and flow.path:
+                # On webapp mode, remove the full path except if its a preset flow
+                if self._isForUser and flow.path and not flow.isPreset:
                     flow.path = str(UserFileExplorer(path, currentUser).getRelativePath())
 
                 # Get the flow JSON
-                flowJson = flow.encode(minimal=False)
+                flowJson = {**flow.encode(minimal=False), "preset": flow.isPreset}
 
                 success = {"ok": True, "flow": flowJson}
 

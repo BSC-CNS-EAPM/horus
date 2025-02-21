@@ -1915,10 +1915,6 @@ class FlowManager:
         if not loadedFLow:
             raise Exception("Flow not found.")
 
-        # Replace the savedID and the flow path so
-        # the forntend can save it to another location
-        loadedFLow.path = None
-
         return loadedFLow
 
     _flowProcesses: typing.Dict[str, mp.Process] = {}
