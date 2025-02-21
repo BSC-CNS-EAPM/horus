@@ -452,17 +452,6 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
           : [0];
       placedIDCounter.current = Math.max(...placedIDs) + 1;
 
-      if (openedFlow.terminalOutput.length > 0) {
-        window.horusTerm.storedMessages = openedFlow.terminalOutput;
-
-        // Print all stored messages if the terminal is mounted
-        window.horusTerm.ref?.current?.pushToStdout(
-          window.horusTerm.storedMessages
-            ? window.horusTerm.storedMessages.join("\n")
-            : ""
-        );
-      }
-
       if (await applyActions(openedFlow)) {
         // Save the mol* state after applying the actions (will clear the extensionActions too)
         await updateMolstarState();
@@ -740,7 +729,6 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
   const serializeFlow = useCallback((): Flow => {
     return {
       ...flow,
-      terminalOutput: window.horusTerm.storedMessages,
     };
   }, [flow]);
 
@@ -1601,12 +1589,6 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
     resetHistory();
 
-    // Clear the terminal if present
-    if (window.horusTerm.ref && window.horusTerm.ref.current) {
-      window.horusTerm.ref.current.clearStdout();
-    }
-    window.horusTerm.storedMessages = [];
-
     setFlowLoading(false);
 
     // Clean the url
@@ -1946,12 +1928,6 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
           status: FlowStatus.QUEUED,
         } as Flow;
       });
-
-      if (resetFlow) {
-        // Clear the terminal if present
-        window.horusTerm.ref?.current?.clearStdout();
-        window.horusTerm.storedMessages = [];
-      }
 
       const response = await horusPost(
         "/api/plugins/executeflow",

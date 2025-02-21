@@ -51,7 +51,6 @@ declare global {
     // Console
     horusTerm: {
       ref: React.RefObject<Terminal> | null;
-      storedMessages: string[];
     };
     // Horus flow builder
     horus: {
