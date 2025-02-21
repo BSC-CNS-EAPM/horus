@@ -457,28 +457,32 @@ function Register({
           />
           <label htmlFor="password">Password</label>
         </div>
+        <div className="mt-8"></div>
         {extraFieldsList.map((field, index) => {
           return (
-            <div className="form-floating bg-white" key={index}>
-              <PluginVariableView
-                customClass="form-control"
-                hideDescription={true}
-                applyStyle={false}
-                hideName={true}
-                variable={field}
-                onChange={(newValue) => {
-                  setExtraFieldsValues((currentValues) => {
-                    return {
-                      ...currentValues,
-                      [field.id]: newValue,
-                    };
-                  });
-                }}
-              />
+            <>
               <label htmlFor={field.id}>{field.name}</label>
-            </div>
+              <div className="form-floating bg-white" key={index} id={field.id}>
+                <PluginVariableView
+                  customClass="form-control"
+                  hideDescription={false}
+                  applyStyle={false}
+                  hideName={true}
+                  variable={field}
+                  onChange={(newValue) => {
+                    setExtraFieldsValues((currentValues) => {
+                      return {
+                        ...currentValues,
+                        [field.id]: newValue,
+                      };
+                    });
+                  }}
+                />
+              </div>
+            </>
           );
         })}
+        <div className="mt-8"></div>
         {hasTos && (
           <div
             className="w-full flex flex-row gap-4 justify-between items-center form-control"
