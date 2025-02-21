@@ -403,6 +403,8 @@ export type Flow = {
   extraData?: {
     [key: string]: any;
   };
+
+  isPreset?: boolean;
 };
 
 export enum DraggableEntity {
