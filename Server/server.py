@@ -2390,9 +2390,8 @@ class HorusServer:
                 # Log the full request
                 horusLogger.error("Request: %s", str(request))
 
-                return self.renderTemplate(
-                    "Error/error.html",
-                    errormsg="Page not found: " + errorMSG,
+                return flask.redirect(
+                    "/error",
                 )
 
             if not request.path.startswith(self.horusRoot):
