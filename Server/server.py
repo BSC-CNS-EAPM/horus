@@ -362,6 +362,24 @@ class HorusServer:
 
         return guiDir
 
+    def renderTemplate(self, template: str, **kwargs):
+        """
+        Renders the template with custom properties
+        """
+
+        from App import AppDelegate
+
+        return flask.render_template(
+            template,
+            horusRoot=self.horusRoot,
+            appName=(
+                self.webAppManager.appName
+                if self.webAppManager
+                else (AppDelegate().APP_INFO.get("NAME") or "Horus")
+            ),
+            **kwargs,
+        )
+
     def _setupLoginManager(self, server):
         """
         Setup the Flask-Login manager
@@ -2047,7 +2065,6 @@ class HorusServer:
             settings = self.settingsManager.listSettings()
 
             return flask.jsonify({"ok": True, "settings": settings})
-            # return flask.render_template("Settings/index.html")
 
         @self.server.route("/api/restoreSettings", methods=["GET"])
         @self.verifyLogin
@@ -2110,7 +2127,7 @@ class HorusServer:
         @self.server.route("/")
         @self.verifyLogin
         def index():
-            return flask.render_template("Main/index.html", horusRoot=self.horusRoot)
+            return self.renderTemplate("Main/index.html")
 
         @self.server.route("/<path:path>")
         def resources(path):
@@ -2119,7 +2136,7 @@ class HorusServer:
         @self.server.route("/bmode", methods=["GET"])
         @self.noWebApp
         def bmode():
-            return flask.render_template("BrowserMode/index.html", horusRoot=self.horusRoot)
+            return self.renderTemplate("BrowserMode/index.html")
 
         @self.server.after_request
         def addHeader(response):
@@ -2353,9 +2370,7 @@ class HorusServer:
             horusLogger = logging.getLogger("Horus")
             horusLogger.error(errorMSG)
 
-            return flask.render_template(
-                "Error/error.html", errormsg=str(errorMSG), horusRoot=self.horusRoot
-            )
+            return self.renderTemplate("Error/error.html", errormsg=str(errorMSG))
 
         # Setup the 404 page
         @self.server.errorhandler(404)
@@ -2375,17 +2390,16 @@ class HorusServer:
                 # Log the full request
                 horusLogger.error("Request: %s", str(request))
 
-                return flask.render_template(
+                return self.renderTemplate(
                     "Error/error.html",
                     errormsg="Page not found: " + errorMSG,
-                    horusRoot=self.horusRoot,
                 )
 
             if not request.path.startswith(self.horusRoot):
                 return flask.redirect("/")
 
             # We need to return the index page for our react-router app to work
-            return flask.render_template("Main/index.html", horusRoot=self.horusRoot)
+            return self.renderTemplate("Main/index.html")
 
         # Setup a template not found error
         @self.server.route("/error")
@@ -2393,7 +2407,7 @@ class HorusServer:
             horusLogger = logging.getLogger("Horus")
             horusLogger.error("Error page requested")
 
-            return flask.render_template("Error/error.html", horusRoot=self.horusRoot)
+            return self.renderTemplate("Error/error.html")
 
         @self.server.errorhandler(HTTPException)
         def handleHTTPexception(e):
@@ -2540,7 +2554,7 @@ class HorusServer:
                 # Only if we require registration
                 if currentUser.isDemo and self.webAppManager.userManagement.requireRegistration:
                     flask_login.logout_user()
-                    return flask.render_template("Login/login.html", horusRoot=self.horusRoot)
+                    return self.renderTemplate("Login/login.html")
 
                 return flask.redirect("/")
 
@@ -2582,7 +2596,7 @@ class HorusServer:
 
                 return flask.jsonify({"ok": True})
 
-            return flask.render_template("Login/login.html", horusRoot=self.horusRoot)
+            return self.renderTemplate("Login/login.html")
 
         @self.server.route("/users/<path:path>")
         def user_resources(path):
@@ -2646,38 +2660,34 @@ class HorusServer:
                 return flask.redirect("/")
 
             if self.webAppManager.db is None:
-                return flask.render_template(
+                return self.renderTemplate(
                     "Login/login.html",
                     message="No user registration required",
                     message_ok=False,
-                    horusRoot=self.horusRoot,
                 )
 
             # Get the activation token from the request
             token = request.args.get("token", None)
 
             if token is None:
-                return flask.render_template(
+                return self.renderTemplate(
                     "Login/login.html",
                     message="No token provided",
                     message_ok=False,
-                    horusRoot=self.horusRoot,
                 )
 
             try:
                 self.webAppManager.db.activateUser(token)
-                return flask.render_template(
+                return self.renderTemplate(
                     "Login/login.html",
                     message="User activated, you can now log in",
                     message_ok=True,
-                    horusRoot=self.horusRoot,
                 )
             except Exception as exc:
-                return flask.render_template(
+                return self.renderTemplate(
                     "Login/login.html",
                     message=str(exc),
                     message_ok=False,
-                    horusRoot=self.horusRoot,
                 )
 
         @self.server.route("/users/fields")
@@ -2787,13 +2797,9 @@ class HorusServer:
                         mail = self.webAppManager.userManagement.mailServer.validateToken(
                             token, self.webAppManager.db.dbConfig.secretKey
                         )
-                        return flask.render_template(
-                            "Login/reset.html", mail=mail, horusRoot=self.horusRoot
-                        )
+                        return self.renderTemplate("Login/reset.html", mail=mail)
                     except Exception:
-                        return flask.render_template(
-                            "Login/reset.html", mail=None, horusRoot=self.horusRoot
-                        )
+                        return self.renderTemplate("Login/reset.html", mail=None)
 
             if request.method == "POST":
                 # Get the token and verify the mail
@@ -3202,7 +3208,7 @@ class HorusServer:
             @self.verifyLogin
             @self.verifyAdmin
             def adminTools():
-                return flask.render_template("Login/admintools.html", horusRoot=self.horusRoot)
+                return self.renderTemplate("Login/admintools.html")
 
             @self.server.route("/users/admintools/settings")
             @self.verifyLogin

@@ -114,7 +114,7 @@ export const config = {
         {
           id: "ocuppation",
           name: "Ocuppation",
-          type: "string_list",
+          type: "string[]",
           allowedValues: ["Student", "Teacher", "Researcher", "Other"],
         },
       ],
