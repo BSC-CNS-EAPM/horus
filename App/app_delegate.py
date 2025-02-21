@@ -548,7 +548,12 @@ class AppDelegate(metaclass=HorusSingleton):
                 env={**os.environ, "PYINSTALLER_RESET_ENVIRONMENT": "1"},
             )
 
-            p.wait()
+            try:
+                p.wait()
+            except BaseException:
+                pass
+
+            # Exit the application
             sys.exit(0)
 
         # Always use fork for multiprocesses, as flows need this to work properly
@@ -837,6 +842,8 @@ class AppDelegate(metaclass=HorusSingleton):
         """
         This will start the window and set the shemsu token to the window object.
         """
+
+        webview.settings["ALLOW_DOWNLOADS"] = True
 
         # Start the server in a new thread
         self._startServerThread()

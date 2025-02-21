@@ -8,7 +8,7 @@ dependencies:
   - pyinstaller==6.8.0
   - flask==3.0.3
   - requests==2.29.0
-  - pywebview==5.0.5
+  - pywebview==5.4
   - flask-cors==5.0.0
   - dnspython
   - pyobjc==9.1.1; sys_platform == 'darwin'
