@@ -554,6 +554,14 @@ def testExtensionsShortcuts(block: PluginBlock):
 
     block.setOutput(extension_output_variable.id, block.inputs[extension_input_variable.id])
 
+    csv = """col1,col2,col3\n"""
+    for i in range(10):
+        csv += f"{i},{i*2},{i*3}\n"
+    with open("file.csv", "w") as f:
+        f.write(csv)
+
+    Extensions().loadCSV("file.csv", title="Some CSV")
+
 
 def finalAction(block: PluginBlock):
     print("Final action")

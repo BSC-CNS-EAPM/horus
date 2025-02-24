@@ -237,6 +237,9 @@ function _UserTable({
 
   return (
     <HorusTable
+      allowDownload={{
+        filename: "users.csv",
+      }}
       ref={tableRef}
       columnDefs={columns}
       rows={users}
@@ -271,6 +274,10 @@ function FlowsTableView() {
     }
 
     const sampleFlow = database.flows[0]!;
+
+    if (!sampleFlow) {
+      return [];
+    }
 
     return Object.keys(sampleFlow).map((f) => {
       return {

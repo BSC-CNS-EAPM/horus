@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <head>
     <title>Horus CSV Loader</title>
@@ -14,10 +14,44 @@
       #gridContainer {
         height: 100%;
       }
+
+      button {
+        font-size: 16px;
+        padding: 0.2rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .right-button {
+        width: 100%;
+        display: flex;
+        justify-content: end;
+        border-radius: 5px;
+      }
     </style>
   </head>
 
   <body>
+    <script>
+      let gridOptions; // Declare globally
+
+      function downloadCSV() {
+        if (!gridOptions || !gridOptions.api) {
+          console.error("Grid API not available");
+          return;
+        }
+        const csv = gridOptions.api.getDataAsCsv({
+          suppressQuotes: true,
+        });
+
+        parent.horus.saveFile(
+          new File([csv], "data.csv", { type: "text/csv" })
+        );
+      }
+    </script>
+
+    <div class="right-button">
+      <button id="downloadCSV" onclick="downloadCSV()">Download CSV</button>
+    </div>
     <div id="gridContainer" class="ag-theme-quartz"></div>
 
     <script>
@@ -27,40 +61,59 @@
             `;
       }
 
-      // Check if the extensionData object is available
       if (window.parent.extensionData) {
         csvToLoad = window.parent.extensionData.csv;
 
-        const blob = parent.horus
+        parent.horus
           .getFile(csvToLoad)
           .then((blob) => {
-            // Read the blob
             const reader = new FileReader();
             reader.readAsText(blob);
             reader.onload = () => {
-              // Parse the CSV
               const csvData = reader.result;
               const csvRows = csvData.split("\n");
               const csvHeaders = csvRows[0].split(",");
-              const csvRowsData = csvRows.slice(1).map((row) => {
-                const splittedRow = row.split(",");
-                let parsedRow = {};
-                for (let i = 0; i < splittedRow.length; i++) {
-                  parsedRow[csvHeaders[i]] = splittedRow[i];
-                }
-                return parsedRow;
-              });
-              const gridOptions = {
+              const csvRowsData = csvRows
+                .slice(1)
+                .map((row) => {
+                  const splittedRow = row
+                    .split(",")
+                    .map((value) => value.trim());
+
+                  // Check if the row is empty (all values are empty strings)
+                  if (splittedRow.every((value) => value === "")) {
+                    return null; // Mark for removal
+                  }
+
+                  let parsedRow = {};
+                  for (let i = 0; i < splittedRow.length; i++) {
+                    const value = splittedRow[i];
+
+                    if (value !== "") {
+                      // Convert to a number if it's a valid numeric value
+                      parsedRow[csvHeaders[i]] = !isNaN(value)
+                        ? Number(value)
+                        : value;
+                    }
+                  }
+
+                  return parsedRow;
+                })
+                .filter((row) => row !== null); // Remove empty rows
+
+              gridOptions = {
                 defaultColDef: {
                   sortable: true,
                   filter: true,
                   resizable: true,
                 },
-                columnDefs: csvHeaders.map((header) => {
-                  return { headerName: header, field: header };
-                }),
+                columnDefs: csvHeaders.map((header) => ({
+                  headerName: header,
+                  field: header,
+                })),
                 rowData: csvRowsData,
               };
+
               const gridDiv = document.getElementById("gridContainer");
               new agGrid.Grid(gridDiv, gridOptions);
             };
