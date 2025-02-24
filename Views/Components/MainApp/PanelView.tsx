@@ -13,6 +13,7 @@ import {
 import { CloseButton } from "dockview/dist/esm/svg";
 import "dockview/dist/styles/dockview.css";
 import Molstar from "../Molstar/molstar";
+import { LoadMoleculeFileType } from "../Molstar/HorusWrapper/horusmolstar";
 import {
   DebugFlow,
   FlowBuilderView,
@@ -848,6 +849,9 @@ export function HorusPanelView() {
     document.addEventListener("togglePanel", togglePanelEventListener);
     socket.on("openExtension", addExtensions);
 
+    // Initialize the hooks
+    hooksInitializer();
+
     return () => {
       document.removeEventListener("addPanel", addPanelEventListener);
       document.removeEventListener("togglePanel", togglePanelEventListener);
@@ -903,4 +907,28 @@ export function HorusPanelView() {
       </DockContext.Provider>
     </DndContext>
   );
+}
+
+// Utility function to initialize some useful hooks for the webpacke
+export function hooksInitializer() {
+  // Create a function that laoids the molstar panel if it does not exits
+  if (!window.molstar) {
+    const hookFunction: LoadMoleculeFileType = async (file, options) => {
+      // Open the panel
+      window.horus?.openPanel?.("molstar");
+
+      // Wait till molstar is opened
+      while (!window.molstar?.plugin) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+
+      // Open the file
+      window.molstar?.loadMoleculeFile(file, options);
+    };
+
+    // @ts-ignore
+    window.molstar = {
+      loadMoleculeFile: hookFunction,
+    };
+  }
 }

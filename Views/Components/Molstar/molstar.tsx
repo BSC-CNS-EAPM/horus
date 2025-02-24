@@ -11,7 +11,12 @@ import HorusMolstar from "./HorusWrapper/horusmolstar";
 // Error boundary (currently does not do anything)
 import { useSettings } from "@/Main/app";
 import AppButton from "../appbutton";
-import { DockContext, PANEL_REGISTRY, addPanel } from "../MainApp/PanelView";
+import {
+  DockContext,
+  PANEL_REGISTRY,
+  addPanel,
+  hooksInitializer,
+} from "../MainApp/PanelView";
 
 export default function Molstar() {
   const parent = createRef<HTMLDivElement>();
@@ -38,6 +43,9 @@ export default function Molstar() {
       window?.molstar?.plugin?.dispose();
 
       window.molstar = undefined;
+
+      // Run the hooksInitializer again
+      hooksInitializer();
     };
   }, [settings]);
 

@@ -129,6 +129,14 @@ export enum MolstarEvents {
 export type MolstarInitOptions = {
   showControls?: boolean;
 };
+
+// Type for the hook loadMoleculeFile
+export type LoadMoleculeFileType = (
+  file: File,
+  options?: {
+    label?: string;
+  }
+) => Promise<void>;
 export default class HorusMolstar {
   plugin: PluginUIContext | null = null;
   target: HTMLDivElement;
@@ -961,12 +969,7 @@ export default class HorusMolstar {
    * @throws {Error} If an error occurs during file parsing or preset application, or if the plugin is not initialized.
    */
 
-  public async loadMoleculeFile(
-    file: File,
-    options?: {
-      label?: string;
-    }
-  ): Promise<void> {
+  public loadMoleculeFile: LoadMoleculeFileType = async (file, options) => {
     if (!this.plugin) {
       throw new Error("Plugin is not initialized. Cannot load molecule file.");
     }
@@ -1018,7 +1021,7 @@ export default class HorusMolstar {
         }`
       );
     }
-  }
+  };
   /**
    * Loads a trajectory using a topology file and a coordinates file
    *
