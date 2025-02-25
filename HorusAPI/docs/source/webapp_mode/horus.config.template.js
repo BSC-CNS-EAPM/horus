@@ -59,7 +59,7 @@ export const config = {
     },
     // Forbid blocks from being used by users. This configuration only applies here when requireRegistration is set to false
     // Otherwise, you can modify the allowed blocks in the Admin Tools panel.
-    // This is just an array with the block IDs. Block IDs can be found in hte block registry panel.
+    // This is just an array with the block IDs. Block IDs can be found in the block registry panel.
     forbiddenBlocks: ["horus.code", "horus.getData"],
     // Mail server configuration
     mailServer: {

@@ -253,9 +253,6 @@ class SettingsManager:
                     fileSettings[key] = value
                     newChanges = True
 
-                    print(json.dumps(fileSettings[key], indent=4))
-                    print(json.dumps(value, indent=4))
-
                     logging.getLogger("Horus").info(
                         "Updated setting '%s'",
                         key,
