@@ -31,6 +31,7 @@ import useResizeObserver from "@react-hook/resize-observer";
 
 import "./Smiles.css";
 import PlotIcon from "../Toolbar/Icons/Plot";
+import { isMolstarLoaded } from "../Molstar/HorusWrapper/horusmolstar";
 
 const SMILES_GRID_WIDTH = 200;
 const SMILES_GRID_HEIGTH = 150;
@@ -43,7 +44,7 @@ export const CannotEdit3D =
 export function SmilesGrid() {
   const [availableSmiles, setAvailableSmiles] = useState<HorusSmilesType[]>([]);
   const [editingSmiles, setEditingSmiles] = useState<HorusSmilesType | null>(
-    null
+    null,
   );
   const [loadingFile, setLoadingFile] = useState<boolean>(false);
   const [currentGroup, setCurrentGroup] = useState<string | undefined>();
@@ -72,7 +73,7 @@ export function SmilesGrid() {
     // Add an event listener for the smiles manager
     window.addEventListener(
       SmilesEvents.STATE,
-      updateAvailableSmilesEventListener
+      updateAvailableSmilesEventListener,
     );
 
     window.addEventListener(SmilesEvents.CONVERSIONS, updateConversions);
@@ -85,7 +86,7 @@ export function SmilesGrid() {
 
       window.removeEventListener(
         SmilesEvents.STATE,
-        updateAvailableSmilesEventListener
+        updateAvailableSmilesEventListener,
       );
 
       window.removeEventListener(SmilesEvents.CONVERSIONS, updateConversions);
@@ -99,7 +100,7 @@ export function SmilesGrid() {
           return newSmiles;
         }
         return s;
-      })
+      }),
     );
   };
 
@@ -149,7 +150,7 @@ export function SmilesGrid() {
       setPreviewSmiles(false);
       setAlertShownAtLeastOnce(true);
       horusAlert(
-        `Disabled SMILES preview due to the list being too large. Click 'View' -> 'Toggle SMILES preview' to enable previews again at the cost of performance.`
+        `Disabled SMILES preview due to the list being too large. Click 'View' -> 'Toggle SMILES preview' to enable previews again at the cost of performance.`,
       );
     }
   }, [availableSmiles, alertShownAtLeastOnce]);
@@ -365,7 +366,7 @@ function _GroupingVirtualizedOfSmilesView(props: InternalSmilesGridViewProps) {
                     setEditingSmiles={props.setEditingSmiles}
                     isScrolling={!isVisible}
                     previewSmiles={props.previewSmiles}
-                  />
+                  />,
                 );
               }
               return (
@@ -554,7 +555,7 @@ function SmilesToolBox(props: {
 
   const getSDFFile = async () => {
     const fileName = await horusPrompt(
-      "Enter the name of the file to save the converted SDF"
+      "Enter the name of the file to save the converted SDF",
     );
 
     const sdfContents = await window.smiles?.convertSelectedToSDF();
@@ -640,7 +641,7 @@ function SmilesToolBox(props: {
                 return { ...s, group: newGroup };
               }
               return s;
-            })
+            }),
           );
         }
       },
@@ -652,7 +653,7 @@ function SmilesToolBox(props: {
         const newProperty = await horusPrompt("Enter new property name");
         if (!newProperty) return;
         const propertyValue = await horusPrompt(
-          "Enter new property value (leave blank for none)"
+          "Enter new property value (leave blank for none)",
         );
         window.smiles?.addPropertyToSelected(newProperty, propertyValue);
       },
@@ -714,7 +715,7 @@ function SmilesToolBox(props: {
             `moleculePlotter-${Date.now()}`,
             {
               smilesToPlot: window.smiles?.getSelectedSmiles() ?? [],
-            }
+            },
           );
         }
       },
@@ -736,11 +737,11 @@ function SmilesToolBox(props: {
               panelID: "molstar",
               noFocus: true,
             },
-          })
+          }),
         );
 
         // Wait for Mol* to be available
-        while (!window.molstar?.plugin?.isInitialized) {
+        while (!isMolstarLoaded(window.molstar)) {
           await delay(1500);
         }
 
@@ -782,7 +783,7 @@ function SmilesToolBox(props: {
       disabled: !window.smiles?.getSelectedSmiles().length,
       onClick: async () => {
         const fileName = await horusPrompt(
-          "Enter the name of the file to save the SMILES"
+          "Enter the name of the file to save the SMILES",
         );
         const selectedSmiles = window.smiles?.getSelectedSmiles();
 
@@ -806,7 +807,7 @@ function SmilesToolBox(props: {
       disabled: !window.smiles?.getSelectedSmiles().length,
       onClick: async () => {
         const fileName = await horusPrompt(
-          "Enter the CSV file name to save the SMILES"
+          "Enter the CSV file name to save the SMILES",
         );
 
         if (!fileName) return;
@@ -816,7 +817,7 @@ function SmilesToolBox(props: {
           fileName + ".csv",
           {
             type: "text/plain",
-          }
+          },
         );
 
         window.horus.saveFile(file);
@@ -869,7 +870,7 @@ function SmilesToolBox(props: {
             window.smiles?.newEmptyMolecule(
               !isGroupEditable || props.viewMode !== "grid"
                 ? "Horus"
-                : props.currentGroup
+                : props.currentGroup,
             );
           }}
         />
@@ -902,7 +903,7 @@ export function EditSmilesModal(props: {
   isShowingList: boolean;
 }) {
   const [smilesState, setSmilesState] = useState<HorusSmilesType | null>(
-    props.smiles
+    props.smiles,
   );
 
   const editingRef = useRef<HTMLDivElement>(null);

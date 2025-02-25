@@ -137,6 +137,13 @@ export type LoadMoleculeFileType = (
     label?: string;
   }
 ) => Promise<void>;
+
+export function isMolstarLoaded(
+  molstar: typeof window.molstar
+): molstar is HorusMolstar {
+  return (molstar as HorusMolstar | undefined)?.plugin !== undefined;
+}
+
 export default class HorusMolstar {
   plugin: PluginUIContext | null = null;
   target: HTMLDivElement;
@@ -295,7 +302,7 @@ export default class HorusMolstar {
    * @returns {Promise<void>} A promise that resolves when the operation is complete.
    * @throws {Error} If there's an issue with disposing of the plugin or saving the snapshot.
    */
-  public async unloadWithState() {
+  public async unload() {
     // Save the state
     this.latestSnapshot = await this.snapshot.get();
 
@@ -305,6 +312,12 @@ export default class HorusMolstar {
 
     // Remove the plugin
     this.plugin.dispose();
+
+    // Launch a STATE event
+    const event = new CustomEvent(MolstarEvents.STATE, {
+      detail: {},
+    });
+    window.dispatchEvent(event);
   }
 
   /**

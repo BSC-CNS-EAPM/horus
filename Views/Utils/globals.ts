@@ -1,5 +1,7 @@
 // Molstar wrapper
-import HorusMolstar from "../Components/Molstar/HorusWrapper/horusmolstar";
+import HorusMolstar, {
+  LoadMoleculeFileType,
+} from "../Components/Molstar/HorusWrapper/horusmolstar";
 import HorusSmilesManager, {
   HorusSmilesType,
 } from "../Components/Smiles/SmilesWrapper/horusSmiles";
@@ -45,7 +47,7 @@ declare global {
     // Settings
     horusSettings: HorusSettingsObject;
     // Molstar
-    molstar?: HorusMolstar;
+    molstar?: HorusMolstar | { loadMoleculeFile: LoadMoleculeFileType };
     // Smiles
     smiles?: HorusSmilesManager;
     // Console
@@ -83,7 +85,7 @@ export type openPanel = {
   (
     type: "moleculePlotter",
     id: string,
-    params: { smilesToPlot: HorusSmilesType[] }
+    params: { smilesToPlot: HorusSmilesType[] },
   ): void;
   (
     type: "extensions",
@@ -93,7 +95,7 @@ export type openPanel = {
       plugin: string;
       id: string;
       data?: any;
-    }
+    },
   ): void;
 };
 

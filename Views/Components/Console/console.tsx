@@ -10,6 +10,7 @@ import Terminal from "react-console-emulator";
 
 // Terminal commands
 import { DockContext, PANEL_REGISTRY, togglePanel } from "../MainApp/PanelView";
+import { isMolstarLoaded } from "../Molstar/HorusWrapper/horusmolstar";
 
 type Command = {
   description: string;
@@ -84,7 +85,7 @@ export default function HorusTerm() {
         description: "Reset Mol* viewer",
         usage: "molreset",
         fn: () => {
-          if (window.molstar) {
+          if (isMolstarLoaded(window.molstar)) {
             window?.molstar?.reset();
           }
           return "";
@@ -132,15 +133,16 @@ export default function HorusTerm() {
           }, {});
 
           try {
+            if (!isMolstarLoaded(window.molstar)) {
+              return "Molstar is not defined.";
+            }
             const molstar = window.molstar;
-            return molstar
-              ? molstar.focus(
-                  structureLabel,
-                  options.resID,
-                  options.chain,
-                  options.surroundRadius
-                )
-              : "Molstar is not defined.";
+            return molstar.focus(
+              structureLabel,
+              options.resID,
+              options.chain,
+              options.surroundRadius,
+            );
           } catch (e: any) {
             return "Internal error focusing residue: " + e.message;
           }
@@ -150,6 +152,7 @@ export default function HorusTerm() {
         description: "List structures in Mol*.",
         usage: "listmol",
         fn: async () => {
+          if (!isMolstarLoaded(window.molstar)) return "Molstar not loaded";
           const molstar = window.molstar;
           const strucList = molstar?.listStructures() ?? [];
 
@@ -171,6 +174,8 @@ export default function HorusTerm() {
           // The structure label is the first argument (if provided)
           // The user can just type listchains <structure label> and the structure label will be the first argument
           const structureLabel = args[0];
+          if (!isMolstarLoaded(window.molstar))
+            return "Molstar is not initialized";
 
           const molstar = window.molstar;
           const chainList = molstar?.listChains(structureLabel) ?? [];

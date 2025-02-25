@@ -6,7 +6,7 @@ import { useEffect, createRef, useContext } from "react";
 import "./horus_molstar.scss";
 
 // Horus Molstar wrapper
-import HorusMolstar from "./HorusWrapper/horusmolstar";
+import HorusMolstar, { isMolstarLoaded } from "./HorusWrapper/horusmolstar";
 
 // Error boundary (currently does not do anything)
 import { useSettings } from "@/Main/app";
@@ -24,7 +24,10 @@ export default function Molstar() {
   const { dockApi } = useContext(DockContext)!;
 
   useEffect(() => {
-    if (settings?.["disableMolstar"]?.value) {
+    if (
+      settings?.["disableMolstar"]?.value &&
+      isMolstarLoaded(window.molstar)
+    ) {
       window.molstar?.plugin?.dispose();
       window.molstar = undefined;
 
@@ -40,7 +43,9 @@ export default function Molstar() {
 
     return () => {
       // Reset mol* when the component unmounts
-      window?.molstar?.plugin?.dispose();
+      if (isMolstarLoaded(window.molstar)) {
+        window?.molstar?.unload();
+      }
 
       window.molstar = undefined;
 

@@ -60,7 +60,10 @@ import {
   PANEL_REGISTRY,
 } from "../MainApp/PanelView";
 import { navigateTo } from "@/Utils/navigationService";
-import { MolstarEvents } from "../Molstar/HorusWrapper/horusmolstar";
+import {
+  isMolstarLoaded,
+  MolstarEvents,
+} from "../Molstar/HorusWrapper/horusmolstar";
 import { LogsData } from "./Logs/logs_connections";
 import { blockLogsPanelID } from "./Blocks/block.hooks";
 import { GLOBAL_IDS } from "@/Utils/globals";
@@ -150,7 +153,7 @@ function isInteractiveElement(element: Element | null) {
 function moveBlock(
   block: Block,
   delta = { x: 0, y: 0 },
-  scale: number = 1
+  scale: number = 1,
 ): Block {
   // Set the new position
   const newBlock: Block = {
@@ -309,7 +312,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         return handledFlow;
       });
     },
-    [isFlowActive]
+    [isFlowActive],
   );
 
   const updateMolstarState = useCallback(async () => {
@@ -324,7 +327,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       const formData = new FormData();
       formData.append("flowPath", flow.path);
 
-      if (window.molstar) {
+      if (isMolstarLoaded(window.molstar)) {
         const molstarState = await window.molstar.snapshot.get();
         formData.append("molstarState", molstarState, "molstarState.molx");
       }
@@ -333,7 +336,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         const smilesState = await window.smiles.saveState();
         const smilesStateFile = new File(
           [JSON.stringify(smilesState)],
-          "smilesState.json"
+          "smilesState.json",
         );
         formData.append("smilesState", smilesStateFile, "smilesState.json");
       }
@@ -344,7 +347,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         formData,
         (percentage) => {
           setFlowText(`Saving structures: ${percentage.toFixed(0)}%`);
-        }
+        },
       );
 
       if (!data.ok) {
@@ -369,6 +372,10 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
   const downloadMolstarState = useCallback(
     async (flowPath?: string) => {
+      if (!isMolstarLoaded(window.molstar)) return;
+
+      const molstar = window.molstar;
+
       const flowToOpen = flowPath ?? flow.path;
 
       // Check that the flow has a valid path and
@@ -393,7 +400,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
           } else {
             setFlowText(`Reading Mol* state... (${percentage.toFixed(0)}%)`);
           }
-        }
+        },
       )
         .then(async (response) => {
           // Determine the content type of the response
@@ -413,7 +420,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
           } else if (contentType.includes("application/octet-stream")) {
             // If the response is a file (binary data), handle it as a Blob
             await response.blob().then(async (blob) => {
-              await window?.molstar?.snapshot.set(blob);
+              await molstar.snapshot?.set(blob);
             });
           } else {
             horusAlert("Error downloading Mol* state: Invalid content type.");
@@ -427,7 +434,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       // Disable horusAlert and horusConfirm hook warning
       // eslint-disable-next-line react-hooks/exhaustive-deps
     },
-    [flow.path]
+    [flow.path],
   );
 
   const internalLoadFlow = useCallback(
@@ -457,7 +464,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         await updateMolstarState();
       }
     },
-    [flow.savedID, updateMolstarState]
+    [flow.savedID, updateMolstarState],
   );
 
   const isLoadingFlow = useRef<boolean>(false);
@@ -469,7 +476,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         path?: string;
         template?: boolean;
       } | null = null,
-      openFile?: File
+      openFile?: File,
     ) => {
       // If the flow is already loading, exit early
       if (isLoadingFlow.current) {
@@ -479,7 +486,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       if (
         !saved &&
         !(await horusConfirm(
-          "Current flow is not saved. Are you sure you want to open a new one?"
+          "Current flow is not saved. Are you sure you want to open a new one?",
         ))
       ) {
         return;
@@ -553,7 +560,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
             },
             (percentage) => {
               setFlowText(`Reading data... (${percentage.toFixed(0)}%)`);
-            }
+            },
           );
         } else if (openFile) {
           const body = new FormData();
@@ -568,9 +575,9 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
             },
             (percentage) => {
               setFlowText(
-                `Verifying dropped flow... (${percentage.toFixed(0)}%)`
+                `Verifying dropped flow... (${percentage.toFixed(0)}%)`,
               );
-            }
+            },
           );
         } else {
           // Using fetchWithProgress to fetch with download progress
@@ -582,7 +589,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
             (percentage) => {
               setFlowText(`Reading data... (${percentage.toFixed(0)}%)`);
               // Here you can update a UI element or do something else with the progress
-            }
+            },
           );
         }
 
@@ -661,7 +668,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
         // Set the molstar state at the beggining in case blocks need structures
         // If it has the new molstar state, open it
-        if (window.molstar?.plugin) {
+        if (isMolstarLoaded(window.molstar)) {
           setFlowText("Loading Mol* state...");
           await downloadMolstarState(openedFlow.path!);
           await delay(500);
@@ -688,7 +695,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     },
     // Disable horusAlert and horusConfirm hook warning
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [saved, resetHistory, internalLoadFlow, dockApi]
+    [saved, resetHistory, internalLoadFlow, dockApi],
   );
 
   // State for the server file picker
@@ -784,7 +791,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
           "/api/saveflow",
           undefined,
           body,
-          undefined
+          undefined,
         );
 
         // Read the response
@@ -814,7 +821,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
           overwrite &&
           !desktop &&
           !(await horusConfirm(
-            "Flow with the same name already exists. Are you sure you want to overwrite the flow?"
+            "Flow with the same name already exists. Are you sure you want to overwrite the flow?",
           ))
         ) {
           return null;
@@ -838,7 +845,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
             "flow.json",
             {
               type: "application/json",
-            }
+            },
           );
 
           overwriteBody.append("flowData", overwriteFile);
@@ -848,7 +855,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
             "/api/saveflow",
             undefined,
             overwriteBody,
-            undefined
+            undefined,
           );
 
           savedFlow = await overwriteResponse.json();
@@ -895,7 +902,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     },
     // Disable horusAlert hook warning
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [serializeFlow, handleFlowChange, saved, dockApi]
+    [serializeFlow, handleFlowChange, saved, dockApi],
   );
 
   const serverPickerFolder = useCallback(
@@ -907,7 +914,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
           const flowToSave = { ...flow, name: flowName ?? flow.name };
           const strippedFlowName = flowToSave.name.replace(
             /[^a-zA-Z0-9]/g,
-            "_"
+            "_",
           );
 
           // append the flow name
@@ -919,7 +926,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         },
       };
     },
-    [flow, handleSave]
+    [flow, handleSave],
   );
 
   // Helper function that should be called every time any block changes
@@ -928,13 +935,13 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     newBlocks: Block[],
     isNew: boolean = false,
     updateHistory: boolean = false,
-    resetExecution: boolean = true
+    resetExecution: boolean = true,
   ) => {
     const updatedBlocks = isNew
       ? [...flow.blocks, ...newBlocks]
       : flow.blocks.map((block: Block) => {
           const matchingNewBlock = newBlocks.find(
-            (newBlock: Block) => newBlock.placedID === block.placedID
+            (newBlock: Block) => newBlock.placedID === block.placedID,
           );
 
           if (matchingNewBlock) {
@@ -1044,7 +1051,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     delta: {
       x: number;
       y: number;
-    }
+    },
   ) => {
     // Update the state
     handleBlockChanges([moveBlock(block, delta, scale)], false, true, false);
@@ -1156,7 +1163,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
     for (const variableReference of block.variableConnectionsReference) {
       const connectedBlock = flow.blocks.find(
-        (b) => b.placedID === variableReference.destination.placedID
+        (b) => b.placedID === variableReference.destination.placedID,
       );
 
       // If the connected block is not found, continue
@@ -1191,7 +1198,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       for (const varConnected of block.variableConnectionsReference) {
         // Find the real block from where the variable goes to
         const realBlock = updatedBlocks.find(
-          (b) => b.placedID === varConnected.destination.placedID
+          (b) => b.placedID === varConnected.destination.placedID,
         );
 
         if (!realBlock) {
@@ -1200,7 +1207,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
         // Remove from the real block the variable connection
         realBlock.variableConnections = realBlock.variableConnections.filter(
-          (v) => v.origin.placedID !== block.placedID
+          (v) => v.origin.placedID !== block.placedID,
         );
 
         // Update the placedBlocks array
@@ -1221,7 +1228,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       for (const varConnected of block.variableConnections) {
         // Find the real block from where the variable comes from
         const realBlock = updatedBlocks.find(
-          (b) => b.placedID === varConnected.origin.placedID
+          (b) => b.placedID === varConnected.origin.placedID,
         );
 
         if (!realBlock) {
@@ -1231,7 +1238,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         // Remove from the real block the variable connection reference
         realBlock.variableConnectionsReference =
           realBlock.variableConnectionsReference.filter(
-            (v) => v.destination.placedID !== block.placedID
+            (v) => v.destination.placedID !== block.placedID,
           );
 
         // Update the placedBlocks array
@@ -1254,7 +1261,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         ...flow,
         blocks: updatedBlocks,
       },
-      true
+      true,
     );
   };
 
@@ -1361,7 +1368,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       [newDestinationBlock, newOriginBlock],
       false,
       true,
-      false
+      false,
     );
   };
 
@@ -1501,7 +1508,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       [newDestinationBlock, newOriginBlock],
       false,
       true,
-      false
+      false,
     );
   }
 
@@ -1537,7 +1544,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
             const newBlock = {
               ...block,
               position: currentFlow.blocks.find(
-                (b) => b.placedID === block.placedID
+                (b) => b.placedID === block.placedID,
               )?.position ?? { x: 0, y: 0 },
             };
 
@@ -1565,7 +1572,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       });
     },
 
-    [updateMolstarState, dockApi]
+    [updateMolstarState, dockApi],
   );
 
   // Handle a new flow.
@@ -1573,7 +1580,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     if (
       !saved &&
       !(await horusConfirm(
-        "Current flow is not saved. Are you sure you want to create a new flow?"
+        "Current flow is not saved. Are you sure you want to create a new flow?",
       ))
     ) {
       return;
@@ -1687,7 +1694,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         loadFlow();
       }
     },
-    [loadFlow, serverPickerFlow]
+    [loadFlow, serverPickerFlow],
   );
 
   // For the server mode, we need to open first the file picker in folder mode
@@ -1728,7 +1735,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         if (comesFromExecuteBlock === true) {
           // Alert the user that the flow needs to be saved first
           await horusAlert(
-            "The flow needs to be saved first. Please select a folder to save the flow"
+            "The flow needs to be saved first. Please select a folder to save the flow",
           );
         }
 
@@ -1742,7 +1749,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     },
     // Disable horusAlert hook warning
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [handleSave, serverPickerFolder, flow.path]
+    [handleSave, serverPickerFolder, flow.path],
   );
 
   const horusPrompt = usePrompt();
@@ -1828,7 +1835,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         blocks: newBlocks,
       });
     },
-    [flow, setFlow]
+    [flow, setFlow],
   );
 
   const centerView = useCallback(() => {
@@ -1940,7 +1947,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
           placedID,
           resetFlow,
           continueSlurm,
-        })
+        }),
       );
 
       const result = await response.json();
@@ -2003,7 +2010,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
     if (
       !(await horusConfirm(
-        "Are you sure you want to pause the flow? You can resume it later."
+        "Are you sure you want to pause the flow? You can resume it later.",
       ))
     ) {
       return;
@@ -2114,7 +2121,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     const updateMousePos = (e: MouseEvent) => {
       // Get the bounding box of the div
       const div = document.getElementById(
-        GLOBAL_IDS.FLOW_BUILDER_DIV
+        GLOBAL_IDS.FLOW_BUILDER_DIV,
       ) as HTMLDivElement;
 
       if (!div) {
@@ -2206,7 +2213,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         };
       });
     },
-    [dockApi]
+    [dockApi],
   );
 
   // Setup a socket listener for the "blockLogs" event
@@ -2315,13 +2322,16 @@ async function applyActions(flow: Flow) {
 
     // Open the Mol* panel if not already open
     let tries = 0;
-    while (!window?.molstar?.plugin?.isInitialized && tries < 10) {
+    while (!isMolstarLoaded(window.molstar) && tries < 10) {
       window?.horus?.openPanel?.("molstar");
       await new Promise((resolve) => setTimeout(resolve, 100));
       tries++;
     }
-    for (const action of flow.pendingActions) {
-      await window.molstar?.applyAction(action);
+
+    if (isMolstarLoaded(window.molstar)) {
+      for (const action of flow.pendingActions) {
+        await window.molstar?.applyAction(action);
+      }
     }
   }
 
