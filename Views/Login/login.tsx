@@ -49,7 +49,7 @@ export default function LoginRegister() {
         setMessages({ ok: false, msg: "" });
       }
     },
-    []
+    [],
   );
 
   const isFirstRender = useRef(true);
@@ -355,7 +355,7 @@ function Register({
         setMessages(
           parsedFields["email"]
             ? { ok: false, msg: "Password is required" }
-            : { ok: false, msg: "Email is required" }
+            : { ok: false, msg: "Email is required" },
         );
         return;
       }

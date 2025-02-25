@@ -19,21 +19,21 @@ function AppButton(props: AppButtonProps) {
 
   // First div necessary for padding
   return (
-      <button
-        title={props?.title}
-        type={props.type}
-        disabled={props.disabled}
-        id={props.id}
-        className={className}
-        onClick={() => props.action && props.action()}
-        style={{
-          color: "black",
-          ...props.style,
-        }}
-      >
-        {props?.text}
-        {props?.children}
-      </button>
+    <button
+      title={props?.title}
+      type={props.type}
+      disabled={props.disabled}
+      id={props.id}
+      className={className}
+      onClick={() => props.action && props.action()}
+      style={{
+        color: "black",
+        ...props.style,
+      }}
+    >
+      {props?.text}
+      {props?.children}
+    </button>
   );
 }
 

@@ -5,7 +5,7 @@ export default function Logo(
   props: DetailedHTMLProps<
     React.ImgHTMLAttributes<HTMLImageElement>,
     HTMLImageElement
-  >
+  >,
 ) {
   return (
     <img

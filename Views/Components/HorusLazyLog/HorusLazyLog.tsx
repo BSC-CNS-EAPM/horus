@@ -65,7 +65,7 @@ export function HorusLazyLog(props: HorusLazyLogProps) {
                   `${filename ?? "logs.log"}`,
                   {
                     type: "text/plain",
-                  }
+                  },
                 );
                 window.horus.saveFile(file);
               }}
@@ -119,7 +119,7 @@ export function HorusLazyLog(props: HorusLazyLogProps) {
       >
         {LoggingView}
       </BlurredModal>,
-      document.documentElement
+      document.documentElement,
     );
   }
 

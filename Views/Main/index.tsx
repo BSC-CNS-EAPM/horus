@@ -28,7 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <HorusRouter />
           </OverrideAlert>
         </QueryClientProvider>
-      </StrictMode>
+      </StrictMode>,
     );
   }
 });

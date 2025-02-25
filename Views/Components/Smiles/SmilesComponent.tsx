@@ -97,7 +97,7 @@ type JSMEAPI = {
     atomE: number,
     data: JavaScriptObject,
     pushOnUndoStack: boolean,
-    emitJSMEEvent: boolean
+    emitJSMEEvent: boolean,
   ): void;
   setAtomBackgroundColors(molIndex: number, atomAndColorCSV: string): void;
   setAtomMolecularAreaFontSize(fs: number): void;
@@ -108,7 +108,7 @@ type JSMEAPI = {
     bondE: number,
     data: JavaScriptObject,
     pushOnUndoStack: boolean,
-    emitJSMEEvent: boolean
+    emitJSMEEvent: boolean,
   ): void;
   setBondBackgroundColors(molIndex: number, bondAndColorCSV: string): void;
   setBondToHighLight(molIndex: number, bondIndex: number): void;
@@ -125,10 +125,10 @@ type JSMEAPI = {
   setMolecularAreaScale(scale: number): void;
   setNewButtonStatus(newStatus: boolean): void;
   setNotifyAtomHighLightChangeJSfunction(
-    notifyAtomHighLightJSfunction: string
+    notifyAtomHighLightJSfunction: string,
   ): void;
   setNotifyStructuralChangeJSfunction(
-    notifyStructuralChangeJSfunction: string
+    notifyStructuralChangeJSfunction: string,
   ): void;
   setPasteLabel(pasteLabel: string): void;
   setPrePasteJSfunction(prePasteJSfunction: string): void;
@@ -237,7 +237,7 @@ type JSMEApplet = {
   setCallBack: (event: string, callback: any) => void;
   setSize: (
     width: CSSProperties["width"],
-    height: CSSProperties["height"]
+    height: CSSProperties["height"],
   ) => void;
   reset: () => void;
 };
@@ -252,7 +252,7 @@ export class SmilesView extends PureComponent {
 
   private generateOptionsString(options: JSMEOptions): string {
     const entries = Object.entries(options || {}).map(
-      ([key, value]) => `${value ? "" : "no"}${key}`
+      ([key, value]) => `${value ? "" : "no"}${key}`,
     );
     return entries.join(",");
   }
@@ -263,7 +263,7 @@ export class SmilesView extends PureComponent {
     // If a smiles is provided, clean it
     if (props.parameters?.smiles) {
       props.parameters.smiles = HorusSmilesManager.cleanSmiles(
-        props.parameters?.smiles
+        props.parameters?.smiles,
       );
     }
 
@@ -279,7 +279,7 @@ export class SmilesView extends PureComponent {
 
     if (this.props.options) {
       optionParameters["options"] = this.generateOptionsString(
-        this.props.options
+        this.props.options,
       );
     }
 
@@ -300,7 +300,7 @@ export class SmilesView extends PureComponent {
         this.id,
         this.props.width,
         this.props.height,
-        optionParameters
+        optionParameters,
       );
     }
 
@@ -312,12 +312,12 @@ export class SmilesView extends PureComponent {
         if (this.props.onChange) {
           this.props.onChange(jsmeEvent);
         }
-      }
+      },
     );
 
     if (this.props.smiles) {
       await this.jsmeApplet!.readGenericMolecularInput(
-        HorusSmilesManager.cleanSmiles(this.props.smiles || "")
+        HorusSmilesManager.cleanSmiles(this.props.smiles || ""),
       );
     }
 
@@ -332,7 +332,7 @@ export class SmilesView extends PureComponent {
 
     // Remove the blue "drag and drop" icon that appears by default
     const elements = document.querySelectorAll(
-      'div[title="drag out molecule file (MOL format)"], img[title="drag out molecule file (MOL format)"], polygon[fill="blue"]'
+      'div[title="drag out molecule file (MOL format)"], img[title="drag out molecule file (MOL format)"], polygon[fill="blue"]',
     );
 
     if (elements) {
@@ -377,7 +377,7 @@ export class SmilesView extends PureComponent {
       // Check that the smiles string exists, is not empty...
       if (this.props.smiles) {
         await this.jsmeApplet.readGenericMolecularInput(
-          HorusSmilesManager.cleanSmiles(this.props.smiles)
+          HorusSmilesManager.cleanSmiles(this.props.smiles),
         );
       } else {
         // Clean the view

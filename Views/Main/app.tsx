@@ -101,7 +101,7 @@ export function App() {
   useEffect(() => {
     const updatedNavigate: NavigateFunction = (
       toOrDelta: To | number,
-      options?: NavigateOptions
+      options?: NavigateOptions,
     ) => {
       if (typeof toOrDelta === "number") {
         navigate(toOrDelta);

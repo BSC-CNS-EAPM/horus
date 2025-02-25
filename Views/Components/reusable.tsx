@@ -233,7 +233,7 @@ export function saveFile(file: File) {
         bubbles: true,
         cancelable: true,
         view: window,
-      })
+      }),
     );
 
     // Remove link from body
@@ -245,7 +245,7 @@ export function saveFile(file: File) {
 // and return the Blob
 export function getFile(path: string) {
   const url = new URL(
-    window.location.origin + window.__HORUS_ROOT__ + "/api/filepicker/download"
+    window.location.origin + window.__HORUS_ROOT__ + "/api/filepicker/download",
   );
 
   url.searchParams.append("path", path);

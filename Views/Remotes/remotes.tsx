@@ -46,7 +46,7 @@ export default function ConfigRemotes() {
 
   const handleNewRemote = () => {
     handleSubView(
-      <DetailedRemote key="new-remote" setEditingRemote={setEditingRemote} />
+      <DetailedRemote key="new-remote" setEditingRemote={setEditingRemote} />,
     );
   };
 
@@ -196,7 +196,7 @@ function RemoteListView(props: RemoteListProps) {
               <DetailedRemote
                 remote={remote}
                 setEditingRemote={setEditingRemote}
-              />
+              />,
             )
           }
           updateList={returnToMainView}
@@ -294,7 +294,7 @@ interface DetailedRemoteViewProps {
 
 function DetailedRemote(props: DetailedRemoteViewProps) {
   const [remoteData, _setRemoteData] = useState<Remote | null>(
-    props.remote ?? null
+    props.remote ?? null,
   );
 
   const setRemoteData = useCallback(
@@ -302,7 +302,7 @@ function DetailedRemote(props: DetailedRemoteViewProps) {
       props?.setEditingRemote && props.setEditingRemote(remote);
       _setRemoteData(remote);
     },
-    [props]
+    [props],
   );
 
   return (

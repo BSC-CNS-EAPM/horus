@@ -41,7 +41,7 @@ export default function SidebarView(props: SidebarViewProps) {
   }, [views, tabs]);
 
   const [currentCategory, setCurrentCategory] = useState(
-    Object.keys(parsedViews)[0]!
+    Object.keys(parsedViews)[0]!,
   );
 
   useEffect(() => {

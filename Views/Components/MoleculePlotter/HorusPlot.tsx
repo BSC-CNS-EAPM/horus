@@ -188,7 +188,7 @@ function usePlotlyPlot({
     () => ({
       toImage: (options) => Plotly.toImage(ref.current?.id, options),
     }),
-    [ref]
+    [ref],
   );
 
   useEffect(() => {
@@ -232,7 +232,7 @@ export type HorusPlotlyAPI = {
 };
 
 export const HorusPlotly = forwardRef<HorusPlotlyAPI, HorusPlotProps>(
-  _HorusPlot
+  _HorusPlot,
 );
 
 function _HorusPlot(props: HorusPlotProps, api: ForwardedRef<HorusPlotlyAPI>) {
