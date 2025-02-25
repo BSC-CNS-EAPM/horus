@@ -780,7 +780,7 @@ class Flow:
         comesFromCyclic: bool = False,
         flowResumed: bool = False,
         continueSlurm: bool = False,
-    ):
+    ) -> typing.Union[None, dict]:
         """
         Executes iteratively the blocks of the flow
 
@@ -1007,6 +1007,7 @@ class Flow:
                         else False
                     ),
                 )
+
             except Exception as exc:
                 # If an error was raised during the execution of the block
                 # update acordingly the block's state
@@ -1024,7 +1025,7 @@ class Flow:
         self.write()
 
         # Return the produced outputs of the block
-        return outputs
+        return typing.cast(typing.Union[None, dict], outputs)
 
     def _runNextBlocks(self, placedID: int, resetRemoteBlock: bool = False):
         if self._pluginManager is None:

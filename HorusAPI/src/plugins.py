@@ -1780,6 +1780,10 @@ class PluginBlock:
         self.selectedRemote = selectedRemote
         self._updateVariables(variablesJSONParsed)
 
+        # Update the outputs
+        for k, v in storedOutputs.items():
+            self.setOutput(k, v)
+
         # Update the internal variables
         self._isPlaced = isPlaced
         self._isRunning = isRunning

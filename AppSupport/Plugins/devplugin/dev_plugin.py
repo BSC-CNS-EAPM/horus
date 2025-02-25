@@ -1,3 +1,4 @@
+from re import I
 import time
 
 from HorusAPI import (
@@ -1047,3 +1048,31 @@ multiple_list_block = PluginBlock(
 )
 
 plugin.addBlock(multiple_list_block)
+
+outputvar = PluginVariable(
+    id="outvar", name="outvar", description="Set output variable", type=VariableTypes.STRING
+)
+
+
+def first_action(block: SlurmBlock):
+    """ """
+
+    block.setOutput(outputvar.id, "test_value")
+
+
+def final_action(block: SlurmBlock):
+    print(block._storedOutputs)
+    print(block.outputs)
+    print(block._outputs)
+
+
+test_setoutput_first_action = SlurmBlock(
+    id="test_setoutput",
+    name="Test setOutput",
+    description="Test the setOutput function",
+    initialAction=first_action,
+    finalAction=final_action,
+    outputs=[outputvar],
+)
+
+plugin.addBlock(test_setoutput_first_action)
