@@ -897,6 +897,12 @@ class HorusServer:
                     "ok": False,
                 }
             except Exception as exc:  # pylint: disable=broad-exception-caught
+                import traceback
+
+                logging.getLogger("Horus").error(
+                    "Error saving a flow: %s", traceback.format_exc()
+                )
+
                 success = {
                     "ok": False,
                     "msg": str(exc),

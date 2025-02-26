@@ -1042,6 +1042,12 @@ class PluginBlockTypes(str, Enum):
         return self.value
 
 
+class OutputIDNotFound(Exception):
+    """
+    Exception raised when an output ID is not found in the block after calling setOutput.
+    """
+
+
 class BlockVarPair:
     """
     A connection of a block for a given variable of that block.
@@ -1576,7 +1582,7 @@ class PluginBlock:
                 self._storedOutputs[id] = value
 
                 return
-        raise Exception(f"Output {id} not found.")
+        raise OutputIDNotFound(f"Output ID '{id}' not found.")
 
     def _connectionsToDict(self, references: bool = False):
         """
@@ -1782,7 +1788,13 @@ class PluginBlock:
 
         # Update the outputs
         for k, v in storedOutputs.items():
-            self.setOutput(k, v)
+            try:
+                self.setOutput(k, v)
+            except OutputIDNotFound:
+                logging.getLogger("Horus").error(
+                    f"Could not assignt he output of variable {k} with value {v}. Output ID not found."
+                )
+                pass
 
         # Update the internal variables
         self._isPlaced = isPlaced
@@ -2198,7 +2210,7 @@ class SlurmJob(HorusPydanticModel):
                 # Check with sacct
                 try:
                     self.state = Status(
-                        remote.command(f"sacct -j {self.job_id} -o 'State' --noheader -X")
+                        remote.command(f"sacct -j {self.job_id} -o 'State' --noheader -X").strip()
                     )
                 except CommandFailed as e:
                     # Assume The job has ended
