@@ -1995,10 +1995,8 @@ class InputBlock(PluginBlock):
             return super().__call__(*args, **kwargs)
 
         # If the block does not have an action, return the value of the variable
-        self._outputs[0].value = self._variables[0].value
-
-        # Update the stored outputs
-        self._storedOutputs[self._outputs[0].id] = self._outputs[0].value
+        for k, v in self.variables.items():
+            self.setOutput(k, v)
 
         return self.outputs
 

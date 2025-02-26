@@ -303,15 +303,10 @@ export default class HorusMolstar {
    * @throws {Error} If there's an issue with disposing of the plugin or saving the snapshot.
    */
   public async unload() {
-    // Save the state
-    this.latestSnapshot = await this.snapshot.get();
-
-    if (!this.plugin) {
-      throw new Error("Plugin is not initialized");
+    if (this.plugin) {
+      // Remove the plugin
+      this.plugin.dispose();
     }
-
-    // Remove the plugin
-    this.plugin.dispose();
 
     // Launch a STATE event
     const event = new CustomEvent(MolstarEvents.STATE, {
