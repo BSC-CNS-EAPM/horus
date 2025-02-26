@@ -13,6 +13,7 @@ import datetime
 import io
 import argparse
 import platform
+from contextlib import contextmanager
 
 # Import type annotations
 import typing
@@ -310,6 +311,23 @@ class HorusLogger:
             rootErrorHandler.setLevel(logging.ERROR)
             rootErrorHandler.setFormatter(colorFormatter)
             self.root.addHandler(rootErrorHandler)
+
+    @staticmethod
+    @contextmanager
+    def mute(level: int = logging.CRITICAL + 1):
+        """
+        Temporarily mute all loggers below the given level
+
+        Default is to mute all.
+        """
+
+        horus_logger = logging.getLogger("Horus")
+        prev_lebel = horus_logger.level
+        horus_logger.setLevel(level)
+        try:
+            yield
+        finally:
+            horus_logger.setLevel(prev_lebel)
 
 
 class WindowOptions:

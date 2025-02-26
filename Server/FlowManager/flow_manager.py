@@ -1624,8 +1624,8 @@ class FlowManager:
         # Remove non-existing flows
         recentFlows = self._updateRecentFlows()
 
-        recentFlowsList = []
         # Parse the flows
+        recentFlowsList = []
         for _, path in recentFlows.items():
             try:
                 instaceFlow = Flow.read(path)

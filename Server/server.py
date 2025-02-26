@@ -945,22 +945,31 @@ class HorusServer:
         @self.server.route("/api/recentflows", methods=["GET"])
         @self.verifyLogin
         def recentFlows():
+
+            # Here we can mute the logger, otherwise we will
+            # keep seeing errors on the flows every 10 seconds
+            # (refresh rate of the frontend)
+            from App import HorusLogger
+
             try:
-                flows = self.flowManager.listRecentFlows()
+                with HorusLogger.mute():
+                    flows = self.flowManager.listRecentFlows()
 
-                # If we are in webapp mode, remove the part of the paths that is not
-                # accessible by the user (otside its directory)
-                if self._isForUser:
-                    for flow in flows:
-                        flow.path = str(
-                            UserFileExplorer(flow.path, currentUser).getRelativePath()
-                        )
+                    # If we are in webapp mode, remove the part of the paths that is not
+                    # accessible by the user (otside its directory)
+                    if self._isForUser:
+                        for flow in flows:
+                            flow.path = str(
+                                UserFileExplorer(flow.path, currentUser).getRelativePath()
+                            )
 
-                # Convert the flows to JSON
-                flows = [flow.encode() for flow in flows]
+                    # Convert the flows to JSON
 
-                success = {"ok": True, "flows": flows}
-            except Exception as exc:  # pylint: disable=broad-exception-caught
+                    flows = [flow.encode() for flow in flows]
+
+                    success = {"ok": True, "flows": flows}
+            except Exception as exc:
+                logging.getLogger("Horus").error("Error reading recent flows: %s", str(exc))
                 success = {
                     "ok": False,
                     "msg": str(exc),
