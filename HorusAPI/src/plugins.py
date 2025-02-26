@@ -1792,7 +1792,7 @@ class PluginBlock:
                 self.setOutput(k, v)
             except OutputIDNotFound:
                 logging.getLogger("Horus").error(
-                    f"Could not assignt he output of variable {k} with value {v}. Output ID not found."
+                    f"Could not assign he output of variable '{k}' with value '{v}'. Output ID not found. IDs available: {[o.id for o in self._outputs]}"
                 )
                 pass
 
@@ -2968,7 +2968,7 @@ class Plugin:
                     configs[config.id] = config.variables
                 json.dump(self.config, configFile, indent=4)
 
-    def _saveConfig(self, configPath: str, valuesToSave: dict[str, str]):
+    def _pConfig(self, configPath: str, valuesToSave: dict[str, str]):
         """
         Saves the config file for the block with new values.
         """

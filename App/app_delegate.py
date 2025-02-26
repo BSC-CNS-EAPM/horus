@@ -312,9 +312,9 @@ class HorusLogger:
             rootErrorHandler.setFormatter(colorFormatter)
             self.root.addHandler(rootErrorHandler)
 
-    @staticmethod
+    @classmethod
     @contextmanager
-    def mute(level: int = logging.CRITICAL + 1):
+    def mute(cls, level: int = logging.CRITICAL + 1):
         """
         Temporarily mute all loggers below the given level
 
