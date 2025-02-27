@@ -31,19 +31,17 @@ export const HorusTable = forwardRef((props: HorusTableProps, ref: any) => {
     window.horus.saveFile(
       new File([csv], props.allowDownload?.filename ?? "data.csv", {
         type: "text/csv",
-      }),
+      })
     );
   };
 
-  const height = props.allowDownload ? "[97%]" : "full";
-
   return (
-    <div className="h-full p-2">
+    <div className="h-full p-2 flex flex-col">
       {props.allowDownload && (
         <AppButton action={downloadCSV}>Save CSV</AppButton>
       )}
       <div
-        className={`ag-theme-quartz h-${height}`} // applying the grid theme
+        className="ag-theme-quartz h-full" // applying the grid theme
       >
         <AgGridReact
           // @ts-ignore

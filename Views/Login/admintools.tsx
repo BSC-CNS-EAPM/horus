@@ -94,7 +94,7 @@ export function BaseAdminToolsView() {
 
 function AdminTools() {
   const [currentView, _setCurrentView] = useState<ReactNode>(
-    <UsersTableView />,
+    <UsersTableView />
   );
 
   const setCurrentView = (v: ReactNode) => {
@@ -169,7 +169,7 @@ function _UserTable({
     const response = await horusPost(
       `/users/admintools/modifyuser`,
       null,
-      newQuotaToSend,
+      newQuotaToSend
     );
 
     if (!response) {
@@ -508,7 +508,7 @@ function GroupDatabaseView() {
       const response = await horusPost(
         "/users/admintools/add_group",
         null,
-        JSON.stringify({ group: g }),
+        JSON.stringify({ group: g })
       );
 
       const data = await response.json();
@@ -729,7 +729,7 @@ export function BlockViewModify(props: {
       JSON.stringify({
         group,
         blockIDs: editedBlocks.map((b) => b.id),
-      }),
+      })
     );
 
     const data = await response.json();
@@ -779,10 +779,11 @@ export function BlockViewModify(props: {
           showIcon={false}
         />
         <AppButton
+          className="min-w-[70]"
           action={() => {
             // Create an array of filtered blocks that are not already in the set
             const blocksToAdd = filteredBlocks.filter(
-              (f) => !editedBlocks.find((e) => e.id === f.id),
+              (f) => !editedBlocks.find((e) => e.id === f.id)
             );
 
             // Concatenate the unique filtered blocks to the current edited blocks
@@ -792,17 +793,20 @@ export function BlockViewModify(props: {
           All
         </AppButton>
         <AppButton
+          className="min-w-[70]"
           action={() => {
             setEditedBlocks((editedBlocks) => {
               return editedBlocks.filter(
-                (b) => !filteredBlocks.find((f) => f.id === b.id),
+                (b) => !filteredBlocks.find((f) => f.id === b.id)
               );
             });
           }}
         >
           None
         </AppButton>
-        <AppButton action={modifyGroup}>Apply</AppButton>
+        <AppButton className="min-w-[70]" action={modifyGroup}>
+          Apply
+        </AppButton>
       </div>
       {filteredBlocks.length === 0 ? (
         <div className="grid place-items-center mt-8">
@@ -831,8 +835,8 @@ export function BlockViewModify(props: {
                     e.target.checked
                       ? [...(editedBlocks ?? []), filteredB]
                       : (editedBlocks ?? []).filter(
-                          (blo: Block) => blo.id !== filteredB.id,
-                        ),
+                          (blo: Block) => blo.id !== filteredB.id
+                        )
                   )
                 }
               />
@@ -926,7 +930,7 @@ export function ExtensionViewModify(props: {
       JSON.stringify({
         group,
         pages: editedPages.map((b) => b.id),
-      }),
+      })
     );
 
     const data = await response.json();
@@ -979,7 +983,7 @@ export function ExtensionViewModify(props: {
           action={() => {
             // Create an array of filtered blocks that are not already in the set
             const blocksToAdd = filteredPages.filter(
-              (f) => !editedPages.find((e) => e.id === f.id),
+              (f) => !editedPages.find((e) => e.id === f.id)
             );
 
             // Concatenate the unique filtered blocks to the current edited blocks
@@ -992,7 +996,7 @@ export function ExtensionViewModify(props: {
           action={() => {
             setEditedPages((editedPages) => {
               return editedPages.filter(
-                (b) => !filteredPages.find((f) => f.id === b.id),
+                (b) => !filteredPages.find((f) => f.id === b.id)
               );
             });
           }}
@@ -1028,8 +1032,8 @@ export function ExtensionViewModify(props: {
                     e.target.checked
                       ? [...(editedPages ?? []), filteredP]
                       : (editedPages ?? []).filter(
-                          (blo: PluginPage) => blo.id !== filteredP.id,
-                        ),
+                          (blo: PluginPage) => blo.id !== filteredP.id
+                        )
                   )
                 }
               />
