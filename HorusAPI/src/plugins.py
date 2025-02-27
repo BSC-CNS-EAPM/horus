@@ -634,6 +634,11 @@ class PluginVariable:
 
     id: str = "baseplugin.variable"
 
+    _isOriginal: bool = True
+    """
+    Check if the variable is a copy or the original used to model the block
+    """
+
     def __init__(
         self,
         id: str,
@@ -757,6 +762,16 @@ class PluginVariable:
 
     def __str__(self):
         return json.dumps(self.toDict(), indent=4)
+
+    def copy(self):
+        """
+        Returns a deep copy of the variable in order to not
+        modify the original reference.
+        """
+
+        copy = deepcopy(self)
+        copy._isOriginal = False
+        return copy
 
 
 class CustomVariable(PluginVariable):
@@ -915,6 +930,7 @@ class VariableList(PluginVariable):
         name: str,
         description: str,
         prototypes: typing.List[PluginVariable],
+        defaultValue: typing.Optional[list[dict]] = None,
         allowedValues: typing.Optional[typing.List[typing.Any]] = None,
         category: typing.Optional[str] = None,
         disabled: bool = False,
@@ -936,7 +952,7 @@ class VariableList(PluginVariable):
             name=name,
             description=description,
             type=VariableTypes._LIST,
-            defaultValue=None,
+            defaultValue=defaultValue or None,
             allowedValues=allowedValues,
             category=category,
             disabled=disabled,
@@ -1193,11 +1209,6 @@ class PluginBlock:
     Whether the block has finished its execution or not.
     """
 
-    _storedOutputs: dict[str, typing.Any] = {}
-    """
-    The outputs of the block after it has finished its execution.
-    """
-
     _variableConnections: typing.List[BlockConnection] = []
     """
     To which variables the block is connected to run after.
@@ -1299,6 +1310,11 @@ class PluginBlock:
         """
         Initialize a PluginBlock.
         """
+
+        # Gather a copy of every variable in order to not modify the model
+        inputs = [i.copy() for i in inputs]
+        variables = [v.copy() for v in variables]
+        outputs = [o.copy() for o in outputs]
 
         if id is None:
             logging.getLogger("Horus").warning(
@@ -1561,7 +1577,7 @@ class PluginBlock:
         return varsDict
 
     def setOutput(self, id: str, value: typing.Any):
-        """
+        """blockJson.get
         Sets the value of an output variable.
 
         :param id: The id of the output variable.
@@ -1577,9 +1593,6 @@ class PluginBlock:
                     variable._updateVariablesInList(value)
                 else:
                     variable.value = value
-
-                # Update the stored outputs
-                self._storedOutputs[id] = value
 
                 return
         raise OutputIDNotFound(f"Output ID '{id}' not found.")
@@ -1629,7 +1642,6 @@ class PluginBlock:
         self.blockLogs = ""
         self._isRunning = False
         self._extensionsToOpen = []
-        self._storedOutputs = {}
         self.time = 0
 
         if cleanDirty:
@@ -1699,8 +1711,6 @@ class PluginBlock:
         xPos: float = position.get("x", 0)
         yPos: float = position.get("y", 0)
 
-        storedOutputs: typing.Dict[str, str] = blockJSON.get("storedOutputs", None)
-
         variableConnections: typing.List[typing.Dict[str, typing.Any]] = blockJSON.get(
             "variableConnections", []
         )
@@ -1761,7 +1771,7 @@ class PluginBlock:
             parsedVariableConnectionsReference.append(parseVariableConnection(connection))
 
         # Parse the variable values
-        variablesJSON = blockJSON.get("variables", {})
+        variablesJSON: list[dict] = blockJSON.get("variables", [])
         variablesJSONParsed = {}
         for variable in variablesJSON:
             varID = variable.get("id", None)
@@ -1787,8 +1797,10 @@ class PluginBlock:
         self._updateVariables(variablesJSONParsed)
 
         # Update the outputs
-        for k, v in storedOutputs.items():
+        for ov in typing.cast(list[dict[str, typing.Any]], blockJSON.get("outputs", [])):
             try:
+                k = ov["id"]
+                v = ov["value"]
                 self.setOutput(k, v)
             except OutputIDNotFound:
                 logging.getLogger("Horus").error(
@@ -1804,7 +1816,6 @@ class PluginBlock:
         self._position = [xPos, yPos]
         self._placedID = placedID
         self._finishedExecution = finishedExecution
-        self._storedOutputs = storedOutputs
         self._variableConnections = parsedVariableConnections
         self._variableConnectionsReferences = parsedVariableConnectionsReference
         self._extensionsToOpen = extensionsToOpen
@@ -1826,7 +1837,7 @@ class PluginBlock:
             "blockLogs": self.blockLogs,
             "placedID": self._placedID,
             "finishedExecution": self._finishedExecution,
-            "storedOutputs": self._storedOutputs,
+            "outputs": self._variablesToDict(self._outputs, minimal=True),
             "variables": self._variablesToDict(self._variables, minimal=True),
             "variableConnections": self._connectionsToDict(),
             "variableConnectionsReference": self._connectionsToDict(True),
@@ -1979,8 +1990,9 @@ class InputBlock(PluginBlock):
             description,
             action=action,
             variables=[variable],
-            inputs=[variable],
-            outputs=[variable if output is None else output],
+            outputs=[
+                variable if output is None else output
+            ],  # Use a diferent copy from the input so that the outputs can be correctly updated
             blockType=PluginBlockTypes.INPUT,
             id=id,
             externalURL=externalURL,
@@ -1992,13 +2004,21 @@ class InputBlock(PluginBlock):
     def __call__(self, *args, **kwargs):
         # If the block has an action, run it
         if self.action is not None:
-            return super().__call__(*args, **kwargs)
-
-        # If the block does not have an action, return the value of the variable
-        for k, v in self.variables.items():
-            self.setOutput(k, v)
+            super().__call__(*args, **kwargs)
+        else:
+            # If the block does not have an action, return the value of the variable as output
+            for k, v in self.inputs.items():
+                self.setOutput(k, v)
 
         return self.outputs
+
+    @property
+    def inputs(self) -> dict:
+        """
+        For input blocks inputs = variables
+        """
+
+        return self.variables
 
 
 class HorusPydanticModel(BaseModel):
@@ -2966,7 +2986,7 @@ class Plugin:
                     configs[config.id] = config.variables
                 json.dump(self.config, configFile, indent=4)
 
-    def _pConfig(self, configPath: str, valuesToSave: dict[str, str]):
+    def _saveConfig(self, configPath: str, valuesToSave: dict[str, str]):
         """
         Saves the config file for the block with new values.
         """

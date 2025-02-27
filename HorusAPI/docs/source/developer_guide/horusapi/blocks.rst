@@ -7,6 +7,10 @@ based on the provided :bdg-secondary-line:`PluginVariable`. In order to build a 
 you first need to instantiate some :bdg-secondary-line:`PluginVariable` and define the :bdg-secondary-line:`Action`
 that the block will perform.
 
+.. warning::
+    The :bdg-secondary-line:`PluginVariable` instances are only used to model the variables of the block. In order to access the updated values,
+    do so using the :bdg-secondary-line:`block.variables` or :bdg-secondary-line:`block.variables` properties.
+
 Defining the Block
 ==================
 

@@ -160,11 +160,6 @@ export type Block = {
   time: number;
   externalURL?: string;
 
-  // Server execution
-  storedOutputs: {
-    [key: string]: any;
-  };
-
   // Variable connections
   variableConnections: Array<VariableConnection>;
 

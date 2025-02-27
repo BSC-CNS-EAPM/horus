@@ -818,7 +818,7 @@ class Flow:
         if (
             blockToRun._finishedExecution and not resetRemoteBlock and not blockToRun.error
         ):  # and not comesFromCyclic
-            return blockToRun._storedOutputs
+            return blockToRun.outputs
         else:
             # Clean the block run only if its not a Slurm block which is currently running
             # nad needs to execute its second action.

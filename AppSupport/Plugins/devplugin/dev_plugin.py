@@ -1061,7 +1061,6 @@ def first_action(block: SlurmBlock):
 
 
 def final_action(block: SlurmBlock):
-    print(block._storedOutputs)
     print(block.outputs)
     print(block._outputs)
 

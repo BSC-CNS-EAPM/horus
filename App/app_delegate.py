@@ -543,9 +543,6 @@ class AppDelegate(metaclass=HorusSingleton):
         # Start the logger if needed
         self._loadLogger()
 
-        # Setup special platform requirements
-        self._internalPlatformSetup()
-
     def _internalPlatformSetup(self):
         """
         Setup special platform requirements
@@ -810,6 +807,9 @@ class AppDelegate(metaclass=HorusSingleton):
         This will be called when the app is launched.
         It will create the first window and launch the app
         """
+
+        # Setup special platform requirements
+        self._internalPlatformSetup()
 
         # Populate the App Info with extra data
         self._extraInfoData()

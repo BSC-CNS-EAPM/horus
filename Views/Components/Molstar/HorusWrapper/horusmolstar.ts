@@ -141,7 +141,7 @@ export type LoadMoleculeFileType = (
 export function isMolstarLoaded(
   molstar: typeof window.molstar
 ): molstar is HorusMolstar {
-  return (molstar as HorusMolstar | undefined)?.plugin !== undefined;
+  return Boolean((molstar as HorusMolstar | undefined)?.plugin);
 }
 
 export default class HorusMolstar {
