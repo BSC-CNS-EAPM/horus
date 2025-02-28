@@ -55,7 +55,14 @@ import requests
 import webview
 
 # Flow manager
-from Server.FlowManager import FlowManager, OverwriteException, NoPathSelected, Flow, NoPublicFlow
+from Server.FlowManager import (
+    FlowManager,
+    OverwriteException,
+    NoPathSelected,
+    Flow,
+    NoPublicFlow,
+    TemplateNotFound,
+)
 
 # Settings manager
 from Server.SettingsManager import SettingsManager
@@ -827,7 +834,7 @@ class HorusServer:
                     # Create it by generating a
                     # container folder with the sanitized name. Then, the flow will be
                     # saved inside this folder
-                    if currentPath is None:
+                    if currentPath is None or currentPath == ".":
                         from pathvalidate import sanitize_filepath
 
                         sanitizedName = sanitize_filepath(flowData["name"], max_len=30)
@@ -1053,7 +1060,7 @@ class HorusServer:
                     raise Exception("No data provided")
                 savedID = data.get("savedID", None)
                 path = data.get("path", None)
-                if path is not None:
+                if path is not None and path != ".":
                     # If we are on webapp mode, update the path to the user's directory
                     if self._isForUser:
                         # Update the path to the user's directory
@@ -1083,7 +1090,7 @@ class HorusServer:
                 smilesState = flow.getSmilesState()
 
                 # On webapp mode, remove the full path except if its a preset flow
-                if self._isForUser and flow.path and not flow.isPreset:
+                if self._isForUser and flow.path:
                     flow.path = str(UserFileExplorer(path, currentUser).getRelativePath())
 
                 # Get the flow JSON
@@ -1147,9 +1154,10 @@ class HorusServer:
         def getMolState():
 
             data = request.get_json()
-            flowPath = data.get("flowPath", None)
+            flowPath: typing.Union[str, None] = data.get("flowPath", None)
+            savedID: typing.Optional[str] = data.get("savedID", None)
 
-            if data is None or flowPath is None:
+            if data is None or flowPath is None or savedID is None:
                 return flask.jsonify(
                     {
                         "ok": False,
@@ -1160,11 +1168,20 @@ class HorusServer:
             try:
                 # If we are on webapp mode, update the path to the user's directory
                 if self._isForUser:
-                    # Update the path to the user's directory
-                    flowPath = str(UserFileExplorer(flowPath, currentUser).getAbsolutePath())
 
-                # Load the flow from the path
-                flow = self.flowManager.openFlowFromPath(flowPath, addToRecents=False)
+                    # If the path is the relative "." it means that it is a preset flow, and we need to use the savedID to obtain the path
+                    if flowPath == ".":
+                        try:
+                            flow = self.flowManager.loadPublicFlow(savedID)
+                        except NoPublicFlow:
+                            flow = self.flowManager.loadPredefinedFlow(savedID)
+                    else:
+                        # Update the path to the user's directory
+                        flowPath = str(UserFileExplorer(flowPath, currentUser).getAbsolutePath())
+                        flow = self.flowManager.openFlowFromPath(flowPath, addToRecents=False)
+                else:
+                    # Load the flow from the path
+                    flow = self.flowManager.openFlowFromPath(flowPath, addToRecents=False)
 
                 # Get the molstarState zip file
                 molstarState = flow.getMolstarState()
@@ -1218,12 +1235,13 @@ class HorusServer:
             request.get_data()
 
             # Get the data from the request
-            flowPath = request.form.get("flowPath", None)
+            flowPath: typing.Union[str, None] = request.form.get("flowPath")
+            savedID: typing.Union[str, None] = request.form.get("savedID")
 
-            if flowPath is None:
+            if flowPath is None or savedID is None:
                 success = {
                     "ok": False,
-                    "msg": "No flowPath provided",
+                    "msg": "Missing data to update the Mol* state",
                 }
 
                 return flask.jsonify(success)
@@ -1234,13 +1252,17 @@ class HorusServer:
 
             try:
 
-                # If we are on webapp mode, update the path to the user's directory
-                if self._isForUser:
-                    # Update the path to the user's directory
-                    flowPath = str(UserFileExplorer(flowPath, currentUser).getAbsolutePath())
+                # Check if the savedID is from a tempalte, use the tempalte path:
+                try:
+                    flow = self.flowManager.getTemplateByID(savedID)
+                except TemplateNotFound:
+                    # If we are on webapp mode, update the path to the user's directory
+                    if self._isForUser:
+                        # Update the path to the user's directory
+                        flowPath = str(UserFileExplorer(flowPath, currentUser).getAbsolutePath())
 
-                # Open the flow
-                flow = self.flowManager.openFlowFromPath(flowPath, addToRecents=False)
+                    # Open the flow
+                    flow = self.flowManager.openFlowFromPath(flowPath, addToRecents=False)
                 flow.pendingActions = []
                 flow.pendingSmilesActions = []
                 flow.pendingExtensions = []

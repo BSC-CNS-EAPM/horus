@@ -133,6 +133,12 @@ class OverwriteException(Exception):
         self.path = path
 
 
+class TemplateNotFound(Exception):
+    """
+    Exception raised when the savedID template is not found
+    """
+
+
 class Flow:
     """
     The flow class stores the information about a flow
@@ -1916,6 +1922,9 @@ class FlowManager:
         if not loadedFLow:
             raise Exception("Flow not found.")
 
+        # Set preset flag to true
+        loadedFLow.isPreset = True
+
         return loadedFLow
 
     _flowProcesses: typing.Dict[str, mp.Process] = {}
@@ -2240,7 +2249,7 @@ class FlowManager:
                 loadedTemplate = tFlow
                 break
         if not loadedTemplate:
-            raise Exception("Template not found.")
+            raise TemplateNotFound("Template not found.")
 
         return loadedTemplate
 
