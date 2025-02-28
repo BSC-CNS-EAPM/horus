@@ -73,6 +73,7 @@ import { DndContext, DragOverlay, pointerWithin } from "@dnd-kit/core";
 import { BlockView } from "../FlowBuilder/Blocks/block.view";
 import PlotIcon from "../Toolbar/Icons/Plot";
 import { MoleculePlotter } from "../MoleculePlotter/MoleculePlotter";
+import { HorusFileEditor } from "../FileEditor/FileEditor";
 
 const MOLSTAR_PANEL: AddPanelOptions = {
   id: "molstar",
@@ -187,6 +188,14 @@ const CODE_EDITOR_PANEL: AddPanelOptions = {
   floating: false,
 };
 
+const FILE_EDITOR_PANEL: AddPanelOptions = {
+  id: "fileEditor",
+  title: "File Editor",
+  component: "fileEditor",
+  renderer: "onlyWhenVisible",
+  floating: false,
+};
+
 const BLOCK_REGISTRY_PANEL: AddPanelOptions = {
   id: "blockRegistry",
   title: "Block Registry",
@@ -224,6 +233,7 @@ export const PANEL_REGISTRY = {
   blockVariablesExtension: BLOCK_VARIABLES_PANEL_EXTENSION,
   blockLogs: BLOCK_LOGS_PANEL,
   codeEditor: CODE_EDITOR_PANEL,
+  fileEditor: FILE_EDITOR_PANEL,
   blockRegistry: BLOCK_REGISTRY_PANEL,
   moleculePlotter: MOLECULE_PLOTTER_PANEL,
 };
@@ -244,6 +254,7 @@ const PANEL_ICONS: Record<string, ReactElement> = {
   blockLogs: <LogFile />,
   blockRegistry: <NewFlowIcon />,
   codeEditor: <CodeIcon />,
+  fileEditor: <LogFile />,
   moleculePlotter: <PlotIcon />,
 };
 
@@ -289,7 +300,7 @@ function useTitle(api: DockviewPanelApi): string | undefined {
 }
 
 function EditableTitleTab(
-  props: IDockviewPanelHeaderProps & { icon?: ReactElement },
+  props: IDockviewPanelHeaderProps & { icon?: ReactElement }
 ) {
   const { api, ...rest } = props;
 
@@ -300,7 +311,7 @@ function EditableTitleTab(
       event.preventDefault();
       api.close();
     },
-    [api],
+    [api]
   );
 
   const onPointerDown = useCallback((e: React.MouseEvent) => {
@@ -315,7 +326,7 @@ function EditableTitleTab(
 
       api.setActive();
     },
-    [api],
+    [api]
   );
 
   const [isEditing, setIsEditing] = useState(false);
@@ -368,12 +379,12 @@ function EditableTitleTab(
 }
 
 function ExtensionsTab(
-  props: Omit<IDockviewPanelHeaderProps, "params"> & { params: PluginPage },
+  props: Omit<IDockviewPanelHeaderProps, "params"> & { params: PluginPage }
 ) {
   const page = props.params;
 
   const [extensionIcon, setExtensionIcon] = useState<ReactElement>(
-    <Chevron direction="right" />,
+    <Chevron direction="right" />
   );
 
   useEffect(() => {
@@ -534,10 +545,13 @@ const components: Record<string, DockView> = {
   codeEditor: (props: IDockviewPanelProps) => {
     return <Editor {...props.params} />;
   },
+  fileEditor: (props: IDockviewPanelProps) => {
+    return <HorusFileEditor dockApi={props.api} params={props.params} />;
+  },
   blockVariables: (props: IDockviewPanelProps) => {
     // Set the panel title to the block name
     props.api.setTitle(
-      `${props.params.block.name} - Block ${props.params.block.placedID}`,
+      `${props.params.block.name} - Block ${props.params.block.placedID}`
     );
 
     return (
@@ -551,7 +565,7 @@ const components: Record<string, DockView> = {
   blockLogs: (props: IDockviewPanelProps) => {
     // Set the panel title to the block name
     props.api.setTitle(
-      `${props.params.block.name} - Block ${props.params.block.placedID}`,
+      `${props.params.block.name} - Block ${props.params.block.placedID}`
     );
 
     return <BlockLogsView block={props.params.block} />;

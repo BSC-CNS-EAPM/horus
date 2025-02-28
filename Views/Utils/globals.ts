@@ -13,7 +13,7 @@ import { ExtensionsFilePickerOptions } from "../Components/FileExplorer/file_exp
 // Terminal ref
 // @ts-ignore
 import Terminal from "react-console-emulator";
-import { getFile, saveFile } from "../Components/reusable";
+import { getFile, saveFile, updateFile } from "../Components/reusable";
 import { PluginPageExtensionEvent } from "@/Components/FlowBuilder/flow.types";
 
 export {};
@@ -64,7 +64,9 @@ declare global {
       getExtraData?: (key: string) => any;
       openExtensionFilePicker?: (options: ExtensionsFilePickerOptions) => void;
       saveFile: (file: File) => void;
+      updateFile: (file: File, path: string) => void;
       getFile: (path: string) => Promise<Blob>;
+      openFile: (path: string) => Promise<void>;
       setTabTitle?: (tabTitle: string) => void;
       closeTab?: () => void;
       openPanel?: openPanel;
@@ -85,7 +87,7 @@ export type openPanel = {
   (
     type: "moleculePlotter",
     id: string,
-    params: { smilesToPlot: HorusSmilesType[] },
+    params: { smilesToPlot: HorusSmilesType[] }
   ): void;
   (
     type: "extensions",
@@ -95,7 +97,7 @@ export type openPanel = {
       plugin: string;
       id: string;
       data?: any;
-    },
+    }
   ): void;
 };
 
@@ -110,4 +112,8 @@ export enum GLOBAL_IDS {
 window.horus = {
   saveFile: saveFile,
   getFile: getFile,
+  updateFile: updateFile,
+  openFile: async () => {
+    alert("Open the flow editor before opnening files");
+  },
 };

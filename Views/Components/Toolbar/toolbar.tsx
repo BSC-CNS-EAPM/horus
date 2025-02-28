@@ -190,7 +190,7 @@ export default function HorusToolbar() {
       name: "File",
       items: [
         {
-          name: "New",
+          name: "New flow",
           keyShortcut: `${modifierKeyLogo}N`,
           svgPath: <NewFlowIcon />,
           onClick: () => {
@@ -198,7 +198,7 @@ export default function HorusToolbar() {
           },
         },
         {
-          name: "Open",
+          name: "Open flow",
           hidden: window.horusInternal.mode === "webapp",
           svgPath: <OpenFlowIcon />,
           keyShortcut: `${modifierKeyLogo}O`,
@@ -210,7 +210,7 @@ export default function HorusToolbar() {
           },
         },
         {
-          name: "Save",
+          name: "Save flow",
           keyShortcut: `${modifierKeyLogo}S`,
           svgPath: <SaveIcon />,
           onClick: () => {
@@ -218,7 +218,7 @@ export default function HorusToolbar() {
           },
         },
         {
-          name: "Save as...",
+          name: "Save flow as...",
           keyShortcut: `${modifierKeyLogo}${shiftKeyLogo}S`,
           svgPath: <SaveAsIcon />,
           onClick: () => {
@@ -241,6 +241,17 @@ export default function HorusToolbar() {
           onClick: () => {
             shortcuts.toggleFileExplorer();
           },
+        },
+        {
+          name: "Open a file",
+          onClick: () => {
+            addPanel({
+              dockApi: dockApi,
+              component: PANEL_REGISTRY.fileEditor.component,
+              panelID: `${PANEL_REGISTRY.fileEditor.id + Math.random()}`,
+            });
+          },
+          svgPath: <LogFile />,
         },
         {
           name: "Clean recents",

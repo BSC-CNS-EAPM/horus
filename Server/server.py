@@ -659,7 +659,7 @@ class HorusServer:
                     return flask.jsonify(
                         {
                             "ok": False,
-                            "msg": "This function is not available.",
+                            "msg": "This function is disabled.",
                         }
                     )
                 return func(*args, **kwargs)
@@ -2004,6 +2004,30 @@ class HorusServer:
                 selFile = errorMSG
 
             return flask.jsonify({"path": selFile})
+
+        @self.server.route("/api/updatefile", methods=["POST"])
+        @self.verifyLogin
+        @self.stopDemoUser
+        def updateFile():
+            try:
+                request.get_data()
+                file = request.files.get("file")
+                path = request.form.get("path")
+
+                if path is None or file is None:
+                    raise ValueError("Missing data")
+
+                if self._isForUser:
+                    # Convert the path
+                    path = UserFileExplorer(path, currentUser).getAbsolutePath()
+
+                file.stream.seek(0)
+                file.save(path)
+
+                return flask.jsonify({"ok": True})
+
+            except Exception as e:
+                return flask.jsonify({"ok": False, "msg": str(e)})
 
         @self.server.route("/api/savecontents", methods=["POST"])
         @self.verifyLogin
