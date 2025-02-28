@@ -516,6 +516,7 @@ class AppDelegate(metaclass=HorusSingleton):
         Initialize the AppDelegate.
         This will start the backend server and create the first window.
         """
+
         self.debug = debug
         self.mode = mode
         self.debugURL = debugURL
@@ -534,6 +535,12 @@ class AppDelegate(metaclass=HorusSingleton):
         Handy variable for checking if we are running in "WebApp" mode, thus "safe mode"
         """
 
+        # Obtain platform information
+        self.platform = sys.platform
+
+        # Setup special platform requirements
+        self._internalPlatformSetup()
+
         # Load the app info from the APP_INFO file
         self._loadAppInfo()
 
@@ -551,7 +558,7 @@ class AppDelegate(metaclass=HorusSingleton):
         # If we are on macOS, set the enviornment to disable some thread safety
         # This is needed for subprocessing the blocks
         if self.platform == "darwin" and not "DARWIN_RESTARTED" in os.environ:
-            print("Appliying environment patches for macOS thread safety issues.")
+            print("Applying environment patches for macOS thread safety issues.")
 
             os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
             os.environ["DISABLE_SPRING"] = "YES"
@@ -665,7 +672,6 @@ class AppDelegate(metaclass=HorusSingleton):
         # On macOS this is ~/Library/Application Support
         # On Windows this is %APPDATA%
         # On Linux this is ~/.local/share
-        self.platform = sys.platform
 
         if hasattr(sys, "_MEIPASS"):
             appFolderName = self.APP_INFO["BUNDLE_IDENTIFIER"].lower().replace(" ", "")
@@ -807,9 +813,6 @@ class AppDelegate(metaclass=HorusSingleton):
         This will be called when the app is launched.
         It will create the first window and launch the app
         """
-
-        # Setup special platform requirements
-        self._internalPlatformSetup()
 
         # Populate the App Info with extra data
         self._extraInfoData()
