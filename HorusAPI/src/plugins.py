@@ -880,10 +880,15 @@ class VariableGroup(PluginVariable):
                 )
             ids.append(variable.id)
 
-        self.variables = variables
         """
         The variables contained in the variable group
         """
+        self.variables = [v.copy() for v in variables]
+
+        # If the variable group is required, make all of them required
+        if required:
+            for v in self.variables:
+                v.required = required
 
         super().__init__(
             id=id,
@@ -977,10 +982,15 @@ class VariableList(PluginVariable):
                 )
             ids.append(variable.id)
 
-        self.prototypes = prototypes
+        self.prototypes = [p.copy() for p in prototypes]
         """
         The prototypes of the variables in the list.
         """
+
+        # Make all required if all are required
+        if required:
+            for p in self.prototypes:
+                p.required = required
 
     def toDict(self, minimal: bool = False):
         """
