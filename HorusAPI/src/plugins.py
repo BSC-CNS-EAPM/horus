@@ -1803,9 +1803,7 @@ class PluginBlock:
                 v = ov["value"]
                 self.setOutput(k, v)
             except OutputIDNotFound:
-                logging.getLogger("Horus").error(
-                    f"Could not assign he output of variable '{k}' with value '{v}'. Output ID not found. IDs available: {[o.id for o in self._outputs]}"
-                )
+                # This can fail if we are inside a GhostBlock, because the outptus no longer exist
                 pass
 
         # Update the internal variables
