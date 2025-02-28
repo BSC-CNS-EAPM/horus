@@ -2437,8 +2437,6 @@ class HorusServer:
         @self.server.errorhandler(404)
         def pageNotFound(error):
 
-            logging.getLogger("Horus").error("Page %s not found: %s", request.path, str(error))
-
             # If the page if for an extension /plugins/pages/...
             if "/plugins/pages/" in request.path:
                 errorMSG = (
@@ -2446,7 +2444,7 @@ class HorusServer:
                     + "make sure to restart the app after installing it."
                 )
                 horusLogger = logging.getLogger("Horus")
-                horusLogger.error("Page not found: %s", str(error))
+                horusLogger.error("Extension not found: %s", str(error))
 
                 # Log the full request
                 horusLogger.error("Request: %s", str(request))
