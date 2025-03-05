@@ -179,7 +179,7 @@ class RemotesAPI:
                     )
                     self.conn.open()
                 except Exception as exc:
-                    logging.getLogger("Horus").critical(
+                    logging.getLogger("Horus").error(
                         "Could not connect to the remote %s: %s", self.host, str(exc)
                     )
                     raise ConnectionFailed(

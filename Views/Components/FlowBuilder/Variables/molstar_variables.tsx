@@ -1611,7 +1611,7 @@ export function SphereVariableView(props: VariableViewProps) {
           <div className="text-center px-1 cut-text">
             {sphereRef.current ? (
               <div className="flex flex-row items-center justify-center gap-2">
-                Placed sphere
+                Click to enable Mol* selection
                 <div
                   className="w-4 h-4 rounded-full"
                   style={{

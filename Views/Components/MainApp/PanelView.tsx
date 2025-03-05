@@ -764,6 +764,8 @@ export function HorusPanelView() {
   const flowBuilderState = useFlowBuilder({ dockApi });
 
   const onReady = (event: DockviewReadyEvent) => {
+    const dockApi = event.api;
+
     event.api.onWillDragPanel((e) => {
       if (e.panel.id === BLOCK_REGISTRY_PANEL.id) {
         e.nativeEvent.preventDefault();
@@ -785,7 +787,40 @@ export function HorusPanelView() {
       }
     });
 
-    setDockApi(event.api);
+    window.horus.openPanel = (type, id?, params?) => {
+      // If of type extensions, we need to reconstruct the url of the
+      // extension with the pluginID + extensionID
+      if (type === "extensions" && params) {
+        const incomingParams = params as PluginPage;
+        params = {
+          ...incomingParams,
+          url: `/plugins/pages/${incomingParams?.plugin}.${incomingParams?.id}`,
+        } as PluginPage;
+      }
+
+      addPanel({
+        dockApi: dockApi,
+        component:
+          PANEL_REGISTRY[type].component ?? PANEL_REGISTRY.error.component,
+        panelID:
+          (id as string) || PANEL_REGISTRY[type].id || PANEL_REGISTRY.error.id,
+        params: params,
+      });
+    };
+
+    window.horus.closePanel = (id) => {
+      const panel = dockApi?.getPanel(id);
+      if (panel) {
+        dockApi.removePanel(panel);
+      }
+    };
+
+    setDockApi(dockApi);
+
+    // Setup the hooks before loading the default panels
+    hooksInitializer();
+
+    // Load the default ocnfiguration
     const urlProps = new URLSearchParams(location.search);
     defaultConfig({ urlProps, api: event.api });
   };
@@ -834,40 +869,9 @@ export function HorusPanelView() {
 
     window.horus.addExtensions = addExtensions;
 
-    window.horus.openPanel = (type, id?, params?) => {
-      // If of type extensions, we need to reconstruct the url of the
-      // extension with the pluginID + extensionID
-      if (type === "extensions" && params) {
-        const incomingParams = params as PluginPage;
-        params = {
-          ...incomingParams,
-          url: `/plugins/pages/${incomingParams?.plugin}.${incomingParams?.id}`,
-        } as PluginPage;
-      }
-
-      addPanel({
-        dockApi: dockApi,
-        component:
-          PANEL_REGISTRY[type].component ?? PANEL_REGISTRY.error.component,
-        panelID:
-          (id as string) || PANEL_REGISTRY[type].id || PANEL_REGISTRY.error.id,
-        params: params,
-      });
-    };
-
-    window.horus.closePanel = (id) => {
-      const panel = dockApi?.getPanel(id);
-      if (panel) {
-        dockApi.removePanel(panel);
-      }
-    };
-
     document.addEventListener("addPanel", addPanelEventListener);
     document.addEventListener("togglePanel", togglePanelEventListener);
     socket.on("openExtension", addExtensions);
-
-    // Initialize the hooks
-    hooksInitializer();
 
     return () => {
       document.removeEventListener("addPanel", addPanelEventListener);

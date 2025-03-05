@@ -558,7 +558,6 @@ class AppDelegate(metaclass=HorusSingleton):
         # If we are on macOS, set the enviornment to disable some thread safety
         # This is needed for subprocessing the blocks
         if self.platform == "darwin" and not "DARWIN_RESTARTED" in os.environ:
-            print("Applying environment patches for macOS thread safety issues.")
 
             os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
             os.environ["DISABLE_SPRING"] = "YES"

@@ -2303,7 +2303,6 @@ class SlurmJob(HorusPydanticModel):
             jobOutputs = out.split(SlurmJob.SEPARATOR)
             slurmJobs = [SlurmJob.parseScontrolToSlurmJob(jobOutput) for jobOutput in jobOutputs]
         except Exception as exc:
-            logging.getLogger("Horus").error("Error submitting job: %s.", str(exc))
             raise Exception(f"Error submitting job: {exc}") from exc
 
         arrayJobs = []

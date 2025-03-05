@@ -1176,9 +1176,6 @@ class PluginManager(metaclass=HorusSingleton):
                 + "You can override this behaviour and install the dependencies at startup "
                 + "by starting the app with the '--server' flag in the terminal."
             )
-
-            logging.getLogger("Horus").error(msg)
-
             raise Exception(msg)
 
         # Get the PATH environment variable
@@ -1256,7 +1253,9 @@ class PluginManager(metaclass=HorusSingleton):
 
         interpreter: str = "python"
         try:
-            interpreter = str(self.horusSettings.getSetting("dependenciesInterpreter").value)
+            interpreter = str(
+                self.horusSettings.getSetting("dependenciesInterpreter").value
+            ).strip()
         except Exception as e:
             msg = f"Could not get the python interpreter from the user settings: {e}. "
             msg += "Defaulting to path 'python' interpreter."
