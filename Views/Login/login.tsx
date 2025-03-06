@@ -404,14 +404,8 @@ function Register({
       await horusAlert("Error fetching fields");
       return;
     }
-    const fields = [
-      ...json.fields,
-      ...json.fields,
-      ...json.fields,
-      ...json.fields,
-    ];
 
-    setExtraFieldsList(fields);
+    setExtraFieldsList(json.fields);
     setHasTos(json.hasTos);
     setTosAccepted(!json.hasTos);
   };
