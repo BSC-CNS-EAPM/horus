@@ -865,18 +865,27 @@ class PluginManager(metaclass=HorusSingleton):
         # Get the entry point from meta
         entryPoint = pluginMeta.get("pluginFile", None)
         if entryPoint is None:
-            raise Exception("The plugin does not contain a pluginFile entry.")
+            raise ValueError("The plugin does not contain a pluginFile entry.")
 
         pluginID = pluginMeta.get("id", None)
         if pluginID is None:
-            raise Exception("The plugin does not contain an id entry.")
+            raise ValueError("The plugin does not contain an id entry.")
 
         pluginPath = os.path.join(pluginDir, entryPoint)
 
-        requirementsPaths = [
-            os.path.join(self._getPluginByID(p)._path)
-            for p in pluginMetaModel.pluginRequires or []
-        ]
+        if pluginMetaModel.id in (pluginMetaModel.pluginRequires or []):
+            raise ValueError(
+                f"The plugin requires itself. Remove the {pluginMetaModel.id} from the plugin.meta file."
+            )
+
+        requirementsPaths = []
+        for p in pluginMetaModel.pluginRequires or []:
+            try:
+                requirementsPaths.append(self._getPluginByID(p)._path)
+            except PluginNotFoundError:
+                raise ValueError(
+                    f"Could not find plugin '{p}', which is required by '{pluginID}'."
+                )
 
         with PluginDepsBase([pluginDir] + requirementsPaths):
 
