@@ -49,7 +49,7 @@ export default function LoginRegister() {
         setMessages({ ok: false, msg: "" });
       }
     },
-    [],
+    []
   );
 
   const isFirstRender = useRef(true);
@@ -355,7 +355,7 @@ function Register({
         setMessages(
           parsedFields["email"]
             ? { ok: false, msg: "Password is required" }
-            : { ok: false, msg: "Email is required" },
+            : { ok: false, msg: "Email is required" }
         );
         return;
       }
@@ -404,8 +404,14 @@ function Register({
       await horusAlert("Error fetching fields");
       return;
     }
+    const fields = [
+      ...json.fields,
+      ...json.fields,
+      ...json.fields,
+      ...json.fields,
+    ];
 
-    setExtraFieldsList(json.fields);
+    setExtraFieldsList(fields);
     setHasTos(json.hasTos);
     setTosAccepted(!json.hasTos);
   };
@@ -419,8 +425,8 @@ function Register({
   }, []);
 
   return (
-    <div className="flex flex-col gap-2 items-center">
-      <div className="w-[350px] flex flex-col gap-2">
+    <div className="gap-2 items-center text-center">
+      <div className="w-[350px] grid grid-cols-1 gap-2 overflow-auto">
         <div className="form-floating">
           <input
             required
