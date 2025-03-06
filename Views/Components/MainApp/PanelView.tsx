@@ -259,6 +259,8 @@ const PANEL_ICONS: Record<string, ReactElement> = {
 };
 
 function FlowTab(props: IDockviewPanelHeaderProps) {
+  const flowContext = useContext(FlowBuilderContext);
+
   const onPointerDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
   }, []);
@@ -275,7 +277,18 @@ function FlowTab(props: IDockviewPanelHeaderProps) {
       <div
         className="ml-2 dv-default-tab-action"
         onPointerDown={onPointerDown}
-        onClick={() => props.api.close()}
+        onClick={() => {
+          if (flowContext?.flow.isFlowActive) {
+            alert("Cannot close the flow while it is active");
+          } else {
+            // Close also the block registry
+            props.containerApi
+              .getPanel(PANEL_REGISTRY.blockRegistry.id)
+              ?.api.close();
+
+            props.api.close();
+          }
+        }}
       >
         <CloseButton />
       </div>
@@ -420,11 +433,18 @@ function BaseTab(props: IDockviewDefaultTabProps) {
 }
 
 function ConfirmCloseTab(props: IDockviewDefaultTabProps) {
+  const flowContext = useContext(FlowBuilderContext);
+
   const onPointerDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
   }, []);
 
   const confirmClose = async () => {
+    if (flowContext?.flow.isFlowActive) {
+      alert(`Cannot close this tab while the flow is active.`);
+      return;
+    }
+
     if (await confirm(`Are you sure you want to close this tab?`)) {
       props.api.close();
     }
