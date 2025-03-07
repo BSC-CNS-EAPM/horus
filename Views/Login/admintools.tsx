@@ -980,6 +980,7 @@ export function ExtensionViewModify(props: {
           showIcon={false}
         />
         <AppButton
+          className="min-w-[70]"
           action={() => {
             // Create an array of filtered blocks that are not already in the set
             const blocksToAdd = filteredPages.filter(
@@ -993,6 +994,7 @@ export function ExtensionViewModify(props: {
           All
         </AppButton>
         <AppButton
+          className="min-w-[70]"
           action={() => {
             setEditedPages((editedPages) => {
               return editedPages.filter(
@@ -1003,7 +1005,9 @@ export function ExtensionViewModify(props: {
         >
           None
         </AppButton>
-        <AppButton action={modifyGroup}>Apply</AppButton>
+        <AppButton className="min-w-[70]" action={modifyGroup}>
+          Apply
+        </AppButton>
       </div>
       {filteredPages.length === 0 ? (
         <div className="grid place-items-center mt-8">
