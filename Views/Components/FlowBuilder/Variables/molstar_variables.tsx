@@ -913,14 +913,6 @@ export function BoxVariableView(props: VariableViewProps) {
       radiusScale: number | string,
       radialSegments: number | string
     ) => {
-      if (!isMolstarLoaded(window.molstar)) return;
-
-      const molstar = window.molstar;
-
-      if (!mounted.current) {
-        return;
-      }
-
       const parsedBoxNumbers = {
         x0: Number(metrics.x0),
         y0: Number(metrics.y0),
@@ -936,18 +928,26 @@ export function BoxVariableView(props: VariableViewProps) {
         z3: Number(metrics.z3),
       };
 
-      const ref = await molstar.addBox(
-        parsedBoxNumbers,
-        Number(radiusScale),
-        Number(radialSegments),
-        1,
-        undefined,
-        boxRef.current ?? undefined
-      );
+      let ref = null;
+      if (isMolstarLoaded(window.molstar)) {
+        const molstar = window.molstar;
 
-      boxRef.current = ref;
+        if (mounted.current) {
+          ref = await molstar.addBox(
+            parsedBoxNumbers,
+            Number(radiusScale),
+            Number(radialSegments),
+            1,
+            undefined,
+            boxRef.current ?? undefined
+          );
 
-      setActiveColor(Color.toHexStyle(ref.color));
+          boxRef.current = ref;
+
+          setActiveColor(Color.toHexStyle(ref.color));
+          window.molstar?.plugin?.managers.interactivity.lociSelects.deselectAll();
+        }
+      }
 
       const boxData = {
         metrics: {
@@ -970,8 +970,6 @@ export function BoxVariableView(props: VariableViewProps) {
       };
 
       onChange(boxData);
-
-      window.molstar?.plugin?.managers.interactivity.lociSelects.deselectAll();
     },
     [onChange]
   );
@@ -1369,30 +1367,28 @@ export function SphereVariableView(props: VariableViewProps) {
       },
       radius: number | string
     ) => {
-      if (!isMolstarLoaded(window.molstar)) return;
-
-      const molstar = window.molstar;
-      if (!mounted.current) {
-        return;
-      }
-
       const parsedSphereNumbers = {
         x: Number(position.x),
         y: Number(position.y),
         z: Number(position.z),
       };
 
-      const ref = await molstar.addSphere(
-        parsedSphereNumbers,
-        Number(radius),
-        0.3,
-        undefined,
-        sphereRef.current ?? undefined
-      );
-
-      sphereRef.current = ref;
-
-      setActiveColor(Color.toHexStyle(ref.color));
+      let ref = null;
+      if (isMolstarLoaded(window.molstar)) {
+        const molstar = window.molstar;
+        if (mounted.current) {
+          ref = await molstar.addSphere(
+            parsedSphereNumbers,
+            Number(radius),
+            0.3,
+            undefined,
+            sphereRef.current ?? undefined
+          );
+          setActiveColor(Color.toHexStyle(ref.color));
+          sphereRef.current = ref;
+          window.molstar?.plugin?.managers.interactivity.lociSelects.deselectAll();
+        }
+      }
 
       const sphereData = {
         center: {
@@ -1405,8 +1401,6 @@ export function SphereVariableView(props: VariableViewProps) {
       };
 
       onChange(sphereData);
-
-      window.molstar?.plugin?.managers.interactivity.lociSelects.deselectAll();
     },
     [onChange]
   );
