@@ -7,7 +7,7 @@ import { BlurredModal } from "../reusable";
 import RotatingLines from "../RotatingLines/rotatinglines";
 import { ServerFileExplorerModal } from "../FileExplorer/file_explorer";
 import { ConnectedArrows } from "./Connections/arrows";
-import Xarrow, { useXarrow, Xwrapper } from "react-xarrows";
+import Xarrow, { Xwrapper, useXarrow } from "react-xarrows";
 import { DroppableEntity, FlowStatus } from "./flow.types";
 import { GreenOverlay } from "../GreenOverlay/GreenOverlay";
 import SaveIcon from "../Toolbar/Icons/Save";
@@ -19,25 +19,6 @@ import { FlowBuilderHooks } from "./flow.hooks";
 function FlowBuilderView() {
   const flowBuilderState = useContext(FlowBuilderContext);
   const builderRef = useRef<HTMLDivElement>(null);
-  const xarrow = useXarrow();
-
-  const updateXarrowTimer = useRef<Timer | null>(null);
-
-  // useResizeObserver(builderRef, () => {
-  //   updateXarrow();
-  // });
-
-  useEffect(() => {
-    updateXarrowTimer.current = setInterval(() => {
-      xarrow();
-    }, 250);
-
-    return () => {
-      if (updateXarrowTimer.current) {
-        clearInterval(updateXarrowTimer.current);
-      }
-    };
-  }, []);
 
   if (!flowBuilderState) {
     return <>No flow context</>;
@@ -70,6 +51,21 @@ function FlowCanvasContainer({
   flowBuilderState: FlowBuilderHooks;
   style: CSSProperties;
 }) {
+  const updateArrow = useXarrow();
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      updateArrow();
+    }, 10);
+
+    setTimeout(() => {
+      clearInterval(interval);
+    }, 100);
+
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flowBuilderState.flow.scale]);
+
   return (
     <Xwrapper>
       <div

@@ -328,7 +328,7 @@ export default function HorusToolbar() {
         {
           name: "Open flow panel",
           onClick: () => {
-            togglePanel({
+            addPanel({
               dockApi: dockApi,
               component: PANEL_REGISTRY.flow.component,
               panelID: PANEL_REGISTRY.flow.id,
