@@ -35,38 +35,41 @@ export function HorusSearch({ pages }: { pages: PluginPage[] }) {
     const value = filterTerm;
 
     if (value === "" || value === undefined) {
-      setPredefinedFilteredFlows(predefinedFlows);
-      setRecentFilteredFlows(recentFlows);
-      setFilteredTemplates(templates);
+      setPredefinedFilteredFlows(predefinedFlows ?? []);
+      setRecentFilteredFlows(recentFlows ?? []);
+      setFilteredTemplates(templates ?? []);
       setFilteredPages(pages);
       return;
     }
 
-    const filteredFlows = predefinedFlows.filter((flow) => {
-      return (
-        flow.name.toLowerCase().includes(value.toLowerCase()) ||
-        (flow.pluginName ?? "Unnamed plugin")
-          .toLowerCase()
-          .includes(value.toLowerCase())
-      );
-    });
+    const filteredFlows =
+      predefinedFlows?.filter((flow) => {
+        return (
+          flow.name.toLowerCase().includes(value.toLowerCase()) ||
+          (flow.pluginName ?? "Unnamed plugin")
+            .toLowerCase()
+            .includes(value.toLowerCase())
+        );
+      }) ?? [];
 
     setPredefinedFilteredFlows(filteredFlows);
 
-    const filteredRecentFlows = recentFlows.filter((flow) => {
-      return (
-        flow.name.toLowerCase().includes(value.toLowerCase()) ||
-        (flow.path ?? "Unknown path")
-          .toLowerCase()
-          .includes(value.toLowerCase())
-      );
-    });
+    const filteredRecentFlows =
+      recentFlows?.filter((flow) => {
+        return (
+          flow.name.toLowerCase().includes(value.toLowerCase()) ||
+          (flow.path ?? "Unknown path")
+            .toLowerCase()
+            .includes(value.toLowerCase())
+        );
+      }) ?? [];
 
     setRecentFilteredFlows(filteredRecentFlows);
 
-    const filteredTemp = templates.filter((flow) => {
-      return flow.name.toLowerCase().includes(value.toLowerCase());
-    });
+    const filteredTemp =
+      templates?.filter((flow) => {
+        return flow.name.toLowerCase().includes(value.toLowerCase());
+      }) ?? [];
 
     setFilteredTemplates(filteredTemp);
 

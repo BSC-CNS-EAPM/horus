@@ -48,22 +48,23 @@ export default function WebAppUserFlows() {
 
   if (fetchingRecents && !hasFetchedInitally) {
     return (
-      <HorusContainer
-        className="w-full flex flex-row justify-center items-center gap-2"
-        style={{
-          maxWidth: "1075px",
-          minWidth: "650px",
-        }}
-      >
+      <div className="mt-16 grid place-items-center">
         <RotatingLines />
-        <h1 className="text-xl font-semibold">Loading user flows...</h1>
-      </HorusContainer>
+        <span
+          className="text-xl font-semibold"
+          style={{
+            color: "var(--digital-grey-IV)",
+          }}
+        >
+          Loading flows
+        </span>
+      </div>
     );
   }
 
   return (
     <>
-      {recentFlows.length > 0 && (
+      {recentFlows && recentFlows.length > 0 && (
         <HorusContainer
           className="w-full flex flex-col justify-center items-center gap-2"
           style={{
@@ -97,7 +98,7 @@ export default function WebAppUserFlows() {
           </div>
         </HorusContainer>
       )}
-      {corruptedFlows.length > 0 && (
+      {corruptedFlows && corruptedFlows.length > 0 && (
         <HorusContainer
           className="w-full flex flex-col justify-center items-center gap-2"
           style={{
@@ -129,7 +130,7 @@ export default function WebAppUserFlows() {
           </div>
         </HorusContainer>
       )}
-      {otherDirectories.length > 0 && (
+      {otherDirectories && otherDirectories.length > 0 && (
         <HorusContainer
           className="w-full flex flex-col justify-center items-center gap-2"
           style={{
@@ -238,12 +239,12 @@ function CorruptedFlowView(props: {
 
   return (
     <>
-      <div>{props.corruptedFlow.name}</div>
+      <div className="overflow-x-auto">{props.corruptedFlow.name}</div>
       <div>{props.corruptedFlow.modDate?.toString().split(".")[0] ?? "-"}</div>
       <div>
         <FlowSize size={props.corruptedFlow.size} />
       </div>
-      <div>{props.corruptedFlow.reason}</div>
+      <div className="overflow-x-auto">{props.corruptedFlow.reason}</div>
       <CloudDownload
         className="cursor-pointer w-6 h-6"
         style={{
@@ -256,7 +257,7 @@ function CorruptedFlowView(props: {
         onClick={async () => {
           if (
             await horusConfirm(
-              "Do you want to delete this corrupted flow? This action is irreversible.",
+              "Do you want to delete this corrupted flow? This action is irreversible."
             )
           ) {
             deleteFile();
@@ -343,7 +344,7 @@ function OtherFileView(props: { directory: FileData; getFlows: () => void }) {
 
   return (
     <>
-      <div>{props.directory.name}</div>
+      <div className="overflow-x-auto">{props.directory.name}</div>
       <div>{props.directory.modDate?.toString().split(".")[0] ?? "-"}</div>
       <div>
         <FlowSize size={props.directory.size} />
@@ -363,7 +364,7 @@ function OtherFileView(props: { directory: FileData; getFlows: () => void }) {
         onClick={async () => {
           if (
             await horusConfirm(
-              "Do you want to delete this file? This action is irreversible.",
+              "Do you want to delete this file? This action is irreversible."
             )
           ) {
             deleteFile();
@@ -380,7 +381,7 @@ function OtherFileView(props: { directory: FileData; getFlows: () => void }) {
 function FlowRowView({ flow, getFlows }: { flow: Flow; getFlows: () => void }) {
   return (
     <>
-      <div className="text-center">{flow.name}</div>
+      <div className="text-center overflow-x-auto">{flow.name}</div>
       <div className="text-center">{flow.date}</div>
       <FlowSize size={flow.size} />
       <FlowElapsed
