@@ -118,7 +118,7 @@ const FLOW_PANEL: AddPanelOptions = {
   id: "flow",
   title: "New flow",
   component: "flow",
-  renderer: "onlyWhenVisible",
+  renderer: "always",
   tabComponent: "flow",
   floating: false,
 };
