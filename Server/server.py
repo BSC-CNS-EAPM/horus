@@ -1263,6 +1263,7 @@ class HorusServer:
 
                     # Open the flow
                     flow = self.flowManager.openFlowFromPath(flowPath, addToRecents=False)
+
                 flow.pendingActions = []
                 flow.pendingSmilesActions = []
                 flow.pendingExtensions = []

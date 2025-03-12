@@ -41,6 +41,7 @@ import {
   DroppableEntity,
   Flow,
   FlowStatus,
+  FlowStatusUtil,
   VariableConnection,
 } from "./flow.types";
 import { FileExplorerProps } from "../FileExplorer/file_explorer";
@@ -263,12 +264,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
   const [flowLoading, setFlowLoading] = useState<boolean>(false);
   const [flowText, setFlowText] = useState<string>("Flow busy");
   const isFlowActive = useMemo(() => {
-    return (
-      flow.status === FlowStatus.RUNNING ||
-      flow.status === FlowStatus.CANCELLING ||
-      flow.status === FlowStatus.QUEUED ||
-      flow.status === FlowStatus.PAUSED
-    );
+    return FlowStatusUtil.RUNNING_STATUSES().includes(flow.status);
   }, [flow]);
 
   // State for the remote servers
@@ -453,12 +449,6 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       // Connect to a socketio room with the flowID
       socket.emit("joinFlow", openedFlow.savedID);
 
-      // Set the flow state
-      setFlow({
-        ...openedFlow,
-        status: isDefault ? FlowStatus.UNSAVED : openedFlow.status,
-      });
-
       // Set the placedIDCounter
       // Search for the highest placedID in the blocks and subblocks
       const placedIDs =
@@ -467,7 +457,18 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
           : [0];
       placedIDCounter.current = Math.max(...placedIDs) + 1;
 
-      if (await applyActions(openedFlow)) {
+      const appliedActions = await applyActions(openedFlow);
+
+      // Set the flow state and clean the pending actions
+      setFlow({
+        ...openedFlow,
+        status: isDefault ? FlowStatus.UNSAVED : openedFlow.status,
+        pendingActions: [],
+        pendingExtensions: [],
+        pendingSmilesActions: [],
+      });
+
+      if (appliedActions) {
         // Save the mol* state after applying the actions (will clear the extensionActions too)
         await updateMolstarState();
       }
@@ -1570,16 +1571,23 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         (async () => {
           // Check for any pending actions if the flow has finished
           if (recivedFlow.status !== FlowStatus.RUNNING) {
+            preventMoleculeChangedListener.current = true;
             if (await applyActions(recivedFlow)) {
               // Save the mol* state after applying the actions
-              // Wait artificaially 500ms for the mol* state to be updated
-              await new Promise((resolve) => setTimeout(resolve, 1000));
+              // Wait artificially 500ms for the mol* state to be updated
+              await new Promise((resolve) => setTimeout(resolve, 500));
               await updateMolstarState();
             }
+            preventMoleculeChangedListener.current = false;
           }
         })();
 
-        return parsedFlow;
+        return {
+          ...parsedFlow,
+          pendingActions: [],
+          pendingExtensions: [],
+          pendingSmilesActions: [],
+        };
       });
     },
 
@@ -2119,9 +2127,18 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.search, dockApi]);
 
+  const preventMoleculeChangedListener = useRef(false);
+
   useEffect(() => {
     const moleculeChangeListener = () => {
       setFlow((currentFlow) => {
+        if (
+          FlowStatusUtil.RUNNING_STATUSES().includes(currentFlow.status) ||
+          preventMoleculeChangedListener.current
+        ) {
+          return currentFlow;
+        }
+
         return {
           ...currentFlow,
           status: FlowStatus.UNSAVED,
@@ -2369,7 +2386,6 @@ async function applyActions(flow: Flow) {
       await window.horus?.addExtensions?.({ ...action, bypass: true });
     }
   }
-
   return hasToUpdate;
 }
 
