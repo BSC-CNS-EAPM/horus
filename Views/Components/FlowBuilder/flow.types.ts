@@ -313,6 +313,17 @@ export enum FlowStatus {
   UNSAVED = "UNSAVED",
 }
 
+export class FlowStatusUtil {
+  static RUNNING_STATUSES(): FlowStatus[] {
+    return [
+      FlowStatus.QUEUED,
+      FlowStatus.RUNNING,
+      FlowStatus.CANCELLING,
+      FlowStatus.PAUSED,
+    ];
+  }
+}
+
 /**
  * Represents a flow in the application.
  */
