@@ -11,6 +11,9 @@ if [ ! -d "GUI" ]; then
     exit 1
 fi
 
+# Set the LD_LIBRARY_PATH so that Linux compilations use conda openssl instead of system wide
+export LD_LIBRARY_PATH=$CONDA_PREFIX/lib
+
 # Build the horus API
 sh Devtools/Compile/build_horusapi.sh
 
