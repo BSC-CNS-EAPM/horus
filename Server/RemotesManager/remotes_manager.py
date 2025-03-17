@@ -236,7 +236,7 @@ class RemotesAPI:
                     shell=True,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
-                    stdin=None,
+                    stdin=subprocess.DEVNULL,
                     timeout=timeout,
                     text=True,
                 )

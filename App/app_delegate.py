@@ -555,34 +555,6 @@ class AppDelegate(metaclass=HorusSingleton):
         Setup special platform requirements
         """
 
-        # If we are on macOS, set the enviornment to disable some thread safety
-        # This is needed for subprocessing the blocks
-        if self.platform == "darwin" and not "DARWIN_RESTARTED" in os.environ:
-
-            os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
-            os.environ["DISABLE_SPRING"] = "YES"
-            os.environ["DARWIN_RESTARTED"] = "YES"
-
-            # Restart the appplication to make sure that all changes are applied
-            p = subprocess.Popen(
-                [sys.executable, *sys.argv],
-                env={**os.environ, "PYINSTALLER_RESET_ENVIRONMENT": "1"},
-            )
-
-            try:
-                p.wait()
-            except BaseException:
-                pass
-
-            # Exit the application
-            sys.exit(0)
-
-        # Always use fork for multiprocesses, as flows need this to work properly
-        try:
-            mp.set_start_method("fork")  # pylint: disable=no-member # type: ignore
-        except RuntimeError:  # If it was already set, then pass
-            pass
-
     def initializeServer(self):
         """
         Initializes the server, the PluginManager, the FlowManager
@@ -1162,6 +1134,7 @@ def parseArgs() -> tuple[dict, dict, dict]:
         help="Set a specific base url path for the server. Defaults to '/'",
     )
 
+    # Flow arguments
     parser.add_argument(
         "--flow",
         "-f",
@@ -1175,6 +1148,36 @@ def parseArgs() -> tuple[dict, dict, dict]:
         metavar="placedID",
         type=int,
         help="Block placedID to run when the --flow option is provided.",
+    )
+
+    parser.add_argument(
+        "--flow-base-url",
+        metavar="URL",
+        help="Base URL for sending events in a subprocess flow. Events will sent to the Horus server available on that instance. Only intended for internal use.",
+    )
+
+    parser.add_argument(
+        "--continue-slurm",
+        action="store_true",
+        help="Continue execution of the flow from a SLURM block that failed.",
+    )
+
+    parser.add_argument(
+        "--reset-flow",
+        action="store_true",
+        help="Reset the entire flow before execution.",
+    )
+
+    parser.add_argument(
+        "--reset-remote",
+        action="store_true",
+        help="Reset the remote block state before execution.",
+    )
+
+    parser.add_argument(
+        "--flow-appsupport",
+        metavar="/path/to/app/support/directory",
+        help="Specify the path to the app support directory for the flow. Only intended for internal use. Do not specify this option unless you know what you are doing.",
     )
 
     # For installing a plugin from the command line
@@ -1239,6 +1242,9 @@ def parseArgs() -> tuple[dict, dict, dict]:
         if envMode is not None:
             mode = envMode
 
+    # Override the mode if install-plugin was provided
+    mode = "server" if args.install_plugin else mode
+
     # Check for the --port (-p) flag to force a port on the app
     port = None
     envPort = os.getenv("HORUS_PORT")
@@ -1285,16 +1291,20 @@ def parseArgs() -> tuple[dict, dict, dict]:
     # The -f flag should be followed by the path to the flow and the
     # intex of the block to run -i <index>
     flowPath = None
-    blockIndex = None
+    blockIndex = args.index
     if args.flow:
-        flowPath = args.flow
+        flowPath = args.flow.strip()
         if not os.path.exists(flowPath):
-            print(f"Flow path {flowPath} does not exist")
+            print(f"Flow '{flowPath}' does not exist")
             sys.exit(1)
-        if not args.index:
-            print(f"No block index provided. Usage: -f {flowPath} -i <block index>")
-            sys.exit(1)
-        blockIndex = args.index
+
+    flowAppSupport = (
+        args.flow_appsupport.strip() if args.flow_appsupport else args.flow_appsupport
+    )
+    flowBaseURL = args.flow_base_url.strip() if args.flow_base_url else args.flow_base_url
+    continueSlurm = args.continue_slurm
+    resetFlow = args.reset_flow
+    resetRemoteBlock = args.reset_remote
 
     # Parse the arguments
     argsDict = {
@@ -1312,6 +1322,11 @@ def parseArgs() -> tuple[dict, dict, dict]:
     flowArgs = {
         "flowPath": flowPath,
         "blockIndex": blockIndex,
+        "flowAppSupport": flowAppSupport,
+        "flowBaseURL": flowBaseURL,
+        "continueSlurm": continueSlurm,
+        "resetRemoteBlock": resetRemoteBlock,
+        "resetFlow": resetFlow,
     }
 
     return argsDict, flowArgs, pluginArgs
@@ -1322,29 +1337,46 @@ def runFlowInsteadOfLaunch(app: AppDelegate, args: dict):
     If a flow was provided as an argument, it will run the flow instead of launching the app.
     """
 
-    flowPath = args.get("flowPath")
-    blockIndex = args.get("blockIndex")
+    flowPath = typing.cast(typing.Union[str, None], args.get("flowPath"))
+    blockIndex = typing.cast(typing.Union[int, None], args.get("blockIndex"))
+    baseURL = typing.cast(typing.Union[str, None], args.get("flowBaseURL"))
+    continueSlurm = typing.cast(typing.Union[bool, None], args.get("continueSlurm"))
+    resetFlow = typing.cast(typing.Union[bool, None], args.get("resetFlow"))
+    resetRemoteBlock = typing.cast(typing.Union[bool, None], args.get("resetRemoteBlock"))
+    flowAppSupport = typing.cast(typing.Union[str, None], args.get("flowAppSupport"))
 
-    if flowPath is None or blockIndex is None:
+    if flowPath is None:
         return
 
-    if app.server.flowManager is None:
-        raise Exception(
-            "Flow manager not initialized. This is a bug with Horus, please report it."
-        )
+    if flowAppSupport:
+        from Server.SettingsManager import SettingsManager
+
+        settings = SettingsManager(flowAppSupport)
+    else:
+        settings = app.server.settingsManager
 
     # Open the flow
-    flow = app.server.flowManager.openFlowFromPath(flowPath)
+    flow = app.server.flowManager.openFlowFromPath(
+        flowPath,
+        addToRecents=False if flowAppSupport else True,
+        socketBaseURL=baseURL,
+        resetFlowSockets=True,
+    )
 
-    # Assign the global HorusSettings instance to the flow
-    # TODO: Read for the users settings instead!
-    flow.horusSettings = app.server.settingsManager
+    # Assign the settings instance. Using the flowAppSupport we ensure that in WebApp Mode
+    # the user settings are used instead of the global settings
+    flow.horusSettings = settings
 
     # Run the flow
     try:
-        flow.run(placedID=blockIndex, resetRemoteBlock=True)
+        flow.run(
+            placedID=blockIndex,
+            resetRemoteBlock=resetRemoteBlock or False,
+            resetFlow=resetFlow or False,
+            continueSlurm=continueSlurm or False,
+        )
     except Exception as error:
-        print(f"Error running flow: {error}")
+        flow.stop(fail=True, message=str(error))
 
     # Exit
     sys.exit(0)
@@ -1387,11 +1419,11 @@ def launchApp():
         )
         sys.exit(1)
 
-    # If a flow was provided as an argument, it will run the flow instead of launching the app.
-    runFlowInsteadOfLaunch(app, flowArgs)
-
     # If a plugin was provided as an argument, it will install the plugin instead of launching the app.
     installPluginInsteadOfLaunch(app, pluginArgs)
+
+    # If a flow was provided as an argument, it will run the flow instead of launching the app.
+    runFlowInsteadOfLaunch(app, flowArgs)
 
     # Start the app
     try:

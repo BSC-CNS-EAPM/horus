@@ -77,20 +77,23 @@
     "value": true,
     "type": "boolean"
   },
-  "automaticConcurrentFlows": {
-    "name": "Automatic concurrent flows",
-    "description": "Whether to automatically set the maximum number of concurrent flows based on the number of available cores. Changing this setting will require a restart of the application.",
+  "runFlowsInSlurm": {
+    "name": "Run flows in SLURM",
+    "description": "If true, the entire flow will be sent as a slurm job instead of a subprocess.",
     "category": "Advanced",
     "value": false,
     "type": "boolean",
     "desktopOnly": true
   },
-  "maxConcurrentFlows": {
-    "name": "Concurrent flows",
-    "description": "If set to 0, the number of concurrent flows will be unlimited. This setting is only used if 'Automatic concurrent flows' is disabled. Changing this setting will require a restart of the application.",
+  "slurmScript": {
+    "name": "Submission script",
+    "description": "The script that Horus will use to submit locally the flows. The command to run the flow will be automatically appended at the end.",
     "category": "Advanced",
-    "value": 0,
-    "type": "integer",
+    "value": "",
+    "type": "code",
+    "allowedValues": [
+      "shell"
+    ],
     "desktopOnly": true
   }
 }

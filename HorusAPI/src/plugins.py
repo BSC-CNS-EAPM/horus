@@ -1504,9 +1504,10 @@ class PluginBlock:
         try:
             inputs = self._inputGroups[self.selectedInputGroup].variables
         except KeyError as keye:
+            self.selectedInputGroup = next(iter(self._inputGroups))
             raise Exception(
                 f"Input group '{self.selectedInputGroup}' not found in block inputs. "
-                + f"Current block inputs are: {self._inputGroups.keys()}"
+                + f"Current block inputs are: {', '.join(self._inputGroups.keys())}"
             ) from keye
         for variable in inputs:
             if variable.disabled:
@@ -1565,9 +1566,11 @@ class PluginBlock:
         try:
             inputs = self._inputGroups[self.selectedInputGroup].variables
         except KeyError as keye:
+            # Assign the default group to the block
+            self.selectedInputGroup = next(iter(self._inputGroups))
             raise Exception(
                 f"Input group '{self.selectedInputGroup}' not found in block inputs. "
-                + f"Current block inputs are: {self._inputGroups.keys()}"
+                + f"Current block inputs are: {', '.join(self._inputGroups.keys())}"
             ) from keye
         for variable in inputs:
             varsDict[variable.id] = self._parseVariablesForBlockAccess(variable)
@@ -2089,9 +2092,10 @@ class Status(Enum):
     # return the UNKNOWN status
     @classmethod
     def _missing_(cls, value: str):
-        # Try by uppercassing
+        # Try by uppercassing, stripping and removing special characters
         try:
-            return cls(value.upper())
+            fixed = "".join(re.findall(r"[A-Z]+", value.upper().strip()))
+            return cls(fixed)
         except:
             return cls.UNKNOWN
 
@@ -2132,18 +2136,21 @@ class Status(Enum):
         return [Status.COMPLETED, Status.IDLE]
 
 
+RemoteUnion = typing.Union["RemotesAPI", "PluginRemote"]
+
+
 class SlurmJob(HorusPydanticModel):
 
     SEPARATOR: ClassVar[str] = f"====HORUS===={os.urandom(16).hex()}====HORUS===="
 
     job_id: str = Field(..., alias="JobId")
+    state: Status = Field(..., alias="JobState")
     array_job_id: Optional[str] = Field(None, alias="ArrayJobId")
     array_task_id: Optional[str] = Field(None, alias="ArrayTaskId")
-    job_name: str = Field(..., alias="JobName")
-    user_id: str = Field(..., alias="UserId")
-    group_id: str = Field(..., alias="GroupId")
-    state: Status = Field(..., alias="JobState")
-    exit_code: str = Field(..., alias="ExitCode")
+    job_name: Optional[str] = Field(None, alias="JobName")
+    user_id: Optional[str] = Field(None, alias="UserId")
+    group_id: Optional[str] = Field(None, alias="GroupId")
+    exit_code: str = Field(None, alias="ExitCode")
     nodes: Optional[str] = Field(None, alias="NodeList")
     submit_time: Optional[datetime] = Field(None, alias="SubmitTime")
     start_time: Optional[datetime] = Field(None, alias="StartTime")
@@ -2205,7 +2212,7 @@ class SlurmJob(HorusPydanticModel):
 
         return "scontrol show jobid {} -d --oneline".format(jid)
 
-    def updateLogs(self, remote: PluginRemote):
+    def updateLogs(self, remote: RemoteUnion):
         """
         Updates the job information by running a command on the remote
         """
@@ -2234,16 +2241,8 @@ class SlurmJob(HorusPydanticModel):
                 self.update(updatedSlurmJob)
             else:
                 # Check with sacct
-                try:
-                    self.state = Status(
-                        remote.command(f"sacct -j {self.job_id} -o 'State' --noheader -X").strip()
-                    )
-                except CommandFailed as e:
-                    # Assume The job has ended
-                    logging.getLogger("Horus").error(
-                        f"Failed to check Slurm state for {self.job_id}: {str(e)}. Assuming job ended successfully."
-                    )
-                    self.state = Status.COMPLETED
+                self.state = SlurmJob.getSacctStatus(remote, self.job_id)
+
             self.script_content = out[0]
             self.stdout_content = out[1]
             self.stderr_content = out[2]
@@ -2253,14 +2252,14 @@ class SlurmJob(HorusPydanticModel):
             )
             self.state = Status.UNKNOWN
 
-    def cancel(self, remote: PluginRemote):
+    def cancel(self, remote: RemoteUnion):
         """
         Cancels the job
         """
 
         remote.command(f"scancel {self.job_id}")
 
-    def reSubmit(self, remote: PluginRemote) -> list["SlurmJob"]:
+    def reSubmit(self, remote: RemoteUnion) -> list["SlurmJob"]:
         """
         Submits again the job
         """
@@ -2272,7 +2271,7 @@ class SlurmJob(HorusPydanticModel):
 
     @staticmethod
     def _submitJob(
-        remote: PluginRemote, scripts: list[str], changeDir: bool = True
+        remote: RemoteUnion, scripts: list[str], changeDir: bool = True
     ) -> list["SlurmJob"]:
         """
         Submit multiple slurm jobs to the queue system of the cluster (SLURM)
@@ -2337,6 +2336,49 @@ class SlurmJob(HorusPydanticModel):
             jobDict[key] = value
 
         return SlurmJob(**jobDict)
+
+    @staticmethod
+    def getSacctStatus(remote: RemoteUnion, jobID: str) -> "Status":
+        from Server.RemotesManager import CommandFailed
+
+        # Assume completed when the status cannot be retrieved
+        status = Status.COMPLETED
+        try:
+            status = Status(remote.command(f"sacct -j {jobID} -o 'State' --noheader -X").strip())
+        except CommandFailed as cf1:
+
+            logging.getLogger("Horus").error(
+                f"Failed to check sactt state for job {jobID}. {cf1}. Trying with less reliable squeue."
+            )
+
+            # Try with squeue
+            try:
+                status = Status(
+                    remote.command(f"squeue -j {jobID} --format='%T' --noheader").strip()
+                )
+            except CommandFailed as cf2:
+                # Assume The job has ended
+                logging.getLogger("Horus").error(
+                    f"Failed to check Slurm state for job {jobID}. {cf2}. Assuming job ended successfully."
+                )
+
+        return status
+
+    @classmethod
+    def fromJobID(cls, remote: RemoteUnion, jobID: str) -> "SlurmJob":
+        """
+        Instantiates a slurm job from a given jobID
+        """
+
+        from Server.RemotesManager import CommandFailed
+
+        try:
+            command = SlurmJob.SCONTROL_COMMAND(jobID)
+            scontrol = remote.command(command)
+            return SlurmJob.parseScontrolToSlurmJob(scontrol)
+        except CommandFailed:
+            status = SlurmJob.getSacctStatus(remote, jobID)
+            return SlurmJob(**{"JobId": jobID, "JobState": status})
 
 
 class SlurmBlock(PluginBlock):
@@ -2460,8 +2502,12 @@ class SlurmBlock(PluginBlock):
         # Based on all jobs, parse the global result
         allStatus = [j.state for j in self.jobs]
 
+        # If all are queued, set queued
+        if all(s == Status.PENDING for s in allStatus):
+            status = Status.PENDING
+
         # If any is running, set the block to running
-        if any(s in Status.RUNNING_STATUSES() for s in allStatus):
+        elif any(s in Status.RUNNING_STATUSES() for s in allStatus):
             status = Status.RUNNING
 
         # If the block is not running and at least one job failed, set as failed
@@ -2487,13 +2533,13 @@ class SlurmBlock(PluginBlock):
         Whether the block is waiting for the job to finish or not.
         """
 
+        # Parse the status
+        self.parseStatus()
+
         if self.status in Status.FINISHED_STATUSES():
             return False
 
         try:
-            # Parse the status
-            self.parseStatus()
-
             # If the job is RUNNING or PENNDING, return False
             if self.status in Status.RUNNING_STATUSES():
                 return True

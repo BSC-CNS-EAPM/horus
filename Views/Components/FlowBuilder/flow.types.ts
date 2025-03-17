@@ -411,6 +411,8 @@ export type Flow = {
   };
 
   isPreset?: boolean;
+
+  flowError: string;
 };
 
 export enum DraggableEntity {

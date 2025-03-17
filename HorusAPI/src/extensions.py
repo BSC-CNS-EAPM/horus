@@ -104,7 +104,7 @@ class Extensions(metaclass=SingletonMeta):
             block = self._flow.findBlockByPlacedID(self._flow.currentExecuting)
 
             # Generate unique ID for each extension
-            extensionData["dataID"] = len(block._extensionsToOpen)
+            extensionData["dataID"] = os.urandom(16).hex()
 
             block._extensionsToOpen.append(extensionData)
         else:

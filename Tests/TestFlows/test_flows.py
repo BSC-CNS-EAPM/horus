@@ -133,8 +133,11 @@ def test_flow_write(tmpdir, flow: Flow):
 
 def test_flow_read(tmpdir, flow_data):
     flow_path = os.path.join(tmpdir, "test_flow.flow")
-    with open(flow_path, "w") as f:
-        json.dump(flow_data, f)
+    flow = Flow(flow_data)
+    flow.path = flow_path
+
+    flow.write()
+
     read_flow = Flow.read(flow_path)
     assert read_flow.name == "Test Flow"
     assert read_flow.remote == "Local"

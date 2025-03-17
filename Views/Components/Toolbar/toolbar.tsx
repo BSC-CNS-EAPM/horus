@@ -1,3 +1,5 @@
+import { useCallback, useContext, useEffect } from "react";
+
 // Horus components
 import { usePluginPages } from "./extensions_list";
 import { ToolBarItemProps, ToolbarMenu, ToolBarMenuProps } from "./ToolbarItem";
@@ -13,7 +15,6 @@ import {
   togglePanel,
 } from "../MainApp/PanelView";
 import { useFlowShortcuts } from "../FlowBuilder/flow.hooks";
-import { useCallback, useContext, useEffect } from "react";
 
 // Icons
 import NewFlowIcon from "./Icons/New";
@@ -49,6 +50,7 @@ import { useAlert } from "../HorusPrompt/horus_alert";
 import { navigateTo } from "@/Utils/navigationService";
 import SmilesIcon from "./Icons/Smiles";
 import StopIcon from "./Icons/Stop";
+import { queryClient } from "@/Main";
 
 // Define the logos for the shortcuts
 const modifierKeyLogo: string = navigator.userAgent.includes("Mac")
@@ -272,6 +274,8 @@ export default function HorusToolbar() {
                 if (!data.ok) {
                   throw new Error(data.msg);
                 }
+
+                queryClient.invalidateQueries({ queryKey: ["recentFlows"] });
               })
               .catch((e) => {
                 horusAlert("Error cleaning recents: " + e);

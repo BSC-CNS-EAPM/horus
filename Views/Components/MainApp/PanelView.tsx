@@ -120,7 +120,6 @@ const FLOW_PANEL: AddPanelOptions = {
   component: "flow",
   renderer: "always",
   tabComponent: "flow",
-  floating: false,
 };
 
 const TERMINAL_PANEL: AddPanelOptions = {
@@ -770,7 +769,7 @@ const WatermarkComponent = () => {
           });
         }}
       >
-        Create a new flow
+        Open the flow panel
       </AppButton>
     </div>
   );

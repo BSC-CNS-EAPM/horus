@@ -29,7 +29,6 @@ import socket
 # in order to have type chekings / autocompletion
 if typing.TYPE_CHECKING:
     import multiprocessing as mp
-    from multiprocessing.synchronize import Semaphore
 else:
     import multiprocess as mp
 
@@ -275,9 +274,6 @@ class HorusServer:
         """
         FlowManager class. Handle saving and opening of flows.
         """
-
-        # Setup the maximum number of processes per flow
-        self._setupSemaphore()
 
         # Security token
         self.token = self._getToken()
@@ -1375,7 +1371,11 @@ class HorusServer:
             if pluginID is None:
                 return flask.jsonify({"ok": False, "msg": "Plugin ID not provided."})
 
-            plugin = self.pluginManager._getPluginByID(pluginID)
+            plugin = None
+            try:
+                plugin = self.pluginManager._getPluginByID(pluginID)
+            except:
+                pass
 
             if plugin is None:
                 return flask.jsonify(
@@ -1507,13 +1507,22 @@ class HorusServer:
 
                 # Run the flow
                 self.flowManager.runFlow(
-                    flow, placedID, resetRemoteBlock, self.socketio, resetFlow, continueSlurm
+                    flow=flow,
+                    socket=self.socketio,
+                    placedID=placedID,
+                    resetRemoteBlock=resetRemoteBlock,
+                    resetFlow=resetFlow,
+                    continueSlurm=continueSlurm,
                 )
 
                 success = {
                     "ok": True,
                 }
             except Exception as exc:
+
+                import traceback
+
+                traceback.print_exc()
 
                 logging.getLogger("Horus").error("Could not execute flow: %s", str(exc))
 
@@ -1579,9 +1588,6 @@ class HorusServer:
                 # Obfuscate the path in webapp mode
                 stoppedFlow._skipPath = relativePath if self._isForUser else None
 
-                self.socketio.emit(
-                    "flow", stoppedFlow.encode(minimal=False), to=stoppedFlow.savedID
-                )
                 return flask.jsonify({"ok": True})
             except Exception as exc:
                 return flask.jsonify({"ok": False, "msg": str(exc)})
@@ -3467,90 +3473,6 @@ class HorusServer:
         # Start the server
         self.socketio.run(self.server, **runArgs)
 
-    _maxConcurrentFlows: int = 1
-    """
-    The maximum number of concurrent flows that the server can run
-    """
-
-    taskSemaphore: typing.Union["Semaphore", None] = None
-    """
-    A semaphore to queue the background tasks
-    according to the number of cores
-    """
-
-    def _setupSemaphore(self):
-        """
-        Assings the maxConcurrentFlows to the semaphore
-        """
-
-        try:
-
-            # Read from the general settings the maximum number of concurrent flows
-            automatic = self.settingsManager.getSetting("automaticConcurrentFlows").value
-
-            # Assign the maximum number of running flows
-            maxConcurrentFlows = 1  # Default to 1
-
-            if automatic:
-                try:
-                    maxConcurrentFlows = len(os.sched_getaffinity(0)) - 1  # type: ignore
-                except AttributeError:
-                    maxConcurrentFlows = mp.cpu_count() - 1
-            else:
-                # Read from the general settings the maximum number of concurrent flows
-                maxConcurrentFlows = self.settingsManager.getSetting("maxConcurrentFlows").value
-
-                if maxConcurrentFlows == 0:
-                    # Unlimited flows
-                    self.taskSemaphore = None
-                    self._maxConcurrentFlows = 0
-                    return
-
-            # Make sure we have at least one flow, even on potato computers
-            self._maxConcurrentFlows = maxConcurrentFlows if maxConcurrentFlows > 0 else 1
-
-            self.taskSemaphore = mp.Semaphore(self._maxConcurrentFlows)
-        finally:
-            logging.getLogger("Horus").info(
-                "Maximum number of concurrent flows: %s",
-                self._maxConcurrentFlows if self._maxConcurrentFlows != 0 else "Unlimited",
-            )
-
-    def backgroundRun(self, func: typing.Callable):
-        """
-        Runs the given function in a background process. This function requires
-        an active request context.
-
-        :param func: The function to run in the background
-        """
-
-        # Define a function to run the request on
-        def requestRunner(environment, semaphore):
-            if semaphore:
-                with semaphore:
-                    with self.server.request_context(environment):
-                        func()
-            else:
-                with self.server.request_context(environment):
-                    try:
-                        func()
-                    except KeyboardInterrupt:
-                        # Do not log when we pause flows by ^C
-                        return
-                    except BaseException as e:
-                        logging.getLogger("Horus").error(str(e))
-
-        # Start a new process for the flowRunner function
-        process = mp.Process(  # pylint: disable=not-callable
-            target=requestRunner, args=(request.environ, self.taskSemaphore)
-        )
-
-        # Start the process
-        process.start()
-
-        # Return the process object
-        return process
-
 
 class TokenManager:
     """
@@ -3829,30 +3751,69 @@ class HorusSocket(SocketIO):
         Removes from the current running flows list the provided flow
         """
 
-        if mp.current_process().name != "MainProcess":
-            # Get the data from the queue
-            data = {
-                "flowPath": flowPath,
-            }
+        # Get the data from the queue
+        data = {
+            "flowPath": flowPath,
+        }
 
-            # Send the data to the server
-            try:
-                response = requests.post(
-                    f"{self.baseURL}/internal/removefinishedflow",
-                    json=data,
-                    timeout=5,
-                )
-            except requests.exceptions.RequestException:
-                logging.getLogger("Horus").error(
-                    "Could not connect to server to remove finished flow"
-                )
-                return False
-
-            if response.status_code == 200:
-                return True
-            else:
-                return False
-        else:
-            raise Exception(
-                "removeFinishedFlowFromRunningFlows can only be called from a background process"
+        # Send the data to the server
+        try:
+            response = requests.post(
+                f"{self.baseURL}/internal/removefinishedflow",
+                json=data,
+                timeout=5,
             )
+        except requests.exceptions.RequestException:
+            logging.getLogger("Horus").error(
+                "Could not connect to server to remove finished flow"
+            )
+            return False
+
+        if response.status_code == 200:
+            return True
+        else:
+            return False
+
+
+class ExternalFlowRunnerSocket(HorusSocket):
+
+    def __init__(self, flowPath: str, baseURL: typing.Optional[str] = None) -> None:
+
+        self.baseURL = baseURL
+        self.flowPath = flowPath
+
+    def emit(self, event, *args, **kwargs):
+
+        # Get the data from the queue
+        data = {
+            "event": event,
+            "args": args,
+            "kwargs": kwargs,
+        }
+
+        # Update the base URL
+        updatedURLS = Flow.loadSocketURL(self.flowPath)
+        URLS = []
+        if updatedURLS:
+            URLS = [f"{updatedURL}/internal/backgroundsocketio/" for updatedURL in updatedURLS]
+        elif self.baseURL:
+            URLS = [f"{self.baseURL}/internal/backgroundsocketio/"]
+        else:
+            return
+
+        # Send the data to the server
+        for url in URLS:
+            try:
+                requests.post(
+                    url,
+                    json=data,
+                    timeout=1,
+                )
+            except:
+                pass
+
+    def removeFinishedFlowFromRunningFlows(self, flowPath: str):
+        if self.baseURL is None:
+            return False
+
+        return super().removeFinishedFlowFromRunningFlows(flowPath)

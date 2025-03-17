@@ -6,6 +6,7 @@ importantly, it manages the execution of the individual blocks of the plugins.
 
 # Standard imports
 from collections import defaultdict, deque
+from multiprocessing import Process
 import os
 import signal
 import sys
@@ -41,9 +42,14 @@ import pkg_resources
 from flask_socketio import SocketIO
 import flask_login
 
+from Server.RemotesManager import CommandFailed
+
 # Plugin deps context manager, forking the process prevents
 # importend modules from being imported twice
-import multiprocess as mp
+if typing.TYPE_CHECKING:
+    import multiprocessing as mp
+else:
+    import multiprocess as mp
 
 # More types from the HorusAPI
 from HorusAPI import (
@@ -448,9 +454,18 @@ class PluginManager(metaclass=HorusSingleton):
             else:
                 pluginFinalPath = os.path.join(self.pluginsDir, loadedPlugin.id)
 
+            # Remove the old plugin folder
+            if os.path.exists(pluginFinalPath):
+                print("Deleting old plugin version...")
+                shutil.rmtree(pluginFinalPath, ignore_errors=True)
+
+                # Wait for the folder to be deleted
+                while os.path.exists(pluginFinalPath):
+                    time.sleep(1)
+
             # If a plugin with the same name already exists, check if it is the same plugin
             # in order to upgrade it
-            if not os.path.exists(pluginFinalPath) and not loadedPlugin in self.loadedPlugins:
+            if not loadedPlugin in self.loadedPlugins:
                 print("Saving new plugin to its folder...")
                 shutil.move(tmpInstallDir, pluginFinalPath)
                 print(
@@ -460,56 +475,13 @@ class PluginManager(metaclass=HorusSingleton):
                 )
                 self.loadedPlugins.append(loadedPlugin)
             else:
-                # If we are installing the same plugin, replace it
-                # newPluginVersion = loadedPlugin.pluginMeta.version
-                # currentInstalledPluginVersion = self._getPluginByID(
-                #     loadedPlugin.id
-                # ).pluginMeta.version
 
-                # newPluginVersion = version_module.parse(newPluginVersion)
-                # currentInstalledPluginVersion = version_module.parse(
-                #     currentInstalledPluginVersion
-                # )
-
-                # # Compare the versions
-                # newVersionIsHigher = newPluginVersion > currentInstalledPluginVersion
-
-                # if newVersionIsHigher:
                 print(f"Upgrading plugin {loadedPlugin.pluginMeta.name}...")
-
-                for config in RemotesManager(self.appSupportDir).listRemotes(includeLocal=True):
-                    remoteName = config.get("name")
-                    if not remoteName:
-                        continue
-
-                    # Backup the plugin configuration to the new plugin folder
-                    currentConfigPath = self._pluginConfigPath(
-                        self._getPluginByID(loadedPlugin.id), remoteName
-                    )
-                    newConfigPath = self._pluginConfigPath(loadedPlugin, remoteName)
-
-                    # Read the current config if it exists, and update the new plugin config
-                    if os.path.exists(currentConfigPath):
-                        print(f"Backing up plugin configuration for remote '{remoteName}'")
-                        with open(currentConfigPath, "r", encoding="utf-8") as f:
-                            currentConfig = json.load(f)
-
-                        # Update the new plugin config
-                        loadedPlugin._saveConfig(newConfigPath, currentConfig)
 
                 # Remove the old plugin
                 try:
                     self.loadedPlugins.remove(self._getPluginByID(loadedPlugin.id))
                 except (ValueError, PluginNotFoundError):
-                    pass
-
-                print("Deleting old plugin version...")
-                # Remove the old plugin folder
-                if os.path.exists(pluginFinalPath):
-                    shutil.rmtree(pluginFinalPath, ignore_errors=True)
-
-                # Wait for the folder to be deleted
-                while os.path.exists(pluginFinalPath):
                     pass
 
                 # Move the new plugin to the final path
@@ -520,35 +492,9 @@ class PluginManager(metaclass=HorusSingleton):
 
                 print("Plugin upgraded to version " + f"{loadedPlugin.pluginMeta.version}.")
 
-                # Emit the plugin changes
-                # self.reloadPlugins()
-                # else:
-                #     message = (
-                #         "You are trying to install "
-                #         + f"{loadedPlugin.pluginMeta.name} version "
-                #         + f"{loadedPlugin.pluginMeta.version}, but you already have version "
-                #         + f"{currentInstalledPluginVersion}."
-                #     )
-
-                #     if currentInstalledPluginVersion == newPluginVersion:
-                #         message += (
-                #             " If you are trying to reinstall the plugin, " + "uninstall it first."
-                #         )
-
-                #     if currentInstalledPluginVersion > newPluginVersion:
-                #         message += (
-                #             " Which means that you are trying to install an older version. "
-                #         )
-
-                #     logging.getLogger("Horus").error(message)
-
-                #     print(message)
-
-                #     raise Exception(message)
-        except Exception as e:
+        finally:
             if os.path.exists(tmpInstallDir):
                 shutil.rmtree(tmpInstallDir, ignore_errors=True)
-            raise Exception(e) from e
 
     def _getPluginByID(self, id: str) -> Plugin:
         """
@@ -679,11 +625,15 @@ class PluginManager(metaclass=HorusSingleton):
             p: str
 
         # Get the metadata for all plugins
-        metas = [
-            MetaPath(**{"meta": self._loadPluginMeta(p), "p": p})
-            for p in pluginPaths
-            if self._loadPluginMeta(p) is not None
-        ]
+        metas: list[MetaPath] = []
+        errors: list[str] = []
+        for p in pluginPaths:
+            try:
+                m = MetaPath(**{"meta": self._loadPluginMeta(p), "p": p})
+                if m:
+                    metas.append(m)
+            except Exception:
+                errors.append(p)
 
         # Build a graph based on plugin dependencies
         graph = defaultdict(list)
@@ -720,6 +670,9 @@ class PluginManager(metaclass=HorusSingleton):
                 "Circular dependency detected among plugins. If you are the developer of such plugins, please update the plugin.meta file accordingly."
                 f" Errors were found for the following plugins: {repeated}"
             )
+
+        # Add the error plugins
+        sorted_plugins = errors + sorted_plugins
 
         return sorted_plugins
 
@@ -1536,17 +1489,6 @@ class PluginManager(metaclass=HorusSingleton):
                         block, appSupportDir, resetRemoteBlock
                     )
         except Exception as e:
-
-            # Get the full traceback only for development / debug mode
-            from App import AppDelegate
-
-            if AppDelegate().debug or self.horusSettings.getSetting("developmentMode").value:
-                import traceback
-
-                errorMSG = traceback.format_exc()
-            else:
-                errorMSG = str(e)
-
             if hasattr(e, "message"):
                 exception = type(e)(e.message + errorMSG)  # type: ignore
             else:
@@ -2059,7 +2001,7 @@ class SubprocessManager:
         libraries each time we execute a plugin's action.
         """
 
-        ctx = mp.context.ForkContext()
+        ctx = mp.context.ForkContext()  # type: ignore
         q = ctx.Queue(1)
         error = ctx.Value("b", False)
 
@@ -2070,7 +2012,9 @@ class SubprocessManager:
                 error.value = True  # type: ignore
                 q.put(e)
 
-        ctx.Process(target=target).start()
+        process = ctx.Process(target=target)
+        process.daemon = False
+        process.start()
         result = q.get()
         if error.value:  # type: ignore
             raise result
@@ -2087,67 +2031,88 @@ class SubprocessManager:
         works correctly. This avoids issues with Paramiko's requirement to run in the
         same process where the connection was established.
         """
+
+        # In this function we should cast mp to the regular Multirpcoess
+        # (the developers of the libraries have messed up typing)
+
         # Fork the current context to execute the block in a subprocess
-        ctx = mp.context.ForkContext()
+        ctx = mp.context.ForkContext()  # type: ignore
         # Setup a queue to communicate with the subprocess, only 1 element
         q = ctx.Queue(1)
 
         # Fork the block
         def target(forkedBlock: PluginBlock):
+
+            # For stopping the flow on SIGTERM
+            from Server.FlowManager import StoppedFlowException
+
             # Block outputs
             outputs = None
+
             # Block error
             error = None
 
-            def handleStoppedFlow():
-                from Server.FlowManager import StoppedFlowException
-
-                raise StoppedFlowException
-
-            # Signal catcher for sigterm
-            signal.signal(signal.SIGTERM, lambda s, f: handleStoppedFlow())
-
             try:
+
+                def handleStoppedFlow():
+                    raise StoppedFlowException
+
+                # Signal catcher for sigterm
+                signal.signal(signal.SIGTERM, lambda s, f: handleStoppedFlow())
+
                 # Establish remote connection inside the subprocess
-                try:
-                    remoteManager = RemotesManager(appSupportDir)
+                remoteManager = RemotesManager(appSupportDir)
 
-                    # If the selected remote doesn't exist, set it to Local
-                    if not remoteManager.remoteExists(forkedBlock.selectedRemote):
-                        logging.getLogger("Horus").warning(
-                            "The selected remote '%s' for block '%s' does not exist. "
-                            + "Setting it to 'Local'",
-                            forkedBlock.selectedRemote,
-                            forkedBlock.name,
-                        )
-                        forkedBlock.selectedRemote = "Local"
+                # If the selected remote doesn't exist, set it to Local
+                if not remoteManager.remoteExists(forkedBlock.selectedRemote):
+                    logging.getLogger("Horus").warning(
+                        "The selected remote '%s' for block '%s' does not exist. "
+                        + "Setting it to 'Local'",
+                        forkedBlock.selectedRemote,
+                        forkedBlock.name,
+                    )
+                    forkedBlock.selectedRemote = "Local"
 
-                    if forkedBlock.selectedRemote != "Local":
-                        msg = f"Connecting to remote '{forkedBlock.selectedRemote}'..."
-                        print(msg)
-                        logging.getLogger("Horus").info(msg)
+                if forkedBlock.selectedRemote != "Local":
+                    msg = f"Connecting to remote '{forkedBlock.selectedRemote}'..."
+                    print(msg)
+                    logging.getLogger("Horus").info(msg)
 
-                    rAPI = remoteManager.getRemoteAPI(forkedBlock.selectedRemote)
+                rAPI = remoteManager.getRemoteAPI(forkedBlock.selectedRemote)
 
-                    if forkedBlock.selectedRemote != "Local":
-                        msg = f"Successfully connected to remote '{forkedBlock.selectedRemote}'"
-                        print(msg)
-                        logging.getLogger("Horus").info(msg)
+                if forkedBlock.selectedRemote != "Local":
+                    msg = f"Successfully connected to remote '{forkedBlock.selectedRemote}'"
+                    print(msg)
+                    logging.getLogger("Horus").info(msg)
 
-                    # Update the block with the remote configuration
-                    forkedBlock._setRemote(rAPI)
+                # Update the block with the remote configuration
+                forkedBlock._setRemote(rAPI)
 
-                except Exception as e:
-                    error = e
-                    raise
-
-                # Execute the block
+                # Actually execute the block
                 outputs = forkedBlock()
 
+            except StoppedFlowException as sf:
+                error = sf
+
             except BaseException as e:
+
+                msg = str(e)
+
+                from App import AppDelegate
+
+                if (
+                    AppDelegate().debug
+                    or AppDelegate().server.settingsManager.getSetting("developmentMode").value
+                    == True
+                ):
+
+                    import traceback
+
+                    msg = f"{traceback.format_exc()}\n{e}"
+
                 # Here we need to convert the exception because it may be a class which does not exist
                 # outside of the forked context
-                error = Exception(str(e))
+                error = Exception(msg)
 
             finally:
                 # Always ensure we put the result in the queue
@@ -2165,11 +2130,15 @@ class SubprocessManager:
                 )
 
         # Start the subprocess
-        proc = ctx.Process(target=target, args=[block])
+        proc: Process = ctx.Process(target=target, args=[block])
         proc.start()
 
+        def terminate():
+            # The internal process is the one which will handle the SIGTERM
+            proc.join()
+
         # Forward sigterm to child process
-        signal.signal(signal.SIGTERM, lambda x, y: proc.terminate())
+        signal.signal(signal.SIGTERM, lambda s, f: terminate())
 
         # Get the result from the subprocess
         result = q.get()
@@ -2201,7 +2170,13 @@ class SubprocessManager:
         return result["outputs"]
 
     @staticmethod
-    def callPopen(command: list[str], cwd: str = ".", env: typing.Optional[dict] = None):
+    def callPopen(
+        command: list[str],
+        cwd: str = ".",
+        env: typing.Optional[dict] = None,
+        wait: bool = True,
+        comunicate: bool = True,
+    ) -> "SubprocessManager.HorusPopen":
         """
         Calls subprocess.Popen with a context manager and prints the STDOUT and STDERR
 
@@ -2213,15 +2188,22 @@ class SubprocessManager:
         - cwd: str: The current working directory. Default = "."
         - env: dict: A dictionary containing environment variables for the command. Default = None
         """
-        with subprocess.Popen(
+
+        logging.getLogger("Horus").debug("Calling Popen with command: %s", " ".join(command))
+
+        p = SubprocessManager.HorusPopen(
             command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
+            stdout=subprocess.PIPE if comunicate else subprocess.DEVNULL,
+            stderr=subprocess.STDOUT if comunicate else subprocess.DEVNULL,
             stdin=subprocess.DEVNULL,
             cwd=cwd,
-            text=True,
             env=env,
-        ) as p:
+            text=True if comunicate else None,
+            preexec_fn=os.setsid,
+        )
+
+        if wait:
+
             # Print the output
             if p.stdout is None:
                 raise Exception(f"Could not get the output of {command}.")
@@ -2234,4 +2216,28 @@ class SubprocessManager:
 
             # Check the return code
             if p.returncode != 0 and p.returncode is not None:
-                raise Exception(f"Command failed: '{' '.join(command)}'")
+                raise CommandFailed(
+                    f"Command failed. Exit code: {p.returncode}",
+                    cmd=" ".join(command),
+                    stderr=str(p.stdout),
+                    stdout=str(p.stdout),
+                )
+
+            return p
+        else:
+            return p
+
+    class HorusPopen(subprocess.Popen):
+
+        def is_alive(self):
+            """
+            Whether the process is alive or not
+            """
+            return self.poll() is not None
+
+        def join(self, timeout: typing.Union[int, None] = None):
+            """
+            Mimics the multiprocess join functionality
+            """
+
+            self.wait(timeout=timeout)
