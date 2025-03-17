@@ -109,19 +109,22 @@ export function BlockRegistry() {
       }
 
       const filtered = blocks?.filter((block) => {
+        const lowerQuery = query.toLowerCase();
+        const blockID = block.id;
         const blockName = block.name.toLowerCase();
         const blockPlugin = block.plugin.name.toLowerCase();
         const blockDescription = block.description.toLowerCase();
         return (
-          blockName.includes(query.toLowerCase()) ||
-          blockPlugin.includes(query.toLowerCase()) ||
-          blockDescription.includes(query.toLowerCase())
+          blockID.startsWith(lowerQuery) ||
+          blockName.includes(lowerQuery) ||
+          blockPlugin.includes(lowerQuery) ||
+          blockDescription.includes(lowerQuery)
         );
       });
 
       setFilteredBlocks(filtered ?? []);
     },
-    [blocks],
+    [blocks]
   );
 
   // Update the filtered blocks when the search term changes
@@ -181,8 +184,8 @@ export function BlockRegistry() {
                         .then(() => refetch())
                         .then(() =>
                           horusAlert(
-                            "Plugins reloaded! Blocks in the flow builder that changed need to be replaced",
-                          ),
+                            "Plugins reloaded! Blocks in the flow builder that changed need to be replaced"
+                          )
                         )
                         .finally(() => setReloadingPlugins(false));
                     }}
@@ -254,7 +257,7 @@ function PluginBlocksGroupList({
           acc[key] = value;
           return acc;
         },
-        {} as { [key: string]: Block[] },
+        {} as { [key: string]: Block[] }
       );
 
     return groupedBlocks;
@@ -281,7 +284,7 @@ function PluginBlocksGroupList({
               groupedBlocks={groupedBlocks}
             />
           );
-        },
+        }
       )}
     </div>
   );
@@ -297,7 +300,7 @@ function useCollapsible({
   const setings = useSettings();
 
   const [show, setShow] = useState<boolean>(
-    setings?.["collapseBlocks"]?.value ? false : true,
+    setings?.["collapseBlocks"]?.value ? false : true
   );
 
   useEffect(() => {
@@ -355,7 +358,7 @@ function PluginBlocksGroup({
           acc[key] = value;
           return acc;
         },
-        {} as Record<string, Block[]>,
+        {} as Record<string, Block[]>
       );
 
     return { categories, uncategorized };

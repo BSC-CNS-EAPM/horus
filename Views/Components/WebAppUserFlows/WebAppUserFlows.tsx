@@ -178,7 +178,7 @@ function CorruptedFlowView(props: {
       // Create a link to download the file
       const link = document.createElement("a");
       const safeURL = encodeURIComponent(props.corruptedFlow["path"]);
-      link.href = `/users/downloadfile?path=${safeURL}`;
+      link.href = `${window.__HORUS_ROOT__}/users/downloadfile?path=${safeURL}`;
 
       // Add the link to the document
       document.body.appendChild(link);
@@ -282,7 +282,7 @@ function OtherFileView(props: { directory: FileData; getFlows: () => void }) {
       // Create a link to download the file
       const link = document.createElement("a");
       const safeURL = encodeURIComponent(props.directory["path"]);
-      link.href = `/users/downloadfile?path=${safeURL}`;
+      link.href = `${window.__HORUS_ROOT__}/users/downloadfile?path=${safeURL}`;
 
       // Add the link to the document
       document.body.appendChild(link);
@@ -452,7 +452,7 @@ function FlowDownload({ flow }: { flow: Flow }) {
       // Create a link to download the file
       const link = document.createElement("a");
       const safeURL = encodeURIComponent(data.path);
-      link.href = `/users/downloadflow?path=${safeURL}`;
+      link.href = `${window.__HORUS_ROOT__}/users/downloadflow?path=${safeURL}`;
 
       // Add the link to the document
       document.body.appendChild(link);

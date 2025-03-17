@@ -6,9 +6,6 @@ import { HorusPanelView } from "@/Components/MainApp/PanelView";
 
 const router = createBrowserRouter([
   {
-    errorElement: <RouterError />,
-  },
-  {
     path: `${window.__HORUS_ROOT__}/`,
     element: <App />,
     errorElement: <RouterError />,
@@ -20,6 +17,10 @@ const router = createBrowserRouter([
       {
         path: "flow",
         element: <HorusPanelView />,
+      },
+      {
+        path: "*",
+        element: <RouterError />,
       },
     ],
   },

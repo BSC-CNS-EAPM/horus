@@ -851,7 +851,7 @@ export default class HorusSmilesManager {
         });
       }
 
-      sdfContents += `${currentSDF} \n\n$$$$\n`;
+      sdfContents += `${currentSDF}\n`;
     }
     return sdfContents;
   }

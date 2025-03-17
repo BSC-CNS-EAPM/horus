@@ -212,6 +212,7 @@ function newFlowObject(): Flow {
     pendingActions: [],
     pendingSmilesActions: [],
     pendingExtensions: [],
+    flowError: "",
     elapsed: 0,
   };
 }
@@ -459,6 +460,10 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
       const appliedActions = await applyActions(openedFlow);
 
+      if (openedFlow.flowError) {
+        alert(openedFlow.flowError);
+      }
+
       // Set the flow state and clean the pending actions
       setFlow({
         ...openedFlow,
@@ -466,6 +471,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         pendingActions: [],
         pendingExtensions: [],
         pendingSmilesActions: [],
+        flowError: "",
       });
 
       if (appliedActions) {
@@ -1543,7 +1549,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
         if (
           currentFlow.status === FlowStatus.CANCELLING &&
-          recivedFlow.status !== FlowStatus.STOPPED
+          recivedFlow.status === FlowStatus.RUNNING
         ) {
           return currentFlow;
         }
@@ -1582,11 +1588,16 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
           }
         })();
 
+        if (parsedFlow.flowError) {
+          alert(parsedFlow.flowError);
+        }
+
         return {
           ...parsedFlow,
           pendingActions: [],
           pendingExtensions: [],
           pendingSmilesActions: [],
+          flowError: "",
         };
       });
     },
@@ -2007,6 +2018,9 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
     if (!data.ok) {
       await horusAlert(data.msg);
+
+      // Restore the previous state of the flow
+      setFlow(flow);
     }
   }
 

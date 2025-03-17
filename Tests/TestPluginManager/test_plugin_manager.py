@@ -199,10 +199,12 @@ def test_install_dep_internal_success(mocker):
     AppDelegate().mode = "server"
     AppDelegate().desktop = False
 
-    # Mock the subprocess.Popen context manager
+    # Mock the SubprocessManager.HorusPopen context manager
     mock_popen = mocker.Mock()
     mock_popen.returncode = 0
-    mocker.patch("subprocess.Popen", return_value=mock_popen)
+    mocker.patch("Server.PluginManager.SubprocessManager.HorusPopen", return_value=mock_popen)
+
+    from Server.PluginManager import SubprocessManager
 
     # Mock the with ... as ... statement for popen
     mock_popen.__enter__ = mocker.Mock(return_value=mock_popen)
@@ -213,15 +215,14 @@ def test_install_dep_internal_success(mocker):
     # Call the _installDepInternal method
     dep_to_install = "dep"
     deps_dir = "/path/to/"
-
     with pytest.raises(
         Exception,
         match="Failed to install dependency dep. External interpreter error: 'Mock' object is not iterable",
     ):
         pluginManager._installDepInternal(dep_to_install, deps_dir)
 
-    # Check the arguments of the last call to subprocess.Popen
-    last_call_args, last_call_kwargs = subprocess.Popen.call_args  # type: ignore
+    # Check the arguments of the last call to SubprocessManager.HorusPopen
+    last_call_args, last_call_kwargs = SubprocessManager.HorusPopen.call_args  # type: ignore
     assert last_call_args[0] == [
         "python",
         "-m",
@@ -238,8 +239,8 @@ def test_install_dep_internal_success(mocker):
     assert last_call_kwargs["stderr"] == subprocess.STDOUT
     assert last_call_kwargs["stdin"] == subprocess.DEVNULL
 
-    # Verify that subprocess.Popen was called once
-    assert subprocess.Popen.call_count == 3  # type: ignore
+    # Verify that SubprocessManager.HorusPopen was called twice (for the dep install and fro the version check)
+    assert SubprocessManager.HorusPopen.call_count == 2  # type: ignore
 
     del pluginManager
 
@@ -248,10 +249,10 @@ def test_install_dep_internal_failure_pyversion(mocker):
     # Create an instance of MyClass
     pluginManager = PluginManager("AppSupport")
     pluginManager.appSupportDir = "AppSupport"
-    # Mock the subprocess.Popen context manager
+    # Mock the SubprocessManager.HorusPopen context manager
     mock_popen = mocker.Mock()
     mock_popen.returncode = 0
-    mocker.patch("subprocess.Popen", return_value=mock_popen)
+    mocker.patch("Server.PluginManager.SubprocessManager.HorusPopen", return_value=mock_popen)
 
     # Mock popen.stdout.read() to return the correct value
     mock_popen.stdout.read.return_value = b"Python 3.7"
@@ -283,13 +284,15 @@ def test_install_dep_internal_frozen_app(mocker):
     AppDelegate().mode = "server"
     AppDelegate().desktop = False
 
+    from Server.PluginManager import SubprocessManager
+
     # Mock the sys.frozen attribute to simulate a frozen app
     with patch.object(sys, "frozen", True, create=True):
-        # Mock the subprocess.Popen context manager
+        # Mock the SubprocessManager.HorusPopen context manager
         # to simulate a successful installation
         mock_popen = mocker.Mock()
         mock_popen.returncode = 0
-        mocker.patch("subprocess.Popen", return_value=mock_popen)
+        mocker.patch("Server.PluginManager.SubprocessManager.HorusPopen", return_value=mock_popen)
 
         # Mock the with ... as ... statement for popen
         mock_popen.__enter__ = mocker.Mock(return_value=mock_popen)
@@ -299,14 +302,17 @@ def test_install_dep_internal_frozen_app(mocker):
         dep_to_install = "dep"
         deps_dir = "/path/to/"
 
-        with pytest.raises(Exception, match="'Mock' object is not subscriptable"):
+        with pytest.raises(
+            Exception,
+            match="Failed to install dependency dep. External interpreter error: 'Mock' object is not iterable",
+        ):
             pluginManager._installDepInternal(dep_to_install, deps_dir)
 
     # With embedded pip the call now is on the meipass (uncompiled is the cwd) + pip/pip
     pipPath = os.path.join(os.getcwd(), "pip", "pip")
 
-    # Check the arguments of the internal pip call to subprocess.Popen
-    second_last_call_args, second_last_call_kwargs = subprocess.Popen.call_args_list[-2]  # type: ignore
+    # Check the arguments of the internal pip call to SubprocessManager.HorusPopen
+    second_last_call_args, second_last_call_kwargs = SubprocessManager.HorusPopen.call_args_list[-2]  # type: ignore
     assert second_last_call_args[0] == [
         pipPath,
         "install",
@@ -321,8 +327,8 @@ def test_install_dep_internal_frozen_app(mocker):
     assert second_last_call_kwargs["stderr"] == subprocess.STDOUT
     assert second_last_call_kwargs["stdin"] == subprocess.DEVNULL
 
-    # Verify that subprocess.Popen was called exactly twice (one for each method internal pip & external python)
-    assert subprocess.Popen.call_count == 2  # type: ignore
+    # Verify that SubprocessManager.HorusPopen was called exactly twice (one for each method internal pip & external python)
+    assert SubprocessManager.HorusPopen.call_count == 2  # type: ignore
 
     del pluginManager
 
@@ -337,15 +343,16 @@ def test_no_dependencies_install(mocker):
     pluginManager.appSupportDir = "AppSupport"
 
     from App import AppDelegate
+    from Server.PluginManager import SubprocessManager
 
     # Set the app delegate to be on "Server mode"
     AppDelegate().mode = "server"
     AppDelegate().desktop = False
 
-    # Mock the subprocess.Popen context manager
+    # Mock the SubprocessManager.HorusPopen context manager
     mock_popen = mocker.Mock()
     mock_popen.returncode = 0
-    mocker.patch("subprocess.Popen", return_value=mock_popen)
+    mocker.patch("Server.PluginManager.SubprocessManager.HorusPopen", return_value=mock_popen)
     mock_popen.__enter__ = mocker.Mock(return_value=mock_popen)
     mock_popen.__exit__ = mocker.Mock(return_value=None)
 
@@ -356,7 +363,7 @@ def test_no_dependencies_install(mocker):
     with pytest.raises(Exception):
         pluginManager._installDepInternal(dep_to_install, deps_dir)
 
-        last_call_args, last_call_kwargs = subprocess.Popen.call_args  # type: ignore
+        last_call_args, last_call_kwargs = SubprocessManager.HorusPopen.call_args  # type: ignore
         assert last_call_args[0] == [
             "python",
             "-m",
@@ -383,10 +390,12 @@ def test_preinstall(mocker):
     AppDelegate().mode = "server"
     AppDelegate().desktop = False
 
-    # Mock the subprocess.Popen context manager
+    from Server.PluginManager import SubprocessManager
+
+    # Mock the SubprocessManager.HorusPopen context manager
     mock_popen = mocker.Mock()
     mock_popen.returncode = 0
-    mocker.patch("subprocess.Popen", return_value=mock_popen)
+    mocker.patch("Server.PluginManager.SubprocessManager.HorusPopen", return_value=mock_popen)
     mock_popen.__enter__ = mocker.Mock(return_value=mock_popen)
     mock_popen.__exit__ = mocker.Mock(return_value=None)
 
@@ -398,7 +407,7 @@ def test_preinstall(mocker):
 
     with pytest.raises(Exception):
         pluginManager._preInstallPlugin(pluginDir)
-    last_call_args, last_call_kwargs = subprocess.Popen.call_args  # type: ignore
+    last_call_args, last_call_kwargs = SubprocessManager.HorusPopen.call_args  # type: ignore
     assert last_call_args[0] == [
         "sh",
         "Tests/TestPluginManager/preinst.sh",
@@ -406,7 +415,7 @@ def test_preinstall(mocker):
     os.remove(pluginPath)
     pluginManager._preInstallPlugin(pluginDir)
 
-    assert subprocess.Popen.call_count == 1  # type: ignore
+    assert SubprocessManager.HorusPopen.call_count == 1  # type: ignore
 
     del pluginManager
 
@@ -417,15 +426,16 @@ def test_postinstall(mocker):
     pluginManager.appSupportDir = "AppSupport"
 
     from App import AppDelegate
+    from Server.PluginManager import SubprocessManager
 
     # Set the app delegate to be on "Server mode"
     AppDelegate().mode = "server"
     AppDelegate().desktop = False
 
-    # Mock the subprocess.Popen context manager
+    # Mock the SubprocessManager.HorusPopen context manager
     mock_popen = mocker.Mock()
     mock_popen.returncode = 0
-    mocker.patch("subprocess.Popen", return_value=mock_popen)
+    mocker.patch("Server.PluginManager.SubprocessManager.HorusPopen", return_value=mock_popen)
     mock_popen.__enter__ = mocker.Mock(return_value=mock_popen)
     mock_popen.__exit__ = mocker.Mock(return_value=None)
 
@@ -436,7 +446,7 @@ def test_postinstall(mocker):
         f.write("echo 'postinstalation script was run'")
     with pytest.raises(Exception):
         pluginManager._postInstallPlugin(pluginDir)
-    last_call_args, last_call_kwargs = subprocess.Popen.call_args  # type: ignore
+    last_call_args, last_call_kwargs = SubprocessManager.HorusPopen.call_args  # type: ignore
     assert last_call_args[0] == [
         "sh",
         "Tests/TestPluginManager/postinst.sh",
@@ -444,7 +454,7 @@ def test_postinstall(mocker):
     os.remove(pluginPath)
     pluginManager._postInstallPlugin(pluginDir)
 
-    assert subprocess.Popen.call_count == 1  # type: ignore
+    assert SubprocessManager.HorusPopen.call_count == 1  # type: ignore
 
     del pluginManager
 
@@ -455,15 +465,16 @@ def test_preremove(mocker):
     pluginManager.appSupportDir = "AppSupport"
 
     from App import AppDelegate
+    from Server.PluginManager import SubprocessManager
 
     # Set the app delegate to be on "Server mode"
     AppDelegate().mode = "server"
     AppDelegate().desktop = False
 
-    # Mock the subprocess.Popen context manager
+    # Mock the SubprocessManager.HorusPopen context manager
     mock_popen = mocker.Mock()
     mock_popen.returncode = 0
-    mocker.patch("subprocess.Popen", return_value=mock_popen)
+    mocker.patch("Server.PluginManager.SubprocessManager.HorusPopen", return_value=mock_popen)
     mock_popen.__enter__ = mocker.Mock(return_value=mock_popen)
     mock_popen.__exit__ = mocker.Mock(return_value=None)
 
@@ -475,7 +486,7 @@ def test_preremove(mocker):
 
     with pytest.raises(Exception):
         pluginManager._preRemovePlugin(pluginDir)
-    last_call_args, last_call_kwargs = subprocess.Popen.call_args  # type: ignore
+    last_call_args, last_call_kwargs = SubprocessManager.HorusPopen.call_args  # type: ignore
     assert last_call_args[0] == [
         "sh",
         "Tests/TestPluginManager/prerm.sh",
@@ -483,7 +494,7 @@ def test_preremove(mocker):
     os.remove(pluginPath)
     pluginManager._preRemovePlugin(pluginDir)
 
-    assert subprocess.Popen.call_count == 1  # type: ignore
+    assert SubprocessManager.HorusPopen.call_count == 1  # type: ignore
 
     del pluginManager
 
@@ -494,15 +505,16 @@ def test_posremove(mocker):
     pluginManager.appSupportDir = "AppSupport"
 
     from App import AppDelegate
+    from Server.PluginManager import SubprocessManager
 
     # Set the app delegate to be on "Server mode"
     AppDelegate().mode = "server"
     AppDelegate().desktop = False
 
-    # Mock the subprocess.Popen context manager
+    # Mock the SubprocessManager.HorusPopen context manager
     mock_popen = mocker.Mock()
     mock_popen.returncode = 0
-    mocker.patch("subprocess.Popen", return_value=mock_popen)
+    mocker.patch("Server.PluginManager.SubprocessManager.HorusPopen", return_value=mock_popen)
     mock_popen.__enter__ = mocker.Mock(return_value=mock_popen)
     mock_popen.__exit__ = mocker.Mock(return_value=None)
 
@@ -513,7 +525,7 @@ def test_posremove(mocker):
         f.write("echo 'postrm script was run'")
     with pytest.raises(Exception):
         pluginManager._postRemovePlugin(pluginDir)
-    last_call_args, last_call_kwargs = subprocess.Popen.call_args  # type: ignore
+    last_call_args, last_call_kwargs = SubprocessManager.HorusPopen.call_args  # type: ignore
     assert last_call_args[0] == [
         "sh",
         "Tests/TestPluginManager/postrm.sh",
@@ -521,7 +533,7 @@ def test_posremove(mocker):
     os.remove(pluginPath)
     pluginManager._postRemovePlugin(pluginDir)
 
-    assert subprocess.Popen.call_count == 1  # type: ignore
+    assert SubprocessManager.HorusPopen.call_count == 1  # type: ignore
 
     del pluginManager
 
