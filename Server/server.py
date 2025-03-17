@@ -3116,6 +3116,11 @@ class HorusServer:
                     newFolderResults = Flow.flowWorkDir(newFlow)
 
                     if os.path.exists(oldFolderResults):
+
+                        # Remove the newFolderResults (it exists because of flow.write())
+                        if os.path.exists(newFolderResults):
+                            shutil.rmtree(newFolderResults)
+
                         shutil.move(oldFolderResults, newFolderResults)
 
                 else:
