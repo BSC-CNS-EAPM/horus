@@ -1686,7 +1686,7 @@ class HorusServer:
                     "ok": True,
                     "flows": flows,
                 }
-            except Exception as exc:  # pylint: disable=broad-exception-caught
+            except Exception as exc:
                 success = {
                     "ok": False,
                     "msg": str(exc),

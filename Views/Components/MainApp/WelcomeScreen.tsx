@@ -312,7 +312,7 @@ function PredefinedFlowsSplash() {
           </div>
         ) : (
           <div className="w-full h-full">
-            {predefinedFlows && predefinedFlows.length === 0 ? (
+            {!predefinedFlows ? (
               <div className="h-full flex justify-center items-center">
                 No preset flows
               </div>

@@ -149,9 +149,11 @@ export function useGetRecentFlows(webAppFlows: boolean = false): {
     queryKey: ["predefinedFlows"],
     queryFn: async () => {
       const response = await horusGet("/api/plugins/flows");
+
       const data = await response.json();
-      if (!data.ok)
+      if (!data.ok) {
         throw new Error(data.msg || "Failed to fetch predefined flows");
+      }
       return data.flows;
     },
   });

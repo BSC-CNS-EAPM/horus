@@ -2564,7 +2564,10 @@ class FlowManager:
                     # Mark as preset so it can't be overwritten
                     flow.isPreset = True
                     publicFlows.append(
-                        Flow.flowProperties(flow, pluginID="Public", pluginName="Public")
+                        {
+                            **Flow.flowProperties(flow, pluginID="Public", pluginName="Public"),
+                            "path": filePath,
+                        }
                     )
                 except Exception as exc:
                     logging.getLogger("Horus").error(
