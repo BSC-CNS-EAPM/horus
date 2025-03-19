@@ -7,4 +7,5 @@ export type Remote = {
   keyPath?: string;
   proxyCommand?: string;
   workDir?: string;
+  loadProfile: boolean;
 };

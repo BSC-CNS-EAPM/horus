@@ -1,15 +1,26 @@
+// React
+import { useState } from "react";
+
 // Horus components
 import SidebarView from "../../SidebarView/sidebar_view";
+import AppButton from "@/Components/appbutton";
+import { horusGet } from "@/Utils/utils";
+import LogFile from "@/Components/Toolbar/Icons/LogFile";
 
 // Flow status
 import { FlowStatusView } from "../../FlowStatus/flow_status";
 
 // TS types
-import { Block, BlockTypes, FlowStatus } from "../flow.types";
+import {
+  Block,
+  BlockTypes,
+  FlowStatus,
+  Status,
+  SlurmJob,
+  JobStatus,
+} from "../flow.types";
 import { HorusLazyLog } from "../../HorusLazyLog/HorusLazyLog";
 import { HorusViewTabs, Tab } from "@/Components/Tabs";
-import { ReactNode } from "react";
-import LogFile from "@/Components/Toolbar/Icons/LogFile";
 
 type BlockLogsViewProps = {
   block: Block;
@@ -50,185 +61,202 @@ function SlurmOutputModalView({ block }: { block: Block }) {
       view: <RegularBlockLogs block={block} />,
     };
 
-    block.jobID?.forEach((jobID) => {
-      const words = block.detailedStatus?.[jobID]?.split(" ");
-      let status = words?.find((word) => word.startsWith("JobState="));
-      status = status?.split("=")[1] ?? "Unknown";
-
-      const parsedStatus = () => {
+    block.jobs?.forEach((job) => {
+      const statusNode = (() => {
         // We need to use a different flow status for slurm
         // because for the IDLE we do not want to use the "Saved" status
-        switch (status) {
-          case "COMPLETED":
+        switch (job.JobState) {
+          case Status.COMPLETED:
             return <FlowStatusView status={FlowStatus.FINISHED} />;
-          case "FAILED":
+          case Status.FAILED:
             return <FlowStatusView status={FlowStatus.ERROR} />;
-          case "PENDING":
+          case Status.PENDING:
             return <FlowStatusView status={FlowStatus.QUEUED} />;
-          case "RUNNING":
+          case Status.RUNNING:
             return <FlowStatusView status={FlowStatus.RUNNING} />;
-          case "CANCELLED":
+          case Status.CANCELLED:
             return <FlowStatusView status={FlowStatus.STOPPED} />;
           default:
-            return <div className="font-semibold">Status: {status} </div>;
+            return <div className="font-semibold">Status: {job.JobState} </div>;
         }
-      };
+      })();
 
-      const statusNode = parsedStatus();
-
-      t[jobID] = {
-        title: `${jobID}`,
+      t[job.JobId] = {
+        title: `${job.JobId}`,
         icon: statusNode,
-        view: (
-          <SingleSlurmJobView
-            block={block}
-            jobID={jobID}
-            detailedStatus={block.detailedStatus?.[jobID]}
-            status={statusNode}
-            stdOut={block.stdOut?.[jobID]}
-            stdErr={block.stdErr?.[jobID]}
-          />
-        ),
+        view: <SingleSlurmJobView block={block} job={job} />,
       };
     });
     return t;
   };
 
-  return <HorusViewTabs tabs={tabs()} />;
+  return <SidebarView tabs={tabs()} />;
 }
 
-function SingleSlurmJobView({
-  block,
-  jobID,
-  status,
-  detailedStatus,
-  stdOut,
-  stdErr,
-}: {
-  block: Block;
-  jobID: number;
-  status: ReactNode;
-  detailedStatus?: string;
-  stdOut?: string;
-  stdErr?: string;
-}) {
-  const groupedViews: Record<string, React.ReactNode[]> = {};
+function SingleSlurmJobView({ block, job }: { block: Block; job: SlurmJob }) {
+  const groupedViews: Record<string, Tab> = {};
 
-  const worldList = () => {
-    const words = detailedStatus?.split(" ");
+  const detailedStatus = (() => {
+    // Filter keys to appear on the detailed status page
+    const FILTER = ["StdOutContent", "StdErrContent", "SubmissionScript"];
+
+    const words = Object.keys(job).filter((k) => !FILTER.includes(k)) as Array<
+      keyof SlurmJob
+    >;
+
     return (
       <div>
-        {words?.map((word) => {
-          let title = "Error";
-          let value = "Error";
-          try {
-            title = word.split("=")[0] as string;
-            value = word.split("=")[1] as string;
-          } catch {}
+        {words?.map((key) => {
           return (
-            <tr>
-              <td style={{ paddingLeft: "15px" }}>{title}</td>
-              <td style={{ paddingLeft: "25px" }}>{value}</td>
+            <tr key={key}>
+              <td className="select-auto" style={{ paddingLeft: "15px" }}>
+                {key}
+              </td>
+              <td
+                className="select-auto"
+                style={{ paddingLeft: "25px" }}
+              >{`${job[key]}`}</td>
             </tr>
           );
         })}
       </div>
     );
-  };
+  })();
 
   const getGroupedVariables = () => {
-    groupedViews["Slurm status"] = [
-      <div
-        className="flex flex-row gap-2 flex-wrap p-2"
-        style={{
-          background: "var(--grey-white)",
-          borderRadius: "10px",
-          borderColor: "lightgray",
-          fontFamily: "Poppins",
-          height: "100%",
-          overflowY: "auto",
-        }}
-      >
-        {block.detailedStatus ? (
-          worldList()
-        ) : (
-          <span className="text-center w-full grid place-items-center h-full">
-            No job status
-          </span>
-        )}
-      </div>,
-    ];
+    groupedViews["Slurm status"] = {
+      title: "Status",
+      view: (
+        <div
+          className="flex flex-row flex-wrap p-2"
+          style={{
+            background: "var(--grey-white)",
+            borderRadius: "10px",
+            borderColor: "lightgray",
+            fontFamily: "Poppins",
+            height: "100%",
+            overflowY: "auto",
+          }}
+        >
+          {detailedStatus}
+        </div>
+      ),
+    };
 
-    groupedViews["Slurm output"] = [
-      <div
-        key={"slurm-output"}
-        style={{
-          background: "var(--grey-white)",
-          borderRadius: "10px",
-          borderColor: "lightgray",
-          fontFamily: "Poppins",
-          overflow: "hidden",
-          height: "100%",
-        }}
-      >
-        {block.stdOut ? (
+    groupedViews["Slurm script"] = {
+      title: "Script",
+      view: (
+        <div
+          key={"slurm-script"}
+          style={{
+            background: "var(--grey-white)",
+            borderRadius: "10px",
+            borderColor: "lightgray",
+            fontFamily: "Poppins",
+            overflow: "hidden",
+            height: "100%",
+          }}
+        >
           <HorusLazyLog
-            logText={stdOut ?? ""}
-            filename={`${block.id}-${block.placedID}-${jobID}-slurm.out`}
+            logText={job.SubmissionScript ?? ""}
+            filename={`${block.id}-${block.placedID}-${job.JobId}-slurm.sh`}
+            format="shell"
           />
-        ) : (
-          <span className="text-center w-full grid place-items-center h-full">
-            No output during execution
-          </span>
-        )}
-      </div>,
-    ];
+        </div>
+      ),
+    };
 
-    groupedViews["Slurm error"] = [
-      <div
-        key={"slurm-error"}
-        style={{
-          background: "var(--grey-white)",
-          borderRadius: "10px",
-          borderColor: "lightgray",
-          fontFamily: "Poppins",
-          overflow: "hidden",
-          height: "100%",
-        }}
-      >
-        {block.stdErr ? (
+    groupedViews["Slurm output"] = {
+      title: "Output",
+      view: (
+        <div
+          key={"slurm-output"}
+          style={{
+            background: "var(--grey-white)",
+            borderRadius: "10px",
+            borderColor: "lightgray",
+            fontFamily: "Poppins",
+            overflow: "hidden",
+            height: "100%",
+          }}
+        >
           <HorusLazyLog
-            logText={stdErr ?? ""}
-            filename={`${block.id}-${block.placedID}-${jobID}-slurm.err`}
+            logText={job.StdOutContent ?? ""}
+            filename={`${block.id}-${block.placedID}-${job.JobId}-slurm.out`}
           />
-        ) : (
-          <span className="text-center w-full grid place-items-center h-full">
-            No errors during execution
-          </span>
-        )}
-      </div>,
-    ];
+        </div>
+      ),
+    };
+
+    groupedViews["Slurm error"] = {
+      title: "Error",
+      view: (
+        <div
+          key={"slurm-error"}
+          style={{
+            background: "var(--grey-white)",
+            borderRadius: "10px",
+            borderColor: "lightgray",
+            fontFamily: "Poppins",
+            overflow: "hidden",
+            height: "100%",
+          }}
+        >
+          <HorusLazyLog
+            logText={job.StdErrContent ?? ""}
+            filename={`${block.id}-${block.placedID}-${job.JobId}-slurm.err`}
+          />
+        </div>
+      ),
+    };
 
     return groupedViews;
   };
 
+  const isJobRunning = JobStatus.RUNNING_STATUSES().includes(job.JobState);
+
+  const [cancelling, setCancelling] = useState(false);
+
   return (
-    <div className="flex flex-col h-full p-2">
+    <div className="flex flex-col h-full p-4">
       <div className="sticky top-0 z-10">
-        <div className="variables-modal-title-search">
+        <div className="variables-modal-title-search gap-2">
           <div
             className="font-semibold text-3xl break-all"
             style={{
               color: "var(--digital-grey-IV)",
             }}
           >
-            {block.name} - {jobID ?? "No job ID"}
+            {block.name} - {job.JobId}
           </div>
-          <div className="flex flex-row gap-4 items-center">{status}</div>
+          {isJobRunning && (
+            <AppButton
+              disabled={cancelling}
+              action={() => {
+                setCancelling(true);
+                const path = "/api/plugins/cancel-job";
+                const searchParams = new URLSearchParams();
+                searchParams.append("jobID", job.JobId);
+                searchParams.append("remote", block.selectedRemote);
+
+                horusGet(`${path}?${searchParams.toString()}`)
+                  .then((r) => r.json())
+                  .then((d) => {
+                    if (!d.ok) {
+                      alert(`${d.msg}`);
+                    }
+                  })
+                  .catch((e) => alert(e))
+                  .finally(() => setCancelling(false));
+              }}
+            >
+              {cancelling ? "Cancelling" : "Cancel"}
+            </AppButton>
+          )}
         </div>
         <hr className="my-4 p-0"></hr>
       </div>
-      <SidebarView views={getGroupedVariables()} />
+      <HorusViewTabs tabs={getGroupedVariables()} />
     </div>
   );
 }

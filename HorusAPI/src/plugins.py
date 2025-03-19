@@ -1,25 +1,33 @@
+# Future imports
 from __future__ import annotations
-import typing
-import json
-import os
-import time
-from enum import Enum
-from copy import deepcopy
-import contextlib
-import logging
-import re
-import base64
-import shutil
-from typing import Any, Dict, List
 
+# Python standard library imports
+import base64
+import contextlib
+import json
+import logging
+import os
+import re
+import shutil
+import typing
+from copy import deepcopy
+from enum import Enum
+from typing import Any, ClassVar, Dict, List, TypeVar, cast, Optional
 from pydantic import (  # pylint: disable=no-name-in-module. # Somehow pylint does not recognize BaseModel
     BaseModel,
+    Field,
+    validator,
 )
+from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, Future
 
+# Horus imports
 from .utils import ResetRemoteException
 
+# Type checking
 if typing.TYPE_CHECKING:
     from Server.FlowManager import Flow
+    from Server.RemotesManager import RemotesAPI
 
 
 class UniqueVariableIDException(Exception):
@@ -34,14 +42,18 @@ class UniqueVariableIDException(Exception):
         self.variableId = variableId
 
 
+T = TypeVar("T", str, list[str])
+
+
 class PluginRemote:
     """
     Remote interface for blocks
     """
 
-    def __init__(self, remote) -> None:
+    def __init__(self, remote: RemotesAPI, block: PluginBlock) -> None:
         self._remote = remote
         self.cd = self._remote.cd
+        self.block = block
 
     def remoteCommand(self, command: str, timeout: typing.Optional[int] = None):
         """
@@ -54,7 +66,11 @@ class PluginRemote:
         return self.command(command, timeout)
 
     def command(
-        self, command: str, timeout: typing.Optional[int] = None, forceLocal: bool = False
+        self,
+        command: str,
+        timeout: typing.Optional[int] = None,
+        forceLocal: bool = False,
+        mergeStdErr: bool = True,
     ):
         """
         Executes a command on the remote.
@@ -63,10 +79,11 @@ class PluginRemote:
         :param command: The command to execute.
         :param timeout: The timeout in seconds. None for no timeout.
         :param forceLocal: If True, the command will be executed locally even if the block has a remote selected.
+        :param mergeStdErr: If True (default) will append the stdErr of the command to the output.
 
         :return: The output of the command.
         """
-        output = self._remote.command(command, timeout, forceLocal)
+        output = self._remote.command(command, timeout, forceLocal, mergeStdErr)
 
         return output
 
@@ -99,18 +116,46 @@ class PluginRemote:
 
         return self._remote.transferFrom(source, destination)
 
-    def submitJob(self, script: str, changeDir: bool = True) -> int:
+    def submitJob(self, script: T, changeDir: bool = True) -> T:
         """
         Submit a slurm job to the queue system of the cluster (SLURM)
 
-        :param script: The  absolute path to the script to submit.
+        :param script: The  absolute path to the script to submit or a list of path to submit more than one at once.
         :param: changeDir: automatically cd to the container folder of the script. \
         Disable this if using the cd context manager or for specific cases.
 
         :return: The job ID.
         """
 
-        return self._remote.submitJob(script, changeDir)
+        if not isinstance(self.block, SlurmBlock):
+            raise ValueError("In order to submit jobs a SlurmBlock instance must be used.")
+
+        scriptsToSubmit: list[str] = []
+        isSingleJob = False
+        if isinstance(script, str):
+            isSingleJob = True
+            scriptsToSubmit = [script]
+        else:
+            scriptsToSubmit = script
+
+        # _submitJob is not intended to be called by users
+        slurmJob = SlurmJob._submitJob(self, scriptsToSubmit, changeDir)
+
+        if not self.block.jobs:
+            self.block.jobs = slurmJob
+        else:
+            self.block.jobs.extend(slurmJob)
+
+        # Because a job has been submited, we set the status of the block to pending
+        self.block.status = Status.PENDING
+
+        # Save the flow to store the job
+        self.block.flow.write()
+
+        if isSingleJob:
+            return cast(T, slurmJob[0].job_id)
+
+        return cast(T, [s.job_id for s in slurmJob])
 
     @contextlib.contextmanager
     def cd(self, path: str):  # pylint: disable=E0202
@@ -120,7 +165,8 @@ class PluginRemote:
         Works with the command, submitJob and send/get data functions.
         """
 
-        return self._remote.cd(path)
+        with self._remote.cd(path):  # Use the remote context manager correctly
+            yield
 
     @property
     def userHome(self) -> str:
@@ -258,9 +304,12 @@ class VariableTypes(str, Enum):
 
     TEXT_AREA = "text_area"
     """
-    A large text like a paragraph, can contain multiple lines. like "Hello world \n Hello planet".
+    A large text like a paragraph, can contain multiple lines.
+    
+    :code:`"Hello world \\\\n Hello planet"`.
     
     Will render as a text input.
+    
     """
 
     NUMBER = "number"
@@ -313,6 +362,7 @@ class VariableTypes(str, Enum):
 
     Will render as a slider.
     Use allowedValues to define: [min, max, step].
+
     - The first number in the list is the minimum value.
     - The second number in the list is the maximum value.
     - The third number in the list is the step.
@@ -327,6 +377,7 @@ class VariableTypes(str, Enum):
     Will render as a slider with tho dragging handles. Used to define
     a range between to points.
     Use allowedValues to define: [min, max, step].
+
     - The first number in the list is the minimum value.
     - The second number in the list is the maximum value.
     - The third number in the list is the step.
@@ -356,6 +407,7 @@ class VariableTypes(str, Enum):
 
     Will render as a list of checkboxes with the list of loaded structures.
     The type of the variable will be a list of dicts with the following data:
+
     - id: The ID of the structure.
     - name: The name of the structure.
     - type: The type of the structure (CIF, PDB...).
@@ -368,6 +420,7 @@ class VariableTypes(str, Enum):
 
     Will render as a list of radio buttons with the list of loaded structures.
     The type of the variable will be a dict with the following data:
+
     - id: The ID of the structure.
     - name: The name of the structure.
     - type: The type of the structure (CIF, PDB...).
@@ -380,6 +433,7 @@ class VariableTypes(str, Enum):
 
     Will render as a list of hetero residues.
     The type of the variable will be a dictionary with the following keys:
+
     - index: The index of the residue in the structure.
     - name: The name of the residue.
     - atoms: The list of atoms in the residue.
@@ -393,6 +447,7 @@ class VariableTypes(str, Enum):
 
     Will render as a dropdown with the list of standard residues.
     The type of the variable will be a dictionary with the following keys:
+
     - index: The index of the residue in the structure.
     - name: The name of the residue.
     - atoms: The list of atoms in the residue.
@@ -418,13 +473,46 @@ class VariableTypes(str, Enum):
 
     Will render as a dropdown with the list of chains.
     The type of the variable will be a dictionary with the following keys:
+
     - index: The index of the chain in the structure.
     - name: The name of the chain.
     - residues: The list of residues in the chain.
     - structure: The structure object variable where the atom is located.
     This last variable contains the properties of the STRUCTURE variable.
     """
+
     BOX = "box"
+    """
+    A box to be rendered in Mol*.
+
+    Will render as an interactive box viewer. The user can select the center and the size of each
+    side of the box.
+
+    This variable will return a dictionary with the following keys:
+
+    .. code-block:: python 
+
+        {
+            "metrics": {
+                "x0": 0,
+                "x1": 5,
+                "x2": 0,
+                "x3": 0,
+                "y0": 0,
+                "y1": 0,
+                "y2": 5,
+                "y3": 0,
+                "z0": 0,
+                "z1": 0,
+                "z2": 0,
+                "z3": 5
+            },
+            "radialSegments": 2,
+            "radiusScale": 5,
+        }
+
+    """
+
     SPHERE = "sphere"
     """
     A sphere to be rendered in Mol*.
@@ -432,6 +520,7 @@ class VariableTypes(str, Enum):
     Will render as an interactive sphere viewer. The user can select the
     center and the radius of the sphere.
     The type of the variable will be a dictionary with the following keys:
+
     - center: The center of the sphere as a list of floats [x, y, z].
     - radius: The radius of the sphere as a float.
     """
@@ -545,6 +634,11 @@ class PluginVariable:
 
     id: str = "baseplugin.variable"
 
+    _isOriginal: bool = True
+    """
+    Check if the variable is a copy or the original used to model the block
+    """
+
     def __init__(
         self,
         id: str,
@@ -655,6 +749,7 @@ class PluginVariable:
         }
 
         if not minimal:
+            varDict["defaultValue"] = self.defaultValue
             varDict["name"] = self.name
             varDict["category"] = self.category
             varDict["description"] = self.description
@@ -667,6 +762,16 @@ class PluginVariable:
 
     def __str__(self):
         return json.dumps(self.toDict(), indent=4)
+
+    def copy(self):
+        """
+        Returns a deep copy of the variable in order to not
+        modify the original reference.
+        """
+
+        copy = deepcopy(self)
+        copy._isOriginal = False
+        return copy
 
 
 class CustomVariable(PluginVariable):
@@ -775,10 +880,15 @@ class VariableGroup(PluginVariable):
                 )
             ids.append(variable.id)
 
-        self.variables = variables
         """
         The variables contained in the variable group
         """
+        self.variables = [v.copy() for v in variables]
+
+        # If the variable group is required, make all of them required
+        if required:
+            for v in self.variables:
+                v.required = required
 
         super().__init__(
             id=id,
@@ -825,6 +935,7 @@ class VariableList(PluginVariable):
         name: str,
         description: str,
         prototypes: typing.List[PluginVariable],
+        defaultValue: typing.Optional[list[dict]] = None,
         allowedValues: typing.Optional[typing.List[typing.Any]] = None,
         category: typing.Optional[str] = None,
         disabled: bool = False,
@@ -846,7 +957,7 @@ class VariableList(PluginVariable):
             name=name,
             description=description,
             type=VariableTypes._LIST,
-            defaultValue=None,
+            defaultValue=defaultValue or None,
             allowedValues=allowedValues,
             category=category,
             disabled=disabled,
@@ -871,10 +982,15 @@ class VariableList(PluginVariable):
                 )
             ids.append(variable.id)
 
-        self.prototypes = prototypes
+        self.prototypes = [p.copy() for p in prototypes]
         """
         The prototypes of the variables in the list.
         """
+
+        # Make all required if all are required
+        if required:
+            for p in self.prototypes:
+                p.required = required
 
     def toDict(self, minimal: bool = False):
         """
@@ -950,6 +1066,12 @@ class PluginBlockTypes(str, Enum):
 
     def __str__(self):
         return self.value
+
+
+class OutputIDNotFound(Exception):
+    """
+    Exception raised when an output ID is not found in the block after calling setOutput.
+    """
 
 
 class BlockVarPair:
@@ -1097,11 +1219,6 @@ class PluginBlock:
     Whether the block has finished its execution or not.
     """
 
-    _storedOutputs: dict[str, typing.Any] = {}
-    """
-    The outputs of the block after it has finished its execution.
-    """
-
     _variableConnections: typing.List[BlockConnection] = []
     """
     To which variables the block is connected to run after.
@@ -1203,6 +1320,11 @@ class PluginBlock:
         """
         Initialize a PluginBlock.
         """
+
+        # Gather a copy of every variable in order to not modify the model
+        inputs = [i.copy() for i in inputs]
+        variables = [v.copy() for v in variables]
+        outputs = [o.copy() for o in outputs]
 
         if id is None:
             logging.getLogger("Horus").warning(
@@ -1382,9 +1504,10 @@ class PluginBlock:
         try:
             inputs = self._inputGroups[self.selectedInputGroup].variables
         except KeyError as keye:
+            self.selectedInputGroup = next(iter(self._inputGroups))
             raise Exception(
                 f"Input group '{self.selectedInputGroup}' not found in block inputs. "
-                + f"Current block inputs are: {self._inputGroups.keys()}"
+                + f"Current block inputs are: {', '.join(self._inputGroups.keys())}"
             ) from keye
         for variable in inputs:
             if variable.disabled:
@@ -1443,9 +1566,11 @@ class PluginBlock:
         try:
             inputs = self._inputGroups[self.selectedInputGroup].variables
         except KeyError as keye:
+            # Assign the default group to the block
+            self.selectedInputGroup = next(iter(self._inputGroups))
             raise Exception(
                 f"Input group '{self.selectedInputGroup}' not found in block inputs. "
-                + f"Current block inputs are: {self._inputGroups.keys()}"
+                + f"Current block inputs are: {', '.join(self._inputGroups.keys())}"
             ) from keye
         for variable in inputs:
             varsDict[variable.id] = self._parseVariablesForBlockAccess(variable)
@@ -1465,7 +1590,7 @@ class PluginBlock:
         return varsDict
 
     def setOutput(self, id: str, value: typing.Any):
-        """
+        """blockJson.get
         Sets the value of an output variable.
 
         :param id: The id of the output variable.
@@ -1482,11 +1607,8 @@ class PluginBlock:
                 else:
                     variable.value = value
 
-                # Update the stored outputs
-                self._storedOutputs[id] = value
-
                 return
-        raise Exception(f"Output {id} not found.")
+        raise OutputIDNotFound(f"Output ID '{id}' not found.")
 
     def _connectionsToDict(self, references: bool = False):
         """
@@ -1533,7 +1655,6 @@ class PluginBlock:
         self.blockLogs = ""
         self._isRunning = False
         self._extensionsToOpen = []
-        self._storedOutputs = {}
         self.time = 0
 
         if cleanDirty:
@@ -1554,7 +1675,7 @@ class PluginBlock:
     The RemoteAPI for the block.
     """
 
-    def _setRemote(self, remote):
+    def _setRemote(self, remote: "RemotesAPI"):
         """
         Sets the remote of the block.
         """
@@ -1567,7 +1688,7 @@ class PluginBlock:
             )
             logging.getLogger("Horus").error(msg)
             raise Exception(msg)
-        self.remote = PluginRemote(remote)
+        self.remote = PluginRemote(remote, self)
 
     def copy(self):
         """
@@ -1602,8 +1723,6 @@ class PluginBlock:
         position: typing.Dict[str, float] = blockJSON.get("position", {})
         xPos: float = position.get("x", 0)
         yPos: float = position.get("y", 0)
-
-        storedOutputs: typing.Dict[str, str] = blockJSON.get("storedOutputs", None)
 
         variableConnections: typing.List[typing.Dict[str, typing.Any]] = blockJSON.get(
             "variableConnections", []
@@ -1665,7 +1784,7 @@ class PluginBlock:
             parsedVariableConnectionsReference.append(parseVariableConnection(connection))
 
         # Parse the variable values
-        variablesJSON = blockJSON.get("variables", {})
+        variablesJSON: list[dict] = blockJSON.get("variables", [])
         variablesJSONParsed = {}
         for variable in variablesJSON:
             varID = variable.get("id", None)
@@ -1690,6 +1809,16 @@ class PluginBlock:
         self.selectedRemote = selectedRemote
         self._updateVariables(variablesJSONParsed)
 
+        # Update the outputs
+        for ov in typing.cast(list[dict[str, typing.Any]], blockJSON.get("outputs", [])):
+            try:
+                k = ov["id"]
+                v = ov["value"]
+                self.setOutput(k, v)
+            except OutputIDNotFound:
+                # This can fail if we are inside a GhostBlock, because the outptus no longer exist
+                pass
+
         # Update the internal variables
         self._isPlaced = isPlaced
         self._isRunning = isRunning
@@ -1698,7 +1827,6 @@ class PluginBlock:
         self._position = [xPos, yPos]
         self._placedID = placedID
         self._finishedExecution = finishedExecution
-        self._storedOutputs = storedOutputs
         self._variableConnections = parsedVariableConnections
         self._variableConnectionsReferences = parsedVariableConnectionsReference
         self._extensionsToOpen = extensionsToOpen
@@ -1720,7 +1848,7 @@ class PluginBlock:
             "blockLogs": self.blockLogs,
             "placedID": self._placedID,
             "finishedExecution": self._finishedExecution,
-            "storedOutputs": self._storedOutputs,
+            "outputs": self._variablesToDict(self._outputs, minimal=True),
             "variables": self._variablesToDict(self._variables, minimal=True),
             "variableConnections": self._connectionsToDict(),
             "variableConnectionsReference": self._connectionsToDict(True),
@@ -1873,8 +2001,9 @@ class InputBlock(PluginBlock):
             description,
             action=action,
             variables=[variable],
-            inputs=[variable],
-            outputs=[variable if output is None else output],
+            outputs=[
+                variable if output is None else output
+            ],  # Use a diferent copy from the input so that the outputs can be correctly updated
             blockType=PluginBlockTypes.INPUT,
             id=id,
             externalURL=externalURL,
@@ -1886,15 +2015,370 @@ class InputBlock(PluginBlock):
     def __call__(self, *args, **kwargs):
         # If the block has an action, run it
         if self.action is not None:
-            return super().__call__(*args, **kwargs)
-
-        # If the block does not have an action, return the value of the variable
-        self._outputs[0].value = self._variables[0].value
-
-        # Update the stored outputs
-        self._storedOutputs[self._outputs[0].id] = self._outputs[0].value
+            super().__call__(*args, **kwargs)
+        else:
+            # If the block does not have an action, return the value of the variable as output
+            for k, v in self.inputs.items():
+                self.setOutput(k, v)
 
         return self.outputs
+
+    @property
+    def inputs(self) -> dict:
+        """
+        For input blocks inputs = variables
+        """
+
+        return self.variables
+
+
+class HorusPydanticModel(BaseModel):
+    def update(self, newValues: "HorusPydanticModel"):
+        # Map the dictionary keys to field names using aliases
+        alias_map = {field.alias: field.name for field in self.__fields__.values()}
+
+        # Look here how we used the .dict() method and not the custom toDict()
+        updated_dict = {alias_map.get(k, k): v for k, v in newValues.dict().items()}
+        self.__dict__.update(updated_dict)
+
+    def toDict(self) -> dict:
+        """
+        Custom serializer, intended for JSON serialization into the flow file
+
+        Take into account that this method will de-instantiate objects such as datetime
+        or Status
+        """
+
+        return json.loads(self.json(by_alias=True))
+
+
+# Define an enum for the statuses
+class Status(Enum):
+    """
+    The status of the block.
+    """
+
+    BOOT_FAIL = "BOOT_FAIL"  # BF
+    CANCELLED = "CANCELLED"  # CA
+    CANCELLING = "CANCELLING"  # C
+    COMPLETED = "COMPLETED"  # CD
+    CONFIGURING = "CONFIGURING"  # CF
+    COMPLETING = "COMPLETING"  # CG
+    DEADLINE = "DEADLINE"  # DL
+    FAILED = "FAILED"  # F
+    NODE_FAIL = "NODE_FAIL"  # NF
+    OUT_OF_ME = "OUT_OF_ME"  # OM
+    PENDING = "PENDING"  # PD
+    PREEMPTED = "PREEMPTED"  # PR
+    RUNNING = "RUNNING"  # R
+    RESV_DEL_HOLD = "RESV_DEL_HOLD"  # RD
+    REQUEUE_FED = "REQUEUE_FED"  # RF
+    REQUEUE_HOLD = "REQUEUE_HOLD"  # RH
+    REQUEUED = "REQUEUED"  # RQ
+    RESIZING = "RESIZING"  # RS
+    REVOKED = "REVOKED"  # RV
+    SIGNALING = "SIGNALING"  # SI
+    SPECIAL_EXIT = "SPECIAL_EXIT"  # SE
+    STAGE_OUT = "STAGE_OUT"  # SO
+    STOPPED = "STOPPED"  # ST
+    SUSPENDED = "SUSPENDED"  # SS
+    TIMEOUT = "TIMEOUT"  # TO
+
+    UNKNOWN = "UNKNOWN"
+    IDLE = "IDLE"
+
+    # Wehn the enum is instantiated with some value,
+    # e.g. Status("IDLE"), if the value is not in the enum,
+    # return the UNKNOWN status
+    @classmethod
+    def _missing_(cls, value: str):
+        # Try by uppercassing, stripping and removing special characters
+        try:
+            fixed = "".join(re.findall(r"[A-Z]+", value.upper().strip()))
+            return cls(fixed)
+        except:
+            return cls.UNKNOWN
+
+    # Make the enum serializable
+    def __str__(self):
+        return str(self.value)
+
+    @staticmethod
+    def RUNNING_STATUSES():
+        return [
+            Status.RUNNING,
+            Status.PENDING,
+            Status.CANCELLING,
+            Status.CONFIGURING,
+            Status.COMPLETING,
+            Status.RESIZING,
+            Status.SIGNALING,
+        ]
+
+    @staticmethod
+    def FAILED_STATUSES():
+        return [
+            Status.FAILED,
+            Status.CANCELLED,
+            Status.BOOT_FAIL,
+            Status.NODE_FAIL,
+            Status.DEADLINE,
+            Status.OUT_OF_ME,
+            Status.TIMEOUT,
+            Status.PREEMPTED,
+            Status.REVOKED,
+            Status.STOPPED,
+            Status.SPECIAL_EXIT,
+        ]
+
+    @staticmethod
+    def FINISHED_STATUSES():
+        return [Status.COMPLETED, Status.IDLE]
+
+
+RemoteUnion = typing.Union["RemotesAPI", "PluginRemote"]
+
+
+class SlurmJob(HorusPydanticModel):
+
+    SEPARATOR: ClassVar[str] = f"====HORUS===={os.urandom(16).hex()}====HORUS===="
+
+    job_id: str = Field(..., alias="JobId")
+    state: Status = Field(..., alias="JobState")
+    array_job_id: Optional[str] = Field(None, alias="ArrayJobId")
+    array_task_id: Optional[str] = Field(None, alias="ArrayTaskId")
+    job_name: Optional[str] = Field(None, alias="JobName")
+    user_id: Optional[str] = Field(None, alias="UserId")
+    group_id: Optional[str] = Field(None, alias="GroupId")
+    exit_code: str = Field(None, alias="ExitCode")
+    nodes: Optional[str] = Field(None, alias="NodeList")
+    submit_time: Optional[datetime] = Field(None, alias="SubmitTime")
+    start_time: Optional[datetime] = Field(None, alias="StartTime")
+    end_time: Optional[datetime] = Field(None, alias="EndTime")
+    elapsed_time: Optional[str] = Field(None, alias="RunTime")
+    work_dir: Optional[str] = Field(None, alias="WorkDir")
+    command: Optional[str] = Field(None, alias="Command")
+    stdout_path: Optional[str] = Field(None, alias="StdOut")
+    stderr_path: Optional[str] = Field(None, alias="StdErr")
+    stdout_content: Optional[str] = Field(None, alias="StdOutContent")
+    stderr_content: Optional[str] = Field(None, alias="StdErrContent")
+    script_content: str = Field(None, alias="SubmissionScript")
+
+    @validator("start_time", "end_time", pre=True)
+    def parse_datetime(cls, value):
+        # Handle known "None" like values
+        if value in (None, "Unknown", "None", "N/A"):
+            return None
+
+        # Check if the value is a valid timestamp (int or float)
+        if isinstance(value, (int, float)):
+            return datetime.fromtimestamp(value)
+
+        # Try parsing it as an ISO 8601 formatted string
+        try:
+            return datetime.fromisoformat(value)
+        except ValueError:
+            raise ValueError(f"Invalid datetime format: {value}")
+
+    @validator("state", pre=True)
+    def parse_status(cls, value):
+        return Status(value)
+
+    class Config:
+        populate_by_name = True  # Allows using alias names for JSON serialization
+        arbitrary_types_allowed = True
+
+        json_encoders = {
+            datetime: lambda x: x.timestamp(),
+            Status: lambda x: x.value,
+        }
+
+    @property
+    def completed(self):
+        """
+        Utility property for knowing if a job is still running or has ended (independently of its final state)
+        """
+
+        if self.state in Status.RUNNING_STATUSES():
+            return False
+
+        return True
+
+    @staticmethod
+    def SCONTROL_COMMAND(jid: str):
+        """
+        Retruns a formatted string for running the scontrol command
+        """
+
+        return "scontrol show jobid {} -d --oneline".format(jid)
+
+    def updateLogs(self, remote: RemoteUnion):
+        """
+        Updates the job information by running a command on the remote
+        """
+
+        from Server.RemotesManager import CommandFailed
+
+        # Prepare the command to get all the information on a single run
+        command = f"cat {self.command}; echo {self.SEPARATOR}; cat {self.stdout_path}; echo {self.SEPARATOR}; cat {self.stderr_path}; echo {self.SEPARATOR}; {self.SCONTROL_COMMAND(self.job_id)}"
+        out = ""
+        try:
+            out = remote.command(command)
+        except CommandFailed as cf:
+            out += f"{cf.stdout}\n{cf.stderr}"
+
+        try:
+            out = out.split(self.SEPARATOR)
+            scontrol_out = out[3]
+            # Update the instance with the new values, including the status
+            # Scontrol returns "slurm_load_jobs error: Invalid job id specified" when the job is removed from
+            # the temporal job storage. Therefore 'sacct' is needed to check the accounting database
+            # (will be done on a later stage with all jobIDs together)
+            if "invalid job id specified" not in scontrol_out.lower():
+                updatedSlurmJob = SlurmJob.parseScontrolToSlurmJob(scontrol_out)
+
+                # Update the dict with the correct value types
+                self.update(updatedSlurmJob)
+            else:
+                # Check with sacct
+                self.state = SlurmJob.getSacctStatus(remote, self.job_id)
+
+            self.script_content = out[0]
+            self.stdout_content = out[1]
+            self.stderr_content = out[2]
+        except Exception as e:
+            logging.getLogger("Horus").error(
+                "Could not update the logs for job %s: %s", self.job_id, str(e)
+            )
+            self.state = Status.UNKNOWN
+
+    def cancel(self, remote: RemoteUnion):
+        """
+        Cancels the job
+        """
+
+        remote.command(f"scancel {self.job_id}")
+
+    def reSubmit(self, remote: RemoteUnion) -> list["SlurmJob"]:
+        """
+        Submits again the job
+        """
+
+        if not self.command:
+            raise ValueError("Could not submit the job. Missing original submit command.")
+
+        return self._submitJob(remote, [self.command])
+
+    @staticmethod
+    def _submitJob(
+        remote: RemoteUnion, scripts: list[str], changeDir: bool = True
+    ) -> list["SlurmJob"]:
+        """
+        Submit multiple slurm jobs to the queue system of the cluster (SLURM)
+
+        :param scripts: List of script paths to submit.
+        :param changeDir: Automatically cd to the container folder of each script. \
+        Disable this if using the cd context manager or for specific cases.
+
+        :return: List of SlurmJob instances.
+        """
+        commands = []
+        for script in scripts:
+            scontrolCmd = SlurmJob.SCONTROL_COMMAND("$jobid")
+            command = "jobid=$(sbatch {} | awk '{{print $4}}'); if [ -z \"$jobid\" ]; then exit 1; fi; {}".format(
+                script, scontrolCmd
+            )
+
+            if changeDir:
+                changeDirTo = os.path.dirname(script) or "."
+                command = f"cd {changeDirTo} && {command}"
+
+            commands.append(command)
+
+        fullCommand = f"; echo {SlurmJob.SEPARATOR};".join(commands)
+
+        try:
+            out = remote.command(fullCommand)
+            jobOutputs = out.split(SlurmJob.SEPARATOR)
+            slurmJobs = [SlurmJob.parseScontrolToSlurmJob(jobOutput) for jobOutput in jobOutputs]
+        except Exception as exc:
+            raise Exception(f"Error submitting job: {exc}") from exc
+
+        arrayJobs = []
+        for slurmJob in slurmJobs:
+            if slurmJob.array_task_id:
+                arrayJobsCommands = []
+                start, end = map(int, slurmJob.array_task_id.split("-"))
+                for i in range(start, end):
+                    arrayJobsCommands.append(SlurmJob.SCONTROL_COMMAND(f"{slurmJob.job_id}_{i}"))
+
+                arrayCommand = f"; echo {SlurmJob.SEPARATOR};".join(arrayJobsCommands)
+                out = remote.command(arrayCommand)
+                scontrols = out.split(SlurmJob.SEPARATOR)
+                for s in scontrols:
+                    newJob = slurmJob.copy()
+                    newJob.update(SlurmJob.parseScontrolToSlurmJob(s))
+                    arrayJobs.append(newJob)
+
+        jobs = slurmJobs + arrayJobs
+        return jobs
+
+    @staticmethod
+    def parseScontrolToSlurmJob(scontrol: str) -> "SlurmJob":
+        # The output is the scontrol information
+        jobDict = {}
+        for o in scontrol.strip().split(" "):
+
+            if "=" not in o:
+                continue
+
+            key, value = o.split("=", 1)
+            jobDict[key] = value
+
+        return SlurmJob(**jobDict)
+
+    @staticmethod
+    def getSacctStatus(remote: RemoteUnion, jobID: str) -> "Status":
+        from Server.RemotesManager import CommandFailed
+
+        # Assume completed when the status cannot be retrieved
+        status = Status.COMPLETED
+        try:
+            status = Status(remote.command(f"sacct -j {jobID} -o 'State' --noheader -X").strip())
+        except CommandFailed as cf1:
+
+            logging.getLogger("Horus").error(
+                f"Failed to check sactt state for job {jobID}. {cf1}. Trying with less reliable squeue."
+            )
+
+            # Try with squeue
+            try:
+                status = Status(
+                    remote.command(f"squeue -j {jobID} --format='%T' --noheader").strip()
+                )
+            except CommandFailed as cf2:
+                # Assume The job has ended
+                logging.getLogger("Horus").error(
+                    f"Failed to check Slurm state for job {jobID}. {cf2}. Assuming job ended successfully."
+                )
+
+        return status
+
+    @classmethod
+    def fromJobID(cls, remote: RemoteUnion, jobID: str) -> "SlurmJob":
+        """
+        Instantiates a slurm job from a given jobID
+        """
+
+        from Server.RemotesManager import CommandFailed
+
+        try:
+            command = SlurmJob.SCONTROL_COMMAND(jobID)
+            scontrol = remote.command(command)
+            return SlurmJob.parseScontrolToSlurmJob(scontrol)
+        except CommandFailed:
+            status = SlurmJob.getSacctStatus(remote, jobID)
+            return SlurmJob(**{"JobId": jobID, "JobState": status})
 
 
 class SlurmBlock(PluginBlock):
@@ -1904,72 +2388,14 @@ class SlurmBlock(PluginBlock):
     one before the job is submitted and one after the job is completed.
     """
 
-    jobID: typing.Optional[list[int]] = None
+    jobs: list[SlurmJob] = []
     """
-    The Job ID of the job.
+    List of jobs sents by the block
     """
-
-    # Define an enum for the statuses
-    class Status(Enum):
-        """
-        The status of the block.
-        """
-
-        BOOT_FAIL = "BOOT_FAIL"  # BF
-        CANCELLED = "CANCELLED"  # CA
-        CANCELLING = "CANCELLING"  # C
-        COMPLETED = "COMPLETED"  # CD
-        CONFIGURING = "CONFIGURING"  # CF
-        COMPLETING = "COMPLETING"  # CG
-        DEADLINE = "DEADLINE"  # DL
-        FAILED = "FAILED"  # F
-        NODE_FAIL = "NODE_FAIL"  # NF
-        OUT_OF_ME = "OUT_OF_ME"  # OM
-        PENDING = "PENDING"  # PD
-        PREEMPTED = "PREEMPTED"  # PR
-        RUNNING = "RUNNING"  # R
-        RESV_DEL_HOLD = "RESV_DEL_HOLD"  # RD
-        REQUEUE_FED = "REQUEUE_FED"  # RF
-        REQUEUE_HOLD = "REQUEUE_HOLD"  # RH
-        REQUEUED = "REQUEUED"  # RQ
-        RESIZING = "RESIZING"  # RS
-        REVOKED = "REVOKED"  # RV
-        SIGNALING = "SIGNALING"  # SI
-        SPECIAL_EXIT = "SPECIAL_EXIT"  # SE
-        STAGE_OUT = "STAGE_OUT"  # SO
-        STOPPED = "STOPPED"  # ST
-        SUSPENDED = "SUSPENDED"  # SS
-        TIMEOUT = "TIMEOUT"  # TO
-
-        UNKNOWN = "UNKNOWN"
-        IDLE = "IDLE"
-
-        # Wehn the enum is instantiated with some value,
-        # e.g. Status("IDLE"), if the value is not in the enum,
-        # return the UNKNOWN status
-        @classmethod
-        def _missing_(cls, value):
-            return cls.UNKNOWN
-
-        # Make the enum serializable
-        def __str__(self):
-            return str(self.value)
 
     status: Status = Status.IDLE
     """
-    The status of the block.
-    """
-    stdOut: typing.Optional[dict[int, str]] = None
-    """
-    The standard output a slurm job.
-    """
-    stdErr: typing.Optional[dict[int, str]] = None
-    """
-    The standard error a slurm job.
-    """
-    detailedStatus: typing.Optional[dict[int, str]] = None
-    """
-    Status and aditional information of a slurm job.
+    The general status of the block.
     """
 
     failOnSlurmError: bool = True
@@ -2043,62 +2469,63 @@ class SlurmBlock(PluginBlock):
         else:
             self.action = self.initalAction
             outputs = super().__call__(*args, **kwargs)
-            # Set the reesetRemoteblock flag to False
-            self.remote._remote._resetRemoteBlock = False  # pylint: disable=protected-access
 
         return outputs
 
-    def parseStatus(self):
+    def parseStatus(self) -> Status:
         """
         The status of the block as a parsed string.
         """
-        try:
-            # Tell the remote which is the current block by its placedID
-            self.remote._remote._blockPlacedID = self._placedID
+        if not self.jobs:
+            self.status = Status.COMPLETED
+            return self.status
 
-            # Get the current status of the job submited by the block
-            # and parse the status to the block
-            status = self.remote._remote.getRemoteBlockStatus(self.flow.savedID, self._placedID)
-            self.status = self.Status(status)
+        # Create tasks for each job
+        tasks: dict[str, Future[None]] = {}
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            for j in self.jobs:
 
-            # Set also the jobIDs of this block
-            self.jobID = self.remote._remote.getJobIDfromBlock(self.flow.savedID, self._placedID)
+                # Skip finished jobs
+                if j.completed:
+                    continue
 
-            if not self.jobID or len(self.jobID) == 0:
-                self.status = self.Status.IDLE
-            else:
-                # Get Slurm status and logging info
-                if not self.stdOut:
-                    self.stdOut = {}
+                tasks[j.job_id] = executor.submit(j.updateLogs, self.remote)
 
-                if not self.stdErr:
-                    self.stdErr = {}
-
-                if not self.detailedStatus:
-                    self.detailedStatus = {}
-
-                for j in self.jobID:
-                    try:
-                        stdOut, stdErr, detailedStatus = self.remote._remote.getRemoteBlockLogs(j)
-
-                        self.stdOut[j] = stdOut
-                        self.stdErr[j] = stdErr
-                        self.detailedStatus[j] = detailedStatus
-
-                    except Exception as e:
-                        logging.getLogger("Horus").error(
-                            "Could not parse latest SlurmBlock logs: %s", str(e)
-                        )
-
-                self.time += self.remote._remote.getRemoteBlockTime(
-                    self.flow.savedID, self._placedID
+        for jobid, task in tasks.items():
+            try:
+                task.result()
+            except Exception as tException:
+                logging.getLogger("Horus").error(
+                    "Could not parse job status status for JobID %s: %s", jobid, str(tException)
                 )
-        except AttributeError as attre:
-            logging.getLogger("Horus").error("Could not parse SlurmBlock status: %s", str(attre))
-            self.status = self.Status.IDLE
+
+        # Based on all jobs, parse the global result
+        allStatus = [j.state for j in self.jobs]
+
+        # If all are queued, set queued
+        if all(s == Status.PENDING for s in allStatus):
+            status = Status.PENDING
+
+        # If any is running, set the block to running
+        elif any(s in Status.RUNNING_STATUSES() for s in allStatus):
+            status = Status.RUNNING
+
+        # If the block is not running and at least one job failed, set as failed
+        elif any(s in Status.FAILED_STATUSES() for s in allStatus):
+            status = Status.FAILED
+
+        # If the job is not running and all are completed, set as completed
+        elif all(s in Status.FINISHED_STATUSES() for s in allStatus):
+            status = Status.COMPLETED
+
+        # Default to unknown if no condition matches
+        else:
+            status = Status.UNKNOWN
+
+        self.status = status
 
         # Set the parsed status with only the first letter as capital
-        return self.status.value.capitalize()
+        return self.status
 
     @property
     def isWaitingForJob(self):
@@ -2106,18 +2533,15 @@ class SlurmBlock(PluginBlock):
         Whether the block is waiting for the job to finish or not.
         """
 
-        if self.status == self.Status.COMPLETED or self.status == self.Status.IDLE:
+        # Parse the status
+        self.parseStatus()
+
+        if self.status in Status.FINISHED_STATUSES():
             return False
 
         try:
-            # Ensure the remote api has as blockID this block
-            self.remote._remote._blockPlacedID = self._placedID
-
-            # Parse the status
-            self.parseStatus()
-
             # If the job is RUNNING or PENNDING, return False
-            if self.status == self.Status.RUNNING or self.status == self.Status.PENDING:
+            if self.status in Status.RUNNING_STATUSES():
                 return True
             else:
                 return False
@@ -2133,34 +2557,21 @@ class SlurmBlock(PluginBlock):
             )
             raise Exception("An error occurred while checking if the job is finished.") from e
 
-    def waitTillJobFinished(self, interval: int = 10):
+    def cancelAllJobs(self):
         """
-        Waits until the job is finished.
-
-        :param interval: The interval in seconds to check if the job is finished.
+        Cancels the jobs in the slurm queue.
         """
-        while self.isWaitingForJob:
-            time.sleep(interval)
 
-        # Set the status
-        self.parseStatus()
+        # Ensure the remote api has as blockID this block
+        jids = ",".join([j.job_id for j in self.jobs])
 
-    # def cancelJob(self):
-    #     """
-    #     Cancels the jobs in the slurm queue.
-    #     """
-
-    #     # Ensure the remote api has as blockID this block
-    #     self.remote._remote.cancelJob(savedID, self._placedID)
+        self.remote.command("scancel {}".format(jids), timeout=20)
 
     # Re-define the minimal method to include the status and jobID
     def _minimalEncode(self):
         minimalBlock = super()._minimalEncode()
         minimalBlock["status"] = str(self.status)
-        minimalBlock["jobID"] = self.jobID
-        minimalBlock["stdOut"] = self.stdOut
-        minimalBlock["stdErr"] = self.stdErr
-        minimalBlock["detailedStatus"] = self.detailedStatus
+        minimalBlock["jobs"] = [j.toDict() for j in self.jobs]
         minimalBlock["executeSecondAction"] = self._executeSecondAction
         return minimalBlock
 
@@ -2168,28 +2579,20 @@ class SlurmBlock(PluginBlock):
     def _parseInternalVariables(self, blockJSON: Dict[str, Any]):
         super()._parseInternalVariables(blockJSON)
 
-        status = blockJSON.get("status", self.Status.IDLE)
-        stdOut = blockJSON.get("stdOut", None)
-        stdErr = blockJSON.get("stdErr", None)
-        detailedStatus = blockJSON.get("detailedStatus", None)
-        jobID = blockJSON.get("jobID", None)
-        executeSecondAction = blockJSON.get("executeSecondAction", False)
+        status = blockJSON.get("status", Status.IDLE.value)
+        jobs = blockJSON.get("jobs")
 
-        self.status = self.Status(status)
-        self.jobID = jobID
-        self.stdOut = stdOut
-        self.stdErr = stdErr
-        self.detailedStatus = detailedStatus
-        self._executeSecondAction = executeSecondAction
+        if jobs:
+            self.jobs = [SlurmJob(**j) for j in jobs]
+
+        self.status = Status(status)
 
     # Override the clean run to reset the status
     def _cleanRun(self, *args, **kwargs):
         super()._cleanRun(*args, **kwargs)
-        self.stdOut = None
-        self.stdErr = None
-        self.detailedStatus = None
-        self.status = self.Status.IDLE
-        self.jobID = None
+        self.status = Status.IDLE
+        self.jobs = []
+
         self._executeSecondAction = False
 
 
@@ -2213,6 +2616,7 @@ class PluginMetaModel(BaseModel):
     platforms: typing.Optional[PlatformType] = ["universal"]
     externalURL: typing.Optional[str]
     dependencies: typing.Optional[typing.List[str]] = []
+    pluginRequires: typing.Optional[typing.List[str]] = []
 
 
 class Plugin:

@@ -104,7 +104,7 @@ class Extensions(metaclass=SingletonMeta):
             block = self._flow.findBlockByPlacedID(self._flow.currentExecuting)
 
             # Generate unique ID for each extension
-            extensionData["dataID"] = len(block._extensionsToOpen)
+            extensionData["dataID"] = os.urandom(16).hex()
 
             block._extensionsToOpen.append(extensionData)
         else:
@@ -149,23 +149,53 @@ class Extensions(metaclass=SingletonMeta):
         """
         Loads the given image into the extension.
 
+        The image will be stored inside the flow.
+
         :param image: The path to the image to load. Supports png, jpg and gif.
         :param title: The title of the 'Result'. \
         This will be displayed on top of the block that produced the image.
         :param store: Whether to store the image as results or to open it inmediately.
         """
 
-        if not os.path.exists(image):
-            raise ValueError("Image file does not exist at path {}".format(image))
+        image = image.strip()
 
-        image = os.path.abspath(image)
+        # Convert the image to base64
+        import base64
+
+        if image.startswith("data:image"):
+            image_data = image
+        elif image.startswith("http"):
+            import requests
+            from io import BytesIO
+
+            image_response = BytesIO(requests.get(image).content)
+
+            encoded_img = base64.b64encode(image_response.read())
+
+            image_data = "data:image/png;base64," + encoded_img.decode("utf-8")
+        else:
+            image = os.path.abspath(image)
+
+            if not os.path.exists(image):
+                raise ValueError("Image file does not exist at path {}".format(image))
+
+            extension = os.path.splitext(image)[1].lower()
+            if extension not in [".png", ".jpg", ".gif"]:
+                raise ValueError("Image file must be png, jpg or gif")
+
+            with open(image, "rb") as i:
+                image_data = f"data:image/{extension[1:]};base64," + base64.b64encode(
+                    i.read()
+                ).decode("utf-8")
 
         if store:
             self.storeExtensionResults(
-                pluginID="horus", pageID="image_loader", data={"image": image}, title=title
+                pluginID="horus", pageID="image_loader", data={"image": image_data}, title=title
             )
         else:
-            self.open(pluginID="horus", pageID="image_loader", data={"image": image}, title=title)
+            self.open(
+                pluginID="horus", pageID="image_loader", data={"image": image_data}, title=title
+            )
 
     def loadText(self, text: str, title: str, store: bool = True) -> None:
         """

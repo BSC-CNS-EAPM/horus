@@ -92,10 +92,10 @@ export default function About() {
         />
         <a
           className="app-button text-black text-decoration-none"
-          href="https://horus.bsc.es/docs"
+          href="https://horus.bsc.es/"
           target="_blank"
         >
-          Horus documentation
+          Learn more about Horus
         </a>
       </div>
     </div>

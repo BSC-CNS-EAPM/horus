@@ -16,6 +16,8 @@ from .src import (
     VariableList,
     PluginMetaModel,
     PlatformType,
+    SlurmJob,
+    Status,
 )
 
 # Export the Molstar API

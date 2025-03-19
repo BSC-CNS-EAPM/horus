@@ -33,7 +33,8 @@ example of a plugin metadata file:
         "author": "Horus",
         "version": "0.0.1",
         "pluginFile": "Horus.py",
-        "dependencies": []
+        "dependencies": [],
+        "pluginRequires": [],
     }
 
 
@@ -49,7 +50,8 @@ This is a JSON object that represents a plugin for the Horus app. The object con
 - ``maxHorusVersion``: The maximum Horus version required in order to run the plugin (optional).
 - ``platforms``: A list of the platforms where this plugin runs. Allowed values are "universal", "linux", "macos_intel" and "macos_arm". Defaults to "universal" if not specified (optional).
 - ``externalURL``: An URL that links to the Plugin's webpage or documentation (optional).
-- ``dependencies``: An array of strings that contains the PyPI dependencies of the plugin. This dependencies can be declared as DEPENDENCY==VERSION or using the --no-deps (DEPENDENCY==VERSION --no-deps) flag which will allow to install the dependency without installing the others that are necessary for it (optional).
+- ``dependencies``: An array of strings that contains the PyPI dependencies of the plugin. This dependencies can be declared as DEPENDENCY==VERSION or using the --no-deps flag (DEPENDENCY==VERSION --no-deps) which will allow to install the dependency without installing the others that are necessary for it, or using the --isolated flag (DEPENDENCY==VERSION --isolated) which will install that dependency separately from the others (optional).
+- ``pluginRequires``: A list of Plugin IDs that can be used as a dependency for this other plugin. The plugins listed here will share the deps / Include folders. (optional).
 
 Dependencies of plugins
 -----------------------
@@ -80,6 +82,9 @@ Deps folder: Some libraries are either not available in :bdg-secondary-line:`pip
 embeed the library pre-installed with the plugin by isntalling manually the package in the :bdg-secondary-line:`Include` folder of the plugin.
 The :bdg-secondary-line:`Include` folder is located in the root of the plugin folder and is appended to the :bdg-secondary-line:`PYTHONPATH` variable
 when the plugin is loaded, allowing for imports to work.
+
+Moreover, one can import from other plugins, as the plugins directory is automatically included in the :bdg-secondary-line:`PYTHONPATH`. Make sure to add the dependency plugin ID in "pluginRequires" to the plugin
+meta of your plugin if you intend to import from other plugins.
 
 .. warning::
 

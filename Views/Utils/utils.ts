@@ -7,7 +7,6 @@ function getShemsuToken() {
 export function getBaseURL(url: string): string {
   // Inserts the base URL into the URL object
   return window.__HORUS_ROOT__ + url;
-  
 }
 
 // Tokenize the urls with the shemsu token
@@ -15,7 +14,7 @@ async function horusGet(
   url: string,
   headers?: any,
   shemsu?: any,
-  timeout?: number
+  timeout?: number,
 ) {
   const controller = new AbortController();
   const signal = controller.signal;
@@ -53,7 +52,7 @@ async function horusPost(
   headers: any,
   body: any,
   shemsu?: string,
-  timeout?: number | null
+  timeout?: number | null,
 ) {
   /* Send a post request to the server to open a window
    * @param {string} url - The url to send the request to
@@ -205,10 +204,9 @@ const fetchInternals = async () => {
       ...window.horusInternal,
       ...(await response.json()),
     };
-
   } catch (err) {
     alert(
-      `Could not detect running mode. Expect errors while running the app. ${err}`
+      `Could not detect running mode. Expect errors while running the app. ${err}`,
     );
     window.horusInternal = {
       ...window.horusInternal,
@@ -249,7 +247,7 @@ export function getRandomFromRange(max: number, min: number) {
 export async function fetchWithProgress(
   url: string,
   options: RequestInit,
-  onProgress: (percentage: number) => void
+  onProgress: (percentage: number) => void,
 ): Promise<Response> {
   const response = await fetch(getBaseURL(url), options);
 
@@ -304,7 +302,7 @@ export async function fetchWithProgress(
 export function POSTUploadWithProgress(
   url: string,
   formData: FormData,
-  onProgress: (percentage: number) => void
+  onProgress: (percentage: number) => void,
 ) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -346,4 +344,3 @@ export function POSTUploadWithProgress(
 export function delay(ms: number) {
   return new Promise((res) => setTimeout(res, ms));
 }
-

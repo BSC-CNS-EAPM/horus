@@ -54,7 +54,7 @@ export default function SplashScreen() {
     <>
       <WelcomeToHorus setModalContent={updateModalContent} />
       <div className="splash-container h-full flex flex-col justify-center gap-4 items-center">
-        <div className="flex flex-row flex-wrap justify-center items-center w-full gap-8 zoom-in-animation text-white">
+        <div className="pt-8 flex flex-row flex-wrap justify-center items-center w-full gap-8 zoom-in-animation text-white">
           <div className="flex gap-2 p-2 flex-wrap justify-center flex-direction-splash-buttons">
             <CreateNewFlow />
             {!window.horusInternal.webApp && <OpenFlow />}
@@ -312,12 +312,12 @@ function PredefinedFlowsSplash() {
           </div>
         ) : (
           <div className="w-full h-full">
-            {predefinedFlows.length === 0 ? (
+            {!predefinedFlows ? (
               <div className="h-full flex justify-center items-center">
                 No preset flows
               </div>
             ) : (
-              <PredefinedFlows flows={predefinedFlows} />
+              <PredefinedFlows flows={predefinedFlows ?? []} />
             )}
           </div>
         )}
@@ -347,8 +347,8 @@ function RecentFlowsSplash() {
     <ScrollableViewWelcome.Root>
       <ScrollableViewWelcome.Header>
         <div className="text-xl font-semibold">
-          {recentFlows.length === 0
-            ? predefinedFlows.length === 0
+          {recentFlows && recentFlows.length === 0
+            ? predefinedFlows && predefinedFlows.length === 0
               ? "Recent flows"
               : "Preset flows"
             : "Recent flows"}
@@ -361,8 +361,8 @@ function RecentFlowsSplash() {
           </div>
         ) : (
           <div className="w-full h-full">
-            {recentFlows.length === 0 ? (
-              predefinedFlows.length > 0 ? (
+            {recentFlows && recentFlows.length === 0 ? (
+              predefinedFlows && predefinedFlows.length > 0 ? (
                 <PredefinedFlows flows={predefinedFlows} />
               ) : (
                 <div className="h-full flex justify-center items-center">
@@ -370,7 +370,7 @@ function RecentFlowsSplash() {
                 </div>
               )
             ) : (
-              <RecentUserFlows flows={recentFlows} />
+              <RecentUserFlows flows={recentFlows ?? []} />
             )}
           </div>
         )}

@@ -679,6 +679,7 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
                 }}
               />
               <AppButton
+                className="min-w-[40px]"
                 action={() => {
                   goToPath &&
                     fetchFolders(goToPath, {

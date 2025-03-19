@@ -31,6 +31,7 @@ import useResizeObserver from "@react-hook/resize-observer";
 
 import "./Smiles.css";
 import PlotIcon from "../Toolbar/Icons/Plot";
+import { isMolstarLoaded } from "../Molstar/HorusWrapper/horusmolstar";
 
 const SMILES_GRID_WIDTH = 200;
 const SMILES_GRID_HEIGTH = 150;
@@ -534,7 +535,7 @@ export function NoPreviewSmilesView({
       className="w-full h-full flex items-center justify-center"
       style={{ ...containerStyle }}
     >
-      <AppButton action={onClickEdit}>
+      <AppButton action={onClickEdit} className="inline-flex">
         {smiles.structureRef ? <MolStarIcon /> : "Edit SMILES"}
       </AppButton>
     </div>
@@ -740,7 +741,7 @@ function SmilesToolBox(props: {
         );
 
         // Wait for Mol* to be available
-        while (!window.molstar?.plugin?.isInitialized) {
+        while (!isMolstarLoaded(window.molstar)) {
           await delay(1500);
         }
 

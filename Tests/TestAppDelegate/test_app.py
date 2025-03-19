@@ -249,7 +249,10 @@ def test_horus_settings_get_setting(horus_settings):
     # Check that the setting was returned correctly
     assert setting.name == "Python interpreter"
     assert setting.value == "python"
-    assert setting.description == "Python interpreter path to use for dependencies installation"
+    assert (
+        setting.description
+        == "Python interpreter path to use for dependencies installation. Only required for special packages that need to be compiled from source. Must be python 3.9."
+    )
     assert setting.category == "Dependencies"
 
 

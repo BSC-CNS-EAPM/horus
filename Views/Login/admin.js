@@ -2,7 +2,7 @@
 import { createRoot } from "react-dom/client";
 
 // Load the React component
-import { AdminTools } from "./admintools.tsx";
+import { BaseAdminToolsView } from "./admintools";
 
 // Import CSS
 import "../CSS/main.css";
@@ -16,6 +16,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if (!container) {
     container = document.getElementById("admin-root");
     const root = createRoot(container);
-    root.render(<AdminTools />);
+    root.render(<BaseAdminToolsView />);
   }
 });

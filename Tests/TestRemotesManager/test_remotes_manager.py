@@ -1,3 +1,4 @@
+from sys import stderr
 import pytest
 from unittest.mock import patch, MagicMock
 from Server.RemotesManager import RemotesAPI
@@ -22,11 +23,11 @@ import os
             "Test",
             "~/.horus/",
         ),
-        (None, True, True, "Local", "/current/directory/"),
+        (None, True, True, "Local", "/tmp/current/directory/"),
     ],
 )
 def test_init(selected_remote, local, expected_is_local, expected_name, expected_workdir):
-    with patch("os.getcwd", return_value="/current/directory/"):
+    with patch("os.getcwd", return_value="/tmp/current/directory/"):
         with patch("fabric.Connection") as mock_conn:
             with patch("Server.RemotesManager.RemotesAPI.command") as mock_command:
                 mock_connection_instance = MagicMock(spec=["open", "is_connected", "close"])
@@ -49,7 +50,7 @@ def test_init(selected_remote, local, expected_is_local, expected_name, expected
 
 @pytest.fixture
 def mock_remotes_api_local():
-    with patch("os.getcwd", return_value="/current/directory/"):
+    with patch("os.getcwd", return_value="/tmp/current/directory/"):
         with patch("fabric.Connection") as mock_conn:
             mock_connection_instance = MagicMock(spec=["open", "is_connected", "close"])
             mock_conn.return_value = mock_connection_instance
@@ -65,9 +66,14 @@ def test_transfer_to_local(mock_remotes_api_local):
     # Mock the subprocess.run function
     with patch("subprocess.run", return_value=MagicMock(returncode=0)) as mock_run:
 
-        source_path = "/path/to/local/file.txt"
-        destination_path = "/remote/path"
-        expected_path = "/remote/path/file.txt"
+        source_path = "/tmp/path/to/local/file.txt"
+
+        # Create the source path
+        os.makedirs(os.path.dirname(source_path), exist_ok=True)
+        with open(source_path, "w") as f:
+            f.write("Test content")
+
+        destination_path = "/tmp/remote/file.txt"
 
         # Mocking internal transfer function
         mock_remotes_api_local._internalTransferTo = MagicMock()
@@ -76,19 +82,29 @@ def test_transfer_to_local(mock_remotes_api_local):
         result = mock_remotes_api_local.transferTo(source_path, destination_path)
 
         # Assertions
-        assert result == expected_path
+        assert result == destination_path
         mock_remotes_api_local._internalTransferTo.assert_not_called()
 
         # Assert that subprocess.run was called with the correct arguments
-        mock_run.assert_called_once_with(
-            ["cp", "-r", "/path/to/local/file.txt", "/remote/path"], check=True
+        mock_run.assert_any_call(
+            f"cp -r {source_path} {destination_path}",
+            shell=True,
+            stdout=-1,
+            stderr=-1,
+            stdin=-3,
+            timeout=None,
+            text=True,
         )
 
 
 def test_transfer_from_local(mock_remotes_api_local):
-    source_path = "/path/to/local/file.txt"
-    destination_path = "/remote/path"
-    expected_path = "/remote/path/file.txt"
+    source_path = "/tmp/path/to/local/file.txt"
+    destination_path = "/tmp/remote/path/file.txt"
+
+    # Create the source path
+    os.makedirs(os.path.dirname(source_path), exist_ok=True)
+    with open(source_path, "w") as f:
+        f.write("Test content")
 
     with patch("subprocess.run", return_value=MagicMock(returncode=0)) as mock_run:
 
@@ -99,18 +115,24 @@ def test_transfer_from_local(mock_remotes_api_local):
         result = mock_remotes_api_local.transferFrom(source_path, destination_path)
 
         # Assertions
-        assert result == expected_path
+        assert result == destination_path
         mock_remotes_api_local._internalTransferFrom.assert_not_called()
 
         # Assert that subprocess.run was called with the correct arguments
-        mock_run.assert_called_once_with(
-            ["cp", "-r", "/path/to/local/file.txt", "/remote/path"], check=True
+        mock_run.assert_any_call(
+            f"cp -r {source_path} {destination_path}",
+            shell=True,
+            stdout=-1,
+            stderr=-1,
+            stdin=-3,
+            timeout=None,
+            text=True,
         )
 
 
 @pytest.fixture
 def mock_remotes_api_remote():
-    with patch("os.getcwd", return_value="/current/directory/"):
+    with patch("os.getcwd", return_value="/tmp/current/directory/"):
         with patch("fabric.Connection") as mock_conn:
             mock_connection_instance = MagicMock(
                 spec=["open", "is_connected", "close", "get", "run"]
@@ -157,8 +179,8 @@ def test_transfer_to_remote(mock_remotes_api_remote):
 
 def test_transfer_from_remote(mock_remotes_api_remote):
     source_path = "/path/to/remote/file.txt"
-    destination_path = "/local/path"
-    expected_destination = "/local/path"
+    destination_path = "/tmp/local/path"
+    expected_destination = "/tmp/local/path"
 
     # Mocking internal transfer function
     mock_remotes_api_remote._internalTransferFrom = MagicMock()

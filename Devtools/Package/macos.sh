@@ -35,7 +35,9 @@ identity=$(security find-identity -v -p codesigning | grep "Developer ID" | awk 
 if [[ -n "$identity" ]] && [[ "$identity" != "" ]]; then
   codesign --force --deep --sign "$identity" dist/Packages/Horus.app
 else
-  echo "WARNING: No signing identity found, skipping codesigning. This may cause issues with macOS Gatekeeper."
+  echo "\nWARNING: No signing identity found, skipping codesigning. This may cause issues with macOS Gatekeeper."
+  echo "Applying an Ad-hoc signature to the .app bundle...\n"
+  codesign --force --deep --sign - dist/Packages/Horus.app
 fi
 
 # Define the name

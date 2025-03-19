@@ -386,6 +386,14 @@ function VariableRenderer(props: {
           onChange={handleVariableChangeInternal}
         />
       );
+    case PluginVariableTypes.PASSWORD:
+      return (
+        <PasswordVariableView
+          currentValue={currentValue}
+          variable={variableToRender}
+          onChange={handleVariableChangeInternal}
+        />
+      );
     case PluginVariableTypes.TEXT_AREA:
       return (
         <TextAreaVariableView
@@ -706,6 +714,20 @@ function StringVariableView(props: VariableViewProps) {
       className="plugin-variable-value"
       id={props.variable.id}
       type="text"
+      placeholder={props.variable.placeholder ?? ""}
+      value={(props.currentValue as string) ?? ""}
+      onChange={(e) => props.onChange(e.target.value)}
+    />
+  );
+}
+
+function PasswordVariableView(props: VariableViewProps) {
+  return (
+    <input
+      className="plugin-variable-value"
+      id={props.variable.id}
+      type="password"
+      autoComplete="off"
       placeholder={props.variable.placeholder ?? ""}
       value={(props.currentValue as string) ?? ""}
       onChange={(e) => props.onChange(e.target.value)}

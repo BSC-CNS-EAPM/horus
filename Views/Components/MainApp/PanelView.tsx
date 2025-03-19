@@ -8,10 +8,15 @@ import {
   AddPanelOptions,
   DockviewPanelApi,
   IDockviewHeaderActionsProps,
+  IDockviewDefaultTabProps,
 } from "dockview";
 import { CloseButton } from "dockview/dist/esm/svg";
 import "dockview/dist/styles/dockview.css";
 import Molstar from "../Molstar/molstar";
+import {
+  isMolstarLoaded,
+  LoadMoleculeFileType,
+} from "../Molstar/HorusWrapper/horusmolstar";
 import {
   DebugFlow,
   FlowBuilderView,
@@ -68,6 +73,7 @@ import { DndContext, DragOverlay, pointerWithin } from "@dnd-kit/core";
 import { BlockView } from "../FlowBuilder/Blocks/block.view";
 import PlotIcon from "../Toolbar/Icons/Plot";
 import { MoleculePlotter } from "../MoleculePlotter/MoleculePlotter";
+import { HorusFileEditor } from "../FileEditor/FileEditor";
 
 const MOLSTAR_PANEL: AddPanelOptions = {
   id: "molstar",
@@ -78,6 +84,7 @@ const MOLSTAR_PANEL: AddPanelOptions = {
   position: {
     direction: "right",
   },
+  tabComponent: "confirmClose",
 };
 
 const SMILES_PANEL: AddPanelOptions = {
@@ -89,6 +96,7 @@ const SMILES_PANEL: AddPanelOptions = {
   position: {
     direction: "right",
   },
+  tabComponent: "confirmClose",
 };
 
 const ERROR_PANEL: AddPanelOptions = {
@@ -110,12 +118,8 @@ const FLOW_PANEL: AddPanelOptions = {
   id: "flow",
   title: "New flow",
   component: "flow",
-  renderer: "onlyWhenVisible",
+  renderer: "always",
   tabComponent: "flow",
-  floating: false,
-  position: {
-    direction: "right",
-  },
 };
 
 const TERMINAL_PANEL: AddPanelOptions = {
@@ -158,11 +162,7 @@ const BLOCK_VARIABLES_PANEL: AddPanelOptions = {
   title: "Block Variables",
   component: "blockVariables",
   renderer: "onlyWhenVisible",
-  tabComponent: "editableTab",
   floating: false,
-  position: {
-    direction: "right",
-  },
 };
 
 const BLOCK_VARIABLES_PANEL_EXTENSION: AddPanelOptions = {
@@ -176,11 +176,7 @@ const BLOCK_LOGS_PANEL: AddPanelOptions = {
   title: "Block Logs",
   component: "blockLogs",
   renderer: "onlyWhenVisible",
-  tabComponent: "editableTab",
   floating: false,
-  position: {
-    direction: "right",
-  },
 };
 
 const CODE_EDITOR_PANEL: AddPanelOptions = {
@@ -189,9 +185,14 @@ const CODE_EDITOR_PANEL: AddPanelOptions = {
   component: "codeEditor",
   renderer: "onlyWhenVisible",
   floating: false,
-  position: {
-    direction: "right",
-  },
+};
+
+const FILE_EDITOR_PANEL: AddPanelOptions = {
+  id: "fileEditor",
+  title: "File Editor",
+  component: "fileEditor",
+  renderer: "onlyWhenVisible",
+  floating: false,
 };
 
 const BLOCK_REGISTRY_PANEL: AddPanelOptions = {
@@ -231,6 +232,7 @@ export const PANEL_REGISTRY = {
   blockVariablesExtension: BLOCK_VARIABLES_PANEL_EXTENSION,
   blockLogs: BLOCK_LOGS_PANEL,
   codeEditor: CODE_EDITOR_PANEL,
+  fileEditor: FILE_EDITOR_PANEL,
   blockRegistry: BLOCK_REGISTRY_PANEL,
   moleculePlotter: MOLECULE_PLOTTER_PANEL,
 };
@@ -251,10 +253,13 @@ const PANEL_ICONS: Record<string, ReactElement> = {
   blockLogs: <LogFile />,
   blockRegistry: <NewFlowIcon />,
   codeEditor: <CodeIcon />,
+  fileEditor: <LogFile />,
   moleculePlotter: <PlotIcon />,
 };
 
 function FlowTab(props: IDockviewPanelHeaderProps) {
+  const flowContext = useContext(FlowBuilderContext);
+
   const onPointerDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
   }, []);
@@ -271,7 +276,18 @@ function FlowTab(props: IDockviewPanelHeaderProps) {
       <div
         className="ml-2 dv-default-tab-action"
         onPointerDown={onPointerDown}
-        onClick={() => props.api.close()}
+        onClick={() => {
+          if (flowContext?.flow.isFlowActive) {
+            alert("Cannot close the flow while it is active");
+          } else {
+            // Close also the block registry
+            props.containerApi
+              .getPanel(PANEL_REGISTRY.blockRegistry.id)
+              ?.api.close();
+
+            props.api.close();
+          }
+        }}
       >
         <CloseButton />
       </div>
@@ -405,6 +421,48 @@ function ExtensionsTab(
   return <EditableTitleTab {...props} icon={extensionIcon} />;
 }
 
+function BaseTab(props: IDockviewDefaultTabProps) {
+  const icon = PANEL_ICONS[props.api.component] ?? null;
+  return (
+    <span className="dv-default-tab">
+      {icon}
+      <DockviewDefaultTab {...props} />
+    </span>
+  );
+}
+
+function ConfirmCloseTab(props: IDockviewDefaultTabProps) {
+  const flowContext = useContext(FlowBuilderContext);
+
+  const onPointerDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+  }, []);
+
+  const confirmClose = async () => {
+    if (flowContext?.flow.isFlowActive) {
+      alert(`Cannot close this tab while the flow is active.`);
+      return;
+    }
+
+    if (await confirm(`Are you sure you want to close this tab?`)) {
+      props.api.close();
+    }
+  };
+
+  return (
+    <span className="dv-default-tab">
+      <BaseTab {...props} hideClose />
+      <div
+        className="ml-2 dv-default-tab-action"
+        onPointerDown={onPointerDown}
+        onClick={confirmClose}
+      >
+        <CloseButton />
+      </div>
+    </span>
+  );
+}
+
 const headerComponents = {
   extensionsTab: ExtensionsTab,
   editableTab: (props: IDockviewPanelHeaderProps) => {
@@ -412,15 +470,8 @@ const headerComponents = {
     return <EditableTitleTab {...props} icon={icon} />;
   },
   flow: FlowTab,
-  default: (props: IDockviewPanelHeaderProps) => {
-    const icon = PANEL_ICONS[props.api.component] ?? null;
-    return (
-      <span className="dv-default-tab">
-        {icon}
-        <DockviewDefaultTab {...props} />
-      </span>
-    );
-  },
+  confirmClose: ConfirmCloseTab,
+  default: BaseTab,
 };
 
 export function addBlockRegistryGroup(api: DockviewApi) {
@@ -512,6 +563,9 @@ const components: Record<string, DockView> = {
   },
   codeEditor: (props: IDockviewPanelProps) => {
     return <Editor {...props.params} />;
+  },
+  fileEditor: (props: IDockviewPanelProps) => {
+    return <HorusFileEditor dockApi={props.api} params={props.params} />;
   },
   blockVariables: (props: IDockviewPanelProps) => {
     // Set the panel title to the block name
@@ -715,7 +769,7 @@ const WatermarkComponent = () => {
           });
         }}
       >
-        Create a new flow
+        Open the flow panel
       </AppButton>
     </div>
   );
@@ -729,6 +783,8 @@ export function HorusPanelView() {
   const flowBuilderState = useFlowBuilder({ dockApi });
 
   const onReady = (event: DockviewReadyEvent) => {
+    const dockApi = event.api;
+
     event.api.onWillDragPanel((e) => {
       if (e.panel.id === BLOCK_REGISTRY_PANEL.id) {
         e.nativeEvent.preventDefault();
@@ -750,7 +806,40 @@ export function HorusPanelView() {
       }
     });
 
-    setDockApi(event.api);
+    window.horus.openPanel = (type, id?, params?) => {
+      // If of type extensions, we need to reconstruct the url of the
+      // extension with the pluginID + extensionID
+      if (type === "extensions" && params) {
+        const incomingParams = params as PluginPage;
+        params = {
+          ...incomingParams,
+          url: `/plugins/pages/${incomingParams?.plugin}.${incomingParams?.id}`,
+        } as PluginPage;
+      }
+
+      addPanel({
+        dockApi: dockApi,
+        component:
+          PANEL_REGISTRY[type].component ?? PANEL_REGISTRY.error.component,
+        panelID:
+          (id as string) || PANEL_REGISTRY[type].id || PANEL_REGISTRY.error.id,
+        params: params,
+      });
+    };
+
+    window.horus.closePanel = (id) => {
+      const panel = dockApi?.getPanel(id);
+      if (panel) {
+        dockApi.removePanel(panel);
+      }
+    };
+
+    setDockApi(dockApi);
+
+    // Setup the hooks before loading the default panels
+    hooksInitializer();
+
+    // Load the default ocnfiguration
     const urlProps = new URLSearchParams(location.search);
     defaultConfig({ urlProps, api: event.api });
   };
@@ -782,7 +871,10 @@ export function HorusPanelView() {
 
     const addExtensions = (e: PluginPageExtensionEvent) => {
       // Only add the extension if the current flow is the opened one
-      if (e?.bypass !== true && flowBuilderState.flow.flow.savedID !== e.savedID) {
+      if (
+        e?.bypass !== true &&
+        flowBuilderState.flow.flow.savedID !== e.savedID
+      ) {
         return;
       }
 
@@ -795,34 +887,6 @@ export function HorusPanelView() {
     };
 
     window.horus.addExtensions = addExtensions;
-
-    window.horus.openPanel = (type, id?, params?) => {
-      // If of type extensions, we need to reconstruct the url of the
-      // extension with the pluginID + extensionID
-      if (type === "extensions" && params) {
-        const incomingParams = params as PluginPage;
-        params = {
-          ...incomingParams,
-          url: `/plugins/pages/${incomingParams?.plugin}.${incomingParams?.id}`,
-        } as PluginPage;
-      }
-
-      addPanel({
-        dockApi: dockApi,
-        component:
-          PANEL_REGISTRY[type].component ?? PANEL_REGISTRY.error.component,
-        panelID:
-          (id as string) || PANEL_REGISTRY[type].id || PANEL_REGISTRY.error.id,
-        params: params,
-      });
-    };
-
-    window.horus.closePanel = (id) => {
-      const panel = dockApi?.getPanel(id);
-      if (panel) {
-        dockApi.removePanel(panel);
-      }
-    };
 
     document.addEventListener("addPanel", addPanelEventListener);
     document.addEventListener("togglePanel", togglePanelEventListener);
@@ -883,4 +947,27 @@ export function HorusPanelView() {
       </DockContext.Provider>
     </DndContext>
   );
+}
+
+// Utility function to initialize some useful hooks for the webpacke
+export function hooksInitializer() {
+  // Create a function that laoids the molstar panel if it does not exits
+  if (!isMolstarLoaded(window.molstar)) {
+    const hookFunction: LoadMoleculeFileType = async (file, options) => {
+      // Open the panel
+      window.horus?.openPanel?.("molstar");
+
+      // Wait till molstar is opened
+      while (!isMolstarLoaded(window.molstar)) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+
+      // Open the file
+      window.molstar?.loadMoleculeFile(file, options);
+    };
+
+    window.molstar = {
+      loadMoleculeFile: hookFunction,
+    };
+  }
 }

@@ -22,7 +22,7 @@ function filterSmiles(structures: HorusSmilesType[], query?: string) {
   return structures.filter(
     (structure) =>
       structure.label.toLowerCase().includes(query.toLowerCase()) ||
-      structure.group?.toLowerCase().includes(query.toLowerCase())
+      structure.group?.toLowerCase().includes(query.toLowerCase()),
   );
 }
 
@@ -33,13 +33,13 @@ function useSmilesFilter() {
   const setCurrentFilter = (query: string) => {
     _setCurrentFilter(query);
     setFilteredSmiles(
-      filterSmiles(window.smiles?.getSmilesList() ?? [], query)
+      filterSmiles(window.smiles?.getSmilesList() ?? [], query),
     );
   };
 
   const refreshStructures = useCallback(() => {
     setFilteredSmiles(
-      filterSmiles(window.smiles?.getSmilesList() ?? [], currentFilter)
+      filterSmiles(window.smiles?.getSmilesList() ?? [], currentFilter),
     );
   }, [currentFilter]);
 
@@ -80,7 +80,7 @@ export function SmilesVariableView(props: VariableViewProps) {
 
       if (props.currentValue) {
         const currentSelected = props.currentValue.flatMap(
-          (s: HorusSmilesType) => s.id
+          (s: HorusSmilesType) => s.id,
         );
 
         if (!window.smiles) {
@@ -218,8 +218,8 @@ function SelectMultipleSmiles({
             e.target.checked
               ? [...(currentValue ?? []), smiles]
               : (currentValue ?? []).filter(
-                  (s: HorusSmilesType) => s.id !== smiles.id
-                )
+                  (s: HorusSmilesType) => s.id !== smiles.id,
+                ),
           )
         }
       />

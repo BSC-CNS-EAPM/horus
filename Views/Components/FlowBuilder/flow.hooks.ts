@@ -41,6 +41,7 @@ import {
   DroppableEntity,
   Flow,
   FlowStatus,
+  FlowStatusUtil,
   VariableConnection,
 } from "./flow.types";
 import { FileExplorerProps } from "../FileExplorer/file_explorer";
@@ -60,7 +61,10 @@ import {
   PANEL_REGISTRY,
 } from "../MainApp/PanelView";
 import { navigateTo } from "@/Utils/navigationService";
-import { MolstarEvents } from "../Molstar/HorusWrapper/horusmolstar";
+import {
+  isMolstarLoaded,
+  MolstarEvents,
+} from "../Molstar/HorusWrapper/horusmolstar";
 import { LogsData } from "./Logs/logs_connections";
 import { blockLogsPanelID } from "./Blocks/block.hooks";
 import { GLOBAL_IDS } from "@/Utils/globals";
@@ -208,6 +212,7 @@ function newFlowObject(): Flow {
     pendingActions: [],
     pendingSmilesActions: [],
     pendingExtensions: [],
+    flowError: "",
     elapsed: 0,
   };
 }
@@ -260,12 +265,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
   const [flowLoading, setFlowLoading] = useState<boolean>(false);
   const [flowText, setFlowText] = useState<string>("Flow busy");
   const isFlowActive = useMemo(() => {
-    return (
-      flow.status === FlowStatus.RUNNING ||
-      flow.status === FlowStatus.CANCELLING ||
-      flow.status === FlowStatus.QUEUED ||
-      flow.status === FlowStatus.PAUSED
-    );
+    return FlowStatusUtil.RUNNING_STATUSES().includes(flow.status);
   }, [flow]);
 
   // State for the remote servers
@@ -312,63 +312,75 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     [isFlowActive]
   );
 
-  const updateMolstarState = useCallback(async () => {
-    // Check that the flow has a valid path and
-    // that Mol* is mounted
-    if (!flow.path) {
-      return;
-    }
+  const updateMolstarState = useCallback(
+    async (options?: { savedPath?: string; savedID?: string }) => {
+      // Check that the flow has a valid path and
+      // that Mol* is mounted
 
-    try {
-      // Save the mol* and smiles state
-      const formData = new FormData();
-      formData.append("flowPath", flow.path);
+      const pathToUse = options?.savedPath ?? flow.path;
+      const savedID = options?.savedID;
 
-      if (window.molstar) {
-        const molstarState = await window.molstar.snapshot.get();
-        formData.append("molstarState", molstarState, "molstarState.molx");
+      if (!pathToUse || !savedID) {
+        return;
       }
 
-      if (window.smiles) {
-        const smilesState = await window.smiles.saveState();
-        const smilesStateFile = new File(
-          [JSON.stringify(smilesState)],
-          "smilesState.json"
-        );
-        formData.append("smilesState", smilesStateFile, "smilesState.json");
-      }
+      try {
+        // Save the mol* and smiles state
+        const formData = new FormData();
+        formData.append("flowPath", pathToUse);
+        formData.append("savedID", savedID);
 
-      // Use the helper function to upload with progress tracking
-      const data: any = await POSTUploadWithProgress(
-        "/api/updatemolstate",
-        formData,
-        (percentage) => {
-          setFlowText(`Saving structures: ${percentage.toFixed(0)}%`);
+        if (isMolstarLoaded(window.molstar)) {
+          const molstarState = await window.molstar.snapshot.get();
+          formData.append("molstarState", molstarState, "molstarState.molx");
         }
-      );
 
-      if (!data.ok) {
-        throw new Error(data.msg);
+        if (window.smiles) {
+          const smilesState = await window.smiles.saveState();
+          const smilesStateFile = new File(
+            [JSON.stringify(smilesState)],
+            "smilesState.json"
+          );
+          formData.append("smilesState", smilesStateFile, "smilesState.json");
+        }
+
+        // Use the helper function to upload with progress tracking
+        const data: any = await POSTUploadWithProgress(
+          "/api/updatemolstate",
+          formData,
+          (percentage) => {
+            setFlowText(`Saving structures: ${percentage.toFixed(0)}%`);
+          }
+        );
+
+        if (!data.ok) {
+          throw new Error(data.msg);
+        }
+
+        // Empty the pending actions
+        setFlow((currentFlow) => {
+          return {
+            ...currentFlow,
+            pendingActions: [],
+            pendingSmilesActions: [],
+            pendingExtensions: [],
+          };
+        });
+      } catch (e) {
+        await horusAlert("Error updating Mol* state: " + e);
       }
-
-      // Empty the pending actions
-      setFlow((currentFlow) => {
-        return {
-          ...currentFlow,
-          pendingActions: [],
-          pendingSmilesActions: [],
-          pendingExtensions: [],
-        };
-      });
-    } catch (e) {
-      await horusAlert("Error updating Mol* state: " + e);
-    }
-    // Disable horusAlert and horusConfirm hook warning
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [flow]);
+      // Disable horusAlert and horusConfirm hook warning
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [flow]
+  );
 
   const downloadMolstarState = useCallback(
-    async (flowPath?: string) => {
+    async (flowPath?: string, savedID?: string | null) => {
+      if (!isMolstarLoaded(window.molstar)) return;
+
+      const molstar = window.molstar;
+
       const flowToOpen = flowPath ?? flow.path;
 
       // Check that the flow has a valid path and
@@ -385,7 +397,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
             "Content-Type": "application/json",
             Accept: "application/json",
           },
-          body: JSON.stringify({ flowPath: flowToOpen }),
+          body: JSON.stringify({ flowPath: flowToOpen, savedID }),
         },
         (percentage) => {
           if (percentage === 100) {
@@ -413,7 +425,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
           } else if (contentType.includes("application/octet-stream")) {
             // If the response is a file (binary data), handle it as a Blob
             await response.blob().then(async (blob) => {
-              await window?.molstar?.snapshot.set(blob);
+              await molstar.snapshot?.set(blob);
             });
           } else {
             horusAlert("Error downloading Mol* state: Invalid content type.");
@@ -438,12 +450,6 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       // Connect to a socketio room with the flowID
       socket.emit("joinFlow", openedFlow.savedID);
 
-      // Set the flow state
-      setFlow({
-        ...openedFlow,
-        status: isDefault ? FlowStatus.UNSAVED : openedFlow.status,
-      });
-
       // Set the placedIDCounter
       // Search for the highest placedID in the blocks and subblocks
       const placedIDs =
@@ -452,18 +458,23 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
           : [0];
       placedIDCounter.current = Math.max(...placedIDs) + 1;
 
-      if (openedFlow.terminalOutput.length > 0) {
-        window.horusTerm.storedMessages = openedFlow.terminalOutput;
+      const appliedActions = await applyActions(openedFlow);
 
-        // Print all stored messages if the terminal is mounted
-        window.horusTerm.ref?.current?.pushToStdout(
-          window.horusTerm.storedMessages
-            ? window.horusTerm.storedMessages.join("\n")
-            : ""
-        );
+      if (openedFlow.flowError) {
+        alert(openedFlow.flowError);
       }
 
-      if (await applyActions(openedFlow)) {
+      // Set the flow state and clean the pending actions
+      setFlow({
+        ...openedFlow,
+        status: isDefault ? FlowStatus.UNSAVED : openedFlow.status,
+        pendingActions: [],
+        pendingExtensions: [],
+        pendingSmilesActions: [],
+        flowError: "",
+      });
+
+      if (appliedActions) {
         // Save the mol* state after applying the actions (will clear the extensionActions too)
         await updateMolstarState();
       }
@@ -672,15 +683,18 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
         // Set the molstar state at the beggining in case blocks need structures
         // If it has the new molstar state, open it
-        if (window.molstar?.plugin) {
+        if (isMolstarLoaded(window.molstar)) {
           setFlowText("Loading Mol* state...");
-          await downloadMolstarState(openedFlow.path!);
+          await downloadMolstarState(openedFlow.path!, openedFlow?.savedID);
           await delay(500);
         }
 
         // If we are dropping a file, do not set the path
         // Except for App mode, in that case leave the path
-        if (openFile && !window.horusInternal.isDesktop) {
+        if (
+          (openFile && !window.horusInternal.isDesktop) ||
+          openedFlow.isPreset
+        ) {
           openedFlow.path = null;
         }
 
@@ -740,7 +754,6 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
   const serializeFlow = useCallback((): Flow => {
     return {
       ...flow,
-      terminalOutput: window.horusTerm.storedMessages,
     };
   }, [flow]);
 
@@ -890,7 +903,10 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
         // Update the molstar state
         setFlowText("Getting structures state...");
-        await updateMolstarState();
+        await updateMolstarState({
+          savedPath: savedFlow.path,
+          savedID: savedFlow.savedID,
+        });
 
         return savedFlow as Flow;
       } catch (error) {
@@ -1531,6 +1547,12 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
           return currentFlow;
         }
 
+        if (
+          currentFlow.status === FlowStatus.CANCELLING &&
+          recivedFlow.status === FlowStatus.RUNNING
+        ) {
+          return currentFlow;
+        }
         // Do not update the position of the blocks
         // This is because the user might be panning the view
         // during the flow execution
@@ -1555,16 +1577,28 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         (async () => {
           // Check for any pending actions if the flow has finished
           if (recivedFlow.status !== FlowStatus.RUNNING) {
+            preventMoleculeChangedListener.current = true;
             if (await applyActions(recivedFlow)) {
               // Save the mol* state after applying the actions
-              // Wait artificaially 500ms for the mol* state to be updated
-              await new Promise((resolve) => setTimeout(resolve, 1000));
+              // Wait artificially 500ms for the mol* state to be updated
+              await new Promise((resolve) => setTimeout(resolve, 500));
               await updateMolstarState();
             }
+            preventMoleculeChangedListener.current = false;
           }
         })();
 
-        return parsedFlow;
+        if (parsedFlow.flowError) {
+          alert(parsedFlow.flowError);
+        }
+
+        return {
+          ...parsedFlow,
+          pendingActions: [],
+          pendingExtensions: [],
+          pendingSmilesActions: [],
+          flowError: "",
+        };
       });
     },
 
@@ -1594,12 +1628,6 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     placedIDCounter.current = 1;
 
     resetHistory();
-
-    // Clear the terminal if present
-    if (window.horusTerm.ref && window.horusTerm.ref.current) {
-      window.horusTerm.ref.current.clearStdout();
-    }
-    window.horusTerm.storedMessages = [];
 
     setFlowLoading(false);
 
@@ -1903,7 +1931,17 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
   const latestPath = useRef<string | null>(null);
 
-  async function executeFlow(placedID?: number, resetFlow: boolean = false) {
+  async function executeFlow(options?: {
+    placedID?: number;
+    resetFlow?: boolean;
+    continueSlurm?: boolean;
+  }) {
+    const {
+      placedID = undefined,
+      resetFlow = false,
+      continueSlurm = false,
+    } = { ...options };
+
     if (isExecutingInProcess.current) {
       return;
     }
@@ -1931,19 +1969,14 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         } as Flow;
       });
 
-      if (resetFlow) {
-        // Clear the terminal if present
-        window.horusTerm.ref?.current?.clearStdout();
-        window.horusTerm.storedMessages = [];
-      }
-
       const response = await horusPost(
         "/api/plugins/executeflow",
         null,
         JSON.stringify({
           flowPath: updatedFlowPath,
-          placedID: placedID,
-          resetFlow: resetFlow,
+          placedID,
+          resetFlow,
+          continueSlurm,
         })
       );
 
@@ -1985,6 +2018,9 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
     if (!data.ok) {
       await horusAlert(data.msg);
+
+      // Restore the previous state of the flow
+      setFlow(flow);
     }
   }
 
@@ -2105,9 +2141,18 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.search, dockApi]);
 
+  const preventMoleculeChangedListener = useRef(false);
+
   useEffect(() => {
     const moleculeChangeListener = () => {
       setFlow((currentFlow) => {
+        if (
+          FlowStatusUtil.RUNNING_STATUSES().includes(currentFlow.status) ||
+          preventMoleculeChangedListener.current
+        ) {
+          return currentFlow;
+        }
+
         return {
           ...currentFlow,
           status: FlowStatus.UNSAVED,
@@ -2319,13 +2364,16 @@ async function applyActions(flow: Flow) {
 
     // Open the Mol* panel if not already open
     let tries = 0;
-    while (!window?.molstar?.plugin?.isInitialized && tries < 10) {
+    while (!isMolstarLoaded(window.molstar) && tries < 10) {
       window?.horus?.openPanel?.("molstar");
       await new Promise((resolve) => setTimeout(resolve, 100));
       tries++;
     }
-    for (const action of flow.pendingActions) {
-      await window.molstar?.applyAction(action);
+
+    if (isMolstarLoaded(window.molstar)) {
+      for (const action of flow.pendingActions) {
+        await window.molstar?.applyAction(action);
+      }
     }
   }
 
@@ -2349,10 +2397,9 @@ async function applyActions(flow: Flow) {
   if (flow.pendingExtensions && flow.pendingExtensions.length > 0) {
     hasToUpdate = true;
     for (const action of flow.pendingExtensions) {
-      await window.horus?.addExtensions?.({...action, bypass: true});
+      await window.horus?.addExtensions?.({ ...action, bypass: true });
     }
   }
-
   return hasToUpdate;
 }
 

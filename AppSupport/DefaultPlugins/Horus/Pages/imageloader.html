@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <head>
     <title>Horus Image Loader</title>
@@ -26,25 +26,34 @@
       if (window.parent.extensionData) {
         imageToLoad = window.parent.extensionData.image;
 
-        const blob = parent.horus
-          .getFile(imageToLoad)
-          .then((blob) => {
-            // If the blob is not image, display an error
-            if (!blob.type.startsWith("image")) {
-              noImage("Not an image");
-              return;
-            }
+        // If the image is base64 data, display the image
+        // else get the file
 
-            imageToLoad = URL.createObjectURL(blob);
-
-            document.getElementById("imageContainer").innerHTML = `
+        if (imageToLoad.startsWith("data:image/png;base64,")) {
+          document.getElementById("imageContainer").innerHTML = `
                 <img src="${imageToLoad}" alt="image" style="max-width: 100%; max-height: 100%; object-fit: contain" />
             `;
-          })
-          .catch((error) => {
-            console.error(error);
-            noImage(error);
-          });
+        } else {
+          const blob = parent.horus
+            .getFile(imageToLoad)
+            .then((blob) => {
+              // If the blob is not image, display an error
+              if (!blob.type.startsWith("image")) {
+                noImage("Not an image");
+                return;
+              }
+
+              imageToLoad = URL.createObjectURL(blob);
+
+              document.getElementById("imageContainer").innerHTML = `
+                <img src="${imageToLoad}" alt="image" style="max-width: 100%; max-height: 100%; object-fit: contain" />
+            `;
+            })
+            .catch((error) => {
+              console.error(error);
+              noImage(error);
+            });
+        }
       } else {
         noImage("Extension data not available");
       }

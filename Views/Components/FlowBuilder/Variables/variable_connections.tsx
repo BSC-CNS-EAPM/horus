@@ -63,7 +63,7 @@ export function VariableSetupView(props: VariableModalViewProps) {
     return {
       ...variable,
       placedID: block.placedID,
-      disabled: !!isFlowActive,
+      disabled: !!isFlowActive || variable.disabled,
     };
   });
 
@@ -554,17 +554,6 @@ export function compareAllowedValues(
     return true;
   }
 
-  // If the input and output are different than FILE
-  // check the type instead of the allowed values
-  if (
-    variableType !== PluginVariableTypes.FILE &&
-    variableType !== PluginVariableTypes.GROUP &&
-    variableType !== PluginVariableTypes._LIST &&
-    variableType === otherVariableType
-  ) {
-    return true;
-  }
-
   // For file type and group, check that the allowedValues of variable and other variable match
   if (
     variableType === PluginVariableTypes.FILE &&
@@ -591,10 +580,22 @@ export function compareAllowedValues(
     }
   }
 
+  // If the input and output are different than FILE
+  // check the type instead of the allowed values
+  if (
+    variableType !== PluginVariableTypes.FILE &&
+    variableType !== PluginVariableTypes.GROUP &&
+    variableType !== PluginVariableTypes._LIST &&
+    variableType === otherVariableType
+  ) {
+    return true;
+  }
+
   for (let i = 0; i < allowedValues.length; i++) {
     if (tryingToConnect.includes(allowedValues[i]!)) {
       return true;
     }
   }
+
   return false;
 }

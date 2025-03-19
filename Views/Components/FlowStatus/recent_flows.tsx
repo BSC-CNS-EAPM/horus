@@ -112,11 +112,11 @@ export type CorruptedFlow = FileData & {
 
 export function useGetRecentFlows(webAppFlows: boolean = false): {
   isLoading: boolean;
-  recentFlows: Flow[];
-  presetFlows: Flow[];
-  templates: Flow[];
-  otherDirectories: FileData[];
-  corruptedFlows: CorruptedFlow[];
+  recentFlows: Flow[] | null;
+  presetFlows: Flow[] | null;
+  templates: Flow[] | null;
+  otherDirectories: FileData[] | null;
+  corruptedFlows: CorruptedFlow[] | null;
   refetch: () => void;
 } {
   // Fetch recent flows
@@ -149,9 +149,11 @@ export function useGetRecentFlows(webAppFlows: boolean = false): {
     queryKey: ["predefinedFlows"],
     queryFn: async () => {
       const response = await horusGet("/api/plugins/flows");
+
       const data = await response.json();
-      if (!data.ok)
+      if (!data.ok) {
         throw new Error(data.msg || "Failed to fetch predefined flows");
+      }
       return data.flows;
     },
   });
@@ -169,11 +171,11 @@ export function useGetRecentFlows(webAppFlows: boolean = false): {
 
   return {
     isLoading: fetchingRecents,
-    recentFlows: recentFlowsData?.flows || [],
-    presetFlows: predefinedFlowsData || [],
-    templates: templatesData || [],
-    otherDirectories: recentFlowsData?.otherDirectories || [],
-    corruptedFlows: recentFlowsData?.corruptedFlows || [],
+    recentFlows: recentFlowsData?.flows ?? null,
+    presetFlows: predefinedFlowsData ?? null,
+    templates: templatesData ?? null,
+    otherDirectories: recentFlowsData?.otherDirectories ?? null,
+    corruptedFlows: recentFlowsData?.corruptedFlows ?? null,
     refetch,
   };
 }

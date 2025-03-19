@@ -49,7 +49,7 @@ export default function LoginRegister() {
         setMessages({ ok: false, msg: "" });
       }
     },
-    [],
+    []
   );
 
   const isFirstRender = useRef(true);
@@ -137,7 +137,7 @@ export default function LoginRegister() {
       >
         {getCurrentView()}
       </div>
-      <p className="mt-5 mb-3 text-muted">&copy; 2024 - Horus</p>
+      <p className="mt-5 mb-3 text-muted">&copy; 2025 - Horus</p>
     </div>
   );
 }
@@ -355,7 +355,7 @@ function Register({
         setMessages(
           parsedFields["email"]
             ? { ok: false, msg: "Password is required" }
-            : { ok: false, msg: "Email is required" },
+            : { ok: false, msg: "Email is required" }
         );
         return;
       }
@@ -419,8 +419,8 @@ function Register({
   }, []);
 
   return (
-    <div className="flex flex-col gap-2 items-center">
-      <div className="w-[350px] flex flex-col gap-2">
+    <div className="gap-2 items-center text-center">
+      <div className="w-[350px] grid grid-cols-1 gap-2 overflow-auto">
         <div className="form-floating">
           <input
             required
@@ -457,28 +457,32 @@ function Register({
           />
           <label htmlFor="password">Password</label>
         </div>
+        <div className="mt-8"></div>
         {extraFieldsList.map((field, index) => {
           return (
-            <div className="form-floating bg-white" key={index}>
-              <PluginVariableView
-                customClass="form-control"
-                hideDescription={true}
-                applyStyle={false}
-                hideName={true}
-                variable={field}
-                onChange={(newValue) => {
-                  setExtraFieldsValues((currentValues) => {
-                    return {
-                      ...currentValues,
-                      [field.id]: newValue,
-                    };
-                  });
-                }}
-              />
+            <>
               <label htmlFor={field.id}>{field.name}</label>
-            </div>
+              <div className="form-floating bg-white" key={index} id={field.id}>
+                <PluginVariableView
+                  customClass="form-control"
+                  hideDescription={false}
+                  applyStyle={false}
+                  hideName={true}
+                  variable={field}
+                  onChange={(newValue) => {
+                    setExtraFieldsValues((currentValues) => {
+                      return {
+                        ...currentValues,
+                        [field.id]: newValue,
+                      };
+                    });
+                  }}
+                />
+              </div>
+            </>
           );
         })}
+        <div className="mt-8"></div>
         {hasTos && (
           <div
             className="w-full flex flex-row gap-4 justify-between items-center form-control"

@@ -2,7 +2,8 @@
 from Server.PluginManager.plugin_manager import (
     PluginManager,
     PrintCapturer,
-    PluginDeps,
+    PluginDepsPlugin,
+    PluginDepsBase,
     PrintSocketCapturer,
-    callPopen,
+    SubprocessManager,
 )  # noqa

@@ -124,7 +124,7 @@ export function ToolbarMenu(props: ToolBarMenuProps) {
                       />
                     )}
                   </Menu.Item>
-                )
+                ),
               )}
             </Menu.Items>
           </Transition>

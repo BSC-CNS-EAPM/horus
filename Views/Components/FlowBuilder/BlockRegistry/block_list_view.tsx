@@ -109,13 +109,16 @@ export function BlockRegistry() {
       }
 
       const filtered = blocks?.filter((block) => {
+        const lowerQuery = query.toLowerCase();
+        const blockID = block.id;
         const blockName = block.name.toLowerCase();
         const blockPlugin = block.plugin.name.toLowerCase();
         const blockDescription = block.description.toLowerCase();
         return (
-          blockName.includes(query.toLowerCase()) ||
-          blockPlugin.includes(query.toLowerCase()) ||
-          blockDescription.includes(query.toLowerCase())
+          blockID.startsWith(lowerQuery) ||
+          blockName.includes(lowerQuery) ||
+          blockPlugin.includes(lowerQuery) ||
+          blockDescription.includes(lowerQuery)
         );
       });
 
@@ -196,7 +199,15 @@ export function BlockRegistry() {
               value={search}
               placeholder="Search blocks..."
               onChange={(event) => {
-                setSearch(event.target.value);
+                const value = event.target.value;
+
+                if (value) {
+                  setShowAllSignal(showAllSignal + 1);
+                } else {
+                  setCollapseAllSignal(collapseAllSignal + 1);
+                }
+
+                setSearch(value);
               }}
               showIcon={false}
             />

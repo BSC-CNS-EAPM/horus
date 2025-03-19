@@ -1,5 +1,7 @@
 // Molstar wrapper
-import HorusMolstar from "../Components/Molstar/HorusWrapper/horusmolstar";
+import HorusMolstar, {
+  LoadMoleculeFileType,
+} from "../Components/Molstar/HorusWrapper/horusmolstar";
 import HorusSmilesManager, {
   HorusSmilesType,
 } from "../Components/Smiles/SmilesWrapper/horusSmiles";
@@ -11,7 +13,7 @@ import { ExtensionsFilePickerOptions } from "../Components/FileExplorer/file_exp
 // Terminal ref
 // @ts-ignore
 import Terminal from "react-console-emulator";
-import { getFile, saveFile } from "../Components/reusable";
+import { getFile, saveFile, updateFile } from "../Components/reusable";
 import { PluginPageExtensionEvent } from "@/Components/FlowBuilder/flow.types";
 
 export {};
@@ -45,13 +47,12 @@ declare global {
     // Settings
     horusSettings: HorusSettingsObject;
     // Molstar
-    molstar?: HorusMolstar;
+    molstar?: HorusMolstar | { loadMoleculeFile: LoadMoleculeFileType };
     // Smiles
     smiles?: HorusSmilesManager;
     // Console
     horusTerm: {
       ref: React.RefObject<Terminal> | null;
-      storedMessages: string[];
     };
     // Horus flow builder
     horus: {
@@ -63,7 +64,9 @@ declare global {
       getExtraData?: (key: string) => any;
       openExtensionFilePicker?: (options: ExtensionsFilePickerOptions) => void;
       saveFile: (file: File) => void;
+      updateFile: (file: File, path: string) => void;
       getFile: (path: string) => Promise<Blob>;
+      openFile: (path: string) => Promise<void>;
       setTabTitle?: (tabTitle: string) => void;
       closeTab?: () => void;
       openPanel?: openPanel;
@@ -109,4 +112,8 @@ export enum GLOBAL_IDS {
 window.horus = {
   saveFile: saveFile,
   getFile: getFile,
+  updateFile: updateFile,
+  openFile: async () => {
+    alert("Open the flow editor before opnening files");
+  },
 };

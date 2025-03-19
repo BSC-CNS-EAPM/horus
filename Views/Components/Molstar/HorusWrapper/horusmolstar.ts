@@ -37,6 +37,7 @@ import { Expression } from "molstar/lib/mol-script/language/expression";
 import { loadMVS } from "molstar/lib/extensions/mvs/load";
 import { MVSData } from "molstar/lib/extensions/mvs/mvs-data";
 import { MolViewSpec } from "molstar/lib/extensions/mvs/behavior";
+import { Mp4Export } from "molstar/lib/extensions/mp4-export";
 import { StateObjectSelector } from "molstar/lib/mol-state";
 import { BuiltInTrajectoryFormats } from "molstar/lib/mol-plugin-state/formats/trajectory";
 import { HorusMolstarViewportComponent } from "./ui/viewport";
@@ -128,6 +129,21 @@ export enum MolstarEvents {
 export type MolstarInitOptions = {
   showControls?: boolean;
 };
+
+// Type for the hook loadMoleculeFile
+export type LoadMoleculeFileType = (
+  file: File,
+  options?: {
+    label?: string;
+  }
+) => Promise<void>;
+
+export function isMolstarLoaded(
+  molstar: typeof window.molstar
+): molstar is HorusMolstar {
+  return Boolean((molstar as HorusMolstar | undefined)?.plugin);
+}
+
 export default class HorusMolstar {
   plugin: PluginUIContext | null = null;
   target: HTMLDivElement;
@@ -141,6 +157,7 @@ export default class HorusMolstar {
     const ExtensionMap = {
       // @ts-ignore
       mvs: PluginSpec.Behavior(MolViewSpec),
+      "mp4-export": PluginSpec.Behavior(Mp4Export),
     };
 
     this.plugin = await createPluginUI({
@@ -285,16 +302,17 @@ export default class HorusMolstar {
    * @returns {Promise<void>} A promise that resolves when the operation is complete.
    * @throws {Error} If there's an issue with disposing of the plugin or saving the snapshot.
    */
-  public async unloadWithState() {
-    // Save the state
-    this.latestSnapshot = await this.snapshot.get();
-
-    if (!this.plugin) {
-      throw new Error("Plugin is not initialized");
+  public async unload() {
+    if (this.plugin) {
+      // Remove the plugin
+      this.plugin.dispose();
     }
 
-    // Remove the plugin
-    this.plugin.dispose();
+    // Launch a STATE event
+    const event = new CustomEvent(MolstarEvents.STATE, {
+      detail: {},
+    });
+    window.dispatchEvent(event);
   }
 
   /**
@@ -959,12 +977,7 @@ export default class HorusMolstar {
    * @throws {Error} If an error occurs during file parsing or preset application, or if the plugin is not initialized.
    */
 
-  public async loadMoleculeFile(
-    file: File,
-    options?: {
-      label?: string;
-    }
-  ): Promise<void> {
+  public loadMoleculeFile: LoadMoleculeFileType = async (file, options) => {
     if (!this.plugin) {
       throw new Error("Plugin is not initialized. Cannot load molecule file.");
     }
@@ -1016,7 +1029,7 @@ export default class HorusMolstar {
         }`
       );
     }
-  }
+  };
   /**
    * Loads a trajectory using a topology file and a coordinates file
    *

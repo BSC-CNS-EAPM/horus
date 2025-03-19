@@ -1,6 +1,5 @@
+from re import I
 import time
-
-from sqlalchemy import String
 
 from HorusAPI import (
     InputBlock,
@@ -305,16 +304,13 @@ flowInsideBlockBlock = PluginBlock(
 plugin.addBlock(flowInsideBlockBlock)
 
 
-def testSlurmBlockAction(block: SlurmBlock):
-
-    print("Test slurm block action")
-
-    print("is local?", block.remote.isLocal)
-
-    timeToWait = int(block.inputs.get("timeToWait", 0) or 0)
-
-    # Submit test job to the current remote
-    script = f"""#!/bin/bash
+script_variable = PluginVariable(
+    id="script_variable",
+    name="Slurm script",
+    description="Slurm script",
+    type=VariableTypes.CODE,
+    allowedValues=["shell"],
+    defaultValue="""#!/bin/bash
 #SBATCH --qos="short"
 #SBATCH --partition="short"
 #SBATCH --job-name="tunnel"
@@ -324,21 +320,37 @@ def testSlurmBlockAction(block: SlurmBlock):
 
 echo "Hello world"
 
-# Wait
-sleep {timeToWait}
+""",
+)
 
-    
-"""
 
-    with open("test.sh", "w") as f:
+def testSlurmBlockAction(block: SlurmBlock):
+
+    print("Test slurm block action")
+
+    print("is local?", block.remote.isLocal)
+
+    timeToWait = int(block.inputs.get("timeToWait", 0) or 0)
+
+    # Submit test job to the current remote
+    script = block.variables[script_variable.id] + f"\n\nsleep {timeToWait}\n"
+
+    if block.extraData.get("submits") is None:
+        block.extraData["submits"] = 0
+
+    n = block.extraData["submits"]
+    block.extraData["submits"] += 1
+
+    file = f"test_{n}"
+    with open(file, "w") as f:
         f.write(script)
 
     # Upload the script to the remote
     import os
 
-    finalPath = os.path.join(block.remote.workDir, "test.sh")
+    finalPath = os.path.join(block.remote.workDir, file)
     try:
-        finalPath = block.remote.sendData("test.sh", block.remote.workDir)
+        finalPath = block.remote.sendData(file, block.remote.workDir)
     except Exception as e:
         print("Error uploading script: ", e)
 
@@ -378,23 +390,77 @@ slurmBlockTest = SlurmBlock(
             type=VariableTypes.NUMBER,
         )
     ],
+    variables=[script_variable],
     id="slurm_block_test",
     category="Slurm",
 )
 
 
 def multipleSlurmTest(block: SlurmBlock):
-    print("sending 1")
-    testSlurmBlockAction(block)
+    quantity = int(block.variables["quantity"] or 5)
 
-    print("Sending 2")
-    testSlurmBlockAction(block)
+    # Submit test job to the current remote
+    script = """#!/bin/bash
+#SBATCH --qos="short"
+#SBATCH --partition="short"
+#SBATCH --job-name="tunnel"
+#SBATCH --time=2:00:00     # walltime
+#SBATCH --ntasks=8  # number of cores
+#SBATCH --mem-per-cpu=1GB
+#SBATCH --output="slurm-%j.out"   # STDOUT output file
+#SBATCH --error="slurm-%j.err"   # STDERR error file
 
+start_time=$(date +%s)
+iterations=0
+max_iterations=10
+
+while [ $iterations -lt $max_iterations ]; do
+    elapsed=$(( $(date +%s) - start_time ))
+    echo "Elapsed time: ${elapsed} seconds"
+    sleep 10
+    ((iterations++))
+done
+
+echo "Script finished after $max_iterations iterations."
+
+
+"""
+
+    import os
+
+    paths = []
+    remote_folder = os.path.join(block.remote.workDir, "tests")
+    # Remove the folder
+    block.remote.command(f"rm -rf {remote_folder}")
+    for n in range(quantity):
+        file = f"test_{n}"
+        with open(file, "w") as f:
+            f.write(script)
+
+        paths.append(file)
+
+    # Upload the folder to the remote
+    remote_folder = block.remote.sendData(os.getcwd(), remote_folder)
+
+    paths = [os.path.join(remote_folder, path) for path in paths]
+
+    jobID = block.remote.submitJob(paths)
+
+    print("Submitted jobs: ", "\n".join(jobID))
+
+
+quantity_variable = PluginVariable(
+    id="quantity",
+    name="Quantity",
+    description="How many jobs to submit",
+    type=VariableTypes.NUMBER,
+)
 
 multipleSlurmTestBlock = SlurmBlock(
     name="Multiple slurm block test",
     description="Slurm block test",
     initialAction=multipleSlurmTest,
+    variables=[quantity_variable],
     inputs=[timeToWaitVar],
     finalAction=lambda block: None,
     category="Slurm",
@@ -488,6 +554,14 @@ def testExtensionsShortcuts(block: PluginBlock):
     Extensions().loadHTML(html, title="Some HTML")
 
     block.setOutput(extension_output_variable.id, block.inputs[extension_input_variable.id])
+
+    csv = """col1,col2,col3\n"""
+    for i in range(10):
+        csv += f"{i},{i*2},{i*3}\n"
+    with open("file.csv", "w") as f:
+        f.write(csv)
+
+    Extensions().loadCSV("file.csv", title="Some CSV")
 
 
 def finalAction(block: PluginBlock):
@@ -974,3 +1048,30 @@ multiple_list_block = PluginBlock(
 )
 
 plugin.addBlock(multiple_list_block)
+
+outputvar = PluginVariable(
+    id="outvar", name="outvar", description="Set output variable", type=VariableTypes.STRING
+)
+
+
+def first_action(block: SlurmBlock):
+    """ """
+
+    block.setOutput(outputvar.id, "test_value")
+
+
+def final_action(block: SlurmBlock):
+    print(block.outputs)
+    print(block._outputs)
+
+
+test_setoutput_first_action = SlurmBlock(
+    id="test_setoutput",
+    name="Test setOutput",
+    description="Test the setOutput function",
+    initialAction=first_action,
+    finalAction=final_action,
+    outputs=[outputvar],
+)
+
+plugin.addBlock(test_setoutput_first_action)

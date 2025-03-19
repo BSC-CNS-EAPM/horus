@@ -174,14 +174,13 @@ function CyclesView(props: {
       <div className="text-center flex flex-row gap-2">
         <div>{currentCycle}</div>
         <div>/</div>
-        <div className="w-12">
-          <input
-            type="number"
-            value={inputValue}
-            onChange={handleOnChangeEvent}
-            onBlur={handleBlur}
-          />
-        </div>
+        <input
+          className="max-w-[50px]"
+          type="number"
+          value={inputValue}
+          onChange={handleOnChangeEvent}
+          onBlur={handleBlur}
+        />
       </div>
     </div>
   );

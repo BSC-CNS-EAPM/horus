@@ -71,6 +71,9 @@ function IFrameLoader({
         </div>
       )}
       <iframe
+        onLoad={() => {
+          setLoading(false);
+        }}
         // id={`${url}-${pagename}`}
         id={iframeID}
         sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-downloads allow-modals allow-top-navigation"

@@ -43,7 +43,7 @@ export function Error({
       return error;
     }
 
-    return "Unknown error.";
+    return "Unknown error. If you are trying to load an extension, try restarting Horus.";
   };
 
   return (

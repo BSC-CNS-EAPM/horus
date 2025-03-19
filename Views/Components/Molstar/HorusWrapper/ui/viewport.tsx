@@ -11,7 +11,7 @@ import { ViewportControls } from "molstar/lib/mol-plugin-ui/viewport";
 import { ViewportCanvas } from "molstar/lib/mol-plugin-ui/viewport/canvas";
 import { useEffect, useState } from "react";
 import { Smiles2DMolstarViewportComponent } from "../../../Smiles/SmilesViewport";
-import { MolstarEvents } from "../horusmolstar";
+import { isMolstarLoaded, MolstarEvents } from "../horusmolstar";
 
 export class HorusMolstarViewportComponent extends PluginUIComponent {
   override render() {
@@ -43,7 +43,11 @@ function EmptyMolstarHelp() {
 
   useEffect(() => {
     const checkEmpty = () => {
-      setIsEmpty((window.molstar?.structures().length ?? 0) === 0);
+      setIsEmpty(
+        (isMolstarLoaded(window.molstar)
+          ? window.molstar?.structures?.().length
+          : 0) === 0,
+      );
     };
 
     window.addEventListener(MolstarEvents.STATE, checkEmpty);
