@@ -32,6 +32,17 @@ you can access it under 'block.remote'.
         # Submit Slurm jobs using the submitJob method
         jobID = block.remote.submitJob('path/to/slurm/script.sh')
 
+        # Here you can pass a list of path to submit multiple jobs at once
+        jobIDs = block.remote.submitJob(['path/to/slurm/script.sh', 'path/to/another/slurm/script.sh'])
+
+.. warning::
+
+    When using the ``submitJob`` method, if you pass a list of paths to submit multiple jobs at once, Horus will automatically
+    submit all jobs at once. If a single one of them fails during the submission phase (for example, the queue specified for one of them does not exist),
+    all jobs will be submitted but not registered in Horus. In order to avoid this, you need to make sure that all jobs have the same specifications for
+    each ``submitJob`` call. 
+
+
 Executing commands
 ==================
 

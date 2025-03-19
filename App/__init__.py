@@ -5,4 +5,4 @@ It is the entry point of the Application.
 """
 
 # Export the App() function from the app_delegate.py file
-from App.app_delegate import launchApp, AppDelegate  # noqa: F401
+from App.app_delegate import launchApp, AppDelegate, HorusLogger  # noqa: F401

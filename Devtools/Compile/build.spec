@@ -192,6 +192,9 @@ imports += [
     "zope.interface.adapter",  # Needed for BSC Plugins
 ]
 
+# Include filecmp for ESMFold plugin
+imports += ["filecmp"]
+
 # Check that all the modules are installed in the environment
 for module in imports:
     try:

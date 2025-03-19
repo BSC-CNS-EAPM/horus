@@ -7,28 +7,18 @@ import { BlurredModal } from "../reusable";
 import RotatingLines from "../RotatingLines/rotatinglines";
 import { ServerFileExplorerModal } from "../FileExplorer/file_explorer";
 import { ConnectedArrows } from "./Connections/arrows";
-import Xarrow, { useXarrow } from "react-xarrows";
+import Xarrow, { Xwrapper, useXarrow } from "react-xarrows";
 import { DroppableEntity, FlowStatus } from "./flow.types";
 import { GreenOverlay } from "../GreenOverlay/GreenOverlay";
 import SaveIcon from "../Toolbar/Icons/Save";
 import { FlowBuilderContext } from "../MainApp/PanelView";
 import { Editor } from "@monaco-editor/react";
-import useResizeObserver from "@react-hook/resize-observer";
 import { FlowBuilderHooks } from "./flow.hooks";
 
 // Main Component
 function FlowBuilderView() {
   const flowBuilderState = useContext(FlowBuilderContext);
   const builderRef = useRef<HTMLDivElement>(null);
-  const updateXarrow = useXarrow();
-
-  // useResizeObserver(builderRef, () => {
-  //   updateXarrow();
-  // });
-
-  useEffect(() => {
-    updateXarrow();
-  }, [flowBuilderState?.flow.scale, updateXarrow]);
 
   if (!flowBuilderState) {
     return <>No flow context</>;
@@ -61,39 +51,56 @@ function FlowCanvasContainer({
   flowBuilderState: FlowBuilderHooks;
   style: CSSProperties;
 }) {
+  const updateArrow = useXarrow();
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      updateArrow();
+    }, 10);
+
+    setTimeout(() => {
+      clearInterval(interval);
+    }, 100);
+
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flowBuilderState.flow.scale]);
+
   return (
-    <div
-      id={GLOBAL_IDS.FLOW_BUILDER_DIV}
-      className="h-full w-full overflow-hidden"
-      style={style}
-      onDragOver={flowBuilderState.handleMouse.handleDragOver}
-      onDrop={flowBuilderState.handleMouse.handleDrop}
-      onDragLeave={flowBuilderState.handleMouse.handleDragDropEnd}
-    >
-      {flowBuilderState.handleMouse.isDraggingFlowFile && (
-        <GreenOverlay>
-          <div className="flex flex-col gap-2 items-center justify-center font-semibold">
-            <SaveIcon className="w-16 h-16" />
-            Drop a .flow file
-          </div>
-        </GreenOverlay>
-      )}
-      <FlowCanvas
-        flowHooks={flowBuilderState.flow}
-        mouseHooks={flowBuilderState.handleMouse}
+    <Xwrapper>
+      <div
+        id={GLOBAL_IDS.FLOW_BUILDER_DIV}
+        className="h-full w-full overflow-hidden"
+        style={style}
+        onDragOver={flowBuilderState.handleMouse.handleDragOver}
+        onDrop={flowBuilderState.handleMouse.handleDrop}
+        onDragLeave={flowBuilderState.handleMouse.handleDragDropEnd}
       >
-        {flowBuilderState.flow.flow.blocks.length === 0 ? (
-          <EmptyCanvas />
-        ) : (
-          <>
-            <div className="relative">
-              <ConnectedArrowsList flowBuilderState={flowBuilderState} />
+        {flowBuilderState.handleMouse.isDraggingFlowFile && (
+          <GreenOverlay>
+            <div className="flex flex-col gap-2 items-center justify-center font-semibold">
+              <SaveIcon className="w-16 h-16" />
+              Drop a .flow file
             </div>
-            <ScaledCanvas flowBuilderState={flowBuilderState} />
-          </>
+          </GreenOverlay>
         )}
-      </FlowCanvas>
-    </div>
+        <FlowCanvas
+          flowHooks={flowBuilderState.flow}
+          mouseHooks={flowBuilderState.handleMouse}
+        >
+          {flowBuilderState.flow.flow.blocks.length === 0 ? (
+            <EmptyCanvas />
+          ) : (
+            <>
+              <div className="relative">
+                <ConnectedArrowsList flowBuilderState={flowBuilderState} />
+              </div>
+              <ScaledCanvas flowBuilderState={flowBuilderState} />
+            </>
+          )}
+        </FlowCanvas>
+      </div>
+    </Xwrapper>
   );
 }
 

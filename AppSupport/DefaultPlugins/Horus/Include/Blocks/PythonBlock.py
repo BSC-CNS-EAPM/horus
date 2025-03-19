@@ -74,7 +74,7 @@ def executePython(block: PluginBlock):
         block.setOutput(outputVariable.id, value)
 
     # Use the PluginDeps context
-    from Server.PluginManager import PluginDeps
+    from Server.PluginManager import PluginDepsPlugin
 
     # Get the environment
     pluginID = block.variables[environmentVariable.id]
@@ -83,15 +83,18 @@ def executePython(block: PluginBlock):
     from App import AppDelegate
 
     pluginPath = None
+    pFound = None
     for p in AppDelegate().server.pluginManager.loadedPlugins:
         if p.id == pluginID:
-            pluginPath = p._path
+            pFound = p
             break
 
-    if pluginPath is None:
+    if pFound is None:
         raise Exception(f"Plugin with ID '{pluginID}' not found")
 
-    with PluginDeps(pluginPath):
+    with PluginDepsPlugin(
+        pFound,
+    ):
         exec(pythonCode)
 
 
@@ -104,6 +107,5 @@ pythonCodeBlock = PluginBlock(
     variables=[environmentVariable, codeVariable],
     outputs=[outputVariable],
     id=codeVariable.id,
-        category="Code",
-
+    category="Code",
 )

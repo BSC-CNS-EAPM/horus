@@ -5,6 +5,8 @@ importantly, it manages the execution of the individual blocks of the plugins.
 """
 
 # Standard imports
+from collections import defaultdict, deque
+from multiprocessing import Process
 import os
 import signal
 import sys
@@ -15,7 +17,7 @@ import logging
 import json
 import shutil
 import datetime
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 from contextlib import contextmanager
 import re
 
@@ -40,9 +42,14 @@ import pkg_resources
 from flask_socketio import SocketIO
 import flask_login
 
+from Server.RemotesManager import CommandFailed
+
 # Plugin deps context manager, forking the process prevents
 # importend modules from being imported twice
-import multiprocess as mp
+if typing.TYPE_CHECKING:
+    import multiprocessing as mp
+else:
+    import multiprocess as mp
 
 # More types from the HorusAPI
 from HorusAPI import (
@@ -55,6 +62,7 @@ from HorusAPI import (
     BlockNotFoundError,
     PlatformType,
     __version__ as HorusAPIVersion,
+    Status,
 )
 
 # Import the RemoteManager for the block's remote
@@ -166,6 +174,10 @@ class PluginManager(metaclass=HorusSingleton):
 
         if not os.path.exists(self.pluginsDir):
             os.makedirs(self.pluginsDir, exist_ok=True)
+
+        # Add the plugins dir to the pythonpath to access other plugins from plugins
+        sys.path.append(self.defaultPluginsDir)
+        sys.path.append(self.pluginsDir)
 
     def installPlugin(self, socketio: SocketIO, file: typing.Optional[str] = None):
         """
@@ -442,9 +454,18 @@ class PluginManager(metaclass=HorusSingleton):
             else:
                 pluginFinalPath = os.path.join(self.pluginsDir, loadedPlugin.id)
 
+            # Remove the old plugin folder
+            if os.path.exists(pluginFinalPath):
+                print("Deleting old plugin version...")
+                shutil.rmtree(pluginFinalPath, ignore_errors=True)
+
+                # Wait for the folder to be deleted
+                while os.path.exists(pluginFinalPath):
+                    time.sleep(1)
+
             # If a plugin with the same name already exists, check if it is the same plugin
             # in order to upgrade it
-            if not os.path.exists(pluginFinalPath) and not loadedPlugin in self.loadedPlugins:
+            if not loadedPlugin in self.loadedPlugins:
                 print("Saving new plugin to its folder...")
                 shutil.move(tmpInstallDir, pluginFinalPath)
                 print(
@@ -454,53 +475,13 @@ class PluginManager(metaclass=HorusSingleton):
                 )
                 self.loadedPlugins.append(loadedPlugin)
             else:
-                # If we are installing the same plugin, replace it
-                # newPluginVersion = loadedPlugin.pluginMeta.version
-                # currentInstalledPluginVersion = self._getPluginByID(
-                #     loadedPlugin.id
-                # ).pluginMeta.version
 
-                # newPluginVersion = version_module.parse(newPluginVersion)
-                # currentInstalledPluginVersion = version_module.parse(
-                #     currentInstalledPluginVersion
-                # )
-
-                # # Compare the versions
-                # newVersionIsHigher = newPluginVersion > currentInstalledPluginVersion
-
-                # if newVersionIsHigher:
                 print(f"Upgrading plugin {loadedPlugin.pluginMeta.name}...")
 
-                for config in RemotesManager(self.appSupportDir).listRemotes(includeLocal=True):
-                    remoteName = config.get("name")
-                    if not remoteName:
-                        continue
-
-                    # Backup the plugin configuration to the new plugin folder
-                    currentConfigPath = self._pluginConfigPath(
-                        self._getPluginByID(loadedPlugin.id), remoteName
-                    )
-                    newConfigPath = self._pluginConfigPath(loadedPlugin, remoteName)
-
-                    # Read the current config if it exists, and update the new plugin config
-                    if os.path.exists(currentConfigPath):
-                        print(f"Backing up plugin configuration for remote '{remoteName}'")
-                        with open(currentConfigPath, "r", encoding="utf-8") as f:
-                            currentConfig = json.load(f)
-
-                        # Update the new plugin config
-                        loadedPlugin._saveConfig(newConfigPath, currentConfig)
-
                 # Remove the old plugin
-                self.loadedPlugins.remove(self._getPluginByID(loadedPlugin.id))
-
-                print("Deleting old plugin version...")
-                # Remove the old plugin folder
-                if os.path.exists(pluginFinalPath):
-                    shutil.rmtree(pluginFinalPath, ignore_errors=True)
-
-                # Wait for the folder to be deleted
-                while os.path.exists(pluginFinalPath):
+                try:
+                    self.loadedPlugins.remove(self._getPluginByID(loadedPlugin.id))
+                except (ValueError, PluginNotFoundError):
                     pass
 
                 # Move the new plugin to the final path
@@ -511,35 +492,9 @@ class PluginManager(metaclass=HorusSingleton):
 
                 print("Plugin upgraded to version " + f"{loadedPlugin.pluginMeta.version}.")
 
-                # Emit the plugin changes
-                # self.reloadPlugins()
-                # else:
-                #     message = (
-                #         "You are trying to install "
-                #         + f"{loadedPlugin.pluginMeta.name} version "
-                #         + f"{loadedPlugin.pluginMeta.version}, but you already have version "
-                #         + f"{currentInstalledPluginVersion}."
-                #     )
-
-                #     if currentInstalledPluginVersion == newPluginVersion:
-                #         message += (
-                #             " If you are trying to reinstall the plugin, " + "uninstall it first."
-                #         )
-
-                #     if currentInstalledPluginVersion > newPluginVersion:
-                #         message += (
-                #             " Which means that you are trying to install an older version. "
-                #         )
-
-                #     logging.getLogger("Horus").error(message)
-
-                #     print(message)
-
-                #     raise Exception(message)
-        except Exception as e:
+        finally:
             if os.path.exists(tmpInstallDir):
                 shutil.rmtree(tmpInstallDir, ignore_errors=True)
-            raise Exception(e) from e
 
     def _getPluginByID(self, id: str) -> Plugin:
         """
@@ -572,8 +527,12 @@ class PluginManager(metaclass=HorusSingleton):
         # Remove the plugin folder
         try:
             self._preRemovePlugin(pluginPath)
-            shutil.rmtree(pluginPath, ignore_errors=True)
             self._postRemovePlugin(pluginPath)
+
+            # Delete the config and the plugin
+            shutil.rmtree(os.path.join(self.appSupportDir, "config", plugin.id))
+            shutil.rmtree(pluginPath, ignore_errors=True)
+
         except Exception as exc:
             raise Exception(f"{exc}. Try restarting the app") from exc
 
@@ -614,7 +573,8 @@ class PluginManager(metaclass=HorusSingleton):
         self.loadedPlugins: list[Plugin] = []
         self.errorPlugins: list[Plugin] = []
         pluginPaths = self._listPluginsPaths()
-        for pth in pluginPaths:
+
+        for pth in self._getPluginsImportOrder(pluginPaths):
             try:
                 self._loadPlugin(pth)
             except Exception as e:
@@ -636,7 +596,8 @@ class PluginManager(metaclass=HorusSingleton):
                 errorPlugin._path = pth
                 self.errorPlugins.append(errorPlugin)
 
-                logging.getLogger("Horus").error("Error loading plugin '%s': %s", pth, str(e))
+                # No need to log here as it is already logged in _loadPlugin
+                # logging.getLogger("Horus").error("Error loading plugin '%s': %s", pth, str(e))
 
         logging.getLogger("Horus").info(
             "%i plugins initialized: %s.",
@@ -653,6 +614,68 @@ class PluginManager(metaclass=HorusSingleton):
 
         self.pluginChanges = False
 
+    def _getPluginsImportOrder(self, pluginPaths: list[str]) -> list[str]:
+        """
+        Based on each plugin's pluginRequires metadata,
+        set the correct order for import order
+        """
+
+        class MetaPath(BaseModel):
+            meta: PluginMetaModel
+            p: str
+
+        # Get the metadata for all plugins
+        metas: list[MetaPath] = []
+        errors: list[str] = []
+        for p in pluginPaths:
+            try:
+                m = MetaPath(**{"meta": self._loadPluginMeta(p), "p": p})
+                if m:
+                    metas.append(m)
+            except Exception:
+                errors.append(p)
+
+        # Build a graph based on plugin dependencies
+        graph = defaultdict(list)
+        in_degree = {meta.meta.id: 0 for meta in metas}
+
+        for meta in metas:
+            for dep in meta.meta.pluginRequires or []:
+                graph[dep].append(meta.meta.id)
+                in_degree[meta.meta.id] += 1
+
+        # Collect plugins with no dependencies
+        queue = deque([meta for meta in metas if in_degree[meta.meta.id] == 0])
+        sorted_plugins: list[str] = []
+
+        while queue:
+            current = queue.popleft()
+            sorted_plugins.append(current.p)
+
+            for dependent in graph[current.meta.id]:
+                in_degree[dependent] -= 1
+                if in_degree[dependent] == 0:
+                    queue.append(next(m for m in metas if m.meta.id == dependent))
+
+        if len(sorted_plugins) != len(metas):
+
+            repeated = ""
+            # Get the wrong values
+            for p in sorted_plugins:
+                c = sorted_plugins.count(p)
+                if c > 1:
+                    repeated += f"{p} was required {c} times. "
+
+            raise ValueError(
+                "Circular dependency detected among plugins. If you are the developer of such plugins, please update the plugin.meta file accordingly."
+                f" Errors were found for the following plugins: {repeated}"
+            )
+
+        # Add the error plugins
+        sorted_plugins = errors + sorted_plugins
+
+        return sorted_plugins
+
     def _loadPlugin(
         self, pluginPath: str, appendToLoaded: bool = True
     ) -> typing.Optional[Plugin]:
@@ -667,6 +690,10 @@ class PluginManager(metaclass=HorusSingleton):
 
         try:
             plugin = self._checkPlugin(pluginPath)
+
+            if not plugin:
+                return None
+
             logging.getLogger("Horus").info(
                 "Loaded plugin '%s' with ID '%s'", plugin.pluginMeta.name, plugin.id
             )
@@ -699,33 +726,31 @@ class PluginManager(metaclass=HorusSingleton):
         # Return the plugin in case its needed
         return plugin
 
-    def _checkPlugin(self, pluginDir) -> Plugin:
+    def _loadPluginMeta(self, pluginDir: str) -> typing.Union[PluginMetaModel, None]:
         """
-        Checks if a plugin is valid.
-
-        :param pluginPath: The path to the plugin folder
+        Loads the PluginMeta from the given path
         """
 
-        # Load the plugin.meta
         pluginMetaPath = os.path.join(pluginDir, "plugin.meta")
-        logging.getLogger("Horus").debug("Loading plugin meta: %s", pluginMetaPath)
 
         if not os.path.exists(pluginMetaPath):
             # If the plugin.meta does not exist, but the plugin is in the default plugins
             # then we can assume that this folder is just the config folder of the plugin
 
-            pluginID = os.path.basename(pluginDir)
-            try:
-                self._getPluginByID(pluginID)
-            except PluginNotFoundError as e:
-                # A exception is raised here if the plugin is not loaded
-                # That means that there is a folder in the Plugins directory that does
-                # not correspond with any plugin configuration nor loaded plugin.
-                # Because the directory also does not  contain a plugin.meta file
-                # it will get ignored.
-                raise PluginMetaNotFound("The plugin does not contain a plugin.meta file.") from e
+            return None
 
-            raise DefaultPluginConfigException
+            # pluginID = os.path.basename(pluginDir)
+            # try:
+            #     self._getPluginByID(pluginID)
+            # except PluginNotFoundError as e:
+            #     # A exception is raised here if the plugin is not loaded
+            #     # That means that there is a folder in the Plugins directory that does
+            #     # not correspond with any plugin configuration nor loaded plugin.
+            #     # Because the directory also does not  contain a plugin.meta file
+            #     # it will get ignored.
+            #     raise PluginMetaNotFound("The plugin does not contain a plugin.meta file.") from e
+
+            # raise DefaultPluginConfigException
 
         # Load the plugin.meta
         with open(pluginMetaPath, "r", encoding="utf-8") as f:
@@ -736,13 +761,15 @@ class PluginManager(metaclass=HorusSingleton):
 
         # Check that the plugin.meta is valid with the schema
         try:
-            pluginMeta = PluginMetaModel(**pluginMeta)
+            pluginMetaModel = PluginMetaModel(**pluginMeta)
 
             self.assertPluginValidForThisPlatform(
-                pluginMeta.minHorusVersion, pluginMeta.maxHorusVersion, pluginMeta.platforms
+                pluginMetaModel.minHorusVersion,
+                pluginMetaModel.maxHorusVersion,
+                pluginMetaModel.platforms,
             )
 
-            pluginMeta = pluginMeta.dict()
+            return pluginMetaModel
 
         except ValidationError as e:
             for error in e.errors():
@@ -752,10 +779,26 @@ class PluginManager(metaclass=HorusSingleton):
         except Exception as e:
             raise ValueError(f"Invalid plugin meta '{pluginMetaPath}'. {e}") from e
 
+    def _checkPlugin(self, pluginDir) -> typing.Union[Plugin, None]:
+        """
+        Checks if a plugin is valid.
+
+        :param pluginPath: The path to the plugin folder
+        """
+
+        # Load the plugin.meta
+        logging.getLogger("Horus").debug("Loading plugin meta at: %s", pluginDir)
+        pluginMetaModel = self._loadPluginMeta(pluginDir)
+
+        if not pluginMetaModel:
+            return None
+
+        pluginMeta = pluginMetaModel.dict()
+
         # Dependencies for the plugin, there they will be installed
         # inside a /lib/pythonX.X/site-packages folder
         # (view the getFullPluginDepsDir function)
-        depsDir = getFullPluginDepsDir(pluginDir)
+        depsDir = PluginDepsBase.getFullPluginDepsDir(pluginDir)
 
         # Create the deps folder
         if not os.path.exists(depsDir):
@@ -775,15 +818,29 @@ class PluginManager(metaclass=HorusSingleton):
         # Get the entry point from meta
         entryPoint = pluginMeta.get("pluginFile", None)
         if entryPoint is None:
-            raise Exception("The plugin does not contain a pluginFile entry.")
+            raise ValueError("The plugin does not contain a pluginFile entry.")
 
         pluginID = pluginMeta.get("id", None)
         if pluginID is None:
-            raise Exception("The plugin does not contain an id entry.")
+            raise ValueError("The plugin does not contain an id entry.")
 
         pluginPath = os.path.join(pluginDir, entryPoint)
 
-        with PluginDeps(pluginDir):
+        if pluginMetaModel.id in (pluginMetaModel.pluginRequires or []):
+            raise ValueError(
+                f"The plugin requires itself. Remove the {pluginMetaModel.id} from the plugin.meta file."
+            )
+
+        requirementsPaths = []
+        for p in pluginMetaModel.pluginRequires or []:
+            try:
+                requirementsPaths.append(self._getPluginByID(p)._path)
+            except PluginNotFoundError:
+                raise ValueError(
+                    f"Could not find plugin '{p}', which is required by '{pluginID}'."
+                )
+
+        with PluginDepsBase([pluginDir] + requirementsPaths):
 
             # Install dependencies if the deps dir exists
             if depsDir is not None and pluginMeta.get("dependencies", None):
@@ -793,7 +850,7 @@ class PluginManager(metaclass=HorusSingleton):
             try:
                 pluginDirPath = os.path.dirname(pluginPath)
                 os.chdir(pluginDirPath)
-                return PluginDeps.subprocessCall(
+                return SubprocessManager.subprocessCall(
                     self._internalLoadPluginInModule, pluginPath, entryPoint
                 )
             finally:
@@ -851,16 +908,35 @@ class PluginManager(metaclass=HorusSingleton):
         PluginDeps in order to not mess the imported modules between plugins
         """
 
-        # Load the plugin file and obtain the plugin variable
-        spec = importlib.util.spec_from_file_location("pluginFile", pluginPath)
-        if spec is None:
-            raise Exception(f"Failed to create module spec for {entryPoint}")
+        try:
+            # Load the plugin file and obtain the plugin variable
+            spec = importlib.util.spec_from_file_location("pluginFile", pluginPath)
+            if spec is None:
+                raise Exception(f"Failed to create module spec for {entryPoint}")
 
-        # Read and load the python file
-        pluginModule = importlib.util.module_from_spec(spec)
+            # Read and load the python file
+            pluginModule = importlib.util.module_from_spec(spec)
 
-        # Load the entry point
-        spec.loader.exec_module(pluginModule)  # type: ignore
+            # Load the entry point
+            spec.loader.exec_module(pluginModule)  # type: ignore
+        except BaseException as e:
+            import traceback
+
+            # Extract the last exception from the traceback
+            lastException = traceback.format_exception(None, e, e.__traceback__)
+            filteredExc = []
+            allow = False
+            for ex in lastException:
+
+                if allow:
+                    filteredExc.append(ex)
+
+                if "<frozen importlib._bootstrap>" in ex:
+                    allow = True
+
+            logging.getLogger("Horus").error("".join(filteredExc))
+
+            raise e
 
         # Check that the plugin variable exists
         if not hasattr(pluginModule, "plugin"):
@@ -893,7 +969,7 @@ class PluginManager(metaclass=HorusSingleton):
 
         dependencies = pluginMeta.get("dependencies", [])
         pluginName = pluginMeta.get("name", "Unknown")
-        fullDepsDir = getFullPluginDepsDir(pluginPath)
+        fullDepsDir = PluginDepsBase.getFullPluginDepsDir(pluginPath)
 
         # Create a new working set that includes the custom directory
         pluginWorkingSet = pkg_resources.WorkingSet(entries=[fullDepsDir])
@@ -955,7 +1031,7 @@ class PluginManager(metaclass=HorusSingleton):
         depsToInstallStringList = []
         currentString = None
         for dep in dependencies:
-            parsedDep = dep.replace(" --no-deps", "")
+            parsedDep = dep.replace(" --no-deps", "").replace(" --isolated", "")
             versionSpecs = None
             if not parsedDep.startswith("git+"):
                 try:
@@ -979,11 +1055,12 @@ class PluginManager(metaclass=HorusSingleton):
                 else:
                     continue
 
-            if "--no-deps" in dep:
+            if "--no-deps" in dep or "--isolated" in dep:
                 if currentString:
                     depsToInstallStringList.append(currentString)
                     currentString = None
-                depsToInstallStringList.append(dep)
+                cleanDep = dep.replace(" --isolated", "") if "--isolated" in dep else dep
+                depsToInstallStringList.append(cleanDep)
             else:
                 if currentString:
                     currentString += " " + dep
@@ -1003,7 +1080,7 @@ class PluginManager(metaclass=HorusSingleton):
         if os.path.isfile(preInstPath):
             print("Executing pre-install script")
             try:
-                callPopen(["sh", preInstPath], cwd=pluginDir)
+                SubprocessManager.callPopen(["sh", preInstPath], cwd=pluginDir)
             except Exception as e:
                 raise Exception("Error running pre-install script") from e
 
@@ -1012,7 +1089,7 @@ class PluginManager(metaclass=HorusSingleton):
         if os.path.isfile(postInstPath):
             print("Executing post-install script")
             try:
-                callPopen(["sh", postInstPath], cwd=pluginDir)
+                SubprocessManager.callPopen(["sh", postInstPath], cwd=pluginDir)
             except Exception as e:
                 raise Exception("Error running post-install script") from e
 
@@ -1021,7 +1098,7 @@ class PluginManager(metaclass=HorusSingleton):
         if os.path.isfile(preRMPath):
             print("Executing pre-remove script")
             try:
-                callPopen(["sh", preRMPath], cwd=pluginDir)
+                SubprocessManager.callPopen(["sh", preRMPath], cwd=pluginDir)
             except Exception as e:
                 raise Exception("Error running pre-remove script") from e
 
@@ -1030,7 +1107,7 @@ class PluginManager(metaclass=HorusSingleton):
         if os.path.isfile(postRMPath):
             print("Executing post-remove script")
             try:
-                callPopen(["sh", postRMPath], cwd=pluginDir)
+                SubprocessManager.callPopen(["sh", postRMPath], cwd=pluginDir)
             except Exception as e:
                 raise Exception("Error running post-remove script") from e
 
@@ -1061,9 +1138,6 @@ class PluginManager(metaclass=HorusSingleton):
                 + "You can override this behaviour and install the dependencies at startup "
                 + "by starting the app with the '--server' flag in the terminal."
             )
-
-            logging.getLogger("Horus").error(msg)
-
             raise Exception(msg)
 
         # Get the PATH environment variable
@@ -1080,7 +1154,7 @@ class PluginManager(metaclass=HorusSingleton):
 
         # Define the environment variables to correctly run the external python interpreter
         env = {
-            "PYTHONPATH": getFullPluginDepsDir(pluginPath),
+            "PYTHONPATH": PluginDepsBase.getFullPluginDepsDir(pluginPath),
             "PATH": path,
         }
 
@@ -1091,7 +1165,7 @@ class PluginManager(metaclass=HorusSingleton):
         else:
             noDependencies = False
 
-        pip = (
+        interpreter = (
             [os.path.join(AppDelegate().bundleDir, "pip", "pip")]
             if AppDelegate().isCompiled
             else ["python", "-m", "pip"]
@@ -1099,11 +1173,10 @@ class PluginManager(metaclass=HorusSingleton):
 
         # The command to install dependencies with pip
         command = [
-            *pip,
             "install",
             *dep.split(" "),
             "--prefix",
-            getFullPluginDepsDir(pluginPath, full=False),
+            PluginDepsBase.getFullPluginDepsDir(pluginPath, full=False),
             "--upgrade",
             "--no-input",
             "--ignore-installed",
@@ -1111,12 +1184,103 @@ class PluginManager(metaclass=HorusSingleton):
         ]
 
         try:
-            callPopen(command, env=env)
+            # Here the embedded pip will be "python" in uncompiled mode! Remember...
+            SubprocessManager.callPopen([*interpreter, *command], env=env)
         except Exception as exc:
-            msg = f"Dependency {dep} could not be installed: {str(exc)}"
+
+            logging.getLogger("Horus").error(
+                f"Dependency {dep} could not be installed using embedded pip: {str(exc)}"
+            )
+
+            try:
+                # Some python packages need to be built from source, and the bundled pip cannot handle this.
+                # For such cases, Horus will use the python interpreter set in the settings.
+                interpreter = [self._getExternalInterpreter(), "-m", "pip"]
+                logging.getLogger("Horus").error(
+                    f"Trying with external python interpreter '{' '.join(interpreter)}'."
+                )
+                SubprocessManager.callPopen([*interpreter, *command], env=env)
+            except Exception as exc2:
+                msg = (
+                    f"Failed to install dependency {dep}. External interpreter error: {str(exc2)}"
+                )
+                raise Exception(msg)
+
+    def _getExternalInterpreter(self) -> str:
+        """
+        This method checks and verifies the defined interpreter set in the settings.
+        """
+
+        from App import AppDelegate
+
+        interpreter: str = "python"
+        try:
+            interpreter = str(
+                self.horusSettings.getSetting("dependenciesInterpreter").value
+            ).strip()
+        except Exception as e:
+            msg = f"Could not get the python interpreter from the user settings: {e}. "
+            msg += "Defaulting to path 'python' interpreter."
             print(msg)
-            logging.getLogger("Horus").error(msg)
-            raise Exception(msg) from exc
+
+        # Check if the python interpreter is valid
+        try:
+            p = subprocess.Popen(
+                [interpreter, "--version"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                stdin=subprocess.PIPE,
+            )
+        except Exception as e:
+            raise Exception(
+                f"Could not execute '{interpreter}' command. {e}."
+                + " Make sure you have selected a valid interpreter in the settings."
+            ) from e
+
+        # Wait for the process to finish
+        p.wait()
+
+        # Get the result
+        if p.stdout is None:
+            raise Exception("Could not get the intalled python interpreter version.")
+
+        version = p.stdout.read().decode("utf-8").strip().split(" ")[-1]
+
+        try:
+            appPythonVersion = AppDelegate().APP_INFO["PYTHON_VERSION"]
+        except Exception as exc:
+            raise Exception(f"Could not get the python version from the app info: {exc}") from exc
+
+        exceptionMsg = (
+            "In order to install additional dependencies, "
+            "you need to have a valid python interpreter "
+            f"installed on your system with python v{appPythonVersion}. "
+            "You can select a specific interpreter in the settings."
+        )
+
+        # Check the return code
+        if p.returncode != 0 and p.returncode is not None:
+            raise Exception(exceptionMsg)
+
+        # Check that the major and minor version of python matches
+        major = version.split(".")[0]
+        minor = version.split(".")[1]
+
+        appVersionMajor = appPythonVersion.split(".")[0]
+        appVersionMinor = appPythonVersion.split(".")[1]
+
+        majorMatches = major == appVersionMajor
+        minorMatches = minor == appVersionMinor
+
+        # Both major and minor versions must match (eg. 3.9.12 == 3.9.15)
+        # Patch versions are ignored
+        bothMatch = majorMatches and minorMatches
+
+        if not bothMatch:
+            exceptionMsg += f" (Currently detected python v{version})"
+            raise Exception(exceptionMsg)
+
+        return interpreter
 
     def getPlugins(self) -> dict:
         """
@@ -1131,8 +1295,8 @@ class PluginManager(metaclass=HorusSingleton):
         # IS NOT AVAILABLE ON WEBAPP MODE
         remoteList = RemotesManager(self.appSupportDir).listRemotes(includeLocal=True)
 
-        try:
-            for p in self.loadedPlugins:
+        for p in self.loadedPlugins:
+            try:
                 info = p.pluginMeta.dict()
                 info["id"] = p.id
                 info["blocks"] = self._getBlocksFromList(p, p.blocks)
@@ -1150,16 +1314,20 @@ class PluginManager(metaclass=HorusSingleton):
                             }
                         )
                 listedPlugins.append(info)
-            for ep in self.errorPlugins:
-                info = ep.pluginMeta.dict()
-                info["id"] = ep.id
-                info["blocks"] = []
-                info["default"] = ep.default
-                info["logo"] = ep.logo
-                info["config"] = []
-                errorPlugins.append(info)
-        except Exception as exc:
-            raise Exception(f"Could not get the plugins: {str(exc)}") from exc
+            except Exception as exc:
+                logging.getLogger("Horus").error(
+                    f"Could not get a plugin: {str(exc)}",
+                )
+
+        for ep in self.errorPlugins:
+            info = ep.pluginMeta.dict()
+            info["id"] = ep.id
+            info["blocks"] = []
+            info["default"] = ep.default
+            info["logo"] = ep.logo
+            info["config"] = []
+            errorPlugins.append(info)
+
         return {"plugins": listedPlugins, "errors": errorPlugins}
 
     def _getBlocksFromList(self, plugin: Plugin, blockList: typing.List[PluginBlock]):
@@ -1229,7 +1397,7 @@ class PluginManager(metaclass=HorusSingleton):
         """
 
         # Clean the block logs, except if its second slurm
-        if not isFirstSlurm:
+        if isFirstSlurm:
             block.blockLogs = ""
 
         logging.getLogger("Horus").info("Executing block %s", block.id)
@@ -1283,21 +1451,14 @@ class PluginManager(metaclass=HorusSingleton):
         if isinstance(block, SlurmBlock):
 
             # In order to check the slurm status, we need to connect to the remote here
-            remoteManager = RemotesManager(appSupportDir)
-            remoteManager.connectRemote(block.selectedRemote)
-
-            rAPI = remoteManager.remote
-
-            block._setRemote(rAPI)
+            # This will also work as a firewall in order to cach connection errors, and pause the flow instead of
+            # stopping it
+            block._setRemote(RemotesManager(appSupportDir).getRemoteAPI(block.selectedRemote))
 
             # If we are unpausing a flow that sent a slurm calculation,
             # we need to skip the first execution of the block
-            if block.status != block.Status.IDLE and isFirstSlurm:
+            if block.status != Status.IDLE and isFirstSlurm:
                 return
-
-            # If is first slurm, remove from the remote manager queue all of the jobIDs that were submitted for this block
-            if isFirstSlurm and rAPI:
-                rAPI.deleteJobsForBlock(flowID, block._placedID if block._placedID else 1)
 
         # Execute the block
         error = False
@@ -1321,22 +1482,13 @@ class PluginManager(metaclass=HorusSingleton):
         startTime = datetime.datetime.now().timestamp()
         exception: typing.Union[None, Exception] = None
         try:
-            with PluginDeps(plugin._path):
+            with PluginDepsPlugin(plugin):
                 with chdir(flowDir):
-                    # Paramiko does not work on subprocess! Need to update to connect inside the block subprocess isntead
-                    outputs = PluginDeps.subprocessBlock(block, appSupportDir, resetRemoteBlock)
+                    # Paramiko does not work on subprocess! Need to update to connect inside the block subprocess instead
+                    outputs = SubprocessManager.subprocessBlock(
+                        block, appSupportDir, resetRemoteBlock
+                    )
         except Exception as e:
-
-            # Get the full traceback only for development / debug mode
-            from App import AppDelegate
-
-            if AppDelegate().debug or self.horusSettings.getSetting("developmentMode").value:
-                import traceback
-
-                errorMSG = traceback.format_exc()
-            else:
-                errorMSG = str(e)
-
             if hasattr(e, "message"):
                 exception = type(e)(e.message + errorMSG)  # type: ignore
             else:
@@ -1385,11 +1537,12 @@ class PluginManager(metaclass=HorusSingleton):
         return {
             "id": pg.id,
             "plugin": p.pluginMeta.name,
+            "pluginID": p.id,
             "name": pg.name,
             "description": pg.description,
             "html": f"{p._path}/Pages/{pg.html}",
             "url": f"/plugins/pages/{pg.id}",
-            "deps": getFullPluginDepsDir(p._path),
+            "deps": PluginDepsBase.getFullPluginDepsDir(p._path),
             "pluginDir": p._path,
             "hidden": pg.hidden,
             "logo": p.logo,
@@ -1422,7 +1575,7 @@ class PluginManager(metaclass=HorusSingleton):
         else:
             return None
 
-    def getPagesObject(self):
+    def getPagesObject(self) -> list[PluginPage]:
         """
         Returns a list of all the pages of all the plugins as Pages instances.
         """
@@ -1484,7 +1637,7 @@ class PluginManager(metaclass=HorusSingleton):
         # pluginID = block.id.split(".")[0]
         # plugin = self._getPluginByID(pluginID)
 
-        configDir = os.path.join(plugin._path, "config")
+        configDir = os.path.join(self.appSupportDir, "config", plugin.id)
 
         # Create it only if the plugin needs configs
         if not os.path.exists(configDir):
@@ -1497,11 +1650,6 @@ class PluginManager(metaclass=HorusSingleton):
                 logging.getLogger("Horus").warning(error)
 
                 raise Exception(error) from ose
-
-        # If the config folder is inside a default plugin (read-only)
-        # move it to the user's app support dir
-        if plugin.default:
-            configDir = os.path.join(self.pluginsDir, plugin.id, "config")
 
         # Find the block config file
         pluginConfigFile = os.path.join(configDir, f"{plugin.id}_{remote}.json")
@@ -1668,7 +1816,7 @@ class PrintSocketCapturer(PrintCapturer):
         self.socketio.sleep(0)
 
 
-class PluginDeps:
+class PluginDepsBase:
     """
     Enters a context where the dependencies of a plugin are added to the PYTHONPATH.
     """
@@ -1678,15 +1826,29 @@ class PluginDeps:
     The initial python path before entering the context.
     """
 
+    paths: list[str]
+    """
+    Extra paths to be added from the other plugins requirements
+    """
+
     intialModules: dict[str, ModuleType]
     """
     The initial modules before entering the context.
     """
 
-    def __init__(self, pluginDir: str):
+    def __init__(self, paths: list[str]):
+        """
+        Will add the specified plugin folder to the python path including:
+
+        - The Include folder
+        - The deps folder
+        - Recursively, the same for the pluginRequires
+        """
+
+        self.paths = paths
+
         self.initialPath = sys.path.copy()
         self.intialModules = sys.modules.copy()
-        self.pluginDir = pluginDir
 
     def __enter__(self):
         self._includeDepsPath()
@@ -1700,64 +1862,132 @@ class PluginDeps:
         """
         Adds the deps folder of the plugin to the python path.
         """
-        depsDir = getFullPluginDepsDir(self.pluginDir)
-        includeDir = os.path.join(self.pluginDir, "Include")
-        sys.path.insert(0, depsDir)
-        sys.path.insert(0, includeDir)
 
-        # Once pyinstaller is compiled, distributions inside the deps
-        # directory are not correctly detected by pkg_resources.
-        # To fix this, we need to add the deps directory to the
-        # pkg_resources working set
+        def addPath(path: str):
+            depsDir = PluginDepsBase.getFullPluginDepsDir(path)
+            includeDir = os.path.join(path, "Include")
+            sys.path.insert(0, depsDir)
+            sys.path.insert(0, includeDir)
 
-        # Add the deps directory to the working set
-        pkg_resources.working_set.add_entry(depsDir)
+            # Once pyinstaller is compiled, distributions inside the deps
+            # directory are not correctly detected by pkg_resources.
+            # To fix this, we need to add the deps directory to the
+            # pkg_resources working set
 
-        # Add the include directory to the working set
-        pkg_resources.working_set.add_entry(includeDir)
+            # Add the deps directory to the working set
+            pkg_resources.working_set.add_entry(depsDir)
+
+            # Add the include directory to the working set
+            pkg_resources.working_set.add_entry(includeDir)
+
+        for p in self.paths:
+            addPath(p)
 
     def _removeDepsPath(self):
         """
         Removes the deps folder of the plugin from the python path.
         """
-        depsDir = getFullPluginDepsDir(self.pluginDir)
-        includeDir = os.path.join(self.pluginDir, "Include")
 
-        # Remove them also from the sys.modules
-        # WARNING: With the creation of subprocessBlock and subprocessCall,
-        # this should not be necessary anymore. But we will leave just in case.
-        for key, module in list(sys.modules.items()):
+        def removePath(path: str):
+            depsDir = PluginDepsBase.getFullPluginDepsDir(path)
+            includeDir = os.path.join(path, "Include")
 
-            # Check if its a new module, otherwise skip it because it is required by Horus
-            if key in self.intialModules:
-                continue
+            # Remove them also from the sys.modules
+            # WARNING: With the creation of subprocessBlock and subprocessCall,
+            # this should not be necessary anymore. But we will leave just in case.
+            for key, module in list(sys.modules.items()):
 
-            # Get the module path
-            modulePath = module.__file__ if hasattr(module, "__file__") else None
-
-            # If the module is in the deps folder, remove it
-            if modulePath is not None and (
-                modulePath.startswith(includeDir) or modulePath.startswith(depsDir)
-            ):
+                # Check if its a new module, otherwise skip it because it is required by Horus
                 if key in self.intialModules:
-                    logging.getLogger("Horus").warning(
-                        "Module %s used by plugin %s is in the App default modules. "
-                        + "The App version was used instead of the Plugin version.",
-                        key,
-                        self.pluginDir,
-                    )
+                    continue
 
-            # Unload the module
-            del sys.modules[key]
+                # Get the module path
+                modulePath = module.__file__ if hasattr(module, "__file__") else None
 
-        # Restore the initial python path
-        sys.path = self.initialPath
+                # If the module is in the deps folder, remove it
+                if modulePath is not None and (
+                    modulePath.startswith(includeDir) or modulePath.startswith(depsDir)
+                ):
+                    if key in self.intialModules:
+                        logging.getLogger("Horus").warning(
+                            "Module %s used by plugin %s is in the App default modules. "
+                            + "The App version was used instead of the Plugin version.",
+                            key,
+                            path,
+                        )
 
-        # Remove the deps directory from the working set
-        pkg_resources.working_set.entries.remove(depsDir)
+                # Unload the module
+                del sys.modules[key]
 
-        # Remove the include directory from the working set
-        pkg_resources.working_set.entries.remove(includeDir)
+            # Restore the initial python path
+            sys.path = self.initialPath
+
+            # Remove the deps directory from the working set
+            pkg_resources.working_set.entries.remove(depsDir)
+
+            # Remove the include directory from the working set
+            pkg_resources.working_set.entries.remove(includeDir)
+
+        for p in self.paths:
+            removePath(p)
+
+    @staticmethod
+    def getFullPluginDepsDir(pluginPath: str, full=True) -> str:
+        """
+        Returns the true path to the dependencies directory for a given
+        plugin for appending to PYTHONPATH.
+
+        Args:
+            pluginPath (str): The path to the plugin directory.
+
+        Returns:
+            str: The path to the dependencies directory.
+
+        The dependencies directory is located at {pluginPath}/deps/lib/{pythonVersion}/site-packages,
+        where {pythonVersion} is the first three characters of the Python version.
+
+        This function creates the dependencies directory if it does not already exist.
+
+        Example:
+            >>> getPluginDepsDir("/path/to/plugin")
+            "/path/to/plugin/deps/lib/python3.9/site-packages"
+        """
+        # We need to return a path of the form {pluginPath}/lib/python{pythonVersion}/site-packages
+        depsDir = os.path.join(pluginPath, "deps")
+
+        if not full:
+            return depsDir
+
+        # Get the python version
+        pythonVersion = sys.version[:3]
+
+        # Return the path
+        return os.path.join(depsDir, "lib", "python" + str(pythonVersion), "site-packages")
+
+
+class PluginDepsPlugin(PluginDepsBase):
+    """
+    Pass a plugin instance to the deps
+    """
+
+    def __init__(self, plugin: Plugin):
+
+        # Get the paths from the plugin + the pluginRequirements
+
+        paths = [plugin._path]
+
+        pManager = PluginManager()
+        for r in plugin.pluginMeta.pluginRequires or []:
+            try:
+                requirement = pManager._getPluginByID(r)
+                paths.append(requirement._path)
+            except PluginNotFoundError:
+                pass
+
+        super().__init__(paths)
+
+
+class SubprocessManager:
 
     @classmethod
     def subprocessCall(cls, fn, *args, **kwargs):
@@ -1771,7 +2001,7 @@ class PluginDeps:
         libraries each time we execute a plugin's action.
         """
 
-        ctx = mp.context.ForkContext()
+        ctx = mp.context.ForkContext()  # type: ignore
         q = ctx.Queue(1)
         error = ctx.Value("b", False)
 
@@ -1782,7 +2012,9 @@ class PluginDeps:
                 error.value = True  # type: ignore
                 q.put(e)
 
-        ctx.Process(target=target).start()
+        process = ctx.Process(target=target)
+        process.daemon = False
+        process.start()
         result = q.get()
         if error.value:  # type: ignore
             raise result
@@ -1799,75 +2031,88 @@ class PluginDeps:
         works correctly. This avoids issues with Paramiko's requirement to run in the
         same process where the connection was established.
         """
+
+        # In this function we should cast mp to the regular Multirpcoess
+        # (the developers of the libraries have messed up typing)
+
         # Fork the current context to execute the block in a subprocess
-        ctx = mp.context.ForkContext()
+        ctx = mp.context.ForkContext()  # type: ignore
         # Setup a queue to communicate with the subprocess, only 1 element
         q = ctx.Queue(1)
 
         # Fork the block
         def target(forkedBlock: PluginBlock):
+
+            # For stopping the flow on SIGTERM
+            from Server.FlowManager import StoppedFlowException
+
             # Block outputs
             outputs = None
+
             # Block error
             error = None
 
-            def handleStoppedFlow():
-                from Server.FlowManager import StoppedFlowException
-
-                raise StoppedFlowException
-
-            # Signal catcher for sigterm
-            signal.signal(signal.SIGTERM, lambda s, f: handleStoppedFlow())
-
             try:
+
+                def handleStoppedFlow():
+                    raise StoppedFlowException
+
+                # Signal catcher for sigterm
+                signal.signal(signal.SIGTERM, lambda s, f: handleStoppedFlow())
+
                 # Establish remote connection inside the subprocess
-                try:
-                    remoteManager = RemotesManager(appSupportDir)
+                remoteManager = RemotesManager(appSupportDir)
 
-                    # If the selected remote doesn't exist, set it to Local
-                    if not remoteManager.remoteExists(forkedBlock.selectedRemote):
-                        logging.getLogger("Horus").warning(
-                            "The selected remote '%s' for block '%s' does not exist. "
-                            + "Setting it to 'Local'",
-                            forkedBlock.selectedRemote,
-                            forkedBlock.name,
-                        )
-                        forkedBlock.selectedRemote = "Local"
+                # If the selected remote doesn't exist, set it to Local
+                if not remoteManager.remoteExists(forkedBlock.selectedRemote):
+                    logging.getLogger("Horus").warning(
+                        "The selected remote '%s' for block '%s' does not exist. "
+                        + "Setting it to 'Local'",
+                        forkedBlock.selectedRemote,
+                        forkedBlock.name,
+                    )
+                    forkedBlock.selectedRemote = "Local"
 
-                    if forkedBlock.selectedRemote != "Local":
-                        msg = f"Connecting to remote '{forkedBlock.selectedRemote}'..."
-                        print(msg)
-                        logging.getLogger("Horus").info(msg)
+                if forkedBlock.selectedRemote != "Local":
+                    msg = f"Connecting to remote '{forkedBlock.selectedRemote}'..."
+                    print(msg)
+                    logging.getLogger("Horus").info(msg)
 
-                    remoteManager.connectRemote(forkedBlock.selectedRemote)
-                    rAPI = remoteManager.remote
+                rAPI = remoteManager.getRemoteAPI(forkedBlock.selectedRemote)
 
-                    if rAPI is None:
-                        raise Exception("Error while getting the remote instance.")
+                if forkedBlock.selectedRemote != "Local":
+                    msg = f"Successfully connected to remote '{forkedBlock.selectedRemote}'"
+                    print(msg)
+                    logging.getLogger("Horus").info(msg)
 
-                    # Set remote-specific attributes
-                    rAPI._blockID = forkedBlock.id
-                    rAPI._blockPlacedID = forkedBlock._placedID
-                    rAPI._flowSavedID = forkedBlock.flow.savedID
-                    rAPI._resetRemoteBlock = resetRemote
+                # Update the block with the remote configuration
+                forkedBlock._setRemote(rAPI)
 
-                    if forkedBlock.selectedRemote != "Local":
-                        msg = f"Successfully connected to remote '{forkedBlock.selectedRemote}'"
-                        print(msg)
-                        logging.getLogger("Horus").info(msg)
-
-                    # Update the block with the remote configuration
-                    forkedBlock._setRemote(rAPI)
-
-                except Exception as e:
-                    error = e
-                    raise
-
-                # Execute the block
+                # Actually execute the block
                 outputs = forkedBlock()
 
+            except StoppedFlowException as sf:
+                error = sf
+
             except BaseException as e:
-                error = e
+
+                msg = str(e)
+
+                from App import AppDelegate
+
+                if (
+                    AppDelegate().debug
+                    or AppDelegate().server.settingsManager.getSetting("developmentMode").value
+                    == True
+                ):
+
+                    import traceback
+
+                    msg = f"{traceback.format_exc()}\n{e}"
+
+                # Here we need to convert the exception because it may be a class which does not exist
+                # outside of the forked context
+                error = Exception(msg)
 
             finally:
                 # Always ensure we put the result in the queue
@@ -1885,11 +2130,15 @@ class PluginDeps:
                 )
 
         # Start the subprocess
-        proc = ctx.Process(target=target, args=[block])
+        proc: Process = ctx.Process(target=target, args=[block])
         proc.start()
 
+        def terminate():
+            # The internal process is the one which will handle the SIGTERM
+            proc.join()
+
         # Forward sigterm to child process
-        signal.signal(signal.SIGTERM, lambda x, y: proc.terminate())
+        signal.signal(signal.SIGTERM, lambda s, f: terminate())
 
         # Get the result from the subprocess
         result = q.get()
@@ -1920,71 +2169,75 @@ class PluginDeps:
         # If everything went well, return the outputs
         return result["outputs"]
 
+    @staticmethod
+    def callPopen(
+        command: list[str],
+        cwd: str = ".",
+        env: typing.Optional[dict] = None,
+        wait: bool = True,
+        comunicate: bool = True,
+    ) -> "SubprocessManager.HorusPopen":
+        """
+        Calls subprocess.Popen with a context manager and prints the STDOUT and STDERR
 
-def callPopen(command: list[str], cwd: str = ".", env: typing.Optional[dict] = None):
-    """
-    Calls subprocess.Popen with a context manager and prints the STDOUT and STDERR
+        Raises an Exception if command fails
 
-    Raises an Exception if command fails
+        Params
+        ------
+        - command: list[str]: a list of strings indicating the command and its arguments
+        - cwd: str: The current working directory. Default = "."
+        - env: dict: A dictionary containing environment variables for the command. Default = None
+        """
 
-    Params
-    ------
-    - command: list[str]: a list of strings indicating the command and its arguments
-    - cwd: str: The current working directory. Default = "."
-    - env: dict: A dictionary containing environment variables for the command. Default = None
-    """
-    with subprocess.Popen(
-        command,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        stdin=subprocess.DEVNULL,
-        cwd=cwd,
-        text=True,
-        env=env,
-    ) as p:
-        # Print the output
-        if p.stdout is None:
-            raise Exception(f"Could not get the output of {command}.")
+        logging.getLogger("Horus").debug("Calling Popen with command: %s", " ".join(command))
 
-        for line in p.stdout:
-            print(line, end="")
+        p = SubprocessManager.HorusPopen(
+            command,
+            stdout=subprocess.PIPE if comunicate else subprocess.DEVNULL,
+            stderr=subprocess.STDOUT if comunicate else subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL,
+            cwd=cwd,
+            env=env,
+            text=True if comunicate else None,
+            preexec_fn=os.setsid,
+        )
 
-        # Wait for the process to finish
-        p.wait()
+        if wait:
 
-        # Check the return code
-        if p.returncode != 0 and p.returncode is not None:
-            raise Exception(f"{command} failed")
+            # Print the output
+            if p.stdout is None:
+                raise Exception(f"Could not get the output of {command}.")
 
+            for line in p.stdout:
+                print(line, end="")
 
-def getFullPluginDepsDir(pluginPath: str, full=True) -> str:
-    """
-    Returns the true path to the dependencies directory for a given
-    plugin for appending to PYTHONPATH.
+            # Wait for the process to finish
+            p.wait()
 
-    Args:
-        pluginPath (str): The path to the plugin directory.
+            # Check the return code
+            if p.returncode != 0 and p.returncode is not None:
+                raise CommandFailed(
+                    f"Command failed. Exit code: {p.returncode}",
+                    cmd=" ".join(command),
+                    stderr=str(p.stdout),
+                    stdout=str(p.stdout),
+                )
 
-    Returns:
-        str: The path to the dependencies directory.
+            return p
+        else:
+            return p
 
-    The dependencies directory is located at {pluginPath}/deps/lib/{pythonVersion}/site-packages,
-    where {pythonVersion} is the first three characters of the Python version.
+    class HorusPopen(subprocess.Popen):
 
-    This function creates the dependencies directory if it does not already exist.
+        def is_alive(self):
+            """
+            Whether the process is alive or not
+            """
+            return self.poll() is not None
 
-    Example:
-        >>> getPluginDepsDir("/path/to/plugin")
-        "/path/to/plugin/deps/lib/python3.9/site-packages"
-    """
-    # We need to return a path of the form {pluginPath}/lib/python{pythonVersion}/site-packages
-    depsDir = os.path.join(pluginPath, "deps")
+        def join(self, timeout: typing.Union[int, None] = None):
+            """
+            Mimics the multiprocess join functionality
+            """
 
-    if not full:
-        return depsDir
-
-    # Get the python version
-    pythonVersion = sys.version[:3]
-
-    # Return the path
-    return os.path.join(depsDir, "lib", "python" + str(pythonVersion), "site-packages")
+            self.wait(timeout=timeout)

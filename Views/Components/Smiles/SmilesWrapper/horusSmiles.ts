@@ -1,6 +1,7 @@
 import { PANEL_REGISTRY } from "@/Components/MainApp/PanelView";
 import {
   AtomInfo,
+  isMolstarLoaded,
   MolInfo,
   MolstarEvents,
 } from "../../Molstar/HorusWrapper/horusmolstar";
@@ -150,7 +151,9 @@ export default class HorusSmilesManager {
    */
   private async updateSmilesFromMolstarEvent() {
     // Gather the new structures
-    const structures = window?.molstar?.listStructures() ?? [];
+    const structures = isMolstarLoaded(window.molstar)
+      ? window?.molstar?.listStructures()
+      : [];
     const newStructures = structures.filter(
       (s) => !this.loadedRefs.includes(s.rootRef)
     );
@@ -302,14 +305,14 @@ export default class HorusSmilesManager {
 
   private updateLabelGroupAfterMolstarState() {
     // Get all the labels from Mol*
-    const currentLabels = (window?.molstar?.listStructures() ?? []).map(
-      (ref) => {
-        return {
-          rootRef: ref.rootRef,
-          label: ref.label,
-        };
-      }
-    );
+    const currentLabels = (
+      isMolstarLoaded(window.molstar) ? window?.molstar?.listStructures() : []
+    ).map((ref) => {
+      return {
+        rootRef: ref.rootRef,
+        label: ref.label,
+      };
+    });
 
     // Now update the groups
     this.setSmilesList(
@@ -427,8 +430,9 @@ export default class HorusSmilesManager {
     if (structure.format === "sdf") {
       this.parseMolstarSDFFileAsSmiles(structure);
     } else {
-      const heteroAtomsList =
-        window?.molstar?.listHeteroAtoms(structureLabel)[structure.id] ?? [];
+      const heteroAtomsList = isMolstarLoaded(window.molstar)
+        ? window?.molstar?.listHeteroAtoms(structureLabel)[structure.id]
+        : [];
       if (!heteroAtomsList) {
         return;
       }
@@ -562,7 +566,7 @@ export default class HorusSmilesManager {
         })
       );
 
-      while (!window.molstar?.plugin) {
+      while (!isMolstarLoaded(window.molstar)) {
         // Wait for molstar to load
         await delay(100);
       }
@@ -808,14 +812,14 @@ export default class HorusSmilesManager {
 
   private readSDFData(molecule: string) {
     const data: any = {};
-    Array.from(
-      molecule.matchAll(/>\s*<([^>]+)>\s*\(1\)\s*\n([^\n]+)/g)
-    ).forEach((match: RegExpMatchArray) => {
-      if (!match[1] || !match[2]) {
-        return;
+    Array.from(molecule.matchAll(/>\s*<([^>]+)>\s*\n([^\n]+)/g)).forEach(
+      (match: RegExpMatchArray) => {
+        if (!match[1] || !match[2]) {
+          return;
+        }
+        data[match[1]] = match[2];
       }
-      data[match[1]] = match[2];
-    });
+    );
     return data;
   }
 
@@ -847,7 +851,7 @@ export default class HorusSmilesManager {
         });
       }
 
-      sdfContents += `${currentSDF} \n\n$$$$\n`;
+      sdfContents += `${currentSDF}\n`;
     }
     return sdfContents;
   }

@@ -30,7 +30,7 @@ export type BlockViewProps = {
   scale?: number;
   isPaused?: boolean;
   isFlowActive?: boolean;
-}
+};
 
 export type BlockViewState = {
   div: {
@@ -189,7 +189,7 @@ export function useBlockView({
         blockHooks?.handleBlockChanges([block]);
       }
     },
-    [block, blockHooks, isFlowActive]
+    [block, blockHooks, isFlowActive],
   );
 
   // Update the params of the block variables panel when opened

@@ -2,6 +2,17 @@
 <html>
   <head>
     <title>Shemsu error</title>
+    <script>
+      window.__HORUS_ROOT__ = "{{ horusRoot }}";
+
+      if (
+        window.__HORUS_ROOT__.startsWith("{{") &&
+        window.__HORUS_ROOT__.endsWith("}}")
+      ) {
+        // Flask is not called to render the template, therefore we need to manually set the root for development mode
+        window.__HORUS_ROOT__ = "";
+      }
+    </script>
     <script src="error.tsx" type="module"></script>
     <link rel="stylesheet" href="error.css" />
 

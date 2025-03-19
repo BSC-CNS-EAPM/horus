@@ -13,7 +13,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { OverrideAlert } from "./OverrideAlert";
 
 let container: HTMLElement | null = null;
-const queryClient = new QueryClient();
+export const queryClient = new QueryClient();
 
 document.addEventListener("DOMContentLoaded", () => {
   if (!container) {

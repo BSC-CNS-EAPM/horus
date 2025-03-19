@@ -108,20 +108,6 @@ def test_disabled_variables_list_one_inside():
         disabled=True,
     )
 
-    list_with_disabled = VariableList(
-        id="var_list",
-        name="test",
-        description="test",
-        prototypes=[disabled_variable, not_disabled_variable, second_disabled_variable],
-    )
-
-    def testBlock(block: PluginBlock):
-        pass
-
-    test_block = PluginBlock(
-        name="Test", description="test", action=testBlock, variables=[list_with_disabled]
-    )
-
     new_values = {
         "var_list": [
             {"test": "modified", "test_2": "modified", "test_3": "modfied_3"},
@@ -140,6 +126,22 @@ def test_disabled_variables_list_one_inside():
         ]
     }
 
+    original = [
+        {"test": "original", "test_2": "original", "test_3": "original_3"},
+        {"test": "original", "test_2": "original", "test_3": "original_3"},
+        {"test": "original", "test_2": "original", "test_3": "original_3"},
+        {"test": "original", "test_2": "original", "test_3": "original_3"},
+        {"test": "original", "test_2": "original", "test_3": "original_3"},
+        {"test": "original", "test_2": "original", "test_3": "original_3"},
+        {"test": "original", "test_2": "original", "test_3": "original_3"},
+        {"test": "original", "test_2": "original", "test_3": "original_3"},
+        {"test": "original", "test_2": "original", "test_3": "original_3"},
+        {"test": "original", "test_2": "original", "test_3": "original_3"},
+        {"test": "original", "test_2": "original", "test_3": "original_3"},
+        {"test": "original", "test_2": "original", "test_3": "original_3"},
+        {"test": "original", "test_2": "original", "test_3": "original_3"},
+    ]
+
     expected = [
         {"test": "original", "test_2": "modified", "test_3": "original_3"},
         {"test": "original", "test_2": "original", "test_3": "original_3"},
@@ -156,9 +158,24 @@ def test_disabled_variables_list_one_inside():
         {"test": "original", "test_2": "modified", "test_3": "original_3"},
     ]
 
+    list_with_disabled = VariableList(
+        id="var_list",
+        name="test",
+        description="test",
+        prototypes=[disabled_variable, not_disabled_variable, second_disabled_variable],
+        defaultValue=original,
+    )
+
+    def testBlock(block: PluginBlock):
+        pass
+
+    test_block = PluginBlock(
+        name="Test", description="test", action=testBlock, variables=[list_with_disabled]
+    )
+
     test_block._updateVariables(new_values)
 
-    assert list_with_disabled.value == expected
+    assert test_block.variables[list_with_disabled.id] == expected
     assert test_block.variables["var_list"] == expected
 
 

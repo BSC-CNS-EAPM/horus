@@ -1,3 +1,5 @@
+import { useCallback, useContext, useEffect } from "react";
+
 // Horus components
 import { usePluginPages } from "./extensions_list";
 import { ToolBarItemProps, ToolbarMenu, ToolBarMenuProps } from "./ToolbarItem";
@@ -13,7 +15,6 @@ import {
   togglePanel,
 } from "../MainApp/PanelView";
 import { useFlowShortcuts } from "../FlowBuilder/flow.hooks";
-import { useCallback, useContext, useEffect } from "react";
 
 // Icons
 import NewFlowIcon from "./Icons/New";
@@ -49,6 +50,7 @@ import { useAlert } from "../HorusPrompt/horus_alert";
 import { navigateTo } from "@/Utils/navigationService";
 import SmilesIcon from "./Icons/Smiles";
 import StopIcon from "./Icons/Stop";
+import { queryClient } from "@/Main";
 
 // Define the logos for the shortcuts
 const modifierKeyLogo: string = navigator.userAgent.includes("Mac")
@@ -88,7 +90,7 @@ export default function HorusToolbar() {
   }, [dockApi]);
 
   const toggleSmiles = useCallback(() => {
-    togglePanel({
+    addPanel({
       dockApi: dockApi,
       component: PANEL_REGISTRY.smiles.component,
       panelID: PANEL_REGISTRY.smiles.id,
@@ -96,7 +98,7 @@ export default function HorusToolbar() {
   }, [dockApi]);
 
   const toggleMolstar = useCallback(() => {
-    togglePanel({
+    addPanel({
       dockApi: dockApi,
       component: PANEL_REGISTRY.molstar.component,
       panelID: PANEL_REGISTRY.molstar.id,
@@ -190,7 +192,7 @@ export default function HorusToolbar() {
       name: "File",
       items: [
         {
-          name: "New",
+          name: "New flow",
           keyShortcut: `${modifierKeyLogo}N`,
           svgPath: <NewFlowIcon />,
           onClick: () => {
@@ -198,7 +200,7 @@ export default function HorusToolbar() {
           },
         },
         {
-          name: "Open",
+          name: "Open flow",
           hidden: window.horusInternal.mode === "webapp",
           svgPath: <OpenFlowIcon />,
           keyShortcut: `${modifierKeyLogo}O`,
@@ -210,7 +212,7 @@ export default function HorusToolbar() {
           },
         },
         {
-          name: "Save",
+          name: "Save flow",
           keyShortcut: `${modifierKeyLogo}S`,
           svgPath: <SaveIcon />,
           onClick: () => {
@@ -218,7 +220,7 @@ export default function HorusToolbar() {
           },
         },
         {
-          name: "Save as...",
+          name: "Save flow as...",
           keyShortcut: `${modifierKeyLogo}${shiftKeyLogo}S`,
           svgPath: <SaveAsIcon />,
           onClick: () => {
@@ -243,6 +245,17 @@ export default function HorusToolbar() {
           },
         },
         {
+          name: "Open a file",
+          onClick: () => {
+            addPanel({
+              dockApi: dockApi,
+              component: PANEL_REGISTRY.fileEditor.component,
+              panelID: `${PANEL_REGISTRY.fileEditor.id + Math.random()}`,
+            });
+          },
+          svgPath: <LogFile />,
+        },
+        {
           name: "Clean recents",
           hidden: window.horusInternal.mode === "webapp",
           svgPath: <TrashLines />,
@@ -261,6 +274,8 @@ export default function HorusToolbar() {
                 if (!data.ok) {
                   throw new Error(data.msg);
                 }
+
+                queryClient.invalidateQueries({ queryKey: ["recentFlows"] });
               })
               .catch((e) => {
                 horusAlert("Error cleaning recents: " + e);
@@ -304,9 +319,20 @@ export default function HorusToolbar() {
           },
         },
         {
-          name: "Open Flow panel",
+          name: "Open block registry",
           onClick: () => {
-            togglePanel({
+            addPanel({
+              dockApi: dockApi,
+              component: PANEL_REGISTRY.blockRegistry.component,
+              panelID: PANEL_REGISTRY.blockRegistry.id,
+            });
+          },
+          svgPath: <NewFlowIcon />,
+        },
+        {
+          name: "Open flow panel",
+          onClick: () => {
+            addPanel({
               dockApi: dockApi,
               component: PANEL_REGISTRY.flow.component,
               panelID: PANEL_REGISTRY.flow.id,
@@ -316,9 +342,9 @@ export default function HorusToolbar() {
           keyShortcut: `${modifierKeyLogo}${shiftKeyLogo}M`,
         },
         {
-          name: "Toggle Mol*",
+          name: "Open Mol*",
           onClick: () => {
-            togglePanel({
+            addPanel({
               dockApi: dockApi,
               component: PANEL_REGISTRY.molstar.component,
               panelID: PANEL_REGISTRY.molstar.id,
@@ -329,10 +355,10 @@ export default function HorusToolbar() {
           keyShortcut: `${modifierKeyLogo}${shiftKeyLogo}M`,
         },
         {
-          name: "Toggle SMILES",
+          name: "Open SMILES",
           svgPath: <SmilesIcon />,
           onClick: () => {
-            togglePanel({
+            addPanel({
               dockApi: dockApi,
               component: PANEL_REGISTRY.smiles.component,
               panelID: PANEL_REGISTRY.smiles.id,

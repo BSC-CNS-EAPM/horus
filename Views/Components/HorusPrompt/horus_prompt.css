@@ -17,6 +17,7 @@
   border-radius: 5px;
   text-align: center;
   overflow: auto;
+  user-select: auto;
 }
 
 .prompt-container p {

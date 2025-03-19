@@ -188,6 +188,30 @@ export function MovingChevron({ down }: { down: boolean }) {
 
 export { debounce, HorusPopover };
 
+export function updateFile(file: File, path: string) {
+  // Updates the file on the selected path
+
+  const formData = new FormData();
+  formData.append("file", file, file.name);
+  formData.append("path", path);
+  const headers = {
+    Accept: "application/json",
+  };
+
+  horusPost("/api/updatefile", headers, formData)
+    .then((res) => {
+      return res.json();
+    })
+    .then((data) => {
+      if (!data.ok) {
+        alert(data.msg);
+      }
+    })
+    .catch((error) => {
+      alert("There was an error saving the file: " + error);
+    });
+}
+
 export function saveFile(file: File) {
   // If we ar eon desktop mode, use the /savecontents endpoint,
   // otherwise, create a download link
@@ -252,10 +276,15 @@ export function getFile(path: string) {
 
   return new Promise<Blob>((resolve, reject) => {
     fetch(url.toString())
-      .then((res) => {
-        // If the response is json, the fail
+      .then(async (res) => {
+        // If the response is json, then fail
         if (res.headers.get("content-type")?.includes("application/json")) {
-          reject("Could not open file");
+          const msg =
+            (await res
+              .json()
+              .then((res) => res["msg"])
+              .catch((e) => undefined)) ?? "Unknown error";
+          reject(`${msg ?? "Unknown error"}`);
         }
         return res.blob();
       })

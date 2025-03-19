@@ -44,12 +44,12 @@ export function MoleculePlotter({
 
   const x = useMemo(
     () => getAxisValues(smilesToPlot ?? [], xAxis),
-    [smilesToPlot, xAxis]
+    [smilesToPlot, xAxis],
   );
 
   const y = useMemo(
     () => getAxisValues(smilesToPlot ?? [], yAxis),
-    [smilesToPlot, yAxis]
+    [smilesToPlot, yAxis],
   );
 
   const plotData = useMemo(() => {
@@ -121,7 +121,7 @@ export function MoleculePlotter({
   }, [smilesToPlot]);
 
   const [clickedSmiles, setClickedSmiles] = useState<HorusSmilesType | null>(
-    null
+    null,
   );
 
   const onPointClick = useCallback(
@@ -131,7 +131,7 @@ export function MoleculePlotter({
         setClickedSmiles(smiles);
       }
     },
-    [smilesToPlot]
+    [smilesToPlot],
   );
 
   if (!smilesToPlot) {

@@ -40,7 +40,7 @@ export function HorusViewTabs({ tabs, disabled, onTabChange }: TabsProps) {
   };
 
   return (
-    <div className="overflow-hidden space-y-[-1px] h-full">
+    <div className="overflow-hidden space-y-[-1px] h-full rounded-b-lg">
       <TabSelector
         tabs={tabs}
         currentTab={currentTab}

@@ -1,41 +1,6 @@
 from HorusAPI import PluginVariable, PluginBlock, VariableTypes, VariableGroup
+
 import os
-
-
-# Create a block that adds a given pdb to Mol*
-def sendData(block: PluginBlock):
-
-    print("Selected input group: " + block.selectedInputGroup)
-
-    # Get the source path
-    source = None
-    if block.selectedInputGroup == "fileInputGroup":
-        source = block.inputs.get("file", None)
-        if source is None:
-            raise Exception("No file provided.")
-    elif block.selectedInputGroup == "folderInputGroup":
-        source = block.inputs.get("folder", None)
-        if source is None:
-            raise Exception("No folder provided.")
-
-    if source is None:
-        raise Exception("No source provided.")
-
-    if not os.path.exists(source):
-        raise Exception("Source does not exist.")
-
-    destinationPath = block.inputs.get("destination", None)
-
-    if destinationPath is None:
-        raise Exception("No destination provided.")
-
-    print(f"Sending data from {source} to {destinationPath}")
-
-    # Send the data
-    block.remote.sendData(source, destinationPath)
-
-    print(f"Data saved at: {destinationPath}")
-
 
 destination = PluginVariable(
     name="Destination",
@@ -73,12 +38,57 @@ folderInputGroup = VariableGroup(
     variables=[inputFolder, destination],
 )
 
+destination_path = PluginVariable(
+    id="final_destination",
+    name="Full destination path",
+    description="The full path to the sent file.",
+    type=VariableTypes.STRING,
+)
+
+
+# Create a block that adds a given pdb to Mol*
+def sendData(block: PluginBlock):
+
+    print("Selected input group: " + block.selectedInputGroup)
+
+    # Get the source path
+    source = None
+    if block.selectedInputGroup == "fileInputGroup":
+        source = block.inputs.get("file", None)
+        if source is None:
+            raise Exception("No file provided.")
+    elif block.selectedInputGroup == "folderInputGroup":
+        source = block.inputs.get("folder", None)
+        if source is None:
+            raise Exception("No folder provided.")
+
+    if source is None:
+        raise Exception("No source provided.")
+
+    if not os.path.exists(source):
+        raise Exception("Source does not exist.")
+
+    destinationPath = block.inputs.get("destination", None)
+
+    if destinationPath is None:
+        raise Exception("No destination provided.")
+
+    print(f"Sending data from {source} to {destinationPath}")
+
+    # Send the data
+    destinationPath = block.remote.sendData(source, destinationPath)
+
+    print(f"Data saved at: {destinationPath}")
+
+    block.setOutput(destination_path.id, destinationPath)
+
+
 sendDataBlock = PluginBlock(
     name="Send data",
     description="Send data from the local machine to the remote.",
     action=sendData,
     inputGroups=[fileInputGroup, folderInputGroup],
+    outputs=[destination_path],
     id="send_data",
-        category="Files"
-
+    category="Files",
 )

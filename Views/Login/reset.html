@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
   <head>
-    <title>Reset Horus password</title>
+    <title>Reset {{ appName }} password</title>
     <style>
       html,
       body {
@@ -18,6 +18,17 @@
         vertical-align: middle;
       }
     </style>
+    <script>
+      window.__HORUS_ROOT__ = "{{ horusRoot }}";
+
+      if (
+        window.__HORUS_ROOT__.startsWith("{{") &&
+        window.__HORUS_ROOT__.endsWith("}}")
+      ) {
+        // Flask is not called to render the template, therefore we need to manually set the root for development mode
+        window.__HORUS_ROOT__ = "";
+      }
+    </script>
   </head>
 
   <body class="bg-transparent">

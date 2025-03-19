@@ -1,6 +1,7 @@
 import threading
 import os
 import typing
+import asyncio
 
 
 # Define the SingletonMeta class for the AppDelegate and MolstarAPI classes

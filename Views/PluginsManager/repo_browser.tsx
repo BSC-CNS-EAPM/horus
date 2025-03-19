@@ -52,7 +52,7 @@ function RepoBrowser(props: PluginInstallProps) {
 function _RepoBrowser(
   props: PluginInstallProps & {
     installedPlugins: HorusPlugin[];
-  }
+  },
 ) {
   const [filterTerm, setFilterTerm] = useState("");
 
