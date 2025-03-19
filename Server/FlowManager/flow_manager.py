@@ -906,6 +906,9 @@ class Flow:
             Whether the call comes from a cyclic block
         """
 
+        if placedID == 6:
+            print("here")
+
         # Check for the plugin manager instance.
         # If it doesn't exist, we cannot execute the blocks
         if self._pluginManager is None:
@@ -1165,6 +1168,13 @@ class Flow:
                     f"Origin: {nextConnection.origin.variableID}, "
                     f"Destination: {nextConnection.destination.variableID}",
                 )
+
+            # If the block already exists in the following connections, skip it
+            # (imagine a single block with 1 output connecting to the same block but at two inputs)
+            if realConnection.destination.blockPlacedID in [
+                d.destination.blockPlacedID for d in runOrder
+            ]:
+                continue
 
             if realConnection.isCyclic:
                 runOrder.insert(0, realConnection)
