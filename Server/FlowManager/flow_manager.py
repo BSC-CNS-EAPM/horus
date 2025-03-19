@@ -906,9 +906,6 @@ class Flow:
             Whether the call comes from a cyclic block
         """
 
-        if placedID == 6:
-            print("here")
-
         # Check for the plugin manager instance.
         # If it doesn't exist, we cannot execute the blocks
         if self._pluginManager is None:
