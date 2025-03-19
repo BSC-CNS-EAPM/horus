@@ -20,6 +20,7 @@ import datetime
 from pydantic import BaseModel, ValidationError
 from contextlib import contextmanager
 import re
+import time
 
 # For downloading plugins
 import requests
@@ -354,8 +355,6 @@ class PluginManager(metaclass=HorusSingleton):
 
             # Remove any previous tmpInstall folder
             shutil.rmtree(tmpInstallDir, ignore_errors=True)
-
-            import time
 
             startTime = time.time()
             while os.path.exists(tmpInstallDir):
