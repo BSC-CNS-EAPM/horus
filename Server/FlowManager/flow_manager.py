@@ -2035,6 +2035,7 @@ class FlowManager:
         addToRecents: bool = True,
         socketBaseURL: typing.Optional[str] = None,
         resetFlowSockets: bool = False,
+        checkState: bool = True,
     ) -> Flow:
         """
         Opens a flow from a file.
@@ -2056,7 +2057,7 @@ class FlowManager:
 
         # If the flow is marked as running but its not present
         # in the running flows list, set the status to FAILED
-        if flow.status in Flow.FlowStatus.RUNNING_STATUSES():
+        if checkState and flow.status in Flow.FlowStatus.RUNNING_STATUSES():
             process = self._flowProcesses.get(flowPath) or self._getProcessFromOpenedFlow(flow)
 
             pause = False

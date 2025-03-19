@@ -1361,6 +1361,7 @@ def runFlowInsteadOfLaunch(app: AppDelegate, args: dict):
         addToRecents=False if flowAppSupport else True,
         socketBaseURL=baseURL,
         resetFlowSockets=True,
+        checkState=False,
     )
 
     # Assign the settings instance. Using the flowAppSupport we ensure that in WebApp Mode
