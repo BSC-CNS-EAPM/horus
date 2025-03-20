@@ -812,7 +812,7 @@ export default class HorusSmilesManager {
 
   private readSDFData(molecule: string) {
     const data: any = {};
-    Array.from(molecule.matchAll(/>\s*<([^>]+)>\s*\n([^\n]+)/g)).forEach(
+    Array.from(molecule.matchAll(/>\s*<(.+)>.*\n(.*)/g)).forEach(
       (match: RegExpMatchArray) => {
         if (!match[1] || !match[2]) {
           return;
