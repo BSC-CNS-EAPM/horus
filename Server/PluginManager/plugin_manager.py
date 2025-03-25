@@ -466,7 +466,7 @@ class PluginManager(metaclass=HorusSingleton):
             # in order to upgrade it
             if not loadedPlugin in self.loadedPlugins:
                 print("Saving new plugin to its folder...")
-                shutil.move(tmpInstallDir, pluginFinalPath)
+                os.rename(tmpInstallDir, pluginFinalPath)
                 print(
                     "Plugin installed."
                     + " You can start working with the blocks in the flow manager."
@@ -484,7 +484,7 @@ class PluginManager(metaclass=HorusSingleton):
                     pass
 
                 # Move the new plugin to the final path
-                shutil.move(tmpInstallDir, pluginFinalPath)
+                os.rename(tmpInstallDir, pluginFinalPath)
 
                 # Add the new plugin
                 self.loadedPlugins.append(loadedPlugin)
