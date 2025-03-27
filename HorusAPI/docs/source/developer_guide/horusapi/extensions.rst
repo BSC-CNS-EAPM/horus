@@ -242,14 +242,6 @@ To store data in the flow, use the built-in functions :bdg-secondary-line:`setEx
     // To obtain the value, just use your key
     const value = parent.horus.getExtraData("my_key")
 
-You can also modify the :bdg-secondary-line:`extraData` property during flow execution from the block instance:
-
-.. code-block:: python
-
-    # Not to be confused with the block.extraData property!
-    block.flow.extraData["my_key"] = "my_value"
-
-
 Managing SMILES and Mol*
 ------------------------
 
