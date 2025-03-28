@@ -44,8 +44,6 @@ export default function HorusTerm() {
         description: "Clear the console and the flow console output.",
         usage: "clear",
         fn: () => {
-          console.log();
-
           // Clear the terminal and the stored messages
           term.current?.clearStdout();
 
@@ -141,7 +139,7 @@ export default function HorusTerm() {
               structureLabel,
               options.resID,
               options.chain,
-              options.surroundRadius,
+              options.surroundRadius
             );
           } catch (e: any) {
             return "Internal error focusing residue: " + e.message;

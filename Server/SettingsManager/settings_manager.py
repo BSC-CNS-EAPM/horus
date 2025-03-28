@@ -263,7 +263,7 @@ class SettingsManager:
                 json.dump(fileSettings, f)
 
         # Instantiate the settings
-        self.settings = {}
+        settings = {}
         for key, value in fileSettings.items():
 
             # If the setting does not exist in the default settings, skip it
@@ -303,7 +303,7 @@ class SettingsManager:
                 )
 
             # If the setting already exists, raise an exception
-            if newSetting.id in self.settings:
+            if newSetting.id in settings:
                 logging.getLogger("Horus").error(
                     "The setting %s is duplicated.\
                     Make sure that each setting has a unique ID.",
@@ -321,10 +321,12 @@ class SettingsManager:
                 # )
 
             # Add the setting to the settings list
-            self.settings[newSetting.id] = newSetting
+            settings[newSetting.id] = newSetting
 
-            # Save the settings
-            self._saveSettings()
+        self.settings = settings
+
+        # Save the settings
+        self._saveSettings()
 
     def getSetting(self, id: str) -> Setting:
         """
