@@ -1533,19 +1533,17 @@ class PluginManager(metaclass=HorusSingleton):
         return outputs
 
     def _getPageInfo(self, pg: PluginPage, p: Plugin):
-        return {
-            "id": pg.id,
+        pg._pageInfo = {
+            **pg._toDict(),
             "plugin": p.pluginMeta.name,
             "pluginID": p.id,
-            "name": pg.name,
-            "description": pg.description,
             "html": f"{p._path}/Pages/{pg.html}",
             "url": f"/plugins/pages/{pg.id}",
             "deps": PluginDepsBase.getFullPluginDepsDir(p._path),
             "pluginDir": p._path,
-            "hidden": pg.hidden,
             "logo": p.logo,
         }
+        return pg._pageInfo
 
     def _getDevelopmentPage(self):
         """
