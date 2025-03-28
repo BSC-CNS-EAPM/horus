@@ -47,7 +47,8 @@ In addition to command-line options, Horus allows configuration through the foll
 
 **App Mode (Default Mode)**
 ---------------------------
-This mode runs :bdg-secondary-line:`Horus` standard in a windowed environment.
+This mode runs :bdg-secondary-line:`Horus` standard in a windowed environment. Runs as a desktop application. 
+It can also connect to a remote machine via SSH to send simulations.
 
 **Browser Mode**
 ----------------
@@ -58,9 +59,19 @@ you can use this mode. It opens a small window that redirects to your web browse
 **Server Mode**
 ---------------
 This mode runs :bdg-secondary-line:`Horus` entirely in server mode (no windowed app). You can connect using a browser to the application.
-It is the same as Browser Mode but without the OS file picker.
+This mode is intended for running Horus in a remote machine, where a URL will be provided to the user to connect using a web browser. Usually,
+port forwarding or a VPN will be required to access it from outside of your local network.
 
 **WebApp Mode**
 ---------------
 This mode is intended for running :bdg-secondary-line:`Horus` in a private/public environment with user capabilities, registration, etc. For more
 information, please refer to the :ref:`webapp` section.
+
+Security considerations
+=======================
+Horus does not manage TLS or HTTPS directly. Instead, a reverse proxy (e.g., Nginx) should be used to enable encrypted communications and manage HTTPS certificates.
+
+- Use Server Mode only within a secured company network (via VPN).
+- Configure a reverse proxy for TLS/HTTPS encryption in WebApp mode.
+- Ensure access control for remote connections in App Mode (e.g., SSH keys).
+- Keep Horus and its dependencies updated to mitigate vulnerabilities.

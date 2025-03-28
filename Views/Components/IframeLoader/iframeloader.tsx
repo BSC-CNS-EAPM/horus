@@ -30,7 +30,13 @@ function IFrameLoader({
       domain = domain.slice(0, -1);
     }
 
-    return domain + page.url;
+    let url: null | string = page?.url ?? null;
+
+    if (!url) {
+      url = `/plugins/pages/${page.id}`;
+    }
+
+    return domain + url;
   };
 
   const [loading, setLoading] = useState(true);

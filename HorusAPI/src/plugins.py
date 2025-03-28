@@ -238,7 +238,7 @@ class PluginPage:
     The endpoints of the page.
     """
 
-    _pageInfo: typing.Dict[str, typing.Any]
+    _pageInfo: typing.Dict[str, typing.Any] = {}
     """
     Internal variable used to store the page info.
     """
@@ -262,7 +262,6 @@ class PluginPage:
 
         # Initialize instance-specific variables
         self.endpoints = []
-        self._pageInfo = {}
 
     def addEndpoint(self, endpoint: PluginEndpoint):
         """
@@ -280,6 +279,18 @@ class PluginPage:
         :param endpoint: The endpoint to add.
         """
         self.endpoints.append(endpoint)
+
+    def _toDict(self):
+        """
+        Converts the page to a standard python dict
+        """
+
+        return {
+            "id": self.id,
+            "name": self.name,
+            "description": self.description,
+            "hidden": self.hidden,
+        }
 
 
 class VariableTypes(str, Enum):
@@ -820,6 +831,7 @@ class CustomVariable(PluginVariable):
         super().__init__(
             id, name, description, type, defaultValue, allowedValues, category, disabled, required
         )
+
         self.customPage = customPage
 
     def toDict(self, minimal: bool = False):
@@ -832,7 +844,7 @@ class CustomVariable(PluginVariable):
 
         # Add the pageID
         encodedVar["isCustom"] = self._isCustom
-        encodedVar["customPage"] = self.customPage._pageInfo
+        encodedVar["customPage"] = self.customPage._toDict()
 
         return encodedVar
 
