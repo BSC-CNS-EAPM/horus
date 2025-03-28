@@ -2322,8 +2322,6 @@ class HorusServer:
             htmlPath = page._pageInfo["html"]  # pylint: disable=protected-access
             url = f"{self.horusRoot if self.horusRoot != '/' else ''}/plugins/pages/{page._pageInfo['id']}/"  # pylint: disable=protected-access
 
-            print(url)
-
             def createBlueprint(page, htmlPath, url):
                 # Create a blueprint for the page
                 newBluePrint = flask.Blueprint(
