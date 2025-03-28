@@ -272,12 +272,13 @@ Then, the config can be accessed like the variables in the :bdg-secondary-line:`
 
     myConfigValue = block.config["myConfigID"]
 
-Storing data on blocks
-======================
+Storing data on blocks or flow
+==============================
 
-Sometimes it is useful to store persistent data on a block. For example, one could store the times
+Sometimes it is useful to store persistent data on a block or on the flow itself. For example, one could store the times
 the block has run, or a variable that is needed in the :bdg-secondary-line:`finalAction` of a :bdg-secondary-line:`SlurmBlock`, which is defined in the :bdg-secondary-line:`initialAction`.
-:bdg-secondary-line:`extraData` is a property of Blocks (a dictionary where to store key:value pairs) that allows developers to store variables across runs of the same block. 
+:bdg-secondary-line:`extraData` is a property of Blocks (a dictionary where to store key:value pairs) that allows developers to store variables across runs of the same block. The same applies
+for the :bdg-secondary-line:`extraData` of a given flow.
 
 .. warning::
 
@@ -286,7 +287,11 @@ the block has run, or a variable that is needed in the :bdg-secondary-line:`fina
 
 .. code-block:: python
 
+    # Extra data of the given block
     block.extraData["value_to_store"] = "myValue"
+
+    # Extra data of the flow. Not to be confused with the block.extraData property!
+    block.flow.extraData["my_key"] = "my_value"
 
 Verifying if the flow was reset
 ===============================

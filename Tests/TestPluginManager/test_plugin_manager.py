@@ -99,6 +99,7 @@ def test_install_plugin_success(mocker):
     mocker.patch("os.remove")  # Mock the os.remove function
     mocker.patch("shutil.copy", return_value="/path/to/new_plugin.hp")
     mocker.patch("shutil.move")  # Mock the move function
+    mocker.patch("os.rename")  # Mock the move function
 
     # Mock the _loadPlugin method
     mocker.patch.object(pluginManager, "_loadPlugin")
@@ -129,7 +130,7 @@ def test_install_plugin_success(mocker):
     os.mkdir.assert_called_once_with("/path/to/plugins/tmpInstall")
     shutil.copy.assert_called_once_with(plugin_path, "/path/to/plugins/tmpInstall")
     mock_zipfile.extractall.assert_called_once_with("/path/to/plugins/tmpInstall")
-    shutil.move.assert_called_once_with("/path/to/plugins/tmpInstall", finalPath)
+    os.rename.assert_called_once_with("/path/to/plugins/tmpInstall", finalPath)
 
     # Assert that the .hp file is removed
     os.remove.assert_called_once_with("/path/to/new_plugin.hp")

@@ -22,7 +22,6 @@ type HorusTableProps = {
 export const HorusTable = forwardRef((props: HorusTableProps, ref: any) => {
   const downloadCSV = () => {
     const gridRef = ref.current.api as GridApi;
-    console.log(ref);
     const csv =
       gridRef?.getDataAsCsv({
         suppressQuotes: true,

@@ -897,7 +897,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         socket.emit("joinFlow", savedFlow.savedID);
 
         // Update the URL with the flowID
-        const newURL = `/flow?open=true&flowID=${savedFlow.savedID}&path=${savedFlow.path}`;
+        const newURL = `${window.__HORUS_ROOT__}/flow?open=true&flowID=${savedFlow.savedID}&path=${savedFlow.path}`;
 
         window.history.replaceState({}, document.title, newURL);
 

@@ -20,6 +20,7 @@ import datetime
 from pydantic import BaseModel, ValidationError
 from contextlib import contextmanager
 import re
+import time
 
 # For downloading plugins
 import requests
@@ -355,8 +356,6 @@ class PluginManager(metaclass=HorusSingleton):
             # Remove any previous tmpInstall folder
             shutil.rmtree(tmpInstallDir, ignore_errors=True)
 
-            import time
-
             startTime = time.time()
             while os.path.exists(tmpInstallDir):
                 if time.time() - startTime > 10:
@@ -467,7 +466,7 @@ class PluginManager(metaclass=HorusSingleton):
             # in order to upgrade it
             if not loadedPlugin in self.loadedPlugins:
                 print("Saving new plugin to its folder...")
-                shutil.move(tmpInstallDir, pluginFinalPath)
+                os.rename(tmpInstallDir, pluginFinalPath)
                 print(
                     "Plugin installed."
                     + " You can start working with the blocks in the flow manager."
@@ -485,7 +484,7 @@ class PluginManager(metaclass=HorusSingleton):
                     pass
 
                 # Move the new plugin to the final path
-                shutil.move(tmpInstallDir, pluginFinalPath)
+                os.rename(tmpInstallDir, pluginFinalPath)
 
                 # Add the new plugin
                 self.loadedPlugins.append(loadedPlugin)
@@ -1534,19 +1533,17 @@ class PluginManager(metaclass=HorusSingleton):
         return outputs
 
     def _getPageInfo(self, pg: PluginPage, p: Plugin):
-        return {
-            "id": pg.id,
+        pg._pageInfo = {
+            **pg._toDict(),
             "plugin": p.pluginMeta.name,
             "pluginID": p.id,
-            "name": pg.name,
-            "description": pg.description,
             "html": f"{p._path}/Pages/{pg.html}",
             "url": f"/plugins/pages/{pg.id}",
             "deps": PluginDepsBase.getFullPluginDepsDir(p._path),
             "pluginDir": p._path,
-            "hidden": pg.hidden,
             "logo": p.logo,
         }
+        return pg._pageInfo
 
     def _getDevelopmentPage(self):
         """
