@@ -156,7 +156,7 @@ class TempFile:
         shutil.rmtree(self.tmpFolder)
 
 
-def getUserFolder():
+def getUserFolder() -> str:
     # On WebApp mode, create the folder in the user's directory
     from App import AppDelegate
 

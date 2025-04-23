@@ -2226,6 +2226,8 @@ class FlowManager:
 
         if AppDelegate().debug:
             optionalOptions += ["--debug"]
+            # Set a random port for preventing clashes
+            optionalOptions += ["--port", str(AppDelegate().server._getFreePort(force=True))]
 
         if AppDelegate().verbose:
             optionalOptions += ["-V"]

@@ -332,11 +332,11 @@ class HorusServer:
 
         return str(random.randint(1, 100000000))
 
-    def _getFreePort(self):
+    def _getFreePort(self, force: bool = False):
         # Generate a random port number
         port = random.randint(3000, 9000)
 
-        if self.debug:
+        if self.debug and not force:
             return 3000
 
         # Check that the port is not in use
