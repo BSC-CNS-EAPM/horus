@@ -76,6 +76,8 @@ export enum PluginVariableTypes {
   CHECKBOX = "checkbox",
   RADIO = "radio",
   PASSWORD = "PASSWORD",
+  CHAIN_INTERACTIVE = "chain_interactive",
+  RESIDUE_RANGE = "residue_range",
 }
 
 export type PluginVariable = {

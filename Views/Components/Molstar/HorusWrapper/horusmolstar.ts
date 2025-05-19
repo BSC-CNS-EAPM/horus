@@ -2156,7 +2156,7 @@ const standardResidues = [
 const nucleotidesResidues = ["DA", "DC", "DG", "DT", "A", "C", "G", "U"];
 
 // Gets a random color from ColorNames enum
-function randomColor(): Color {
+export function randomColor(): Color {
   const colors = Object.values(ColorNames);
   const randomIndex = Math.floor(Math.random() * colors.length);
   return colors[randomIndex]!;

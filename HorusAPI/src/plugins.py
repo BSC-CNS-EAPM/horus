@@ -492,6 +492,23 @@ class VariableTypes(str, Enum):
     This last variable contains the properties of the STRUCTURE variable.
     """
 
+    CHAIN_INTERACTIVE = "chain_interactive"
+    """
+    A chain to be selected from a loaded structure.
+
+    This variant of the chain selection is meant to be used witing Mol*. The user will be allowed
+    to select a specific chain from the loaded structures, not from a dropdown, but clicking directly into the 
+    loaded structure. The selected chain will be highlighted.
+    """
+
+    RESIDUE_RANGE = "residue_range"
+    """
+    A residue range to be selected fro ma loaded structure.
+    
+    Will enable residue selection. Two residues need to be selected. The starting one, and the ending one. 
+    A range will be automatically selected an visualized within Mol*.
+    """
+
     BOX = "box"
     """
     A box to be rendered in Mol*.

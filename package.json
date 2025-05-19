@@ -55,7 +55,7 @@
     "chonky-icon-fontawesome": "2.3.2",
     "develop": "^1.0.0",
     "devlop": "^1.1.0",
-    "dockview-react": "^2.0.0",
+    "dockview-react": "^4.2.3",
     "i18next": "22.4.15",
     "i18next-browser-languagedetector": "7.0.1",
     "immutability-helper": "3.1.1",

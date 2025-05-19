@@ -10,6 +10,8 @@ import {
   IDockviewHeaderActionsProps,
   IDockviewDefaultTabProps,
 } from "dockview";
+import { themeLight } from "dockview";
+
 import { CloseButton } from "dockview/dist/esm/svg";
 import "dockview/dist/styles/dockview.css";
 import Molstar from "../Molstar/molstar";
@@ -921,7 +923,7 @@ export function HorusPanelView() {
             defaultTabComponent={headerComponents.default}
             rightHeaderActionsComponent={MaximizeComponent}
             onReady={onReady}
-            className="dockview-theme-light"
+            theme={themeLight}
           />
           {
             // If there is a block being dragged, show it
