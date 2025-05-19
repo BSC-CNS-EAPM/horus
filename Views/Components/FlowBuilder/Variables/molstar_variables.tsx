@@ -1,5 +1,13 @@
 // React imports
-import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import {
+  Dispatch,
+  ReactNode,
+  SetStateAction,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 // Mol*
 import { Color } from "molstar/lib/mol-util/color";
@@ -19,6 +27,9 @@ import {
   isMolstarLoaded,
 } from "../../Molstar/HorusWrapper/horusmolstar";
 import { SearchComponent } from "@/Components/Search/Search";
+import { StructureSelection } from "molstar/lib/mol-model/structure";
+import { Script } from "molstar/lib/mol-script/script";
+import { MolScriptBuilder } from "molstar/lib/mol-script/language/builder";
 
 // Utilities
 function filterStructures(structures: MolInfo[], query?: string) {
@@ -1619,6 +1630,384 @@ export function SphereVariableView(props: VariableViewProps) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+export function InteractiveChainView(props: VariableViewProps) {
+  const { currentValue, onChange } = props;
+
+  const [chain, setChain] = useState<AtomInfo | null>(null);
+  const [active, setActive] = useState<boolean>(false);
+  const handleAtomClick = (e: any) => {
+    const atomInfo = (e.detail as MolstarClickEventDetail).atom;
+    setChain(atomInfo);
+    onChange(atomInfo);
+  };
+
+  useEffect(() => {
+    if (isMolstarLoaded(window.molstar)) {
+      window.molstar.plugin!.selectionMode = active;
+      // Set the granularity to element
+      window.molstar.plugin!.managers.interactivity.setProps({
+        granularity: "chain",
+      });
+      // Unselect selected residues
+      window.molstar.plugin!.managers.interactivity.lociSelects.deselectAll();
+    }
+
+    if (active) {
+      window.addEventListener(MolstarEvents.COORDINATES, handleAtomClick);
+    }
+
+    return () => {
+      window.removeEventListener(MolstarEvents.COORDINATES, handleAtomClick);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active]);
+
+  useEffect(() => {
+    if (currentValue) {
+      setChain(currentValue);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const highlightSelected = (c: string) => {
+    if (!isMolstarLoaded(window.molstar)) {
+      return;
+    }
+
+    const ctx = window.molstar.plugin!;
+    const data =
+      ctx.managers.structure.hierarchy.current.structures[0]?.cell.obj?.data;
+    const sel = Script.getStructureSelection(
+      (Q) =>
+        Q.struct.generator.atomGroups({
+          "chain-test": Q.core.rel.eq([
+            Q.struct.atomProperty.macromolecular.auth_asym_id(),
+            c,
+          ]),
+        }),
+      data!
+    );
+
+    const loci = StructureSelection.toLociWithSourceUnits(sel);
+    ctx.managers.interactivity.lociHighlights.highlight({ loci });
+  };
+
+  const unHighlight = () => {
+    if (!isMolstarLoaded(window.molstar)) {
+      return;
+    }
+    const ctx = window.molstar.plugin!;
+
+    ctx.managers.interactivity.lociHighlights.clearHighlights();
+  };
+
+  return (
+    <div
+      onMouseOver={() => {
+        if (chain) {
+          highlightSelected(chain.chainID);
+        }
+      }}
+      onMouseLeave={unHighlight}
+      onClick={() => setActive(!active)}
+      className={`w-full h-full max-h-28 overflow-auto border-2 rounded-xl ${
+        active && "bg-green-200 border-green-200"
+      }`}
+    >
+      {!chain ? (
+        <div className="text-center px-1 cut-text">
+          Click here to enable selection
+        </div>
+      ) : (
+        <div className="text-center px-1 cut-text max-w-[200px] m-auto">
+          {chain.chainID} - {chain.label}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// export function ResidueRangeView(props: VariableViewProps) {
+//   const { currentValue, onChange } = props;
+
+//   const [residues, setResidues] = useState<AtomInfo[] | null>(null);
+
+//   // 0 -> not active
+//   // 1 -> select residue 1
+//   // 2 -> select residue 2
+//   const [active, setActive] = useState<number>(0);
+//   const activeColors = useRef([randomColor(), randomColor()]);
+
+//   const handleAtomClick = (e: any) => {
+//     const atomInfo = (e.detail as MolstarClickEventDetail).atom;
+
+//     if (!atomInfo) {
+//       return;
+//     }
+
+//     setResidues((prevRes) => {
+//       const newRes = [...(prevRes ?? [])];
+//       newRes[active - 1] = atomInfo;
+
+//       onChange(newRes);
+//       return newRes;
+//     });
+//   };
+
+//   useEffect(() => {
+//     if (isMolstarLoaded(window.molstar)) {
+//       window.molstar.plugin!.selectionMode = active !== 0;
+//       // Set the granularity to element
+//       window.molstar.plugin!.managers.interactivity.setProps({
+//         granularity: "residue",
+//       });
+//       // Unselect selected residues
+//       window.molstar.plugin!.managers.interactivity.lociSelects.deselectAll();
+//     }
+
+//     if (active) {
+//       window.addEventListener(MolstarEvents.COORDINATES, handleAtomClick);
+//     }
+
+//     return () => {
+//       window.removeEventListener(MolstarEvents.COORDINATES, handleAtomClick);
+//     };
+//     // eslint-disable-next-line react-hooks/exhaustive-deps
+//   }, [active]);
+
+//   useEffect(() => {
+//     if (currentValue) {
+//       setResidues(currentValue);
+//     }
+//     // eslint-disable-next-line react-hooks/exhaustive-deps
+//   }, []);
+
+//   return (
+//     <div className="flex flex-col gap-2 w-full">
+//       <div
+//         onClick={() => setActive(1)}
+//         className={`w-full h-full max-h-28 overflow-auto border-2 rounded-xl ${
+//           active === 1 && " border-green-200"
+//         }`}
+//         style={{
+//           background:
+//             active === 1
+//               ? Color.toHexStyle(activeColors.current[0]!)
+//               : undefined,
+//         }}
+//       >
+//         {!residues?.[0] ? (
+//           <div className="text-center px-1 cut-text">
+//             Click here to enable selection of first residue
+//           </div>
+//         ) : (
+//           <div className="text-center px-1 cut-text max-w-[200px] m-auto">
+//             {residues[0].residue}:{residues[0].auth_comp_id} -{" "}
+//             {residues[0].label}
+//           </div>
+//         )}
+//       </div>
+//       <div
+//         onClick={() => setActive(2)}
+//         className={`w-full h-full max-h-28 overflow-auto border-2 rounded-xl ${
+//           active === 2 && " border-green-200"
+//         }`}
+//         style={{
+//           background:
+//             active === 2
+//               ? Color.toHexStyle(activeColors.current[1]!)
+//               : undefined,
+//         }}
+//       >
+//         {!residues?.[1] ? (
+//           <div className="text-center px-1 cut-text">
+//             Click here to enable selection of latest residue
+//           </div>
+//         ) : (
+//           <div className="text-center px-1 cut-text max-w-[200px] m-auto">
+//             {residues[1].residue}:{residues[1].auth_comp_id} -{" "}
+//             {residues[1].label}
+//           </div>
+//         )}
+//       </div>
+//     </div>
+//   );
+// }
+
+export function ResidueRangeView({
+  currentValue,
+  onChange,
+}: VariableViewProps) {
+  const [residues, setResidues] = useState<AtomInfo[] | null>(null);
+  const [active, setActive] = useState<number>(0); // 0 = inactive, 1 = selecting first, 2 = selecting second
+
+  // Highlight range between two residues
+  const getLociForResidues = (perform: "selection" | "highlight") => {
+    if (!isMolstarLoaded(window.molstar) || !residues?.[0] || !residues?.[1])
+      return;
+
+    const ctx = window.molstar.plugin!;
+    const data =
+      ctx.managers.structure.hierarchy.current.structures[0]?.cell.obj?.data;
+    if (!data) return;
+
+    const r1 = Math.min(
+      Number(residues[0].residue),
+      Number(residues[1].residue)
+    );
+    const r2 = Math.max(
+      Number(residues[0].residue),
+      Number(residues[1].residue)
+    );
+
+    if (isNaN(r1) || isNaN(r2)) {
+      return;
+    }
+
+    const sel = Script.getStructureSelection(
+      (Q) =>
+        Q.struct.generator.atomGroups({
+          "chain-test": MolScriptBuilder.core.rel.eq([
+            MolScriptBuilder.ammp("auth_asym_id"),
+            residues[0]?.chainID,
+          ]),
+          "residue-test": MolScriptBuilder.core.rel.inRange([
+            MolScriptBuilder.ammp("auth_seq_id"),
+            r1,
+            r2,
+          ]),
+        }),
+      data
+    );
+
+    const loci = StructureSelection.toLociWithSourceUnits(sel);
+
+    switch (perform) {
+      case "selection":
+        ctx.managers.interactivity.lociSelects.select({ loci });
+        break;
+
+      default:
+        ctx.managers.interactivity.lociHighlights.highlight({ loci });
+    }
+  };
+
+  const clearHighlight = () => {
+    if (!isMolstarLoaded(window.molstar)) return;
+    window.molstar.plugin!.managers.interactivity.lociHighlights.clearHighlights();
+  };
+
+  const handleAtomClick = (e: any) => {
+    const atomInfo = (e.detail as MolstarClickEventDetail).atom;
+    if (!atomInfo) return;
+
+    setResidues((prev) => {
+      const updated = [...(prev ?? [])];
+      updated[active - 1] = atomInfo;
+      onChange(updated);
+      return updated;
+    });
+  };
+
+  useEffect(() => {
+    if (isMolstarLoaded(window.molstar)) {
+      window.molstar.plugin!.selectionMode = active !== 0;
+      window.molstar.plugin!.managers.interactivity.setProps({
+        granularity: "residue",
+      });
+      window.molstar.plugin!.managers.interactivity.lociSelects.deselectAll();
+    }
+
+    if (active) {
+      window.addEventListener(MolstarEvents.COORDINATES, handleAtomClick);
+    }
+
+    return () => {
+      window.removeEventListener(MolstarEvents.COORDINATES, handleAtomClick);
+    };
+  }, [active]);
+
+  useEffect(() => {
+    clearHighlight();
+    getLociForResidues("selection");
+  }, [residues]);
+
+  useEffect(() => {
+    if (currentValue) {
+      setResidues(currentValue);
+    }
+  }, []);
+
+  return (
+    <div className="flex flex-col gap-2 w-full items-center">
+      <ResidueBox
+        index={0}
+        label="Click here to enable selection of first residue"
+        active={active}
+        residue={residues?.[0]}
+        setActive={setActive}
+      />
+      <ResidueBox
+        active={active}
+        index={1}
+        residue={residues?.[1]}
+        label="Click here to enable selection of latest residue"
+        setActive={setActive}
+      />
+      <div
+        onMouseOver={() => getLociForResidues("highlight")}
+        onMouseLeave={clearHighlight}
+      >
+        <AppButton action={() => getLociForResidues("selection")}>
+          Highlight selection
+        </AppButton>
+      </div>
+    </div>
+  );
+}
+
+function ResidueBox({
+  index,
+  label,
+  active,
+  residue,
+  setActive,
+  onMouseOver,
+  onMouseLeave,
+}: {
+  index: 0 | 1;
+  label: string;
+  active: number;
+  residue?: AtomInfo;
+  setActive: Dispatch<SetStateAction<number>>;
+  onMouseOver?: () => void;
+  onMouseLeave?: () => void;
+}) {
+  const isActive = active === index + 1;
+
+  return (
+    <div
+      onClick={() => {
+        isActive ? setActive(0) : setActive(index + 1);
+      }}
+      onMouseOver={onMouseOver}
+      onMouseLeave={onMouseLeave}
+      className={`w-full h-full max-h-28 overflow-auto border-2 rounded-xl ${
+        isActive ? "bg-green-200 border-green-200" : ""
+      }`}
+    >
+      {!residue ? (
+        <div className="text-center px-1 cut-text">{label}</div>
+      ) : (
+        <div className="text-center px-1 cut-text max-w-[200px] m-auto">
+          {residue.chainID}:{residue.auth_comp_id}:{residue.residue} -{" "}
+          {residue.label}
+        </div>
+      )}
     </div>
   );
 }

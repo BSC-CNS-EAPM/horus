@@ -26,7 +26,9 @@ import {
   BoxVariableView,
   ChainView,
   HeteroResView,
+  InteractiveChainView,
   MultipleStructureVariableView,
+  ResidueRangeView,
   ResidueView,
   SphereVariableView,
   StandardResView,
@@ -188,7 +190,7 @@ function VariableListView(props: VariableViewProps) {
           acc[variable.id] = variable.defaultValue ?? null;
         }
         return acc;
-      }, {}),
+      }, {})
     );
     onChange(newValues);
   };
@@ -204,7 +206,7 @@ function VariableListView(props: VariableViewProps) {
     index: number,
     value: any,
     id: string,
-    groupID?: string,
+    groupID?: string
   ) => {
     // Update the corresponding index on the values array
     const newValues = [...currentValue];
@@ -250,7 +252,7 @@ function VariableListView(props: VariableViewProps) {
     <div key="delete" className="w-[100px] text-center">
       Delete
       <hr></hr>
-    </div>,
+    </div>
   );
 
   const colsNum = cols.length;
@@ -596,6 +598,22 @@ function VariableRenderer(props: {
           radio
         />
       );
+    case PluginVariableTypes.CHAIN_INTERACTIVE:
+      return (
+        <InteractiveChainView
+          currentValue={currentValue}
+          onChange={handleVariableChangeInternal}
+          variable={props.variable}
+        />
+      );
+    case PluginVariableTypes.RESIDUE_RANGE:
+      return (
+        <ResidueRangeView
+          currentValue={currentValue}
+          onChange={handleVariableChangeInternal}
+          variable={props.variable}
+        />
+      );
     default:
       return (
         <div className="red-containerp-2 m-2">
@@ -619,7 +637,7 @@ function DropdownVariableView({
       variableToRender.allowedValues
     ) {
       onChange(
-        variableToRender.defaultValue ?? variableToRender?.allowedValues[0],
+        variableToRender.defaultValue ?? variableToRender?.allowedValues[0]
       );
     }
   }, [
@@ -800,8 +818,8 @@ function IntegerFloatVariableView(props: VariableViewProps) {
       if (variable.allowedValues) {
         setNumberMessage(
           `The value must be one of the following: ${variable.allowedValues.join(
-            ", ",
-          )}`,
+            ", "
+          )}`
         );
       }
     }
