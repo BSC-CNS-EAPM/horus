@@ -306,6 +306,7 @@ export default class HorusMolstar {
     if (this.plugin) {
       // Remove the plugin
       this.plugin.dispose();
+      this.plugin.unmount();
     }
 
     // Launch a STATE event

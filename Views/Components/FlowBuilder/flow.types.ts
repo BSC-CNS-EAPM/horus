@@ -97,6 +97,8 @@ export type PluginVariable = {
 
   // Check if the variable is custom
   isCustom?: boolean;
+
+  block?: Block;
 };
 
 export type CustomVariable = PluginVariable & {

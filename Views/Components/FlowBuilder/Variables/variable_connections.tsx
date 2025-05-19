@@ -64,26 +64,24 @@ export function VariableSetupView(props: VariableModalViewProps) {
       ...variable,
       placedID: block.placedID,
       disabled: !!isFlowActive || variable.disabled,
-    };
+      block: block,
+    } as PluginVariable;
   });
 
-  const [filteredVariables, setFilteredVariables] = useState(variables);
+  const [filter, setFilter] = useState("");
 
-  const filterVariables = (event: any) => {
-    const value = event.target.value;
-    const filteredVariables = variables.filter((variable) => {
-      return (
-        variable.name.toLowerCase().includes(value.toLowerCase()) ||
-        variable.description.toLowerCase().includes(value.toLowerCase())
-      );
-    });
-
-    setFilteredVariables(filteredVariables);
-  };
-
-  const getGroupedVariables = () => {
+  const groupedVariables = (() => {
     // Group the variables by category
     const groupedVariables: Record<string, PluginVariable[]> = {};
+
+    const filteredVariables = filter
+      ? variables.filter((variable) => {
+          return (
+            variable.name.toLowerCase().includes(filter.toLowerCase()) ||
+            variable.description.toLowerCase().includes(filter.toLowerCase())
+          );
+        })
+      : variables;
 
     filteredVariables.forEach((variable) => {
       if (!groupedVariables[variable.category]) {
@@ -110,7 +108,7 @@ export function VariableSetupView(props: VariableModalViewProps) {
       ];
     }
     return groupedViews;
-  };
+  })();
 
   return (
     <div className="flex flex-col h-full p-2">
@@ -127,14 +125,16 @@ export function VariableSetupView(props: VariableModalViewProps) {
           <div className="flex flex-row gap-2">
             <SearchComponent
               placeholder="Search variables"
-              onChange={filterVariables}
+              onChange={(e) => {
+                setFilter(e.target.value);
+              }}
             />
           </div>
         </div>
         <hr className="my-4 p-0"></hr>
       </div>
       {block.variables && block.variables.length > 0 && (
-        <SidebarView views={getGroupedVariables()} />
+        <SidebarView views={groupedVariables} />
       )}
     </div>
   );
