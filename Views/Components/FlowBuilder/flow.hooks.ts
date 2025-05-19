@@ -2211,8 +2211,8 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     };
 
     // Update the window.horus.setFlow function
-    window.horus.setFlow = (flow: Flow) => {
-      setFlow(flow);
+    window.horus.setFlow = (newFlow) => {
+      setFlow({ ...newFlow });
     };
 
     // Add a new function to store extraData to the flow
@@ -2232,7 +2232,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     window.horus.getExtraData = (key: string) => {
       return flow.extraData?.[key];
     };
-  }, [flow]);
+  }, [flow, setFlow]);
 
   const updateBlockLogs = useCallback(
     (logs: LogsData) => {
