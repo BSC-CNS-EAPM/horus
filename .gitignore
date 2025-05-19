@@ -237,3 +237,5 @@ tmp/
 
 
 AppSupport/config
+
+*.horusSocket
