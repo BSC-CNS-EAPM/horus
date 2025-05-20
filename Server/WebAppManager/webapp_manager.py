@@ -86,12 +86,11 @@ class ExtraField:
         id = rawExtraField.get("id", None)
         if id is None:
             raise ValueError("Missing ID for extra field. Please check the configuration file.")
-        else:
-            self.id = id
+        self.id = id
 
-        name = rawExtraField.get("name", None)
+        name = rawExtraField.get("name", "Unknown")
+        type = rawExtraField.get("type", VariableTypes.STRING)
         self.description = rawExtraField.get("description", None)
-        type = rawExtraField.get("type", None)
 
         if not name or not type:
             raise ValueError(
@@ -192,16 +191,18 @@ class DatabaseConfig:
 
         if not secretKey:
 
-            self.secretKey = secrets.token_urlsafe(16)
+            secretKey = secrets.token_urlsafe(16)
 
             logging.getLogger("Horus").warning(
                 "Missing secret key for the database. "
                 + "Please check the configuration file. "
                 + "A random secret key will be used: %s",
-                self.secretKey,
+                secretKey,
             )
         else:
             self.secretKey = secretKey
+
+        self.secretKey = secretKey
 
         rawExtraFields = rawDatabase.get("extraFields", [])
         self.extraFields = [ExtraField(extraField) for extraField in rawExtraFields]
@@ -883,15 +884,17 @@ class WebAppManager:
 
         self.host = self.rawConfig.get("host", "localhost")
         self.port = self.rawConfig.get("port", 5000)
-        externalURL = self.rawConfig.get("externalURL", None)
         self.appName = self.rawConfig.get("appName", "Horus")
         self.companyName = self.rawConfig.get("companyName", "Horus")
         self.allowRemotes = self.rawConfig.get("allowRemotes", True)
 
+        externalURL = self.rawConfig.get("externalURL", None)
         if not externalURL:
             raise ValueError("Missing external URL. Please check the configuration file.")
         else:
             self.externalURL = externalURL
+
+        self.externalURL = externalURL
 
         # Instantiate the user management object
         rawUserManagement = self.rawConfig.get("userManagement")

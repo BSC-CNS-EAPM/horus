@@ -76,7 +76,7 @@ from Server.PluginManager import PluginManager
 from Server.FileExplorer import FileExplorer, UserFileExplorer, File
 
 # User management for WebApp mode
-from Server.WebAppManager import WebAppManager, UserError
+from Server.WebAppManager import WebAppManager, UserError, user
 from Server.WebAppManager import HorusUser
 
 if typing.TYPE_CHECKING:
@@ -2898,6 +2898,58 @@ class HorusServer:
 
             # Else just redirect to the home page
             return flask.redirect("/")
+
+        @self.server.route("/users/admintools/deleteuser", methods=["DELETE"])
+        @self.verifyAdmin
+        def deleteUserAdmintools():
+            if (
+                not self.webAppManager
+                or not self.webAppManager.userManagement.requireRegistration
+                or not self.webAppManager.db
+            ):
+                return flask.jsonify({"ok": False, "redirect": "/"})
+
+            if not currentUser or not currentUser.is_authenticated or currentUser.isDemo:
+                return flask.jsonify({"ok": False, "msg": "Invalid user. Please log in."})
+
+            try:
+                data = request.get_json()
+                email = data.get("email")
+
+                # Check if the email it's in the database
+                logging.getLogger("Horus").info(
+                    f"Admin '{currentUser.email}' is requesting the deletion of user '{email}'."
+                )
+                userToDelete = self.webAppManager.db.getUser(mail=email)
+
+                if not userToDelete:
+                    return flask.jsonify({"ok": False, "msg": "User not found"})
+
+                # Check if the user is the only admin
+                if userToDelete.admin:
+                    admins = [
+                        user for user in self.webAppManager.db.getAllUsers() if user.get("admin")
+                    ]
+                    if len(admins) == 1:
+                        return flask.jsonify(
+                            {
+                                "ok": False,
+                                "msg": "Cannot delete the last remaining administrator. At least one admin account must be preserved.",
+                            }
+                        )
+
+                # Delete the desired user from the database
+                self.webAppManager.db.deleteUser(email)
+
+                # If current user is the deleted user, log out
+                if currentUser.email == email:
+                    flask_login.logout_user()
+                    return flask.jsonify({"ok": False, "redirect": "/users/login"})
+
+                return flask.jsonify({"ok": True})
+
+            except Exception as exc:
+                return flask.jsonify({"ok": False, "msg": str(exc)})
 
         @self.server.route("/users/delete", methods=["GET"])
         def deleteUser():
