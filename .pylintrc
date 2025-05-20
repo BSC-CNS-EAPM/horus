@@ -1,5 +1,5 @@
 [tool.pylint.MASTER]
-ignore-paths = [ "^Tests/**/.*$" ]
+ignore = "^Tests/**/.*$" 
 
 [FORMAT]
 

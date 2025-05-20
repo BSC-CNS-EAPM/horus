@@ -1,7 +1,7 @@
+# pylint: disable=invalid-name
 import threading
 import os
 import typing
-import asyncio
 
 
 # Define the SingletonMeta class for the AppDelegate and MolstarAPI classes
@@ -63,7 +63,8 @@ class TempFile:
     def __init__(self, name: str, folder: typing.Optional[str] = None):
         """
         - Name: The name of the file.
-        - Folder: The folder where the file will be stored. If None, the file will bestored in the tmp folder.
+        - Folder: The folder where the file will be stored.
+        If None, the file will bestored in the tmp folder.
         """
         if folder is None:
             folder = self._tmpDir()
@@ -119,7 +120,7 @@ class TempFile:
 
     def _create(self):
         # Create the file with the content of the string
-        with open(self.path, "w") as f:
+        with open(self.path, "w", encoding="utf-8") as f:
             f.write("")
 
     def delete(self):
@@ -134,7 +135,7 @@ class TempFile:
 
         - content: The content to write to the file.
         """
-        with open(self.path, "w") as f:
+        with open(self.path, "w", encoding="utf-8") as f:
             f.write(content)
 
     def read(self):
@@ -143,7 +144,7 @@ class TempFile:
 
         :return: The content of the file as a string.
         """
-        with open(self.path, "r") as f:
+        with open(self.path, "r", encoding="utf-8") as f:
             return f.read()
 
     def deleteTmpFolder(self):
@@ -157,6 +158,9 @@ class TempFile:
 
 
 def getUserFolder() -> str:
+    """
+    Returns the current logged in user's folder
+    """
     # On WebApp mode, create the folder in the user's directory
     from App import AppDelegate
 
@@ -191,7 +195,8 @@ def initPlugin():
     version = input("Plugin version [0.0.1]: ") or "0.0.1"
     platforms = (
         input(
-            "Plugin platforms. Allowed: universal, linux, macos_intel, macos_arm) separated by spaces. Default: universal: "
+            "Plugin platforms. Allowed: universal, linux, macos_intel, macos_arm) "
+            "separated by spaces. Default: universal: "
         )
         or "universal"
     )
@@ -255,5 +260,6 @@ def initPlugin():
 
     print(f"Plugin {pluginName} created successfully!")
     print(
-        "Visit https://horus.bsc.es/repo for instructions on how to upload your plugin to the public repository."
+        "Visit https://horus.bsc.es/repo for instructions on how to upload your "
+        "plugin to the public repository."
     )
