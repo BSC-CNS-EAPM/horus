@@ -198,7 +198,7 @@ function _UserTable({
 
     const sampleUser = users[0]!;
 
-    return Object.keys(sampleUser).map((k) => {
+    const generatedColumns = Object.keys(sampleUser).map((k) => {
       return {
         field: k,
         filter: true,
@@ -210,6 +210,7 @@ function _UserTable({
                 values: groups,
               }
             : undefined,
+        cellRenderer: undefined as any,
         valueFormatter:
           k === "group"
             ? (params: any) => {
@@ -222,6 +223,49 @@ function _UserTable({
             : undefined,
       };
     });
+
+    generatedColumns.push({
+      field: "delete",
+      filter: false,
+      editable: false,
+      cellRenderer: (params: any) => {
+        return (
+          <div
+            className="w-full h-full flex justify-center items-center cursor-pointer"
+            onClick={() => {
+                const email = params.data.email;
+                const confirmDelete = window.confirm(`Delete user ${email}?`);
+                if (confirmDelete) {
+                  horusDelete({
+                    url: "/users/admintools/deleteuser",
+                    body: { email },
+                  }).then(async (res) => {
+                    // Check if the response is ok
+                    const response = await res.json();
+                    if(response.redirect) {
+                      window.location.href = response.redirect;
+                      return
+                    }
+                    if (!response.ok) {
+                      window.alert(response.msg);
+                      return;
+                    }
+                    getDatabase();
+                  });
+                }
+            }}
+          >
+            <TrashIcon style={{ color: "red" }} />
+          </div>
+        );
+      },
+      cellEditor: undefined,
+      cellEditorParams: undefined,
+      valueFormatter: undefined
+    });
+
+    return generatedColumns;
+
   }, [users, groups]);
 
   const editCell = (e: any) => {
