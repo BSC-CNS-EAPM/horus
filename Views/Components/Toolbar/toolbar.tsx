@@ -178,7 +178,7 @@ export default function HorusToolbar() {
         if (flowContext && !flowContext.flow.saved) {
           if (
             !(await horusConfirm(
-              "The current flow is not saved. Are you sure you want to continue?"
+              "The current flow is not saved. Are you sure you want to continue?",
             ))
           ) {
             return;
@@ -262,7 +262,7 @@ export default function HorusToolbar() {
           onClick: async () => {
             if (
               !(await horusConfirm(
-                "Are you sure you want to clean the recent flows?"
+                "Are you sure you want to clean the recent flows?",
               ))
             ) {
               return;
@@ -449,7 +449,7 @@ export default function HorusToolbar() {
                 dockApi: dockApi,
                 component: PANEL_REGISTRY.extensions.component,
                 panelID: `extensions-${page.id}-${Math.floor(
-                  Math.random() * 100000
+                  Math.random() * 100000,
                 )}`,
                 params: page,
               });

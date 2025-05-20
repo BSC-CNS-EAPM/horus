@@ -91,7 +91,7 @@ export type openPanel = {
   (
     type: "moleculePlotter",
     id: string,
-    params: { smilesToPlot: HorusSmilesType[] }
+    params: { smilesToPlot: HorusSmilesType[] },
   ): void;
   (
     type: "extensions",
@@ -101,7 +101,7 @@ export type openPanel = {
       plugin: string;
       id: string;
       data?: any;
-    }
+    },
   ): void;
 };
 

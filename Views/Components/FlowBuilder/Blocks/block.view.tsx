@@ -50,7 +50,7 @@ import ExternalIcon from "../../Toolbar/Icons/External";
 import Chevron from "@/Components/Toolbar/Icons/Chevron";
 
 export function BlockView(
-  props: BlockViewProps & { extraStyle?: CSSProperties }
+  props: BlockViewProps & { extraStyle?: CSSProperties },
 ) {
   const { block, blockHooks, isFlowActive } = props;
 
@@ -208,7 +208,7 @@ export function BlockRemotes(props: BlockRemotesProps) {
           onChange={(e) => {
             props.blockHooks?.setBlockRemote(
               props.block.placedID,
-              e.target.value
+              e.target.value,
             );
           }}
         >

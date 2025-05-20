@@ -97,7 +97,7 @@ export function HorusFileEditor({
 
                 window.horus?.updateFile(
                   new File([value], filename, { type: fileType }),
-                  path
+                  path,
                 );
 
                 setHasChanges(false);

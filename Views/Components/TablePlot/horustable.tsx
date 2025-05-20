@@ -30,7 +30,7 @@ export const HorusTable = forwardRef((props: HorusTableProps, ref: any) => {
     window.horus.saveFile(
       new File([csv], props.allowDownload?.filename ?? "data.csv", {
         type: "text/csv",
-      })
+      }),
     );
   };
 
