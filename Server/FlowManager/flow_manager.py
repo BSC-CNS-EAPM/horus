@@ -310,7 +310,8 @@ class Flow:
     """
 
     # WARNING: Properties added here may be updated by the blocks during their actions.
-    # Please if you add any property here, make sure to update the SubprocessManager.subprocessBlock
+    # Please if you add any property here,
+    # make sure to update the SubprocessManager.subprocessBlock
     # classmethod to include the new property in the subprocess block
 
     terminalOutput: typing.List[str]
@@ -452,9 +453,9 @@ class Flow:
         # Set the flow properties
         self.name = flow.get("name", "Unnamed flow")
         self.path = flow.get("path", None)
-        self.remote = flow.get("remote", None)
+
         self.currentExecuting = flow.get("currentExecuting", None)
-        self.date = flow.get("date", None)
+        self.date = flow.get("date", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         self.terminalOutput = flow.get("terminalOutput", [])
         self.pendingActions = flow.get("pendingActions", [])
         self.pendingSmilesActions = flow.get("pendingSmilesActions", [])
@@ -650,7 +651,6 @@ class Flow:
             "name": self.name,
             "savedID": self.savedID,
             "path": self.path if self._skipPath is None else self._skipPath,
-            "remote": self.remote,
             "currentExecuting": self.currentExecuting,
             "status": self.status.value,
             "date": self.date,
