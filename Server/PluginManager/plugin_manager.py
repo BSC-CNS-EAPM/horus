@@ -1430,7 +1430,7 @@ class PluginManager(metaclass=HorusSingleton):
             print(f"Block starting time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
             print(f"Block ID: {block.id}")
             print(f"Block name: {block.name}")
-            print("Block selected remote: {block.selectedRemote}")
+            print(f"Block selected remote: {block.selectedRemote}")
             print("Block config:")
             print(json.dumps(block.config, indent=4))
             print("Block inputs:")

@@ -1875,8 +1875,7 @@ class PluginBlock:
         # If the selected remote does not exist in the current remotes, set it as the local IP
         from App import AppDelegate
 
-        remotes = AppDelegate().server.remoteManager.listRemotes()
-        if self.selectedRemote not in remotes:
+        if not AppDelegate().server.remoteManager.remoteExists(self.selectedRemote):
             self.selectedRemote = "Local"
 
         return {
