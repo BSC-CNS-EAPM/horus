@@ -2120,6 +2120,11 @@ class SubprocessManager:
                 # outside of the forked context
                 error = Exception(msg)
 
+                # Cancel Any job in the block if its a slurm block
+                if isinstance(forkedBlock, SlurmBlock):
+                    forkedBlock.cancelAllJobs()
+                    forkedBlock.parseStatus()
+
             finally:
                 # Always ensure we put the result in the queue
                 q.put(

@@ -246,10 +246,22 @@ class RemotesAPI:
             except subprocess.TimeoutExpired:
                 failed = True
 
+            def logCommandOutput(o: str):
+                if len(o) > 250:
+                    logging.getLogger("Horus").debug(
+                        "Local command output (truncated): %s",
+                        o[:250],
+                    )
+                else:
+                    logging.getLogger("Horus").debug("Local command output: %s", o)
+
+            # STDOUT
             out = process.stdout.strip() if process.stdout else ""
+            logCommandOutput(out)
+
+            # STDERR
             err = process.stderr.strip() if process.stderr else ""
-            logging.getLogger("Horus").debug("Local command output: %s", out)
-            logging.getLogger("Horus").debug("Local command error: %s", err)
+            logCommandOutput(err)
 
             if failed:
                 logging.getLogger("Horus").error("Command timed out: %s", command)

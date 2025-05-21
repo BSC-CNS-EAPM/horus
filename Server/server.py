@@ -1532,6 +1532,45 @@ class HorusServer:
 
             return flask.jsonify(success)
 
+        @self.server.route("/api/plugins/fetch-job", methods=["POST"])
+        @self.verifyLogin
+        def fetchJob():
+            """
+            Force-update the slurm status of a block
+            """
+            data = request.get_json()
+            flowPath = data.get("flowPath")
+            placedID = data.get("placedID")
+
+            if any(item is None for item in [flowPath, placedID]):
+                return flask.make_response({"ok": False, "msg": "Missing parameters."}, 400)
+
+            # Connect to the remote and cancel the job
+            try:
+                flow = self.flowManager.openFlowFromPath(
+                    flowPath, addToRecents=False, checkState=True
+                )
+                blockToUpdate = flow.findBlockByPlacedID(int(placedID))
+
+                from HorusAPI import SlurmBlock
+
+                if not isinstance(blockToUpdate, SlurmBlock):
+                    raise ValueError("Specified block is not a SLURM Block.")
+
+                blockToUpdate._setRemote(
+                    self.remoteManager.getRemoteAPI(blockToUpdate.selectedRemote)
+                )
+                blockToUpdate.parseStatus(skipCompleted=False)
+
+                # Emit the changes
+                flow._socket = self.socketio
+                flow.write()
+
+            except Exception as e:
+                return flask.make_response({"ok": False, "msg": str(e)}, 400)
+
+            return flask.make_response({"ok": True, "msg": "Job Updated."}, 200)
+
         @self.server.route("/api/plugins/cancel-job", methods=["GET"])
         @self.verifyLogin
         def cancelJob():
