@@ -1,10 +1,10 @@
 // React
-import { useState } from "react";
+import { useContext, useState } from "react";
 
 // Horus components
 import SidebarView from "../../SidebarView/sidebar_view";
 import AppButton from "@/Components/appbutton";
-import { horusGet } from "@/Utils/utils";
+import { horusGet, horusPost } from "@/Utils/utils";
 import LogFile from "@/Components/Toolbar/Icons/LogFile";
 
 // Flow status
@@ -21,6 +21,7 @@ import {
 } from "../flow.types";
 import { HorusLazyLog } from "../../HorusLazyLog/HorusLazyLog";
 import { HorusViewTabs, Tab } from "@/Components/Tabs";
+import { FlowBuilderContext } from "@/Components/MainApp/PanelView";
 
 type BlockLogsViewProps = {
   block: Block;
@@ -216,6 +217,9 @@ function SingleSlurmJobView({ block, job }: { block: Block; job: SlurmJob }) {
   const isJobRunning = JobStatus.RUNNING_STATUSES().includes(job.JobState);
 
   const [cancelling, setCancelling] = useState(false);
+  const [fetching, setFetching] = useState(false);
+
+  const flowBuilderContext = useContext(FlowBuilderContext);
 
   return (
     <div className="flex flex-col h-full p-4">
@@ -229,6 +233,40 @@ function SingleSlurmJobView({ block, job }: { block: Block; job: SlurmJob }) {
           >
             {block.name} - {job.JobId}
           </div>
+          {!flowBuilderContext?.flow.isFlowActive && !block.isRunning && (
+            <AppButton
+              disabled={fetching}
+              action={() => {
+                if (!flowBuilderContext) {
+                  return;
+                }
+
+                setFetching(true);
+                // Force an update of the block
+                const path = "/api/plugins/fetch-job";
+                const data = JSON.stringify({
+                  flowPath: flowBuilderContext?.flow.flow.path,
+                  placedID: block.placedID,
+                });
+
+                flowBuilderContext.flow.hideFlowError.current = true;
+
+                horusPost(path, null, data)
+                  .then((r) => r.json())
+                  .then((d) => {
+                    if (!d.ok) {
+                      alert(`${d.msg}`);
+                    }
+                  })
+                  .catch((e) => alert(e))
+                  .finally(() => {
+                    setFetching(false);
+                  });
+              }}
+            >
+              {fetching ? "Updating" : "Update status"}
+            </AppButton>
+          )}
           {isJobRunning && (
             <AppButton
               disabled={cancelling}

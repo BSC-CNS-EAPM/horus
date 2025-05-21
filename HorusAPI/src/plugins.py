@@ -1,3 +1,5 @@
+# pylint: disable=invalid-name
+
 # Future imports
 from __future__ import annotations
 
@@ -2258,7 +2260,16 @@ class SlurmJob(HorusPydanticModel):
         from Server.RemotesManager import CommandFailed
 
         # Prepare the command to get all the information on a single run
-        command = f"cat {self.command}; echo {self.SEPARATOR}; cat {self.stdout_path}; echo {self.SEPARATOR}; cat {self.stderr_path}; echo {self.SEPARATOR}; {self.SCONTROL_COMMAND(self.job_id)}"
+        command = (
+            f"cat {self.command}; "
+            f"echo {self.SEPARATOR}; "
+            f"cat {self.stdout_path}; "
+            f"echo {self.SEPARATOR}; "
+            f"cat {self.stderr_path}; "
+            f"echo {self.SEPARATOR}; "
+            f"{self.SCONTROL_COMMAND(self.job_id)}"
+        )
+
         out = ""
         try:
             out = remote.command(command)
@@ -2377,6 +2388,9 @@ class SlurmJob(HorusPydanticModel):
 
     @staticmethod
     def getSacctStatus(remote: RemoteUnion, jobID: str) -> "Status":
+        """
+        Will get the status of the job from the Slurm Accounting Database (if available)
+        """
         from Server.RemotesManager import CommandFailed
 
         # Assume completed when the status cannot be retrieved
@@ -2386,7 +2400,10 @@ class SlurmJob(HorusPydanticModel):
         except CommandFailed as cf1:
 
             logging.getLogger("Horus").error(
-                f"Failed to check sactt state for job {jobID}. {cf1}. Trying with less reliable squeue."
+                "Failed to check sactt state for job %s. %s."
+                " Trying with less reliable squeue.",
+                jobID,
+                str(cf1),
             )
 
             # Try with squeue
@@ -2397,7 +2414,10 @@ class SlurmJob(HorusPydanticModel):
             except CommandFailed as cf2:
                 # Assume The job has ended
                 logging.getLogger("Horus").error(
-                    f"Failed to check Slurm state for job {jobID}. {cf2}. Assuming job ended successfully."
+                    "Failed to check Slurm state for job %s. %s. "
+                    "Assuming job ended successfully.",
+                    jobID,
+                    str(cf2),
                 )
 
         return status
@@ -2510,7 +2530,7 @@ class SlurmBlock(PluginBlock):
 
         return outputs
 
-    def parseStatus(self) -> Status:
+    def parseStatus(self, skipCompleted: bool = True) -> Status:
         """
         The status of the block as a parsed string.
         """
@@ -2524,7 +2544,7 @@ class SlurmBlock(PluginBlock):
             for j in self.jobs:
 
                 # Skip finished jobs
-                if j.completed:
+                if skipCompleted and j.completed:
                     continue
 
                 tasks[j.job_id] = executor.submit(j.updateLogs, self.remote)
@@ -2599,6 +2619,9 @@ class SlurmBlock(PluginBlock):
         """
         Cancels the jobs in the slurm queue.
         """
+
+        if not self.jobs:
+            return
 
         # Ensure the remote api has as blockID this block
         jids = ",".join([j.job_id for j in self.jobs])

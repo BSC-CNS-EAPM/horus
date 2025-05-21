@@ -1510,8 +1510,7 @@ class Flow:
                     block._setRemote(rAPI)
 
                     # Cancel the jobs and parse the failed status
-                    if block.jobs:
-                        block.cancelAllJobs()
+                    block.cancelAllJobs()
 
                     block.parseStatus()
 
