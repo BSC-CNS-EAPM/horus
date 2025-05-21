@@ -1835,6 +1835,7 @@ class PluginBlock:
 
         # Update the variables with the values the user has set
         self.selectedInputGroup = selectedInputGroup
+
         self.selectedRemote = selectedRemote
         self._updateVariables(variablesJSONParsed)
 
@@ -1867,6 +1868,14 @@ class PluginBlock:
         """
         Encode only the blockID and the internal variables.
         """
+
+        # Ensure the selected remote exists in the current isntance of Horus
+        # If the selected remote does not exist in the current remotes, set it as the local IP
+        from App import AppDelegate
+
+        remotes = AppDelegate().server.remoteManager.listRemotes()
+        if self.selectedRemote not in remotes:
+            self.selectedRemote = "Local"
 
         return {
             "id": self.id,

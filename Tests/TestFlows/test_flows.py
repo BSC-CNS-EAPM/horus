@@ -53,7 +53,6 @@ def flow_data():
     return {
         "name": "Test Flow",
         "path": "/path/to/flow.flow",
-        "remote": "Local",
         "currentExecuting": 1,
         "status": "RUNNING",
         "date": "2022-01-01 12:00:00",
@@ -80,7 +79,6 @@ def flow(flow_data, plugin_manager):
 def test_flow_properties(flow: Flow):
     assert flow.name == "Test Flow"
     assert flow.path == "/path/to/flow.flow"
-    assert flow.remote == "Local"
     assert flow.currentExecuting == 1
     assert flow.status == Flow.FlowStatus.RUNNING
     assert flow.date == "2022-01-01 12:00:00"
@@ -102,7 +100,6 @@ def test_flow_encode(flow: Flow):
     print(encoded_flow)
     assert encoded_flow["name"] == "Test Flow"
     assert encoded_flow["path"] == "/path/to/flow.flow"
-    assert encoded_flow["remote"] == "Local"
     assert encoded_flow["currentExecuting"] == 1
     assert encoded_flow["status"] == "RUNNING"
     assert encoded_flow["date"] == "2022-01-01 12:00:00"
@@ -140,7 +137,6 @@ def test_flow_read(tmpdir, flow_data):
 
     read_flow = Flow.read(flow_path)
     assert read_flow.name == "Test Flow"
-    assert read_flow.remote == "Local"
     assert read_flow.currentExecuting == 1
     assert read_flow.status == Flow.FlowStatus.RUNNING
     assert read_flow.date == "2022-01-01 12:00:00"
