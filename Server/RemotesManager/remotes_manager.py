@@ -1,3 +1,4 @@
+# pylint: disable=invalid-name
 """
 This module contains the RemotesAPI class, which is used to manage the
 remote connections to the run Slurm blocks.
@@ -208,7 +209,7 @@ class RemotesAPI:
         """
         return self.command("echo $HOME")
 
-    def command(
+    def command(  # pylint: disable=method-hidden
         self,
         command: str,
         timeout: t.Optional[int] = None,
@@ -220,7 +221,8 @@ class RemotesAPI:
 
         :param command: The command to run.
         :param timeout: The timeout in seconds.
-        :param forceLocal: If True, the command will be executed locally even if the block has a remote selected.
+        :param forceLocal: If True, the command will be
+        executed locally even if the block has a remote selected.
         :param mergeStdErr: If True (default) will append the stdErr of the command to the output.
 
         :return: The output of the command.
@@ -239,8 +241,9 @@ class RemotesAPI:
                     stdin=subprocess.DEVNULL,
                     timeout=timeout,
                     text=True,
+                    check=False,
                 )
-            except subprocess.TimeoutExpired as te:
+            except subprocess.TimeoutExpired:
                 failed = True
 
             out = process.stdout.strip() if process.stdout else ""
@@ -655,6 +658,9 @@ class RemotesManager:
     Manages the connection to the remote clusters.
     """
 
+    # The default local name
+    LOCAL_IP = "Local"
+
     remote: t.Optional[RemotesAPI] = None
     """
     The connected remote
@@ -707,7 +713,8 @@ class RemotesManager:
 
         if newConfig.get("keyPath") is not None and newConfig.get("password") is not None:
             raise Exception(
-                "While configuring a remote either the keys or the password is required, not both."
+                "While configuring a remote either the keys or "
+                "the password is required, not both."
             )
 
         newKeyPath = newConfig.get("keyPath", None)

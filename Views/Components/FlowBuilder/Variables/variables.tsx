@@ -190,7 +190,7 @@ function VariableListView(props: VariableViewProps) {
           acc[variable.id] = variable.defaultValue ?? null;
         }
         return acc;
-      }, {}),
+      }, {})
     );
     onChange(newValues);
   };
@@ -206,7 +206,7 @@ function VariableListView(props: VariableViewProps) {
     index: number,
     value: any,
     id: string,
-    groupID?: string,
+    groupID?: string
   ) => {
     // Update the corresponding index on the values array
     const newValues = [...currentValue];
@@ -252,7 +252,7 @@ function VariableListView(props: VariableViewProps) {
     <div key="delete" className="w-[100px] text-center">
       Delete
       <hr></hr>
-    </div>,
+    </div>
   );
 
   const colsNum = cols.length;
@@ -637,7 +637,7 @@ function DropdownVariableView({
       variableToRender.allowedValues
     ) {
       onChange(
-        variableToRender.defaultValue ?? variableToRender?.allowedValues[0],
+        variableToRender.defaultValue ?? variableToRender?.allowedValues[0]
       );
     }
   }, [
@@ -818,8 +818,8 @@ function IntegerFloatVariableView(props: VariableViewProps) {
       if (variable.allowedValues) {
         setNumberMessage(
           `The value must be one of the following: ${variable.allowedValues.join(
-            ", ",
-          )}`,
+            ", "
+          )}`
         );
       }
     }
@@ -983,6 +983,10 @@ function FilePickerView(props: FilePickerViewProps) {
         onChange={(e) => onChange(e.target.value)}
       />
       <HorusFileExplorer
+        openOutsideFlowContext={
+          (variable as PluginVariable & { openOutsideFlowContext?: boolean })
+            ?.openOutsideFlowContext
+        }
         openAtPath={currentValue}
         onFileConfirm={onChange}
         onFileSelect={onChange}

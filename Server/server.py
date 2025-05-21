@@ -76,8 +76,7 @@ from Server.PluginManager import PluginManager
 from Server.FileExplorer import FileExplorer, UserFileExplorer, File
 
 # User management for WebApp mode
-from Server.WebAppManager import WebAppManager, UserError, user
-from Server.WebAppManager import HorusUser
+from Server.WebAppManager import WebAppManager, UserError, HorusUser
 
 if typing.TYPE_CHECKING:
     from Server.WebAppManager import Database
@@ -2844,14 +2843,6 @@ class HorusServer:
             ):
                 raise Exception("No user registration required")
 
-            if self.webAppManager.userManagement.mailServer is None:
-                logging.getLogger("Horus").error(
-                    "Cannot reset user passwords without a MailServer."
-                    + " To enable this functionality, set 'requireActivation'"
-                    + " to true and configure the Mail in the horus.config.json file"
-                )
-                raise Exception("Please contact support in order to recover your password")
-
             if request.method == "GET":
 
                 # If there is a token in the args, verify it and send the reset password page
@@ -2859,7 +2850,7 @@ class HorusServer:
 
                 if token is not None:
                     try:
-                        mail = self.webAppManager.userManagement.mailServer.validateToken(
+                        mail = self.webAppManager.db.validateToken(
                             token, self.webAppManager.db.dbConfig.secretKey
                         )
                         return self.renderTemplate("Login/reset.html", mail=mail)
@@ -2874,6 +2865,16 @@ class HorusServer:
 
                 if email is not None:
                     try:
+                        if self.webAppManager.userManagement.mailServer is None:
+                            logging.getLogger("Horus").error(
+                                "Cannot reset user passwords without a MailServer."
+                                + " To enable this functionality, set 'requireActivation'"
+                                + " to true and configure the Mail in the horus.config.json file"
+                            )
+                            raise Exception(
+                                "Please contact support in order to recover your password"
+                            )
+
                         self.webAppManager.db.resetPassword(email)
                         return flask.jsonify(
                             {"ok": True, "msg": "An email has been sent to reset your password"}
@@ -2899,6 +2900,33 @@ class HorusServer:
             # Else just redirect to the home page
             return flask.redirect("/")
 
+        @self.server.route("/users/admintools/changepassword", methods=["POST"])
+        @self.verifyAdmin
+        def changePasswordAdmintools():
+            if (
+                not self.webAppManager
+                or not self.webAppManager.userManagement.requireRegistration
+                or not self.webAppManager.db
+            ):
+                return flask.jsonify({"ok": False, "redirect": "/"})
+
+            if not currentUser or not currentUser.is_authenticated or currentUser.isDemo:
+                return flask.jsonify({"ok": False, "msg": "Invalid user. Please log in."})
+
+            try:
+                data = request.get_json()
+                email = data.get("email")
+
+                if email is not None:
+                    url = self.webAppManager.db.getUrlResetPassword(email)
+                    return flask.jsonify(
+                        {"ok": True, "msg": "Use this URL to change the password", "url": url}
+                    )
+                else:
+                    return flask.jsonify({"ok": False, "msg": "No email provided"})
+            except Exception as exc:
+                return flask.jsonify({"ok": False, "msg": str(exc)})
+
         @self.server.route("/users/admintools/deleteuser", methods=["DELETE"])
         @self.verifyAdmin
         def deleteUserAdmintools():
@@ -2918,7 +2946,9 @@ class HorusServer:
 
                 # Check if the email it's in the database
                 logging.getLogger("Horus").info(
-                    f"Admin '{currentUser.email}' is requesting the deletion of user '{email}'."
+                    "Admin '%s' is requesting the deletion of user '%s'.",
+                    currentUser.email,
+                    email,
                 )
                 userToDelete = self.webAppManager.db.getUser(mail=email)
 
@@ -2934,7 +2964,8 @@ class HorusServer:
                         return flask.jsonify(
                             {
                                 "ok": False,
-                                "msg": "Cannot delete the last remaining administrator. At least one admin account must be preserved.",
+                                "msg": "Cannot delete the last remaining administrator. "
+                                "At least one admin account must be preserved.",
                             }
                         )
 

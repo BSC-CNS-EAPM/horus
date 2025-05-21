@@ -18,7 +18,12 @@ export const queryClient = new QueryClient();
 document.addEventListener("DOMContentLoaded", () => {
   if (!container) {
     // check if createRoot has already been called
-    container = document.getElementById("horusRoot")!;
+    container = document.getElementById("horusRoot");
+
+    if (!container) {
+      return;
+    }
+
     const root = createRoot(container);
     root.render(
       // StrictMode is not compatible with XArrows, disable in production, enable in debug
