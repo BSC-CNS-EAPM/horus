@@ -18,5 +18,11 @@
   "python.analysis.autoImportCompletions": true,
   "python.analysis.extraPaths": [
     "AppSupport/DefaultPlugins/Horus/Include"
-  ]
+  ],
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/bower_components": true,
+    "**/*.code-search": true,
+    "**/dist": true
+  }
 }

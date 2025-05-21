@@ -1,5 +1,6 @@
 [tool.pylint.MASTER]
 ignore = "^Tests/**/.*$" 
+extension-pkg-whitelist=pydantic
 
 [FORMAT]
 

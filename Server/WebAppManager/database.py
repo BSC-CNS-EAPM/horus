@@ -11,7 +11,11 @@ import datetime
 # json for serialization
 import json
 
+# socket for knowing the external ip adress
+import socket
+
 # Werkzeug utilities
+import itsdangerous
 from werkzeug.security import generate_password_hash, check_password_hash
 
 # Database management with SQLite and SQLAlchemy
@@ -48,12 +52,32 @@ class Database:
     A shared instance of the web app manager
     """
 
+    TOKEN_SALT: str = "email-confirm"
+    """
+    The salt for the token
+    """
+
     VALIDATION_MAIL_EXPIRATION = 60 * 60 * 24
     """
     The expiration time for the validation mail in seconds
     """
 
-    def __init__(self, config: "WebAppManager") -> None:
+    externalURL: str
+    """
+    External URL to generate links to
+    """
+
+    def __init__(self, config: "WebAppManager", externalURL: typing.Optional[str] = None) -> None:
+
+        if externalURL is None:
+            externalURL = socket.gethostbyname(socket.gethostname())
+            logging.getLogger("Horus").warning(
+                "Missing external URL. Please check the configuration file. "
+                + "Using external ip address (%s) as the external URL.",
+                externalURL,
+            )
+
+        self.externalURL = externalURL
         self.webAppManager = config
         dbConfig = config.userManagement.database
 
@@ -288,6 +312,51 @@ class Database:
                     return
 
         raise UserError("User already exists")
+    
+    def generateToken(self, email: str, secretKey: str) -> str:
+        """
+        Generates a token for the user. The token is used to verify the user's email address
+
+        :param email: The email address to generate the token for
+        :param secretKey: The secret key to use for token generation
+        """
+
+        serializer = itsdangerous.URLSafeTimedSerializer(secretKey)
+        return str(serializer.dumps(email, salt=self.TOKEN_SALT))
+
+    def validateToken(self, token: str, secretKey: str, expiration: int = 3600) -> str:
+        """
+        Validates the token for the user. The token is used to verify the user's email address
+
+        :param token: The token to validate
+        :param secretKey: The secret key to use for validation
+        :param expiration: The expiration time for the token
+
+        :return: The email address if the token is valid
+        """
+
+        serializer = itsdangerous.URLSafeTimedSerializer(secretKey)
+        try:
+            mail = serializer.loads(token, salt=self.TOKEN_SALT, max_age=expiration)
+            return mail
+        except itsdangerous.SignatureExpired as e:
+            raise ValueError("The token has expired") from e
+        except itsdangerous.BadSignature as e:
+            raise ValueError("The token is invalid") from e
+
+    def getUrlResetPassword(self, mail: str) -> str:
+        """
+        Returns a token to reset the password of a user in the database with the given email
+        """
+
+        if not self.getUser(mail=mail):
+            raise ValueError("User does not exist")
+
+        serializer = itsdangerous.URLSafeTimedSerializer(self.dbConfig.secretKey)
+        token = str(serializer.dumps(mail, salt=self.TOKEN_SALT))
+
+        return self.externalURL + "/users/reset?token=" + token
+
 
     def resetPassword(self, mail: str) -> str:
         """
@@ -311,10 +380,7 @@ class Database:
         Given a correct token and a new password, resets the password of the user
         """
 
-        if not self.webAppManager.userManagement.mailServer:
-            raise ValueError("Mail server is not configured")
-
-        mail = self.webAppManager.userManagement.mailServer.validateToken(
+        mail = self.validateToken(
             token, self.dbConfig.secretKey, self.VALIDATION_MAIL_EXPIRATION
         )
 
@@ -341,7 +407,7 @@ class Database:
             raise ValueError("Mail server is not configured")
 
         # Check if the token is valid for the user
-        mail = self.webAppManager.userManagement.mailServer.validateToken(
+        mail = self.validateToken(
             token,
             self.dbConfig.secretKey,
             self.VALIDATION_MAIL_EXPIRATION,

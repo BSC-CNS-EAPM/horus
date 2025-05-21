@@ -30,13 +30,13 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 # Generating the token in case the secret key is missing
 import secrets
-import itsdangerous
 
 # HorusAPI
 from HorusAPI import VariableTypes
 
 # Database
-from .database import Database
+from .database import Database, UserError
+from Server.WebAppManager import database
 
 # Current user
 if typing.TYPE_CHECKING:
@@ -48,6 +48,28 @@ if typing.TYPE_CHECKING:
     currentUser = typing.cast(HorusUser, flask_login.current_user)
 else:
     currentUser = flask_login.current_user
+
+
+def getDB() -> "Database":
+    """
+    Returns the database class if running in WebApp mode with DB
+    """
+
+    from App import AppDelegate
+
+    wManager = AppDelegate().server.webAppManager
+
+    if not wManager:
+        raise RuntimeError(
+            "WebApp manager is not correctly defined. Are you running WebApp mode?"
+        )
+
+    db = wManager.db
+
+    if not db:
+        raise ValueError("WebApp mode not configured with a database for users.")
+
+    return db
 
 
 class ExtraField:
@@ -308,11 +330,6 @@ class MailServer:
     External URL to generate links to
     """
 
-    TOKEN_SALT: str = "email-confirm"
-    """
-    The salt for the token
-    """
-
     def __init__(self, rawMailServer: Dict[str, Any], externalURL: Optional[str] = None) -> None:
 
         if externalURL is None:
@@ -339,6 +356,7 @@ class MailServer:
         self.resetSubject = rawMailServer.get("resetSubject", "Horus Password Reset")
         self.resetBody = rawMailServer.get("resetBody", "Your password reset link is: %link%")
 
+        self.database = database
         self.externalURL = externalURL
         self.host = host
         self.port = port
@@ -404,7 +422,7 @@ class MailServer:
         :param activationCode: The activation code to send to the user
         """
 
-        activationCode = self._generateToken(to, secretKey)
+        activationCode = getDB().generateToken(to, secretKey)
 
         activationLink = f"{self.externalURL}/users/activate?token={activationCode}"
 
@@ -425,7 +443,7 @@ class MailServer:
         :param secretKey: The secret key to use for token generation
         """
 
-        resetLink = f"{self.externalURL}/users/reset?token={self._generateToken(to, secretKey)}"
+        resetLink = f"{self.externalURL}/users/reset?token={getDB().generateToken(to, secretKey)}"
 
         subject = self.resetSubject if self.resetSubject else "Horus Password Reset"
         body = (
@@ -435,39 +453,6 @@ class MailServer:
         )
 
         self._sendMail(to, subject, body)
-
-    @classmethod
-    def _generateToken(cls, email: str, secretKey: str) -> str:
-        """
-        Generates a token for the user. The token is used to verify the user's email address
-
-        :param email: The email address to generate the token for
-        :param secretKey: The secret key to use for token generation
-        """
-
-        serializer = itsdangerous.URLSafeTimedSerializer(secretKey)
-        return str(serializer.dumps(email, salt=cls.TOKEN_SALT))
-
-    @classmethod
-    def validateToken(cls, token: str, secretKey: str, expiration: int = 3600) -> str:
-        """
-        Validates the token for the user. The token is used to verify the user's email address
-
-        :param token: The token to validate
-        :param secretKey: The secret key to use for validation
-        :param expiration: The expiration time for the token
-
-        :return: The email address if the token is valid
-        """
-
-        serializer = itsdangerous.URLSafeTimedSerializer(secretKey)
-        try:
-            mail = serializer.loads(token, salt=cls.TOKEN_SALT, max_age=expiration)
-            return mail
-        except itsdangerous.SignatureExpired as e:
-            raise ValueError("The token has expired") from e
-        except itsdangerous.BadSignature as e:
-            raise ValueError("The token is invalid") from e
 
 
 class FileManagement:

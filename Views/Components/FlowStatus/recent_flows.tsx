@@ -53,14 +53,14 @@ export default function RecentUserFlows(props: RecentUserFlowProps) {
   };
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1 h-full">
       {flows?.length > 0 ? (
         flows.map((flow) => (
           <HorusLink
             role="button"
             to={getURL(flow)}
             key={flow.savedID ?? "Unknown flow ID"}
-            className="predefined-flow w-full h-full max-w-[380px]"
+            className="predefined-flow w-full max-w-[380px]"
           >
             <div className="flex flex-row justify-between">
               <div className="predefined-flow-name max-w-[260px] cut-text">
@@ -76,7 +76,9 @@ export default function RecentUserFlows(props: RecentUserFlowProps) {
           </HorusLink>
         ))
       ) : (
-        <div className="predefined-flow-name">No recent flows</div>
+        <div className="h-full flex justify-center items-center">
+          No recent flows
+        </div>
       )}
     </div>
   );
@@ -133,7 +135,7 @@ export function useGetRecentFlows(webAppFlows: boolean = false): {
       if (!data.ok) throw new Error(data.msg || "Failed to fetch recent flows");
       const flows = data.flows.sort(
         (a: Flow, b: Flow) =>
-          new Date(b.date).getTime() - new Date(a.date).getTime(),
+          new Date(b.date).getTime() - new Date(a.date).getTime()
       );
       return {
         flows,
