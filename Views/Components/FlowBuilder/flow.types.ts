@@ -19,6 +19,7 @@ export type HorusPlugin = {
     config: Array<Block>;
   }>;
   default: boolean;
+  dev: boolean;
 
   // Base64 encoded logo
   logo?: string;

@@ -2699,6 +2699,12 @@ class Plugin:
     Whether the plugin is a default plugin or not.
     """
 
+    dev: bool = False
+    """
+    If the plugin comes from a development 
+    folder and not the regular plugins folder
+    """
+
     def __init__(self, id: typing.Optional[str] = None, noMetaLoad: bool = False):
         """
         Initializes the plugin.
