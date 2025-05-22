@@ -174,6 +174,25 @@ class PluginManager(metaclass=HorusSingleton):
         if not os.path.exists(self.pluginsDir):
             os.makedirs(self.pluginsDir, exist_ok=True)
 
+        # Load additional folders if provided
+        try:
+            self.devPluginsFolders: list[str] = (
+                self.horusSettings.getSetting("pluginsFolders").value or []
+            )
+        except Exception as e:
+            logging.getLogger("Horus").error(
+                "Could not read additional development plugins folders: %s", str(e)
+            )
+            self.devPluginsFolders = []
+
+        if len(self.devPluginsFolders) > 0:
+            logging.getLogger("Horus").info("Additional plugin directories:")
+            for f in self.devPluginsFolders:
+                logging.getLogger("Horus").info("- %s", f)
+
+        for ePlug in self.devPluginsFolders:
+            sys.path.append(ePlug)
+
         # Add the plugins dir to the pythonpath to access other plugins from plugins
         sys.path.append(self.defaultPluginsDir)
         sys.path.append(self.pluginsDir)
@@ -514,6 +533,13 @@ class PluginManager(metaclass=HorusSingleton):
 
         try:
             plugin = self._getPluginByID(pluginID)
+
+            # If the plugin is default or dev, then prevent uninstall
+            if plugin.dev or plugin.default:
+                raise ValueError(
+                    "The plugin cannot be removed because its a default or development plugin."
+                )
+
             pluginPath = os.path.join(self.pluginsDir, plugin._path)
         except PluginNotFoundError:
             pluginPath = os.path.join(self.pluginsDir, pluginID)
@@ -554,7 +580,16 @@ class PluginManager(metaclass=HorusSingleton):
             if not p.startswith(".")
         ]
 
-        plugins = defaultPlugins + installedPlugins
+        # List the plugins in the additional plugins, if provided
+        devPlugins = []
+        for devFolder in self.devPluginsFolders:
+            for p in os.listdir(devFolder):
+                path = os.path.join(devFolder, p)
+                if not p.startswith("."):
+                    devPlugins.append(path)
+
+        # plugins = defaultPlugins + installedPlugins
+        plugins = devPlugins + defaultPlugins + installedPlugins
 
         return plugins
 
@@ -956,8 +991,10 @@ class PluginManager(metaclass=HorusSingleton):
         # Check if the plugin is a default plugin
         if pluginPath.startswith(self.defaultPluginsDir):
             pluginModule.plugin.default = True
-        else:
-            pluginModule.plugin.default = False
+
+        for devF in self.devPluginsFolders:
+            if pluginPath.startswith(devF):
+                pluginModule.plugin.dev = True
 
         # Return the loaded plugin instace
         return pluginModule.plugin
@@ -1306,6 +1343,7 @@ class PluginManager(metaclass=HorusSingleton):
                 info["id"] = p.id
                 info["blocks"] = self._getBlocksFromList(p, p.blocks)
                 info["default"] = p.default
+                info["dev"] = p.dev
                 info["logo"] = p.logo
                 info["config"] = []
                 # Config per remotes
@@ -1327,6 +1365,7 @@ class PluginManager(metaclass=HorusSingleton):
             info["id"] = ep.id
             info["blocks"] = []
             info["default"] = ep.default
+            info["dev"] = ep.dev
             info["logo"] = ep.logo
             info["config"] = []
             errorPlugins.append(info)
