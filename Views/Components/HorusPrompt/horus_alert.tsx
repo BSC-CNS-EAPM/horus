@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
 import "./horus_prompt.css";
+
+// Ignore React18 errors until frontend-rewrite
+// @ts-ignore
 import { render, unmountComponentAtNode } from "react-dom";
 import AppButton from "../appbutton";
 import { BlurredModal } from "../reusable";
@@ -9,7 +12,7 @@ export const useAlert = () => {
   const [showAlert, setShowAlert] = useState(false);
   const [message, setMessage] = useState("");
   const [resolveCallback, setResolveCallback] = useState<null | (() => void)>(
-    null,
+    null
   );
 
   const horusAlert = (msg: string) => {
@@ -42,7 +45,7 @@ export const useAlert = () => {
     if (showAlert) {
       render(
         <AlertComponent message={message} onSubmit={handleSubmit} />,
-        document.getElementById("alert-root"),
+        document.getElementById("alert-root")
       );
     } else {
       unmountComponentAtNode(document.getElementById("alert-root")!);
@@ -72,7 +75,7 @@ const AlertComponent = ({
         onSubmit();
       }
     },
-    [onSubmit],
+    [onSubmit]
   );
 
   useEffect(() => {

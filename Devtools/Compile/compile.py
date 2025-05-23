@@ -106,6 +106,13 @@ ext_modules = [
         ["Server/WebAppManager/__init__.py"],
         include_package_data=True,  # type: ignore
     ),
+    # Utils
+    # Extension("Utils.utils", ["Utils/utils.py"]),
+    # Extension(
+    #     "Utils.__init__",
+    #     ["Utils/__init__.py"],
+    #     include_package_data=True,  # type: ignore
+    # ),
 ]
 
 setup(

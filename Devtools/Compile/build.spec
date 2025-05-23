@@ -9,7 +9,7 @@ import sys
 
 # Before compiling horus, we need to bundle pip to be used by Horus
 # in the plugin manager to install plugin dependencies
-print(f"Bundling pip...")
+print("Bundling pip...")
 
 os.system(f"pyinstaller {os.path.join('Devtools', 'Compile', 'pip.spec')}")
 
@@ -32,6 +32,9 @@ cython_folder = os.path.join(currentDir, "build", "cython")
 
 # Include the GUI folder
 gui_folder = os.path.join(currentDir, "GUI")
+
+# Include the license
+license = os.path.join(currentDir, "LICENSES.md")
 
 # Include the default plugins folder
 default_plugins_folder = os.path.join(currentDir, "AppSupport", "DefaultPlugins")
@@ -108,6 +111,7 @@ default_settings = os.path.join(currentDir, "App", "default_settings.json")
 datas = [
     (bundled_pip, "pip"),
     (gui_folder, "GUI"),
+    (license, "."),
     (cython_folder, "."),
     (default_plugins_folder, "DefaultPlugins"),
     (app_info_file, "."),

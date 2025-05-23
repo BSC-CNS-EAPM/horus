@@ -100,10 +100,15 @@ os.system("cp src/__init__.py src/__init__.py.bak")
 with open("src/__init__.py", "a", encoding="utf-8") as f:
     f.write(f'\n__version__ = "{version}"\n')
 
+# License
+with open("../LICENSE.md", "r", encoding="utf-8") as f:
+    license = f.read()
+
 # Create the HorusAPI package
 setuptools.setup(
     name="HorusAPI",
     version=version,
+    license=license,
     author="Barcelona Supercomputing Center",
     author_email="christian.dominguez@bsc.es",
     description=f"Horus API package for building plugins. Version: {version}",

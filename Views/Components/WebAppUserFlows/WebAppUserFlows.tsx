@@ -20,6 +20,9 @@ import CloudDownload from "../Toolbar/Icons/CloudDownload";
 
 // React
 import { useEffect, useState } from "react";
+
+// Ignore those errors until frontend-rewrite
+// @ts-ignore
 import { render, unmountComponentAtNode } from "react-dom";
 
 // Utils
@@ -257,7 +260,7 @@ function CorruptedFlowView(props: {
         onClick={async () => {
           if (
             await horusConfirm(
-              "Do you want to delete this corrupted flow? This action is irreversible.",
+              "Do you want to delete this corrupted flow? This action is irreversible."
             )
           ) {
             deleteFile();
@@ -364,7 +367,7 @@ function OtherFileView(props: { directory: FileData; getFlows: () => void }) {
         onClick={async () => {
           if (
             await horusConfirm(
-              "Do you want to delete this file? This action is irreversible.",
+              "Do you want to delete this file? This action is irreversible."
             )
           ) {
             deleteFile();
