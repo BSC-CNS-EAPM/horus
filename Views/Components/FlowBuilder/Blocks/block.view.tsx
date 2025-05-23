@@ -529,7 +529,11 @@ function BlockBody({
         return (
           <PluginVariableView
             key={`${block.variables[0]?.id}-0-${block.id}-${block.placedID}`}
-            variable={block.variables[0]!}
+            variable={{
+              ...block.variables[0]!,
+              placedID: block.placedID,
+              block: block,
+            }}
             onChange={blockState.blockViewHooks.handleVariableChange}
             hideName={true}
             hideDescription={true}

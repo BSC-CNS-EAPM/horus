@@ -53,14 +53,14 @@ export default function RecentUserFlows(props: RecentUserFlowProps) {
   };
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1 h-full">
       {flows?.length > 0 ? (
         flows.map((flow) => (
           <HorusLink
             role="button"
             to={getURL(flow)}
             key={flow.savedID ?? "Unknown flow ID"}
-            className="predefined-flow w-full h-full max-w-[380px]"
+            className="predefined-flow w-full max-w-[380px]"
           >
             <div className="flex flex-row justify-between">
               <div className="predefined-flow-name max-w-[260px] cut-text">
@@ -76,7 +76,9 @@ export default function RecentUserFlows(props: RecentUserFlowProps) {
           </HorusLink>
         ))
       ) : (
-        <div className="predefined-flow-name">No recent flows</div>
+        <div className="h-full flex justify-center items-center">
+          No recent flows
+        </div>
       )}
     </div>
   );

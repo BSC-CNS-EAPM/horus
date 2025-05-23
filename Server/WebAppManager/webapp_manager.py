@@ -1,4 +1,5 @@
 # Typing
+from enum import Enum
 from typing import Optional, List, Dict, Any, Union
 
 # Basic tools
@@ -29,13 +30,13 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 # Generating the token in case the secret key is missing
 import secrets
-import itsdangerous
 
 # HorusAPI
 from HorusAPI import VariableTypes
 
 # Database
-from .database import Database
+from .database import Database, UserError
+from Server.WebAppManager import database
 
 # Current user
 if typing.TYPE_CHECKING:
@@ -47,6 +48,28 @@ if typing.TYPE_CHECKING:
     currentUser = typing.cast(HorusUser, flask_login.current_user)
 else:
     currentUser = flask_login.current_user
+
+
+def getDB() -> "Database":
+    """
+    Returns the database class if running in WebApp mode with DB
+    """
+
+    from App import AppDelegate
+
+    wManager = AppDelegate().server.webAppManager
+
+    if not wManager:
+        raise RuntimeError(
+            "WebApp manager is not correctly defined. Are you running WebApp mode?"
+        )
+
+    db = wManager.db
+
+    if not db:
+        raise ValueError("WebApp mode not configured with a database for users.")
+
+    return db
 
 
 class ExtraField:
@@ -82,18 +105,22 @@ class ExtraField:
     """
 
     def __init__(self, rawExtraField: Dict[str, Any]) -> None:
-        self.id = rawExtraField.get("id", None)
-        if self.id is None:
+        id = rawExtraField.get("id", None)
+        if id is None:
             raise ValueError("Missing ID for extra field. Please check the configuration file.")
+        self.id = id
 
-        self.name = rawExtraField.get("name", None)
+        name = rawExtraField.get("name", "Unknown")
+        type = rawExtraField.get("type", VariableTypes.STRING)
         self.description = rawExtraField.get("description", None)
-        self.type = rawExtraField.get("type", None)
 
-        if not self.name or not self.type:
+        if not name or not type:
             raise ValueError(
                 "Missing name or type for extra field. Please check the configuration file."
             )
+        else:
+            self.name = name
+            self.type = type
 
         if self.type not in [str(_type) for _type in VariableTypes.getTypes()]:
             raise ValueError(
@@ -182,18 +209,22 @@ class DatabaseConfig:
 
     def __init__(self, rawDatabase: Dict[str, Any]) -> None:
         self.path = rawDatabase.get("path", "horus_users.db")
-        self.secretKey = rawDatabase.get("secretKey", None)
+        secretKey = rawDatabase.get("secretKey", None)
 
-        if not self.secretKey:
+        if not secretKey:
 
-            self.secretKey = secrets.token_urlsafe(16)
+            secretKey = secrets.token_urlsafe(16)
 
             logging.getLogger("Horus").warning(
                 "Missing secret key for the database. "
                 + "Please check the configuration file. "
                 + "A random secret key will be used: %s",
-                self.secretKey,
+                secretKey,
             )
+        else:
+            self.secretKey = secretKey
+
+        self.secretKey = secretKey
 
         rawExtraFields = rawDatabase.get("extraFields", [])
         self.extraFields = [ExtraField(extraField) for extraField in rawExtraFields]
@@ -240,6 +271,14 @@ class Auth:
         self.password = password
 
 
+class EmailSecurityType(str, Enum):
+    """Email security connection types"""
+
+    NONE = "none"  # No encryption
+    STARTTLS = "STARTTLS"  # Use STARTTLS to upgrade connection
+    SSL_TLS = "SSL_TLS"  # Direct SSL/TLS connection
+
+
 class MailServer:
     """
     If the user management system requires registration,
@@ -256,7 +295,7 @@ class MailServer:
     Mail service port    
     """
 
-    secure: bool
+    secure: EmailSecurityType
     """
     Whether the mail service is secure
     """
@@ -291,11 +330,6 @@ class MailServer:
     External URL to generate links to
     """
 
-    TOKEN_SALT: str = "email-confirm"
-    """
-    The salt for the token
-    """
-
     def __init__(self, rawMailServer: Dict[str, Any], externalURL: Optional[str] = None) -> None:
 
         if externalURL is None:
@@ -311,7 +345,7 @@ class MailServer:
             raise ValueError("Missing mail server host. Please check the configuration file.")
 
         port = rawMailServer.get("port", 587)
-        secure = rawMailServer.get("secure", False)
+        secure = EmailSecurityType(rawMailServer.get("secure", EmailSecurityType.NONE))
         rawAuth = rawMailServer.get("auth")
 
         if not rawAuth:
@@ -322,6 +356,7 @@ class MailServer:
         self.resetSubject = rawMailServer.get("resetSubject", "Horus Password Reset")
         self.resetBody = rawMailServer.get("resetBody", "Your password reset link is: %link%")
 
+        self.database = database
         self.externalURL = externalURL
         self.host = host
         self.port = port
@@ -342,11 +377,37 @@ class MailServer:
         msg["From"] = self.auth.user
         msg["To"] = to
         try:
-            with smtplib.SMTP_SSL(host=self.host, port=self.port) as mailServer:
-                mailServer.login(self.auth.user, self.auth.password)
-                mailServer.sendmail(self.auth.user, to, msg.as_string())
+            # Select the appropriate connection method based on security mode
+            if self.secure == EmailSecurityType.SSL_TLS:
+                # Immediate SSL connection
+                with smtplib.SMTP_SSL(host=self.host, port=self.port) as mailServer:
+                    mailServer.login(self.auth.user, self.auth.password)
+                    mailServer.sendmail(self.auth.user, to, msg.as_string())
 
-                logging.getLogger("Horus").debug("Sent email to %s", to)
+            elif self.secure == EmailSecurityType.STARTTLS:
+                # Start with plain connection, then upgrade to TLS
+                with smtplib.SMTP(host=self.host, port=self.port) as mailServer:
+                    mailServer.starttls()
+                    mailServer.login(self.auth.user, self.auth.password)
+                    mailServer.sendmail(self.auth.user, to, msg.as_string())
+
+            elif self.secure == EmailSecurityType.NONE:
+                # Plain text connection - USE WITH EXTREME CAUTION
+                with smtplib.SMTP(host=self.host, port=self.port) as mailServer:
+                    mailServer.login(self.auth.user, self.auth.password)
+                    mailServer.sendmail(self.auth.user, to, msg.as_string())
+
+            else:
+                raise ValueError(f"Unsupported security mode: {self.secure}")
+
+            logging.getLogger("Horus").debug(f"Sent email to {to} using {self.secure.name}")
+
+        # try:
+        #     with smtplib.SMTP_SSL(host=self.host, port=self.port) as mailServer:
+        #         mailServer.login(self.auth.user, self.auth.password)
+        #         mailServer.sendmail(self.auth.user, to, msg.as_string())
+
+        #         logging.getLogger("Horus").debug("Sent email to %s", to)
         except Exception as e:
             logging.getLogger("Horus").error(
                 "Error sending activation email to %s: %s", to, str(e)
@@ -361,7 +422,7 @@ class MailServer:
         :param activationCode: The activation code to send to the user
         """
 
-        activationCode = self._generateToken(to, secretKey)
+        activationCode = getDB().generateToken(to, secretKey)
 
         activationLink = f"{self.externalURL}/users/activate?token={activationCode}"
 
@@ -382,7 +443,7 @@ class MailServer:
         :param secretKey: The secret key to use for token generation
         """
 
-        resetLink = f"{self.externalURL}/users/reset?token={self._generateToken(to, secretKey)}"
+        resetLink = f"{self.externalURL}/users/reset?token={getDB().generateToken(to, secretKey)}"
 
         subject = self.resetSubject if self.resetSubject else "Horus Password Reset"
         body = (
@@ -392,39 +453,6 @@ class MailServer:
         )
 
         self._sendMail(to, subject, body)
-
-    @classmethod
-    def _generateToken(cls, email: str, secretKey: str) -> str:
-        """
-        Generates a token for the user. The token is used to verify the user's email address
-
-        :param email: The email address to generate the token for
-        :param secretKey: The secret key to use for token generation
-        """
-
-        serializer = itsdangerous.URLSafeTimedSerializer(secretKey)
-        return str(serializer.dumps(email, salt=cls.TOKEN_SALT))
-
-    @classmethod
-    def validateToken(cls, token: str, secretKey: str, expiration: int = 3600) -> str:
-        """
-        Validates the token for the user. The token is used to verify the user's email address
-
-        :param token: The token to validate
-        :param secretKey: The secret key to use for validation
-        :param expiration: The expiration time for the token
-
-        :return: The email address if the token is valid
-        """
-
-        serializer = itsdangerous.URLSafeTimedSerializer(secretKey)
-        try:
-            mail = serializer.loads(token, salt=cls.TOKEN_SALT, max_age=expiration)
-            return mail
-        except itsdangerous.SignatureExpired as e:
-            raise ValueError("The token has expired") from e
-        except itsdangerous.BadSignature as e:
-            raise ValueError("The token is invalid") from e
 
 
 class FileManagement:
@@ -841,13 +869,17 @@ class WebAppManager:
 
         self.host = self.rawConfig.get("host", "localhost")
         self.port = self.rawConfig.get("port", 5000)
-        self.externalURL = self.rawConfig.get("externalURL", None)
         self.appName = self.rawConfig.get("appName", "Horus")
         self.companyName = self.rawConfig.get("companyName", "Horus")
         self.allowRemotes = self.rawConfig.get("allowRemotes", True)
 
-        if not self.externalURL:
+        externalURL = self.rawConfig.get("externalURL", None)
+        if not externalURL:
             raise ValueError("Missing external URL. Please check the configuration file.")
+        else:
+            self.externalURL = externalURL
+
+        self.externalURL = externalURL
 
         # Instantiate the user management object
         rawUserManagement = self.rawConfig.get("userManagement")

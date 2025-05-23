@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
 import "./horus_prompt.css";
+
+// Ignore React18 errors until frontend-rewrite
+// @ts-ignore
 import { render, unmountComponentAtNode } from "react-dom";
 import AppButton from "../appbutton";
 import { BlurredModal } from "../reusable";
@@ -42,7 +45,7 @@ export const usePrompt = () => {
     if (showPrompt) {
       render(
         <PromptComponent message={message} onSubmit={handleSubmit} />,
-        document.getElementById("prompt-root"),
+        document.getElementById("prompt-root")
       );
     } else {
       unmountComponentAtNode(document.getElementById("prompt-root")!);
@@ -79,7 +82,7 @@ const PromptComponent = ({
         onSubmit(null);
       }
     },
-    [inputValue, onSubmit],
+    [inputValue, onSubmit]
   );
 
   useEffect(() => {

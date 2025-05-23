@@ -59,3 +59,9 @@ Welcome to Horus documentation!
    :caption: API Reference
 
    Source code <source_code>
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Citing & License
+
+   Citing & License <citing>

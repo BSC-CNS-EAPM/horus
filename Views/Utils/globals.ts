@@ -14,7 +14,11 @@ import { ExtensionsFilePickerOptions } from "../Components/FileExplorer/file_exp
 // @ts-ignore
 import Terminal from "react-console-emulator";
 import { getFile, saveFile, updateFile } from "../Components/reusable";
-import { PluginPageExtensionEvent } from "@/Components/FlowBuilder/flow.types";
+import {
+  Flow,
+  PluginPageExtensionEvent,
+} from "@/Components/FlowBuilder/flow.types";
+import { Dispatch, SetStateAction } from "react";
 
 export {};
 
@@ -59,7 +63,7 @@ declare global {
       getVariable?: () => any;
       setVariable?: (value: any) => void;
       getFlow?: () => any;
-      setFlow?: (value: any) => void;
+      setFlow?: (newFlow: Flow) => void;
       setExtraData?: (key: string, value: any) => void;
       getExtraData?: (key: string) => any;
       openExtensionFilePicker?: (options: ExtensionsFilePickerOptions) => void;
@@ -87,7 +91,7 @@ export type openPanel = {
   (
     type: "moleculePlotter",
     id: string,
-    params: { smilesToPlot: HorusSmilesType[] }
+    params: { smilesToPlot: HorusSmilesType[] },
   ): void;
   (
     type: "extensions",
@@ -97,7 +101,7 @@ export type openPanel = {
       plugin: string;
       id: string;
       data?: any;
-    }
+    },
   ): void;
 };
 

@@ -35,7 +35,7 @@ import { useSettings } from "@/Main/app";
 
 export function getBlockVarPair(
   block: Block,
-  variable: PluginVariable
+  variable: PluginVariable,
 ): BlockVarPair {
   return {
     placedID: block.placedID,
@@ -64,26 +64,24 @@ export function VariableSetupView(props: VariableModalViewProps) {
       ...variable,
       placedID: block.placedID,
       disabled: !!isFlowActive || variable.disabled,
-    };
+      block: block,
+    } as PluginVariable;
   });
 
-  const [filteredVariables, setFilteredVariables] = useState(variables);
+  const [filter, setFilter] = useState("");
 
-  const filterVariables = (event: any) => {
-    const value = event.target.value;
-    const filteredVariables = variables.filter((variable) => {
-      return (
-        variable.name.toLowerCase().includes(value.toLowerCase()) ||
-        variable.description.toLowerCase().includes(value.toLowerCase())
-      );
-    });
-
-    setFilteredVariables(filteredVariables);
-  };
-
-  const getGroupedVariables = () => {
+  const groupedVariables = (() => {
     // Group the variables by category
     const groupedVariables: Record<string, PluginVariable[]> = {};
+
+    const filteredVariables = filter
+      ? variables.filter((variable) => {
+          return (
+            variable.name.toLowerCase().includes(filter.toLowerCase()) ||
+            variable.description.toLowerCase().includes(filter.toLowerCase())
+          );
+        })
+      : variables;
 
     filteredVariables.forEach((variable) => {
       if (!groupedVariables[variable.category]) {
@@ -110,7 +108,7 @@ export function VariableSetupView(props: VariableModalViewProps) {
       ];
     }
     return groupedViews;
-  };
+  })();
 
   return (
     <div className="flex flex-col h-full p-2">
@@ -127,14 +125,16 @@ export function VariableSetupView(props: VariableModalViewProps) {
           <div className="flex flex-row gap-2">
             <SearchComponent
               placeholder="Search variables"
-              onChange={filterVariables}
+              onChange={(e) => {
+                setFilter(e.target.value);
+              }}
             />
           </div>
         </div>
         <hr className="my-4 p-0"></hr>
       </div>
       {block.variables && block.variables.length > 0 && (
-        <SidebarView views={getGroupedVariables()} />
+        <SidebarView views={groupedVariables} />
       )}
     </div>
   );
@@ -169,7 +169,7 @@ function OutputVariableBallConnector({
     scale =
       1 /
       parseFloat(
-        flowCanvas.style.transform.match(/scale\((.*?)\)/)?.[1] || "1"
+        flowCanvas.style.transform.match(/scale\((.*?)\)/)?.[1] || "1",
       );
     style = {
       transform: `translate(${transform.x * scale - 15}px, ${
@@ -208,7 +208,7 @@ function OutputVariableBallConnector({
         variable.type,
         overBlockVarPair.variableType,
         variable.allowedValues ?? [],
-        overBlockVarPair.variableAllowedValues ?? []
+        overBlockVarPair.variableAllowedValues ?? [],
       );
 
       arrowColor = allowedConnection ? "var(--pop-code)" : "var(--red-error)";
@@ -298,7 +298,7 @@ export function PlacedBlockVariables(props: PlacedBlockVariablesProps) {
   }
 
   const visibleInputs = block.inputs.find(
-    (input) => input.id === block.selectedInputGroup
+    (input) => input.id === block.selectedInputGroup,
   );
 
   return (
@@ -358,11 +358,11 @@ function VariableInputSelector({
     return null;
 
   const selectedPageIndex = block.inputs.findIndex(
-    (input) => input.id === block.selectedInputGroup
+    (input) => input.id === block.selectedInputGroup,
   );
 
   const selectedVariableInputGroup = block.inputs.find(
-    (i) => i.id === block.selectedInputGroup
+    (i) => i.id === block.selectedInputGroup,
   );
 
   if (!selectedVariableInputGroup) return null;
@@ -417,7 +417,7 @@ type VariableConnectViewProps = {
 function VariableInputConnectView(props: VariableConnectViewProps) {
   const blockVarPair: BlockVarPair = getBlockVarPair(
     props.block,
-    props.variable
+    props.variable,
   );
 
   const id = `connect-${props.variable.id}-${props.block.placedID}`;
@@ -446,7 +446,7 @@ function VariableInputConnectView(props: VariableConnectViewProps) {
       props.connectingVariable.variableType,
       allowedValues as Array<string>,
       (props.connectingVariable.variableAllowedValues as Array<string>) ||
-        ([] as Array<string>)
+        ([] as Array<string>),
     );
     if (acceptConnection) {
       classNameVariableBall = "variable-ball variable-ball-accept";
@@ -463,7 +463,7 @@ function VariableInputConnectView(props: VariableConnectViewProps) {
       activePair.variableType,
       allowedValues as Array<string>,
       (activePair.variableAllowedValues as Array<string>) ||
-        ([] as Array<string>)
+        ([] as Array<string>),
     );
 
     if (acceptConnection) {
@@ -482,7 +482,7 @@ function VariableInputConnectView(props: VariableConnectViewProps) {
   }
 
   const isAlreadyConnected = props.block.variableConnections.find(
-    (connection) => connection.destination.variableID === props.variable.id
+    (connection) => connection.destination.variableID === props.variable.id,
   );
 
   if (isAlreadyConnected) {
@@ -491,7 +491,7 @@ function VariableInputConnectView(props: VariableConnectViewProps) {
       isAlreadyConnected.origin.variableType,
       allowedValues as Array<string>,
       (isAlreadyConnected.origin.variableAllowedValues as Array<string>) ||
-        ([] as Array<string>)
+        ([] as Array<string>),
     );
 
     if (acceptConnection) {
@@ -545,7 +545,7 @@ export function compareAllowedValues(
   variableType: PluginVariableTypes,
   otherVariableType: PluginVariableTypes,
   allowedValues: Array<string>,
-  tryingToConnect: Array<string>
+  tryingToConnect: Array<string>,
 ) {
   if (
     variableType === PluginVariableTypes.ANY ||

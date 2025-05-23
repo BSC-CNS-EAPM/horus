@@ -45,6 +45,12 @@ export default function Molstar() {
       // Reset mol* when the component unmounts
       if (isMolstarLoaded(window.molstar)) {
         window?.molstar?.unload();
+
+        // Close the panel
+        if (window.horus.closePanel && window.horus.openPanel) {
+          window.horus?.closePanel("molstar");
+          window.horus.openPanel("molstar");
+        }
       }
 
       window.molstar = undefined;
@@ -52,7 +58,8 @@ export default function Molstar() {
       // Run the hooksInitializer again
       hooksInitializer();
     };
-  }, [settings]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings?.["disableMolstar"]?.value]);
 
   if (settings?.["disableMolstar"]?.value) {
     return (

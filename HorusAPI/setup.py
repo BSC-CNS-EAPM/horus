@@ -1,3 +1,6 @@
+# pylint: disable=invalid-name
+
+from typing import cast
 import setuptools
 from distutils.extension import Extension
 from distutils.sysconfig import get_config_vars as default_get_config_vars
@@ -12,6 +15,9 @@ import sys
 # manipulate get_config_vars:
 # 1. step: wrap functionality and filter
 def remove_pthread(x):
+    """
+    Remove the pthread command line argument
+    """
     if isinstance(x, str):
         # x.replace(" -pthread ") would be probably enough...
         # but we want to make sure we make it right for every input
@@ -26,12 +32,15 @@ def remove_pthread(x):
 
 
 def my_get_config_vars(*args):
+    """
+    Correctly get the config variables that I provide
+    """
     result = default_get_config_vars(*args)
     # sometimes result is a list and sometimes a dict:
     if isinstance(result, list):
         return [remove_pthread(x) for x in result]
     elif isinstance(result, dict):
-        return {k: remove_pthread(x) for k, x in result.items()}
+        return {k: remove_pthread(x) for k, x in (cast(dict, result)).items()}
     else:
         raise Exception("cannot handle type" + str(type(result)))
 
@@ -40,11 +49,14 @@ def my_get_config_vars(*args):
 dsc.get_config_vars = my_get_config_vars
 
 horusAPIPath = os.path.join(os.path.dirname(__file__), "..")
-sys.path.append(horusAPIPath)
+
+# Insert it so it gets precedence over the HorusAPI if its installed on the same environment
+sys.path.insert(0, horusAPIPath)
 
 import HorusAPI
 
 version = HorusAPI.__version__
+
 # If long_version does not contain "release"
 # use the branch name as the version (with commit hash)
 if "release" not in version:
@@ -85,17 +97,23 @@ print("Copying src/__init__.py file to a backup")
 os.system("cp src/__init__.py src/__init__.py.bak")
 
 # Append temporarily inside the src/__init__.py file the version
-with open("src/__init__.py", "a") as f:
+with open("src/__init__.py", "a", encoding="utf-8") as f:
     f.write(f'\n__version__ = "{version}"\n')
+
+# License
+with open("../LICENSE.md", "r", encoding="utf-8") as f:
+    license = f.read()
 
 # Create the HorusAPI package
 setuptools.setup(
     name="HorusAPI",
     version=version,
+    license=license,
     author="Barcelona Supercomputing Center",
     author_email="christian.dominguez@bsc.es",
     description=f"Horus API package for building plugins. Version: {version}",
-    long_description="Horus API package for building plugins. More information at [https://horus.bsc.es/docs](https://horus.bsc.es/docs)",
+    long_description="Horus API package for building plugins. More information at "
+    "[https://horus.bsc.es/docs](https://horus.bsc.es/docs)",
     long_description_content_type="text/markdown",
     cmdclass={"build_ext": build_ext},
     ext_modules=ext_modules,  # type: ignore
@@ -130,10 +148,10 @@ wheelPath = os.listdir("dist")[0]
 os.system(f"unzip dist/{wheelPath} -d dist/")
 
 # Copy the .pyi files inside the wheel
-os.system(f"cp -r src/*.pyi dist/HorusAPI/")
+os.system("cp -r src/*.pyi dist/HorusAPI/")
 
 # Copy the py.typed file inside the wheel
-os.system(f"cp py.typed dist/HorusAPI/")
+os.system("cp py.typed dist/HorusAPI/")
 
 # Remove the wheel
 os.remove(f"dist/{wheelPath}")

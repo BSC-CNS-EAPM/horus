@@ -20,6 +20,9 @@ import CloudDownload from "../Toolbar/Icons/CloudDownload";
 
 // React
 import { useEffect, useState } from "react";
+
+// Ignore those errors until frontend-rewrite
+// @ts-ignore
 import { render, unmountComponentAtNode } from "react-dom";
 
 // Utils

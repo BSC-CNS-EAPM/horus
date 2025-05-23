@@ -94,6 +94,7 @@ def test_transfer_to_local(mock_remotes_api_local):
             stdin=-3,
             timeout=None,
             text=True,
+            check=False,
         )
 
 
@@ -127,6 +128,7 @@ def test_transfer_from_local(mock_remotes_api_local):
             stdin=-3,
             timeout=None,
             text=True,
+            check=False,
         )
 
 

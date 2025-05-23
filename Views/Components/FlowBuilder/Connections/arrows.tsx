@@ -42,7 +42,7 @@ export function ConnectedArrows(props: ConnectedArrows) {
     props.connection.origin.variableType,
     props.connection.destination.variableType,
     props.connection.origin.variableAllowedValues ?? [],
-    props.connection.destination.variableAllowedValues ?? []
+    props.connection.destination.variableAllowedValues ?? [],
   );
 
   const arrowColor = allowedConnection

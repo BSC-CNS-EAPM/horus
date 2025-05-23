@@ -37,7 +37,7 @@ import threading  # For background socketio thread
 # Flask
 import flask
 import jinja2
-from flask import Flask, after_this_request, request, Response
+from flask import Flask, after_this_request, request, Response, send_file
 from flask_socketio import SocketIO, join_room, leave_room
 from flask_cors import CORS
 import flask_login
@@ -76,8 +76,7 @@ from Server.PluginManager import PluginManager
 from Server.FileExplorer import FileExplorer, UserFileExplorer, File
 
 # User management for WebApp mode
-from Server.WebAppManager import WebAppManager, UserError
-from Server.WebAppManager import HorusUser
+from Server.WebAppManager import WebAppManager, UserError, HorusUser
 
 if typing.TYPE_CHECKING:
     from Server.WebAppManager import Database
@@ -332,11 +331,11 @@ class HorusServer:
 
         return str(random.randint(1, 100000000))
 
-    def _getFreePort(self):
+    def _getFreePort(self, force: bool = False):
         # Generate a random port number
         port = random.randint(3000, 9000)
 
-        if self.debug:
+        if self.debug and not force:
             return 3000
 
         # Check that the port is not in use
@@ -1533,6 +1532,45 @@ class HorusServer:
 
             return flask.jsonify(success)
 
+        @self.server.route("/api/plugins/fetch-job", methods=["POST"])
+        @self.verifyLogin
+        def fetchJob():
+            """
+            Force-update the slurm status of a block
+            """
+            data = request.get_json()
+            flowPath = data.get("flowPath")
+            placedID = data.get("placedID")
+
+            if any(item is None for item in [flowPath, placedID]):
+                return flask.make_response({"ok": False, "msg": "Missing parameters."}, 400)
+
+            # Connect to the remote and cancel the job
+            try:
+                flow = self.flowManager.openFlowFromPath(
+                    flowPath, addToRecents=False, checkState=True
+                )
+                blockToUpdate = flow.findBlockByPlacedID(int(placedID))
+
+                from HorusAPI import SlurmBlock
+
+                if not isinstance(blockToUpdate, SlurmBlock):
+                    raise ValueError("Specified block is not a SLURM Block.")
+
+                blockToUpdate._setRemote(
+                    self.remoteManager.getRemoteAPI(blockToUpdate.selectedRemote)
+                )
+                blockToUpdate.parseStatus(skipCompleted=False)
+
+                # Emit the changes
+                flow._socket = self.socketio
+                flow.write()
+
+            except Exception as e:
+                return flask.make_response({"ok": False, "msg": str(e)}, 400)
+
+            return flask.make_response({"ok": True, "msg": "Job Updated."}, 200)
+
         @self.server.route("/api/plugins/cancel-job", methods=["GET"])
         @self.verifyLogin
         def cancelJob():
@@ -1734,6 +1772,16 @@ class HorusServer:
             AppDelegate().openURL(url)
 
             return flask.jsonify({"ok": True})
+
+        @self.server.route("/license", methods=["GET"])
+        def license():
+
+            try:
+                from App import AppDelegate
+
+                return send_file(os.path.join(AppDelegate().bundleDir, "LICENSES.md"))
+            except Exception:
+                return flask.jsonify("License file not found.")
 
         @self.server.route("/api/version", methods=["GET"])
         @self.verifyLogin
@@ -2844,14 +2892,6 @@ class HorusServer:
             ):
                 raise Exception("No user registration required")
 
-            if self.webAppManager.userManagement.mailServer is None:
-                logging.getLogger("Horus").error(
-                    "Cannot reset user passwords without a MailServer."
-                    + " To enable this functionality, set 'requireActivation'"
-                    + " to true and configure the Mail in the horus.config.json file"
-                )
-                raise Exception("Please contact support in order to recover your password")
-
             if request.method == "GET":
 
                 # If there is a token in the args, verify it and send the reset password page
@@ -2859,7 +2899,7 @@ class HorusServer:
 
                 if token is not None:
                     try:
-                        mail = self.webAppManager.userManagement.mailServer.validateToken(
+                        mail = self.webAppManager.db.validateToken(
                             token, self.webAppManager.db.dbConfig.secretKey
                         )
                         return self.renderTemplate("Login/reset.html", mail=mail)
@@ -2874,6 +2914,16 @@ class HorusServer:
 
                 if email is not None:
                     try:
+                        if self.webAppManager.userManagement.mailServer is None:
+                            logging.getLogger("Horus").error(
+                                "Cannot reset user passwords without a MailServer."
+                                + " To enable this functionality, set 'requireActivation'"
+                                + " to true and configure the Mail in the horus.config.json file"
+                            )
+                            raise Exception(
+                                "Please contact support in order to recover your password"
+                            )
+
                         self.webAppManager.db.resetPassword(email)
                         return flask.jsonify(
                             {"ok": True, "msg": "An email has been sent to reset your password"}
@@ -2898,6 +2948,88 @@ class HorusServer:
 
             # Else just redirect to the home page
             return flask.redirect("/")
+
+        @self.server.route("/users/admintools/changepassword", methods=["POST"])
+        @self.verifyAdmin
+        def changePasswordAdmintools():
+            if (
+                not self.webAppManager
+                or not self.webAppManager.userManagement.requireRegistration
+                or not self.webAppManager.db
+            ):
+                return flask.jsonify({"ok": False, "redirect": "/"})
+
+            if not currentUser or not currentUser.is_authenticated or currentUser.isDemo:
+                return flask.jsonify({"ok": False, "msg": "Invalid user. Please log in."})
+
+            try:
+                data = request.get_json()
+                email = data.get("email")
+
+                if email is not None:
+                    url = self.webAppManager.db.getUrlResetPassword(email)
+                    return flask.jsonify(
+                        {"ok": True, "msg": "Use this URL to change the password", "url": url}
+                    )
+                else:
+                    return flask.jsonify({"ok": False, "msg": "No email provided"})
+            except Exception as exc:
+                return flask.jsonify({"ok": False, "msg": str(exc)})
+
+        @self.server.route("/users/admintools/deleteuser", methods=["DELETE"])
+        @self.verifyAdmin
+        def deleteUserAdmintools():
+            if (
+                not self.webAppManager
+                or not self.webAppManager.userManagement.requireRegistration
+                or not self.webAppManager.db
+            ):
+                return flask.jsonify({"ok": False, "redirect": "/"})
+
+            if not currentUser or not currentUser.is_authenticated or currentUser.isDemo:
+                return flask.jsonify({"ok": False, "msg": "Invalid user. Please log in."})
+
+            try:
+                data = request.get_json()
+                email = data.get("email")
+
+                # Check if the email it's in the database
+                logging.getLogger("Horus").info(
+                    "Admin '%s' is requesting the deletion of user '%s'.",
+                    currentUser.email,
+                    email,
+                )
+                userToDelete = self.webAppManager.db.getUser(mail=email)
+
+                if not userToDelete:
+                    return flask.jsonify({"ok": False, "msg": "User not found"})
+
+                # Check if the user is the only admin
+                if userToDelete.admin:
+                    admins = [
+                        user for user in self.webAppManager.db.getAllUsers() if user.get("admin")
+                    ]
+                    if len(admins) == 1:
+                        return flask.jsonify(
+                            {
+                                "ok": False,
+                                "msg": "Cannot delete the last remaining administrator. "
+                                "At least one admin account must be preserved.",
+                            }
+                        )
+
+                # Delete the desired user from the database
+                self.webAppManager.db.deleteUser(email)
+
+                # If current user is the deleted user, log out
+                if currentUser.email == email:
+                    flask_login.logout_user()
+                    return flask.jsonify({"ok": False, "redirect": "/users/login"})
+
+                return flask.jsonify({"ok": True})
+
+            except Exception as exc:
+                return flask.jsonify({"ok": False, "msg": str(exc)})
 
         @self.server.route("/users/delete", methods=["GET"])
         def deleteUser():

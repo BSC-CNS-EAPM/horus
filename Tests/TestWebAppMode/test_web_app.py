@@ -3,6 +3,7 @@ from typing import Any, Dict, cast
 import pytest
 from HorusAPI import VariableTypes
 from Server.WebAppManager.webapp_manager import (
+    EmailSecurityType,
     ExtraField,
     DefaultQuotas,
     DatabaseConfig,
@@ -145,13 +146,13 @@ def test_mail_server_valid_input():
     raw_data = {
         "host": "smtp.example.com",
         "port": 587,
-        "secure": True,
+        "secure": "SSL_TLS",
         "auth": {"user": "username", "password": "securepassword"},
     }
     mail_server = MailServer(raw_data)
     assert mail_server.host == "smtp.example.com"
     assert mail_server.port == 587
-    assert mail_server.secure == True
+    assert mail_server.secure == EmailSecurityType.SSL_TLS
     assert mail_server.auth.user == "username"
     assert mail_server.auth.password == "securepassword"
 
@@ -161,7 +162,7 @@ def test_mail_server_missing_host():
         MailServer(
             {
                 "port": 587,
-                "secure": True,
+                "secure": "SSL_TLS",
                 "auth": {"user": "username", "password": "securepassword"},
             }
         )
@@ -169,7 +170,7 @@ def test_mail_server_missing_host():
 
 def test_mail_server_missing_auth():
     with pytest.raises(ValueError, match="Missing mail server auth"):
-        MailServer({"host": "smtp.example.com", "port": 587, "secure": True})
+        MailServer({"host": "smtp.example.com", "port": 587, "secure": "SSL_TLS"})
 
 
 def test_mail_server_invalid_auth():
@@ -178,7 +179,7 @@ def test_mail_server_invalid_auth():
             {
                 "host": "smtp.example.com",
                 "port": 587,
-                "secure": True,
+                "secure": "SSL_TLS",
                 "auth": {"password": "securepassword"},
             }
         )
@@ -192,7 +193,7 @@ def test_user_management_valid_input():
         "mailServer": {
             "host": "smtp.example.com",
             "port": 587,
-            "secure": True,
+            "secure": "SSL_TLS",
             "auth": {"user": "username", "password": "securepassword"},
         },
         "database": {"path": "users.db"},

@@ -237,3 +237,8 @@ tmp/
 
 
 AppSupport/config
+
+# The licenses file will be autoamtically generated during the build process
+LICENSES.md
+
+*.horusSocket

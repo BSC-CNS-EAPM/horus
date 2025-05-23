@@ -65,7 +65,7 @@ export const config = {
     mailServer: {
       host: "smtp.mail.com",
       port: 587,
-      secure: false,
+      secure: "SSL_TLS", // Allowed none, STARTTLS and SSL_TLS
       auth: {
         user: "horus@mail.com",
         password: "password",
