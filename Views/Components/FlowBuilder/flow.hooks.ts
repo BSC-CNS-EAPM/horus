@@ -1536,6 +1536,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       // new recived flow that comes from the preHandleSave function
       // inside the executeFlow function. This prevented the flow to update
       // even tough the flow was running
+
       if (isExecutingInProcess.current) {
         return;
       }
@@ -1588,8 +1589,15 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
           }
         })();
 
-        if (parsedFlow.flowError) {
+        console.log(hideFlowError.current);
+
+        if (parsedFlow.flowError && !hideFlowError.current) {
           alert(parsedFlow.flowError);
+        }
+
+        // Reset the hide flow error
+        if (hideFlowError.current) {
+          hideFlowError.current = false;
         }
 
         return {
@@ -1928,6 +1936,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
   // in order to not update the flow from the socket
   // This will prevent overwriting the flow status
   const isExecutingInProcess = useRef(false);
+  const hideFlowError = useRef(false);
 
   const latestPath = useRef<string | null>(null);
 
@@ -2211,8 +2220,8 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     };
 
     // Update the window.horus.setFlow function
-    window.horus.setFlow = (flow: Flow) => {
-      setFlow(flow);
+    window.horus.setFlow = (newFlow) => {
+      setFlow({ ...newFlow });
     };
 
     // Add a new function to store extraData to the flow
@@ -2232,7 +2241,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     window.horus.getExtraData = (key: string) => {
       return flow.extraData?.[key];
     };
-  }, [flow]);
+  }, [flow, setFlow]);
 
   const updateBlockLogs = useCallback(
     (logs: LogsData) => {
@@ -2287,6 +2296,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
   return {
     flow: {
+      hideFlowError,
       flow,
       flowText,
       blockConnections,

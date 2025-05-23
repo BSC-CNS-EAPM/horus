@@ -1,3 +1,4 @@
+# pylint: disable=invalid-name
 """
 The PluginManager module contains the PluginManager class. This class
 manages the installation, loading and uninstallation of plugins. Most
@@ -18,7 +19,6 @@ import json
 import shutil
 import datetime
 from pydantic import BaseModel, ValidationError
-from contextlib import contextmanager
 import re
 import time
 
@@ -34,7 +34,7 @@ from types import ModuleType
 import importlib.util
 
 # For the PrintCapturer class
-from contextlib import redirect_stdout, redirect_stderr
+from contextlib import contextmanager, redirect_stdout, redirect_stderr
 
 # For the PluginDeps class
 import pkg_resources
@@ -42,8 +42,6 @@ import pkg_resources
 # For the SocketIO type completion
 from flask_socketio import SocketIO
 import flask_login
-
-from Server.RemotesManager import CommandFailed
 
 # Plugin deps context manager, forking the process prevents
 # importend modules from being imported twice
@@ -67,7 +65,7 @@ from HorusAPI import (
 )
 
 # Import the RemoteManager for the block's remote
-from Server.RemotesManager import RemotesManager
+from Server.RemotesManager import RemotesManager, CommandFailed
 
 # Import the settings manager
 from Server.SettingsManager import SettingsManager
@@ -175,6 +173,25 @@ class PluginManager(metaclass=HorusSingleton):
 
         if not os.path.exists(self.pluginsDir):
             os.makedirs(self.pluginsDir, exist_ok=True)
+
+        # Load additional folders if provided
+        try:
+            self.devPluginsFolders: list[str] = (
+                self.horusSettings.getSetting("pluginsFolders").value or []
+            )
+        except Exception as e:
+            logging.getLogger("Horus").error(
+                "Could not read additional development plugins folders: %s", str(e)
+            )
+            self.devPluginsFolders = []
+
+        if len(self.devPluginsFolders) > 0:
+            logging.getLogger("Horus").info("Additional plugin directories:")
+            for f in self.devPluginsFolders:
+                logging.getLogger("Horus").info("- %s", f)
+
+        for ePlug in self.devPluginsFolders:
+            sys.path.append(ePlug)
 
         # Add the plugins dir to the pythonpath to access other plugins from plugins
         sys.path.append(self.defaultPluginsDir)
@@ -516,6 +533,13 @@ class PluginManager(metaclass=HorusSingleton):
 
         try:
             plugin = self._getPluginByID(pluginID)
+
+            # If the plugin is default or dev, then prevent uninstall
+            if plugin.dev or plugin.default:
+                raise ValueError(
+                    "The plugin cannot be removed because its a default or development plugin."
+                )
+
             pluginPath = os.path.join(self.pluginsDir, plugin._path)
         except PluginNotFoundError:
             pluginPath = os.path.join(self.pluginsDir, pluginID)
@@ -556,7 +580,16 @@ class PluginManager(metaclass=HorusSingleton):
             if not p.startswith(".")
         ]
 
-        plugins = defaultPlugins + installedPlugins
+        # List the plugins in the additional plugins, if provided
+        devPlugins = []
+        for devFolder in self.devPluginsFolders:
+            for p in os.listdir(devFolder):
+                path = os.path.join(devFolder, p)
+                if not p.startswith("."):
+                    devPlugins.append(path)
+
+        # plugins = defaultPlugins + installedPlugins
+        plugins = devPlugins + defaultPlugins + installedPlugins
 
         return plugins
 
@@ -620,6 +653,10 @@ class PluginManager(metaclass=HorusSingleton):
         """
 
         class MetaPath(BaseModel):
+            """
+            Meta path model representation
+            """
+
             meta: PluginMetaModel
             p: str
 
@@ -666,7 +703,9 @@ class PluginManager(metaclass=HorusSingleton):
                     repeated += f"{p} was required {c} times. "
 
             raise ValueError(
-                "Circular dependency detected among plugins. If you are the developer of such plugins, please update the plugin.meta file accordingly."
+                "Circular dependency detected among plugins. "
+                "If you are the developer of such plugins, "
+                "please update the plugin.meta file accordingly."
                 f" Errors were found for the following plugins: {repeated}"
             )
 
@@ -834,10 +873,10 @@ class PluginManager(metaclass=HorusSingleton):
         for p in pluginMetaModel.pluginRequires or []:
             try:
                 requirementsPaths.append(self._getPluginByID(p)._path)
-            except PluginNotFoundError:
+            except PluginNotFoundError as pnf:
                 raise ValueError(
                     f"Could not find plugin '{p}', which is required by '{pluginID}'."
-                )
+                ) from pnf
 
         with PluginDepsBase([pluginDir] + requirementsPaths):
 
@@ -952,8 +991,10 @@ class PluginManager(metaclass=HorusSingleton):
         # Check if the plugin is a default plugin
         if pluginPath.startswith(self.defaultPluginsDir):
             pluginModule.plugin.default = True
-        else:
-            pluginModule.plugin.default = False
+
+        for devF in self.devPluginsFolders:
+            if pluginPath.startswith(devF):
+                pluginModule.plugin.dev = True
 
         # Return the loaded plugin instace
         return pluginModule.plugin
@@ -1188,22 +1229,24 @@ class PluginManager(metaclass=HorusSingleton):
         except Exception as exc:
 
             logging.getLogger("Horus").error(
-                f"Dependency {dep} could not be installed using embedded pip: {str(exc)}"
+                "Dependency %s could not be installed using embedded pip: %s", dep, str(exc)
             )
 
             try:
-                # Some python packages need to be built from source, and the bundled pip cannot handle this.
+                # Some python packages need to be built from source,
+                # and the bundled pip cannot handle this.
                 # For such cases, Horus will use the python interpreter set in the settings.
                 interpreter = [self._getExternalInterpreter(), "-m", "pip"]
+                interpreterCMD = " ".join(interpreter)
                 logging.getLogger("Horus").error(
-                    f"Trying with external python interpreter '{' '.join(interpreter)}'."
+                    "Trying with external python interpreter '%s'.", interpreterCMD
                 )
                 SubprocessManager.callPopen([*interpreter, *command], env=env)
             except Exception as exc2:
                 msg = (
                     f"Failed to install dependency {dep}. External interpreter error: {str(exc2)}"
                 )
-                raise Exception(msg)
+                raise Exception(msg) from exc2
 
     def _getExternalInterpreter(self) -> str:
         """
@@ -1300,6 +1343,7 @@ class PluginManager(metaclass=HorusSingleton):
                 info["id"] = p.id
                 info["blocks"] = self._getBlocksFromList(p, p.blocks)
                 info["default"] = p.default
+                info["dev"] = p.dev
                 info["logo"] = p.logo
                 info["config"] = []
                 # Config per remotes
@@ -1314,15 +1358,14 @@ class PluginManager(metaclass=HorusSingleton):
                         )
                 listedPlugins.append(info)
             except Exception as exc:
-                logging.getLogger("Horus").error(
-                    f"Could not get a plugin: {str(exc)}",
-                )
+                logging.getLogger("Horus").error("Could not get a plugin: %s", str(exc))
 
         for ep in self.errorPlugins:
             info = ep.pluginMeta.dict()
             info["id"] = ep.id
             info["blocks"] = []
             info["default"] = ep.default
+            info["dev"] = ep.dev
             info["logo"] = ep.logo
             info["config"] = []
             errorPlugins.append(info)
@@ -1427,13 +1470,13 @@ class PluginManager(metaclass=HorusSingleton):
             print(f"Block ID: {block.id}")
             print(f"Block name: {block.name}")
             print(f"Block selected remote: {block.selectedRemote}")
-            print(f"Block config:")
+            print("Block config:")
             print(json.dumps(block.config, indent=4))
-            print(f"Block inputs:")
+            print("Block inputs:")
             print(json.dumps(block.inputs, indent=4))
-            print(f"Block variables:")
+            print("Block variables:")
             print(json.dumps(block.variables, indent=4))
-            print(f"Block initial extraData:")
+            print("Block initial extraData:")
             print(json.dumps(block.extraData, indent=4))
             print(
                 "============================================================================\n"
@@ -1450,7 +1493,8 @@ class PluginManager(metaclass=HorusSingleton):
         if isinstance(block, SlurmBlock):
 
             # In order to check the slurm status, we need to connect to the remote here
-            # This will also work as a firewall in order to cach connection errors, and pause the flow instead of
+            # This will also work as a firewall in order to
+            # cach connection errors, and pause the flow instead of
             # stopping it
             block._setRemote(RemotesManager(appSupportDir).getRemoteAPI(block.selectedRemote))
 
@@ -1483,10 +1527,9 @@ class PluginManager(metaclass=HorusSingleton):
         try:
             with PluginDepsPlugin(plugin):
                 with chdir(flowDir):
-                    # Paramiko does not work on subprocess! Need to update to connect inside the block subprocess instead
-                    outputs = SubprocessManager.subprocessBlock(
-                        block, appSupportDir, resetRemoteBlock
-                    )
+                    # Paramiko does not work on subprocess!
+                    # Need to update to connect inside the block subprocess instead
+                    outputs = SubprocessManager.subprocessBlock(block, appSupportDir)
         except Exception as e:
             if hasattr(e, "message"):
                 exception = type(e)(e.message + errorMSG)  # type: ignore
@@ -1518,9 +1561,9 @@ class PluginManager(metaclass=HorusSingleton):
                 )
                 print(f"Block execution time: {formattedTime}")
                 print(f"Block error: {error}")
-                print(f"Block outputs:")
+                print("Block outputs:")
                 print(json.dumps(outputs, indent=4))
-                print(f"Block final extraData:")
+                print("Block final extraData:")
                 print(json.dumps(block.extraData, indent=4))
                 print(
                     "============================================================================="
@@ -1985,6 +2028,10 @@ class PluginDepsPlugin(PluginDepsBase):
 
 
 class SubprocessManager:
+    """
+    Manages the subprocesses used in the PluginManager and in the Server
+    (call in isolated environment)
+    """
 
     @classmethod
     def subprocessCall(cls, fn, *args, **kwargs):
@@ -2019,7 +2066,7 @@ class SubprocessManager:
         return result
 
     @classmethod
-    def subprocessBlock(cls, block: PluginBlock, appSupportDir: str, resetRemote: bool):
+    def subprocessBlock(cls, block: PluginBlock, appSupportDir: str):
         """
         Calls the given block's action in a subprocess.
         Returns the result and the updated block.
@@ -2100,16 +2147,22 @@ class SubprocessManager:
                 if (
                     AppDelegate().debug
                     or AppDelegate().server.settingsManager.getSetting("developmentMode").value
-                    == True
+                    is True
                 ):
 
                     import traceback
 
                     msg = f"{traceback.format_exc()}\n{e}"
 
-                # Here we need to convert the exception because it may be a class which does not exist
+                # Here we need to convert the exception because
+                # it may be a class which does not exist
                 # outside of the forked context
                 error = Exception(msg)
+
+                # Cancel Any job in the block if its a slurm block
+                if isinstance(forkedBlock, SlurmBlock):
+                    forkedBlock.cancelAllJobs()
+                    forkedBlock.parseStatus()
 
             finally:
                 # Always ensure we put the result in the queue
@@ -2225,6 +2278,11 @@ class SubprocessManager:
             return p
 
     class HorusPopen(subprocess.Popen):
+        """
+        Wrapper for the subprocess.Popen module
+
+        Adds new methods like is_alive and join, to mimic multiprocess.Process
+        """
 
         def is_alive(self):
             """

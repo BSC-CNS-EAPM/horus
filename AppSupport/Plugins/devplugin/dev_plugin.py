@@ -360,13 +360,16 @@ def testSlurmBlockAction(block: SlurmBlock):
 
 
 def finalTestSlurmBlockAction(block: SlurmBlock):
+
     print("Test slurm block final action")
 
-    print("Status of slurm job: ", block.status)
+    print("block status", block.status)
 
-    timeToWait = int(block.inputs.get("timeToWait", 0) or 0)
+    if "timeToWait" in block.outputs.keys():
 
-    block.setOutput("time_to_wait", timeToWait)
+        timeToWait = int(block.inputs.get("timeToWait", 0) or 0)
+
+        block.setOutput("time_to_wait", timeToWait)
 
 
 slurmBlockTest = SlurmBlock(
@@ -476,15 +479,15 @@ def testSlurmBlockFailedAction(block: SlurmBlock):
     script = """#!/bin/bash
 #SBATCH --qos="short"
 #SBATCH --partition="short"
-#SBATCH --job-name="tunnel"
-#SBATCH --time=2:00:00     # walltime
-#SBATCH --ntasks=8  # number of cores
+#SBATCH --job-name="test_horus"
+#SBATCH --time=10:00     # walltime
+#SBATCH --ntasks=2  # number of cores
 #SBATCH --mem-per-cpu=1GB
 
 echo "Hello world"
 
 # Wait
-sleep 200
+# sleep 5
 
 # fail
 exit 1
@@ -503,9 +506,13 @@ exit 1
     except Exception as e:
         print("Error uploading script: ", e)
 
-    jobID = block.remote.submitJob(finalPath)
+    for i in range(10):
+        jobID = block.remote.submitJob(finalPath)
+        print("Job ID: ", jobID)
 
-    print("Job ID: ", jobID)
+    time.sleep(10)
+
+    print("Submitted all jobs...")
 
 
 slurmBlockFailes = SlurmBlock(

@@ -1,14 +1,21 @@
+# pylint: disable=invalid-name
+
 from distutils.sysconfig import get_config_vars as default_get_config_vars
 import distutils.sysconfig as dsc
-from setuptools import setup
 from distutils.extension import Extension
+from typing import cast
+from setuptools import setup
 from Cython.Distutils import build_ext  # type: ignore
 import os
 
 
+# TODO: THIS CODE IS DUPLICATED IN HorusAPI/setup.py !!!
 # manipulate get_config_vars:
 # 1. step: wrap functionality and filter
 def remove_pthread(x):
+    """
+    Remove the pthread command line argument
+    """
     if isinstance(x, str):
         # x.replace(" -pthread ") would be probably enough...
         # but we want to make sure we make it right for every input
@@ -23,12 +30,15 @@ def remove_pthread(x):
 
 
 def my_get_config_vars(*args):
+    """
+    Correctly get the config variables that I provide
+    """
     result = default_get_config_vars(*args)
     # sometimes result is a list and sometimes a dict:
     if isinstance(result, list):
         return [remove_pthread(x) for x in result]
     elif isinstance(result, dict):
-        return {k: remove_pthread(x) for k, x in result.items()}
+        return {k: remove_pthread(x) for k, x in (cast(dict, result)).items()}
     else:
         raise Exception("cannot handle type" + str(type(result)))
 
@@ -96,6 +106,13 @@ ext_modules = [
         ["Server/WebAppManager/__init__.py"],
         include_package_data=True,  # type: ignore
     ),
+    # Utils
+    # Extension("Utils.utils", ["Utils/utils.py"]),
+    # Extension(
+    #     "Utils.__init__",
+    #     ["Utils/__init__.py"],
+    #     include_package_data=True,  # type: ignore
+    # ),
 ]
 
 setup(

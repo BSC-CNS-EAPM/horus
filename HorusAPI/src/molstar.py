@@ -196,7 +196,7 @@ class MolstarAPI(metaclass=SingletonMeta):
     def addBox(
         self,
         center: list[float],
-        sides: list[float] = [1, 1, 1],
+        sides: typing.Optional[list[float]] = None,
         lineSize: float = 1,
         color: typing.Optional[str] = None,
         opacity: float = 1,
@@ -205,11 +205,19 @@ class MolstarAPI(metaclass=SingletonMeta):
         Adds a box to the scene.
 
         :param center: The x, y and z coordinates of the center of the box as a list of [x, y ,z]
-        :param sides: The a, b and c lengths of the box as a list of [a, b ,c]. Defaults to [1, 1, 1]
+        :param sides: The a, b and c lengths of the box as a list of [a, b ,c].
+        Defaults to [1, 1, 1]
         :param lineSize: The width of the lines. Defaults to 1.
-        :param color: The color of the box as an RGB hex string (i.e. #0000FF) Defaults to random color.
+        :param color: The color of the box as an RGB hex string (i.e. #0000FF)
+        Defaults to random color.
         :param opacity: The opacity of the box (0.0 - 1.0). Defaults to 1.
         """
+
+        # Changed the sides property from a default valu of list to None
+        # in order to fix python's default mutable value
+        # https://pylint.readthedocs.io/en/latest/user_guide/messages/warning/dangerous-default-value.html
+        if not sides:
+            sides = [1, 1, 1]
 
         if (
             not isinstance(center, list)
@@ -217,7 +225,8 @@ class MolstarAPI(metaclass=SingletonMeta):
             or not all(isinstance(x, float) for x in center)
         ):
             raise ValueError(
-                f"Center must be a 3 dimensional float list of the form [x, y, z]. Got value '{center}'"
+                "Center must be a 3 dimensional float list of the form [x, y, z]. "
+                f"Got value '{center}'"
             )
 
         if (
@@ -226,7 +235,8 @@ class MolstarAPI(metaclass=SingletonMeta):
             or not all(isinstance(x, float) for x in sides)
         ):
             raise ValueError(
-                f"Sides must be a 3 dimensional float list of the form [a, b, c]. Got value '{center}'"
+                "Sides must be a 3 dimensional float list of the form [a, b, c]. "
+                f"Got value '{center}'"
             )
 
         position = {

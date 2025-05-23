@@ -8,7 +8,7 @@ import json
 import sys
 import logging
 
-from HorusAPI import VariableTypes, HorusSingleton
+from HorusAPI import VariableTypes
 
 
 class Setting:

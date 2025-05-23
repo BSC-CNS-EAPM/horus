@@ -34,6 +34,7 @@ import CenterView from "../Components/Toolbar/Icons/CenterView";
 import NewFlowIcon from "../Components/Toolbar/Icons/New";
 import LogFile from "../Components/Toolbar/Icons/LogFile";
 import TrashIcon from "../Components/Toolbar/Icons/Trash";
+import ChangePassword from "../Components/Toolbar/Icons/ChangePassword";
 
 // Types
 import { Block, PluginPage } from "../Components/FlowBuilder/flow.types";
@@ -41,6 +42,7 @@ import { useAlert } from "../Components/HorusPrompt/horus_alert";
 import { HorusLazyLog } from "../Components/HorusLazyLog/HorusLazyLog";
 import { SearchComponent } from "@/Components/Search/Search";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { OverrideAlert } from "@/Main/OverrideAlert";
 
 type Database = {
   users: UsersDatabase[];
@@ -87,7 +89,9 @@ const queryClient = new QueryClient();
 export function BaseAdminToolsView() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AdminTools />
+      <OverrideAlert>
+        <AdminTools />
+      </OverrideAlert>
     </QueryClientProvider>
   );
 }
@@ -198,7 +202,7 @@ function _UserTable({
 
     const sampleUser = users[0]!;
 
-    return Object.keys(sampleUser).map((k) => {
+    const generatedColumns = Object.keys(sampleUser).map((k) => {
       return {
         field: k,
         filter: true,
@@ -210,6 +214,7 @@ function _UserTable({
                 values: groups,
               }
             : undefined,
+        cellRenderer: undefined as any,
         valueFormatter:
           k === "group"
             ? (params: any) => {
@@ -222,6 +227,93 @@ function _UserTable({
             : undefined,
       };
     });
+
+    generatedColumns.push({
+      field: "actions",
+      filter: false,
+      editable: false,
+      cellRenderer: (params: any) => {
+        return (
+          <div className="w-full h-full flex justify-center items-center">
+            <button
+              title="Delete user"
+              className="cursor-pointer p-1"
+              onClick={async () => {
+                const email = params.data.email;
+                const confirmDelete = await confirm(`Delete user ${email}?`);
+
+                if (confirmDelete) {
+                  horusDelete({
+                    url: "/users/admintools/deleteuser",
+                    body: { email },
+                  }).then(async (res) => {
+                    // Check if the response is ok
+                    const response = await res.json();
+                    if (response.redirect) {
+                      window.location.href = response.redirect;
+                      return;
+                    }
+                    if (!response.ok) {
+                      await alert(response.msg);
+                      return;
+                    }
+                    getDatabase();
+                  });
+                }
+              }}
+            >
+              <TrashIcon className="text-red-500 w-10 h-10" />
+            </button>
+
+            <button
+              title="Change password"
+              className="cursor-pointer p-1 bg-red"
+              onClick={async () => {
+                const email = params.data.email;
+                const confirmChangePassword = await confirm(
+                  `Change password for user ${email}?`
+                );
+
+                const header = {
+                  "Content-Type": "application/json",
+                  "Access-Control-Allow-Origin": "*",
+                };
+
+                const body = JSON.stringify({
+                  email: email,
+                });
+
+                if (confirmChangePassword) {
+                  horusPost(
+                    "/users/admintools/changepassword",
+                    header,
+                    body
+                  ).then(async (res) => {
+                    // Check if the response is ok
+                    const response = await res.json();
+                    if (!response.ok) {
+                      window.alert(response.msg);
+                      return;
+                    }
+                    if (response.url) {
+                      alert("Generated URL: " + response.url);
+                      return;
+                    }
+                  });
+                }
+              }}
+            >
+              <ChangePassword className="text-black w-10 h-10" />
+            </button>
+          </div>
+        );
+      },
+      cellEditor: undefined,
+      cellEditorParams: undefined,
+      valueFormatter: undefined,
+    });
+
+    return generatedColumns;
   }, [users, groups]);
 
   const editCell = (e: any) => {

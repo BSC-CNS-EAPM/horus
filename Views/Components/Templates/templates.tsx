@@ -1,5 +1,8 @@
 // React
 import { useCallback, useEffect, useState } from "react";
+
+// Ignore React18 errors until frontend-rewrite
+// @ts-ignore
 import { render, unmountComponentAtNode } from "react-dom";
 
 // Types
@@ -30,8 +33,8 @@ function useTemplates() {
   const filterTemplates = useCallback(() => {
     setFilteredTemplates(
       templates.filter((t) =>
-        t.name.toLowerCase().includes(filterTerm.toLowerCase()),
-      ),
+        t.name.toLowerCase().includes(filterTerm.toLowerCase())
+      )
     );
   }, [filterTerm, templates]);
 
@@ -186,7 +189,7 @@ function DeleteTemplateModal({
   // Render the modal
   render(
     <_DeleteTemplateModal flow={flow} getTemplates={getTemplates} />,
-    modal,
+    modal
   );
 }
 

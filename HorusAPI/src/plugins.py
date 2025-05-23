@@ -1,3 +1,5 @@
+# pylint: disable=invalid-name
+
 # Future imports
 from __future__ import annotations
 
@@ -490,6 +492,23 @@ class VariableTypes(str, Enum):
     - residues: The list of residues in the chain.
     - structure: The structure object variable where the atom is located.
     This last variable contains the properties of the STRUCTURE variable.
+    """
+
+    CHAIN_INTERACTIVE = "chain_interactive"
+    """
+    A chain to be selected from a loaded structure.
+
+    This variant of the chain selection is meant to be used witing Mol*. The user will be allowed
+    to select a specific chain from the loaded structures, not from a dropdown, but clicking directly into the 
+    loaded structure. The selected chain will be highlighted.
+    """
+
+    RESIDUE_RANGE = "residue_range"
+    """
+    A residue range to be selected fro ma loaded structure.
+    
+    Will enable residue selection. Two residues need to be selected. The starting one, and the ending one. 
+    A range will be automatically selected an visualized within Mol*.
     """
 
     BOX = "box"
@@ -1818,6 +1837,7 @@ class PluginBlock:
 
         # Update the variables with the values the user has set
         self.selectedInputGroup = selectedInputGroup
+
         self.selectedRemote = selectedRemote
         self._updateVariables(variablesJSONParsed)
 
@@ -1850,6 +1870,13 @@ class PluginBlock:
         """
         Encode only the blockID and the internal variables.
         """
+
+        # Ensure the selected remote exists in the current isntance of Horus
+        # If the selected remote does not exist in the current remotes, set it as the local IP
+        from App import AppDelegate
+
+        if not AppDelegate().server.remoteManager.remoteExists(self.selectedRemote):
+            self.selectedRemote = "Local"
 
         return {
             "id": self.id,
@@ -2232,7 +2259,16 @@ class SlurmJob(HorusPydanticModel):
         from Server.RemotesManager import CommandFailed
 
         # Prepare the command to get all the information on a single run
-        command = f"cat {self.command}; echo {self.SEPARATOR}; cat {self.stdout_path}; echo {self.SEPARATOR}; cat {self.stderr_path}; echo {self.SEPARATOR}; {self.SCONTROL_COMMAND(self.job_id)}"
+        command = (
+            f"cat {self.command}; "
+            f"echo {self.SEPARATOR}; "
+            f"cat {self.stdout_path}; "
+            f"echo {self.SEPARATOR}; "
+            f"cat {self.stderr_path}; "
+            f"echo {self.SEPARATOR}; "
+            f"{self.SCONTROL_COMMAND(self.job_id)}"
+        )
+
         out = ""
         try:
             out = remote.command(command)
@@ -2351,6 +2387,9 @@ class SlurmJob(HorusPydanticModel):
 
     @staticmethod
     def getSacctStatus(remote: RemoteUnion, jobID: str) -> "Status":
+        """
+        Will get the status of the job from the Slurm Accounting Database (if available)
+        """
         from Server.RemotesManager import CommandFailed
 
         # Assume completed when the status cannot be retrieved
@@ -2360,7 +2399,10 @@ class SlurmJob(HorusPydanticModel):
         except CommandFailed as cf1:
 
             logging.getLogger("Horus").error(
-                f"Failed to check sactt state for job {jobID}. {cf1}. Trying with less reliable squeue."
+                "Failed to check sactt state for job %s. %s."
+                " Trying with less reliable squeue.",
+                jobID,
+                str(cf1),
             )
 
             # Try with squeue
@@ -2371,7 +2413,10 @@ class SlurmJob(HorusPydanticModel):
             except CommandFailed as cf2:
                 # Assume The job has ended
                 logging.getLogger("Horus").error(
-                    f"Failed to check Slurm state for job {jobID}. {cf2}. Assuming job ended successfully."
+                    "Failed to check Slurm state for job %s. %s. "
+                    "Assuming job ended successfully.",
+                    jobID,
+                    str(cf2),
                 )
 
         return status
@@ -2484,7 +2529,7 @@ class SlurmBlock(PluginBlock):
 
         return outputs
 
-    def parseStatus(self) -> Status:
+    def parseStatus(self, skipCompleted: bool = True) -> Status:
         """
         The status of the block as a parsed string.
         """
@@ -2498,7 +2543,7 @@ class SlurmBlock(PluginBlock):
             for j in self.jobs:
 
                 # Skip finished jobs
-                if j.completed:
+                if skipCompleted and j.completed:
                     continue
 
                 tasks[j.job_id] = executor.submit(j.updateLogs, self.remote)
@@ -2573,6 +2618,9 @@ class SlurmBlock(PluginBlock):
         """
         Cancels the jobs in the slurm queue.
         """
+
+        if not self.jobs:
+            return
 
         # Ensure the remote api has as blockID this block
         jids = ",".join([j.job_id for j in self.jobs])
@@ -2649,6 +2697,12 @@ class Plugin:
     default: bool = False
     """
     Whether the plugin is a default plugin or not.
+    """
+
+    dev: bool = False
+    """
+    If the plugin comes from a development 
+    folder and not the regular plugins folder
     """
 
     def __init__(self, id: typing.Optional[str] = None, noMetaLoad: bool = False):

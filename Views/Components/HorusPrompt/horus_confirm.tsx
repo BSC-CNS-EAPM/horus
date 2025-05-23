@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
 import "./horus_prompt.css";
+
+// Ignore React18 errors until frontend-rewrite
+// @ts-ignore
 import { render, unmountComponentAtNode } from "react-dom";
 import AppButton from "../appbutton";
 import { BlurredModal } from "../reusable";
@@ -42,7 +45,7 @@ export const useConfirm = () => {
     if (showConfirm) {
       render(
         <ConfirmComponent message={message} onSubmit={handleSubmit} />,
-        document.getElementById("confirm-root"),
+        document.getElementById("confirm-root")
       );
     } else {
       unmountComponentAtNode(document.getElementById("confirm-root")!);
@@ -72,7 +75,7 @@ const ConfirmComponent = ({
         onSubmit(false);
       }
     },
-    [onSubmit],
+    [onSubmit]
   );
 
   useEffect(() => {

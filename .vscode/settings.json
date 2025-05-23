@@ -15,5 +15,17 @@
   ],
   "typescript.validate.enable": true,
   "typescript.tsdk": "node_modules/typescript/lib",
-  "python.analysis.autoImportCompletions": true
+  "python.analysis.autoImportCompletions": true,
+  "python.analysis.extraPaths": [
+    "AppSupport/DefaultPlugins/Horus/Include"
+  ],
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/bower_components": true,
+    "**/*.code-search": true,
+    "**/dist": true,
+    "**/*.map": true,
+    "AppSupport/Plugins/**": true,
+    "**/.*": true
+  }
 }

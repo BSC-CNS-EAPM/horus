@@ -7,6 +7,9 @@ import {
 } from "chonky";
 import { ChonkyIconFA } from "chonky-icon-fontawesome";
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
+
+// Ignore React18 errors until frontend-rewrite
+// @ts-ignore
 import { render } from "react-dom";
 import { horusPost, POSTUploadWithProgress } from "../../Utils/utils";
 import AppButton from "../appbutton";
@@ -44,7 +47,7 @@ function useServerExplorer(
 
   // Needed for opening the file explore routside a flow
   // for example, in the plugin installer page
-  openOutsideFlowContext: boolean = false,
+  openOutsideFlowContext: boolean = false
 ) {
   const [files, setFiles] = useState<FileArray>([null]);
   const [folderChain, setFolderChain] = useState<FileArray>([null]);
@@ -67,7 +70,7 @@ function useServerExplorer(
       openPath?: string,
       options?: {
         setGoToPathAsSelected: boolean;
-      },
+      }
     ) => {
       const header = {
         "Content-Type": "application/json",
@@ -154,7 +157,7 @@ function useServerExplorer(
       files,
       onFileSelect,
       openOutsideFlowContext,
-    ],
+    ]
   );
 
   const handleFileAction = (action: FileActionState) => {
@@ -227,7 +230,7 @@ function useServerExplorer(
     const response = await horusPost(
       "/api/filepicker/createfolder",
       header,
-      body,
+      body
     );
 
     const data = await response.json();
@@ -278,7 +281,7 @@ function useServerExplorer(
         await horusAlert(
           `The filze size exceeds the maximum of ${
             window.horusInternal.webApp?.uploadSize ?? 2
-          } MB`,
+          } MB`
         );
         return;
       }
@@ -288,7 +291,7 @@ function useServerExplorer(
       formData.append("path", currentPath.current!);
       formData.append(
         "flowContextPath",
-        flowBuilderContext?.flow?.flow?.path ?? "",
+        flowBuilderContext?.flow?.flow?.path ?? ""
       );
 
       // Check if its size is more than the maximum allowed
@@ -307,7 +310,7 @@ function useServerExplorer(
             ...currentText,
             progress: percentage,
           }));
-        },
+        }
       );
 
       if (!data.ok) {
@@ -351,7 +354,7 @@ function useServerExplorer(
         const response = await horusPost(
           "/api/filepicker/download",
           header,
-          body,
+          body
         );
 
         if (response.headers.get("content-type") === "application/json") {
@@ -388,7 +391,7 @@ function useServerExplorer(
       }
       resetActionFiles();
     },
-    [resetActionFiles, flowBuilderContext?.flow?.flow?.path],
+    [resetActionFiles, flowBuilderContext?.flow?.flow?.path]
   );
 
   const deleteFiles = useCallback(
@@ -397,7 +400,7 @@ function useServerExplorer(
         {
           path: string;
         },
-      ],
+      ]
     ) => {
       const header = {
         "Content-Type": "application/json",
@@ -422,7 +425,7 @@ function useServerExplorer(
         const response = await horusPost(
           "/api/filepicker/delete",
           header,
-          body,
+          body
         );
 
         const data = await response.json();
@@ -435,7 +438,7 @@ function useServerExplorer(
 
       resetActionFiles();
     },
-    [resetActionFiles, flowBuilderContext?.flow?.flow?.path],
+    [resetActionFiles, flowBuilderContext?.flow?.flow?.path]
   );
 
   return {
@@ -531,12 +534,12 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
     setOpen,
     fileProps?.allowedExtensions,
     fileProps?.openDirectly,
-    fileProps?.openOutsideFlowContext,
+    fileProps?.openOutsideFlowContext
   );
 
   useEffect(() => {
     setSelectedIsDir(
-      selectedFile?.isDir === undefined ? false : selectedFile.isDir,
+      selectedFile?.isDir === undefined ? false : selectedFile.isDir
     );
   }, [selectedFile]);
 
@@ -651,7 +654,7 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
                     if (lastPart && lastPart.length > 0) {
                       // Find the folder to autocomplete
                       const folder = folders.find((f) =>
-                        f?.name.includes(lastPart),
+                        f?.name.includes(lastPart)
                       );
                       if (folder) {
                         // If the folder was fully completed, then do nothing
@@ -788,7 +791,7 @@ function useDesktopExplorer(
   openFolder: boolean,
   onFileSelect: (path: string) => void,
   onFileConfirm: (path: string) => void,
-  allowedExtensions?: string[],
+  allowedExtensions?: string[]
 ) {
   const openFilePicker = async () => {
     const header = {
@@ -825,7 +828,7 @@ function DesktopFileExplorer(props: FileExplorerProps) {
     openFolder,
     props.onFileSelect ? props.onFileSelect : (_) => _,
     props.onFileConfirm ? props.onFileConfirm : (_) => _,
-    props.allowedExtensions,
+    props.allowedExtensions
   );
 
   useEffect(() => {
@@ -856,7 +859,7 @@ export type ExtensionsFilePickerOptions = Omit<
 
 function openExtensionFilePicker(options: ExtensionsFilePickerOptions) {
   let globalFilePicker = document.getElementById(
-    GLOBAL_IDS.EXTENSIONS_FILEPICKER,
+    GLOBAL_IDS.EXTENSIONS_FILEPICKER
   );
 
   if (globalFilePicker) {

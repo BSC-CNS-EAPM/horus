@@ -10,6 +10,8 @@ import {
   IDockviewHeaderActionsProps,
   IDockviewDefaultTabProps,
 } from "dockview";
+import { themeLight } from "dockview";
+
 import { CloseButton } from "dockview/dist/esm/svg";
 import "dockview/dist/styles/dockview.css";
 import Molstar from "../Molstar/molstar";
@@ -914,15 +916,17 @@ export function HorusPanelView() {
       >
         <FlowBuilderContext.Provider value={flowBuilderState}>
           <HorusToolbar />
-          <DockviewReact
-            components={components}
-            tabComponents={headerComponents}
-            watermarkComponent={WatermarkComponent}
-            defaultTabComponent={headerComponents.default}
-            rightHeaderActionsComponent={MaximizeComponent}
-            onReady={onReady}
-            className="dockview-theme-light"
-          />
+          <div>
+            <DockviewReact
+              components={components}
+              tabComponents={headerComponents}
+              watermarkComponent={WatermarkComponent}
+              defaultTabComponent={headerComponents.default}
+              rightHeaderActionsComponent={MaximizeComponent}
+              onReady={onReady}
+              theme={themeLight}
+            />
+          </div>
           {
             // If there is a block being dragged, show it
             flowBuilderState.dnd.draggingBlock &&

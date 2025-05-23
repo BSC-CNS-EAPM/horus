@@ -1,5 +1,6 @@
 [tool.pylint.MASTER]
-ignore-paths = [ "^Tests/**/.*$" ]
+ignore = "^Tests/**/.*$" 
+extension-pkg-whitelist=pydantic
 
 [FORMAT]
 

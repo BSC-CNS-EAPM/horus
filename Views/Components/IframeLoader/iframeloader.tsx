@@ -19,13 +19,15 @@ function IFrameLoader({
 }) {
   const fixedURL = () => {
     // Do not fix the url for the development page
+    // Plugins installed do not have a protocol, as will be inherited later
+    // Plugins determine its url in the following form /plugins/pages/pluginid.pageid/
     if (page?.url?.startsWith("http")) {
       return page.url;
     }
 
     let domain = window.origin + window.__HORUS_ROOT__;
 
-    // Remove the final slash
+    // Remove the final slash for the doman, in order to no have multiple "//"
     if (domain.endsWith("/")) {
       domain = domain.slice(0, -1);
     }
@@ -34,6 +36,13 @@ function IFrameLoader({
 
     if (!url) {
       url = `/plugins/pages/${page.id}`;
+    }
+
+    // Always end the URL with a final slash,
+    // this will prevent load balancers from mixing the content
+    // and therefore the browser won't block the request. (Look at https://stackoverflow.com/a/58428968/15479705)
+    if (!url.endsWith("/")) {
+      url = url + "/";
     }
 
     return domain + url;

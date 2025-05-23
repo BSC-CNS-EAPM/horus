@@ -19,6 +19,7 @@ export type HorusPlugin = {
     config: Array<Block>;
   }>;
   default: boolean;
+  dev: boolean;
 
   // Base64 encoded logo
   logo?: string;
@@ -76,6 +77,8 @@ export enum PluginVariableTypes {
   CHECKBOX = "checkbox",
   RADIO = "radio",
   PASSWORD = "PASSWORD",
+  CHAIN_INTERACTIVE = "chain_interactive",
+  RESIDUE_RANGE = "residue_range",
 }
 
 export type PluginVariable = {
@@ -97,6 +100,8 @@ export type PluginVariable = {
 
   // Check if the variable is custom
   isCustom?: boolean;
+
+  block?: Block;
 };
 
 export type CustomVariable = PluginVariable & {

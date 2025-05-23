@@ -38,6 +38,13 @@ from HorusAPI import HorusSingleton, __version__
 # Add to the pythonpath the path of the project
 sys.path.append("../")
 
+FLOWNAME: typing.Optional[str] = None
+"""
+Variable only used to log the Flows, not the application itself
+
+Used in HorusLogger
+"""
+
 
 class HorusLogger:
     """
@@ -77,20 +84,21 @@ class HorusLogger:
             os.mkdir(self.logDir)
 
         # Clean the logs folder
-        self._cleanLogs()
+        # DISABLED AS NO NEED TO REMOVE OLD LOGS
+        # self._cleanLogs()
 
         # Init the logger
         self._initLogger()
 
     def _cleanLogs(self):
         """
-        Clean the oldes logs if there are more than 5
+        Clean the oldes logs if there are more than 25
         """
         # If there are more than 5 logs inside the logs folder,
         # delete the oldest one
         try:
             logs = os.listdir(self.logDir)  # type: ignore
-            if len(logs) > 5:
+            if len(logs) > 25:
                 logs = [os.path.join(self.logDir, log) for log in logs]
                 oldestLog = min(logs, key=os.path.getctime)
                 os.remove(os.path.join(self.logDir, oldestLog))
@@ -135,16 +143,16 @@ class HorusLogger:
         self.capturer.addFilter(FilterCapturer())
 
         # Start a new log
-        logname = "Horus-"
+        logname = f"{datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}-Horus-"
+
         if self.debug:
             logname += "debug"
-        else:
-            date = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-            logname += date
-        logFile = os.path.join(self.logDir, f"{logname}.log")
 
-        if os.path.exists(logFile):
-            os.remove(logFile)
+        # If we are running a flow instead of running Horus, add "flow-{flowname}" to the logname
+        if FLOWNAME:
+            logname += f"-FLOWRUN-{FLOWNAME}"
+
+        logFile = os.path.join(self.logDir, f"{logname}.log")
 
         # Generate emtpy file
         with open(logFile, "w", encoding="utf-8") as f:
@@ -152,11 +160,13 @@ class HorusLogger:
 
         self.latestLogFile = os.path.join(self.logDir, "latest.log")
 
-        # Generate a symlink to the latest log as "latest.log"
-        if os.path.exists(self.latestLogFile):
-            os.remove(self.latestLogFile)
+        # Do not create symlink for FLOWRUN logs
+        if not FLOWNAME:
+            # Generate a symlink to the latest log as "latest.log"
+            if os.path.exists(self.latestLogFile):
+                os.remove(self.latestLogFile)
 
-        os.symlink(logFile, self.latestLogFile)
+            os.symlink(logFile, self.latestLogFile)
 
         # Create the file handler
         fh = logging.FileHandler(logFile)  # pylint: disable=invalid-name
@@ -1297,6 +1307,9 @@ def parseArgs() -> tuple[dict, dict, dict]:
         if not os.path.exists(flowPath):
             print(f"Flow '{flowPath}' does not exist")
             sys.exit(1)
+
+        global FLOWNAME  # pylint: disable=global-statement
+        FLOWNAME = os.path.basename(flowPath).replace(".flow", "")
 
     flowAppSupport = (
         args.flow_appsupport.strip() if args.flow_appsupport else args.flow_appsupport
