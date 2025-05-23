@@ -13,7 +13,7 @@ echo "Testing Horus for Rocky Linux 8"
 
 # Install node_modules requirements
 echo "Installing frontend requirements"
-npm i
+npm i --legacy-peer-deps
 
 # Reinstall the conda environment
 echo "Reinstalling the conda environment"

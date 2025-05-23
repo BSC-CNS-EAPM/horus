@@ -37,3 +37,4 @@ dependencies:
   - zope==5.9
   - locust==2.29.0
   - twine==5.1.1
+  - PyYAML==6.0.2

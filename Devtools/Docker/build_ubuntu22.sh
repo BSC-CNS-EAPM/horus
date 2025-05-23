@@ -12,7 +12,7 @@ echo "Starting the build process for Ubuntu 22.04"
 
 # Install node_modules requirements
 echo "Installing frontend requirements"
-npm i
+npm i --legacy-peer-deps
 
 # Reinstall the conda environment
 echo "Reinstalling the conda environment"
