@@ -139,7 +139,7 @@ export default function HorusTerm() {
               structureLabel,
               options.resID,
               options.chain,
-              options.surroundRadius,
+              options.surroundRadius
             );
           } catch (e: any) {
             return "Internal error focusing residue: " + e.message;
