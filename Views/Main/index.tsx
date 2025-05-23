@@ -11,6 +11,7 @@ import { StrictMode } from "react";
 import { HorusRouter } from "./Router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { OverrideAlert } from "./OverrideAlert";
+import { MantineProvider } from "@mantine/core";
 
 let container: HTMLElement | null = null;
 export const queryClient = new QueryClient();
@@ -30,10 +31,12 @@ document.addEventListener("DOMContentLoaded", () => {
       <StrictMode>
         <QueryClientProvider client={queryClient}>
           <OverrideAlert>
-            <HorusRouter />
+            <MantineProvider>
+              <HorusRouter />
+            </MantineProvider>
           </OverrideAlert>
         </QueryClientProvider>
-      </StrictMode>,
+      </StrictMode>
     );
   }
 });

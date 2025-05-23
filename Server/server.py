@@ -37,7 +37,7 @@ import threading  # For background socketio thread
 # Flask
 import flask
 import jinja2
-from flask import Flask, after_this_request, request, Response
+from flask import Flask, after_this_request, request, Response, send_file
 from flask_socketio import SocketIO, join_room, leave_room
 from flask_cors import CORS
 import flask_login
@@ -1772,6 +1772,16 @@ class HorusServer:
             AppDelegate().openURL(url)
 
             return flask.jsonify({"ok": True})
+
+        @self.server.route("/license", methods=["GET"])
+        def license():
+
+            try:
+                from App import AppDelegate
+
+                return send_file(os.path.join(AppDelegate().bundleDir, "LICENSES.md"))
+            except Exception:
+                return flask.jsonify("License file not found.")
 
         @self.server.route("/api/version", methods=["GET"])
         @self.verifyLogin

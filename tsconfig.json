@@ -40,6 +40,9 @@
             ],
             "@resources/*": [
                 "./Resources/*"
+            ],
+            "@components/*": [
+                "./Views/Components/*"
             ]
         }
     },

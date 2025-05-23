@@ -23,6 +23,9 @@
     "**/node_modules": true,
     "**/bower_components": true,
     "**/*.code-search": true,
-    "**/dist": true
+    "**/dist": true,
+    "**/*.map": true,
+    "AppSupport/Plugins/**": true,
+    "**/.*": true
   }
 }
