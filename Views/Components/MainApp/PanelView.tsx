@@ -916,15 +916,17 @@ export function HorusPanelView() {
       >
         <FlowBuilderContext.Provider value={flowBuilderState}>
           <HorusToolbar />
-          <DockviewReact
-            components={components}
-            tabComponents={headerComponents}
-            watermarkComponent={WatermarkComponent}
-            defaultTabComponent={headerComponents.default}
-            rightHeaderActionsComponent={MaximizeComponent}
-            onReady={onReady}
-            theme={themeLight}
-          />
+          <div>
+            <DockviewReact
+              components={components}
+              tabComponents={headerComponents}
+              watermarkComponent={WatermarkComponent}
+              defaultTabComponent={headerComponents.default}
+              rightHeaderActionsComponent={MaximizeComponent}
+              onReady={onReady}
+              theme={themeLight}
+            />
+          </div>
           {
             // If there is a block being dragged, show it
             flowBuilderState.dnd.draggingBlock &&
