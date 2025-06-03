@@ -63,7 +63,3 @@ __all__ = [
 
 # Set the module name
 __module__ = "HorusAPI"
-
-__version__ = "0.6.1.dev0+"
-
-__version__ = "0.6.1.dev0+"
