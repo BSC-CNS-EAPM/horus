@@ -135,11 +135,11 @@ export type LoadMoleculeFileType = (
   file: File,
   options?: {
     label?: string;
-  },
+  }
 ) => Promise<void>;
 
 export function isMolstarLoaded(
-  molstar: typeof window.molstar,
+  molstar: typeof window.molstar
 ): molstar is HorusMolstar {
   return Boolean((molstar as HorusMolstar | undefined)?.plugin);
 }
@@ -212,10 +212,10 @@ export default class HorusMolstar {
     });
 
     this.plugin.representation.structure.registry.add(
-      DockingSphereRepresentationProvider,
+      DockingSphereRepresentationProvider
     );
     this.plugin.representation.structure.registry.add(
-      DockingBoxRepresentationProvider,
+      DockingBoxRepresentationProvider
     );
     this.plugin.behaviors.layout.leftPanelTabName.next("data");
 
@@ -369,7 +369,7 @@ export default class HorusMolstar {
   public async setBackground(hexColor: string): Promise<void> {
     if (!this.plugin?.canvas3d) {
       throw new Error(
-        "3D canvas is not available. Cannot set background color.",
+        "3D canvas is not available. Cannot set background color."
       );
     }
 
@@ -388,7 +388,7 @@ export default class HorusMolstar {
       throw new Error(
         `Failed to set background color: ${
           error instanceof Error ? error.message : String(error)
-        }`,
+        }`
       );
     }
   }
@@ -432,7 +432,7 @@ export default class HorusMolstar {
       throw new Error(
         `Failed to toggle spin: ${
           error instanceof Error ? error.message : String(error)
-        }`,
+        }`
       );
     }
   }
@@ -502,7 +502,7 @@ export default class HorusMolstar {
       throw new Error(
         `Failed to get session: ${
           error instanceof Error ? error.message : String(error)
-        }`,
+        }`
       );
     }
   }
@@ -524,7 +524,7 @@ export default class HorusMolstar {
 
     if (session.size > MAX_SESSION_SIZE) {
       throw new Error(
-        `Session size exceeds the maximum size of ${ALLOWED_MB} MB.`,
+        `Session size exceeds the maximum size of ${ALLOWED_MB} MB.`
       );
     }
 
@@ -600,7 +600,7 @@ export default class HorusMolstar {
       throw new Error(
         `Failed to get structure from model ID '${modelID}': ${
           error instanceof Error ? error.message : String(error)
-        }`,
+        }`
       );
     }
   }
@@ -621,7 +621,7 @@ export default class HorusMolstar {
    * @throws {Error} If there's an error while accessing the state cells or their properties.
    */
   public getStructureIDFromStructureRef(
-    structure: StructureRef,
+    structure: StructureRef
   ): string | null {
     try {
       // Find the first cell with a "Structure" type that matches the given structure reference
@@ -637,7 +637,7 @@ export default class HorusMolstar {
       throw new Error(
         `Error finding model ID from structure: ${
           error instanceof Error ? error.message : String(error)
-        }`,
+        }`
       );
     }
   }
@@ -660,7 +660,7 @@ export default class HorusMolstar {
    */
   public getStructureObjectFromLabel(
     structureLabel: string,
-    first: boolean = true,
+    first: boolean = true
   ): StructureRef | null {
     try {
       const structures = this.structures();
@@ -672,14 +672,14 @@ export default class HorusMolstar {
       return (
         structures.find(
           (s) =>
-            this.getLabelFromStructureRef(s.cell.sourceRef!) === structureLabel,
+            this.getLabelFromStructureRef(s.cell.sourceRef!) === structureLabel
         ) ?? null
       );
     } catch (error) {
       throw new Error(
         `Failed to get structure from label '${structureLabel}': ${
           error instanceof Error ? error.message : String(error)
-        }`,
+        }`
       );
     }
   }
@@ -704,7 +704,7 @@ export default class HorusMolstar {
     structureLabel?: string,
     residueNumber?: number,
     chain?: string,
-    surroundRadius: number = 0,
+    surroundRadius: number = 0
   ): Promise<string> {
     let message = "";
 
@@ -732,7 +732,7 @@ export default class HorusMolstar {
 
     if (!structureRef) {
       throw new Error(
-        `Could not find structure with label '${structureLabel}'`,
+        `Could not find structure with label '${structureLabel}'`
       );
     }
 
@@ -747,7 +747,7 @@ export default class HorusMolstar {
 
       const snapshot = this.plugin!.canvas3d!.camera.getFocus(
         boundary.center,
-        radius,
+        radius
       );
       await PluginCommands.Camera.SetSnapshot(this.plugin!, {
         snapshot,
@@ -780,7 +780,7 @@ export default class HorusMolstar {
       residueNumber,
       structureRef,
       chain,
-      surroundRadius,
+      surroundRadius
     );
 
     return message;
@@ -806,7 +806,7 @@ export default class HorusMolstar {
     residueID: number,
     structureObject: StructureRef,
     chain: string,
-    surroundRadius: number = 0,
+    surroundRadius: number = 0
   ) {
     // Get the 'Update' object from Mol*. This is used to update the state of the visualizer
     const update = this.state.build();
@@ -862,7 +862,7 @@ export default class HorusMolstar {
       .group(
         StateTransforms.Misc.CreateGroup,
         { label: focusLabel },
-        { ref: StateElements.Selection },
+        { ref: StateElements.Selection }
       );
 
     // Inside the new group named 'Focus' we create the actual residue selection
@@ -870,7 +870,7 @@ export default class HorusMolstar {
     const filteredResidueInner = group.apply(
       StateTransforms.Model.StructureSelectionFromExpression,
       { label: "Residue " + residueID, expression: filteredResidue },
-      { ref: StateElements.SelectionGroup },
+      { ref: StateElements.SelectionGroup }
     );
 
     // To our new selection, we add a representation based on the data of the structure
@@ -879,7 +879,7 @@ export default class HorusMolstar {
       StateTransforms.Representation.StructureRepresentation3D,
       createStructureRepresentationParams(this.plugin!, model.data, {
         type: "ball-and-stick",
-      }),
+      })
     );
 
     // If the user specified a radius for the surroundings, we will create a new selection
@@ -901,7 +901,7 @@ export default class HorusMolstar {
           StateTransforms.Representation.StructureRepresentation3D,
           createStructureRepresentationParams(this.plugin!, model.data, {
             type: "ball-and-stick",
-          }),
+          })
         );
     }
 
@@ -950,7 +950,7 @@ export default class HorusMolstar {
     const radius = Math.max(boundingSphere.radius, 5);
     const snapshot = this.plugin!.canvas3d!.camera.getFocus(
       boundingSphere.center,
-      radius,
+      radius
     );
 
     // Finally, we will animate the camera to the new position
@@ -988,7 +988,7 @@ export default class HorusMolstar {
 
       const ext = file.name.split(".").pop();
       const isAllowed = BuiltInTrajectoryFormats.find(
-        (format) => format[0] === ext,
+        (format) => format[0] === ext
       );
 
       if (isAllowed) {
@@ -1003,16 +1003,26 @@ export default class HorusMolstar {
           // @ts-ignore -> Ignore the extension
           await this.plugin!.builders.structure.parseTrajectory(data.data, ext);
 
-        await this.plugin.builders.structure.hierarchy.applyPreset(
-          trajectory,
-          "default",
+        // Create the model
+        const model =
+          await this.plugin.builders.structure.createModel(trajectory);
+
+        // Force model representation instead of assembly
+        const structure = await this.plugin.builders.structure.createStructure(
+          model,
+          { name: "model", params: {} }
+        );
+
+        await this.plugin.builders.structure.representation.applyPreset(
+          structure,
+          "auto"
         );
       } else {
         // Use the old method of dropping a file into molstar
         // Using "drag and drop action" to upload a structure
 
         console.warn(
-          `When loading ${ext} files, setting the label is not supported.`,
+          `When loading ${ext} files, setting the label is not supported.`
         );
 
         await this.plugin.runTask(
@@ -1020,14 +1030,14 @@ export default class HorusMolstar {
             files: [parseFileAsAsset],
             format: { name: "auto", params: {} },
             visuals: true,
-          }),
+          })
         );
       }
     } catch (error) {
       console.error(
         `Failed to load molecule file: ${
           error instanceof Error ? error.message : String(error)
-        }`,
+        }`
       );
     }
   };
@@ -1073,7 +1083,7 @@ export default class HorusMolstar {
 
             if (!provider) {
               ctx.log.warn(
-                `LoadTrajectory: could not find data provider for '${info.ext}'`,
+                `LoadTrajectory: could not find data provider for '${info.ext}'`
               );
               await ctx.state.data.build().delete(data).commit();
               return;
@@ -1108,7 +1118,7 @@ export default class HorusMolstar {
                   modelRef: model.ref,
                   coordinatesRef: coordinates.ref,
                 },
-                { dependsOn },
+                { dependsOn }
               )
               .apply(StateTransforms.Model.ModelFromTrajectory, {
                 modelIndex: 0,
@@ -1116,11 +1126,11 @@ export default class HorusMolstar {
 
             await this.state.updateTree(traj).runInContext(taskCtx);
             const structure = await ctx.builders.structure.createStructure(
-              traj.selector,
+              traj.selector
             );
             await ctx.builders.structure.representation.applyPreset(
               structure,
-              "auto",
+              "auto"
             );
           } catch (e) {
             console.error(e);
@@ -1136,7 +1146,7 @@ export default class HorusMolstar {
   // Deprecated method
   async loadPDBString(pdbString: string, label: string) {
     console.warn(
-      "loadPDBString will be soon deprecated use loadMoleculeString instead.",
+      "loadPDBString will be soon deprecated use loadMoleculeString instead."
     );
 
     // Parse the data from the string
@@ -1148,7 +1158,7 @@ export default class HorusMolstar {
     });
     const trajectory = await this.plugin!.builders.structure.parseTrajectory(
       data,
-      "pdb",
+      "pdb"
     );
     const model = await this.plugin!.builders.structure.createModel(trajectory);
     const structure =
@@ -1157,15 +1167,15 @@ export default class HorusMolstar {
     const components = {
       polymer: await this.plugin!.builders.structure.tryCreateComponentStatic(
         structure,
-        "polymer",
+        "polymer"
       ),
       ligand: await this.plugin!.builders.structure.tryCreateComponentStatic(
         structure,
-        "ligand",
+        "ligand"
       ),
       water: await this.plugin!.builders.structure.tryCreateComponentStatic(
         structure,
-        "water",
+        "water"
       ),
     };
 
@@ -1184,7 +1194,7 @@ export default class HorusMolstar {
           color: proteinColorType as any,
           colorParams: { value: Color.fromRgb(1, 0, 0) },
         },
-        { tag: "polymer" },
+        { tag: "polymer" }
       );
     if (components.ligand)
       builder.buildRepresentation(
@@ -1195,14 +1205,14 @@ export default class HorusMolstar {
           color: ligandColorType as any,
           colorParams: { value: Color.fromRgb(1, 0, 0) },
         },
-        { tag: "ligand" },
+        { tag: "ligand" }
       );
     if (components.water)
       builder.buildRepresentation(
         update,
         components.water,
         { type: "ball-and-stick", typeParams: { alpha: 0.6 } },
-        { tag: "water" },
+        { tag: "water" }
       );
     await update.commit();
   }
@@ -1232,7 +1242,7 @@ export default class HorusMolstar {
           Q.struct.generator.atomGroups({
             "chain-test": Q.core.rel.eq(["B", Q.ammp("label_asym_id")]),
           }),
-        structure,
+        structure
       );
 
       const loci = StructureSelection.toLociWithSourceUnits(selection);
@@ -1242,14 +1252,14 @@ export default class HorusMolstar {
       throw new Error(
         `Failed to generate Loci for structure: ${
           error instanceof Error ? error.message : String(error)
-        }`,
+        }`
       );
     }
   }
 
   private extractAtomInfo(
     loc: StructureElement.Location<Unit>,
-    structureID?: string,
+    structureID?: string
   ): AtomInfo {
     // auth_seq_id  : UniProt coordinate space
     // label_seq_id : PDB coordinate space
@@ -1341,11 +1351,11 @@ export default class HorusMolstar {
    * @throws {Error} If the `structureSourceRef` is not found or if there's an unexpected error during traversal.
    */
   private getStructureRootIDFromStructureSourceRef(
-    structureSourceRef: string,
+    structureSourceRef: string
   ): string {
     if (!this.plugin || !this.plugin.state || !this.plugin.state.data) {
       throw new Error(
-        "Plugin state is not initialized. Cannot find the structure root.",
+        "Plugin state is not initialized. Cannot find the structure root."
       );
     }
 
@@ -1354,7 +1364,7 @@ export default class HorusMolstar {
 
     if (!currentRef) {
       throw new Error(
-        `Unexpected error while finding the structure root. Cell '${structureSourceRef}' not found.`,
+        `Unexpected error while finding the structure root. Cell '${structureSourceRef}' not found.`
       );
     }
 
@@ -1416,7 +1426,7 @@ export default class HorusMolstar {
   public getLabelFromStructureRef(refID: string) {
     try {
       return this.plugin?.state.data.cells.get(
-        this.getStructureRootIDFromStructureSourceRef(refID),
+        this.getStructureRootIDFromStructureSourceRef(refID)
       )!.obj!.label;
     } catch (error) {
       return "Unknown";
@@ -1442,7 +1452,7 @@ export default class HorusMolstar {
     try {
       for (const structure of structures) {
         const rootRef = this.getStructureRootIDFromStructureSourceRef(
-          structure.cell.sourceRef!,
+          structure.cell.sourceRef!
         );
 
         const molInfo = {
@@ -1460,7 +1470,7 @@ export default class HorusMolstar {
       alert(
         `Failed to list structures: ${
           error instanceof Error ? error.message : String(error)
-        }`,
+        }`
       );
     }
 
@@ -1544,7 +1554,7 @@ export default class HorusMolstar {
   private getResiduesFromStructure(
     structureRef: StructureRef,
     get?: "all" | "hetero" | "standard" | "chain",
-    unique: boolean = true,
+    unique: boolean = true
   ): AtomInfo[] {
     const resInfo: AtomInfo[] = [];
     Structure.eachAtomicHierarchyElement(structureRef.cell.obj!.data, {
@@ -1626,7 +1636,7 @@ export default class HorusMolstar {
 
     // Map each structure to its list of hetero residues
     return structuresToList.flatMap((s) =>
-      this.getResiduesFromStructure(s, "hetero"),
+      this.getResiduesFromStructure(s, "hetero")
     );
   }
 
@@ -1657,7 +1667,7 @@ export default class HorusMolstar {
 
     // Map each structure to its list of hetero residues
     return structuresToList.flatMap((s) =>
-      this.getResiduesFromStructure(s, "standard", false),
+      this.getResiduesFromStructure(s, "standard", false)
     );
   }
 
@@ -1688,7 +1698,7 @@ export default class HorusMolstar {
 
     // Map each structure to its list of hetero residues
     return structuresToList.flatMap((s) =>
-      this.getResiduesFromStructure(s, "chain"),
+      this.getResiduesFromStructure(s, "chain")
     );
   }
 
@@ -1713,7 +1723,7 @@ export default class HorusMolstar {
     });
     const trajectory = await this.plugin!.builders.structure.parseTrajectory(
       data,
-      "pdb",
+      "pdb"
     );
     const model = await this.plugin!.builders.structure.createModel(trajectory);
     return await this.plugin!.builders.structure.createStructure(model);
@@ -1748,7 +1758,7 @@ export default class HorusMolstar {
     radius: number,
     opacity?: number,
     color?: Color,
-    deletePrevious?: SphereRef,
+    deletePrevious?: SphereRef
   ): Promise<SphereRef> {
     deletePrevious && this.removeShape(deletePrevious.ref);
 
@@ -1763,7 +1773,7 @@ export default class HorusMolstar {
 
     if (!structure) {
       throw new Error(
-        "Failed to add sphere to mosltar. Could not get a valid structure to place it.",
+        "Failed to add sphere to mosltar. Could not get a valid structure to place it."
       );
     }
 
@@ -1834,7 +1844,7 @@ export default class HorusMolstar {
     radialSegments: number,
     opacity?: number,
     color?: Color,
-    deletePrevious?: BoxRef,
+    deletePrevious?: BoxRef
   ): Promise<BoxRef> {
     deletePrevious && this.removeShape(deletePrevious.ref);
 
@@ -1849,7 +1859,7 @@ export default class HorusMolstar {
 
     if (!structure) {
       throw new Error(
-        "Failed to add sphere to mosltar. Could not get a valid structure to place it.",
+        "Failed to add sphere to mosltar. Could not get a valid structure to place it."
       );
     }
 
@@ -1924,7 +1934,7 @@ export default class HorusMolstar {
 
   public async addStructureRepresentation(
     structure: StructureRef | "all",
-    representation: "cartoon" | "ball-and-stick",
+    representation: "cartoon" | "ball-and-stick"
   ) {
     const structures = structure === "all" ? this.structures() : [structure];
 
@@ -1950,7 +1960,7 @@ export default class HorusMolstar {
         },
         {
           tag: reprTag,
-        },
+        }
       );
       this.addedReprs.push(newRepr);
     }
@@ -2049,7 +2059,7 @@ export default class HorusMolstar {
             data.structureLabel,
             data.residue,
             data.chain,
-            data.nearRadius,
+            data.nearRadius
           );
           break;
         case "addBox":
@@ -2058,7 +2068,7 @@ export default class HorusMolstar {
             data.radiousScale,
             data.radialSegments,
             data.opacity ?? 1,
-            data.color ? Color.fromHexStyle(data.color) : randomColor(),
+            data.color ? Color.fromHexStyle(data.color) : randomColor()
           );
           break;
         case "addSphere":
@@ -2066,7 +2076,7 @@ export default class HorusMolstar {
             data.position,
             data.radius,
             data.opacity,
-            data.color ? Color.fromHexStyle(data.color) : randomColor(),
+            data.color ? Color.fromHexStyle(data.color) : randomColor()
           );
           break;
         case "setBackgroundColor":
@@ -2086,7 +2096,7 @@ export default class HorusMolstar {
         "There was an error applying the following Mol* action: " +
           type +
           "\n\n" +
-          error,
+          error
       );
     } finally {
       // Once the action has been applied, remove it from the pending actions
@@ -2109,7 +2119,7 @@ export default class HorusMolstar {
    */
   private async loadMolViewSpecSession(
     session: string,
-    replaceExisting: boolean = false,
+    replaceExisting: boolean = false
   ) {
     const parsedData = MVSData.fromMVSJ(session);
 
