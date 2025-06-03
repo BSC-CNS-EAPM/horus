@@ -49,7 +49,6 @@ export default function Molstar() {
         // Close the panel
         if (window.horus.closePanel && window.horus.openPanel) {
           window.horus?.closePanel("molstar");
-          window.horus.openPanel("molstar");
         }
       }
 
