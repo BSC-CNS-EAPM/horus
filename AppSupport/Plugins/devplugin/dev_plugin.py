@@ -194,6 +194,18 @@ multipleInput2 = PluginVariable(
 
 
 def multipleInputOutputAction(block: PluginBlock):
+    i1 = block.inputs[multipleInput1.id]
+    i2 = block.inputs[multipleInput2.id]
+
+    if block.extraData.get("times") is None or not block.dirty:
+        block.extraData["times"] = 0
+
+    block.extraData["times"] += 1
+
+    print("input1", i1)
+    print("input2", i2)
+    print(f"Block executed {block.extraData['times']} times")
+
     block.setOutput("multipleOutput1", 1)
     block.setOutput("multipleOutput2", 2)
 
