@@ -6,7 +6,10 @@ import { useEffect, createRef, useContext } from "react";
 import "./horus_molstar.scss";
 
 // Horus Molstar wrapper
-import HorusMolstar, { isMolstarLoaded } from "./HorusWrapper/horusmolstar";
+import HorusMolstar, {
+  MolstarEvents,
+  isMolstarLoaded,
+} from "./HorusWrapper/horusmolstar";
 
 // Error boundary (currently does not do anything)
 import { useSettings } from "@/Main/app";
@@ -24,38 +27,16 @@ export default function Molstar() {
   const { dockApi } = useContext(DockContext)!;
 
   useEffect(() => {
-    if (
-      settings?.["disableMolstar"]?.value &&
-      isMolstarLoaded(window.molstar)
-    ) {
-      window.molstar?.plugin?.dispose();
-      window.molstar = undefined;
-
-      // Remove the msp-plugin class div
-      document
-        .querySelectorAll(".msp-plugin")
-        .forEach((element) => element.remove());
-
-      return;
+    if (settings?.["disableMolstar"]?.value) {
+      pluginDisposal();
+    } else {
+      window.molstar = new HorusMolstar(parent.current!);
     }
 
-    window.molstar = new HorusMolstar(parent.current!);
-
     return () => {
-      // Reset mol* when the component unmounts
-      if (isMolstarLoaded(window.molstar)) {
-        window?.molstar?.unload();
-
-        // Close the panel
-        if (window.horus.closePanel && window.horus.openPanel) {
-          window.horus?.closePanel("molstar");
-        }
+      if (pluginDisposal()) {
+        hooksInitializer();
       }
-
-      window.molstar = undefined;
-
-      // Run the hooksInitializer again
-      hooksInitializer();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings?.["disableMolstar"]?.value]);
@@ -94,4 +75,27 @@ export default function Molstar() {
       }}
     />
   );
+}
+
+// Remove the plugin entirely from the HTML canvas
+function pluginDisposal() {
+  if (isMolstarLoaded(window.molstar)) {
+    // Proper plugin disposal
+    window.molstar?.plugin?.dispose();
+    window.molstar = undefined;
+
+    // Clean up DOM elements
+    document
+      .querySelectorAll(".msp-plugin")
+      .forEach((element) => element.remove());
+
+    // Launch a STATE event
+    const event = new CustomEvent(MolstarEvents.STATE, {
+      detail: {},
+    });
+    window.dispatchEvent(event);
+    return true;
+  }
+
+  return false;
 }
