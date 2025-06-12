@@ -954,6 +954,10 @@ class Flow:
 
         # If the block has input connections, execute first those blocks
         inputs = {}
+
+        # Track the blocks which obtained othe rinputs in order to not re-run the m multiple times
+        # https://gitlab.bsc.es/eapm/horus/-/issues/443
+        executedInputsPlacedIDs: list[int] = []
         for connection in runOrder:
             # Find the block that is connected to a variable of the block selected to run
             variableBlock = self.findBlockByPlacedID(connection.origin.blockPlacedID)
@@ -985,7 +989,13 @@ class Flow:
             # Execute the block that provides the variable by calling recursively this method
             # This ensures that if the variable is provided by another block that also requires
             # an input variable, the blocks will be executed in the correct order
-            outputs = self._runPreviousBlocks(variablePlacedID, resetRemoteBlock, comesFromCyclic)
+            outputs = self._runPreviousBlocks(
+                variablePlacedID,
+                resetRemoteBlock=(
+                    resetRemoteBlock if variablePlacedID not in executedInputsPlacedIDs else False
+                ),
+                comesFromCyclic=comesFromCyclic,
+            )
 
             # If we have connected a variable to an input, the outputs should exist
             # This is only for the whole outputs dictionary itself, as the inidvidual
@@ -1004,6 +1014,8 @@ class Flow:
                     + f"'{connection.origin.variableID}' to the block '{blockToRun.name}'. "
                     + "Did you forget to call setOutput() in the action of the block?",
                 ) from keye
+
+            executedInputsPlacedIDs.append(variablePlacedID)
 
         # With the generated inputs, update the block to run
         blockToRun._updateInputs(inputs)
