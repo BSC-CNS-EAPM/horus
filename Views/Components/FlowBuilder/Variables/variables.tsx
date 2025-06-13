@@ -1,5 +1,5 @@
 // React
-import { useEffect, useState, useMemo, useContext } from "react";
+import { useEffect, useState, useMemo, useContext, useCallback } from "react";
 
 // Horus TS types
 import {
@@ -52,7 +52,7 @@ import {
 
 type PluginVariableViewProps = {
   variable: PluginVariable;
-  onChange: (value: any, id: string, groupID?: string) => void;
+  onChange: (value: any, variable: PluginVariable, groupID?: string) => void;
   hideName?: boolean;
   hideDescription?: boolean;
   applyStyle?: boolean;
@@ -64,18 +64,20 @@ type PluginVariableViewProps = {
 export function PluginVariableView(props: PluginVariableViewProps) {
   const { variable, onChange, hideName } = props;
   const flowContext = useContext(FlowBuilderContext);
-
   const isFlowActive = !!flowContext?.flow.isFlowActive;
 
-  const handleChange = (value: any, id?: string, groupID?: string) => {
-    if (!variable.disabled) {
-      if (variable.type === PluginVariableTypes.GROUP) {
-        onChange(value, id!, groupID);
-      } else {
-        onChange(value, variable.id);
+  const handleChange = useCallback(
+    (value: any, varToChange?: PluginVariable, groupID?: string) => {
+      if (!variable.disabled) {
+        if (variable.type === PluginVariableTypes.GROUP) {
+          varToChange && onChange(value, varToChange, groupID);
+        } else {
+          onChange(value, variable);
+        }
       }
-    }
-  };
+    },
+    [variable, onChange],
+  );
 
   // If the variable is any of the list types or the group, always ocuppy the whole width using min-w-full
   const widthStyle = useMemo(() => {
@@ -190,7 +192,7 @@ function VariableListView(props: VariableViewProps) {
           acc[variable.id] = variable.defaultValue ?? null;
         }
         return acc;
-      }, {})
+      }, {}),
     );
     onChange(newValues);
   };
@@ -206,7 +208,7 @@ function VariableListView(props: VariableViewProps) {
     index: number,
     value: any,
     id: string,
-    groupID?: string
+    groupID?: string,
   ) => {
     // Update the corresponding index on the values array
     const newValues = [...currentValue];
@@ -252,7 +254,7 @@ function VariableListView(props: VariableViewProps) {
     <div key="delete" className="w-[100px] text-center">
       Delete
       <hr></hr>
-    </div>
+    </div>,
   );
 
   const colsNum = cols.length;
@@ -289,8 +291,17 @@ function VariableListView(props: VariableViewProps) {
                       ...variable,
                       value: value[variable.id],
                     }}
-                    onChange={(value: any, id: string, groupID?: string) => {
-                      internalOnChange(index, value, id, groupID);
+                    onChange={(
+                      value: any,
+                      variableToChange: PluginVariable,
+                      groupID?: string,
+                    ) => {
+                      internalOnChange(
+                        index,
+                        value,
+                        variableToChange.id,
+                        groupID,
+                      );
                     }}
                     hideDescription={true}
                     applyStyle={false}
@@ -317,7 +328,7 @@ function VariableListView(props: VariableViewProps) {
 function GroupVariableView(props: PluginVariableViewProps) {
   const variables = props.variable.variables;
 
-  const onChange = (value: any, id: string) => {
+  const onChange = (value: any, id: PluginVariable) => {
     props.onChange(value, id, props.variable.id);
   };
 
@@ -637,7 +648,7 @@ function DropdownVariableView({
       variableToRender.allowedValues
     ) {
       onChange(
-        variableToRender.defaultValue ?? variableToRender?.allowedValues[0]
+        variableToRender.defaultValue ?? variableToRender?.allowedValues[0],
       );
     }
   }, [
@@ -666,7 +677,7 @@ function DropdownVariableView({
 }
 
 function CheckboxVariableView(props: VariableViewProps & { radio?: boolean }) {
-  const allowedValues: string[] = props.variable.allowedValues;
+  const allowedValues: string[] = props.variable.allowedValues ?? [];
 
   let currentValue: string[] | string | null = props.currentValue;
   if (props.radio) {
@@ -818,8 +829,8 @@ function IntegerFloatVariableView(props: VariableViewProps) {
       if (variable.allowedValues) {
         setNumberMessage(
           `The value must be one of the following: ${variable.allowedValues.join(
-            ", "
-          )}`
+            ", ",
+          )}`,
         );
       }
     }

@@ -3,7 +3,7 @@ JSApplet.Inchi = {};
   var d;
   d ||
     (d = eval(
-      "(function() { try { return JSApplet.Inchi || {} } catch(e) { return {} } })()"
+      "(function() { try { return JSApplet.Inchi || {} } catch(e) { return {} } })()",
     ));
   var k = {},
     l;
@@ -19,7 +19,7 @@ JSApplet.Inchi = {};
     else if ("SHELL" === d.ENVIRONMENT) ca = !0;
     else
       throw Error(
-        "The provided Module['ENVIRONMENT'] value is not valid. It must be one of: WEB|WORKER|NODE|SHELL."
+        "The provided Module['ENVIRONMENT'] value is not valid. It must be one of: WEB|WORKER|NODE|SHELL.",
       );
   else
     (aa = "object" === typeof window),
@@ -87,7 +87,7 @@ JSApplet.Inchi = {};
         ? (d.arguments = scriptArgs)
         : "undefined" != typeof arguments && (d.arguments = arguments),
       eval(
-        "if (typeof gc === 'function' && gc.toString().indexOf('[native code]') > 0) var gc = undefined"
+        "if (typeof gc === 'function' && gc.toString().indexOf('[native code]') > 0) var gc = undefined",
       );
   else if (aa || r)
     (d.read = function (a) {
@@ -175,8 +175,8 @@ JSApplet.Inchi = {};
             return "*" === a[a.length - 1]
               ? x.l
               : "i" === a[0]
-              ? ((a = parseInt(a.substr(1))), assert(0 === a % 8), a / 8)
-              : 0;
+                ? ((a = parseInt(a.substr(1))), assert(0 === a % 8), a / 8)
+                : 0;
         }
       },
       G: function (a) {
@@ -250,7 +250,7 @@ JSApplet.Inchi = {};
           B(
             "Cannot enlarge memory arrays. Either (1) compile with  -s TOTAL_MEMORY=X  with X higher than the current value " +
               A +
-              ", (2) compile with  -s ALLOW_MEMORY_GROWTH=1  which adjusts the size at runtime but prevents some optimizations, (3) set Module.TOTAL_MEMORY to a higher value before the program runs, or if you want malloc to return NULL (0) instead of this abort, compile with  -s ABORTING_MALLOC=0 "
+              ", (2) compile with  -s ALLOW_MEMORY_GROWTH=1  which adjusts the size at runtime but prevents some optimizations, (3) set Module.TOTAL_MEMORY to a higher value before the program runs, or if you want malloc to return NULL (0) instead of this abort, compile with  -s ABORTING_MALLOC=0 ",
           ),
             (a = !0);
         return a ? ((z = b), 0) : b;
@@ -284,7 +284,7 @@ JSApplet.Inchi = {};
       b,
       "Cannot call unknown function " +
         a +
-        " (perhaps LLVM optimizations or closure removed it?)"
+        " (perhaps LLVM optimizations or closure removed it?)",
     );
     return b;
   }
@@ -515,7 +515,7 @@ JSApplet.Inchi = {};
       for (; 0 < b; )
         (c = String.fromCharCode.apply(
           String,
-          K.subarray(a, a + Math.min(b, 1024))
+          K.subarray(a, a + Math.min(b, 1024)),
         )),
           (e = e ? e + c : c),
           (a += 1024),
@@ -570,7 +570,7 @@ JSApplet.Inchi = {};
                 : ((c -= 65536),
                   (m += String.fromCharCode(
                     55296 | (c >> 10),
-                    56320 | (c & 1023)
+                    56320 | (c & 1023),
                   )))))
         : (m += String.fromCharCode(c));
     }
@@ -640,12 +640,12 @@ JSApplet.Inchi = {};
             2047 >= e
               ? b + 2
               : 65535 >= e
-              ? b + 3
-              : 2097151 >= e
-              ? b + 4
-              : 67108863 >= e
-              ? b + 5
-              : b + 6);
+                ? b + 3
+                : 2097151 >= e
+                  ? b + 4
+                  : 67108863 >= e
+                    ? b + 5
+                    : b + 6);
     }
     return b;
   }
@@ -671,7 +671,7 @@ JSApplet.Inchi = {};
             c && M(c), e && M(e), f && M(f);
           }
         x.f(
-          "warning: build with  -s DEMANGLE_SUPPORT=1  to link in libcxxabi demangling"
+          "warning: build with  -s DEMANGLE_SUPPORT=1  to link in libcxxabi demangling",
         );
         b = a;
       }
@@ -1316,7 +1316,7 @@ JSApplet.Inchi = {};
     ],
     "i8",
     4,
-    x.a
+    x.a,
   );
   H(
     [
@@ -1855,7 +1855,7 @@ JSApplet.Inchi = {};
     ],
     "i8",
     4,
-    x.a + 10280
+    x.a + 10280,
   );
   H(
     [
@@ -2374,7 +2374,7 @@ JSApplet.Inchi = {};
     ],
     "i8",
     4,
-    x.a + 20520
+    x.a + 20520,
   );
   H(
     [
@@ -2893,7 +2893,7 @@ JSApplet.Inchi = {};
     ],
     "i8",
     4,
-    x.a + 30760
+    x.a + 30760,
   );
   H(
     [
@@ -3412,7 +3412,7 @@ JSApplet.Inchi = {};
     ],
     "i8",
     4,
-    x.a + 41e3
+    x.a + 41e3,
   );
   H(
     [
@@ -3931,7 +3931,7 @@ JSApplet.Inchi = {};
     ],
     "i8",
     4,
-    x.a + 51240
+    x.a + 51240,
   );
   H(
     [
@@ -4450,7 +4450,7 @@ JSApplet.Inchi = {};
     ],
     "i8",
     4,
-    x.a + 61480
+    x.a + 61480,
   );
   H(
     [
@@ -4982,7 +4982,7 @@ JSApplet.Inchi = {};
     ],
     "i8",
     4,
-    x.a + 71720
+    x.a + 71720,
   );
   H(
     [
@@ -5561,7 +5561,7 @@ JSApplet.Inchi = {};
     ],
     "i8",
     4,
-    x.a + 81960
+    x.a + 81960,
   );
   var Wa = y,
     y = y + 16;
@@ -5594,7 +5594,7 @@ JSApplet.Inchi = {};
       "body",
       "return function " +
         a +
-        '() {\n    "use strict";    return body.apply(this, arguments);\n};\n'
+        '() {\n    "use strict";    return body.apply(this, arguments);\n};\n',
     )(b);
   }
   function eb(a, b) {
@@ -5627,7 +5627,7 @@ JSApplet.Inchi = {};
     c = c || {};
     if (!("argPackAdvance" in b))
       throw new TypeError(
-        "registerType registeredInstance requires argPackAdvance"
+        "registerType registeredInstance requires argPackAdvance",
       );
     var e = b.name;
     a || gb('type "' + e + '" must have a positive integer typeid pointer');
@@ -5869,7 +5869,7 @@ JSApplet.Inchi = {};
         4, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0,
       ],
       "i8",
-      3
+      3,
     );
   d.C = {
     Math: Math,
@@ -5928,7 +5928,7 @@ JSApplet.Inchi = {};
       v,
       J,
       F,
-      Aa
+      Aa,
     ) {
       try {
         return d.dynCall_iiiiiiiiiiiiiiiii(
@@ -5948,7 +5948,7 @@ JSApplet.Inchi = {};
           v,
           J,
           F,
-          Aa
+          Aa,
         );
       } catch (da) {
         if ("number" !== typeof da && "longjmp" !== da) throw da;
@@ -5973,7 +5973,7 @@ JSApplet.Inchi = {};
       J,
       F,
       Aa,
-      da
+      da,
     ) {
       try {
         return d.dynCall_iiiiiiiiiiiiiiiiii(
@@ -5994,7 +5994,7 @@ JSApplet.Inchi = {};
           J,
           F,
           Aa,
-          da
+          da,
         );
       } catch (Ia) {
         if ("number" !== typeof Ia && "longjmp" !== Ia) throw Ia;
@@ -6052,7 +6052,7 @@ JSApplet.Inchi = {};
     _pthread_cleanup_pop: function () {
       assert(
         Bb.level == Q.length,
-        "cannot pop if something else added meanwhile!"
+        "cannot pop if something else added meanwhile!",
       );
       Q.pop();
       Bb.level = Q.length;
@@ -6084,7 +6084,7 @@ JSApplet.Inchi = {};
           argPackAdvance: 8,
           readValueFromPointer: e,
         },
-        { J: !0 }
+        { J: !0 },
       );
     },
     throwInternalError: ib,
@@ -6377,10 +6377,10 @@ JSApplet.Inchi = {};
           b instanceof Uint8Array
             ? (h = f)
             : b instanceof Int8Array
-            ? (h = f)
-            : "string" === typeof b
-            ? (h = g)
-            : gb("Cannot pass non-string to std::string");
+              ? (h = f)
+              : "string" === typeof b
+                ? (h = g)
+                : gb("Cannot pass non-string to std::string");
           var n = b.length,
             m = I(4 + n);
           N[m >> 2] = n;
@@ -6442,7 +6442,7 @@ JSApplet.Inchi = {};
         toWireType: function (a, c) {
           if ("number" !== typeof c && "boolean" !== typeof c)
             throw new TypeError(
-              'Cannot convert "' + qb(c) + '" to ' + this.name
+              'Cannot convert "' + qb(c) + '" to ' + this.name,
             );
           if (c < e || c > f)
             throw new TypeError(
@@ -6454,7 +6454,7 @@ JSApplet.Inchi = {};
                 e +
                 ", " +
                 f +
-                "]!"
+                "]!",
             );
           return c | 0;
         },
@@ -6475,7 +6475,7 @@ JSApplet.Inchi = {};
         toWireType: function (a, b) {
           if ("number" !== typeof b && "boolean" !== typeof b)
             throw new TypeError(
-              'Cannot convert "' + qb(b) + '" to ' + this.name
+              'Cannot convert "' + qb(b) + '" to ' + this.name,
             );
           return b;
         },
@@ -6923,42 +6923,42 @@ JSApplet.Inchi = {};
           hh(
             (a + ((e * 144) | 0) + 124) | 0,
             (a + ((e * 144) | 0) + 125) | 0,
-            1
+            1,
           );
           hh(
             (a + ((e * 144) | 0) + 128) | 0,
             (a + ((e * 144) | 0) + 129) | 0,
-            1
+            1,
           );
           hh(
             (a + ((e * 144) | 0) + 126) | 0,
             (a + ((e * 144) | 0) + 127) | 0,
-            1
+            1,
           );
           hh(
             (a + ((e * 144) | 0) + 131) | 0,
             (a + ((e * 144) | 0) + 132) | 0,
-            1
+            1,
           );
           hh(
             (a + ((e * 144) | 0) + 94) | 0,
             (a + ((e * 144) | 0) + 100) | 0,
-            6
+            6,
           );
           hh(
             (a + ((e * 144) | 0) + 106) | 0,
             (a + ((e * 144) | 0) + 109) | 0,
-            3
+            3,
           );
           hh(
             (a + ((e * 144) | 0) + 112) | 0,
             (a + ((e * 144) | 0) + 115) | 0,
-            3
+            3,
           );
           hh(
             (a + ((e * 144) | 0) + 118) | 0,
             (a + ((e * 144) | 0) + 121) | 0,
-            3
+            3,
           );
           e = (e + 1) | 0;
         }
@@ -7035,7 +7035,7 @@ JSApplet.Inchi = {};
               c[o >> 2] | 0,
               l,
               c[j >> 2] | 0,
-              0
+              0,
             ) | 0;
           i = (i + 1) | 0;
         }
@@ -7054,7 +7054,7 @@ JSApplet.Inchi = {};
               c[o >> 2] | 0,
               l,
               c[j >> 2] | 0,
-              1
+              1,
             ) | 0;
           i = (i + 1) | 0;
         }
@@ -8165,7 +8165,7 @@ JSApplet.Inchi = {};
                           l,
                           j,
                           h,
-                          1
+                          1,
                         ) |
                           0) <<
                           16) >>
@@ -8508,7 +8508,7 @@ JSApplet.Inchi = {};
                             m,
                             k,
                             j,
-                            1
+                            1,
                           ) |
                             0) <<
                             16) >>
@@ -9399,7 +9399,7 @@ JSApplet.Inchi = {};
             k,
             l,
             h,
-            j
+            j,
           ) |
             0) ==
           0
@@ -9418,7 +9418,7 @@ JSApplet.Inchi = {};
               f,
               a,
               c[l >> 2] | 0,
-              g
+              g,
             ) |
               0) !=
             (e | 0);
@@ -10134,7 +10134,7 @@ JSApplet.Inchi = {};
                         c[(n + 72) >> 2] | 0,
                         c[(n + 68) >> 2] | 0,
                         w,
-                        S
+                        S,
                       ) | 0;
                     k = (p + 16) | 0;
                     I = c[k >> 2] | 0;
@@ -10288,7 +10288,7 @@ JSApplet.Inchi = {};
                         (v << 24) >> 24,
                         a[(m + ((t * 176) | 0) + 93) >> 0] | 0,
                         a[(m + ((t * 176) | 0) + 94) >> 0] | 0,
-                        (u << 24) >> 24
+                        (u << 24) >> 24,
                       ) |
                         0) &
                       255;
@@ -10550,7 +10550,7 @@ JSApplet.Inchi = {};
                 c[(n + 64) >> 2] | 0,
                 c[H >> 2] | 0,
                 c[(n + 60) >> 2] | 0,
-                c[(n + 100) >> 2] | 0
+                c[(n + 100) >> 2] | 0,
               ) | 0;
               t = c[N >> 2] | 0;
               do
@@ -10620,7 +10620,7 @@ JSApplet.Inchi = {};
                       c[(n + 88) >> 2] | 0,
                       c[(n + 84) >> 2] | 0,
                       v,
-                      S
+                      S,
                     ) | 0;
                   k = (w + 16) | 0;
                   H = c[k >> 2] | 0;
@@ -10866,7 +10866,7 @@ JSApplet.Inchi = {};
                 c[(n + 80) >> 2] | 0,
                 c[N >> 2] | 0,
                 c[(n + 76) >> 2] | 0,
-                c[(n + 176) >> 2] | 0
+                c[(n + 176) >> 2] | 0,
               ) | 0;
               if (!(c[y >> 2] | 0)) {
                 k = 0;
@@ -11482,7 +11482,7 @@ JSApplet.Inchi = {};
                                   c[(r + 68) >> 2] | 0,
                                   n,
                                   c[(p + 68) >> 2] | 0,
-                                  o
+                                  o,
                                 ) | 0;
                               if (!g) break;
                               else break a;
@@ -12804,7 +12804,7 @@ JSApplet.Inchi = {};
                                     c[(r + 68) >> 2] | 0,
                                     o,
                                     c[(q + 68) >> 2] | 0,
-                                    p
+                                    p,
                                   ) | 0;
                                 if (!h) break;
                                 else break a;
@@ -13490,7 +13490,7 @@ JSApplet.Inchi = {};
                   o,
                   m,
                   z,
-                  y
+                  y,
                 ) | 0;
               if (((h + 30019) | 0) >>> 0 < 20) break;
               c[(oa + 96) >> 2] = ((c[o >> 2] | c[u >> 2] | 0) != 0) & 1;
@@ -13556,7 +13556,7 @@ JSApplet.Inchi = {};
                       o,
                       m,
                       z,
-                      y
+                      y,
                     ) | 0;
                   if (((h + 30019) | 0) >>> 0 < 20) break a;
                   c[(oa + 36) >> 2] = ((c[o >> 2] | c[oa >> 2] | 0) != 0) & 1;
@@ -13759,7 +13759,7 @@ JSApplet.Inchi = {};
                           0,
                           c[p >> 2] | 0,
                           o,
-                          pa
+                          pa,
                         ) | 0;
                       if (h | 0) break a;
                       ir(na | 0, ma | 0, 340) | 0;
@@ -13789,7 +13789,7 @@ JSApplet.Inchi = {};
                           c[L >> 2] | 0,
                           c[M >> 2] | 0,
                           o,
-                          pa
+                          pa,
                         ) | 0;
                       if (h | 0) break a;
                       ir(na | 0, ma | 0, 340) | 0;
@@ -13848,7 +13848,7 @@ JSApplet.Inchi = {};
                           a,
                           A,
                           ba,
-                          t
+                          t,
                         ) | 0;
                       if (((o + 30019) | 0) >>> 0 < 20) {
                         c[y >> 2] = o;
@@ -15028,7 +15028,7 @@ JSApplet.Inchi = {};
               jr(
                 (g + ((0 - f) << 1) + 2) | 0,
                 (g + -2) | 0,
-                ((e << 1) + 2) | 0
+                ((e << 1) + 2) | 0,
               ) | 0;
               j = c[a >> 2] | 0;
               b[(j + (((c[k >> 2] | 0) - e) << 1)) >> 1] = 2;
@@ -15256,7 +15256,7 @@ JSApplet.Inchi = {};
                   vh(
                     c[(f + ((e[o >> 1] | 0) << 2)) >> 2] | 0,
                     c[(f + ((e[(i + (p << 1)) >> 1] | 0) << 2)) >> 2] | 0,
-                    g
+                    g,
                   ) | 0
                 ) {
                   k = (k + 1) | 0;
@@ -15328,7 +15328,7 @@ JSApplet.Inchi = {};
                     c[(f + ((e[p >> 1] | 0) << 2)) >> 2] | 0,
                     c[(f + ((e[(i + (q << 1)) >> 1] | 0) << 2)) >> 2] | 0,
                     g,
-                    j
+                    j,
                   ) | 0
                 ) {
                   l = (l + 1) | 0;
@@ -18255,7 +18255,7 @@ JSApplet.Inchi = {};
                   b,
                   c[(i + (n << 3)) >> 2] | 0,
                   n,
-                  c[(i + (n << 3) + 4) >> 2] | 0
+                  c[(i + (n << 3) + 4) >> 2] | 0,
                 ) |
                   0) >
                 1
@@ -19130,7 +19130,7 @@ JSApplet.Inchi = {};
                       a[j >> 0] | 0,
                       a[y >> 0] | 0,
                       a[z >> 0] | 0,
-                      (k << 24) >> 24
+                      (k << 24) >> 24,
                     ) | 0
                   )
                 ) {
@@ -19172,7 +19172,7 @@ JSApplet.Inchi = {};
                       a[(b + ((j * 176) | 0) + 100) >> 0] | 0,
                       a[p >> 0] | 0,
                       a[(b + ((j * 176) | 0) + 94) >> 0] | 0,
-                      a[q >> 0] | 0
+                      a[q >> 0] | 0,
                     ) | 0
                   ) {
                     i = 0;
@@ -19896,7 +19896,7 @@ JSApplet.Inchi = {};
                             a[(g + ((t * 176) | 0) + 146 + n) >> 0] | 0,
                             u,
                             v,
-                            w
+                            w,
                           ) |
                             0) >
                           0
@@ -20236,7 +20236,7 @@ JSApplet.Inchi = {};
                     (g + ((n * 176) | 0) + 72 + p) | 0,
                     (g + ((u * 176) | 0) + 72 + q) | 0,
                     m,
-                    l | A
+                    l | A,
                   ) | 0;
                 if ((k | 0) < 0) j = -9997;
                 else i = ((k | 0) > 0) | i;
@@ -20815,8 +20815,8 @@ JSApplet.Inchi = {};
                   ((q + 9999) | 0) >>> 0 < 20
                     ? q
                     : ((j + 9999) | 0) >>> 0 < 20
-                    ? j
-                    : 0;
+                      ? j
+                      : 0;
               } else j = 0;
               xj(b) | 0;
               if (!k) break;
@@ -21575,7 +21575,7 @@ JSApplet.Inchi = {};
                     (h + ((p * 176) | 0) + 72)) |
                     0,
                   (q - w) | 0,
-                  v
+                  v,
                 ) | 0;
               if (((l + 9999) | 0) >>> 0 < 20) k = l;
               else j = ((l | 0) > 0) | j;
@@ -24340,7 +24340,7 @@ JSApplet.Inchi = {};
                                   c[n >> 2] | 0,
                                   c[s >> 2] | 0,
                                   0,
-                                  1
+                                  1,
                                 ) | 0;
                                 qj(e, h, j, 0, 0, c[(g + 28) >> 2] | 0, 0) | 0;
                                 break;
@@ -24695,7 +24695,7 @@ JSApplet.Inchi = {};
                               c[y >> 2] | 0,
                               c[j >> 2] | 0,
                               g,
-                              c[k >> 2] | 0
+                              c[k >> 2] | 0,
                             ) | 0;
                           if ((g | 0) < 0) {
                             g = -9988;
@@ -24796,7 +24796,7 @@ JSApplet.Inchi = {};
                               0,
                             b,
                             1,
-                            j >>> 31
+                            j >>> 31,
                           ) | 0;
                         if (((h + 9999) | 0) >>> 0 < 20) {
                           g = h;
@@ -31531,7 +31531,7 @@ JSApplet.Inchi = {};
                     Ta,
                     0,
                     kb,
-                    p
+                    p,
                   ) | 0;
                 if ((A | 0) >= 0) {
                   Pc(n, f, fb, N, x, X, y) | 0;
@@ -31562,7 +31562,7 @@ JSApplet.Inchi = {};
                         Ta,
                         0,
                         kb,
-                        p
+                        p,
                       ) | 0;
                     if ((A | 0) < 0) {
                       Z = 0;
@@ -31709,7 +31709,7 @@ JSApplet.Inchi = {};
                           Ta,
                           kb,
                           mb,
-                          p
+                          p,
                         ) | 0;
                       if ((A | 0) < 0) {
                         Z = 0;
@@ -31879,7 +31879,7 @@ JSApplet.Inchi = {};
                                 w,
                                 a[(s + ((B * 144) | 0) + 76) >> 0] | 0,
                                 a[(s + ((B * 144) | 0) + 77) >> 0] | 0,
-                                a[(s + ((B * 144) | 0) + 78) >> 0] | 0
+                                a[(s + ((B * 144) | 0) + 78) >> 0] | 0,
                               ) | 0;
                           else A = Nd(w, 0, 0, 0) | 0;
                           w = (C + (B << 2)) | 0;
@@ -31965,7 +31965,7 @@ JSApplet.Inchi = {};
                               x,
                               Y,
                               Ua,
-                              0
+                              0,
                             ) | 0;
                             c[Aa >> 2] = M;
                             A =
@@ -31985,7 +31985,7 @@ JSApplet.Inchi = {};
                                 Ta,
                                 mb,
                                 sb,
-                                p
+                                p,
                               ) | 0;
                             if ((A | 0) < 0) {
                               Z = 0;
@@ -32234,7 +32234,7 @@ JSApplet.Inchi = {};
                           x,
                           c[(m + 4) >> 2] | 0,
                           A,
-                          Ua
+                          Ua,
                         ) | 0;
                         er(hb | 0, 0, Sa | 0) | 0;
                         m = 0;
@@ -32273,7 +32273,7 @@ JSApplet.Inchi = {};
                             Ta,
                             mb,
                             ob,
-                            p
+                            p,
                           ) | 0;
                         if ((A | 0) < 0) {
                           Z = 0;
@@ -32399,7 +32399,7 @@ JSApplet.Inchi = {};
                                       a[(s + ((D * 144) | 0) + 80) >> 0] | 0,
                                       a[(s + ((D * 144) | 0) + 76) >> 0] | 0,
                                       a[(s + ((D * 144) | 0) + 77) >> 0] | 0,
-                                      a[(s + ((D * 144) | 0) + 78) >> 0] | 0
+                                      a[(s + ((D * 144) | 0) + 78) >> 0] | 0,
                                     ) | 0;
                                   if (!R) break;
                                   a[(H + D) >> 0] = 1;
@@ -32413,7 +32413,7 @@ JSApplet.Inchi = {};
                                       a[(s + ((D * 144) | 0) + 80) >> 0] | 0,
                                       0,
                                       0,
-                                      0
+                                      0,
                                     ) | 0;
                                   if (!R) break;
                                   A = ((((b[B >> 1] | 0) == 0) & 1) + A) | 0;
@@ -32667,7 +32667,7 @@ JSApplet.Inchi = {};
                                   x,
                                   Y,
                                   Ua,
-                                  0
+                                  0,
                                 ) | 0;
                                 c[ta >> 2] = M;
                                 A =
@@ -32687,7 +32687,7 @@ JSApplet.Inchi = {};
                                     Ta,
                                     ob,
                                     ub,
-                                    p
+                                    p,
                                   ) | 0;
                                 if ((A | 0) < 0) {
                                   Z = 0;
@@ -32911,7 +32911,7 @@ JSApplet.Inchi = {};
                               Ta,
                               mb,
                               qb,
-                              p
+                              p,
                             ) | 0;
                           if ((A | 0) < 0) {
                             Z = $;
@@ -33007,7 +33007,7 @@ JSApplet.Inchi = {};
                                       a[(s + ((Q * 144) | 0) + 80) >> 0] | 0,
                                       a[(s + ((Q * 144) | 0) + 76) >> 0] | 0,
                                       a[(s + ((Q * 144) | 0) + 77) >> 0] | 0,
-                                      a[(s + ((Q * 144) | 0) + 78) >> 0] | 0
+                                      a[(s + ((Q * 144) | 0) + 78) >> 0] | 0,
                                     ) | 0;
                                   break;
                                 } else {
@@ -33016,7 +33016,7 @@ JSApplet.Inchi = {};
                                       a[(q + ((Q * 144) | 0) + 80) >> 0] | 0,
                                       a[(q + ((Q * 144) | 0) + 76) >> 0] | 0,
                                       a[(q + ((Q * 144) | 0) + 77) >> 0] | 0,
-                                      a[(q + ((Q * 144) | 0) + 78) >> 0] | 0
+                                      a[(q + ((Q * 144) | 0) + 78) >> 0] | 0,
                                     ) | 0;
                                   break;
                                 }
@@ -33026,7 +33026,7 @@ JSApplet.Inchi = {};
                                     a[(s + ((Q * 144) | 0) + 80) >> 0] | 0,
                                     a[(s + ((Q * 144) | 0) + 76) >> 0] | 0,
                                     a[(s + ((Q * 144) | 0) + 77) >> 0] | 0,
-                                    a[(s + ((Q * 144) | 0) + 78) >> 0] | 0
+                                    a[(s + ((Q * 144) | 0) + 78) >> 0] | 0,
                                   ) | 0;
                             while (0);
                             m = (W + (Q << 2)) | 0;
@@ -33115,7 +33115,7 @@ JSApplet.Inchi = {};
                                 x,
                                 Y,
                                 Ua,
-                                0
+                                0,
                               ) | 0;
                               c[Aa >> 2] = M;
                               A =
@@ -33135,7 +33135,7 @@ JSApplet.Inchi = {};
                                   Ta,
                                   qb,
                                   wb,
-                                  p
+                                  p,
                                 ) | 0;
                               if ((A | 0) < 0) {
                                 Z = $;
@@ -33260,7 +33260,7 @@ JSApplet.Inchi = {};
                             (hp(
                               c[(G + 36) >> 2] | 0,
                               c[(r + 36) >> 2] | 0,
-                              q << 1
+                              q << 1,
                             ) |
                               0) !=
                             0;
@@ -33278,7 +33278,7 @@ JSApplet.Inchi = {};
                           (hp(
                             c[(G + 36) >> 2] | 0,
                             c[(r + 36) >> 2] | 0,
-                            q << 1
+                            q << 1,
                           ) |
                             0) !=
                           0;
@@ -33300,7 +33300,7 @@ JSApplet.Inchi = {};
                             (hp(
                               c[(C + 36) >> 2] | 0,
                               c[(q + 36) >> 2] | 0,
-                              D << 1
+                              D << 1,
                             ) |
                               0) !=
                             0;
@@ -33321,7 +33321,7 @@ JSApplet.Inchi = {};
                               (hp(
                                 c[(m + 36) >> 2] | 0,
                                 c[(C + 36) >> 2] | 0,
-                                q << 1
+                                q << 1,
                               ) |
                                 0) !=
                               0;
@@ -33338,7 +33338,7 @@ JSApplet.Inchi = {};
                           (hp(
                             c[(G + 36) >> 2] | 0,
                             c[(m + 36) >> 2] | 0,
-                            q << 1
+                            q << 1,
                           ) |
                             0) !=
                           0;
@@ -34623,7 +34623,7 @@ JSApplet.Inchi = {};
                   0,
                 e[(f + ((k * 36) | 0) + 30) >> 1] | 0,
                 2,
-                9
+                9,
               );
               k = (k + 1) | 0;
             }
@@ -35132,7 +35132,7 @@ JSApplet.Inchi = {};
         ir(
           c[ha >> 2] | 0,
           c[(W + 24 + ((l * 100) | 0) + 16) >> 2] | 0,
-          (c[p >> 2] << 1) | 0
+          (c[p >> 2] << 1) | 0,
         ) | 0;
         n = (h + 328) | 0;
         a: do
@@ -35198,7 +35198,7 @@ JSApplet.Inchi = {};
             ir(
               n | 0,
               c[(W + 24 + ((l * 100) | 0) + 76) >> 2] | 0,
-              (f << 1) | 0
+              (f << 1) | 0,
             ) | 0;
           n = c[(h + 244) >> 2] | 0;
           if (n | 0) {
@@ -35212,7 +35212,7 @@ JSApplet.Inchi = {};
               c[ea >> 2] | 0,
               c[(h + 52) >> 2] | 0,
               c[(h + 132) >> 2] | 0,
-              (h + 128) | 0
+              (h + 128) | 0,
             ) | 0;
           if (((n + 30019) | 0) >>> 0 >= 20)
             if ((n | 0) < 0) {
@@ -35274,7 +35274,7 @@ JSApplet.Inchi = {};
                     c[(h + 56) >> 2] | 0,
                     c[(h + 140) >> 2] | 0,
                     (h + 136) | 0,
-                    Z
+                    Z,
                   ) | 0;
                 if (((u + 30019) | 0) >>> 0 < 20) {
                   A = 0;
@@ -35418,7 +35418,7 @@ JSApplet.Inchi = {};
                     ir(
                       t | 0,
                       c[(W + 24 + ((l * 100) | 0) + 40) >> 2] | 0,
-                      I | 0
+                      I | 0,
                     ) | 0;
                     L = Pc(j, f, t, _, $, z, 0) | 0;
                     ir(c[(h + 208) >> 2] | 0, c[J >> 2] | 0, I | 0) | 0;
@@ -35533,7 +35533,7 @@ JSApplet.Inchi = {};
                         h,
                         A,
                         0,
-                        ca
+                        ca,
                       ) | 0;
                     if (((u + 30019) | 0) >>> 0 < 20) {
                       y = 0;
@@ -35644,7 +35644,7 @@ JSApplet.Inchi = {};
                       ir(
                         c[B >> 2] | 0,
                         c[(ka + 64) >> 2] | 0,
-                        (c[N >> 2] << 2) | 0
+                        (c[N >> 2] << 2) | 0,
                       ) | 0;
                     }
                     ir(o | 0, n | 0, V | 0) | 0;
@@ -35738,7 +35738,7 @@ JSApplet.Inchi = {};
                         h,
                         A,
                         0,
-                        ca
+                        ca,
                       ) | 0;
                     if (((u + 30019) | 0) >>> 0 < 20) {
                       y = 0;
@@ -35823,7 +35823,7 @@ JSApplet.Inchi = {};
                         c[y >> 2] | 0,
                         c[M >> 2] | 0,
                         c[B >> 2] | 0,
-                        c[N >> 2] | 0
+                        c[N >> 2] | 0,
                       ) |
                         0) +
                       2;
@@ -35982,7 +35982,7 @@ JSApplet.Inchi = {};
                         h,
                         A,
                         0,
-                        ca
+                        ca,
                       ) | 0;
                     if (((u + 30019) | 0) >>> 0 < 20) {
                       y = L;
@@ -36089,7 +36089,7 @@ JSApplet.Inchi = {};
                       ir(
                         c[y >> 2] | 0,
                         c[(ka + 80) >> 2] | 0,
-                        (c[D >> 2] << 2) | 0
+                        (c[D >> 2] << 2) | 0,
                       ) | 0;
                     }
                     ir(m | 0, L | 0, V | 0) | 0;
@@ -36172,7 +36172,7 @@ JSApplet.Inchi = {};
                         h,
                         A,
                         0,
-                        ca
+                        ca,
                       ) | 0;
                     if (((u + 30019) | 0) >>> 0 < 20) {
                       y = L;
@@ -36262,7 +36262,7 @@ JSApplet.Inchi = {};
                         c[(h + 76) >> 2] | 0,
                         c[K >> 2] | 0,
                         c[(h + 80) >> 2] | 0,
-                        c[J >> 2] | 0
+                        c[J >> 2] | 0,
                       ) |
                         0) +
                       2;
@@ -37885,7 +37885,7 @@ JSApplet.Inchi = {};
                                       6 +
                                       (e[(G + (r << 1)) >> 1] << 1)) >>
                                       1
-                                  ] | 0
+                                  ] | 0,
                                 ) |
                                   0) +
                                   o) |
@@ -40602,7 +40602,7 @@ JSApplet.Inchi = {};
                                       Do(
                                         (o + (r << 5)) | 0,
                                         c[M >> 2] | 0,
-                                        31
+                                        31,
                                       ) | 0;
                                     o = c[K >> 2] | 0;
                                     if (!o) {
@@ -40615,7 +40615,7 @@ JSApplet.Inchi = {};
                                           (o + ((r * 40) | 0)) | 0,
                                           10,
                                           68,
-                                          M
+                                          M,
                                         ) |
                                           0) >=
                                         0
@@ -40628,7 +40628,7 @@ JSApplet.Inchi = {};
                                               0,
                                             10,
                                             68,
-                                            M
+                                            M,
                                           ) |
                                             0) <
                                           0
@@ -40642,7 +40642,7 @@ JSApplet.Inchi = {};
                                               0,
                                             10,
                                             68,
-                                            M
+                                            M,
                                           ) |
                                             0) <
                                           0
@@ -40658,7 +40658,7 @@ JSApplet.Inchi = {};
                                                 0,
                                               3,
                                               83,
-                                              M
+                                              M,
                                             ) | 0
                                           )
                                         )
@@ -40671,7 +40671,7 @@ JSApplet.Inchi = {};
                                               0,
                                             2,
                                             67,
-                                            M
+                                            M,
                                           ) |
                                             0) <
                                           0
@@ -40685,7 +40685,7 @@ JSApplet.Inchi = {};
                                               0,
                                             3,
                                             67,
-                                            M
+                                            M,
                                           ) |
                                             0) <
                                           0
@@ -40699,7 +40699,7 @@ JSApplet.Inchi = {};
                                               0,
                                             3,
                                             67,
-                                            M
+                                            M,
                                           ) |
                                             0) <
                                           0
@@ -40715,7 +40715,7 @@ JSApplet.Inchi = {};
                                               0,
                                             3,
                                             67,
-                                            M
+                                            M,
                                           ) |
                                             0) <
                                           0
@@ -40734,7 +40734,7 @@ JSApplet.Inchi = {};
                                                   d[
                                                     (o + ((r * 40) | 0) + 25) >>
                                                       0
-                                                  ] | 0
+                                                  ] | 0,
                                                 ) | 0
                                               )
                                             )
@@ -40746,7 +40746,7 @@ JSApplet.Inchi = {};
                                                     ((r * 40) | 0) +
                                                     25) >>
                                                     0
-                                                ] | 0
+                                                ] | 0,
                                               ) |
                                                 0) &
                                               255;
@@ -40780,9 +40780,8 @@ JSApplet.Inchi = {};
                                             }
                                           else {
                                             a[p >> 0] = 4 - q;
-                                            a[
-                                              (o + ((r * 40) | 0) + 32) >> 0
-                                            ] = 0;
+                                            a[(o + ((r * 40) | 0) + 32) >> 0] =
+                                              0;
                                           }
                                         while (0);
                                         do
@@ -40851,7 +40850,7 @@ JSApplet.Inchi = {};
                                 E =
                                   Dq(
                                     (((E << 16) >> 16 > 1 ? E : 1) << 16) >> 16,
-                                    6
+                                    6,
                                   ) | 0;
                                 c[(j + 552) >> 2] = E;
                                 if (E | 0) break;
@@ -40904,7 +40903,7 @@ JSApplet.Inchi = {};
                                               0,
                                             3,
                                             78,
-                                            M
+                                            M,
                                           ) |
                                             0) <
                                           0
@@ -40918,7 +40917,7 @@ JSApplet.Inchi = {};
                                               0,
                                             3,
                                             67,
-                                            M
+                                            M,
                                           ) |
                                             0) <
                                           0
@@ -40932,7 +40931,7 @@ JSApplet.Inchi = {};
                                               0,
                                             3,
                                             67,
-                                            M
+                                            M,
                                           ) |
                                             0) <
                                           0
@@ -41213,7 +41212,7 @@ JSApplet.Inchi = {};
                                               J,
                                               (s | 0) < 32 ? s : 32,
                                               76,
-                                              T
+                                              T,
                                             ) | 0;
                                             s = v;
                                             k = u;
@@ -41530,7 +41529,7 @@ JSApplet.Inchi = {};
                                                         (S + (q << 1)) | 0,
                                                         0,
                                                         78,
-                                                        T
+                                                        T,
                                                       ) |
                                                         0) <
                                                       0
@@ -41849,7 +41848,7 @@ JSApplet.Inchi = {};
                                                           q =
                                                             Ol(
                                                               b[r >> 1] | 0,
-                                                              I
+                                                              I,
                                                             ) | 0;
                                                           if ((q | 0) == -1) {
                                                             k = 1;
@@ -41983,7 +41982,7 @@ JSApplet.Inchi = {};
                                                           q =
                                                             Ol(
                                                               b[r >> 1] | 0,
-                                                              I
+                                                              I,
                                                             ) | 0;
                                                           if ((q | 0) == -1) {
                                                             k = 1;
@@ -42193,7 +42192,8 @@ JSApplet.Inchi = {};
                                                         0) +
                                                         168) |
                                                         0,
-                                                      b[(U + (q << 1)) >> 1] | 0
+                                                      b[(U + (q << 1)) >> 1] |
+                                                        0,
                                                     ) | 0
                                                   ) {
                                                     k = 9;
@@ -42275,7 +42275,8 @@ JSApplet.Inchi = {};
                                                         0) +
                                                         184) |
                                                         0,
-                                                      b[(V + (q << 1)) >> 1] | 0
+                                                      b[(V + (q << 1)) >> 1] |
+                                                        0,
                                                     ) | 0
                                                   ) {
                                                     k = 10;
@@ -42322,7 +42323,7 @@ JSApplet.Inchi = {};
                                                     0) +
                                                     88) |
                                                     0,
-                                                  _
+                                                  _,
                                                 ) | 0;
                                                 k = 0;
                                                 break;
@@ -42353,7 +42354,7 @@ JSApplet.Inchi = {};
                                                         (ca + (r << 3)) | 0,
                                                         0,
                                                         68,
-                                                        M
+                                                        M,
                                                       ) |
                                                         0) <
                                                       0
@@ -42374,9 +42375,11 @@ JSApplet.Inchi = {};
                                                         +(
                                                           777777.777 -
                                                           +N(
-                                                            +(+h[(q + 24) >> 3])
+                                                            +(+h[
+                                                              (q + 24) >> 3
+                                                            ]),
                                                           )
-                                                        )
+                                                        ),
                                                       ) < 1.0e-7
                                                     ) {
                                                       k = 0;
@@ -43851,7 +43854,7 @@ JSApplet.Inchi = {};
                           k =
                             (rp(
                               d[((c[o >> 2] | 0) + ((l * 40) | 0) + 25) >> 0] |
-                                0
+                                0,
                             ) |
                               0) &
                             255;
@@ -43878,7 +43881,7 @@ JSApplet.Inchi = {};
                                 (_k(
                                   ((c[o >> 2] | 0) + ((l * 40) | 0) + 31) | 0,
                                   67,
-                                  B
+                                  B,
                                 ) |
                                   0) <
                                 0
@@ -43891,7 +43894,7 @@ JSApplet.Inchi = {};
                                   (_k(
                                     ((c[o >> 2] | 0) + ((l * 40) | 0) + 32) | 0,
                                     67,
-                                    B
+                                    B,
                                   ) |
                                     0) <
                                   0
@@ -43907,7 +43910,7 @@ JSApplet.Inchi = {};
                                   (_k(
                                     ((c[o >> 2] | 0) + ((l * 40) | 0) + 33) | 0,
                                     67,
-                                    B
+                                    B,
                                   ) |
                                     0) <
                                   0
@@ -43928,7 +43931,7 @@ JSApplet.Inchi = {};
                                   k =
                                     lo(
                                       ((c[o >> 2] | 0) + ((l * 40) | 0) + 24) |
-                                        0
+                                        0,
                                     ) | 0;
                                   E = b[v >> 1] | 0;
                                   a[
@@ -44723,7 +44726,7 @@ JSApplet.Inchi = {};
                   ir(
                     ((c[f >> 2] | 0) + (((c[O >> 2] | 0) * 176) | 0)) | 0,
                     c[P >> 2] | 0,
-                    (g * 176) | 0
+                    (g * 176) | 0,
                   ) | 0;
                   r = c[G >> 2] | 0;
                   s = c[M >> 2] | 0;
@@ -45388,7 +45391,7 @@ JSApplet.Inchi = {};
                         a[q >> 0] | 0,
                         (b + -1) | 0,
                         m,
-                        a[s >> 0] | 0
+                        a[s >> 0] | 0,
                       ) |
                         0) !=
                         0)
@@ -45413,7 +45416,7 @@ JSApplet.Inchi = {};
                     a[(r + ((w * 40) | 0) + 34) >> 0] | 0,
                     a[(r + ((w * 40) | 0) + 37) >> 0] | 0,
                     h,
-                    0
+                    0,
                   ) | 0;
               }
             }
@@ -45452,7 +45455,7 @@ JSApplet.Inchi = {};
             (j + 8) | 0,
             j,
             e,
-            f
+            f,
           ) | 0;
         a: do
           if (g | 0) {
@@ -46835,7 +46838,7 @@ JSApplet.Inchi = {};
               c[n >> 2] | 0,
               c[p >> 2] | 0,
               c[o >> 2] | 0,
-              u
+              u,
             ) | 0;
           if (k | 0 ? a[k >> 0] | 0 : 0) {
             if ((j | 0) != 0 ? (a[j >> 0] | 0) != 0 : 0) {
@@ -47141,7 +47144,7 @@ JSApplet.Inchi = {};
                 (a[k >> 0] | 0) +
                 (a[q >> 0] | 0)) |
                 0,
-              a[(u + ((t * 176) | 0) + 92) >> 0] | 0
+              a[(u + ((t * 176) | 0) + 92) >> 0] | 0,
             ) | 0;
           if (!(kp(w, 86994) | 0)) b[w >> 1] = 42;
           h[x >> 3] = n;
@@ -48042,13 +48045,13 @@ JSApplet.Inchi = {};
                   ((c[t >> 2] | 0) + -1) | 0,
                   ((c[l >> 2] | 0) + -1) | 0,
                   f,
-                  h
+                  h,
                 ) | 0;
                 Gm(
                   ((c[u >> 2] | 0) + -1) | 0,
                   ((c[m >> 2] | 0) + -1) | 0,
                   f,
-                  h
+                  h,
                 ) | 0;
                 c[(o + 24) >> 2] = 2;
                 c[r >> 2] = 0;
@@ -48108,7 +48111,7 @@ JSApplet.Inchi = {};
                   (Xl(
                     c[(k + (e << 2)) >> 2] | 0,
                     c[(k + (h << 2)) >> 2] | 0,
-                    b
+                    b,
                   ) |
                     0) <=
                   0
@@ -48682,7 +48685,7 @@ JSApplet.Inchi = {};
         z,
         A,
         B,
-        C
+        C,
       ) {
         f = f | 0;
         g = g | 0;
@@ -49558,7 +49561,7 @@ JSApplet.Inchi = {};
                               2,
                               c[M >> 2] | 0,
                               2,
-                              (((c[Z >> 2] & 6) | 0) != 0) & 1
+                              (((c[Z >> 2] & 6) | 0) != 0) & 1,
                             ) |
                               0) ==
                             0;
@@ -49961,7 +49964,7 @@ JSApplet.Inchi = {};
                       Ia,
                       c[zc >> 2] | 0,
                       c[uc >> 2] | 0,
-                      c[xc >> 2] | 0
+                      c[xc >> 2] | 0,
                     ) | 0;
                   if (Ef(E, Ia, g, -1, 1) | 0) {
                     E = 1;
@@ -49987,7 +49990,7 @@ JSApplet.Inchi = {};
                     c[zc >> 2] | 0,
                     c[Bc >> 2] | 0,
                     c[uc >> 2] | 0,
-                    c[xc >> 2] | 0
+                    c[xc >> 2] | 0,
                   ) | 0;
                 sa = (Bc + 116) | 0;
                 c[sa >> 2] = E;
@@ -50004,7 +50007,7 @@ JSApplet.Inchi = {};
                 }
                 if (
                   (he(
-                    a[(Bc + 300 + (((c[va >> 2] | 0) * 11) | 0) + 2) >> 0] | 0
+                    a[(Bc + 300 + (((c[va >> 2] | 0) * 11) | 0) + 2) >> 0] | 0,
                   ) |
                     0) ==
                   1
@@ -50022,7 +50025,7 @@ JSApplet.Inchi = {};
                           c[Bc >> 2] | 0,
                           c[tc >> 2] | 0,
                           c[uc >> 2] | 0,
-                          c[xc >> 2] | 0
+                          c[xc >> 2] | 0,
                         ) | 0),
                       (c[sa >> 2] = Ka),
                       (c[F >> 2] | 0) != (Ka | 0))
@@ -50060,7 +50063,8 @@ JSApplet.Inchi = {};
                 h: while (1) {
                   Ma =
                     he(
-                      a[(Bc + 300 + (((c[va >> 2] | 0) * 11) | 0) + 3) >> 0] | 0
+                      a[(Bc + 300 + (((c[va >> 2] | 0) * 11) | 0) + 3) >> 0] |
+                        0,
                     ) | 0;
                   c[aa >> 2] = Ma;
                   if (Ma | 0) {
@@ -50082,7 +50086,7 @@ JSApplet.Inchi = {};
                           c[uc >> 2] | 0,
                           c[Ac >> 2] | 0,
                           c[$b >> 2] | 0,
-                          c[xc >> 2] | 0
+                          c[xc >> 2] | 0,
                         ) | 0;
                       c[Sa >> 2] = (c[Sa >> 2] | 0) + (c[Ac >> 2] | 0);
                       E = c[aa >> 2] | 0;
@@ -50102,7 +50106,7 @@ JSApplet.Inchi = {};
                         he(
                           a[
                             (Bc + 300 + (((c[va >> 2] | 0) * 11) | 0) + 4) >> 0
-                          ] | 0
+                          ] | 0,
                         ) | 0;
                       c[aa >> 2] = Ma;
                       if (!Ma) {
@@ -50124,7 +50128,7 @@ JSApplet.Inchi = {};
                             Ia,
                             g,
                             (0 - (c[aa >> 2] | 0)) | 0,
-                            c[Rc >> 2] | 0
+                            c[Rc >> 2] | 0,
                           ) | 0
                         ) {
                           E = 1;
@@ -50503,7 +50507,7 @@ JSApplet.Inchi = {};
                         he(
                           a[
                             (Bc + 300 + (((c[va >> 2] | 0) * 11) | 0) + 5) >> 0
-                          ] | 0
+                          ] | 0,
                         ) | 0
                       )
                     ) {
@@ -50511,7 +50515,7 @@ JSApplet.Inchi = {};
                         he(
                           a[
                             (Bc + 300 + (((c[va >> 2] | 0) * 11) | 0) + 6) >> 0
-                          ] | 0
+                          ] | 0,
                         ) | 0
                       ) {
                         sd = 337;
@@ -50521,7 +50525,7 @@ JSApplet.Inchi = {};
                         he(
                           a[
                             (Bc + 300 + (((c[va >> 2] | 0) * 11) | 0) + 7) >> 0
-                          ] | 0
+                          ] | 0,
                         ) | 0
                       ) {
                         sd = 337;
@@ -50531,7 +50535,7 @@ JSApplet.Inchi = {};
                         he(
                           a[
                             (Bc + 300 + (((c[va >> 2] | 0) * 11) | 0) + 8) >> 0
-                          ] | 0
+                          ] | 0,
                         ) | 0
                       ) {
                         sd = 337;
@@ -50552,7 +50556,7 @@ JSApplet.Inchi = {};
                         he(
                           a[
                             (Bc + 300 + (((c[va >> 2] | 0) * 11) | 0) + 5) >> 0
-                          ] | 0
+                          ] | 0,
                         ) | 0;
                       c[aa >> 2] = Ma;
                       do
@@ -50579,7 +50583,7 @@ JSApplet.Inchi = {};
                                 c[uc >> 2] | 0,
                                 c[Ac >> 2] | 0,
                                 c[$b >> 2] | 0,
-                                c[xc >> 2] | 0
+                                c[xc >> 2] | 0,
                               ) | 0;
                             c[Sa >> 2] = (c[Sa >> 2] | 0) + (c[Ac >> 2] | 0);
                             E = c[aa >> 2] | 0;
@@ -50598,7 +50602,7 @@ JSApplet.Inchi = {};
                         he(
                           a[
                             (Bc + 300 + (((c[va >> 2] | 0) * 11) | 0) + 6) >> 0
-                          ] | 0
+                          ] | 0,
                         ) | 0;
                       c[aa >> 2] = Ma;
                       do
@@ -50631,7 +50635,7 @@ JSApplet.Inchi = {};
                                 c[ka >> 2] | 0,
                                 c[Ac >> 2] | 0,
                                 c[$b >> 2] | 0,
-                                c[xc >> 2] | 0
+                                c[xc >> 2] | 0,
                               ) | 0;
                             c[Sa >> 2] = (c[Sa >> 2] | 0) + (c[Ac >> 2] | 0);
                             E = c[aa >> 2] | 0;
@@ -50650,7 +50654,7 @@ JSApplet.Inchi = {};
                         he(
                           a[
                             (Bc + 300 + (((c[va >> 2] | 0) * 11) | 0) + 7) >> 0
-                          ] | 0
+                          ] | 0,
                         ) | 0;
                       c[aa >> 2] = Ma;
                       do
@@ -50672,7 +50676,7 @@ JSApplet.Inchi = {};
                                 g,
                                 Ia,
                                 c[zc >> 2] | 0,
-                                c[uc >> 2] | 0
+                                c[uc >> 2] | 0,
                               ) | 0;
                             c[Sa >> 2] = (c[Sa >> 2] | 0) + (c[Ac >> 2] | 0);
                             E = c[aa >> 2] | 0;
@@ -50691,7 +50695,7 @@ JSApplet.Inchi = {};
                         he(
                           a[
                             (Bc + 300 + (((c[va >> 2] | 0) * 11) | 0) + 8) >> 0
-                          ] | 0
+                          ] | 0,
                         ) | 0;
                       c[aa >> 2] = Ma;
                       if (Ma | 0) {
@@ -50744,7 +50748,7 @@ JSApplet.Inchi = {};
                         he(
                           a[
                             (Bc + 300 + (((c[va >> 2] | 0) * 11) | 0) + 9) >> 0
-                          ] | 0
+                          ] | 0,
                         ) | 0;
                       c[aa >> 2] = Ma;
                       if (Ma | 0) {
@@ -50768,7 +50772,7 @@ JSApplet.Inchi = {};
                               c[Qa >> 2] | 0,
                               c[Ac >> 2] | 0,
                               c[$b >> 2] | 0,
-                              c[xc >> 2] | 0
+                              c[xc >> 2] | 0,
                             ) | 0;
                           c[Ra >> 2] = (c[Ra >> 2] | 0) + (c[Ac >> 2] | 0);
                           E = c[aa >> 2] | 0;
@@ -50788,7 +50792,7 @@ JSApplet.Inchi = {};
                         he(
                           a[
                             (Bc + 300 + (((c[va >> 2] | 0) * 11) | 0) + 2) >> 0
-                          ] | 0
+                          ] | 0,
                         ) | 0;
                       c[aa >> 2] = Ma;
                       if (Ma | 0) {
@@ -50807,7 +50811,7 @@ JSApplet.Inchi = {};
                             Ia,
                             g,
                             (0 - (c[aa >> 2] | 0)) | 0,
-                            c[Rc >> 2] | 0
+                            c[Rc >> 2] | 0,
                           ) | 0
                         ) {
                           E = 2;
@@ -50828,7 +50832,7 @@ JSApplet.Inchi = {};
                                   (((c[va >> 2] | 0) * 11) | 0) +
                                   5) >>
                                   0
-                              ] | 0
+                              ] | 0,
                             ) | 0
                           )
                         ) {
@@ -50840,7 +50844,7 @@ JSApplet.Inchi = {};
                                   (((c[va >> 2] | 0) * 11) | 0) +
                                   6) >>
                                   0
-                              ] | 0
+                              ] | 0,
                             ) | 0
                           )
                             break;
@@ -50852,7 +50856,7 @@ JSApplet.Inchi = {};
                                   (((c[va >> 2] | 0) * 11) | 0) +
                                   7) >>
                                   0
-                              ] | 0
+                              ] | 0,
                             ) | 0
                           )
                             break;
@@ -50864,7 +50868,7 @@ JSApplet.Inchi = {};
                                   (((c[va >> 2] | 0) * 11) | 0) +
                                   8) >>
                                   0
-                              ] | 0
+                              ] | 0,
                             ) | 0
                           )
                             break;
@@ -50881,7 +50885,7 @@ JSApplet.Inchi = {};
                         he(
                           a[
                             (Bc + 300 + (((c[va >> 2] | 0) * 11) | 0) + 5) >> 0
-                          ] | 0
+                          ] | 0,
                         ) | 0;
                       c[aa >> 2] = Ma;
                       do
@@ -50908,7 +50912,7 @@ JSApplet.Inchi = {};
                                 c[uc >> 2] | 0,
                                 c[Ac >> 2] | 0,
                                 c[$b >> 2] | 0,
-                                c[xc >> 2] | 0
+                                c[xc >> 2] | 0,
                               ) | 0;
                             c[Ra >> 2] = (c[Ra >> 2] | 0) + (c[Ac >> 2] | 0);
                             E = c[aa >> 2] | 0;
@@ -50927,7 +50931,7 @@ JSApplet.Inchi = {};
                         he(
                           a[
                             (Bc + 300 + (((c[va >> 2] | 0) * 11) | 0) + 6) >> 0
-                          ] | 0
+                          ] | 0,
                         ) | 0;
                       c[aa >> 2] = Ma;
                       do
@@ -50960,7 +50964,7 @@ JSApplet.Inchi = {};
                                 c[ka >> 2] | 0,
                                 c[Ac >> 2] | 0,
                                 c[$b >> 2] | 0,
-                                c[xc >> 2] | 0
+                                c[xc >> 2] | 0,
                               ) | 0;
                             c[Ra >> 2] = (c[Ra >> 2] | 0) + (c[Ac >> 2] | 0);
                             E = c[aa >> 2] | 0;
@@ -50979,7 +50983,7 @@ JSApplet.Inchi = {};
                         he(
                           a[
                             (Bc + 300 + (((c[va >> 2] | 0) * 11) | 0) + 7) >> 0
-                          ] | 0
+                          ] | 0,
                         ) | 0;
                       c[aa >> 2] = Ma;
                       do
@@ -51001,7 +51005,7 @@ JSApplet.Inchi = {};
                                 g,
                                 Ia,
                                 c[zc >> 2] | 0,
-                                c[uc >> 2] | 0
+                                c[uc >> 2] | 0,
                               ) | 0;
                             c[Ra >> 2] = (c[Ra >> 2] | 0) + (c[Ac >> 2] | 0);
                             E = c[aa >> 2] | 0;
@@ -51020,7 +51024,7 @@ JSApplet.Inchi = {};
                         he(
                           a[
                             (Bc + 300 + (((c[va >> 2] | 0) * 11) | 0) + 8) >> 0
-                          ] | 0
+                          ] | 0,
                         ) | 0;
                       c[aa >> 2] = Ma;
                       if (Ma | 0) {
@@ -51069,7 +51073,7 @@ JSApplet.Inchi = {};
                               Va,
                               Wa,
                               c[zc >> 2] | 0,
-                              c[uc >> 2] | 0
+                              c[uc >> 2] | 0,
                             ) |
                               0) >
                             0
@@ -51088,7 +51092,7 @@ JSApplet.Inchi = {};
                                 g,
                                 Ia,
                                 c[tc >> 2] | 0,
-                                c[uc >> 2] | 0
+                                c[uc >> 2] | 0,
                               ) | 0;
                             c[Ra >> 2] = (c[Ra >> 2] | 0) + (c[Ac >> 2] | 0);
                             if (Ef(ta, Ia, g, -1, c[Rc >> 2] | 0) | 0) {
@@ -51165,7 +51169,7 @@ JSApplet.Inchi = {};
                         Ia,
                         c[zc >> 2] | 0,
                         c[uc >> 2] | 0,
-                        c[xc >> 2] | 0
+                        c[xc >> 2] | 0,
                       ) | 0;
                     c[Sa >> 2] = (c[Sa >> 2] | 0) + (c[Ac >> 2] | 0);
                     E = c[aa >> 2] | 0;
@@ -51182,7 +51186,8 @@ JSApplet.Inchi = {};
                   _c(v, 12485, wb) | 0;
                   Ma =
                     he(
-                      a[(Bc + 300 + (((c[va >> 2] | 0) * 11) | 0) + 2) >> 0] | 0
+                      a[(Bc + 300 + (((c[va >> 2] | 0) * 11) | 0) + 2) >> 0] |
+                        0,
                     ) | 0;
                   c[aa >> 2] = Ma;
                   if ((Ma | 0) == 1) {
@@ -51200,7 +51205,7 @@ JSApplet.Inchi = {};
                         c[zc >> 2] | 0,
                         c[Bc >> 2] | 0,
                         c[uc >> 2] | 0,
-                        c[xc >> 2] | 0
+                        c[xc >> 2] | 0,
                       ) | 0;
                     c[sa >> 2] = Ma;
                     c[F >> 2] = Ma;
@@ -51210,7 +51215,7 @@ JSApplet.Inchi = {};
                         Ia,
                         g,
                         (0 - (c[aa >> 2] | 0)) | 0,
-                        c[Rc >> 2] | 0
+                        c[Rc >> 2] | 0,
                       ) | 0
                     ) {
                       E = 2;
@@ -51287,7 +51292,7 @@ JSApplet.Inchi = {};
                         z,
                         A,
                         B,
-                        C
+                        C,
                       ) | 0
                     )
                   ) {
@@ -51423,7 +51428,7 @@ JSApplet.Inchi = {};
                           c[tc >> 2] | 0,
                           c[uc >> 2] | 0,
                           c[Ac >> 2] | 0,
-                          c[$b >> 2] | 0
+                          c[$b >> 2] | 0,
                         ) | 0;
                       if (Ef(O, Ia, g, -1, c[Rc >> 2] | 0) | 0) {
                         E = 1;
@@ -51454,7 +51459,7 @@ JSApplet.Inchi = {};
                           c[uc >> 2] | 0,
                           c[Ac >> 2] | 0,
                           c[$b >> 2] | 0,
-                          c[xc >> 2] | 0
+                          c[xc >> 2] | 0,
                         ) | 0;
                       if (Ef(O, Ia, g, -1, c[Rc >> 2] | 0) | 0) {
                         E = 1;
@@ -51486,7 +51491,7 @@ JSApplet.Inchi = {};
                               c[zc >> 2] | 0,
                               c[tc >> 2] | 0,
                               c[uc >> 2] | 0,
-                              c[xc >> 2] | 0
+                              c[xc >> 2] | 0,
                             ) | 0;
                           if (Ef(O, Ia, g, -1, c[Rc >> 2] | 0) | 0) {
                             E = 1;
@@ -51527,7 +51532,7 @@ JSApplet.Inchi = {};
                             c[uc >> 2] | 0,
                             c[Ac >> 2] | 0,
                             c[$b >> 2] | 0,
-                            c[xc >> 2] | 0
+                            c[xc >> 2] | 0,
                           ) | 0;
                         if (Ef(Q, Ia, g, -1, c[Rc >> 2] | 0) | 0) {
                           E = 1;
@@ -51559,7 +51564,7 @@ JSApplet.Inchi = {};
                               c[tc >> 2] | 0,
                               c[uc >> 2] | 0,
                               c[Ac >> 2] | 0,
-                              c[$b >> 2] | 0
+                              c[$b >> 2] | 0,
                             ) | 0;
                           if (Ef(Q, Ia, g, -1, c[Rc >> 2] | 0) | 0) {
                             E = 1;
@@ -51623,7 +51628,7 @@ JSApplet.Inchi = {};
                                 c[tc >> 2] | 0,
                                 c[uc >> 2] | 0,
                                 c[Ac >> 2] | 0,
-                                c[$b >> 2] | 0
+                                c[$b >> 2] | 0,
                               ) | 0;
                             if (Ef(Q, Ia, g, -1, c[Rc >> 2] | 0) | 0) {
                               E = 1;
@@ -51656,7 +51661,7 @@ JSApplet.Inchi = {};
                                   c[uc >> 2] | 0,
                                   c[Ac >> 2] | 0,
                                   c[$b >> 2] | 0,
-                                  c[xc >> 2] | 0
+                                  c[xc >> 2] | 0,
                                 ) | 0;
                               if (Ef(Q, Ia, g, -2, c[Rc >> 2] | 0) | 0) {
                                 E = 1;
@@ -51697,7 +51702,7 @@ JSApplet.Inchi = {};
                                     c[tc >> 2] | 0,
                                     c[uc >> 2] | 0,
                                     c[$b >> 2] | 0,
-                                    c[xc >> 2] | 0
+                                    c[xc >> 2] | 0,
                                   ) | 0;
                                 if (Ef(Q, Ia, g, -2, c[Rc >> 2] | 0) | 0) {
                                   E = 1;
@@ -51736,7 +51741,7 @@ JSApplet.Inchi = {};
                               c[uc >> 2] | 0,
                               c[Ac >> 2] | 0,
                               c[$b >> 2] | 0,
-                              c[xc >> 2] | 0
+                              c[xc >> 2] | 0,
                             ) | 0;
                           if (Ef(K, Ia, g, -1, c[Rc >> 2] | 0) | 0) {
                             E = 1;
@@ -51767,7 +51772,7 @@ JSApplet.Inchi = {};
                                 c[tc >> 2] | 0,
                                 c[uc >> 2] | 0,
                                 c[Ac >> 2] | 0,
-                                c[$b >> 2] | 0
+                                c[$b >> 2] | 0,
                               ) | 0;
                             if (Ef(K, Ia, g, -1, c[Rc >> 2] | 0) | 0) {
                               E = 1;
@@ -51844,7 +51849,7 @@ JSApplet.Inchi = {};
                             c[zc >> 2] | 0,
                             c[tc >> 2] | 0,
                             c[uc >> 2] | 0,
-                            c[xc >> 2] | 0
+                            c[xc >> 2] | 0,
                           ) | 0;
                         if (Ef(O, Ia, g, -1, c[Rc >> 2] | 0) | 0) {
                           E = 1;
@@ -51910,11 +51915,10 @@ JSApplet.Inchi = {};
                             ir(
                               ((c[g >> 2] | 0) + (c[L >> 2] | 0)) | 0,
                               (E + H) | 0,
-                              sd | 0
+                              sd | 0,
                             ) | 0;
-                            a[
-                              ((c[g >> 2] | 0) + ((c[L >> 2] | 0) + sd)) >> 0
-                            ] = 0;
+                            a[((c[g >> 2] | 0) + ((c[L >> 2] | 0) + sd)) >> 0] =
+                              0;
                             sd = c[Rc >> 2] | 0 ? 92409 : 83461;
                             c[Hc >> 2] = c[g >> 2];
                             c[(Hc + 4) >> 2] = sd;
@@ -52128,7 +52132,7 @@ JSApplet.Inchi = {};
                           z,
                           A,
                           B,
-                          C
+                          C,
                         ) | 0
                       )
                     ) {
@@ -53073,7 +53077,7 @@ JSApplet.Inchi = {};
               a[(h + ((m * 176) | 0) + 93) >> 0] | 0,
               o,
               a[(h + ((m * 176) | 0) + 94) >> 0] | 0,
-              a[s >> 0] | 0
+              a[s >> 0] | 0,
             ) | 0;
           if (!o) {
             q = a[q >> 0] | 0;
@@ -53514,7 +53518,7 @@ JSApplet.Inchi = {};
                                   !(
                                     ((r | 0) < (o | 0)) &
                                     ((ho(
-                                      d[(h + ((r * 176) | 0) + 6) >> 0] | 0
+                                      d[(h + ((r * 176) | 0) + 6) >> 0] | 0,
                                     ) |
                                       0) ==
                                       0)
@@ -53564,7 +53568,7 @@ JSApplet.Inchi = {};
                                   !(
                                     ((q | 0) < (o | 0)) &
                                     ((ho(
-                                      d[(h + ((q * 176) | 0) + 6) >> 0] | 0
+                                      d[(h + ((q * 176) | 0) + 6) >> 0] | 0,
                                     ) |
                                       0) ==
                                       0)
@@ -55510,7 +55514,7 @@ JSApplet.Inchi = {};
                           o,
                           (2048 - p) | 0,
                           c[(8784 + (((k >>> 31) ^ 1) << 2)) >> 2] | 0,
-                          (l | 0) > -1 ? l : (0 - l) | 0
+                          (l | 0) > -1 ? l : (0 - l) | 0,
                         ) | 0;
                       n = 27;
                       break;
@@ -55949,7 +55953,7 @@ JSApplet.Inchi = {};
               c[(e + 4) >> 2] | 0,
               c[(e + 88) >> 2] | 0,
               c[(e + 48) >> 2] | 0,
-              c[(e + 32) >> 2] | 0
+              c[(e + 32) >> 2] | 0,
             ) | 0;
           e = 0;
           while (1) {
@@ -56973,7 +56977,7 @@ JSApplet.Inchi = {};
                     c[(q + 12) >> 2] | 0,
                     e,
                     h,
-                    f
+                    f,
                   ) | 0;
                   o = 0;
                   m = n;
@@ -57312,7 +57316,7 @@ JSApplet.Inchi = {};
                 ((j | 0) != 0) & 1,
                 d,
                 h,
-                e
+                e,
               ) | 0;
               j = q;
               m = 0;
@@ -58175,7 +58179,7 @@ JSApplet.Inchi = {};
                     c[E >> 2] | 0,
                     d,
                     g,
-                    e
+                    e,
                   ) | 0;
                 }
               } else if ((n | 0) != 0 ? (c[(n + 12) >> 2] | 0) != 0 : 0) {
@@ -58273,7 +58277,7 @@ JSApplet.Inchi = {};
                   c[I >> 2] | 0,
                   d,
                   g,
-                  e
+                  e,
                 ) | 0;
                 k = 0;
                 l = 0;
@@ -58502,7 +58506,7 @@ JSApplet.Inchi = {};
                     c[j >> 2] | 0,
                     d,
                     g,
-                    e
+                    e,
                   ) | 0;
                 }
               } else if ((n | 0) != 0 ? (c[(n + 12) >> 2] | 0) != 0 : 0) {
@@ -58600,7 +58604,7 @@ JSApplet.Inchi = {};
                   c[G >> 2] | 0,
                   d,
                   g,
-                  e
+                  e,
                 ) | 0;
                 k = 0;
                 l = 0;
@@ -59449,9 +59453,8 @@ JSApplet.Inchi = {};
                             else break;
                             while (1) {
                               if ((l | 0) == 3) break;
-                              a[
-                                (((l * 10) | 0) + 4 + (Q + (y << 5))) >> 0
-                              ] = 48;
+                              a[(((l * 10) | 0) + 4 + (Q + (y << 5))) >> 0] =
+                                48;
                               l = (l + 1) | 0;
                             }
                             y = (y + 1) | 0;
@@ -59466,9 +59469,8 @@ JSApplet.Inchi = {};
                             if ((r | 0) == 3) break;
                             do
                               if (A) {
-                                a[
-                                  (((r * 10) | 0) + 4 + (Q + (y << 5))) >> 0
-                                ] = 48;
+                                a[(((r * 10) | 0) + 4 + (Q + (y << 5))) >> 0] =
+                                  48;
                                 l = 0;
                                 F = 0.0;
                               } else {
@@ -59624,7 +59626,7 @@ JSApplet.Inchi = {};
                                                       112) >>
                                                       3
                                                   ]
-                                                )
+                                                ),
                                               ) >
                                                 1.0e-6) |
                                               z;
@@ -59638,7 +59640,7 @@ JSApplet.Inchi = {};
                                                       120) >>
                                                       3
                                                   ]
-                                                )
+                                                ),
                                               ) >
                                                 1.0e-6) |
                                               y;
@@ -59652,7 +59654,7 @@ JSApplet.Inchi = {};
                                                       128) >>
                                                       3
                                                   ]
-                                                )
+                                                ),
                                               ) >
                                                 1.0e-6) |
                                               x;
@@ -59720,7 +59722,7 @@ JSApplet.Inchi = {};
                                                         ((q * 176) | 0) +
                                                         92) >>
                                                         0
-                                                    ] | 0
+                                                    ] | 0,
                                                   ) | 0;
                                                 if (!B) {
                                                   T = 245;
@@ -59785,7 +59787,7 @@ JSApplet.Inchi = {};
                                                 a[n >> 0] | 0,
                                                 s,
                                                 H,
-                                                a[I >> 0] | 0
+                                                a[I >> 0] | 0,
                                               ) | 0;
                                             A = (s + -1) | 0;
                                             if (
@@ -59796,7 +59798,7 @@ JSApplet.Inchi = {};
                                                 a[n >> 0] | 0,
                                                 A,
                                                 H,
-                                                a[I >> 0] | 0
+                                                a[I >> 0] | 0,
                                               ) |
                                                 0) !=
                                                 0)
@@ -59822,7 +59824,7 @@ JSApplet.Inchi = {};
                                             E,
                                             0,
                                             j,
-                                            0
+                                            0,
                                           ) | 0;
                                         L = K;
                                       }
@@ -60413,7 +60415,7 @@ JSApplet.Inchi = {};
                                                             ((z * 176) | 0) +
                                                             6) >>
                                                             0
-                                                        ] | 0
+                                                        ] | 0,
                                                       ) | 0
                                                     )
                                                       break;
@@ -60650,7 +60652,7 @@ JSApplet.Inchi = {};
             c[(o + 68) >> 2] | 0,
             c[o >> 2] | 0,
             c[(o + 12) >> 2] | 0,
-            (o + 8) | 0
+            (o + 8) | 0,
           );
         t = (f + 192) | 0;
         if (
@@ -60665,7 +60667,7 @@ JSApplet.Inchi = {};
                 c[(e + 292) >> 2] & 1,
                 ((c[t >> 2] | 0) >>> 11) & 1,
                 c[(f + 68) >> 2] | 0,
-                c[(f + 72) >> 2] | 0
+                c[(f + 72) >> 2] | 0,
               ) |
                 0) !=
                 0)
@@ -60752,7 +60754,7 @@ JSApplet.Inchi = {};
               h,
               j,
               D,
-              a[C >> 0] | 0
+              a[C >> 0] | 0,
             ) | 0;
           if (c[(f + 220) >> 2] | 0) c[(f + 252) >> 2] = 1;
           im(t, e, f, n, k);
@@ -61354,7 +61356,7 @@ JSApplet.Inchi = {};
                         c[S >> 2] | 0,
                         T,
                         c[Z >> 2] | 0,
-                        h
+                        h,
                       ) | 0;
                     c[Y >> 2] = ((M | 0) == 27) & 1;
                     if (!M) cd(P, 84508, qa) | 0;
@@ -61388,8 +61390,8 @@ JSApplet.Inchi = {};
                         F = F
                           ? 84548
                           : (((c[Z >> 2] & 1) | 0) != 0) & (F ^ 1)
-                          ? 84538
-                          : 92346;
+                            ? 84538
+                            : 92346;
                         G = G ? 2 : 1;
                         H = 0;
                         while (1) {
@@ -61543,7 +61545,7 @@ JSApplet.Inchi = {};
                                       c[S >> 2] | 0,
                                       T,
                                       c[Z >> 2] | 0,
-                                      h
+                                      h,
                                     ) | 0;
                                 else
                                   t =
@@ -61562,7 +61564,7 @@ JSApplet.Inchi = {};
                                       c[S >> 2] | 0,
                                       T,
                                       c[Z >> 2] | 0,
-                                      h
+                                      h,
                                     ) | 0;
                                 r = (t | 0) == 27;
                                 c[Y >> 2] = r & 1;
@@ -61765,7 +61767,7 @@ JSApplet.Inchi = {};
             A,
             r,
             0,
-            (f + 16) | 0
+            (f + 16) | 0,
           ) | 0;
         In(c[h >> 2] | 0, c[x >> 2] | 0, (n + 1) | 0) | 0;
         o = 0;
@@ -62406,7 +62408,7 @@ JSApplet.Inchi = {};
                 j,
                 B,
                 (d + 12) | 0,
-                (d + 16) | 0
+                (d + 16) | 0,
               ) | 0;
               if (
                 !((c[(e + 240) >> 2] | 0) != 0 ? (c[h >> 2] | 0) != 999999 : 0)
@@ -62536,7 +62538,7 @@ JSApplet.Inchi = {};
                 (e + 80) | 0,
                 B,
                 (d + 12) | 0,
-                (d + 16) | 0
+                (d + 16) | 0,
               ) | 0;
               if (
                 (c[j >> 2] | 0) == 2 ? ((x = c[(f + 16) >> 2] | 0), x | 0) : 0
@@ -62744,7 +62746,7 @@ JSApplet.Inchi = {};
                   ir(
                     ((c[f >> 2] | 0) + (((c[M >> 2] | 0) * 176) | 0)) | 0,
                     c[L >> 2] | 0,
-                    (g * 176) | 0
+                    (g * 176) | 0,
                   ) | 0;
                   s = c[F >> 2] | 0;
                   t = c[I >> 2] | 0;
@@ -63240,7 +63242,7 @@ JSApplet.Inchi = {};
                   a[h >> 0] | 0,
                   a[(n + ((k * 176) | 0) + 93) >> 0] | 0,
                   b,
-                  a[(n + ((k * 176) | 0) + 92) >> 0] | 0
+                  a[(n + ((k * 176) | 0) + 92) >> 0] | 0,
                 ) | 0;
               if (j) {
                 e = (e + 1) | 0;
@@ -63405,7 +63407,7 @@ JSApplet.Inchi = {};
                 c[r >> 2] | 0,
                 c[g >> 2] | 0,
                 c[m >> 2] & 262144,
-                c[(e + 284) >> 2] | 0
+                c[(e + 284) >> 2] | 0,
               ) |
                 0) >
               0
@@ -64026,7 +64028,7 @@ JSApplet.Inchi = {};
                             !(
                               kp(
                                 ((c[a >> 2] | 0) + ((f * 176) | 0)) | 0,
-                                86994
+                                86994,
                               ) | 0
                             )
                           )
@@ -64066,7 +64068,7 @@ JSApplet.Inchi = {};
                                   c[(g + 212) >> 2] | 0,
                                   c[(g + 20) >> 2] | 0,
                                   c[(r + 212) >> 2] | 0,
-                                  c[(r + 20) >> 2] | 0
+                                  c[(r + 20) >> 2] | 0,
                                 ) |
                                   0) !=
                                   0)
@@ -64450,7 +64452,7 @@ JSApplet.Inchi = {};
                                       ? no(
                                           c[(b + 212) >> 2] | 0,
                                           e,
-                                          c[(b + 20) >> 2] | 0
+                                          c[(b + 20) >> 2] | 0,
                                         ) | 0
                                       : 0
                                   ) {
@@ -64674,7 +64676,7 @@ JSApplet.Inchi = {};
                       0) +
                     6) >>
                     0
-                ] | 0
+                ] | 0,
               ) | 0
             )
           )
@@ -64704,20 +64706,20 @@ JSApplet.Inchi = {};
               ((c[(b + 196) >> 2] | 0) + -1) | 0,
               ((c[h >> 2] | 0) + -1) | 0,
               c[d >> 2] | 0,
-              g
+              g,
             ) | 0;
             f = (b + 208) | 0;
             Em(
               ((c[(b + 204) >> 2] | 0) + -1) | 0,
               ((c[f >> 2] | 0) + -1) | 0,
               c[d >> 2] | 0,
-              g
+              g,
             ) | 0;
             Gm(
               ((c[h >> 2] | 0) + -1) | 0,
               ((c[f >> 2] | 0) + -1) | 0,
               c[d >> 2] | 0,
-              g
+              g,
             ) | 0;
             g = 5;
             break;
@@ -64728,20 +64730,20 @@ JSApplet.Inchi = {};
             Hm(
               ((c[f >> 2] | 0) + -1) | 0,
               ((c[h >> 2] | 0) + -1) | 0,
-              c[d >> 2] | 0
+              c[d >> 2] | 0,
             ) | 0;
             g = (d + 8) | 0;
             Em(
               ((c[(b + 196) >> 2] | 0) + -1) | 0,
               ((c[f >> 2] | 0) + -1) | 0,
               c[d >> 2] | 0,
-              g
+              g,
             ) | 0;
             Em(
               ((c[(b + 204) >> 2] | 0) + -1) | 0,
               ((c[h >> 2] | 0) + -1) | 0,
               c[d >> 2] | 0,
-              g
+              g,
             ) | 0;
             g = 5;
             break;
@@ -64756,7 +64758,7 @@ JSApplet.Inchi = {};
               ((c[(b + 204) >> 2] | 0) + -1) | 0,
               ((c[(b + 208) >> 2] | 0) + -1) | 0,
               c[d >> 2] | 0,
-              g
+              g,
             ) | 0;
             g = 5;
             break;
@@ -65316,7 +65318,7 @@ JSApplet.Inchi = {};
                     a,
                     b,
                     0,
-                    0
+                    0,
                   ),
                   (c[d >> 2] | 0) == 0)
                 : 0
@@ -65407,7 +65409,7 @@ JSApplet.Inchi = {};
               (b + 8) | 0,
               h,
               0,
-              ((c[(a + 200) >> 2] | 0) + -1) | 0
+              ((c[(a + 200) >> 2] | 0) + -1) | 0,
             ) | 0
           ) {
             a = (a + 228) | 0;
@@ -65454,7 +65456,7 @@ JSApplet.Inchi = {};
                   ((c[(j + 200) >> 2] | 0) + -1) | 0,
                   ((c[(j + 208) >> 2] | 0) + -1) | 0,
                   b,
-                  f
+                  f,
                 ) | 0;
               k = (k + 1) | 0;
             }
@@ -65500,7 +65502,7 @@ JSApplet.Inchi = {};
                   ((c[(k + 200) >> 2] | 0) + -1) | 0,
                   ((c[(k + 208) >> 2] | 0) + -1) | 0,
                   b,
-                  f
+                  f,
                 ) | 0;
               i = (i + 1) | 0;
             }
@@ -65892,7 +65894,7 @@ JSApplet.Inchi = {};
                         c[A >> 2] | 0,
                         c[j >> 2] | 0,
                         v,
-                        w
+                        w,
                       ) |
                         0) &
                       x;
@@ -65920,7 +65922,7 @@ JSApplet.Inchi = {};
                           c[A >> 2] | 0,
                           c[j >> 2] | 0,
                           v,
-                          w
+                          w,
                         ) |
                           0) &
                         x;
@@ -68892,7 +68894,7 @@ JSApplet.Inchi = {};
                               lp(
                                 92351,
                                 d[(f + ((u * 176) | 0) + 6) >> 0] | 0,
-                                I
+                                I,
                               ) | 0)
                             : 0
                         )
@@ -68904,7 +68906,7 @@ JSApplet.Inchi = {};
                         ? lp(
                             92352,
                             d[(f + ((J * 176) | 0) + 6) >> 0] | 0,
-                            (H + -5) | 0
+                            (H + -5) | 0,
                           ) | 0
                         : 0
                     )
@@ -69332,7 +69334,7 @@ JSApplet.Inchi = {};
                           ? (lp(
                               92357,
                               d[(g + ((x * 176) | 0) + 6) >> 0] | 0,
-                              4
+                              4,
                             ) |
                               0) !=
                             0
@@ -69352,7 +69354,7 @@ JSApplet.Inchi = {};
                                 ? (lp(
                                     92361,
                                     d[(g + ((t * 176) | 0) + 6) >> 0] | 0,
-                                    4
+                                    4,
                                   ) |
                                     0) !=
                                   0
@@ -69401,7 +69403,7 @@ JSApplet.Inchi = {};
                             ((mo(
                               F,
                               x & 65535,
-                              a[(g + ((H * 176) | 0) + 92) >> 0] | 0
+                              a[(g + ((H * 176) | 0) + 92) >> 0] | 0,
                             ) |
                               0) -
                               F) >>
@@ -69445,7 +69447,7 @@ JSApplet.Inchi = {};
                           ? (lp(
                               92358,
                               d[(g + ((w * 176) | 0) + 6) >> 0] | 0,
-                              3
+                              3,
                             ) |
                               0) !=
                             0
@@ -69464,7 +69466,7 @@ JSApplet.Inchi = {};
                                   ? (lp(
                                       92361,
                                       d[(g + ((r * 176) | 0) + 6) >> 0] | 0,
-                                      4
+                                      4,
                                     ) |
                                       0) !=
                                     0
@@ -69494,7 +69496,7 @@ JSApplet.Inchi = {};
                             ((mo(
                               H,
                               w & 65535,
-                              a[(g + ((l * 176) | 0) + 92) >> 0] | 0
+                              a[(g + ((l * 176) | 0) + 92) >> 0] | 0,
                             ) |
                               0) -
                               H) >>
@@ -69562,7 +69564,7 @@ JSApplet.Inchi = {};
                               ? (lp(
                                   92361,
                                   d[(g + ((F * 176) | 0) + 6) >> 0] | 0,
-                                  4
+                                  4,
                                 ) |
                                   0) !=
                                 0
@@ -69593,7 +69595,7 @@ JSApplet.Inchi = {};
                                 lp(
                                   92357,
                                   d[(g + ((u * 176) | 0) + 6) >> 0] | 0,
-                                  4
+                                  4,
                                 ) | 0
                               )
                             )
@@ -69615,7 +69617,7 @@ JSApplet.Inchi = {};
                                 lp(
                                   92365,
                                   d[(g + ((q * 176) | 0) + 6) >> 0] | 0,
-                                  2
+                                  2,
                                 ) | 0
                               )
                             )
@@ -69659,7 +69661,7 @@ JSApplet.Inchi = {};
                               lp(
                                 92361,
                                 d[(g + ((u * 176) | 0) + 6) >> 0] | 0,
-                                4
+                                4,
                               ) | 0
                             )
                           ) {
@@ -69704,7 +69706,7 @@ JSApplet.Inchi = {};
                               lp(
                                 92365,
                                 d[(g + ((q * 176) | 0) + 6) >> 0] | 0,
-                                2
+                                2,
                               ) | 0
                             )
                           ) {
@@ -69757,7 +69759,7 @@ JSApplet.Inchi = {};
                                 ? lp(
                                     92361,
                                     d[(g + ((F * 176) | 0) + 6) >> 0] | 0,
-                                    4
+                                    4,
                                   ) | 0
                                 : 0
                             )
@@ -69783,7 +69785,7 @@ JSApplet.Inchi = {};
                                   lp(
                                     92357,
                                     d[(g + ((u * 176) | 0) + 6) >> 0] | 0,
-                                    4
+                                    4,
                                   ) | 0
                                 )
                               )
@@ -69793,7 +69795,7 @@ JSApplet.Inchi = {};
                                 ((mo(
                                   G,
                                   F & 65535,
-                                  a[(g + ((u * 176) | 0) + 92) >> 0] | 0
+                                  a[(g + ((u * 176) | 0) + 92) >> 0] | 0,
                                 ) |
                                   0) -
                                   G) >>
@@ -69827,7 +69829,7 @@ JSApplet.Inchi = {};
                                   lp(
                                     92361,
                                     d[(g + ((u * 176) | 0) + 6) >> 0] | 0,
-                                    4
+                                    4,
                                   ) | 0
                                 )
                               )
@@ -69837,7 +69839,7 @@ JSApplet.Inchi = {};
                                 ((mo(
                                   G,
                                   F & 65535,
-                                  a[(g + ((u * 176) | 0) + 92) >> 0] | 0
+                                  a[(g + ((u * 176) | 0) + 92) >> 0] | 0,
                                 ) |
                                   0) -
                                   G) >>
@@ -69883,7 +69885,7 @@ JSApplet.Inchi = {};
                               lp(
                                 92361,
                                 d[(g + ((u * 176) | 0) + 6) >> 0] | 0,
-                                4
+                                4,
                               ) | 0
                             )
                           ) {
@@ -69928,7 +69930,7 @@ JSApplet.Inchi = {};
                               lp(
                                 92365,
                                 d[(g + ((q * 176) | 0) + 6) >> 0] | 0,
-                                2
+                                2,
                               ) | 0
                             )
                           ) {
@@ -69946,7 +69948,7 @@ JSApplet.Inchi = {};
                             ((mo(
                               t,
                               F & 65535,
-                              a[(g + ((u * 176) | 0) + 92) >> 0] | 0
+                              a[(g + ((u * 176) | 0) + 92) >> 0] | 0,
                             ) |
                               0) -
                               t) >>
@@ -69997,7 +69999,7 @@ JSApplet.Inchi = {};
                                 ? (lp(
                                     92357,
                                     d[(g + ((F * 176) | 0) + 6) >> 0] | 0,
-                                    4
+                                    4,
                                   ) |
                                     0) !=
                                   0
@@ -70023,7 +70025,7 @@ JSApplet.Inchi = {};
                                   lp(
                                     92357,
                                     d[(g + ((t * 176) | 0) + 6) >> 0] | 0,
-                                    4
+                                    4,
                                   ) | 0
                                 )
                               )
@@ -70033,7 +70035,7 @@ JSApplet.Inchi = {};
                                 ((mo(
                                   G,
                                   F & 65535,
-                                  a[(g + ((t * 176) | 0) + 92) >> 0] | 0
+                                  a[(g + ((t * 176) | 0) + 92) >> 0] | 0,
                                 ) |
                                   0) -
                                   G) >>
@@ -70067,7 +70069,7 @@ JSApplet.Inchi = {};
                                   lp(
                                     92361,
                                     d[(g + ((t * 176) | 0) + 6) >> 0] | 0,
-                                    4
+                                    4,
                                   ) | 0
                                 )
                               )
@@ -70077,7 +70079,7 @@ JSApplet.Inchi = {};
                                 ((mo(
                                   G,
                                   F & 65535,
-                                  a[(g + ((t * 176) | 0) + 92) >> 0] | 0
+                                  a[(g + ((t * 176) | 0) + 92) >> 0] | 0,
                                 ) |
                                   0) -
                                   G) >>
@@ -70126,7 +70128,7 @@ JSApplet.Inchi = {};
                               lp(
                                 92365,
                                 d[(g + ((t * 176) | 0) + 6) >> 0] | 0,
-                                2
+                                2,
                               ) | 0
                             )
                           ) {
@@ -70194,7 +70196,7 @@ JSApplet.Inchi = {};
                           ? (lp(
                               92357,
                               d[(g + ((E * 176) | 0) + 6) >> 0] | 0,
-                              4
+                              4,
                             ) |
                               0) !=
                             0
@@ -70244,7 +70246,7 @@ JSApplet.Inchi = {};
                                     (lp(
                                       92365,
                                       d[(g + ((r * 176) | 0) + 6) >> 0] | 0,
-                                      2
+                                      2,
                                     ) |
                                       0) ==
                                     0;
@@ -70274,7 +70276,7 @@ JSApplet.Inchi = {};
                                 ((mo(
                                   l,
                                   E & 65535,
-                                  a[(g + ((xa * 176) | 0) + 92) >> 0] | 0
+                                  a[(g + ((xa * 176) | 0) + 92) >> 0] | 0,
                                 ) |
                                   0) -
                                   l) >>
@@ -70340,7 +70342,7 @@ JSApplet.Inchi = {};
                                     (lp(
                                       92365,
                                       d[(g + ((r * 176) | 0) + 6) >> 0] | 0,
-                                      2
+                                      2,
                                     ) |
                                       0) ==
                                     0;
@@ -70365,7 +70367,7 @@ JSApplet.Inchi = {};
                                 ((mo(
                                   G,
                                   E & 65535,
-                                  a[(g + ((ya * 176) | 0) + 92) >> 0] | 0
+                                  a[(g + ((ya * 176) | 0) + 92) >> 0] | 0,
                                 ) |
                                   0) -
                                   G) >>
@@ -70426,7 +70428,7 @@ JSApplet.Inchi = {};
                                   (lp(
                                     92357,
                                     d[(g + ((r * 176) | 0) + 6) >> 0] | 0,
-                                    4
+                                    4,
                                   ) |
                                     0) ==
                                   0;
@@ -70453,7 +70455,7 @@ JSApplet.Inchi = {};
                               ((mo(
                                 G,
                                 E & 65535,
-                                a[(g + ((U * 176) | 0) + 92) >> 0] | 0
+                                a[(g + ((U * 176) | 0) + 92) >> 0] | 0,
                               ) |
                                 0) -
                                 G) >>
@@ -70498,7 +70500,7 @@ JSApplet.Inchi = {};
                             ? (lp(
                                 92361,
                                 d[(g + ((E * 176) | 0) + 6) >> 0] | 0,
-                                4
+                                4,
                               ) |
                                 0) !=
                               0
@@ -70552,7 +70554,7 @@ JSApplet.Inchi = {};
                                       (lp(
                                         92365,
                                         d[(g + ((r * 176) | 0) + 6) >> 0] | 0,
-                                        2
+                                        2,
                                       ) |
                                         0) ==
                                       0;
@@ -70578,7 +70580,7 @@ JSApplet.Inchi = {};
                                   ((mo(
                                     G,
                                     E & 65535,
-                                    a[(g + ((V * 176) | 0) + 92) >> 0] | 0
+                                    a[(g + ((V * 176) | 0) + 92) >> 0] | 0,
                                   ) |
                                     0) -
                                     G) >>
@@ -70650,7 +70652,7 @@ JSApplet.Inchi = {};
                                       (lp(
                                         92365,
                                         d[(g + ((r * 176) | 0) + 6) >> 0] | 0,
-                                        2
+                                        2,
                                       ) |
                                         0) ==
                                       0;
@@ -70671,7 +70673,7 @@ JSApplet.Inchi = {};
                                   ((mo(
                                     G,
                                     E & 65535,
-                                    a[(g + ((l * 176) | 0) + 92) >> 0] | 0
+                                    a[(g + ((l * 176) | 0) + 92) >> 0] | 0,
                                   ) |
                                     0) -
                                     G) >>
@@ -70734,7 +70736,7 @@ JSApplet.Inchi = {};
                                     (lp(
                                       92357,
                                       d[(g + ((r * 176) | 0) + 6) >> 0] | 0,
-                                      4
+                                      4,
                                     ) |
                                       0) ==
                                     0;
@@ -70761,7 +70763,7 @@ JSApplet.Inchi = {};
                                 ((mo(
                                   G,
                                   E & 65535,
-                                  a[(g + ((l * 176) | 0) + 92) >> 0] | 0
+                                  a[(g + ((l * 176) | 0) + 92) >> 0] | 0,
                                 ) |
                                   0) -
                                   G) >>
@@ -70880,7 +70882,7 @@ JSApplet.Inchi = {};
                                 ? lp(
                                     92357,
                                     d[(g + ((s * 176) | 0) + 6) >> 0] | 0,
-                                    4
+                                    4,
                                   ) | 0
                                 : 0
                             ) {
@@ -70917,7 +70919,7 @@ JSApplet.Inchi = {};
                               (lp(
                                 92365,
                                 d[(g + ((s * 176) | 0) + 6) >> 0] | 0,
-                                2
+                                2,
                               ) |
                                 0) ==
                               0;
@@ -71096,7 +71098,7 @@ JSApplet.Inchi = {};
                                   (lp(
                                     92365,
                                     d[(g + ((l * 176) | 0) + 6) >> 0] | 0,
-                                    2
+                                    2,
                                   ) |
                                     0) ==
                                   0;
@@ -71109,7 +71111,7 @@ JSApplet.Inchi = {};
                                   (lp(
                                     92365,
                                     d[(g + ((l * 176) | 0) + 6) >> 0] | 0,
-                                    2
+                                    2,
                                   ) |
                                     0) ==
                                   0;
@@ -71354,7 +71356,7 @@ JSApplet.Inchi = {};
                                   6) >>
                                   0
                               ] | 0,
-                              4
+                              4,
                             ) | 0
                           )
                             break l;
@@ -72879,7 +72881,7 @@ JSApplet.Inchi = {};
           } else {
             o = +zn(
               (c + ((j * 176) | 0)) | 0,
-              (c + (((e[(c + ((j * 176) | 0) + 8) >> 1] | 0) * 176) | 0)) | 0
+              (c + (((e[(c + ((j * 176) | 0) + 8) >> 1] | 0) * 176) | 0)) | 0,
             );
             t = 0.0;
             p = 0.0;
@@ -72943,7 +72945,7 @@ JSApplet.Inchi = {};
                       ((B < 0.0 ? B + 6.283185307179586 : B) +
                         0.15707963267948966) /
                       0.3141592653589793
-                    )
+                    ),
                   ) |
                     0) %
                     20 |
@@ -73257,7 +73259,7 @@ JSApplet.Inchi = {};
                       j =
                         (k +
                           (((~~+M(
-                            +((S + (q < 0.0 ? q + 6.283185307179586 : q)) / T)
+                            +((S + (q < 0.0 ? q + 6.283185307179586 : q)) / T),
                           ) |
                             0) %
                             (l | 0) |
@@ -73274,7 +73276,7 @@ JSApplet.Inchi = {};
                       j =
                         (k +
                           (((~~+M(
-                            +((S + (B < 0.0 ? B + 6.283185307179586 : B)) / T)
+                            +((S + (B < 0.0 ? B + 6.283185307179586 : B)) / T),
                           ) |
                             0) %
                             (l | 0) |
@@ -75184,7 +75186,7 @@ JSApplet.Inchi = {};
                   c[(g + ((f + -1) << 2)) >> 2] | 0,
                   c[(g + (f << 2)) >> 2] | 0,
                   b,
-                  d
+                  d,
                 );
                 f = (f + 1) | 0;
               }
@@ -77850,7 +77852,7 @@ JSApplet.Inchi = {};
                                 if (
                                   ((ba | x | ca) << 24) >> 24 == 0
                                     ? (uo(
-                                        a[(g + ((G * 176) | 0) + 6) >> 0] | 0
+                                        a[(g + ((G * 176) | 0) + 6) >> 0] | 0,
                                       ) |
                                         0) ==
                                       3
@@ -77894,7 +77896,8 @@ JSApplet.Inchi = {};
                                 f: do
                                   switch (
                                     Uh(
-                                      d[(g + ((G * 176) | 0) + 72 + B) >> 0] | 0
+                                      d[(g + ((G * 176) | 0) + 72 + B) >> 0] |
+                                        0,
                                     ) | 0
                                   ) {
                                     case 4: {
@@ -77916,7 +77919,7 @@ JSApplet.Inchi = {};
                                               0) *
                                               176) |
                                               0)) |
-                                            0
+                                            0,
                                         ) | 0;
                                       if ((y | 0) <= -1) break f;
                                       Db = (bc + (y << 2)) | 0;
@@ -77992,7 +77995,7 @@ JSApplet.Inchi = {};
                                       break;
                                     if (
                                       (uo(
-                                        a[(g + ((G * 176) | 0) + 6) >> 0] | 0
+                                        a[(g + ((G * 176) | 0) + 6) >> 0] | 0,
                                       ) |
                                         0) !=
                                       3
@@ -78480,7 +78483,7 @@ JSApplet.Inchi = {};
                                       ai(
                                         (Wb + ((x * 24) | 0)) | 0,
                                         w,
-                                        (_b + ((s * 24) | 0)) | 0
+                                        (_b + ((s * 24) | 0)) | 0,
                                       ) | 0;
                                       s = (s + 1) | 0;
                                     }
@@ -78601,7 +78604,7 @@ JSApplet.Inchi = {};
                               if ((w | 0) == (F | 0)) break;
                               h[Ub >> 3] = +W(
                                 +(+h[(Wb + ((w * 24) | 0) + 8) >> 3]),
-                                +(+h[(Wb + ((w * 24) | 0)) >> 3])
+                                +(+h[(Wb + ((w * 24) | 0)) >> 3]),
                               );
                               if (+h[Ub >> 3] < 0.0)
                                 h[Ub >> 3] = +h[Ub >> 3] + 6.283185307179586;
@@ -79022,7 +79025,7 @@ JSApplet.Inchi = {};
                                             +N(
                                               +(
                                                 +h[Ub >> 3] + -3.141592653589793
-                                              )
+                                              ),
                                             ) < 0.8227342478134155
                                           ) {
                                             s = 6;
@@ -79063,7 +79066,7 @@ JSApplet.Inchi = {};
                                                 3
                                             ];
                                           h[Ub >> 3] = +N(
-                                            +(6.283185307179586 - +h[Ub >> 3])
+                                            +(6.283185307179586 - +h[Ub >> 3]),
                                           );
                                           h[Vb >> 3] =
                                             +h[
@@ -79547,7 +79550,7 @@ JSApplet.Inchi = {};
                                   }
                                   if (
                                     (Uh(
-                                      d[(g + ((B * 176) | 0) + 72) >> 0] | 0
+                                      d[(g + ((B * 176) | 0) + 72) >> 0] | 0,
                                     ) |
                                       0) !=
                                     2
@@ -79559,7 +79562,7 @@ JSApplet.Inchi = {};
                                   }
                                   if (
                                     (Uh(
-                                      d[(g + ((B * 176) | 0) + 73) >> 0] | 0
+                                      d[(g + ((B * 176) | 0) + 73) >> 0] | 0,
                                     ) |
                                       0) !=
                                     2
@@ -79574,7 +79577,7 @@ JSApplet.Inchi = {};
                                       Nh(
                                         z,
                                         a[(g + ((B * 176) | 0) + 99) >> 0] | 0,
-                                        a[(g + ((B * 176) | 0) + 100) >> 0] | 0
+                                        a[(g + ((B * 176) | 0) + 100) >> 0] | 0,
                                       ) | 0
                                     )
                                   ) {
@@ -79733,7 +79736,7 @@ JSApplet.Inchi = {};
                                 }
                                 E =
                                   Uh(
-                                    d[(g + ((V * 176) | 0) + 72 + H) >> 0] | 0
+                                    d[(g + ((V * 176) | 0) + 72 + H) >> 0] | 0,
                                   ) | 0;
                                 A: do
                                   switch (E | 0) {
@@ -79750,7 +79753,7 @@ JSApplet.Inchi = {};
                                       E =
                                         Vh(
                                           (g + (((e[B >> 1] | 0) * 176) | 0)) |
-                                            0
+                                            0,
                                         ) | 0;
                                       if ((E | 0) <= -1) {
                                         E = I;
@@ -80176,7 +80179,7 @@ JSApplet.Inchi = {};
                                         (j + ((K * 144) | 0) + 94) | 0,
                                         (j + ((K * 144) | 0) + 106) | 0,
                                         (j + ((K * 144) | 0) + 112) | 0,
-                                        (j + ((K * 144) | 0) + 118) | 0
+                                        (j + ((K * 144) | 0) + 118) | 0,
                                       ) | 0
                                     )
                                   )
@@ -80264,7 +80267,7 @@ JSApplet.Inchi = {};
                                     (j + ((K * 144) | 0) + 100) | 0,
                                     (j + ((K * 144) | 0) + 109) | 0,
                                     (j + ((K * 144) | 0) + 115) | 0,
-                                    (j + ((K * 144) | 0) + 121) | 0
+                                    (j + ((K * 144) | 0) + 121) | 0,
                                   ) | 0
                                 )
                               )
@@ -80521,7 +80524,7 @@ JSApplet.Inchi = {};
                         128) >>
                         3
                     ]
-                  )
+                  ),
                 ) > 1.0e-6
               ) {
                 p = 16;
@@ -81039,8 +81042,8 @@ JSApplet.Inchi = {};
                       ai(
                         (K + ((q * 24) | 0)) | 0,
                         (K + ((((n | 0) % 3 | 0) * 24) | 0)) | 0,
-                        p
-                      ) | 0
+                        p,
+                      ) | 0,
                     );
                     h[(J + (q << 3)) >> 3] = o;
                     if (o < 0.03) {
@@ -81079,8 +81082,8 @@ JSApplet.Inchi = {};
                       $h(
                         (L + ((n * 24) | 0)) | 0,
                         (L + ((((F | 0) % 3 | 0) * 24) | 0)) | 0,
-                        I
-                      ) | 0
+                        I,
+                      ) | 0,
                     );
                     H = U > o;
                     G = H ? n : p;
@@ -82059,7 +82062,7 @@ JSApplet.Inchi = {};
                       a[(13036 + ((g * 9) | 0) + 5) >> 0] | 0,
                       a[(13036 + ((g * 9) | 0) + 4) >> 0] | 0,
                       o,
-                      f
+                      f,
                     ) | 0
                   )
                     break c;
@@ -83734,7 +83737,7 @@ JSApplet.Inchi = {};
                               q,
                               a[r >> 0] | 0,
                               f,
-                              g
+                              g,
                             ) | 0;
                           if (((q + 9999) | 0) >>> 0 < 20) {
                             j = q;
@@ -84374,7 +84377,7 @@ JSApplet.Inchi = {};
                                         h,
                                         e[y >> 1] | 0,
                                         e[(I + ((z * 6) | 0)) >> 1] | 0,
-                                        8
+                                        8,
                                       ) | 0;
                                     if (!j) break;
                                     if (((j + 9999) | 0) >>> 0 < 20) {
@@ -84407,7 +84410,7 @@ JSApplet.Inchi = {};
                                         h,
                                         e[y >> 1] | 0,
                                         e[(I + ((z * 6) | 0)) >> 1] | 0,
-                                        7
+                                        7,
                                       ) | 0;
                                     if (!j) break;
                                     if (((j + 9999) | 0) >>> 0 < 20) {
@@ -84546,7 +84549,7 @@ JSApplet.Inchi = {};
                                         h,
                                         e[x >> 1] | 0,
                                         e[(I + ((D * 6) | 0)) >> 1] | 0,
-                                        6
+                                        6,
                                       ) | 0;
                                     if (!j) {
                                       j = t;
@@ -84650,7 +84653,7 @@ JSApplet.Inchi = {};
                                     h,
                                     e[x >> 1] | 0,
                                     e[(I + ((D * 6) | 0)) >> 1] | 0,
-                                    5
+                                    5,
                                   ) | 0;
                                 if (!j) {
                                   j = q;
@@ -85632,14 +85635,14 @@ JSApplet.Inchi = {};
                                       (Y + (((c[aa >> 2] | 0) * 28) | 0)) | 0,
                                       g,
                                       w,
-                                      2
+                                      2,
                                     ) | 0;
                                   mi(
                                     (Y + (((c[aa >> 2] | 0) * 28) | 0) + 10) |
                                       0,
                                     g,
                                     w,
-                                    2
+                                    2,
                                   );
                                   if (!s) {
                                     S =
@@ -85719,8 +85722,8 @@ JSApplet.Inchi = {};
                                     (n | 0) < 0
                                       ? n
                                       : (n | 0) == -1
-                                      ? -30005
-                                      : 0;
+                                        ? -30005
+                                        : 0;
                                   if (o | 0) {
                                     n = C;
                                     break b;
@@ -85774,7 +85777,7 @@ JSApplet.Inchi = {};
                                           ? (ji(
                                               a[
                                                 (g + ((E * 176) | 0) + 6) >> 0
-                                              ] | 0
+                                              ] | 0,
                                             ) |
                                               0) !=
                                             0
@@ -85909,7 +85912,7 @@ JSApplet.Inchi = {};
                                                 0,
                                               g,
                                               y,
-                                              2
+                                              2,
                                             ) | 0;
                                           mi(
                                             (Y +
@@ -85918,7 +85921,7 @@ JSApplet.Inchi = {};
                                               0,
                                             g,
                                             y,
-                                            2
+                                            2,
                                           );
                                           if (!u) {
                                             S =
@@ -86030,8 +86033,8 @@ JSApplet.Inchi = {};
                                         (n | 0) < 0
                                           ? n
                                           : (n | 0) == -1
-                                          ? -30005
-                                          : 0;
+                                            ? -30005
+                                            : 0;
                                       if (o | 0) {
                                         n = F;
                                         break d;
@@ -86091,7 +86094,7 @@ JSApplet.Inchi = {};
                                         $,
                                         l,
                                         m,
-                                        h
+                                        h,
                                       ) | 0;
                                     if ((o | 0) <= 0)
                                       if (((o + 9999) | 0) >>> 0 < 20) break h;
@@ -86103,8 +86106,8 @@ JSApplet.Inchi = {};
                                         (p | 0) < 0
                                           ? p
                                           : (p | 0) == -1
-                                          ? -30005
-                                          : 0;
+                                            ? -30005
+                                            : 0;
                                       if (o | 0) break h;
                                       n = ((((p | 0) > 0) & 1) + n) | 0;
                                     }
@@ -86154,7 +86157,7 @@ JSApplet.Inchi = {};
                                     $,
                                     l,
                                     m,
-                                    h
+                                    h,
                                   ) | 0;
                                 if ((o | 0) <= 0)
                                   if (((o + 9999) | 0) >>> 0 < 20) break h;
@@ -86166,8 +86169,8 @@ JSApplet.Inchi = {};
                                     (p | 0) < 0
                                       ? p
                                       : (p | 0) == -1
-                                      ? -30005
-                                      : 0;
+                                        ? -30005
+                                        : 0;
                                   if (o | 0) break h;
                                   n = ((((p | 0) > 0) & 1) + n) | 0;
                                 }
@@ -86279,7 +86282,7 @@ JSApplet.Inchi = {};
                                           $,
                                           l,
                                           m,
-                                          h
+                                          h,
                                         ) | 0;
                                       if ((o | 0) <= 0)
                                         if (((o + 9999) | 0) >>> 0 < 20)
@@ -86292,8 +86295,8 @@ JSApplet.Inchi = {};
                                           (p | 0) < 0
                                             ? p
                                             : (p | 0) == -1
-                                            ? -30005
-                                            : 0;
+                                              ? -30005
+                                              : 0;
                                         if (o | 0) break h;
                                         n = ((((p | 0) > 0) & 1) + n) | 0;
                                       }
@@ -86654,7 +86657,7 @@ JSApplet.Inchi = {};
                                                         $,
                                                         l,
                                                         m,
-                                                        h
+                                                        h,
                                                       ) | 0;
                                                     do
                                                       if ((o | 0) <= 0) {
@@ -86676,14 +86679,14 @@ JSApplet.Inchi = {};
                                                               g,
                                                               h,
                                                               k,
-                                                              l
+                                                              l,
                                                             ) | 0;
                                                           o =
                                                             (p | 0) < 0
                                                               ? p
                                                               : (p | 0) == -1
-                                                              ? -30005
-                                                              : 0;
+                                                                ? -30005
+                                                                : 0;
                                                           if (o | 0) break h;
                                                           n =
                                                             ((((p | 0) > 0) &
@@ -86723,7 +86726,7 @@ JSApplet.Inchi = {};
                                                       $,
                                                       l,
                                                       m,
-                                                      h
+                                                      h,
                                                     ) | 0;
                                                   if ((o | 0) <= 0)
                                                     if (
@@ -86743,14 +86746,14 @@ JSApplet.Inchi = {};
                                                         g,
                                                         h,
                                                         k,
-                                                        l
+                                                        l,
                                                       ) | 0;
                                                     o =
                                                       (p | 0) < 0
                                                         ? p
                                                         : (p | 0) == -1
-                                                        ? -30005
-                                                        : 0;
+                                                          ? -30005
+                                                          : 0;
                                                     if (o | 0) break h;
                                                     n =
                                                       ((((p | 0) > 0) & 1) +
@@ -89280,7 +89283,7 @@ JSApplet.Inchi = {};
                   p,
                   (a + -1) | 0,
                   1,
-                  o
+                  o,
                 );
                 k = c[p >> 2] | 0;
                 c[m >> 2] = (k >>> 31) | (c[m >> 2] << 1);
@@ -90549,7 +90552,7 @@ JSApplet.Inchi = {};
                               32,
                               0,
                               J | 0,
-                              ((((J | 0) < 0) << 31) >> 31) | 0
+                              ((((J | 0) < 0) << 31) >> 31) | 0,
                             ) | 0;
                           e = gr(l | 0, h | 0, e | 0, C | 0) | 0;
                           J = C;
@@ -90947,8 +90950,8 @@ JSApplet.Inchi = {};
                                   ((u | 0) != (((l + 127) & 127) | 0)) | b
                                     ? l
                                     : (o | 0) == 0
-                                    ? u
-                                    : l;
+                                      ? u
+                                      : l;
                                 if (b) break;
                                 else o = (u + -1) | 0;
                               }
@@ -94041,7 +94044,7 @@ JSApplet.Inchi = {};
           d,
           (e + h) | 0,
           (i & 2) | 0 ? f : 2,
-          g
+          g,
         );
         return;
       }
@@ -94217,7 +94220,7 @@ JSApplet.Inchi = {};
           b,
           (d + g) | 0,
           (h & 2) | 0 ? e : 2,
-          f
+          f,
         );
         return;
       }
@@ -94261,7 +94264,7 @@ JSApplet.Inchi = {};
           a,
           b,
           (d + f) | 0,
-          (g & 2) | 0 ? e : 2
+          (g & 2) | 0 ? e : 2,
         );
         return;
       }
@@ -94455,7 +94458,7 @@ JSApplet.Inchi = {};
               0,
             (C ^ b) | 0,
             a | 0,
-            b | 0
+            b | 0,
           ) | 0
         );
       }
@@ -94708,7 +94711,7 @@ JSApplet.Inchi = {};
                 (((((p | 0) < 0 ? -1 : 0) >> 31) |
                   (((p | 0) < 0 ? -1 : 0) << 1)) &
                   l) |
-                  0
+                  0,
               ) | 0;
             b = C;
             h = (h - 1) | 0;
@@ -94788,7 +94791,7 @@ JSApplet.Inchi = {};
             n | 0,
             o | 0,
             p | 0,
-            q | 0
+            q | 0,
           ) | 0
         );
       }
@@ -94829,7 +94832,7 @@ JSApplet.Inchi = {};
             o | 0,
             p | 0,
             q | 0,
-            r | 0
+            r | 0,
           ) | 0
         );
       }
@@ -95557,7 +95560,7 @@ JSApplet.Inchi = {};
                     c[I >> 2] | 0,
                     d,
                     g,
-                    e
+                    e,
                   ) | 0;
                 }
               } else if ((n | 0) != 0 ? (c[(n + 12) >> 2] | 0) != 0 : 0) {
@@ -95652,7 +95655,7 @@ JSApplet.Inchi = {};
                   c[M >> 2] | 0,
                   d,
                   g,
-                  e
+                  e,
                 ) | 0;
                 i = 0;
                 l = 0;
@@ -95928,7 +95931,7 @@ JSApplet.Inchi = {};
                     c[b >> 2] | 0,
                     d,
                     g,
-                    e
+                    e,
                   ) | 0;
                 }
               } else if ((n | 0) != 0 ? (c[(n + 12) >> 2] | 0) != 0 : 0) {
@@ -96023,7 +96026,7 @@ JSApplet.Inchi = {};
                   c[K >> 2] | 0,
                   d,
                   g,
-                  e
+                  e,
                 ) | 0;
                 l = 0;
                 j = 0;
@@ -96730,7 +96733,7 @@ JSApplet.Inchi = {};
                     c[j >> 2] | 0,
                     d,
                     g,
-                    e
+                    e,
                   ) | 0;
                 }
               } else if ((n | 0) != 0 ? (c[(n + 12) >> 2] | 0) != 0 : 0) {
@@ -96831,7 +96834,7 @@ JSApplet.Inchi = {};
                   c[H >> 2] | 0,
                   d,
                   g,
-                  e
+                  e,
                 ) | 0;
                 i = 0;
                 l = 0;
@@ -98132,7 +98135,7 @@ JSApplet.Inchi = {};
                     c[k >> 2] | 0,
                     d,
                     h,
-                    f
+                    f,
                   ) | 0;
                 }
               } else if ((r | 0) != 0 ? (c[(r + 12) >> 2] | 0) != 0 : 0) {
@@ -98262,7 +98265,7 @@ JSApplet.Inchi = {};
                   c[K >> 2] | 0,
                   d,
                   h,
-                  f
+                  f,
                 ) | 0;
                 n = 0;
                 o = 0;
@@ -101590,7 +101593,7 @@ JSApplet.Inchi = {};
                       u,
                       v,
                       w,
-                      x
+                      x,
                     ) | 0;
                   if (y | 0) break c;
                 }
@@ -101980,7 +101983,7 @@ JSApplet.Inchi = {};
                     (_(
                       (((((((n - m) | 0) >>> 0) / (e >>> 0)) | 0) + 1) | 0) >>>
                         1,
-                      e
+                      e,
                     ) |
                       0)) |
                   0;
@@ -102556,7 +102559,7 @@ JSApplet.Inchi = {};
           xh(
             (f + ((e[a >> 1] | 0) << 2)) | 0,
             (f + ((e[b >> 1] | 0) << 2)) | 0,
-            d
+            d,
           ) | 0
         );
       }
@@ -102571,7 +102574,7 @@ JSApplet.Inchi = {};
             c[(g + ((e[a >> 1] | 0) << 2)) >> 2] | 0,
             c[(g + ((e[d >> 1] | 0) << 2)) >> 2] | 0,
             c[(f + 12) >> 2] | 0,
-            b[(f + 16) >> 1] | 0
+            b[(f + 16) >> 1] | 0,
           ) | 0
         );
       }
@@ -103791,7 +103794,7 @@ JSApplet.Inchi = {};
                             (b[(e + ((x * 144) | 0) + 134) >> 1] | 0)
                             ? v
                             : I,
-                          w
+                          w,
                         ) | 0;
                       if ((x | 0) < 1) break a;
                       x = a[G >> 0] | 0;
@@ -104545,8 +104548,8 @@ JSApplet.Inchi = {};
                           ((v | 0) == (x | 0)
                             ? 2
                             : (B << 24) >> 24 == 4
-                            ? 4
-                            : 0);
+                              ? 4
+                              : 0);
                         if (!z) {
                           u = -1;
                           break a;
@@ -104782,7 +104785,7 @@ JSApplet.Inchi = {};
                                   n,
                                   t,
                                   u,
-                                  da
+                                  da,
                                 ) | 0;
                               if ((B | 0) < 1) {
                                 D = M;
@@ -104842,7 +104845,7 @@ JSApplet.Inchi = {};
                             n,
                             ha,
                             fa,
-                            0
+                            0,
                           ) | 0;
                         if ((E | 0) > 0) {
                           B =
@@ -104865,7 +104868,7 @@ JSApplet.Inchi = {};
                               c[fa >> 2] | 0,
                               0,
                               x,
-                              y
+                              y,
                             ) | 0;
                           if ((B | 0) > 0) {
                             if ((B & 6) | 0) {
@@ -104964,7 +104967,7 @@ JSApplet.Inchi = {};
                                 jr(
                                   E | 0,
                                   (E + 6) | 0,
-                                  (((H - D) | 0) * 6) | 0
+                                  (((H - D) | 0) * 6) | 0,
                                 ) | 0;
                                 B = c[ba >> 2] | 0;
                               }
@@ -105215,7 +105218,7 @@ JSApplet.Inchi = {};
                                     n,
                                     t,
                                     u,
-                                    da
+                                    da,
                                   ) | 0;
                                 if ((B | 0) < 1) {
                                   z = (z | 0) > (B | 0) ? B : z;
@@ -105265,7 +105268,7 @@ JSApplet.Inchi = {};
                               n,
                               ga,
                               ea,
-                              J
+                              J,
                             ) | 0;
                           do
                             if ((D | 0) > 0) {
@@ -105289,7 +105292,7 @@ JSApplet.Inchi = {};
                                   c[ea >> 2] | 0,
                                   J,
                                   x,
-                                  y
+                                  y,
                                 ) | 0;
                               if ((B | 0) <= 0) break;
                               if ((B & 6) | 0) {
@@ -105543,7 +105546,7 @@ JSApplet.Inchi = {};
         x,
         y,
         z,
-        A
+        A,
       ) {
         f = f | 0;
         g = g | 0;
@@ -106138,7 +106141,7 @@ JSApplet.Inchi = {};
                                     r,
                                     s,
                                     o,
-                                    h
+                                    h,
                                   ) | 0;
                                 if ((F | 0) < 0) {
                                   B = -30010;
@@ -106173,7 +106176,7 @@ JSApplet.Inchi = {};
                                         w,
                                         r,
                                         s,
-                                        Ya
+                                        Ya,
                                       ) | 0;
                                     if (((H + 30019) | 0) >>> 0 < 20) {
                                       B = H;
@@ -106235,7 +106238,7 @@ JSApplet.Inchi = {};
                                         I,
                                         L,
                                         o,
-                                        h
+                                        h,
                                       ) | 0;
                                     if ((M | 0) < 0) {
                                       B = -30012;
@@ -106279,7 +106282,7 @@ JSApplet.Inchi = {};
                                     w,
                                     I,
                                     L,
-                                    Ya
+                                    Ya,
                                   ) | 0;
                                 if (((I + 30019) | 0) >>> 0 < 20) {
                                   B = I;
@@ -106316,7 +106319,7 @@ JSApplet.Inchi = {};
                                   ((c[jb >> 2] | 0) + ((z * 6) | 0)) | 0,
                                   b[Ua >> 1] | 0,
                                   b[Wa >> 1] | 0,
-                                  L
+                                  L,
                                 ) | 0;
                               do
                                 if ((I | 0) < 0) {
@@ -106404,7 +106407,7 @@ JSApplet.Inchi = {};
                                   x,
                                   y,
                                   Ea,
-                                  A
+                                  A,
                                 ) | 0;
                               if (!Q) {
                                 la = ((c[Ra >> 2] | 0) + ra) | 0;
@@ -106484,7 +106487,7 @@ JSApplet.Inchi = {};
                                 Va,
                                 n,
                                 c[(r + (H << 2)) >> 2] | 0,
-                                c[(s + (H << 2)) >> 2] | 0
+                                c[(s + (H << 2)) >> 2] | 0,
                               ) | 0;
                             if (!L) {
                               B = -30010;
@@ -106538,7 +106541,7 @@ JSApplet.Inchi = {};
                                       w,
                                       (r + (N << 2)) | 0,
                                       (s + (N << 2)) | 0,
-                                      Ya
+                                      Ya,
                                     ) | 0;
                                   if (((L + 30019) | 0) >>> 0 < 20) {
                                     B = L;
@@ -106574,7 +106577,7 @@ JSApplet.Inchi = {};
                                       Ja,
                                       n,
                                       c[(r + (N << 2)) >> 2] | 0,
-                                      c[(s + (N << 2)) >> 2] | 0
+                                      c[(s + (N << 2)) >> 2] | 0,
                                     ) | 0;
                                   if ((L | 0) < 1) {
                                     B = -30010;
@@ -106605,7 +106608,7 @@ JSApplet.Inchi = {};
                                       $a,
                                       n,
                                       c[X >> 2] | 0,
-                                      c[Y >> 2] | 0
+                                      c[Y >> 2] | 0,
                                     ) | 0;
                                   if (!Q) {
                                     B = -30010;
@@ -106654,7 +106657,7 @@ JSApplet.Inchi = {};
                                             w,
                                             X,
                                             Y,
-                                            Ya
+                                            Ya,
                                           ) | 0;
                                         if (((Q + 30019) | 0) >>> 0 < 20) {
                                           B = Q;
@@ -106684,7 +106687,7 @@ JSApplet.Inchi = {};
                                             Ha,
                                             n,
                                             c[(r + (Q << 2)) >> 2] | 0,
-                                            c[(s + (Q << 2)) >> 2] | 0
+                                            c[(s + (Q << 2)) >> 2] | 0,
                                           ) | 0;
                                         if ((R | 0) < 1) {
                                           B = -30010;
@@ -106731,7 +106734,7 @@ JSApplet.Inchi = {};
                                               0,
                                             b[Ua >> 1] | 0,
                                             b[Wa >> 1] | 0,
-                                            T
+                                            T,
                                           ) | 0;
                                         n: do
                                           if ((c[fb >> 2] | 0) == (R | 0)) {
@@ -106805,7 +106808,7 @@ JSApplet.Inchi = {};
                                                 x,
                                                 y,
                                                 Ea,
-                                                A
+                                                A,
                                               ) | 0;
                                             T = ((c[Qa >> 2] | 0) + va) | 0;
                                             a[T >> 0] =
@@ -107485,7 +107488,7 @@ JSApplet.Inchi = {};
                               A,
                               m,
                               c[(q + (L << 2)) >> 2] | 0,
-                              c[(r + (L << 2)) >> 2] | 0
+                              c[(r + (L << 2)) >> 2] | 0,
                             ) | 0;
                           if (!D) {
                             C = 0;
@@ -107507,7 +107510,7 @@ JSApplet.Inchi = {};
                             xe(
                               ((c[xa >> 2] | 0) + (y << 2)) | 0,
                               b[ma >> 1] | 0,
-                              D
+                              D,
                             ) | 0;
                           do
                             if ((A | 0) < 0) {
@@ -107566,7 +107569,7 @@ JSApplet.Inchi = {};
                               w,
                               x,
                               ha,
-                              z
+                              z,
                             ) | 0;
                           a[((c[ga >> 2] | 0) + Z) >> 0] = 0;
                           if (!N) {
@@ -107677,7 +107680,7 @@ JSApplet.Inchi = {};
                                     v,
                                     (q + (N << 2)) | 0,
                                     (r + (N << 2)) | 0,
-                                    ya
+                                    ya,
                                   ) | 0;
                                 if (((A + 30019) | 0) >>> 0 < 20) {
                                   C = 0;
@@ -107707,7 +107710,7 @@ JSApplet.Inchi = {};
                                     (Q + ((D * 20) | 0)) | 0,
                                     m,
                                     c[K >> 2] | 0,
-                                    c[N >> 2] | 0
+                                    c[N >> 2] | 0,
                                   ) | 0;
                                 if (!A) {
                                   C = 0;
@@ -107723,7 +107726,7 @@ JSApplet.Inchi = {};
                                   xe(
                                     ((c[xa >> 2] | 0) + (y << 2)) | 0,
                                     b[ma >> 1] | 0,
-                                    L
+                                    L,
                                   ) | 0;
                                 h: do
                                   if ((c[ta >> 2] | 0) == (A | 0)) {
@@ -107773,7 +107776,7 @@ JSApplet.Inchi = {};
                                         w,
                                         x,
                                         ha,
-                                        z
+                                        z,
                                       ) | 0;
                                     a[((c[ga >> 2] | 0) + Z) >> 0] = 0;
                                     O = ((c[ba >> 2] | 0) + T) | 0;
@@ -107822,7 +107825,7 @@ JSApplet.Inchi = {};
                                           j,
                                           T,
                                           c[N >> 2] | 0,
-                                          c[(r + (c[R >> 2] << 2)) >> 2] | 0
+                                          c[(r + (c[R >> 2] << 2)) >> 2] | 0,
                                         ) | 0
                                       )
                                     )
@@ -107994,7 +107997,7 @@ JSApplet.Inchi = {};
                               1)) >>
                             1
                         ] | 0,
-                        b[za >> 1] | 0
+                        b[za >> 1] | 0,
                       ) |
                         0) +
                         A) |
@@ -109414,7 +109417,7 @@ JSApplet.Inchi = {};
         s,
         t,
         u,
-        v
+        v,
       ) {
         a = a | 0;
         b = b | 0;
@@ -109490,7 +109493,7 @@ JSApplet.Inchi = {};
                   s,
                   t,
                   u,
-                  v
+                  v,
                 ) |
                 0 |
                 w;
@@ -109583,7 +109586,7 @@ JSApplet.Inchi = {};
       // EMSCRIPTEN_END_ASM
       d.C,
       d.D,
-      buffer
+      buffer,
     ),
     Xa = (d._i64Subtract = Y._i64Subtract),
     Va = (d.__GLOBAL__sub_I_bind_cpp = Y.__GLOBAL__sub_I_bind_cpp),

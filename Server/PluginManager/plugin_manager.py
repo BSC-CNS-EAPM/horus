@@ -531,6 +531,7 @@ class PluginManager(metaclass=HorusSingleton):
         Uninstalls a plugin with the given ID.
         """
 
+        plugin = None
         try:
             plugin = self._getPluginByID(pluginID)
 
@@ -553,7 +554,9 @@ class PluginManager(metaclass=HorusSingleton):
             self._postRemovePlugin(pluginPath)
 
             # Delete the config and the plugin
-            shutil.rmtree(os.path.join(self.appSupportDir, "config", plugin.id))
+            if plugin:
+                shutil.rmtree(os.path.join(self.appSupportDir, "config", plugin.id))
+
             shutil.rmtree(pluginPath, ignore_errors=True)
 
         except Exception as exc:
@@ -810,6 +813,7 @@ class PluginManager(metaclass=HorusSingleton):
             return pluginMetaModel
 
         except ValidationError as e:
+            msg = ""
             for error in e.errors():
                 field = error["loc"][0]
                 msg = f"Field '{field}': {error['msg']}."
@@ -1070,6 +1074,7 @@ class PluginManager(metaclass=HorusSingleton):
         # Iterate through the required dependencies
         depsToInstallStringList = []
         currentString = None
+        name = ""
         for dep in dependencies:
             parsedDep = dep.replace(" --no-deps", "").replace(" --isolated", "")
             versionSpecs = None

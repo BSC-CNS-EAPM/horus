@@ -24,7 +24,7 @@ import { useAlert } from "../Components/HorusPrompt/horus_alert";
 import { useConfirm } from "../Components/HorusPrompt/horus_confirm";
 
 export async function fetchSettings(
-  forAdmin?: boolean
+  forAdmin?: boolean,
 ): Promise<HorusSettingsObject | null> {
   let response;
   if (forAdmin) {
@@ -60,7 +60,7 @@ export async function fetchSettings(
 }
 
 function parseSettingsIntoPluginVariable(
-  settings: HorusSettingsObject | null
+  settings: HorusSettingsObject | null,
 ): PluginVariable[] {
   if (settings === null) {
     return [];
@@ -110,7 +110,7 @@ function useSettings(forAdmin?: boolean) {
             acc[setting.category]!.push(setting);
             return acc;
           },
-          {} as Record<string, PluginVariable[]>
+          {} as Record<string, PluginVariable[]>,
         );
       }
 
@@ -125,7 +125,7 @@ function useSettings(forAdmin?: boolean) {
   async function restoreSettings() {
     if (
       !(await horusConfirm(
-        "Are you sure you want to restore the default settings?"
+        "Are you sure you want to restore the default settings?",
       ))
     ) {
       return;
@@ -162,7 +162,7 @@ function useSettings(forAdmin?: boolean) {
       response = await horusPost(
         "/users/admintools/savesettings",
         header,
-        body
+        body,
       );
     } else {
       response = await horusPost("/api/savesettings", header, body);
@@ -187,12 +187,12 @@ function useSettings(forAdmin?: boolean) {
     setIsSaving(false);
   }
 
-  const onSettingChange = (value: any, settingID: string) => {
+  const onSettingChange = (value: any, settingID: PluginVariable) => {
     if (settings === null) {
       return;
     }
 
-    const setting = settings.find((setting) => setting.id === settingID)!;
+    const setting = settings.find((setting) => setting.id === settingID.id)!;
     if (setting.value !== value) {
       setting.value = value;
       setSettings([...settings]);
@@ -258,7 +258,7 @@ function SettingsView({ forAdmin }: { forAdmin?: boolean }) {
 
   const memoizedGroupedSettings = useMemo(
     () => getGroupedSettings(),
-    [groupedSettings]
+    [groupedSettings],
   );
 
   return (

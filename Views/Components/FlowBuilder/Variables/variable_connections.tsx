@@ -49,7 +49,11 @@ export function getBlockVarPair(
 
 type VariableModalViewProps = {
   block: Block;
-  handleVariableChange: (value: any, id: string, groupID?: string) => void;
+  handleVariableChange: (
+    value: any,
+    variable: PluginVariable,
+    groupID?: string,
+  ) => void;
 };
 
 export function VariableSetupView(props: VariableModalViewProps) {
@@ -94,9 +98,10 @@ export function VariableSetupView(props: VariableModalViewProps) {
 
     for (const [category, gVariables] of Object.entries(groupedVariables)) {
       const variableViews = gVariables.map((gVar) => {
+        const key = `${gVar.id}-${gVar.placedID}`;
         return (
           <PluginVariableView
-            key={gVar.id}
+            key={key}
             variable={gVar}
             onChange={handleVariableChange}
             customClass="w-fit"

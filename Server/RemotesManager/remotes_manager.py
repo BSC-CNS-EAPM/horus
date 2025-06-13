@@ -232,6 +232,8 @@ class RemotesAPI:
             # Run command locally
             logging.getLogger("Horus").info("Running command: '%s' on local machine,", command)
             failed = False
+            out = ""
+            err = ""
             try:
                 process = subprocess.run(
                     command,
@@ -243,35 +245,36 @@ class RemotesAPI:
                     text=True,
                     check=False,
                 )
+
+                def logCommandOutput(o: str):
+                    if len(o) > 250:
+                        logging.getLogger("Horus").debug(
+                            "Local command output (truncated): %s",
+                            o[:250],
+                        )
+                    else:
+                        logging.getLogger("Horus").debug("Local command output: %s", o)
+
+                # STDOUT
+                out = process.stdout.strip() if process.stdout else ""
+                logCommandOutput(out)
+
+                # STDERR
+                err = process.stderr.strip() if process.stderr else ""
+                logCommandOutput(err)
+
+                # If the command failed, raise an exception
+                if process.returncode != 0:
+                    raise CommandFailed(
+                        f"Command '{command}' failed: {err}", cmd=command, stdout=out, stderr=err
+                    )
+
             except subprocess.TimeoutExpired:
                 failed = True
-
-            def logCommandOutput(o: str):
-                if len(o) > 250:
-                    logging.getLogger("Horus").debug(
-                        "Local command output (truncated): %s",
-                        o[:250],
-                    )
-                else:
-                    logging.getLogger("Horus").debug("Local command output: %s", o)
-
-            # STDOUT
-            out = process.stdout.strip() if process.stdout else ""
-            logCommandOutput(out)
-
-            # STDERR
-            err = process.stderr.strip() if process.stderr else ""
-            logCommandOutput(err)
 
             if failed:
                 logging.getLogger("Horus").error("Command timed out: %s", command)
                 raise CommandFailed("Command timed out.", cmd=command, stdout=out, stderr=err)
-
-            # If the command failed, raise an exception
-            if process.returncode != 0:
-                raise CommandFailed(
-                    f"Command '{command}' failed: {err}", cmd=command, stdout=out, stderr=err
-                )
 
             # Return the stdout and stderr as a string
             return out + "\n" + err if mergeStdErr else out

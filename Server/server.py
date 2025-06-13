@@ -1462,7 +1462,7 @@ class HorusServer:
         def executeFlow():
             # Get the request data
             data = request.get_json()
-
+            relativePath = ""
             try:
                 # Get the flow data
                 flowPath = data["flowPath"]
