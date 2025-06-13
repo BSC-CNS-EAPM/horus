@@ -24,7 +24,7 @@ from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, Future
 
 # Horus imports
-from .utils import ResetRemoteException
+from .utils import ResetRemoteException, get_unique_dir_name
 
 # Type checking
 if typing.TYPE_CHECKING:
@@ -1321,6 +1321,63 @@ class PluginBlock:
     """
     The category of the block
     """
+
+    _unique_dir: typing.Union[None, str] = None
+    """
+    Internal property to store the unique directory name per block execution.
+    This is just the directory name, not the full path.
+    """
+
+    @property
+    def unique_block_dir_local(self):
+        """
+        Returns a unique LOCAL path for the block based on its name and placedID.
+        Every time the block gets executed,
+        a new unique block dir is generated.
+        If you need to store previous runs paths, use the
+        block.extraData property.
+        https://horus.bsc.es/docs/developer_guide/horusapi/blocks.html#storing-data-on-blocks-or-flow
+        """
+        if not self._unique_dir:
+            # Generate the unique directory name once
+            block_unique_id = f"{self.id}_{self._placedID}"
+            self._unique_dir = get_unique_dir_name(self, block_unique_id)
+
+        # Return the full local path
+        if not self.flow.path:
+            raise ValueError("The flow does not have a path.")
+
+        from Server.FlowManager import Flow
+
+        return os.path.join(Flow.flowWorkDir(self.flow.path), self._unique_dir)
+
+    @property
+    def unique_block_dir_remote(self):
+        """
+        Returns a unique REMOTE path for the block based on its name and placedID.
+        Every time the block gets executed,
+        a new unique block dir is generated.
+        If you need to store previous runs paths, use the
+        block.extraData property.
+        https://horus.bsc.es/docs/developer_guide/horusapi/blocks.html#storing-data-on-blocks-or-flow
+        """
+        if not self._unique_dir:
+            # Generate the unique directory name once
+            block_unique_id = f"{self.id}_{self._placedID}"
+            self._unique_dir = get_unique_dir_name(self, block_unique_id)
+
+        # Return the full local path
+        if not self.flow.path:
+            raise ValueError("The flow does not have a path.")
+
+        from Server.FlowManager import Flow
+
+        remote_path = os.path.join(
+            self.remote.workDir, os.path.basename(Flow.flowWorkDir(self.flow.path))
+        )
+
+        # Return the full remote path
+        return os.path.join(remote_path, self._unique_dir)
 
     def _parseID(self, id: str) -> str:
         """
