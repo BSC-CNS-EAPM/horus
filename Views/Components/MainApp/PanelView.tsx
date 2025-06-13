@@ -314,7 +314,7 @@ function useTitle(api: DockviewPanelApi): string | undefined {
 }
 
 function EditableTitleTab(
-  props: IDockviewPanelHeaderProps & { icon?: ReactElement }
+  props: IDockviewPanelHeaderProps & { icon?: ReactElement },
 ) {
   const { api, ...rest } = props;
 
@@ -325,7 +325,7 @@ function EditableTitleTab(
       event.preventDefault();
       api.close();
     },
-    [api]
+    [api],
   );
 
   const onPointerDown = useCallback((e: React.MouseEvent) => {
@@ -340,7 +340,7 @@ function EditableTitleTab(
 
       api.setActive();
     },
-    [api]
+    [api],
   );
 
   const [isEditing, setIsEditing] = useState(false);
@@ -393,12 +393,12 @@ function EditableTitleTab(
 }
 
 function ExtensionsTab(
-  props: Omit<IDockviewPanelHeaderProps, "params"> & { params: PluginPage }
+  props: Omit<IDockviewPanelHeaderProps, "params"> & { params: PluginPage },
 ) {
   const page = props.params;
 
   const [extensionIcon, setExtensionIcon] = useState<ReactElement>(
-    <Chevron direction="right" />
+    <Chevron direction="right" />,
   );
 
   useEffect(() => {
@@ -572,11 +572,14 @@ const components: Record<string, DockView> = {
   blockVariables: (props: IDockviewPanelProps) => {
     // Set the panel title to the block name
     props.api.setTitle(
-      `${props.params.block.name} - Block ${props.params.block.placedID}`
+      `${props.params.block.name} - Block ${props.params.block.placedID}`,
     );
+
+    const key = `${props.params.block.id}-${props.params.block.placedID}`;
 
     return (
       <VariableSetupView
+        key={key}
         block={props.params.block}
         handleVariableChange={props.params.handleVariableChange}
       />
@@ -586,7 +589,7 @@ const components: Record<string, DockView> = {
   blockLogs: (props: IDockviewPanelProps) => {
     // Set the panel title to the block name
     props.api.setTitle(
-      `${props.params.block.name} - Block ${props.params.block.placedID}`
+      `${props.params.block.name} - Block ${props.params.block.placedID}`,
     );
 
     return <BlockLogsView block={props.params.block} />;

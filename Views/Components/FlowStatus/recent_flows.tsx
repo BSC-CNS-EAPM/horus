@@ -135,7 +135,7 @@ export function useGetRecentFlows(webAppFlows: boolean = false): {
       if (!data.ok) throw new Error(data.msg || "Failed to fetch recent flows");
       const flows = data.flows.sort(
         (a: Flow, b: Flow) =>
-          new Date(b.date).getTime() - new Date(a.date).getTime()
+          new Date(b.date).getTime() - new Date(a.date).getTime(),
       );
       return {
         flows,

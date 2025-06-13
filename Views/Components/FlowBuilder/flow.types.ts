@@ -88,7 +88,7 @@ export type PluginVariable = {
   type: PluginVariableTypes;
   value: any;
   placedID: number;
-  allowedValues: Array<any>;
+  allowedValues?: Array<any>;
   defaultValue: any;
   category: string;
   disabled: boolean;

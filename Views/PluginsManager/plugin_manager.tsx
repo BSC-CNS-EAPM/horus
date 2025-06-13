@@ -100,29 +100,34 @@ function PluginConfigView(props: PluginConfigViewProps) {
   const [tempChanges, setTempChanges] = useState<Block[]>([]);
   const [hasChanges, setHasChanges] = useState<boolean>(false);
   const [selectedRemote, setSelectedRemote] = useState(
-    props.configBlocks[0]?.remote ?? "Error getting configuration"
+    props.configBlocks[0]?.remote ?? "Error getting configuration",
   );
   const [saving, setSaving] = useState(false);
 
   const { configBlocks } = props;
 
-  const handleModifyConfig = (value: any, id: string, groupID?: string) => {
-    const changeID = groupID ? groupID : id;
+  const handleModifyConfig = (
+    value: any,
+    variableToChange: PluginVariable,
+    groupID?: string,
+  ) => {
+    const changeID = groupID ? groupID : variableToChange.id;
 
     const updatedChanges = [...tempChanges]; // Create a copy of tempChanges
     const existingChangeIndex = updatedChanges.findIndex(
-      (change) => change.id === changeID
+      (change) => change.id === changeID,
     ); // Check if the change already exists
 
     // Update the value of the variable in the tempChanges array (set to the block)
     if (existingChangeIndex >= 0) {
       const updateVar = updatedChanges[existingChangeIndex]!.variables.find(
-        (variable) => variable.id === changeID
+        (variable) => variable.id === changeID,
       )!;
       // If the change already exists, update the value
       if (groupID) {
-        updateVar.variables!.find((variable) => variable.id === id)!.value =
-          value;
+        updateVar.variables!.find(
+          (variable) => variable.id === variableToChange.id,
+        )!.value = value;
       } else {
         updateVar.value = value;
       }
@@ -136,13 +141,14 @@ function PluginConfigView(props: PluginConfigViewProps) {
 
       for (let i = 0; i < configBlock.config.length; i++) {
         const variable = configBlock.config[i]!.variables.find(
-          (variable) => variable.id === changeID
+          (variable) => variable.id === changeID,
         );
         if (variable) {
           // Update the value of the variable
           if (groupID) {
-            variable.variables!.find((variable) => variable.id === id)!.value =
-              value;
+            variable.variables!.find(
+              (variable) => variable.id === variableToChange.id,
+            )!.value = value;
           } else {
             variable.value = value;
           }
@@ -173,7 +179,7 @@ function PluginConfigView(props: PluginConfigViewProps) {
       const newConfig = [...configBlock?.config];
       for (let i = 0; i < tempChanges.length; i++) {
         const blockIndex = newConfig.findIndex(
-          (block) => block.id === tempChanges[i]!.id
+          (block) => block.id === tempChanges[i]!.id,
         )!;
         newConfig[blockIndex] = tempChanges[i]!;
       }
@@ -203,7 +209,7 @@ function PluginConfigView(props: PluginConfigViewProps) {
   };
 
   const currentVariables = configBlocks.find(
-    (c) => c.remote === selectedRemote
+    (c) => c.remote === selectedRemote,
   );
 
   const getGroupedVariables = () => {
@@ -474,7 +480,7 @@ function PluginCard(props: PluginCardProps) {
                 <button
                   onClick={() => {
                     props.setSubview(
-                      <PluginConfigView configBlocks={plugin.config} />
+                      <PluginConfigView configBlocks={plugin.config} />,
                     );
                   }}
                 >
@@ -622,12 +628,12 @@ export function PluginManager() {
 
     // Remove the plugin from the list
     newPluginList.plugins = newPluginList.plugins.filter(
-      (plugin) => plugin.id !== id
+      (plugin) => plugin.id !== id,
     );
 
     // Also remove it from the error plugins
     newPluginList.errors = newPluginList.errors.filter(
-      (plugin) => plugin.id !== id
+      (plugin) => plugin.id !== id,
     );
 
     setPluginList(newPluginList);
@@ -677,7 +683,7 @@ export function PluginManager() {
               text="Install plugin"
               action={() => {
                 handleSetSubview(
-                  <InstallingPluginView onPluginInstall={fetchData} />
+                  <InstallingPluginView onPluginInstall={fetchData} />,
                 );
               }}
             />
@@ -778,7 +784,7 @@ function InstallingPluginView({
       })
       .catch(() => {
         horusAlert(
-          "Error retrieving data while installing plugin. Please check the Horus console for details."
+          "Error retrieving data while installing plugin. Please check the Horus console for details.",
         );
       })
       .finally(() => {

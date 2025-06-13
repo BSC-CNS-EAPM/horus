@@ -943,7 +943,7 @@ class VariableGroup(PluginVariable):
 
         return groupDict
 
-    def _updateVariablesInGroup(self, values: dict):
+    def _updateVariablesInGroup(self, values: typing.Union[None, dict]):
         """
         Update the values of the variables inside this group
         """
@@ -951,7 +951,7 @@ class VariableGroup(PluginVariable):
         for variable in self.variables:
             if variable.disabled:
                 continue
-            if variable.id in values.keys():
+            if values is not None and variable.id in values.keys():
                 variable.value = values[variable.id]
 
 
@@ -1883,7 +1883,7 @@ class PluginBlock:
             if varType == VariableTypes._GROUP.value:  # pylint: disable=protected-access
                 groupVariables = variable.get("variables", None)
                 variableGroupJSONParsed = {}
-                for var in groupVariables:
+                for var in groupVariables or []:
                     subVarID = var.get("id", None)
                     variableGroupJSONParsed[subVarID] = var.get("value", None)
 
@@ -3119,6 +3119,7 @@ class Plugin:
             self._createConfig(configPath)
 
         # Read the config file
+        configs = {}
         try:
             with open(configPath, "r", encoding="utf-8") as configFile:
                 configs = json.load(configFile)
