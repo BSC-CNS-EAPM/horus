@@ -43,6 +43,8 @@ import pkg_resources
 from flask_socketio import SocketIO
 import flask_login
 
+from Server.Utils import PrintTruncator
+
 # Plugin deps context manager, forking the process prevents
 # importend modules from being imported twice
 if typing.TYPE_CHECKING:
@@ -1780,7 +1782,7 @@ class PluginManager(metaclass=HorusSingleton):
         return flows
 
 
-class PrintCapturer(io.StringIO):
+class PrintCapturer(PrintTruncator):
     """
     Captures any print statement.
     """
@@ -1805,7 +1807,8 @@ class PrintCapturer(io.StringIO):
         """
         Writes the message to the terminal.
         """
-        self.oldStdout.write(message)
+
+        self.oldStdout.write(self.format(message))
 
     def flush(self):
         """
@@ -1856,7 +1859,7 @@ class PrintSocketCapturer(PrintCapturer):
         """
         Writes the message to the socketio event and to the terminal.
         """
-        self.socketio.emit(self.event, message, to=self.room)
+        self.socketio.emit(self.event, self.format(message), to=self.room)
         super().write(message)
         self.socketio.sleep(0)
 

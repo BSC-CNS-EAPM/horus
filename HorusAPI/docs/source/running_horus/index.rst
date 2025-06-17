@@ -43,7 +43,8 @@ In addition to command-line options, Horus allows configuration through the foll
 - **HORUS_MODE**: Specifies the application mode. Valid values are ``app``, ``browser``, ``server``, or ``webapp``.
 - **HORUS_PORT**: Defines the port for the Horus server.
 - **HORUS_HOST**: Specifies the host for the Horus server.
-
+- **HORUS_HOST**: Specifies the host for the Horus server.
+- **HORUS_LOG_LENGHT**: Specifies the maximum length of a log line. This can be useful to prevent memory overflows when printing large chunks of data (Defaults to 500).
 
 **App Mode (Default Mode)**
 ---------------------------

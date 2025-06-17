@@ -1619,6 +1619,8 @@ class Flow:
             Writes the text to the terminal output
             """
 
+            message = self.format(message)
+
             self.terminalOutput.append(message)
 
             runningBlock = self.getRunningBlock()
