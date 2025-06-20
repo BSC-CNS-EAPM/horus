@@ -1,4 +1,5 @@
 # pylint: disable=invalid-name
+import shutil
 import threading
 import os
 import typing
@@ -6,6 +7,8 @@ from pathlib import PurePath
 
 if typing.TYPE_CHECKING:
     from HorusAPI import PluginBlock
+
+from pathvalidate import sanitize_filepath
 
 
 # Define the SingletonMeta class for the AppDelegate and MolstarAPI classes
@@ -179,6 +182,91 @@ def getUserFolder() -> str:
 
     return user_folder
 
+def sanitizePath(path: str):
+    """
+    Replaces any invalid character in a path
+    """
+
+    path = (
+        path.replace(" ", "_")
+        .replace(":", "_")
+        .replace("/", "_")
+        .replace("\\", "_")
+        .replace("(", "")
+        .replace(")", "")
+    )
+
+    return sanitize_filepath(path, platform="universal", normalize=True)
+
+def structureToFile(structure: dict, filePathToWrite: typing.Optional[str] = None) -> str:
+    """
+    Save one structure in the correct format.
+    """
+
+    # Get the contents earlier and check if they exist
+    fileContents = structure.get("fileContents")
+
+    if fileContents is None:
+        raise Exception(f"File for structure {filePathToWrite} is empty")
+
+    if filePathToWrite is None or os.path.isdir(filePathToWrite):
+        
+        name = structure.get("label", None)
+        format = structure.get("format")
+
+        if name is None or format is None:
+            raise Exception("Structure not loaded correctly")
+
+        format = "." + format
+
+        if not name.endswith(format):
+            name += format
+
+        name = sanitizePath(name)
+
+        filePathToWrite = os.getcwd() if filePathToWrite is None else filePathToWrite
+        
+        filePathToWrite = os.path.join(filePathToWrite, name) 
+
+    if "bcif" == filePathToWrite.split(".")[-1]:
+        with open(filePathToWrite, "wb") as ff:
+            # If file is bcif convert from type Uint8arr to binary file
+            newFileBytes = map(int, fileContents.split(","))
+            ff.write(bytes(newFileBytes))
+    else:
+        with open(filePathToWrite, "w", encoding="utf-8") as ff:
+            # If file isn't a bcif write directly
+            ff.write(fileContents)
+
+    print(f"Saved {filePathToWrite} to flow folder")
+
+    if not os.path.exists(filePathToWrite):
+        raise Exception(f"The file {filePathToWrite} wasn't generated correctly.")
+
+    return filePathToWrite
+
+def multipleStructuresToFolder(structureList: list, path: typing.Optional[str]):
+    """
+    Save more than one Mol* structure into a folder
+    """
+
+    if structureList is None:
+        raise Exception("No structure provided.")
+    
+    if path is None:
+        path = os.path.join(os.getcwd(), "structures")
+
+    # Remove if directory already exists
+    if os.path.exists(path):
+        shutil.rmtree(path)
+
+    os.mkdir(path)
+
+    for structure in structureList:
+        # Save structure
+        structureToFile(structure, path)
+
+    return path
 
 class ResetRemoteException(Exception):
     """
