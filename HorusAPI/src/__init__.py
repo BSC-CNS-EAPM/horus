@@ -29,7 +29,7 @@ from .extensions import Extensions
 
 # Export the utility SingletonMeta class
 from .utils import SingletonMeta as HorusSingleton
-from .utils import TempFile, ResetRemoteException, getUserFolder, initPlugin
+from .utils import TempFile, ResetRemoteException, getUserFolder, initPlugin, structureToFile, multipleStructuresToFolder
 
 # Set the exported modules
 __all__ = [
@@ -59,6 +59,8 @@ __all__ = [
     "initPlugin",
     "SlurmJob",
     "Status",
+    "structureToFile",
+    "multipleStructuresToFolder",
 ]
 
 # Set the module name
