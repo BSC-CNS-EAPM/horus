@@ -222,3 +222,13 @@ export HORUS_GUI=qt
 export QT_QUICK_BACKEND=software
 ./Horus --browser
 ```
+
+# Building a Development Version
+
+When building Horus for development, you can override the version number used in the compiled binary by setting the `HORUS_VERSION_OVERRIDE` environment variable. For example:
+
+```
+HORUS_VERSION_OVERRIDE=1.2.3 npm run build
+```
+
+Replace `1.2.3` with your desired version. This is useful for testing or distributing custom builds with specific version identifiers.
