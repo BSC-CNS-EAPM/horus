@@ -11,7 +11,7 @@ class PrintTruncator(io.StringIO):
 
     max_log_len: int
     """
-    Maximum log length, editable using the HORUS_LOG_LENGHT environment variable
+    Maximum log length, editable using the HORUS_LOG_LENGTH environment variable
     """
 
     def __init__(self, *args, **kwargs) -> None:
@@ -19,10 +19,10 @@ class PrintTruncator(io.StringIO):
         # Issues when lines are too big...
         # We must truncate the outputs of the log files
         try:
-            self.max_log_len = int(os.getenv("HORUS_LOG_LENGHT", "500"))
+            self.max_log_len = int(os.getenv("HORUS_LOG_LENGTH", "500"))
         except ValueError as e:
-            logging.getLogger("Horus").error("Failed to get MAX_LOG_LENTH: %s", e)
-            os.putenv("HORUS_LOG_LENGHT", "500")
+            logging.getLogger("Horus").error("Failed to get HORUS_LOG_LENGTH: %s", e)
+            os.putenv("HORUS_LOG_LENGTH", "500")
             self.max_log_len = 500
 
         super().__init__(*args, **kwargs)
