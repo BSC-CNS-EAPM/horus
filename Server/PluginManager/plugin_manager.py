@@ -138,7 +138,17 @@ class PluginManager(metaclass=HorusSingleton):
         self.workingDir = os.getcwd()
 
         # Initialize the plugins
-        self._initializePlugins()
+        try:
+            self._initializePlugins()
+        except Exception as e:
+            logging.getLogger("Horus").critical(
+                "Error initializing plugins: %s. "
+                "Please check the plugins in the Plugins directory. Booting Horus without plugins.",
+                str(e),
+            )
+
+            # Prevent the plugins from being reloaded
+            self.pluginChanges = False
 
     def _pluginsDepsDir(self):
         """
@@ -181,6 +191,12 @@ class PluginManager(metaclass=HorusSingleton):
             self.devPluginsFolders: list[str] = (
                 self.horusSettings.getSetting("pluginsFolders").value or []
             )
+
+            # Skip folders that do not exist or start with a #
+            self.devPluginsFolders = [
+                f for f in self.devPluginsFolders if os.path.exists(f) and not f.startswith("#")
+            ]
+
         except Exception as e:
             logging.getLogger("Horus").error(
                 "Could not read additional development plugins folders: %s", str(e)
@@ -701,16 +717,24 @@ class PluginManager(metaclass=HorusSingleton):
         if len(sorted_plugins) != len(metas):
 
             repeated = ""
+
+            longest_list = [
+                os.path.basename(d)
+                for d in (
+                    [m.p for m in metas] if len(metas) > len(sorted_plugins) else sorted_plugins
+                )
+            ]
             # Get the wrong values
-            for p in sorted_plugins:
-                c = sorted_plugins.count(p)
+            for p in longest_list:
+                c = longest_list.count(p)
                 if c > 1:
                     repeated += f"{p} was required {c} times. "
 
             raise ValueError(
                 "Circular dependency detected among plugins. "
                 "If you are the developer of such plugins, "
-                "please update the plugin.meta file accordingly."
+                "please update the plugin.meta file accordingly. This can happen "
+                "also if the same plugin is installed multiple times in different plugin folders. "
                 f" Errors were found for the following plugins: {repeated}"
             )
 
