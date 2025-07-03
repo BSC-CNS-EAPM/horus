@@ -664,6 +664,11 @@ class PluginVariable:
 
     id: str = "baseplugin.variable"
 
+    placedID: int = 0
+    """
+    Same placedID as the block, used to identify the variable in the frontend.
+    """
+
     _isOriginal: bool = True
     """
     Check if the variable is a copy or the original used to model the block
@@ -787,6 +792,7 @@ class PluginVariable:
             varDict["disabled"] = self.disabled
             varDict["required"] = self.required
             varDict["placeholder"] = self.placeholder
+            varDict["placedID"] = self.placedID
 
         return varDict
 
@@ -1922,6 +1928,10 @@ class PluginBlock:
         self.time = blockTime
         self.extraData = extraData
         self.dirty = dirty
+
+        # Update all variables to have the same placedID as the block
+        for variable in self._variables:
+            variable.placedID = self._placedID
 
     def _minimalEncode(self):
         """
