@@ -2,8 +2,17 @@
   "dependenciesInterpreter": {
     "name": "Python interpreter",
     "description": "Python interpreter path to use for dependencies installation. Only required for special packages that need to be compiled from source. Must be python 3.9.",
-    "category": "Dependencies",
+    "category": "Python",
     "value": "python",
+    "type": "file",
+    "allowedValues": [],
+    "desktopOnly": true
+  },
+  "condaRuntime": {
+    "name": "Conda runtime",
+    "description": "Conda runtime path to use for environment management. This is used to create and manage conda environments for the application.",
+    "category": "Python",
+    "value": "conda",
     "type": "file",
     "allowedValues": [],
     "desktopOnly": true

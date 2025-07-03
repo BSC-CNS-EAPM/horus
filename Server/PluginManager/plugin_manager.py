@@ -2258,6 +2258,7 @@ class SubprocessManager:
         env: typing.Optional[dict] = None,
         wait: bool = True,
         comunicate: bool = True,
+        shell: bool = False,
     ) -> "SubprocessManager.HorusPopen":
         """
         Calls subprocess.Popen with a context manager and prints the STDOUT and STDERR
@@ -2282,6 +2283,8 @@ class SubprocessManager:
             env=env,
             text=True if comunicate else None,
             preexec_fn=os.setsid,
+            shell=shell,
+            universal_newlines=True if shell else None,
         )
 
         if wait:
