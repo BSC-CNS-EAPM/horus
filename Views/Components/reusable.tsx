@@ -174,10 +174,16 @@ export class ErrorBoundary extends Component {
   }
 }
 
-export function MovingChevron({ down }: { down: boolean }) {
+export function MovingChevron({
+  down,
+  className,
+}: {
+  down: boolean;
+  className?: string;
+}) {
   return (
     <div
-      className={`cursor-pointer transition-all transform ${
+      className={`${className} cursor-pointer transition-all transform ${
         down ? null : "rotate-180"
       }`}
     >

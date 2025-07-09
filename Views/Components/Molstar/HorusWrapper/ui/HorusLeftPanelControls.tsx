@@ -12,7 +12,7 @@ import {
   Canvas3DParams,
 } from "molstar/lib/mol-canvas3d/canvas3d";
 import { PluginCommands } from "molstar/lib/mol-plugin/commands";
-import { StateTransform } from "molstar/lib/mol-state";
+import { State, StateTransform } from "molstar/lib/mol-state";
 import { ParamDefinition as PD } from "molstar/lib/mol-util/param-definition";
 import { PluginUIComponent } from "molstar/lib/mol-plugin-ui/base";
 import {
@@ -38,13 +38,18 @@ import { StateTree } from "molstar/lib/mol-plugin-ui/state/tree";
 import { HelpContent } from "molstar/lib/mol-plugin-ui/viewport/help";
 import { DefaultStructureTools } from "molstar/lib/mol-plugin-ui/controls";
 import { LeftPanelTabName } from "molstar/lib/mol-plugin/layout";
+import AppButton from "@/Components/appbutton";
+import HorusSwitch from "@/Components/Switch/switch";
+import HorusMolstar, { MolInfoWithRef, MolstarEvents } from "../horusmolstar";
+import { SingleStructureView } from "./CustomStateTree/CustomStateTree";
+import RotatingLines from "@/Components/RotatingLines/rotatinglines";
 
 export class CustomImportControls extends PluginUIComponent<{
   initiallyCollapsed?: boolean;
 }> {
   override componentDidMount() {
     this.subscribe(this.plugin.state.behaviors.events.changed, () =>
-      this.forceUpdate(),
+      this.forceUpdate()
     );
   }
 
@@ -55,7 +60,7 @@ export class CustomImportControls extends PluginUIComponent<{
         <Controls
           initiallyCollapsed={this.props.initiallyCollapsed}
           key={key}
-        />,
+        />
       );
     });
     return controls.length > 0 ? <>{controls}</> : null;
@@ -90,17 +95,12 @@ export class HorusLeftPanelControls extends PluginUIComponent<
         });
       }
     });
-
-    this.subscribe(this.plugin.state.data.events.changed, ({ state }) => {
-      if (this.state.tab !== "data") return;
-      if (state.cells.size === 1) this.set("root");
-    });
   }
 
   set = (tab: HorusLeftPanelTypes) => {
     if (this.state.tab === tab) {
       this.setState({ tab: "none" }, () =>
-        this.plugin.behaviors.layout.leftPanelTabName.next("none"),
+        this.plugin.behaviors.layout.leftPanelTabName.next("none")
       );
       PluginCommands.Layout.Update(this.plugin, {
         state: {
@@ -115,8 +115,8 @@ export class HorusLeftPanelControls extends PluginUIComponent<
 
     this.setState({ tab }, () =>
       this.plugin.behaviors.layout.leftPanelTabName.next(
-        tab as LeftPanelTabName,
-      ),
+        tab as LeftPanelTabName
+      )
     );
     if (this.plugin.layout.state.regionState.left !== "full") {
       PluginCommands.Layout.Update(this.plugin, {
@@ -148,19 +148,7 @@ export class HorusLeftPanelControls extends PluginUIComponent<
         )}
       </>
     ),
-    data: (
-      <>
-        <SectionHeader
-          icon={AccountTreeOutlinedSvg}
-          title={
-            <>
-              <RemoveAllButton /> State Tree
-            </>
-          }
-        />
-        <StateTree state={this.plugin.state.data} />
-      </>
-    ),
+    data: <StateTreeTab state={this.plugin.state.data} />,
     "structure-tools": <DefaultStructureTools />,
     states: <StateSnapshots />,
     settings: (
@@ -292,20 +280,20 @@ class FullSettings extends PluginUIComponent {
 
   override componentDidMount() {
     this.subscribe(this.plugin.events.canvas3d.settingsUpdated, () =>
-      this.forceUpdate(),
+      this.forceUpdate()
     );
     this.subscribe(this.plugin.layout.events.updated, () => this.forceUpdate());
 
     if (this.plugin.canvas3d) {
       this.subscribe(
         this.plugin.canvas3d.camera.stateChanged.pipe(
-          throttleTime(500, undefined, { leading: true, trailing: true }),
+          throttleTime(500, undefined, { leading: true, trailing: true })
         ),
         (state) => {
           if (state.radiusMax !== undefined || state.radius !== undefined) {
             this.forceUpdate();
           }
-        },
+        }
       );
     }
   }
@@ -357,7 +345,7 @@ class RemoveAllButton extends PluginUIComponent<object> {
 
   override render() {
     const count = this.plugin.state.data.tree.children.get(
-      StateTransform.RootRef,
+      StateTransform.RootRef
     ).size;
     if (count === 0) return null;
     return (
@@ -372,4 +360,239 @@ class RemoveAllButton extends PluginUIComponent<object> {
       />
     );
   }
+}
+
+function StateTreeTab({ state }: { state: State }) {
+  const [advancedTree, setAdvancedTree] = React.useState(false);
+
+  return (
+    <>
+      <SectionHeader
+        icon={AccountTreeOutlinedSvg}
+        title={
+          <div className="flex flex-row gap-2 justify-end items-center">
+            <RemoveAllButton />
+            {advancedTree ? "Advanced" : "Simple"} State Tree
+            <HorusSwitch enabled={advancedTree} setEnabled={setAdvancedTree}>
+              {advancedTree ? "Advanced" : "Simple"}
+            </HorusSwitch>
+          </div>
+        }
+      />
+
+      {advancedTree ? <StateTree state={state} /> : <SimpleStateTree />}
+    </>
+  );
+}
+
+function useLoadedStructures() {
+  const [structures, setStructures] = React.useState<MolInfoWithRef[]>([]);
+
+  React.useEffect(() => {
+    const updateStructures = () => {
+      // Mol* always loaded if this interface is visible
+      const molstar = window.molstar as HorusMolstar;
+      const structures = molstar.listStructures({ includeRef: true });
+      setStructures(structures);
+    };
+    updateStructures();
+
+    window.addEventListener(MolstarEvents.STATE, updateStructures);
+
+    return () => {
+      window.removeEventListener(MolstarEvents.STATE, updateStructures);
+    };
+  }, []);
+
+  return { structures };
+}
+
+function SimpleStateTree() {
+  const { structures: loadedStructures } = useLoadedStructures();
+
+  const [allHidden, setAllHidden] = React.useState(false);
+
+  const toggleAllStructuresVisibility = (visible: boolean) => {
+    const plugin = (window.molstar as HorusMolstar).plugin!;
+
+    // Get the current visibility state of the first structure to determine toggle direction
+    const structures = plugin.managers.structure.hierarchy.current.structures;
+    if (structures.length === 0) return;
+    const structuresToTogle = structures.filter(
+      (s) => !!s.cell.state.isHidden === visible
+    );
+
+    // Apply to all structures
+    for (const structure of structuresToTogle) {
+      PluginCommands.State.ToggleVisibility(plugin, {
+        state: structure.cell.parent!,
+        ref: structure.cell.transform.ref,
+      });
+    }
+
+    setAllHidden(!visible);
+  };
+
+  if (loadedStructures.length === 0) {
+    return (
+      <div className="flex flex-col justify-center items-center gap-2">
+        <span className="text-center">No loaded structures</span>
+        <OpenFileStructure />
+        <OpenTrajectoryStructure />
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="flex flex-col gap-1 p-2">
+        <div className="flex flex-row items-center space-x-2">
+          <input
+            type="checkbox"
+            checked={!allHidden}
+            onChange={(e) => {
+              toggleAllStructuresVisibility(e.target.checked);
+            }}
+            className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 focus:ring-2 mt-0.5 flex-shrink-0"
+          />
+          <span>Show / hide all</span>
+        </div>
+        {loadedStructures.map((s) => (
+          <SingleStructureView structure={s} />
+        ))}
+      </div>
+      <div className="flex flex-col justify-center items-center gap-2">
+        <OpenFileStructure />
+        <OpenTrajectoryStructure />
+      </div>
+    </>
+  );
+}
+
+function OpenFileStructure() {
+  const [pdbID, setPDBID] = React.useState("");
+  const [loading, setIsLoading] = React.useState(false);
+
+  const fetchPDB = async () => {
+    const trimmedID = pdbID.trim().toUpperCase();
+    if (!/^[A-Z0-9]{4}$/.test(trimmedID)) {
+      alert("Please enter a valid 4-letter PDB ID.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(
+        `https://files.rcsb.org/download/${trimmedID}.pdb`
+      );
+      if (!response.ok) {
+        throw new Error("Failed to fetch PDB file.");
+      }
+      const blob = await response.blob();
+      const file = new File([blob], `${trimmedID}.pdb`, {
+        type: "chemical/x-pdb",
+      });
+      window.molstar?.loadMoleculeFile(file, { label: trimmedID });
+      setPDBID("");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to fetch or load the PDB file.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (loading) {
+    return <RotatingLines />;
+  }
+
+  return (
+    <div className="space-y-2 w-[250px] mb-2">
+      {/* Fetch from PDB */}
+      <div className="flex space-x-2 w-full">
+        <input
+          type="text"
+          placeholder="PDB ID"
+          value={pdbID}
+          onChange={(e) => setPDBID(e.target.value)}
+          className="flex-1 min-w-0 border border-slate-300 rounded-md px-2 py-1 text-sm"
+          maxLength={4}
+        />
+        <AppButton className="w-[100px]" action={fetchPDB}>
+          Fetch
+        </AppButton>
+      </div>
+      {/* Open local file */}
+      <AppButton
+        className="w-full"
+        action={() => {
+          window.horus.openExtensionFilePicker?.({
+            onFileConfirm(file) {
+              window.horus.getFile(file).then((b) => {
+                const filename = file.split("/").pop() || "molecule";
+                const f = new File([b], filename);
+                window.molstar?.loadMoleculeFile(f, { label: filename });
+              });
+            },
+          });
+        }}
+      >
+        Open file
+      </AppButton>
+    </div>
+  );
+}
+
+function OpenTrajectoryStructure() {
+  return (
+    <div className="space-y-2 w-[250px] mb-2">
+      <AppButton
+        className="w-full"
+        action={async () => {
+          const molstar = window.molstar as HorusMolstar;
+
+          let top: File | undefined;
+          let trajectory: File | undefined;
+
+          const topPath = await window.horus.openExtensionFilePicker?.({
+            label: "Select topology",
+          });
+
+          if (!topPath) {
+            return;
+          }
+
+          await window.horus.getFile(topPath).then((b) => {
+            const filename = topPath.split("/").pop() || "topology";
+            const f = new File([b], filename);
+            top = f;
+          });
+
+          const trajPath = await window.horus.openExtensionFilePicker?.({
+            label: "Select trajectory",
+          });
+
+          if (!trajPath) {
+            return;
+          }
+
+          await window.horus.getFile(trajPath).then((b) => {
+            const filename = trajPath.split("/").pop() || "trajectory";
+            const f = new File([b], filename);
+            trajectory = f;
+          });
+
+          if (top && trajectory) {
+            molstar.loadTrajectory({
+              topology: top,
+              trajectory: trajectory,
+              label: top.name,
+            });
+          }
+        }}
+      >
+        Open trajectory
+      </AppButton>
+    </div>
+  );
 }

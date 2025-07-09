@@ -182,6 +182,7 @@ def getUserFolder() -> str:
 
     return user_folder
 
+
 def sanitizePath(path: str):
     """
     Replaces any invalid character in a path
@@ -198,6 +199,7 @@ def sanitizePath(path: str):
 
     return sanitize_filepath(path, platform="universal", normalize=True)
 
+
 def structureToFile(structure: dict, filePathToWrite: typing.Optional[str] = None) -> str:
     """
     Save one structure in the correct format.
@@ -210,7 +212,7 @@ def structureToFile(structure: dict, filePathToWrite: typing.Optional[str] = Non
         raise Exception(f"File for structure {filePathToWrite} is empty")
 
     if filePathToWrite is None or os.path.isdir(filePathToWrite):
-        
+
         name = structure.get("label", None)
         format = structure.get("format")
 
@@ -225,8 +227,8 @@ def structureToFile(structure: dict, filePathToWrite: typing.Optional[str] = Non
         name = sanitizePath(name)
 
         filePathToWrite = os.getcwd() if filePathToWrite is None else filePathToWrite
-        
-        filePathToWrite = os.path.join(filePathToWrite, name) 
+
+        filePathToWrite = os.path.join(filePathToWrite, name)
 
     if "bcif" == filePathToWrite.split(".")[-1]:
         with open(filePathToWrite, "wb") as ff:
@@ -245,6 +247,7 @@ def structureToFile(structure: dict, filePathToWrite: typing.Optional[str] = Non
 
     return filePathToWrite
 
+
 def multipleStructuresToFolder(structureList: list, path: typing.Optional[str]):
     """
     Save more than one Mol* structure into a folder
@@ -252,7 +255,7 @@ def multipleStructuresToFolder(structureList: list, path: typing.Optional[str]):
 
     if structureList is None:
         raise Exception("No structure provided.")
-    
+
     if path is None:
         path = os.path.join(os.getcwd(), "structures")
 
@@ -267,6 +270,7 @@ def multipleStructuresToFolder(structureList: list, path: typing.Optional[str]):
         structureToFile(structure, path)
 
     return path
+
 
 class ResetRemoteException(Exception):
     """

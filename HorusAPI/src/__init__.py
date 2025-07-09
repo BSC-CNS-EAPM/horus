@@ -21,7 +21,15 @@ from .plugins import (
 )
 
 # Export the Molstar API
-from .molstar import MolstarAPI
+from .molstar import (
+    MolstarAPI,
+    MolstarThemeOptions,
+    ColorTheme,
+    SizeTheme,
+    MolRepresentations,
+    MolecularSelection,
+    SelectionLanguage,
+)
 from .smiles import SmilesAPI
 
 # Export the extensions API
@@ -29,7 +37,14 @@ from .extensions import Extensions
 
 # Export the utility SingletonMeta class
 from .utils import SingletonMeta as HorusSingleton
-from .utils import TempFile, ResetRemoteException, getUserFolder, initPlugin, structureToFile, multipleStructuresToFolder
+from .utils import (
+    TempFile,
+    ResetRemoteException,
+    getUserFolder,
+    initPlugin,
+    structureToFile,
+    multipleStructuresToFolder,
+)
 
 # Set the exported modules
 __all__ = [
@@ -59,6 +74,12 @@ __all__ = [
     "initPlugin",
     "SlurmJob",
     "Status",
+    "MolstarThemeOptions",
+    "ColorTheme",
+    "SizeTheme",
+    "MolRepresentations",
+    "MolecularSelection",
+    "SelectionLanguage",
     "structureToFile",
     "multipleStructuresToFolder",
 ]

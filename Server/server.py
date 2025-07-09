@@ -455,7 +455,7 @@ class HorusServer:
         API requests. Also disables Flask logging when not in debug mode.
         """
         # Disable werkzeug logging when not in debug mode
-        # logging.getLogger("werkzeug").disabled = not self.debug
+        logging.getLogger("werkzeug").setLevel(logging.DEBUG if self.debug else logging.WARNING)
 
         from flask.sansio.scaffold import setupmethod, T_route
 

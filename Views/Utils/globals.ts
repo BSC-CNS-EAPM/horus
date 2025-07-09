@@ -18,7 +18,6 @@ import {
   Flow,
   PluginPageExtensionEvent,
 } from "@/Components/FlowBuilder/flow.types";
-import { Dispatch, SetStateAction } from "react";
 
 export {};
 
@@ -66,7 +65,9 @@ declare global {
       setFlow?: (newFlow: Flow) => void;
       setExtraData?: (key: string, value: any) => void;
       getExtraData?: (key: string) => any;
-      openExtensionFilePicker?: (options: ExtensionsFilePickerOptions) => void;
+      openExtensionFilePicker?: (
+        options: ExtensionsFilePickerOptions
+      ) => Promise<string | null>;
       saveFile: (file: File) => void;
       updateFile: (file: File, path: string) => void;
       getFile: (path: string) => Promise<Blob>;
@@ -91,7 +92,7 @@ export type openPanel = {
   (
     type: "moleculePlotter",
     id: string,
-    params: { smilesToPlot: HorusSmilesType[] },
+    params: { smilesToPlot: HorusSmilesType[] }
   ): void;
   (
     type: "extensions",
@@ -101,7 +102,7 @@ export type openPanel = {
       plugin: string;
       id: string;
       data?: any;
-    },
+    }
   ): void;
 };
 
@@ -118,6 +119,6 @@ window.horus = {
   getFile: getFile,
   updateFile: updateFile,
   openFile: async () => {
-    alert("Open the flow editor before opnening files");
+    alert("Open the flow editor before opening files");
   },
 };
