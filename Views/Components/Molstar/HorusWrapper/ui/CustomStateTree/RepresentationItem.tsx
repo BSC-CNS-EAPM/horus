@@ -34,27 +34,31 @@ export function RepresentationItem({
   const [showSizeOptions, setShowSizeOptions] = useState(false);
   const [selectedRepresentation, setSelectedRepresentation] =
     useState<StructureRepresentationRegistry.BuiltIn>(
-      representation.type as StructureRepresentationRegistry.BuiltIn,
+      representation.type as StructureRepresentationRegistry.BuiltIn
     );
   const [selectedColorTheme, setSelectedColorTheme] = useState(
-    getCurrentColorTheme(representation.ref),
+    getCurrentColorTheme(representation.ref)
   );
   const [selectedSizeTheme, setSelectedSizeTheme] = useState(
-    getCurrentSizeTheme(representation.ref),
+    getCurrentSizeTheme(representation.ref)
   );
   const [customColor, setCustomColor] = useState<string>(
-    getUniformColor(representation.ref),
+    getUniformColor(representation.ref)
   );
   const [uniformSize, setUniformSize] = useState(
-    getCurrentSize(representation.ref),
+    getCurrentSize(representation.ref)
   );
   const [opacity, setOpacity] = useState(
-    getCurrentTransparency(representation.ref, plugin),
+    getCurrentTransparency(representation.ref, plugin)
+  );
+
+  const [domain, setDomain] = useState<[number, number]>(
+    getDomain(representation.ref)
   );
 
   const lociList = useMemo(
     () => representation.ref.cell.obj?.data.repr.getAllLoci(),
-    [],
+    []
   );
 
   const focusRepresentation = () => {
@@ -87,6 +91,7 @@ export function RepresentationItem({
       colorTheme: {
         name: selectedColorTheme,
         params: {
+          domain: domain,
           value:
             typeof customColor === "string"
               ? Color.fromHexStyle(customColor)
@@ -101,6 +106,7 @@ export function RepresentationItem({
       },
     });
   }, [
+    domain,
     opacity,
     selectedRepresentation,
     selectedColorTheme,
@@ -171,6 +177,31 @@ export function RepresentationItem({
               ))}
             </select>
           </div>
+
+          {/* B-factor color options */}
+          {selectedColorTheme === "uncertainty" && (
+            <div className="flex flex-row gap-2 items-center">
+              <label className="text-gray-600">Domain</label>
+              <input
+                type="number"
+                value={domain[0] || ""}
+                onChange={(e) =>
+                  setDomain([parseFloat(e.target.value), domain[1] ?? 0])
+                }
+                className="w-16 border rounded px-2 py-1"
+                placeholder="Minimum B-Factor"
+              />
+              <input
+                type="number"
+                value={domain[1] || ""}
+                onChange={(e) =>
+                  setDomain([domain[0] ?? 0, parseFloat(e.target.value)])
+                }
+                className="w-16 border rounded px-2 py-1"
+                placeholder="Maximum B-Factor"
+              />
+            </div>
+          )}
 
           {/* Uniform color options */}
           {selectedColorTheme === "uniform" && (
@@ -279,15 +310,15 @@ const getCurrentSize = (representation: StructureRepresentationRef) => {
 
 const getCurrentTransparency = (
   representation: StructureRepresentationRef,
-  plugin: PluginContext,
+  plugin: PluginContext
 ): number => {
   // Look for transparency transforms applied to this representation
   const transparencyStates = plugin.state.data.select(
     StateSelection.Generators.ofTransformer(
       StateTransforms.Representation
         .TransparencyStructureRepresentation3DFromBundle,
-      representation.cell.transform.ref,
-    ),
+      representation.cell.transform.ref
+    )
   );
 
   if (transparencyStates.length > 0) {
@@ -301,10 +332,20 @@ const getCurrentTransparency = (
 };
 
 const getUniformColor = (
-  representation: StructureRepresentationRef,
+  representation: StructureRepresentationRef
 ): string => {
   const colorTheme = representation.cell.transform.params?.colorTheme;
   const isUniform = colorTheme?.name === "uniform";
   if (!isUniform) return "#0000FF";
   return Color.toHexStyle(colorTheme?.params?.value) ?? "#0000FF";
+};
+
+const getDomain = (
+  representation: StructureRepresentationRef
+): [number, number] => {
+  const colorTheme = representation.cell.transform.params?.colorTheme;
+  if (colorTheme?.name === "uncertainty") {
+    return colorTheme.params?.domain || [0, 100];
+  }
+  return [0, 0];
 };
