@@ -38,6 +38,7 @@ declare global {
         allowRemotes: boolean;
         allowDemoUser: boolean;
         uploadSize: number;
+        allowFullFileSystemAccess: boolean;
       };
       updateSettings: (settings: HorusSettingsObject) => void;
     };

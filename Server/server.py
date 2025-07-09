@@ -76,7 +76,7 @@ from Server.PluginManager import PluginManager
 from Server.FileExplorer import FileExplorer, UserFileExplorer, File
 
 # User management for WebApp mode
-from Server.WebAppManager import WebAppManager, UserError, HorusUser
+from Server.WebAppManager import WebAppManager, UserError, HorusUser, overrideUserExplorer
 
 if typing.TYPE_CHECKING:
     from Server.WebAppManager import Database
@@ -1307,6 +1307,7 @@ class HorusServer:
                     "allowRemotes": self.webAppManager.allowRemotes,
                     "allowDemoUser": self.webAppManager.userManagement.allowDemoUser,
                     "uploadSize": self.webAppManager.userManagement.fileManagement.maxUploadSize,
+                    "allowFullFileSystemAccess": self.webAppManager.userManagement.fileManagement.allowFullFileSystemAccess,
                 }
 
             return flask.jsonify(internalSettings)
@@ -1838,9 +1839,15 @@ class HorusServer:
                             else currentUser.flowsDir
                         )
 
-                        fileExplorer = UserFileExplorer(
-                            path, currentUser, relativeTo=relativeTo, obfuscate=obfuscate
-                        )
+                        if overrideUserExplorer():
+                            fileExplorer = FileExplorer(
+                                (path if os.path.exists(path) else relativeTo),
+                            )
+                        else:
+                            fileExplorer = UserFileExplorer(
+                                path, currentUser, relativeTo=relativeTo, obfuscate=obfuscate
+                            )
+
                 else:
                     fileExplorer = FileExplorer(path)
 

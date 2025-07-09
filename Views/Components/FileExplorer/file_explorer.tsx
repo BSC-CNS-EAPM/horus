@@ -79,6 +79,7 @@ function useServerExplorer(
 
       if (
         window.horusInternal.webApp &&
+        !window.horusInternal.webApp.allowFullFileSystemAccess &&
         !flowBuilderContext?.flow?.flow?.path &&
         !openDirectly &&
         !openOutsideFlowContext
@@ -632,7 +633,8 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
         <div className="flex flex-col gap-2 flex-wrap justify-start items-start">
           <div className="text-3xl font-bold min-w-[180px]">{getLabel()}</div>
           {(!window.horusInternal?.webApp ||
-            props.fileProps?.openOutsideFlowContext) && (
+            props.fileProps?.openOutsideFlowContext ||
+            window.horusInternal.webApp.allowFullFileSystemAccess) && (
             <div className="flex flex-row gap-2 w-full">
               <input
                 className="app-button w-full"
