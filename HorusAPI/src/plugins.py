@@ -830,7 +830,7 @@ class CustomVariable(PluginVariable):
         id: str,
         name: str,
         description: str,
-        type: VariableTypes,
+        type: typing.Union[VariableTypes, str],
         customPage: PluginPage,
         defaultValue: Any | None = None,
         allowedValues: List[Any] | None = None,
