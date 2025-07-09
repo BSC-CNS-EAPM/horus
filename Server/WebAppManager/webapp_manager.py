@@ -460,6 +460,12 @@ class FileManagement:
     Configuration about how the file picker should work in WebApp mode
     """
 
+    allowFullFileSystemAccess: bool = False
+    """
+    If users should be allowed to access the entire file system.
+    If False, users will only be able to access their own user folder
+    """
+
     allowUpload: bool = False
     """
     If users should be allowed to uplaod files to the flow
@@ -486,6 +492,7 @@ class FileManagement:
     """
 
     def __init__(self, rawFileManager: dict[str, Any]) -> None:
+        self.allowFullFileSystemAccess = rawFileManager.get("allowFullFileSystemAccess", False)
         self.allowUpload = rawFileManager.get("allowUpload", False)
         self.maxUploadSize = rawFileManager.get("maxUploadSize", 2)
         self.allowDownload = rawFileManager.get("allowDownload", False)
@@ -914,3 +921,17 @@ class WebAppManager:
 
         # Start the Group manager class
         self.userGroupsManager = UserGroupsManager(self.db)
+
+
+def overrideUserExplorer():
+
+    from App import AppDelegate
+
+    webappManager = AppDelegate().server.webAppManager
+
+    if webappManager is not None:
+        if webappManager.userManagement.fileManagement.allowFullFileSystemAccess:
+            # If allowFullFileSystemAccess is enabled, then the user can access any path
+            return True
+
+    return False

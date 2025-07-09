@@ -11,6 +11,7 @@ import hashlib
 import subprocess
 from datetime import datetime
 
+
 # Horus imports
 if typing.TYPE_CHECKING:
     from Server.WebAppManager import HorusUser
@@ -386,6 +387,12 @@ class UserFileExplorer(FileExplorer):
         """
         Returns True if the current path is accessible, False otherwise.
         """
+
+        from Server.WebAppManager import overrideUserExplorer
+
+        if overrideUserExplorer():
+            # If the user is overriding the explorer, then the path is always accessible
+            return True
 
         from Server.FlowManager import FlowManager
 
