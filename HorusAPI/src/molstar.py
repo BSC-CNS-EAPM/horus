@@ -6,15 +6,206 @@ The MolstarAPI module
 import os
 import logging
 
-# Import types only in development
-# pyright: reportUnboundVariable=false
+from enum import Enum
 import typing
+from typing import Optional, Any, Dict, Union, Literal
+
+from pydantic import BaseModel, Field
 
 # Utilities
 from .utils import SingletonMeta
 
+# Import types only in development
 if typing.TYPE_CHECKING:
     from Server.FlowManager import Flow
+
+
+class ColorTheme(str, Enum):
+    """
+    A list of the color themes available in Mol*
+    """
+
+    atom_id = "atom-id"
+    carbohydrate_symbol = "carbohydrate-symbol"
+    cartoon = "cartoon"
+    chain_id = "chain-id"
+    element_index = "element-index"
+    element_symbol = "element-symbol"
+    entity_id = "entity-id"
+    entity_source = "entity-source"
+    external_structure = "external-structure"
+    external_volume = "external-volume"
+    formal_charge = "formal-charge"
+    hydrophobicity = "hydrophobicity"
+    illustrative = "illustrative"
+    model_index = "model-index"
+    molecule_type = "molecule-type"
+    occupancy = "occupancy"
+    operator_hkl = "operator-hkl"
+    operator_name = "operator-name"
+    partial_charge = "partial-charge"
+    polymer_id = "polymer-id"
+    polymer_index = "polymer-index"
+    residue_name = "residue-name"
+    secondary_structure = "secondary-structure"
+    sequence_id = "sequence-id"
+    shape_group = "shape-group"
+    structure_index = "structure-index"
+    trajectory_index = "trajectory-index"
+    uncertainty = "uncertainty"
+    unit_index = "unit-index"
+    uniform = "uniform"
+    volume_segment = "volume-segment"
+    volume_value = "volume-value"
+    default = "default"
+
+
+class SizeTheme(str, Enum):
+    """
+    A list of the size themes available in Mol*
+    """
+
+    physical = "physical"
+    shape_group = "shape-group"
+    uncertainty = "uncertainty"
+    uniform = "uniform"
+    volume_value = "volume-value"
+    default = "default"
+
+
+class MolRepresentations(str, Enum):
+    """
+    Available molstar representations
+    """
+
+    CARTOON = "cartoon"
+    BACKBONE = "backbone"
+    BALL_AND_STICK = "ball-and-stick"
+    CARBOHYDRATE = "carbohydrate"
+    ELLIPSOID = "ellipsoid"
+    GAUSSIAN_SURFACE = "gaussian-surface"
+    GAUSSIAN_VOLUME = "gaussian-volume"
+    LABEL = "label"
+    LINE = "line"
+    MOLECULAR_SURFACE = "molecular-surface"
+    ORIENTATION = "orientation"
+    PLANE = "plane"
+    POINT = "point"
+    PUTTY = "putty"
+    SPACEFILL = "spacefill"
+
+
+class MolstarThemeOptions(BaseModel):
+    """
+    Options for updating a model's theme
+    """
+
+    representation: MolRepresentations = MolRepresentations.CARTOON
+    representationParams: Optional[dict[str, Any]] = None
+    color: Optional[Union[ColorTheme, str]] = None
+    colorParams: Optional[dict[str, Any]] = None
+    size: Optional[Union[SizeTheme, str]] = None
+    sizeParams: Optional[Dict[str, Any]] = None
+
+    class Config:
+        use_enum_values = True
+
+
+class SelectionLanguage(str, Enum):
+    """Selection language types supported by Mol*"""
+
+    MOL_SCRIPT = "mol-script"
+    VMD = "vmd"
+    PYMOL = "pymol"
+    JMOL = "jmol"
+
+
+class MolecularSelection(BaseModel):
+    """
+    Comprehensive molecular selection model supporting all Mol* selection types
+    """
+
+    # Script-based selections (VMD, PyMOL, Jmol, MolScript)
+    script: Optional[str] = Field(
+        default=None, description="Selection script in specified language (defaults to VMD)"
+    )
+    language: Optional[SelectionLanguage] = Field(
+        default=SelectionLanguage.VMD, description="Script language"
+    )
+
+    # Chain selections
+    chain: Optional[str] = Field(
+        default=None, description="Label chain identifier (label_asym_id)"
+    )
+    auth_chain: Optional[str] = Field(
+        default=None, description="Author chain identifier (auth_asym_id)"
+    )
+
+    # Entity selection
+    entity: Optional[str] = Field(default=None, description="Entity identifier (label_entity_id)")
+
+    # Residue selections
+    residue: Optional[int] = Field(
+        default=None, description="Label residue sequence ID (label_seq_id)"
+    )
+    auth_residue: Optional[int] = Field(
+        default=None, description="Author residue sequence ID (auth_seq_id)"
+    )
+    residue_range: Optional[dict] = Field(
+        default=None, description="Residue range {start: int, end: int}"
+    )
+    auth_residue_range: Optional[dict] = Field(
+        default=None, description="Author residue range {start: int, end: int}"
+    )
+
+    # Atom selections
+    atom_name: Optional[str] = Field(
+        default=None, description="Label atom identifier (label_atom_id)"
+    )
+    auth_atom_name: Optional[str] = Field(
+        default=None, description="Author atom identifier (auth_atom_id)"
+    )
+    element_symbol: Optional[str] = Field(default=None, description="Chemical element symbol")
+    atom_id: Optional[int] = Field(default=None, description="Atom ID number")
+    atom_index: Optional[int] = Field(default=None, description="Atom source index")
+
+    # Insertion code
+    insertion_code: Optional[str] = Field(
+        default=None, description="PDB insertion code (pdbx_PDB_ins_code)"
+    )
+
+    # Combined selections
+    chain_and_residue: Optional[dict] = Field(
+        default=None, description="Combined selection {chain: str, residue: int}"
+    )
+    auth_chain_and_residue: Optional[dict] = Field(
+        default=None, description="Combined auth selection {auth_chain: str, auth_residue: int}"
+    )
+
+    # Structural selections
+    secondary_structure: Optional[Literal["helix", "sheet", "coil"]] = Field(
+        default=None, description="Secondary structure type"
+    )
+    type: Optional[
+        Literal[
+            "all",
+            "polymer",
+            "protein",
+            "nucleic",
+            "water",
+            "ion",
+            "lipid",
+            "branched",
+            "ligand",
+            "non-standard",
+            "coarse",
+        ]
+    ] = Field(default=None, description="Polymer type")
+
+    # Proximity selections
+    within_distance: Optional[dict] = Field(
+        default=None, description="Within distance {radius: float, target: MolecularSelection}"
+    )
 
 
 class MolstarAPI(metaclass=SingletonMeta):
@@ -54,7 +245,12 @@ class MolstarAPI(metaclass=SingletonMeta):
         # Store the action and data for when the client connects and opens the flow
         self._flow.pendingActions.append(data)
 
-    def addMolecule(self, filePath: str, label: typing.Optional[str] = None) -> None:
+    def addMolecule(
+        self,
+        filePath: str,
+        label: typing.Optional[str] = None,
+        theme: typing.Optional[MolstarThemeOptions] = None,
+    ) -> None:
         """
         Adds the given Molecule file to Mol*
 
@@ -73,11 +269,53 @@ class MolstarAPI(metaclass=SingletonMeta):
             "data": {
                 "fileName": fileName,
                 "molContent": absPath,
-                "label": label if label else fileName,
+                "options": {
+                    "label": label if label else fileName,
+                    "theme": theme.dict() if theme else None,
+                },
             },
         }
 
         self._emitAction("loadMolecule", data)
+
+    def addComponent(
+        self,
+        label: str,
+        selectionLabel: str,
+        selection: MolecularSelection,
+        theme: typing.Optional[MolstarThemeOptions] = None,
+    ):
+        """
+        Adds a component to an existing structure given the label and a selection.
+
+        :param label: The loaded structure to which apply the component
+        :param selectionLabel: The new component label
+        :param selection: The specific selection of the structure provided in the label
+        :param theme: Custom theme to apply to the selection
+        """
+
+        if not label or not selectionLabel or not selection:
+            raise ValueError(
+                "Missing parameters. "
+                "Cannot create a molecular component "
+                "if the label or the selection label is not given."
+            )
+
+        data = {
+            "type": "addComponent",
+            "data": {
+                "label": label,
+                "selectionLabel": selectionLabel,
+                "options": {
+                    "selection": selection.dict(),
+                    "theme": theme.dict() if theme else None,
+                },
+            },
+        }
+
+        self._emitAction("addComponent", data)
+
+    # TODO: create selection & apply themes
 
     def loadTrajectory(
         self, topology: str, trajectory: str, label: typing.Optional[str] = None

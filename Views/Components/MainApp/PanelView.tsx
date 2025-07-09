@@ -970,7 +970,7 @@ export function hooksInitializer() {
       }
 
       // Open the file
-      window.molstar?.loadMoleculeFile(file, options);
+      return window.molstar?.loadMoleculeFile(file, options);
     };
 
     window.molstar = {
