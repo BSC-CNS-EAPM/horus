@@ -1,3 +1,4 @@
+from math import e
 from sys import stderr
 import pytest
 from unittest.mock import patch, MagicMock
@@ -95,6 +96,7 @@ def test_transfer_to_local(mock_remotes_api_local):
             timeout=None,
             text=True,
             check=False,
+            env=None,
         )
 
 
@@ -129,6 +131,7 @@ def test_transfer_from_local(mock_remotes_api_local):
             timeout=None,
             text=True,
             check=False,
+            env=None,
         )
 
 

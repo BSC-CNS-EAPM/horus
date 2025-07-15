@@ -345,7 +345,12 @@ def testSlurmBlockAction(block: SlurmBlock):
     timeToWait = int(block.inputs.get("timeToWait", 0) or 0)
 
     # Submit test job to the current remote
-    script = block.variables[script_variable.id] + f"\n\nsleep {timeToWait}\n"
+    script = (
+        block.variables[script_variable.id]
+        + f"\n\nsleep {timeToWait}\n"
+        + "echo Slurm environment:\n"
+        + """echo ${TEST_SLURM_ENVIRONMENT}"""
+    )
 
     if block.extraData.get("submits") is None:
         block.extraData["submits"] = 0
@@ -366,7 +371,26 @@ def testSlurmBlockAction(block: SlurmBlock):
     except Exception as e:
         print("Error uploading script: ", e)
 
+    print("Submitting regular job")
     jobID = block.remote.submitJob(finalPath)
+    print("Job ID: ", jobID)
+
+    # Submitting with environment variables
+    print("Submitting job with environment variables")
+    env = {"TEST_SLURM_ENVIRONMENT": "test_value"}
+    jobID = block.remote.submitJob(finalPath, env=env)
+    print("Job ID with env: ", jobID)
+
+    print("Submitting with job arguments")
+    jobID = block.remote.submitJob(
+        finalPath,
+        arguments=[
+            "--qos=short",
+            "--partition=short",
+            "--job-name=TEST HORUS SLURM ARGUMENTS",
+            "--time=2:00:00",
+        ],
+    )
 
     print("Job ID: ", jobID)
 

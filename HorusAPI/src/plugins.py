@@ -57,22 +57,13 @@ class PluginRemote:
         self.cd = self._remote.cd
         self.block = block
 
-    def remoteCommand(self, command: str, timeout: typing.Optional[int] = None):
-        """
-        Deprecated. Use command instead.
-        """
-
-        print("WARNING: remoteCommand is deprecated. Use command instead.")
-        print("If you are not the developer of this plugin, ignore this warning.")
-
-        return self.command(command, timeout)
-
     def command(
         self,
         command: str,
         timeout: typing.Optional[int] = None,
         forceLocal: bool = False,
         mergeStdErr: bool = True,
+        env: typing.Optional[Dict[str, str]] = None,
     ):
         """
         Executes a command on the remote.
@@ -85,7 +76,7 @@ class PluginRemote:
 
         :return: The output of the command.
         """
-        output = self._remote.command(command, timeout, forceLocal, mergeStdErr)
+        output = self._remote.command(command, timeout, forceLocal, mergeStdErr, env)
 
         return output
 
@@ -118,13 +109,23 @@ class PluginRemote:
 
         return self._remote.transferFrom(source, destination)
 
-    def submitJob(self, script: T, changeDir: bool = True) -> T:
+    def submitJob(
+        self,
+        script: T,
+        changeDir: bool = True,
+        arguments: Optional[list[str]] = None,
+        env: Optional[dict] = None,
+    ) -> T:
         """
         Submit a slurm job to the queue system of the cluster (SLURM)
 
         :param script: The  absolute path to the script to submit or a list of path to submit more than one at once.
         :param: changeDir: automatically cd to the container folder of the script. \
         Disable this if using the cd context manager or for specific cases.
+        :param arguments: A list of arguments to pass to the SBATCH command. \
+            For example, ["--partition=short", "--time=01:00:00", "--dependency=afterok:12345"].
+        :param env: A dictionary of environment variables to set for the job. \
+            For example, {"MY_VAR": "value"}.
 
         :return: The job ID.
         """
@@ -141,7 +142,9 @@ class PluginRemote:
             scriptsToSubmit = script
 
         # _submitJob is not intended to be called by users
-        slurmJob = SlurmJob._submitJob(self, scriptsToSubmit, changeDir)
+        slurmJob = SlurmJob._submitJob(
+            self, scriptsToSubmit, changeDir, arguments=arguments, env=env
+        )
 
         if not self.block.jobs:
             self.block.jobs = slurmJob
@@ -2374,19 +2377,13 @@ class SlurmJob(HorusPydanticModel):
 
         remote.command(f"scancel {self.job_id}")
 
-    def reSubmit(self, remote: RemoteUnion) -> list["SlurmJob"]:
-        """
-        Submits again the job
-        """
-
-        if not self.command:
-            raise ValueError("Could not submit the job. Missing original submit command.")
-
-        return self._submitJob(remote, [self.command])
-
     @staticmethod
     def _submitJob(
-        remote: RemoteUnion, scripts: list[str], changeDir: bool = True
+        remote: RemoteUnion,
+        scripts: list[str],
+        changeDir: bool = True,
+        arguments: Optional[list[str]] = None,
+        env: Optional[dict] = None,
     ) -> list["SlurmJob"]:
         """
         Submit multiple slurm jobs to the queue system of the cluster (SLURM)
@@ -2397,11 +2394,28 @@ class SlurmJob(HorusPydanticModel):
 
         :return: List of SlurmJob instances.
         """
+
+        if arguments:
+            # Parse the arguments to ensure no spaces are present (convert to quotes if needed)
+
+            parguments = []
+            for arg in arguments:
+                if "=" in arg:
+                    # If the argument is in the format --arg=value, we can keep it as is
+                    arg, value = arg.split("=", 1)
+                    value = value.replace("'", "").replace('"', "").replace(" ", "_")
+                    parguments.append(f'{arg}="{value}"')
+                else:
+                    # Otherwise, we assume it's a simple argument and quote it
+                    parguments.append(f'"{arg}"')
+
+            arguments = parguments
+
         commands = []
         for script in scripts:
             scontrolCmd = SlurmJob.SCONTROL_COMMAND("$jobid")
-            command = "jobid=$(sbatch {} | awk '{{print $4}}'); if [ -z \"$jobid\" ]; then exit 1; fi; {}".format(
-                script, scontrolCmd
+            command = "jobid=$(sbatch {} {} | awk '{{print $4}}'); if [ -z \"$jobid\" ]; then exit 1; fi; {}".format(
+                " ".join(arguments) if arguments else "", script, scontrolCmd
             )
 
             if changeDir:
@@ -2413,7 +2427,7 @@ class SlurmJob(HorusPydanticModel):
         fullCommand = f"; echo {SlurmJob.SEPARATOR};".join(commands)
 
         try:
-            out = remote.command(fullCommand)
+            out = remote.command(fullCommand, env=env)
             jobOutputs = out.split(SlurmJob.SEPARATOR)
             slurmJobs = [SlurmJob.parseScontrolToSlurmJob(jobOutput) for jobOutput in jobOutputs]
         except Exception as exc:

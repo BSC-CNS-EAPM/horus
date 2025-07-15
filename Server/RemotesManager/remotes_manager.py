@@ -215,6 +215,7 @@ class RemotesAPI:
         timeout: t.Optional[int] = None,
         forceLocal: bool = False,
         mergeStdErr: bool = True,
+        env: t.Optional[dict[str, str]] = None,
     ) -> str:  # pylint: disable=method-hidden
         """
         Runs a command on the remote (or locally).
@@ -244,6 +245,7 @@ class RemotesAPI:
                     timeout=timeout,
                     text=True,
                     check=False,
+                    env=env,
                 )
 
                 def logCommandOutput(o: str):
@@ -292,7 +294,7 @@ class RemotesAPI:
 
             if not hasattr(self.conn, "transport") or not self.loadProfile:
                 # Execute the command the old way
-                return self._oldCommand(command, timeout)
+                return self._oldCommand(command, timeout, env)
 
             if not self.conn.transport:
                 raise Exception("Connection is not open.")
@@ -306,6 +308,11 @@ class RemotesAPI:
 
             # Construct command to source bashrc and execute the actual command
             bash_command = f'bash -l -c "source ~/.bashrc 2>/dev/null || source /etc/bash.bashrc 2>/dev/null; {command}"'
+
+            if env:
+                # Add environment variables to the command
+                env_vars = " ".join(f'export {key}="{value}"' for key, value in env.items())
+                bash_command = f'bash -l -c "{env_vars}; {bash_command}"'
 
             # Add timeout if specified for the command itself
             if timeout is not None:
@@ -366,7 +373,9 @@ class RemotesAPI:
                 except:
                     pass
 
-    def _oldCommand(self, command: str, timeout: t.Optional[int] = None):
+    def _oldCommand(
+        self, command: str, timeout: t.Optional[int] = None, env: t.Optional[dict] = None
+    ) -> str:
         # Run command on remote
         # Hide is needed to avoid the output to be printed on the console
         # in_stream is needed to avoid fabric raising OSError (fabric
@@ -377,7 +386,12 @@ class RemotesAPI:
             if timeout:
                 command = "timeout {timeout} {command}".format(timeout=timeout, command=command)
 
-            out_cmd = self.conn.run(command, hide=True, in_stream=False)
+            out_cmd = self.conn.run(
+                command,
+                hide=True,
+                in_stream=False,
+                env=env,
+            )
             out = str(out_cmd.stdout.strip())
             err = str(out_cmd.stderr.strip())
 
