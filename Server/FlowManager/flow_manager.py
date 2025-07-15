@@ -6,7 +6,6 @@ Flow manager
 from abc import ABC, abstractmethod
 import os
 import shutil
-import subprocess
 import sys
 import json
 import typing
@@ -1281,6 +1280,15 @@ class Flow:
         If None, no updates will be sent (intended for command line execution)
         """
 
+        logging.getLogger("Horus").info(
+            "Running flow '%s' with placedID %s, resetRemoteBlock=%s, resetFlow=%s, continueSlurm=%s",
+            self.path,
+            placedID,
+            resetRemoteBlock,
+            resetFlow,
+            continueSlurm,
+        )
+
         # Reset the flow error
         self.flowError = ""
 
@@ -1431,12 +1439,32 @@ class Flow:
             # Pause the flow so the user can fix the connection issues
             self.status = self.FlowStatus.PAUSED
             self.flowError = str(ce)
+
+            logging.getLogger("Horus").error(
+                "Connection failed while running flow '%s': %s",
+                self.path,
+                str(ce),
+            )
+
         except StoppedFlowException:
             self.stop()
+
+            logging.getLogger("Horus").info(
+                "Flow '%s' stopped.",
+                self.path,
+            )
         except ErrorRunningBlock as er:
             self.flowError = str(er)
             self.currentExecuting = None
             self.status = self.FlowStatus.ERROR
+
+            logging.getLogger("Horus").error(
+                "Error running block '%s' in flow '%s': %s",
+                er.block.id,
+                self.path,
+                str(er),
+            )
+
         except KeyboardInterrupt as ke:
             raise ke
         except BaseException as be:
@@ -1463,6 +1491,12 @@ class Flow:
             # Send the flow to the frontend if a socket is provided
             # Send a request to the main server to remove the flow from the running flows list
             self._socket.removeFinishedFlowFromRunningFlows(self.path) if self._socket else None
+
+        logging.getLogger("Horus").info(
+            "Flow '%s' finished with status '%s'.",
+            self.path,
+            self.status.value,
+        )
 
     def _computeFinalTime(self):
         """
