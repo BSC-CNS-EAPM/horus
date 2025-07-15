@@ -197,6 +197,14 @@ class PluginManager(metaclass=HorusSingleton):
                 f for f in self.devPluginsFolders if os.path.exists(f) and not f.startswith("#")
             ]
 
+            # Add more if added using the HORUS_DEV_PLUGINS_FOLDERS environment variable
+            additionalDevFolders = os.getenv("HORUS_DEV_PLUGINS_FOLDERS", "").split(",")
+            additionalDevFolders = [
+                f.strip() for f in additionalDevFolders if f.strip() and os.path.exists(f.strip())
+            ]
+
+            self.devPluginsFolders.extend(additionalDevFolders)
+
         except Exception as e:
             logging.getLogger("Horus").error(
                 "Could not read additional development plugins folders: %s", str(e)
@@ -610,7 +618,7 @@ class PluginManager(metaclass=HorusSingleton):
                     devPlugins.append(path)
 
         # plugins = defaultPlugins + installedPlugins
-        plugins = devPlugins + defaultPlugins + installedPlugins
+        plugins = devPlugins + installedPlugins + defaultPlugins
 
         return plugins
 
