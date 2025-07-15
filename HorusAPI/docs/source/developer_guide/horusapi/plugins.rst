@@ -172,8 +172,16 @@ run the following command in your terminal:
     # macOS
     ln -s /absolute/path/to/your/plugin /Users/<username>/Library/Application\ Support/horus/Plugins
 
-You can also change the folder where Horus looks for the installed plugins using the :bdg-secondary-line:`HORUS_PLUGINS_DIR` environment variable. Check all the
+You can also change the folder where Horus looks for the installed plugins using the :bdg-secondary-line:`HORUS_PLUGINS_DIR` or :bdg-secondary-line:`HORUS_DEV_PLUGINS_FOLDERS` environment variable. Check all the
 Horus options in the :ref:`running` section.
+
+.. note::
+
+    The :bdg-secondary-line:`Plugins` are imported in the following order:
+
+    1. Development plugins
+    2. Installed plugins
+    3. Default plugins
 
 .. warning::
 

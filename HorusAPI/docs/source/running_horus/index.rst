@@ -37,6 +37,7 @@ In addition to command-line options, Horus allows configuration through the foll
 - **HORUS_APP_SUPPORT_DIR**: Specifies the directory path for the App Support folder, which holds user configurations, remotes, and installed plugins.
 - **HORUS_DEFAULT_PLUGINS_DIR**: Defines the path for default plugins that cannot be uninstalled. The default Horus plugin is located here. By default, this is set to ``app_support_dir/DefaultPlugins``.
 - **HORUS_PLUGINS_DIR**: Indicates the directory for user-installed plugins. By default, this points to ``app_support_dir/Plugins``.
+- **HORUS_DEV_PLUGINS_FOLDERS**: Specifies additional directories for development plugins. This is useful for developers who want to test plugins without installing them. Multiple directories can be specified, separated by commas.
 - **HORUS_PUBLIC_FLOWS**: Directory for public flows. Intended to be used in WebApp mode.
 - **HORUS_ROOT**: Root path where the server runs. Defaults to "/".
 - **HORUS_GUI**: Sets the GUI backend to be used. Available options are QT and GTK (Linux only), or Cocoa (macOS).
