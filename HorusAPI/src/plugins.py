@@ -629,6 +629,12 @@ class VariableTypes(str, Enum):
     ["A", "B", "C"].
     """
 
+    PASSWORD = "password"
+    """
+    A password variable. It will render as a password input field.
+    The resulting value will be a string.
+    """
+
     @staticmethod
     def getTypes():
         """

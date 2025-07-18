@@ -48,6 +48,7 @@ export function HorusViewTabs({ tabs, disabled, onTabChange }: TabsProps) {
         disabled={disabled}
       />
       <div
+        key={currentTab}
         className={`p-4 bg-gray-100 rounded-b-lg rounded-tr-lg ${
           currentTab === tabKeys[0] ? "" : "rounded-tl-lg"
         }`}

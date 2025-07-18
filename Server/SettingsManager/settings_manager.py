@@ -62,6 +62,11 @@ class Setting:
     the setting will always return the default value
     """
 
+    variables: typing.List[str] = []
+    """
+    Compatibility for list and group variables.
+    """
+
     @property
     def value(self):
         """
@@ -81,6 +86,7 @@ class Setting:
         type: VariableTypes = VariableTypes.STRING,
         allowedValues: typing.Optional[typing.List[typing.Any]] = None,
         desktopOnly: bool = False,
+        variables: typing.Optional[typing.List[str]] = None,
     ):
         """
         Create a Setting instance
@@ -101,6 +107,7 @@ class Setting:
         self.description = description
         self.category = category
         self.type = type
+        self.variables = variables if variables is not None else []
 
         if allowedValues is None:
             allowedValues = []
@@ -139,6 +146,7 @@ class Setting:
             "type": self.type.value,
             "allowedValues": self.allowedValues if len(self.allowedValues) > 0 else None,
             "desktopOnly": self.desktopOnly,
+            "variables": self.variables if len(self.variables) > 0 else None,
         }
 
 
@@ -188,8 +196,10 @@ class SettingsManager:
 
     def _createSettings(self):
         """
-        If no settings file exists, create one with the default settings
+        If no settings file exists, create one with the default settings, using atomic write.
         """
+
+        import tempfile
 
         # Check if the default settings file exists
         if not os.path.exists(self.defaultSettingsPath):
@@ -199,9 +209,13 @@ class SettingsManager:
         with open(self.defaultSettingsPath, "r", encoding="utf-8") as f:
             defaultSettings = json.load(f)
 
-        # Write the default settings to the user settings file
-        with open(self.userSettingsPath, "w", encoding="utf-8") as f:
-            json.dump(defaultSettings, f)
+        # Write to a temporary file first, then atomically replace
+        dir_name = os.path.dirname(self.userSettingsPath)
+        with tempfile.NamedTemporaryFile("w", dir=dir_name, delete=False, encoding="utf-8") as tf:
+            json.dump(defaultSettings, tf)
+            tempname = tf.name
+
+        os.replace(tempname, self.userSettingsPath)
 
     def _loadSettings(self):
         """
@@ -217,7 +231,14 @@ class SettingsManager:
         try:
             with open(self.userSettingsPath, "r", encoding="utf-8") as f:
                 fileSettings = json.load(f)
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as jose:
+
+            logging.getLogger("Horus").error(
+                "The settings file is corrupted.\
+                Restoring default settings. Error: %s",
+                jose,
+            )
+
             # If the settings file is corrupted, create a new one
             self._createSettings()
 
@@ -241,7 +262,14 @@ class SettingsManager:
             # If the description, name or category of a setting has changed, update it
             if any(
                 fileSettings[key].get(k) != value.get(k)
-                for k in {"description", "name", "category", "type", "allowedValues"}
+                for k in {
+                    "description",
+                    "name",
+                    "category",
+                    "type",
+                    "allowedValues",
+                    "variables",
+                }
                 if k in fileSettings[key] and k in value
             ):
 
@@ -282,6 +310,7 @@ class SettingsManager:
                     VariableTypes(value["type"]),
                     value.get("allowedValues", []),
                     value.get("desktopOnly", False),
+                    value.get("variables", []),
                 )
             except KeyError as keye:
                 print(
@@ -300,6 +329,7 @@ class SettingsManager:
                     VariableTypes(defaultSettings[key]["type"]),
                     defaultSettings[key].get("allowedValues", []),
                     defaultSettings[key].get("desktopOnly", True),
+                    defaultSettings[key].get("variables", []),
                 )
 
             # If the setting already exists, raise an exception
@@ -377,17 +407,22 @@ class SettingsManager:
 
     def _saveSettings(self):
         """
-        Updates the user settings file
+        Updates the user settings file using atomic write
         """
+
+        import tempfile
 
         settingsToSave = {}
 
         for id, setting in self.settings.items():
             settingsToSave[id] = setting.toDict()
 
-        # Save the settings
-        with open(self.userSettingsPath, "w", encoding="utf-8") as file:
-            json.dump(settingsToSave, file)
+        dir_name = os.path.dirname(self.userSettingsPath)
+        with tempfile.NamedTemporaryFile("w", dir=dir_name, delete=False, encoding="utf-8") as tf:
+            json.dump(settingsToSave, tf, indent=4)
+            tempname = tf.name
+
+        os.replace(tempname, self.userSettingsPath)
 
     def listSettings(self) -> typing.Dict[str, dict]:
         """

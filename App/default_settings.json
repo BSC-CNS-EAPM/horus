@@ -115,5 +115,41 @@
       "shell"
     ],
     "desktopOnly": true
+  },
+  "repos": {
+    "name": "Plugin repositories",
+    "description": "A list of plugin repositories to use for the application. This is used to fetch plugins from remote sources.",
+    "category": "Plugin Repositories",
+    "value": [
+      {
+        "repository_name": "Official Plugin Repository",
+        "repository_url": "https://horus.bsc.es/repo_api/"
+      }
+    ],
+    "type": "_list",
+    "desktopOnly": true,
+    "variables": [
+      {
+        "description": "Repository Name",
+        "id": "repository_name",
+        "name": "Repository Name",
+        "placeholder": "Custom repository name",
+        "type": "string"
+      },
+      {
+        "description": "Repository URL",
+        "id": "repository_url",
+        "name": "Repository URL",
+        "placeholder": "API URL",
+        "type": "string"
+      },
+      {
+        "description": "Repository token",
+        "id": "repository_token",
+        "name": "Repository token",
+        "placeholder": "Private token (optional)",
+        "type": "password"
+      }
+    ]
   }
 }
