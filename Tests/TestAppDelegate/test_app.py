@@ -171,6 +171,7 @@ def test_setting_to_dict():
         "type": "string",
         "allowedValues": None,
         "desktopOnly": False,
+        "variables": None,
     }
 
 

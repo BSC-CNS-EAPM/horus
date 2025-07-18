@@ -81,6 +81,11 @@ if typing.TYPE_CHECKING:
 else:
     currentUser = flask_login.current_user
 
+URL_TOKEN = "://"
+REPOIDURL_PREFIX = f"repoID{URL_TOKEN}"
+PLUGINIDURL_PREFIX = f"pluginID{URL_TOKEN}"
+REPONAME_PREFIX = f"repoName{URL_TOKEN}"
+
 
 class DefaultPluginConfigException(Exception):
     """
@@ -98,6 +103,16 @@ class PluginMetaNotFound(Exception):
     """
     Exception raised when a plugin meta is not found.
     """
+
+
+class PluginRepos(BaseModel):
+    """
+    Model for the plugin repositories.
+    """
+
+    repository_url: str
+    repository_token: typing.Optional[str] = None
+    repository_name: typing.Optional[str] = None
 
 
 class PluginManager(metaclass=HorusSingleton):
@@ -252,23 +267,44 @@ class PluginManager(metaclass=HorusSingleton):
 
     def _loopPluginsToInstall(self, files: typing.Sequence[str], asDefault: bool = False):
         downloadDir = os.path.join(self.appSupportDir, "plugin_downloads")
+        os.makedirs(downloadDir, exist_ok=True)
         for f in files:  # pylint: disable=invalid-name
             try:
                 # If the file is a plugin URL from the web, download it
                 if f.startswith("https://") or f.startswith("http://"):
                     print("Downloading plugin from URL...")
-
-                    os.makedirs(downloadDir, exist_ok=True)
-
                     f = self._downloadPluginFromURL(f, downloadDir)
 
-                # If the file is a plugin from the plugin repo (starts with pluginID://)
+                # If the file is a plugin from the plugin repo (starts with pluginID:// or repoID://)
                 # then download the specific version
                 # for this system
-                if f.startswith("pluginID://"):
-                    pluginID = f.split("://")[1]
-                    os.makedirs(downloadDir, exist_ok=True)
-                    f = self._downloadPluginFromRepo(pluginID, downloadDir)
+                if f.startswith(REPOIDURL_PREFIX) or f.startswith(PLUGINIDURL_PREFIX):
+                    try:
+                        repoID = None
+                        pluginID = None
+                        repoName = None
+                        if f.startswith(REPOIDURL_PREFIX):
+
+                            # The URL is formed like:
+                            # repoID://<repo_url>/repoName://<repo_name>/pluginID://<plugin_id>
+                            # Therefore we need to split the URL
+                            repoID = "".join(f.split(REPOIDURL_PREFIX)[1]).split(
+                                REPONAME_PREFIX, maxsplit=1
+                            )[0]
+
+                            pluginID = f.split(PLUGINIDURL_PREFIX)[1]
+
+                            repoName = f.split(REPONAME_PREFIX)[1].split(PLUGINIDURL_PREFIX)[0]
+
+                        if f.startswith(PLUGINIDURL_PREFIX):
+                            pluginID = f.split(PLUGINIDURL_PREFIX)[1]
+
+                        if not pluginID:
+                            raise ValueError("Plugin ID not found in the URL.")
+
+                        f = self._downloadPluginFromRepo(pluginID, downloadDir, repoID, repoName)
+                    except Exception as e:
+                        raise Exception(f"Failed to download plugin from repository: {e}") from e
 
                 print("Installing plugin: " + f)
                 self._installPlugin(f, asDefault)
@@ -276,7 +312,27 @@ class PluginManager(metaclass=HorusSingleton):
                 if os.path.exists(downloadDir):
                     shutil.rmtree(downloadDir, ignore_errors=True)
 
-    def _downloadPluginFromRepo(self, pluginID: str, downloadDir: str) -> str:
+    def _getRepos(self) -> typing.List[PluginRepos]:
+        parsed_repos = []
+        for r in self.horusSettings.getSetting("repos").value or []:
+            try:
+                parsed_repos.append(PluginRepos(**r))
+            except ValidationError as e:
+                logging.getLogger("Horus").error(
+                    "Invalid plugin repository configuration: %s. Error: %s",
+                    r,
+                    e,
+                )
+                continue
+        return parsed_repos
+
+    def _downloadPluginFromRepo(
+        self,
+        pluginID: str,
+        downloadDir: str,
+        repo_url: typing.Optional[str] = None,
+        repo_name: typing.Optional[str] = None,
+    ) -> str:
         """
         Downloads a plugin from the repo.
 
@@ -291,13 +347,56 @@ class PluginManager(metaclass=HorusSingleton):
 
         print(f"Downloading plugin {pluginID}...")
 
-        # First get plugin info
-        urlForInfo = f"https://horus.bsc.es/repo_api/plugins/{pluginID}"
+        repos = self._getRepos()
+        headers = {}
 
-        pluginResponse = requests.get(urlForInfo, timeout=30)
+        pluginRepo = None
+        if repo_url:
+            for repo in repos:
+                if repo.repository_url == repo_url and repo.repository_name == repo_name:
+                    pluginRepo = repo
+                    urlForInfo = f"{repo.repository_url}/plugins/{pluginID}"
 
-        if pluginResponse.status_code != 200:
-            raise Exception(f"Failed to get plugin info: {pluginResponse.status_code}")
+                    headers["Authorization"] = f"Bearer {repo.repository_token}"
+
+                    pluginResponse = requests.get(urlForInfo, headers=headers, timeout=30)
+
+                    if pluginResponse.status_code != 200:
+                        logging.getLogger("Horus").debug(
+                            "Failed to get plugin info from %s: %s",
+                            urlForInfo,
+                            pluginResponse.status_code,
+                        )
+
+                    break
+        else:
+            # Find the plugin in the repositories
+            for repo in repos:
+                print(f"Searching in repository: {repo.repository_url}")
+
+                # First get plugin info
+                urlForInfo = f"{repo.repository_url}/plugins/{pluginID}"
+
+                if repo.repository_token:
+                    headers["Authorization"] = f"Bearer {repo.repository_token}"
+
+                pluginResponse = requests.get(urlForInfo, headers=headers, timeout=30)
+
+                if pluginResponse.status_code != 200:
+                    logging.getLogger("Horus").debug(
+                        "Failed to get plugin info from %s: %s",
+                        urlForInfo,
+                        pluginResponse.status_code,
+                    )
+                    continue
+
+                pluginRepo = repo
+                break
+
+        if pluginRepo is None:
+            raise Exception(
+                f"Failed to get {pluginID} plugin info from any repository. Does it exist?"
+            )
 
         jsonResponse = pluginResponse.json()
 
@@ -341,13 +440,15 @@ class PluginManager(metaclass=HorusSingleton):
 
         # Download the plugin
         urlForPlugin = (
-            f"https://horus.bsc.es/repo_api/download?"
+            f"{pluginRepo.repository_url}/download?"
             f"plugin_id={pluginID}&version={compatibleVersion}&platform={compatiblePlatform}"
         )
 
-        return self._downloadPluginFromURL(urlForPlugin, downloadDir)
+        return self._downloadPluginFromURL(urlForPlugin, downloadDir, headers=headers)
 
-    def _downloadPluginFromURL(self, url: str, downloadDir: str) -> str:
+    def _downloadPluginFromURL(
+        self, url: str, downloadDir: str, headers: typing.Optional[dict] = None
+    ) -> str:
         """
         Downloads a plugin from a URL.
 
@@ -363,7 +464,7 @@ class PluginManager(metaclass=HorusSingleton):
 
         print(f"Downloading plugin from {url}...")
 
-        with requests.get(url, stream=True, timeout=30) as pluginResponse:
+        with requests.get(url, stream=True, timeout=30, headers=headers) as pluginResponse:
             pluginResponse.raise_for_status()
 
             total = int(pluginResponse.headers.get("content-length", 1))
@@ -581,7 +682,9 @@ class PluginManager(metaclass=HorusSingleton):
 
             # Delete the config and the plugin
             if plugin:
-                shutil.rmtree(os.path.join(self.appSupportDir, "config", plugin.id))
+                config_dir = os.path.join(self.appSupportDir, "config", plugin.id)
+                if os.path.exists(config_dir):
+                    shutil.rmtree(config_dir)
 
             shutil.rmtree(pluginPath, ignore_errors=True)
 

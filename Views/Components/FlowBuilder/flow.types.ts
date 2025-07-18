@@ -76,7 +76,7 @@ export enum PluginVariableTypes {
   CUSTOM = "custom",
   CHECKBOX = "checkbox",
   RADIO = "radio",
-  PASSWORD = "PASSWORD",
+  PASSWORD = "password",
   CHAIN_INTERACTIVE = "chain_interactive",
   RESIDUE_RANGE = "residue_range",
 }

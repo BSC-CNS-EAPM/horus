@@ -194,7 +194,9 @@ class FileExplorer:
         if not self.path.is_dir():
             raise PathIsNotDirectory(self.path)
 
-        if allowedExtensions == ["*"]:
+        if allowedExtensions == ["*"] or (
+            isinstance(allowedExtensions, list) and len(allowedExtensions) == 0
+        ):
             allowedExtensions = None
 
         # Parse the allowed extensions to add a leading dot if they do not have it

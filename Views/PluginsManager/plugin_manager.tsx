@@ -1,5 +1,5 @@
 // React imports
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 
 // Web-server imports
 import { socket } from "../Utils/socket";
@@ -34,6 +34,7 @@ import { HorusViewTabs, Tab } from "../Components/Tabs";
 import RemoteIcon from "../Components/Toolbar/Icons/Remote";
 import { HorusLazyLog } from "../Components/HorusLazyLog/HorusLazyLog";
 import { SearchComponent } from "@/Components/Search/Search";
+import { useSettings } from "@/Main/app";
 
 type ConfigBlockType = Array<{
   remote: string;
@@ -100,7 +101,7 @@ function PluginConfigView(props: PluginConfigViewProps) {
   const [tempChanges, setTempChanges] = useState<Block[]>([]);
   const [hasChanges, setHasChanges] = useState<boolean>(false);
   const [selectedRemote, setSelectedRemote] = useState(
-    props.configBlocks[0]?.remote ?? "Error getting configuration",
+    props.configBlocks[0]?.remote ?? "Error getting configuration"
   );
   const [saving, setSaving] = useState(false);
 
@@ -109,24 +110,24 @@ function PluginConfigView(props: PluginConfigViewProps) {
   const handleModifyConfig = (
     value: any,
     variableToChange: PluginVariable,
-    groupID?: string,
+    groupID?: string
   ) => {
     const changeID = groupID ? groupID : variableToChange.id;
 
     const updatedChanges = [...tempChanges]; // Create a copy of tempChanges
     const existingChangeIndex = updatedChanges.findIndex(
-      (change) => change.id === changeID,
+      (change) => change.id === changeID
     ); // Check if the change already exists
 
     // Update the value of the variable in the tempChanges array (set to the block)
     if (existingChangeIndex >= 0) {
       const updateVar = updatedChanges[existingChangeIndex]!.variables.find(
-        (variable) => variable.id === changeID,
+        (variable) => variable.id === changeID
       )!;
       // If the change already exists, update the value
       if (groupID) {
         updateVar.variables!.find(
-          (variable) => variable.id === variableToChange.id,
+          (variable) => variable.id === variableToChange.id
         )!.value = value;
       } else {
         updateVar.value = value;
@@ -141,13 +142,13 @@ function PluginConfigView(props: PluginConfigViewProps) {
 
       for (let i = 0; i < configBlock.config.length; i++) {
         const variable = configBlock.config[i]!.variables.find(
-          (variable) => variable.id === changeID,
+          (variable) => variable.id === changeID
         );
         if (variable) {
           // Update the value of the variable
           if (groupID) {
             variable.variables!.find(
-              (variable) => variable.id === variableToChange.id,
+              (variable) => variable.id === variableToChange.id
             )!.value = value;
           } else {
             variable.value = value;
@@ -179,7 +180,7 @@ function PluginConfigView(props: PluginConfigViewProps) {
       const newConfig = [...configBlock?.config];
       for (let i = 0; i < tempChanges.length; i++) {
         const blockIndex = newConfig.findIndex(
-          (block) => block.id === tempChanges[i]!.id,
+          (block) => block.id === tempChanges[i]!.id
         )!;
         newConfig[blockIndex] = tempChanges[i]!;
       }
@@ -209,7 +210,7 @@ function PluginConfigView(props: PluginConfigViewProps) {
   };
 
   const currentVariables = configBlocks.find(
-    (c) => c.remote === selectedRemote,
+    (c) => c.remote === selectedRemote
   );
 
   const getGroupedVariables = () => {
@@ -480,7 +481,7 @@ function PluginCard(props: PluginCardProps) {
                 <button
                   onClick={() => {
                     props.setSubview(
-                      <PluginConfigView configBlocks={plugin.config} />,
+                      <PluginConfigView configBlocks={plugin.config} />
                     );
                   }}
                 >
@@ -628,12 +629,12 @@ export function PluginManager() {
 
     // Remove the plugin from the list
     newPluginList.plugins = newPluginList.plugins.filter(
-      (plugin) => plugin.id !== id,
+      (plugin) => plugin.id !== id
     );
 
     // Also remove it from the error plugins
     newPluginList.errors = newPluginList.errors.filter(
-      (plugin) => plugin.id !== id,
+      (plugin) => plugin.id !== id
     );
 
     setPluginList(newPluginList);
@@ -683,7 +684,7 @@ export function PluginManager() {
               text="Install plugin"
               action={() => {
                 handleSetSubview(
-                  <InstallingPluginView onPluginInstall={fetchData} />,
+                  <InstallingPluginView onPluginInstall={fetchData} />
                 );
               }}
             />
@@ -784,7 +785,7 @@ function InstallingPluginView({
       })
       .catch(() => {
         horusAlert(
-          "Error retrieving data while installing plugin. Please check the Horus console for details.",
+          "Error retrieving data while installing plugin. Please check the Horus console for details."
         );
       })
       .finally(() => {
@@ -900,7 +901,7 @@ export type PluginInstallProps = {
   onPluginInstall: (file: string) => void;
 };
 
-type InstallationViewsType = "manual" | "repo";
+type InstallationViewsType = "manual" | string;
 
 function ManualOrStoreInstall({
   selectedFile,
@@ -908,6 +909,33 @@ function ManualOrStoreInstall({
   isInstalling,
   onPluginInstall,
 }: PluginInstallProps) {
+  const settings = useSettings();
+
+  const getRepos = useMemo(() => {
+    if (!settings) {
+      return {};
+    }
+
+    const repos = settings["repos"]?.value.map((r: any) => ({
+      title: r.repository_name,
+      icon: <RemoteIcon />,
+      view: (
+        <PluginBrowserRoot
+          key={`${r.repository_name}-${r.repository_url}-${r.repository_token}`}
+          isInstalling={isInstalling}
+          selectedFile={selectedFile}
+          setSelectedFile={setSelectedFile}
+          onPluginInstall={onPluginInstall}
+          repoURL={r.repository_url}
+          repoToken={r.repository_token}
+          repoName={r.repository_name}
+        />
+      ),
+    }));
+
+    return repos;
+  }, [settings, isInstalling, selectedFile, setSelectedFile, onPluginInstall]);
+
   const tabs: {
     [key in InstallationViewsType]: {
       title: string;
@@ -915,18 +943,7 @@ function ManualOrStoreInstall({
       icon: JSX.Element;
     };
   } = {
-    repo: {
-      title: "Plugins repository",
-      icon: <PluginsIcon />,
-      view: (
-        <PluginBrowserRoot
-          isInstalling={isInstalling}
-          selectedFile={selectedFile}
-          setSelectedFile={setSelectedFile}
-          onPluginInstall={onPluginInstall}
-        />
-      ),
-    },
+    ...getRepos,
     manual: {
       title: "Manual install",
       icon: <OpenFlowIcon />,

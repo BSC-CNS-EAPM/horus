@@ -753,10 +753,10 @@ function StringVariableView(props: VariableViewProps) {
 function PasswordVariableView(props: VariableViewProps) {
   return (
     <input
-      className="plugin-variable-value"
+      className="plugin-variable-value mask-password"
       id={props.variable.id}
-      type="password"
       autoComplete="off"
+      aria-autocomplete="none"
       placeholder={props.variable.placeholder ?? ""}
       value={(props.currentValue as string) ?? ""}
       onChange={(e) => props.onChange(e.target.value)}
