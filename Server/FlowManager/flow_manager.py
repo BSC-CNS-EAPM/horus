@@ -674,11 +674,9 @@ class Flow:
         self, molState: typing.Optional[bytes] = None, smilesState: typing.Optional[dict] = None
     ) -> typing.Dict[str, typing.Any]:
         """
-        Writes the flow to the file
-
+        Writes the flow to the file atomically
         :returns: The encoded flow
         """
-
         if not self.path:
             raise Exception(f"The flow '{self.name}' has no path")
 
@@ -704,30 +702,43 @@ class Flow:
         else:
             smilesStateDict = smilesState
 
-        # Remove the current file
-        if os.path.exists(self.path):
-            os.remove(self.path)
+        # Write to temporary file first
+        temp_path = self.path + ".tmp"
 
         logging.getLogger("Horus").debug("Writing flow '%s'", self.name)
 
-        with zipfile.ZipFile(self.path, "w", zipfile.ZIP_DEFLATED) as zipFile:
-            zipFile.writestr(self.FLOW_FILE, json.dumps(encodedFlow, indent=4))
+        try:
+            with zipfile.ZipFile(temp_path, "w", zipfile.ZIP_DEFLATED) as zipFile:
+                zipFile.writestr(self.FLOW_FILE, json.dumps(encodedFlow, indent=4))
 
-            # Store again the molstar state
-            if molstarStateBytes is not None:
-                zipFile.writestr(self.MOLSTAR_STATE_FILE, molstarStateBytes)
+                # Store again the molstar state
+                if molstarStateBytes is not None:
+                    zipFile.writestr(self.MOLSTAR_STATE_FILE, molstarStateBytes)
 
-            # Store again the smiles state
-            if smilesStateDict is not None:
-                zipFile.writestr(self.SMILES_STATE_FILE, json.dumps(smilesStateDict, indent=4))
+                # Store again the smiles state
+                if smilesStateDict is not None:
+                    zipFile.writestr(
+                        self.SMILES_STATE_FILE, json.dumps(smilesStateDict, indent=4)
+                    )
 
+            # Atomic move - this prevents corruption if the write fails
+            if os.path.exists(self.path):
+                os.replace(temp_path, self.path)
+            else:
+                os.rename(temp_path, self.path)
+
+        except Exception as e:
+            # Clean up temp file if something went wrong
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            raise e
+
+        # Rest of your code remains the same...
         # Send the flow to the frontend on write
         if not self._socket:
             from Server import ExternalFlowRunnerSocket
 
-            # Assign the socket from the Socket File
             self._socket = ExternalFlowRunnerSocket(self.path)
-
         self._socket.emit("flow", self.encode(minimal=False), to=self.savedID)
 
         # Generate the results folder if needed
@@ -735,7 +746,6 @@ class Flow:
         if not os.path.exists(flowWorkDir):
             os.makedirs(flowWorkDir)
 
-        # Return the encoded flow in case its needed
         return encodedFlow
 
     @classmethod
