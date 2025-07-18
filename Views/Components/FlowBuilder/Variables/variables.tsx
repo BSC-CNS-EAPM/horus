@@ -68,7 +68,7 @@ export function PluginVariableView(props: PluginVariableViewProps) {
 
   const handleChange = useCallback(
     (value: any, varToChange?: PluginVariable, groupID?: string) => {
-      if (!variable.disabled) {
+      if (!variable.disabled && !isFlowActive) {
         if (variable.type === PluginVariableTypes.GROUP) {
           varToChange && onChange(value, varToChange, groupID);
         } else {
@@ -76,7 +76,7 @@ export function PluginVariableView(props: PluginVariableViewProps) {
         }
       }
     },
-    [variable, onChange],
+    [variable, onChange, isFlowActive]
   );
 
   // If the variable is any of the list types or the group, always ocuppy the whole width using min-w-full
@@ -161,9 +161,9 @@ export function PluginVariableView(props: PluginVariableViewProps) {
       </div>
       <div
         className={`plugin-variable-value flex justify-start w-full`}
-        style={{
-          pointerEvents: variable.disabled || isFlowActive ? "none" : "auto",
-        }}
+        // style={{
+        //   pointerEvents: variable.disabled || isFlowActive ? "none" : "auto",
+        // }}
       >
         <VariableRenderer
           variable={variable}
@@ -192,7 +192,7 @@ function VariableListView(props: VariableViewProps) {
           acc[variable.id] = variable.defaultValue ?? null;
         }
         return acc;
-      }, {}),
+      }, {})
     );
     onChange(newValues);
   };
@@ -208,7 +208,7 @@ function VariableListView(props: VariableViewProps) {
     index: number,
     value: any,
     id: string,
-    groupID?: string,
+    groupID?: string
   ) => {
     // Update the corresponding index on the values array
     const newValues = [...currentValue];
@@ -254,7 +254,7 @@ function VariableListView(props: VariableViewProps) {
     <div key="delete" className="w-[100px] text-center">
       Delete
       <hr></hr>
-    </div>,
+    </div>
   );
 
   const colsNum = cols.length;
@@ -294,13 +294,13 @@ function VariableListView(props: VariableViewProps) {
                     onChange={(
                       value: any,
                       variableToChange: PluginVariable,
-                      groupID?: string,
+                      groupID?: string
                     ) => {
                       internalOnChange(
                         index,
                         value,
                         variableToChange.id,
-                        groupID,
+                        groupID
                       );
                     }}
                     hideDescription={true}
@@ -367,7 +367,7 @@ function VariableRenderer(props: {
   const [currentValue, setCurrentValue] = useState(variableToRender.value);
 
   const handleVariableChangeInternal = (value: any) => {
-    if (props.isFlowActive) {
+    if (props.isFlowActive || props.variable.disabled) {
       return;
     }
     onChange(value);
@@ -648,7 +648,7 @@ function DropdownVariableView({
       variableToRender.allowedValues
     ) {
       onChange(
-        variableToRender.defaultValue ?? variableToRender?.allowedValues[0],
+        variableToRender.defaultValue ?? variableToRender?.allowedValues[0]
       );
     }
   }, [
@@ -829,8 +829,8 @@ function IntegerFloatVariableView(props: VariableViewProps) {
       if (variable.allowedValues) {
         setNumberMessage(
           `The value must be one of the following: ${variable.allowedValues.join(
-            ", ",
-          )}`,
+            ", "
+          )}`
         );
       }
     }

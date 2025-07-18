@@ -1118,3 +1118,34 @@ test_setoutput_first_action = SlurmBlock(
 )
 
 plugin.addBlock(test_setoutput_first_action)
+
+
+explicative_code_variable = PluginVariable(
+    id="explicative_code_variable",
+    name="Explicative code",
+    description="Explicative code",
+    type=VariableTypes.CODE,
+    disabled=True,
+    allowedValues=["python"],
+    defaultValue="""# This is an example of a code block
+print("Hello world")
+""",
+)
+
+disabled_string_list_variable = PluginVariable(
+    id="disabled_string_list_variable",
+    name="Disabled string list variable",
+    description="This variable is disabled",
+    type=VariableTypes.STRING_LIST,
+    allowedValues=["Value 1", "Value 2", "Value 3"],
+)
+
+explicative_block = PluginBlock(
+    id="explicative_block",
+    name="Explicative block",
+    description="This block is an example of a code block",
+    action=lambda block: None,
+    variables=[explicative_code_variable, disabled_string_list_variable],
+)
+
+plugin.addBlock(explicative_block)
