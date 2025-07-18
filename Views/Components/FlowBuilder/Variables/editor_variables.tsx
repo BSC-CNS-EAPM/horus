@@ -45,7 +45,7 @@ export function ObjectVariableView(props: VariableViewProps) {
         setIsWrongValue(true);
       }
     },
-    [props],
+    [props]
   );
 
   return (
@@ -81,7 +81,7 @@ export function CodeVariableView(props: VariableViewProps) {
 }
 
 export function HorusSmallVariableCodeEditor(
-  props: EditorProps & { variable: PluginVariable },
+  props: EditorProps & { variable: PluginVariable }
 ) {
   const { dockApi } = useContext(DockContext);
 
@@ -196,7 +196,13 @@ export function HorusSmallVariableCodeEditor(
           </div>
         </HorusPopover>
       </div>
-      <Editor {...props} onChange={props.onChange} />
+      <Editor
+        {...props}
+        onChange={props.onChange}
+        options={{
+          readOnly: isFlowActive || props.variable.disabled,
+        }}
+      />
     </div>
   );
 }
