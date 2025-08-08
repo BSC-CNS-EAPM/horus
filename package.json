@@ -56,6 +56,7 @@
     "@melloware/react-logviewer": "^5.0.6",
     "@monaco-editor/react": "^4.6.0",
     "@react-hook/resize-observer": "^2.0.2",
+    "@tabler/icons-react": "^3.34.1",
     "@tanstack/react-query": "^5.52.1",
     "@types/react": "^19.0.14",
     "@xyflow/react": "^12.4.4",

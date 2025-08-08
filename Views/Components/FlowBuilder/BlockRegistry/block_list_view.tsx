@@ -2,6 +2,7 @@
 import {
   ImgHTMLAttributes,
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useState,
@@ -30,6 +31,20 @@ import PluginsIcon from "@/Components/Toolbar/Icons/Plugins";
 import { useQuery } from "@tanstack/react-query";
 import { getPluginLogo } from "@/Components/logo";
 import { useSettings } from "@/Main/app";
+
+// Icons
+import {
+  IconChevronsUp,
+  IconPlus,
+  IconReload,
+  IconSelector,
+} from "@tabler/icons-react";
+import {
+  DockContext,
+  PANEL_REGISTRY,
+  addPanel,
+} from "@/Components/MainApp/PanelView";
+import { useUser } from "@/Login/profile";
 
 function PluginLogo({
   pluginID,
@@ -95,6 +110,8 @@ export function BlockRegistry() {
     queryFn: fetchBlocks,
   });
 
+  const { userData } = useUser();
+
   /**
    * Filters the list of blocks based on a search query.
    * @param query - The search query to filter the blocks by.
@@ -124,7 +141,7 @@ export function BlockRegistry() {
 
       setFilteredBlocks(filtered ?? []);
     },
-    [blocks],
+    [blocks]
   );
 
   // Update the filtered blocks when the search term changes
@@ -146,6 +163,14 @@ export function BlockRegistry() {
 
   const [showAllSignal, setShowAllSignal] = useState(0);
   const [collapseAllSignal, setCollapseAllSignal] = useState(0);
+  const [turn, setTurn] = useState(0);
+
+  const { dockApi } = useContext(DockContext);
+
+  useEffect(() => {
+    // Toggle the turn state to switch between showing all and collapsing all blocks
+    setTurn((prevTurn) => prevTurn + 1);
+  }, [showAllSignal, collapseAllSignal]);
 
   // Render
   return (
@@ -166,31 +191,55 @@ export function BlockRegistry() {
             <div className="flex flex-row items-center justify-between w-full">
               <div className="flow-title">Blocks</div>
               <div className="flex flex-row flex-wrap justify-end items-center gap-2 pb-2">
-                <AppButton
-                  action={() => {
-                    setCollapseAllSignal(collapseAllSignal + 1);
-                  }}
-                >
-                  Collapse
-                </AppButton>
-                <AppButton action={() => setShowAllSignal(showAllSignal + 1)}>
-                  Expand
-                </AppButton>
                 {horusSettings?.["developmentMode"]?.value && (
                   <AppButton
+                    title="Reload plugins"
                     action={async () => {
                       setReloadingPlugins(true);
                       horusGet("/api/plugins/reload")
                         .then(() => refetch())
                         .then(() =>
                           horusAlert(
-                            "Plugins reloaded! Blocks in the flow builder that changed need to be replaced",
-                          ),
+                            "Plugins reloaded! Blocks in the flow builder that changed need to be replaced"
+                          )
                         )
                         .finally(() => setReloadingPlugins(false));
                     }}
                   >
-                    Reload
+                    <IconReload />
+                  </AppButton>
+                )}
+                {turn % 2 === 0 ? (
+                  <AppButton
+                    action={() => setShowAllSignal(showAllSignal + 1)}
+                    title="Show all blocks"
+                  >
+                    <IconSelector />
+                  </AppButton>
+                ) : (
+                  <AppButton
+                    title="Collapse all blocks"
+                    action={() => {
+                      setCollapseAllSignal(collapseAllSignal + 1);
+                    }}
+                  >
+                    <IconChevronsUp />
+                  </AppButton>
+                )}
+                {(window.horusInternal.webApp === undefined ||
+                  (window.horusInternal.webApp?.allowCustomBlocks &&
+                    userData?.admin)) && (
+                  <AppButton
+                    title="New custom block"
+                    action={() => {
+                      addPanel({
+                        dockApi,
+                        component: PANEL_REGISTRY.blockEditor.component,
+                        panelID: PANEL_REGISTRY.blockEditor.id,
+                      });
+                    }}
+                  >
+                    <IconPlus />
                   </AppButton>
                 )}
               </div>
@@ -219,6 +268,7 @@ export function BlockRegistry() {
             ></hr>
           </div>
           <PluginBlocksGroupList
+            key={filteredBlocks.map((block) => block.id).join("-")}
             blocks={filteredBlocks}
             showAllSignal={showAllSignal}
             collapseAllSignal={collapseAllSignal}
@@ -240,7 +290,18 @@ function PluginBlocksGroupList({
 }) {
   const groupBlocksByPlugin = () => {
     let groupedBlocks: { [key: string]: Block[] } = {};
+
     blocks.forEach((block) => {
+      // If the block is custom (no plugin), group it under "Custom Blocks"
+      if (block.isCustom) {
+        if (!groupedBlocks["Custom Blocks"]) {
+          groupedBlocks["Custom Blocks"] = [];
+        }
+        groupedBlocks["Custom Blocks"].push(block);
+        return;
+      }
+
+      // Otherwise, group by plugin ID
       if (!groupedBlocks[block.plugin.id]) {
         groupedBlocks[block.plugin.id] = [];
       }
@@ -257,7 +318,7 @@ function PluginBlocksGroupList({
           acc[key] = value;
           return acc;
         },
-        {} as { [key: string]: Block[] },
+        {} as { [key: string]: Block[] }
       );
 
     return groupedBlocks;
@@ -277,14 +338,14 @@ function PluginBlocksGroupList({
         ([pluginID, groupedBlocks]) => {
           return (
             <PluginBlocksGroup
+              key={pluginID}
               showAllSignal={showAllSignal}
               collapseAllSignal={collapseAllSignal}
-              key={pluginID}
               pluginID={pluginID}
               groupedBlocks={groupedBlocks}
             />
           );
-        },
+        }
       )}
     </div>
   );
@@ -300,7 +361,7 @@ function useCollapsible({
   const setings = useSettings();
 
   const [show, setShow] = useState<boolean>(
-    setings?.["collapseBlocks"]?.value ? false : true,
+    setings?.["collapseBlocks"]?.value ? false : true
   );
 
   useEffect(() => {
@@ -358,7 +419,7 @@ function PluginBlocksGroup({
           acc[key] = value;
           return acc;
         },
-        {} as Record<string, Block[]>,
+        {} as Record<string, Block[]>
       );
 
     return { categories, uncategorized };
@@ -373,7 +434,11 @@ function PluginBlocksGroup({
         <PluginLogo pluginID={pluginID} className="object-contain w-5 h-5" />
         <div className="flex flex-row justify-between items-center w-full pl-2">
           <BreakLongUnderscoreNames
-            name={groupedBlocks[0]?.plugin.name ?? "Unnamed Plugin"}
+            name={
+              pluginID === "Custom Blocks"
+                ? pluginID
+                : (groupedBlocks[0]?.plugin.name ?? "Unnamed Plugin")
+            }
           />
           <MovingChevron down={show} />
         </div>

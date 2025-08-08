@@ -76,6 +76,7 @@ import { BlockView } from "../FlowBuilder/Blocks/block.view";
 import PlotIcon from "../Toolbar/Icons/Plot";
 import { MoleculePlotter } from "../MoleculePlotter/MoleculePlotter";
 import { HorusFileEditor } from "../FileEditor/FileEditor";
+import { BlockEditor } from "../FlowBuilder/BlockRegistry/BlockEditor";
 
 const MOLSTAR_PANEL: AddPanelOptions = {
   id: "molstar",
@@ -218,6 +219,13 @@ const MOLECULE_PLOTTER_PANEL: AddPanelOptions = {
   tabComponent: "editableTab",
 };
 
+const BLOCK_EDITOR_PANEL: AddPanelOptions = {
+  id: "blockEditor",
+  title: "Block Editor",
+  component: "blockEditor",
+  renderer: "onlyWhenVisible",
+};
+
 // To be used in other components
 export const PANEL_REGISTRY = {
   flow: FLOW_PANEL,
@@ -237,6 +245,7 @@ export const PANEL_REGISTRY = {
   fileEditor: FILE_EDITOR_PANEL,
   blockRegistry: BLOCK_REGISTRY_PANEL,
   moleculePlotter: MOLECULE_PLOTTER_PANEL,
+  blockEditor: BLOCK_EDITOR_PANEL,
 };
 
 // For DockApi
@@ -257,6 +266,7 @@ const PANEL_ICONS: Record<string, ReactElement> = {
   codeEditor: <CodeIcon />,
   fileEditor: <LogFile />,
   moleculePlotter: <PlotIcon />,
+  blockEditor: <SettingsIcon />,
 };
 
 function FlowTab(props: IDockviewPanelHeaderProps) {
@@ -314,7 +324,7 @@ function useTitle(api: DockviewPanelApi): string | undefined {
 }
 
 function EditableTitleTab(
-  props: IDockviewPanelHeaderProps & { icon?: ReactElement },
+  props: IDockviewPanelHeaderProps & { icon?: ReactElement }
 ) {
   const { api, ...rest } = props;
 
@@ -325,7 +335,7 @@ function EditableTitleTab(
       event.preventDefault();
       api.close();
     },
-    [api],
+    [api]
   );
 
   const onPointerDown = useCallback((e: React.MouseEvent) => {
@@ -340,7 +350,7 @@ function EditableTitleTab(
 
       api.setActive();
     },
-    [api],
+    [api]
   );
 
   const [isEditing, setIsEditing] = useState(false);
@@ -393,12 +403,12 @@ function EditableTitleTab(
 }
 
 function ExtensionsTab(
-  props: Omit<IDockviewPanelHeaderProps, "params"> & { params: PluginPage },
+  props: Omit<IDockviewPanelHeaderProps, "params"> & { params: PluginPage }
 ) {
   const page = props.params;
 
   const [extensionIcon, setExtensionIcon] = useState<ReactElement>(
-    <Chevron direction="right" />,
+    <Chevron direction="right" />
   );
 
   useEffect(() => {
@@ -426,7 +436,7 @@ function ExtensionsTab(
 function BaseTab(props: IDockviewDefaultTabProps) {
   const icon = PANEL_ICONS[props.api.component] ?? null;
   return (
-    <span className="dv-default-tab">
+    <span className="dv-default-tab flex flex-row gap-2">
       {icon}
       <DockviewDefaultTab {...props} />
     </span>
@@ -572,7 +582,7 @@ const components: Record<string, DockView> = {
   blockVariables: (props: IDockviewPanelProps) => {
     // Set the panel title to the block name
     props.api.setTitle(
-      `${props.params.block.name} - Block ${props.params.block.placedID}`,
+      `${props.params.block.name} - Block ${props.params.block.placedID}`
     );
 
     const key = `${props.params.block.id}-${props.params.block.placedID}`;
@@ -589,13 +599,28 @@ const components: Record<string, DockView> = {
   blockLogs: (props: IDockviewPanelProps) => {
     // Set the panel title to the block name
     props.api.setTitle(
-      `${props.params.block.name} - Block ${props.params.block.placedID}`,
+      `${props.params.block.name} - Block ${props.params.block.placedID}`
     );
 
     return <BlockLogsView block={props.params.block} />;
   },
   extensions: ExtensionComponent,
   error: () => <Error error="View not found" />,
+  blockEditor: (props: IDockviewPanelProps) => {
+    // Update the title of the tab to the block ID
+    props.api.setTitle(
+      `Block Editor - ${props.params?.block?.id || "New Block"}`
+    );
+
+    return (
+      <BlockEditor
+        block={props.params.block}
+        onBlockChange={(newBlock) => {
+          props.api.setTitle(`Block Editor - ${newBlock.id || "New Block"}`);
+        }}
+      />
+    );
+  },
 };
 
 type PanelFunctions = {

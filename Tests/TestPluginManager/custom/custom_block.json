@@ -1,0 +1,26 @@
+{
+    "action": "import random\n\ndef blockAction(block: PluginBlock):\n    num = random.randint(0, 10)\n    print(\"Generated random number: \", num)\n\n    block.setOutput(\"number\", num)",
+    "category": "Numbers",
+    "dependencies": [],
+    "description": "A block that prints a random number",
+    "finalAction": "def finalAction(block: SlurmBlock):\n    print('Final action')",
+    "id": "new_block",
+    "inputs": [],
+    "isCustom": true,
+    "name": "Print random number",
+    "outputs": [
+        {
+            "category": "",
+            "defaultValue": "",
+            "description": "The random number generated",
+            "disabled": false,
+            "id": "number",
+            "name": "Random number",
+            "placeholder": "",
+            "required": false,
+            "type": "number"
+        }
+    ],
+    "type": "action",
+    "variables": []
+}

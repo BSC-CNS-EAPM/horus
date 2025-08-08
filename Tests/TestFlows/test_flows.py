@@ -380,34 +380,6 @@ def test_no_inputs_block(flow_appDelegate):
         os.system(f"mv {path}.bak {path}")
 
 
-def test_molview_flow(flow_appDelegate):
-    path = os.path.join(os.path.dirname(__file__), "molview.flow")
-
-    # Save a backup of the clean flow
-    os.system(f"cp {path} {path}.bak")
-
-    flow = Flow.read(path)
-
-    try:
-        flow.run(placedID=1)
-
-        for block in flow.blocks:
-            print(block.blockLogs)
-
-        # Check that the flow has been updated
-        assert flow.status == Flow.FlowStatus.FINISHED
-
-        # Verify that all blocks are marked as finished
-        for block in flow.blocks:
-            assert block._finishedExecution
-
-        # Check that it has 6 molstar pending actions (is the ones present in the dev_plugin molviewSpecBlock)
-        assert len(flow.pendingActions) == 6
-    finally:
-        # Restore the flow by copying the .bak file to the original file
-        os.system(f"mv {path}.bak {path}")
-
-
 def test_extra_data_block(flow_appDelegate):
     path = os.path.join(os.path.dirname(__file__), "extra_data_test.flow")
 

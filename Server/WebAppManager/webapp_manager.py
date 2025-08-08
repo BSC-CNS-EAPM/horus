@@ -835,6 +835,12 @@ class WebAppManager:
     Whether to allow remote connections or only local
     """
 
+    allowCustomBlocks: bool
+    """
+    Whether to allow custom blocks definition. WARNING: Custom blocks allow for the execution of arbitrary code.
+    Use at your own risk.
+    """
+
     userManagement: UserManagement
     """
     User management information for the server such as the app support directory,
@@ -878,7 +884,8 @@ class WebAppManager:
         self.port = self.rawConfig.get("port", 5000)
         self.appName = self.rawConfig.get("appName", "Horus")
         self.companyName = self.rawConfig.get("companyName", "Horus")
-        self.allowRemotes = self.rawConfig.get("allowRemotes", True)
+        self.allowRemotes = self.rawConfig.get("allowRemotes", False)
+        self.allowCustomBlocks = self.rawConfig.get("allowCustomBlocks", False)
 
         externalURL = self.rawConfig.get("externalURL", None)
         if not externalURL:

@@ -36,10 +36,6 @@ import {
 import { Vec3 } from "molstar/lib/mol-math/linear-algebra";
 import { Expression } from "molstar/lib/mol-script/language/expression";
 
-// Import the molviewspec library
-import { loadMVS } from "molstar/lib/extensions/mvs/load";
-import { MVSData } from "molstar/lib/extensions/mvs/mvs-data";
-import { MolViewSpec } from "molstar/lib/extensions/mvs/behavior";
 import { Mp4Export } from "molstar/lib/extensions/mp4-export";
 import {
   StateObjectRef,
@@ -276,7 +272,6 @@ export default class HorusMolstar {
   private async initPlugin(options?: MolstarInitOptions) {
     const ExtensionMap = {
       // @ts-ignore
-      mvs: PluginSpec.Behavior(MolViewSpec),
       "mp4-export": PluginSpec.Behavior(Mp4Export),
     };
 
@@ -2758,9 +2753,6 @@ export default class HorusMolstar {
             representationParams: data.options?.theme,
           });
           break;
-        case "loadMVJS":
-          await this.loadMolViewSpecSession(data.session, data.replaceExisting);
-          break;
         case "focus":
           await this.focus(
             data.structureLabel,
@@ -2809,31 +2801,6 @@ export default class HorusMolstar {
       // Once the action has been applied, remove it from the pending actions
       this.actionsQueue.shift();
     }
-  }
-
-  /**
-   * Loads a Mol* session from a serialized MolViewSpec (MVS) session string.
-   *
-   * This method takes a serialized MolViewSpec session string and loads it into
-   * the Mol* plugin. If `replaceExisting` is `true`, the existing session is replaced
-   * with the new one; otherwise, it is merged or added to the current session.
-   *
-   * @param {string} session The serialized MolViewSpec session string.
-   * @param {boolean} [replaceExisting=false] Whether to replace the existing session with the new one (optional, defaults to `false`).
-   *
-   * @returns {Promise<void>} A promise that resolves once the session is loaded.
-   *
-   */
-  private async loadMolViewSpecSession(
-    session: string,
-    replaceExisting: boolean = false
-  ) {
-    const parsedData = MVSData.fromMVSJ(session);
-
-    // Loads the session
-    await loadMVS(this.plugin!, parsedData, {
-      replaceExisting: replaceExisting,
-    });
   }
 }
 

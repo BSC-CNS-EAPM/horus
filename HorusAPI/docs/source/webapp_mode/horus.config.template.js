@@ -11,6 +11,10 @@ export const config = {
   appName: "My App Name",
   // Wether to allow users to configure and use remotes
   allowRemotes: false,
+  // Allow custom blocks definition. WARNING: Custom blocks allow for the execution of arbitrary code
+  // use at your own risk. If enabled, only admins can create custom blocks. Custom blocks loaded in the
+  // custom blocks folder will be available to all users
+  allowCustomBlocks: false,
   // CORS configuration, by default, all origins are allowed
   cors: {
     origins: "*",

@@ -18,6 +18,7 @@ from .plugins import (
     PlatformType,
     SlurmJob,
     Status,
+    CustomBlockParser,
 )
 
 # Export the Molstar API
@@ -82,6 +83,7 @@ __all__ = [
     "SelectionLanguage",
     "structureToFile",
     "multipleStructuresToFolder",
+    "CustomBlockParser",
 ]
 
 # Set the module name

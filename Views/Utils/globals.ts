@@ -39,6 +39,7 @@ declare global {
         allowDemoUser: boolean;
         uploadSize: number;
         allowFullFileSystemAccess: boolean;
+        allowCustomBlocks: boolean;
       };
       updateSettings: (settings: HorusSettingsObject) => void;
     };
