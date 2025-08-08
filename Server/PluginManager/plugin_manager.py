@@ -43,6 +43,7 @@ import pkg_resources
 from flask_socketio import SocketIO
 import flask_login
 
+from HorusAPI import CustomBlockParser
 from Server.Utils import PrintTruncator
 
 # Plugin deps context manager, forking the process prevents
@@ -651,6 +652,12 @@ class PluginManager(metaclass=HorusSingleton):
         for p in self.errorPlugins:
             if p.id == id:
                 return p
+
+        # Could be a custom block "fake plugin"
+        for p in self.customBlocks.values():
+            if p.id == id:
+                return p
+
         raise PluginNotFoundError(f"PluginID '{id}' not found.")
 
     def uninstallPlugin(self, pluginID: str):
@@ -736,6 +743,7 @@ class PluginManager(metaclass=HorusSingleton):
 
         self.loadedPlugins: list[Plugin] = []
         self.errorPlugins: list[Plugin] = []
+        self.customBlocks: dict[str, Plugin] = {}
         pluginPaths = self._listPluginsPaths()
 
         for pth in self._getPluginsImportOrder(pluginPaths):
@@ -777,6 +785,15 @@ class PluginManager(metaclass=HorusSingleton):
             )
 
         self.pluginChanges = False
+
+        # Initialize custom blocks
+        self.customBlocks = {b.id: b for b in self.loadCustomBlocks()}
+
+        logging.getLogger("Horus").info(
+            "%i custom blocks loaded: %s.",
+            len(self.customBlocks),
+            ", ".join([block.id for block in self.customBlocks.values()]),
+        )
 
     def _getPluginsImportOrder(self, pluginPaths: list[str]) -> list[str]:
         """
@@ -1151,6 +1168,9 @@ class PluginManager(metaclass=HorusSingleton):
         dependencies = pluginMeta.get("dependencies", [])
         pluginName = pluginMeta.get("name", "Unknown")
         fullDepsDir = PluginDepsBase.getFullPluginDepsDir(pluginPath)
+
+        if not os.path.exists(fullDepsDir):
+            os.makedirs(fullDepsDir, exist_ok=True)
 
         # Create a new working set that includes the custom directory
         pluginWorkingSet = pkg_resources.WorkingSet(entries=[fullDepsDir])
@@ -1538,6 +1558,11 @@ class PluginManager(metaclass=HorusSingleton):
         blocks: list[dict[str, typing.Any]] = []
         for p in self.loadedPlugins:
             blocks += self._getBlocksFromList(p, p.blocks)
+
+        # Custom blocks
+        for b in self.customBlocks.values():
+            blocks += self._getBlocksFromList(b, b.blocks)
+
         return blocks
 
     def getVariables(self, block: PluginBlock):
@@ -1554,6 +1579,16 @@ class PluginManager(metaclass=HorusSingleton):
         """
         Finds a block from a 'plugin.block' ID format or raises an exception if not found.
         """
+
+        # If it does not have a ., then its a custom block
+        if "." not in fromBlockID:
+            # Check if the block is a custom block
+            if fromBlockID in self.customBlocks:
+                return self.customBlocks[fromBlockID].getBlock(fromBlockID)
+
+            # If not, raise an error
+            raise BlockNotFoundError(fromBlockID)
+
         # Split the id
         pluginID = fromBlockID.split(".")[0]
 
@@ -1915,6 +1950,134 @@ class PluginManager(metaclass=HorusSingleton):
             flows += p._flows
 
         return flows
+
+    @property
+    def customBlocksDir(self) -> str:
+        """
+        Returns the path to the custom blocks directory.
+        """
+        p = os.path.join(self.appSupportDir, "custom_blocks")
+
+        if not os.path.exists(p):
+            os.makedirs(p)
+
+        return p
+
+    def _internalGenerateFakeCustomPlugin(
+        self, block: dict, socket: typing.Optional[SocketIO] = None
+    ) -> Plugin:
+        # First get the fake plugin class that will hold the block
+        plugin_instance = CustomBlockParser.getFakePlugin(block, self.customBlocksDir)
+
+        # Install dependencies
+        if plugin_instance.pluginMeta.dependencies:
+            try:
+                if socket:
+                    with PrintSocketCapturer(socket, "installPluginDep"):
+                        self._installDependencies(
+                            plugin_instance.pluginMeta.dict(), plugin_instance._path
+                        )
+                else:
+                    self._installDependencies(
+                        plugin_instance.pluginMeta.dict(), plugin_instance._path
+                    )
+            except Exception as e:
+                logging.getLogger("Horus").error(
+                    "Could not install dependencies for custom block '%s': %s",
+                    plugin_instance.id,
+                    str(e),
+                )
+
+                raise e
+
+        # Now parse the block (and the block actions) inside the dependencies context
+        with PluginDepsBase([plugin_instance._path]):
+            block_instance = SubprocessManager.subprocessCall(
+                CustomBlockParser.parse, block, self.customBlocksDir
+            )
+
+        # If everything went correct, assign the block instance to the plugin
+        plugin_instance._blocks = [block_instance]
+
+        return plugin_instance
+
+    def saveCustomBlock(self, block: dict, socket: SocketIO):
+        """
+        Verifies and saves a custom block from the JSON representation.
+        """
+
+        # Try to load the block directly with the block parser class
+        try:
+            plugin_instance = self._internalGenerateFakeCustomPlugin(block, socket)
+        except Exception as e:
+            raise Exception(f"Could not save the custom block: {e}") from e
+
+        # Create a unique filename for the block
+        blockFileName = f"{plugin_instance.id}.json"
+        blockFilePath = os.path.join(self.customBlocksDir, blockFileName)
+
+        # Override the existing block if it exists
+        self.customBlocks[plugin_instance.id] = plugin_instance
+
+        # Save the block to the file
+        with open(blockFilePath, "w", encoding="utf-8") as f:
+            json.dump(block, f, indent=4)
+
+        logging.getLogger("Horus").info(
+            "Custom block '%s' saved successfully to '%s'.", plugin_instance.id, blockFilePath
+        )
+
+        return plugin_instance
+
+    def loadCustomBlocks(self) -> list[Plugin]:
+        """Loads all the custom blocks from the AppSupportDir/Custom blocks folder.
+        Returns a list of Plugin instances.
+        """
+
+        customBlocks: list[Plugin] = []
+        for file in os.listdir(self.customBlocksDir):
+            if file.endswith(".json"):
+                blockFilePath = os.path.join(self.customBlocksDir, file)
+                try:
+                    with open(blockFilePath, "r", encoding="utf-8") as f:
+                        blockData = json.load(f)
+                        # Parse the block data to a PluginBlock instance
+                        plugin_instance = self._internalGenerateFakeCustomPlugin(blockData)
+                        customBlocks.append(plugin_instance)
+                except Exception as e:
+                    logging.getLogger("Horus").error(
+                        "Could not load custom block from '%s': %s", blockFilePath, str(e)
+                    )
+
+        return customBlocks
+
+    def deleteCustomBlock(self, blockID: str):
+        """
+        Deletes a custom block by its ID.
+        """
+
+        # Check if the block exists
+        if blockID not in self.customBlocks:
+            raise ValueError(f"Custom block '{blockID}' does not exist.")
+
+        # Delete the block from the dictionary
+        block = self.customBlocks[blockID]
+
+        # Delete the block file
+        blockFilePath = os.path.join(self.customBlocksDir, f"{blockID}.json")
+        if os.path.exists(blockFilePath):
+            os.remove(blockFilePath)
+
+        # Delete the fake block plugin folder
+        if os.path.exists(block._path):
+            shutil.rmtree(block._path)
+
+        # Unload from memory
+        del self.customBlocks[blockID]
+
+        logging.getLogger("Horus").info(
+            "Custom block '%s' deleted successfully from '%s'.", blockID, blockFilePath
+        )
 
 
 class PrintCapturer(PrintTruncator):

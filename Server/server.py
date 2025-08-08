@@ -1308,6 +1308,7 @@ class HorusServer:
                     "allowDemoUser": self.webAppManager.userManagement.allowDemoUser,
                     "uploadSize": self.webAppManager.userManagement.fileManagement.maxUploadSize,
                     "allowFullFileSystemAccess": self.webAppManager.userManagement.fileManagement.allowFullFileSystemAccess,
+                    "allowCustomBlocks": self.webAppManager.allowCustomBlocks,
                 }
 
             return flask.jsonify(internalSettings)
@@ -1355,6 +1356,53 @@ class HorusServer:
                     "msg": str(exc),
                 }
             return success
+
+        @self.server.route("/api/plugins/custom-block", methods=["POST", "DELETE"])
+        @self.verifyLogin
+        @self.verifyAdmin
+        def customBlock():
+            """
+            Saves a custom block to the custom blocks folder
+            """
+
+            # Prevent this function completely in web appmode if disabled
+            if self.webAppManager is not None and not self.webAppManager.allowCustomBlocks:
+                return flask.jsonify(
+                    {"ok": False, "msg": "Custom blocks are not allowed in this web app."}
+                )
+
+            data = request.get_json()
+
+            if request.method == "POST":
+                blockData = data.get("block", None)
+                if blockData is None:
+                    return flask.jsonify({"ok": False, "msg": "No block data provided."})
+
+                try:
+                    new_block = self.pluginManager.saveCustomBlock(blockData, self.socketio)
+
+                    return flask.jsonify(
+                        {
+                            "ok": True,
+                            "msg": "Block saved successfully.",
+                            "block": new_block.blocks[0]._toDict(),
+                        }
+                    )
+                except Exception as exc:
+                    return flask.jsonify({"ok": False, "msg": str(exc)})
+            elif request.method == "DELETE":
+                blockId = data.get("blockId", None)
+                if blockId is None:
+                    return flask.jsonify({"ok": False, "msg": "No block ID provided."})
+
+                try:
+                    self.pluginManager.deleteCustomBlock(blockId)
+
+                    return flask.jsonify({"ok": True, "msg": "Block deleted successfully."})
+                except Exception as exc:
+                    return flask.jsonify({"ok": False, "msg": str(exc)})
+            else:
+                return flask.jsonify({"ok": False, "msg": "Invalid request method."})
 
         @self.server.route("/api/desktop/appsupportdir", methods=["GET"])
         @self.noWebApp
@@ -2572,6 +2620,7 @@ class HorusServer:
                     {
                         "name": "Unhandled Horus Error",
                         "description": error,
+                        "msg": "An unhandled error occurred in the server.",
                         "code": 500,
                         "data": str(request.data),
                     }

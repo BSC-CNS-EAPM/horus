@@ -18,6 +18,7 @@ from .src import (
     PlatformType,
     SlurmJob,
     Status,
+    CustomBlockParser,
 )
 
 # Export the Molstar API

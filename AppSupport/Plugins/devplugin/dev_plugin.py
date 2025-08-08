@@ -247,41 +247,6 @@ focusResidueBlock = PluginBlock(
 plugin.addBlock(focusResidueBlock)
 
 
-def molviewSpecAciton(block: PluginBlock):
-    mol = MolstarAPI()
-
-    # Basic MolstarAPI
-    mol.reset()
-    mol.addSphere(0, 0, 0, 5, color="#0000ff", opacity=1)
-    mol.setSpin()
-    mol.setBackgroundColor("#ffffff")
-    mol.focusResidue(1, nearRadius=5)
-
-    # MolviewSpec
-    mvs = mol.mvs
-    builder = mvs.create_builder()
-    (
-        builder.download(url="https://www.ebi.ac.uk/pdbe/entry-files/download/1cbs_updated.cif")
-        .parse(format="mmcif")
-        .assembly_structure(assembly_id="1")
-        .component()
-        .representation()
-    )
-
-    # finally, we pretty-print everything to the console
-    mol.loadMVJS(builder.get_state())
-
-
-molviewSpecBlock = PluginBlock(
-    name="Molview spec",
-    description="Loads the molview spec",
-    action=molviewSpecAciton,
-    id="molview_spec",
-)
-
-plugin.addBlock(molviewSpecBlock)
-
-
 def storeBlockVariable(block: PluginBlock):
     runs = block.extraData.get("runs", 0)
 

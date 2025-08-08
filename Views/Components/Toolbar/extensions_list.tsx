@@ -31,6 +31,7 @@ export default function PluginPagesView(props: PluginPageViewProps) {
         ?.filter((page) => !page.hidden)
         .map((page) => (
           <div
+            key={page.id}
             role="button"
             onClick={() => {
               if (props.overrideLoadPage) {
@@ -41,7 +42,7 @@ export default function PluginPagesView(props: PluginPageViewProps) {
                     dockApi: dockApi,
                     component: PANEL_REGISTRY.extensions.component,
                     panelID: `extensions-${page.id}-${Math.floor(
-                      Math.random() * 100000,
+                      Math.random() * 100000
                     )}`,
                     params: page,
                   });

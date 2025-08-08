@@ -218,17 +218,6 @@ class MolstarAPI(metaclass=SingletonMeta):
     The current flow where the API is running
     """
 
-    @property
-    def mvs(self):
-        """
-        The molviewspec library. Use it to build complex scenes
-        """
-
-        # Import the molviewspec builder
-        import molviewspec as mvs
-
-        return mvs
-
     def _emitAction(self, action: str, data: dict) -> None:
         """
         Emits the given action with the given data to Mol*
@@ -343,24 +332,6 @@ class MolstarAPI(metaclass=SingletonMeta):
         }
 
         self._emitAction("loadTrajectory", data)
-
-    def loadMVJS(self, mvjs: typing.Dict[str, typing.Any], replaceExisting: bool = False) -> None:
-        """
-        Loads a molviewspec session into Mol*
-
-        :param mvjs: The molviewspec session to load as a dictionary
-        (returned by the .get_state() method of molviewspec builder)
-        :param replaceExisting: Whether to replace the existing session or not
-        """
-
-        # Convert the object to JSON string
-        import json
-
-        mvjsString = json.dumps(mvjs)
-
-        data = {"type": "loadMVJS", "data": {"session": mvjsString, "replace": replaceExisting}}
-
-        self._emitAction("loadMVJS", data)
 
     def focusResidue(
         self,

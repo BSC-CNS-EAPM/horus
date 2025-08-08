@@ -48,9 +48,10 @@ import PausedIcon from "../../Toolbar/Icons/Paused";
 import ErrorLogFile from "../../Toolbar/Icons/ErrorLogFile";
 import ExternalIcon from "../../Toolbar/Icons/External";
 import Chevron from "@/Components/Toolbar/Icons/Chevron";
+import { IconPencilCog } from "@tabler/icons-react";
 
 export function BlockView(
-  props: BlockViewProps & { extraStyle?: CSSProperties },
+  props: BlockViewProps & { extraStyle?: CSSProperties }
 ) {
   const { block, blockHooks, isFlowActive } = props;
 
@@ -208,7 +209,7 @@ export function BlockRemotes(props: BlockRemotesProps) {
           onChange={(e) => {
             props.blockHooks?.setBlockRemote(
               props.block.placedID,
-              e.target.value,
+              e.target.value
             );
           }}
         >
@@ -228,7 +229,7 @@ function BlockExtensionsView(props: { block: Block }) {
 
   const block = props.block;
 
-  if (block.extensionsToOpen.length === 0) {
+  if (!block?.extensionsToOpen || block.extensionsToOpen.length === 0) {
     return null;
   }
 
@@ -360,6 +361,8 @@ function BlockToolbar({
   blockHooks?: BlockHooks;
   isPaused?: boolean;
 }) {
+  const { dockApi } = useContext(DockContext);
+
   return (
     <div className="flex flex-row gap-1 items-start cursor-auto">
       {/* Play button to execute the block */}
@@ -401,18 +404,39 @@ function BlockToolbar({
       )}
 
       {!block.isPlaced && (
-        <div
-          onMouseOver={() => blockState.blockViewHooks.setIsInfoHovering(true)}
-          onMouseLeave={() =>
-            blockState.blockViewHooks.setIsInfoHovering(false)
-          }
-          className={block.externalURL ? "cursor-pointer" : "cursor-help"}
-          onClick={() => {
-            // Open the external block URL if any
-            block.externalURL && window.open(block.externalURL, "_blank");
-          }}
-        >
-          {block.externalURL ? <ExternalIcon /> : <InfoIcon />}
+        <div className="flex flex-row gap-2">
+          {block.isCustom && (
+            <div
+              className="cursor-pointer"
+              onClick={() => {
+                addPanel({
+                  dockApi,
+                  component: PANEL_REGISTRY.blockEditor.component,
+                  panelID: `${PANEL_REGISTRY.blockEditor.id}.${block.id}`,
+                  params: {
+                    block: block.rawBlock,
+                  },
+                });
+              }}
+            >
+              <IconPencilCog title="Modify custom block" className="w-6 h-6" />
+            </div>
+          )}
+          <div
+            onMouseOver={() =>
+              blockState.blockViewHooks.setIsInfoHovering(true)
+            }
+            onMouseLeave={() =>
+              blockState.blockViewHooks.setIsInfoHovering(false)
+            }
+            className={block.externalURL ? "cursor-pointer" : "cursor-help"}
+            onClick={() => {
+              // Open the external block URL if any
+              block.externalURL && window.open(block.externalURL, "_blank");
+            }}
+          >
+            {block.externalURL ? <ExternalIcon /> : <InfoIcon />}
+          </div>
         </div>
       )}
     </div>

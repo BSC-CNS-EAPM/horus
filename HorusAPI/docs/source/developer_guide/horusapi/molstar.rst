@@ -46,31 +46,6 @@ Mol* actions will be stored in the :bdg-secondary-line:`flow` and applied to the
 order they were invoked. If a flow is not yet open, the actions will queue and execute once it opens.
 The flow is then saved with the updated Mol* state.
 
-MolViewSpec
------------
-
-The :bdg-secondary-line:`MolstarAPI` is fully compatible with :bdg-secondary-line:`MolViewSpec`. For more info, see the
-`MolViewSpec documentation <https://colab.research.google.com/drive/1O2TldXlS01s-YgkD9gy87vWsfCBTYuz9#scrollTo=QaFqBtMQIz_r>`_.
-
-Horus includes :bdg-secondary-line:`mvs` inside MolstarAPI and can be accessed through the :bdg-secondary-line:`mvs` attribute.
-
-.. code-block:: python
-
-    from HorusAPI import MolstarAPI
-
-    mol = MolstarAPI()
-    builder = mol.mvs.create_builder()
-
-    (
-        builder.download(url="https://www.ebi.ac.uk/pdbe/entry-files/download/1cbs_updated.cif")
-        .parse(format="mmcif")
-        .assembly_structure(assembly_id="1")
-        .component()
-        .representation()
-    )
-
-    mol.loadMVJS(builder.get_state())
-
 Selections and Theming
 =======================
 

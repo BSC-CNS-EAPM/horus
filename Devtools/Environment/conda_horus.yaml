@@ -26,8 +26,7 @@ dependencies:
   - mypy==1.8
   - multiprocess==0.70.17
   - pathvalidate==3.2.0
-  - pydantic==1.10.13
-  - molviewspec==1.0.0
+  - pydantic==2.11.7
   - pylint==3.0.3
   - black==24.2.0
   - pyright==1.1.351
