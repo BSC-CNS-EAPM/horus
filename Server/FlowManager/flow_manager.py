@@ -664,7 +664,7 @@ class Flow:
             "pendingExtensions": self.pendingExtensions,
             "panels": self.panels,
             "extraData": self.extraData,
-            "flowRunInfo": self.flowRunInfo.dict() if self.flowRunInfo else None,
+            "flowRunInfo": self.flowRunInfo.model_dump() if self.flowRunInfo else None,
             "flowError": self.flowError,
         }
 

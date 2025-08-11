@@ -989,7 +989,7 @@ class PluginManager(metaclass=HorusSingleton):
         if not pluginMetaModel:
             return None
 
-        pluginMeta = pluginMetaModel.dict()
+        pluginMeta = pluginMetaModel.model_dump()
 
         # Dependencies for the plugin, there they will be installed
         # inside a /lib/pythonX.X/site-packages folder
@@ -1501,7 +1501,7 @@ class PluginManager(metaclass=HorusSingleton):
 
         for p in self.loadedPlugins:
             try:
-                info = p.pluginMeta.dict()
+                info = p.pluginMeta.model_dump()
                 info["id"] = p.id
                 info["blocks"] = self._getBlocksFromList(p, p.blocks)
                 info["default"] = p.default
@@ -1523,7 +1523,7 @@ class PluginManager(metaclass=HorusSingleton):
                 logging.getLogger("Horus").error("Could not get a plugin: %s", str(exc))
 
         for ep in self.errorPlugins:
-            info = ep.pluginMeta.dict()
+            info = ep.pluginMeta.model_dump()
             info["id"] = ep.id
             info["blocks"] = []
             info["default"] = ep.default
@@ -1975,11 +1975,11 @@ class PluginManager(metaclass=HorusSingleton):
                 if socket:
                     with PrintSocketCapturer(socket, "installPluginDep"):
                         self._installDependencies(
-                            plugin_instance.pluginMeta.dict(), plugin_instance._path
+                            plugin_instance.pluginMeta.model_dump(), plugin_instance._path
                         )
                 else:
                     self._installDependencies(
-                        plugin_instance.pluginMeta.dict(), plugin_instance._path
+                        plugin_instance.pluginMeta.model_dump(), plugin_instance._path
                     )
             except Exception as e:
                 logging.getLogger("Horus").error(

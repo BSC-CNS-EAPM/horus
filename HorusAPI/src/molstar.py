@@ -260,7 +260,7 @@ class MolstarAPI(metaclass=SingletonMeta):
                 "molContent": absPath,
                 "options": {
                     "label": label if label else fileName,
-                    "theme": theme.dict() if theme else None,
+                    "theme": theme.model_dump() if theme else None,
                 },
             },
         }
@@ -296,8 +296,8 @@ class MolstarAPI(metaclass=SingletonMeta):
                 "label": label,
                 "selectionLabel": selectionLabel,
                 "options": {
-                    "selection": selection.dict(),
-                    "theme": theme.dict() if theme else None,
+                    "selection": selection.model_dump(),
+                    "theme": theme.model_dump() if theme else None,
                 },
             },
         }
