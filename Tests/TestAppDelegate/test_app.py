@@ -172,6 +172,7 @@ def test_setting_to_dict():
         "allowedValues": None,
         "desktopOnly": False,
         "variables": None,
+        "id": "id",
     }
 
 

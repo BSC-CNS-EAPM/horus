@@ -14,4 +14,5 @@ export type HorusSetting = {
   allowedValues?: Array<any>;
   value: any;
   variables: Array<HorusSetting>;
+  id: string;
 };
