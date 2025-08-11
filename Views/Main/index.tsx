@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
             </MantineProvider>
           </OverrideAlert>
         </QueryClientProvider>
-      </StrictMode>,
+      </StrictMode>
     );
   }
 });

@@ -138,6 +138,7 @@ class Setting:
         """
 
         return {
+            "id": self.id,
             "name": self.name,
             "value": self.value,
             "defaultValue": self.defaultValue,

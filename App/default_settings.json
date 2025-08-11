@@ -151,5 +151,12 @@
         "type": "password"
       }
     ]
+  },
+  "analytics": {
+    "name": "Analytics consent",
+    "description": "Manage your cookie preferences for analytics. This will allow us to collect data on how you use Horus, which helps us improve the platform.",
+    "category": "Analytics",
+    "value": null,
+    "type": "boolean"
   }
 }
