@@ -2169,7 +2169,7 @@ class HorusPydanticModel(BaseModel):
             for field in HorusPydanticModel.model_fields.values()  # pylint: disable=no-member
         }
 
-        # Look here how we used the .dict() method and not the custom toDict()
+        # Look here how we used the .model_dump() method and not the custom toDict()
         updated_dict: dict = {alias_map.get(k, k): v for k, v in newValues.model_dump().items()}
         self.__dict__.update(updated_dict)
 
