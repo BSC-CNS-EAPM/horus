@@ -2428,31 +2428,31 @@ export default class HorusMolstar {
    *
    * @throws {Error} If there is an issue adding the sphere to the structure or if the structure is invalid.
    */
-  public async addSphere(
+  public async addSphere({
+    position,
+    radius,
+    opacity,
+    color,
+    deletePrevious,
+  }: {
     position: {
       x: number;
       y: number;
       z: number;
-    },
-    radius: number,
-    opacity?: number,
-    color?: Color,
-    deletePrevious?: SphereRef
-  ): Promise<SphereRef> {
+    };
+    radius: number;
+    opacity?: number;
+    color?: Color;
+    deletePrevious?: SphereRef;
+  }): Promise<SphereRef> {
     deletePrevious && this.removeShape(deletePrevious.ref);
 
-    // Get the first structure or null if no structures exist
-    const structureFirst = this.structures()[0];
-
     // Determine the structure to use based on the existence of structureFirst
-    const structureRef = structureFirst?.cell.transform.ref;
-    const structure = structureRef
-      ? this.plugin!.state.data.cells.get(structureRef)
-      : await this.createEmptyNode("Sphere");
+    const structure = await this.createEmptyNode("Sphere");
 
     if (!structure) {
       throw new Error(
-        "Failed to add sphere to mosltar. Could not get a valid structure to place it."
+        "Failed to add sphere to molstar. Could not get a valid structure to place it."
       );
     }
 
@@ -2470,6 +2470,54 @@ export default class HorusMolstar {
     sphere.ref = await addSphereTo(this.plugin!, structure, sphere);
 
     return sphere;
+  }
+
+  public async moveSphere({
+    sphereRef,
+    newPosition,
+    newRadius,
+    newColor,
+    newOpacity,
+  }: {
+    sphereRef: string;
+    newPosition?: { x: number; y: number; z: number };
+    newRadius?: number;
+    newColor?: Color;
+    newOpacity?: number;
+  }): Promise<boolean> {
+    // Get the state object from the ref
+    const stateObject = this.plugin!.state.data.select(sphereRef)[0];
+    if (!stateObject) {
+      return false;
+    }
+
+    // Update the sphere's transform or recreate with new position
+    const currentTransform = stateObject.transform;
+
+    const newParams = {
+      ...currentTransform.params,
+      type: {
+        ...currentTransform.params.type,
+        params: {
+          ...currentTransform.params.type.params,
+          x: newPosition?.x ?? currentTransform.params.type.params.position.x,
+          y: newPosition?.y ?? currentTransform.params.type.params.position.y,
+          z: newPosition?.z ?? currentTransform.params.type.params.position.z,
+          radius: newRadius ?? currentTransform.params.type.params.radius,
+          color: newColor ?? currentTransform.params.type.params.color,
+          opacity: newOpacity ?? currentTransform.params.type.params.opacity,
+        },
+      },
+    };
+
+    // Update the state object with new parameters
+    await this.plugin!.state.updateTransform(
+      this.plugin!.state.data,
+      sphereRef,
+      newParams
+    );
+
+    return true;
   }
 
   /**
@@ -2504,7 +2552,14 @@ export default class HorusMolstar {
    * @throws {Error} If there's an issue creating or adding the box, or if the structure is invalid.
    */
 
-  public async addBox(
+  public async addBox({
+    position,
+    radiusScale,
+    radialSegments,
+    opacity,
+    color,
+    deletePrevious,
+  }: {
     position: {
       x0: number;
       y0: number;
@@ -2518,27 +2573,21 @@ export default class HorusMolstar {
       x3: number;
       y3: number;
       z3: number;
-    },
-    radiusScale: number,
-    radialSegments: number,
-    opacity?: number,
-    color?: Color,
-    deletePrevious?: BoxRef
-  ): Promise<BoxRef> {
+    };
+    radiusScale: number;
+    radialSegments: number;
+    opacity?: number;
+    color?: Color;
+    deletePrevious?: BoxRef;
+  }): Promise<BoxRef> {
     deletePrevious && this.removeShape(deletePrevious.ref);
 
-    // Get the first structure or null if no structures exist
-    const structureFirst = this.structures()[0];
-
-    // Determine the structure to use based on the existence of structureFirst
-    const structureRef = structureFirst?.cell.transform.ref;
-    const structure = structureRef
-      ? this.plugin!.state.data.cells.get(structureRef)
-      : await this.createEmptyNode("Box");
+    // Generate a box node
+    const structure = await this.createEmptyNode("Box");
 
     if (!structure) {
       throw new Error(
-        "Failed to add sphere to mosltar. Could not get a valid structure to place it."
+        "Failed to add box to molstar. Could not get a valid structure to place it."
       );
     }
 
@@ -2566,6 +2615,109 @@ export default class HorusMolstar {
     box.ref = await addBoxTo(this.plugin!, structure, box);
 
     return box;
+  }
+
+  /**
+   * Moves an existing box to a new position and/or updates its properties.
+   *
+   * This method updates an existing box's position, radius scale, radial segments, and/or color
+   * by modifying the state object parameters. It follows the same pattern as moveSphere.
+   *
+   * @param {object} params The parameters for moving the box.
+   * @param {string} params.boxRef The reference ID of the box to move.
+   * @param {object} [params.newPosition] The new position for the box vertices (optional).
+   * @param {number} [params.newPosition.x0] New x-coordinate of the first vertex.
+   * @param {number} [params.newPosition.y0] New y-coordinate of the first vertex.
+   * @param {number} [params.newPosition.z0] New z-coordinate of the first vertex.
+   * @param {number} [params.newPosition.x1] New x-coordinate of the second vertex.
+   * @param {number} [params.newPosition.y1] New y-coordinate of the second vertex.
+   * @param {number} [params.newPosition.z1] New z-coordinate of the second vertex.
+   * @param {number} [params.newPosition.x2] New x-coordinate of the third vertex.
+   * @param {number} [params.newPosition.y2] New y-coordinate of the third vertex.
+   * @param {number} [params.newPosition.z2] New z-coordinate of the third vertex.
+   * @param {number} [params.newPosition.x3] New x-coordinate of the fourth vertex.
+   * @param {number} [params.newPosition.y3] New y-coordinate of the fourth vertex.
+   * @param {number} [params.newPosition.z3] New z-coordinate of the fourth vertex.
+   * @param {number} [params.newRadiusScale] The new radius scale for the box (optional).
+   * @param {number} [params.newRadialSegments] The new number of radial segments for the box (optional).
+   * @param {Color} [params.newColor] The new color for the box (optional).
+   *
+   * @returns {Promise<boolean>} A promise that resolves to true if the box was successfully moved, false otherwise.
+   */
+  public async moveBox({
+    boxRef,
+    newPosition,
+    newRadiusScale,
+    newRadialSegments,
+    newColor,
+    newOpacity,
+  }: {
+    boxRef: string;
+    newPosition?: {
+      x0: number;
+      y0: number;
+      z0: number;
+      x1: number;
+      y1: number;
+      z1: number;
+      x2: number;
+      y2: number;
+      z2: number;
+      x3: number;
+      y3: number;
+      z3: number;
+    };
+    newRadiusScale?: number;
+    newRadialSegments?: number;
+    newColor?: Color;
+    newOpacity?: number;
+  }): Promise<boolean> {
+    // Get the state object from the ref
+    const stateObject = this.plugin!.state.data.select(boxRef)[0];
+    if (!stateObject) {
+      return false;
+    }
+
+    // Update the box's transform or recreate with new parameters
+    const currentTransform = stateObject.transform;
+
+    const newParams = {
+      ...currentTransform.params,
+      type: {
+        ...currentTransform.params.type,
+        params: {
+          ...currentTransform.params.type.params,
+          x0: newPosition?.x0 ?? currentTransform.params.type.params.x0,
+          y0: newPosition?.y0 ?? currentTransform.params.type.params.y0,
+          z0: newPosition?.z0 ?? currentTransform.params.type.params.z0,
+          x1: newPosition?.x1 ?? currentTransform.params.type.params.x1,
+          y1: newPosition?.y1 ?? currentTransform.params.type.params.y1,
+          z1: newPosition?.z1 ?? currentTransform.params.type.params.z1,
+          x2: newPosition?.x2 ?? currentTransform.params.type.params.x2,
+          y2: newPosition?.y2 ?? currentTransform.params.type.params.y2,
+          z2: newPosition?.z2 ?? currentTransform.params.type.params.z2,
+          x3: newPosition?.x3 ?? currentTransform.params.type.params.x3,
+          y3: newPosition?.y3 ?? currentTransform.params.type.params.y3,
+          z3: newPosition?.z3 ?? currentTransform.params.type.params.z3,
+          radiusScale:
+            newRadiusScale ?? currentTransform.params.type.params.radiusScale,
+          radialSegments:
+            newRadialSegments ??
+            currentTransform.params.type.params.radialSegments,
+          color: newColor ?? currentTransform.params.type.params.color,
+          opacity: newOpacity ?? currentTransform.params.type.params.opacity,
+        },
+      },
+    };
+
+    // Update the state object with new parameters
+    await this.plugin!.state.updateTransform(
+      this.plugin!.state.data,
+      boxRef,
+      newParams
+    );
+
+    return true;
   }
 
   /**
@@ -2762,21 +2914,22 @@ export default class HorusMolstar {
           );
           break;
         case "addBox":
-          await this.addBox(
-            data.position,
-            data.radiousScale,
-            data.radialSegments,
-            data.opacity ?? 1,
-            data.color ? Color.fromHexStyle(data.color) : randomColor()
-          );
+          await this.addBox({
+            position: data.position,
+            radiusScale: data.radiusScale,
+            radialSegments: data.radialSegments,
+            opacity: data.opacity ?? 1,
+            color: data.color ? Color.fromHexStyle(data.color) : randomColor(),
+          });
           break;
         case "addSphere":
-          await this.addSphere(
-            data.position,
-            data.radius,
-            data.opacity,
-            data.color ? Color.fromHexStyle(data.color) : randomColor()
-          );
+          await this.addSphere({
+            position: data.position,
+            radius: data.radius,
+            opacity: data.opacity,
+            color: data.color ? Color.fromHexStyle(data.color) : randomColor(),
+            deletePrevious: data.deletePrevious,
+          });
           break;
         case "setBackgroundColor":
           await this.setBackground(data.color);
