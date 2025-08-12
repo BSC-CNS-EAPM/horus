@@ -67,7 +67,7 @@ Examples
 
 .. code-block:: python
 
-    # Define the PELE results page
+    # Define a results page
     myCustomViewPage = PluginPage(
         id="customView",
         name="Custom view",
@@ -359,3 +359,34 @@ Default extensions
 ------------------
 
 For more information about Horus default extensions, please refer to the :ref:`default` section. 
+
+
+Using an extension as a block's external URL
+--------------------------------------------
+
+You can use an embedded extension as the URL of a block. 
+This can be useful to display documentation of a block within the application. 
+First, you need to define the :bdg-secondary-line:`PluginPage`. Then, use the ID of such
+:bdg-secondary-line:`PluginPage` to generate the :bdg-secondary-line:`externalURL`.
+
+.. code-block:: python
+
+    # The ID of the plugin is automatically assigned from the plugin.meta
+    plugin = Plugin()
+
+    # Define a documentation page
+    docs = PluginPage(
+        id="docs",
+        name="Documentation",
+        description="Documentation for my plugin",
+        html="index.html", # The HTML file to load
+    )
+
+    plugin.addPage(docs) # ATTENTION! You MUST add the page to te plugin before using the page ID in order to have the updated ID value
+
+    my_block = PluginBlock(
+        id="my_block",
+        name="My Block",
+        description="A block that uses the documentation page",
+        externalURL=f"/{docs.id}/my_block_docs/index.html" # Make sure to construct the URL correctly if the specific page for the block is under a path
+    )

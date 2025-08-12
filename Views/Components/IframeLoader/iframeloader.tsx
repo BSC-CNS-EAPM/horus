@@ -41,7 +41,8 @@ function IFrameLoader({
     // Always end the URL with a final slash,
     // this will prevent load balancers from mixing the content
     // and therefore the browser won't block the request. (Look at https://stackoverflow.com/a/58428968/15479705)
-    if (!url.endsWith("/")) {
+    // EXCEPT if the URL is for a documentation page and ends with .html
+    if (!url.endsWith("/") && !url.endsWith(".html")) {
       url = url + "/";
     }
 

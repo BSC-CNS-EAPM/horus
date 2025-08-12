@@ -28,7 +28,7 @@ import { PluginVariableView } from "../Variables/variables";
 import { PlacedBlockVariables } from "../Variables/variable_connections";
 
 // Typescript types
-import { Block, BlockTypes, Status } from "../flow.types";
+import { Block, BlockTypes, PluginPage, Status } from "../flow.types";
 
 // Block style
 import "./block.css";
@@ -49,6 +49,7 @@ import ErrorLogFile from "../../Toolbar/Icons/ErrorLogFile";
 import ExternalIcon from "../../Toolbar/Icons/External";
 import Chevron from "@/Components/Toolbar/Icons/Chevron";
 import { IconPencilCog } from "@tabler/icons-react";
+import { unrelatedExtensionToBlockIDGenerator } from "@/Components/Toolbar/extensions_list";
 
 export function BlockView(
   props: BlockViewProps & { extraStyle?: CSSProperties }
@@ -431,8 +432,34 @@ function BlockToolbar({
             }
             className={block.externalURL ? "cursor-pointer" : "cursor-help"}
             onClick={() => {
-              // Open the external block URL if any
-              block.externalURL && window.open(block.externalURL, "_blank");
+              if (!block.externalURL) return;
+
+              // If the external URL is relative to the app, open the panel corresponding to the ID given
+              if (block.externalURL.startsWith("/")) {
+                // The ID of the extension must be the first part of the /{id}/ url
+                const extensionID = block.externalURL.split("/")[1];
+
+                const pageURL = block.externalURL.startsWith("/")
+                  ? block.externalURL.substring(1)
+                  : block.externalURL;
+
+                addPanel({
+                  dockApi,
+                  component: PANEL_REGISTRY.extensions.component,
+                  title: block.name,
+                  panelID: unrelatedExtensionToBlockIDGenerator({
+                    id: extensionID,
+                  }),
+                  params: {
+                    // Here the URL is the ID
+                    id: pageURL,
+                    name: block.name,
+                  } as PluginPage,
+                });
+              } else {
+                // Open the external block URL if any
+                window.open(block.externalURL, "_blank");
+              }
             }}
           >
             {block.externalURL ? <ExternalIcon /> : <InfoIcon />}
