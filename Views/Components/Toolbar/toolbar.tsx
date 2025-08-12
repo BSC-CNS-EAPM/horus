@@ -1,7 +1,10 @@
 import { useCallback, useContext, useEffect } from "react";
 
 // Horus components
-import { usePluginPages } from "./extensions_list";
+import {
+  unrelatedExtensionToBlockIDGenerator,
+  usePluginPages,
+} from "./extensions_list";
 import { ToolBarItemProps, ToolbarMenu, ToolBarMenuProps } from "./ToolbarItem";
 import { HorusSearch } from "./ToolbarSearch";
 
@@ -448,9 +451,7 @@ export default function HorusToolbar() {
               addPanel({
                 dockApi: dockApi,
                 component: PANEL_REGISTRY.extensions.component,
-                panelID: `extensions-${page.id}-${Math.floor(
-                  Math.random() * 100000
-                )}`,
+                panelID: unrelatedExtensionToBlockIDGenerator({ id: page.id }),
                 params: page,
               });
             },

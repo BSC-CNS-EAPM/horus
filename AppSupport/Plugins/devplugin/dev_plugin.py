@@ -1114,3 +1114,24 @@ explicative_block = PluginBlock(
 )
 
 plugin.addBlock(explicative_block)
+
+
+docs_page = PluginPage(
+    id="docs",
+    name="Docs Page",
+    description="Documentation for the dev plugin",
+    html="docs/index.html",  # This is inside the Pages directory
+)
+
+plugin.addPage(docs_page)
+
+docs_block = PluginBlock(
+    id="docs_block",
+    name="Docs Block",
+    description="Block for the Docs Page",
+    action=lambda block: None,
+    variables=[],
+    externalURL=f"/{docs_page.id}/installing_plugins/index.html",
+)
+
+plugin.addBlock(docs_block)
