@@ -958,18 +958,32 @@ export function BoxVariableView(props: VariableViewProps) {
         const molstar = window.molstar;
 
         if (mounted.current) {
-          ref = await molstar.addBox(
-            parsedBoxNumbers,
-            Number(radiusScale),
-            Number(radialSegments),
-            1,
-            undefined,
-            boxRef.current ?? undefined
-          );
+          let updated = false;
 
-          boxRef.current = ref;
+          if (boxRef.current) {
+            updated = await molstar.moveBox({
+              boxRef: boxRef.current.ref,
+              newPosition: parsedBoxNumbers,
+              newRadiusScale: Number(radiusScale),
+              newRadialSegments: Number(radialSegments),
+              newOpacity: 0.75,
+            });
+          }
 
-          setActiveColor(Color.toHexStyle(ref.color));
+          if (!updated) {
+            ref = await molstar.addBox({
+              position: parsedBoxNumbers,
+              radiusScale: Number(radiusScale),
+              radialSegments: Number(radialSegments),
+              opacity: 0.75,
+              color: boxRef.current?.color ?? undefined,
+              deletePrevious: boxRef.current ?? undefined,
+            });
+
+            boxRef.current = ref;
+
+            setActiveColor(Color.toHexStyle(ref.color));
+          }
           if (active) {
             window.molstar?.plugin?.managers.interactivity.lociSelects.deselectAll();
           }
@@ -1075,13 +1089,14 @@ export function BoxVariableView(props: VariableViewProps) {
     };
 
     if (isMolstarLoaded(window.molstar)) {
-      const ref = await window.molstar.addBox(
-        boxData.metrics,
-        boxData.radius,
-        0.3,
-        undefined,
-        undefined
-      );
+      const ref = await window.molstar.addBox({
+        position: boxData.metrics,
+        radiusScale: boxData.radiusScale,
+        radialSegments: boxData.radialSegments,
+        opacity: 0.75,
+        color: boxRef.current?.color ?? undefined,
+        deletePrevious: boxRef.current ?? undefined,
+      });
       boxRef.current = ref;
       setActiveColor(Color.toHexStyle(ref.color));
 
@@ -1128,20 +1143,20 @@ export function BoxVariableView(props: VariableViewProps) {
 
                   //UNCHANGED
 
-                  y0: currentValue.metrics.y0,
-                  z0: currentValue.metrics.z0,
-                  y1: currentValue.metrics.y1,
-                  x1: currentValue.metrics.x1,
-                  z1: currentValue.metrics.z1,
-                  x2: currentValue.metrics.x2,
-                  y2: currentValue.metrics.y2,
-                  z2: currentValue.metrics.z2,
-                  x3: currentValue.metrics.x3,
-                  y3: currentValue.metrics.y3,
-                  z3: currentValue.metrics.z3,
+                  y0: currentValue?.metrics?.y0,
+                  z0: currentValue?.metrics?.z0,
+                  y1: currentValue?.metrics?.y1,
+                  x1: currentValue?.metrics?.x1,
+                  z1: currentValue?.metrics?.z1,
+                  x2: currentValue?.metrics?.x2,
+                  y2: currentValue?.metrics?.y2,
+                  z2: currentValue?.metrics?.z2,
+                  x3: currentValue?.metrics?.x3,
+                  y3: currentValue?.metrics?.y3,
+                  z3: currentValue?.metrics?.z3,
                 },
-                currentValue.radiusScale,
-                currentValue.radialSegments
+                currentValue?.radiusScale,
+                currentValue?.radialSegments
               );
             }}
           />
@@ -1167,20 +1182,20 @@ export function BoxVariableView(props: VariableViewProps) {
 
                   //UNCHANGED
 
-                  x0: currentValue.metrics.x0,
-                  z0: currentValue.metrics.z0,
-                  x1: currentValue.metrics.x1,
-                  y1: currentValue.metrics.y1,
-                  z1: currentValue.metrics.z1,
-                  x2: currentValue.metrics.x2,
-                  y2: currentValue.metrics.y2,
-                  z2: currentValue.metrics.z2,
-                  x3: currentValue.metrics.x3,
-                  y3: currentValue.metrics.y3,
-                  z3: currentValue.metrics.z3,
+                  x0: currentValue?.metrics?.x0,
+                  z0: currentValue?.metrics?.z0,
+                  x1: currentValue?.metrics?.x1,
+                  y1: currentValue?.metrics?.y1,
+                  z1: currentValue?.metrics?.z1,
+                  x2: currentValue?.metrics?.x2,
+                  y2: currentValue?.metrics?.y2,
+                  z2: currentValue?.metrics?.z2,
+                  x3: currentValue?.metrics?.x3,
+                  y3: currentValue?.metrics?.y3,
+                  z3: currentValue?.metrics?.z3,
                 },
-                currentValue.radiusScale,
-                currentValue.radialSegments
+                currentValue?.radiusScale,
+                currentValue?.radialSegments
               );
             }}
           />
@@ -1206,20 +1221,20 @@ export function BoxVariableView(props: VariableViewProps) {
 
                   //UNCHANGED
 
-                  x0: currentValue.metrics.x0,
-                  y0: currentValue.metrics.y0,
-                  x1: currentValue.metrics.x1,
-                  y1: currentValue.metrics.y1,
-                  z1: currentValue.metrics.z1,
-                  x2: currentValue.metrics.x2,
-                  y2: currentValue.metrics.y2,
-                  z2: currentValue.metrics.z2,
-                  x3: currentValue.metrics.x3,
-                  y3: currentValue.metrics.y3,
-                  z3: currentValue.metrics.z3,
+                  x0: currentValue?.metrics?.x0,
+                  y0: currentValue?.metrics?.y0,
+                  x1: currentValue?.metrics?.x1,
+                  y1: currentValue?.metrics?.y1,
+                  z1: currentValue?.metrics?.z1,
+                  x2: currentValue?.metrics?.x2,
+                  y2: currentValue?.metrics?.y2,
+                  z2: currentValue?.metrics?.z2,
+                  x3: currentValue?.metrics?.x3,
+                  y3: currentValue?.metrics?.y3,
+                  z3: currentValue?.metrics?.z3,
                 },
-                currentValue.radiusScale,
-                currentValue.radialSegments
+                currentValue?.radiusScale,
+                currentValue?.radialSegments
               );
             }}
           />
@@ -1247,20 +1262,20 @@ export function BoxVariableView(props: VariableViewProps) {
 
                   //UNCHANGED
 
-                  x0: currentValue.metrics.x0,
-                  y0: currentValue.metrics.y0,
-                  z0: currentValue.metrics.z0,
-                  y1: currentValue.metrics.y1,
-                  z1: currentValue.metrics.z1,
-                  x2: currentValue.metrics.x2,
-                  y2: currentValue.metrics.y2,
-                  z2: currentValue.metrics.z2,
-                  x3: currentValue.metrics.x3,
-                  y3: currentValue.metrics.y3,
-                  z3: currentValue.metrics.z3,
+                  x0: currentValue?.metrics?.x0,
+                  y0: currentValue?.metrics?.y0,
+                  z0: currentValue?.metrics?.z0,
+                  y1: currentValue?.metrics?.y1,
+                  z1: currentValue?.metrics?.z1,
+                  x2: currentValue?.metrics?.x2,
+                  y2: currentValue?.metrics?.y2,
+                  z2: currentValue?.metrics?.z2,
+                  x3: currentValue?.metrics?.x3,
+                  y3: currentValue?.metrics?.y3,
+                  z3: currentValue?.metrics?.z3,
                 },
-                currentValue.radiusScale,
-                currentValue.radialSegments
+                currentValue?.radiusScale,
+                currentValue?.radialSegments
               );
             }}
           />
@@ -1286,20 +1301,20 @@ export function BoxVariableView(props: VariableViewProps) {
 
                   //UNCHANGED
 
-                  x0: currentValue.metrics.x0,
-                  y0: currentValue.metrics.y0,
-                  z0: currentValue.metrics.z0,
-                  x1: currentValue.metrics.x1,
-                  y1: currentValue.metrics.y1,
-                  z1: currentValue.metrics.z1,
-                  x2: currentValue.metrics.x2,
-                  z2: currentValue.metrics.z2,
-                  x3: currentValue.metrics.x3,
-                  y3: currentValue.metrics.y3,
-                  z3: currentValue.metrics.z3,
+                  x0: currentValue?.metrics?.x0,
+                  y0: currentValue?.metrics?.y0,
+                  z0: currentValue?.metrics?.z0,
+                  x1: currentValue?.metrics?.x1,
+                  y1: currentValue?.metrics?.y1,
+                  z1: currentValue?.metrics?.z1,
+                  x2: currentValue?.metrics?.x2,
+                  z2: currentValue?.metrics?.z2,
+                  x3: currentValue?.metrics?.x3,
+                  y3: currentValue?.metrics?.y3,
+                  z3: currentValue?.metrics?.z3,
                 },
-                currentValue.radiusScale,
-                currentValue.radialSegments
+                currentValue?.radiusScale,
+                currentValue?.radialSegments
               );
             }}
           />
@@ -1325,20 +1340,20 @@ export function BoxVariableView(props: VariableViewProps) {
 
                   //UNCHANGED
 
-                  x0: currentValue.metrics.x0,
-                  y0: currentValue.metrics.y0,
-                  z0: currentValue.metrics.z0,
-                  x1: currentValue.metrics.x1,
-                  y1: currentValue.metrics.y1,
-                  z1: currentValue.metrics.z1,
-                  x2: currentValue.metrics.x2,
-                  y2: currentValue.metrics.y2,
-                  z2: currentValue.metrics.z2,
-                  x3: currentValue.metrics.x3,
-                  y3: currentValue.metrics.y3,
+                  x0: currentValue?.metrics?.x0,
+                  y0: currentValue?.metrics?.y0,
+                  z0: currentValue?.metrics?.z0,
+                  x1: currentValue?.metrics?.x1,
+                  y1: currentValue?.metrics?.y1,
+                  z1: currentValue?.metrics?.z1,
+                  x2: currentValue?.metrics?.x2,
+                  y2: currentValue?.metrics?.y2,
+                  z2: currentValue?.metrics?.z2,
+                  x3: currentValue?.metrics?.x3,
+                  y3: currentValue?.metrics?.y3,
                 },
-                currentValue.radiusScale,
-                currentValue.radialSegments
+                currentValue?.radiusScale,
+                currentValue?.radialSegments
               );
             }}
           />
@@ -1410,16 +1425,30 @@ export function SphereVariableView(props: VariableViewProps) {
       let ref = null;
       if (isMolstarLoaded(window.molstar)) {
         const molstar = window.molstar;
+
         if (mounted.current) {
-          ref = await molstar.addSphere(
-            parsedSphereNumbers,
-            Number(radius),
-            0.3,
-            undefined,
-            sphereRef.current ?? undefined
-          );
-          setActiveColor(Color.toHexStyle(ref.color));
-          sphereRef.current = ref;
+          let updated = false;
+
+          if (sphereRef.current) {
+            updated = await molstar.moveSphere({
+              sphereRef: sphereRef.current?.ref,
+              newPosition: parsedSphereNumbers,
+              newRadius: Number(radius),
+            });
+          }
+
+          if (!updated) {
+            ref = await molstar.addSphere({
+              position: parsedSphereNumbers,
+              radius: Number(radius),
+              opacity: 0.3,
+              color: sphereRef.current?.color ?? undefined,
+              deletePrevious: sphereRef.current ?? undefined,
+            });
+
+            setActiveColor(Color.toHexStyle(ref.color));
+            sphereRef.current = ref;
+          }
           if (active) {
             window.molstar?.plugin?.managers.interactivity.lociSelects.deselectAll();
           }
@@ -1496,13 +1525,12 @@ export function SphereVariableView(props: VariableViewProps) {
     };
 
     if (isMolstarLoaded(window.molstar)) {
-      const ref = await window.molstar.addSphere(
-        sphereData.center,
-        sphereData.radius,
-        0.3,
-        undefined,
-        undefined
-      );
+      const ref = await window.molstar.addSphere({
+        position: sphereData.center,
+        radius: sphereData.radius,
+        opacity: 0.3,
+      });
+
       sphereRef.current = ref;
       setActiveColor(Color.toHexStyle(ref.color));
 
@@ -1545,10 +1573,10 @@ export function SphereVariableView(props: VariableViewProps) {
               handleChange(
                 {
                   x: parseNumberOrNegative(e.target.value),
-                  y: currentValue.center.y,
-                  z: currentValue.center.z,
+                  y: currentValue?.center?.y,
+                  z: currentValue?.center?.z,
                 },
-                currentValue.radius
+                currentValue?.radius
               );
             }}
           />
@@ -1569,11 +1597,11 @@ export function SphereVariableView(props: VariableViewProps) {
             onChange={(e) => {
               handleChange(
                 {
-                  x: currentValue.center.x,
+                  x: currentValue?.center.x,
                   y: parseNumberOrNegative(e.target.value),
-                  z: currentValue.center.z,
+                  z: currentValue?.center.z,
                 },
-                currentValue.radius
+                currentValue?.radius
               );
             }}
           />
@@ -1594,11 +1622,11 @@ export function SphereVariableView(props: VariableViewProps) {
             onChange={(e) => {
               handleChange(
                 {
-                  x: currentValue.center.x,
-                  y: currentValue.center.y,
+                  x: currentValue?.center.x,
+                  y: currentValue?.center.y,
                   z: parseNumberOrNegative(e.target.value),
                 },
-                currentValue.radius
+                currentValue?.radius
               );
             }}
           />

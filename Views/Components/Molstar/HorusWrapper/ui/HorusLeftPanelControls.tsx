@@ -392,6 +392,11 @@ function useLoadedStructures() {
     const updateStructures = () => {
       // Mol* always loaded if this interface is visible
       const molstar = window.molstar as HorusMolstar;
+
+      if (!molstar?.plugin) {
+        return;
+      }
+
       const structures = molstar.listStructures({ includeRef: true });
       setStructures(structures);
     };

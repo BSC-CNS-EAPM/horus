@@ -363,9 +363,7 @@ class MolstarAPI(metaclass=SingletonMeta):
 
     def addSphere(
         self,
-        x: float,
-        y: float,
-        z: float,
+        center: list[float],
         radius: float,
         color: typing.Optional[str] = None,
         opacity: float = 1,
@@ -381,10 +379,16 @@ class MolstarAPI(metaclass=SingletonMeta):
         :param opacity: The opacity of the sphere (0.0 - 1.0)
         """
 
+        if not center or not isinstance(center, list) or len(center) != 3:
+            raise ValueError(
+                "Center must be a 3 dimensional list of numbers [x, y, z]. "
+                f"Got value '{center}'"
+            )
+
         position = {
-            "x": x,
-            "y": y,
-            "z": z,
+            "x": float(center[0]),
+            "y": float(center[1]),
+            "z": float(center[2]),
         }
 
         # Convert the color to a hex string without the #
@@ -428,25 +432,30 @@ class MolstarAPI(metaclass=SingletonMeta):
         if not sides:
             sides = [1, 1, 1]
 
+        # Accept ints and convert to floats for center
         if (
             not isinstance(center, list)
             or len(center) != 3
-            or not all(isinstance(x, float) for x in center)
+            or not all(isinstance(x, (float, int)) for x in center)
         ):
             raise ValueError(
-                "Center must be a 3 dimensional float list of the form [x, y, z]. "
+                "Center must be a 3 dimensional list of numbers [x, y, z]. "
                 f"Got value '{center}'"
             )
 
+        center = [float(x) for x in center]
+
+        # Accept ints and convert to floats for sides
         if (
             not isinstance(sides, list)
             or len(sides) != 3
-            or not all(isinstance(x, float) for x in sides)
+            or not all(isinstance(x, (float, int)) for x in sides)
         ):
             raise ValueError(
-                "Sides must be a 3 dimensional float list of the form [a, b, c]. "
-                f"Got value '{center}'"
+                "Sides must be a 3 dimensional list of numbers [a, b, c]. " f"Got value '{sides}'"
             )
+
+        sides = [float(x) for x in sides]
 
         position = {
             "x0": center[0],
