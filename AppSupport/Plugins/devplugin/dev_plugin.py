@@ -638,6 +638,24 @@ customVariableTest = CustomVariable(
     category="Custom variables",
 )
 
+customVariableTest21 = CustomVariable(
+    id="custom_variable_test21",
+    name="Custom variable test21",
+    description="Custom variable test21",
+    customPage=devPage,
+    type=VariableTypes.NUMBER,
+    category="Custom variables",
+)
+
+customVariableTest22 = CustomVariable(
+    id="custom_variable_test22",
+    name="Custom variable test22",
+    description="Custom variable test22",
+    customPage=devPage,
+    type=VariableTypes.NUMBER,
+    category="Custom variables",
+)
+
 
 def customVariableAction(block: InputBlock):
     print(block.inputs["custom_variable_test"])
@@ -651,7 +669,34 @@ testCustomVariableInputBlock = InputBlock(
     id="test_custom_variable",
 )
 
+testCustomVariableInputBlock2 = InputBlock(
+    name="Test custom variable2",
+    description="Test custom variable2",
+    variable=VariableGroup(
+        id="variable_group2",
+        name="Variable group",
+        description="Variable group",
+        variables=[
+            customVariableTest21,
+            customVariableTest22,
+        ],
+    ),
+    action=customVariableAction,
+    id="test_custom_variable2",
+)
+
+customVars = PluginBlock(
+    name="Custom vars",
+    description="Custom vars",
+    variables=[
+        customVariableTest21,
+        customVariableTest22,
+    ],
+)
+
 plugin.addBlock(testCustomVariableInputBlock)
+plugin.addBlock(testCustomVariableInputBlock2)
+plugin.addBlock(customVars)
 
 
 def checkPluginPathAction(block: PluginBlock):

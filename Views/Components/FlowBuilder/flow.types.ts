@@ -31,11 +31,13 @@ export type PluginPage = {
   description?: string;
   hidden?: boolean;
   id?: string;
+  variable_id?: string;
   plugin?: string;
   placedID?: number;
   logo?: string;
   data?: any;
   dataID?: number;
+  developmentPage?: boolean;
   onFocus?: () => void;
 };
 

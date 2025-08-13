@@ -222,5 +222,19 @@ using the :bdg-secondary-line:`parent.horus` object. For example:
     // Set a new value for the flow
     parent.horus.setFlow(newFlow)
 
+    // Obtain an updated value from the flow when it is modified
+    // using an event listener
+    parent.addEventListener("flowChanged", (event) => {
+        const flow = event.detail;
+        console.log("Flow changed", flow);
+    });
+
+    // You can execute the flow using the executeFlow function
+    await parent.horus.executeFlow({
+        placedID: 1, // Mandatory, the ID of the block to be executed
+        resetFlow: true, // Optional, whether to reset the flow before executing
+        continueSlurm: false, // Optional, whether to continue the Slurm execution
+    });
+
 More information about extensions can be seen at :ref:`extensions` section.
 

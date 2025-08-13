@@ -53,7 +53,10 @@ import { getFileNameInfo } from "molstar/lib/mol-util/file-info";
 import { Task } from "molstar/lib/mol-task";
 import { ColorTheme } from "molstar/lib/mol-theme/color";
 import { SizeTheme } from "molstar/lib/mol-theme/size";
-import { presetStaticComponent } from "molstar/lib/mol-plugin-state/builder/structure/representation-preset";
+import {
+  presetStaticComponent,
+  PresetStructureRepresentations,
+} from "molstar/lib/mol-plugin-state/builder/structure/representation-preset";
 import { StructureRepresentationRegistry } from "molstar/lib/mol-repr/structure/registry";
 import { ParamDefinition } from "molstar/lib/mol-util/param-definition";
 import {
@@ -1167,35 +1170,46 @@ export default class HorusMolstar {
         }
         const update = this.plugin.state.data.build();
 
-        console.log(
-          "options?.theme?.representation",
-          options?.theme?.representation
-        );
-
-        update
-          .to(component)
-          .apply(StateTransforms.Representation.StructureRepresentation3D, {
-            type: {
-              name: options?.theme?.representation ?? "cartoon",
-              params: {
-                ...options?.theme?.representationParams,
-                value: options?.theme?.representation ?? "cartoon",
+        if (options?.theme) {
+          update
+            .to(component)
+            .apply(StateTransforms.Representation.StructureRepresentation3D, {
+              type: {
+                name: options?.theme?.representation ?? "cartoon",
+                params: {
+                  ...options?.theme?.representationParams,
+                  value: options?.theme?.representation ?? "cartoon",
+                },
               },
-            },
-            colorTheme: {
-              name: options?.theme?.color ?? "uniform",
-              params: {
-                ...options?.theme?.colorParams,
-                value: options?.theme?.colorParams?.value
-                  ? getColor(options?.theme?.colorParams?.value)
-                  : randomColor(),
+              colorTheme: {
+                name: options?.theme?.color ?? "uniform",
+                params: {
+                  ...options?.theme?.colorParams,
+                  value: options?.theme?.colorParams?.value
+                    ? getColor(options?.theme?.colorParams?.value)
+                    : randomColor(),
+                },
               },
-            },
-            sizeTheme: {
-              name: options?.theme?.size ?? "physical",
-              params: options?.theme?.sizeParams,
-            },
-          });
+              sizeTheme: {
+                name: options?.theme?.size ?? "physical",
+                params: options?.theme?.sizeParams,
+              },
+            });
+        } else {
+          // Apply default preset using the component manager when no theme is provided
+          const defaultPreset =
+            this.plugin.config.get(
+              PluginConfig.Structure.DefaultRepresentationPreset
+            ) || PresetStructureRepresentations.auto.id;
+          const provider =
+            this.plugin.builders.structure.representation.resolveProvider(
+              defaultPreset
+            );
+          await this.plugin.managers.structure.component.applyPreset(
+            [structureRef],
+            provider
+          );
+        }
 
         await update.commit();
 
@@ -2479,14 +2493,17 @@ export default class HorusMolstar {
     newColor,
     newOpacity,
   }: {
-    sphereRef: string;
+    sphereRef?: string;
     newPosition?: { x: number; y: number; z: number };
     newRadius?: number;
     newColor?: Color;
     newOpacity?: number;
   }): Promise<boolean> {
+    if (!sphereRef) return false;
+
     // Get the state object from the ref
     const stateObject = this.plugin!.state.data.select(sphereRef)[0];
+
     if (!stateObject) {
       return false;
     }
@@ -2494,18 +2511,30 @@ export default class HorusMolstar {
     // Update the sphere's transform or recreate with new position
     const currentTransform = stateObject.transform;
 
+    // Ensure params and position exist before updating
+    const params = currentTransform.params?.type?.params;
+    if (
+      !params ||
+      typeof params.x !== "number" ||
+      typeof params.y !== "number" ||
+      typeof params.z !== "number" ||
+      typeof params.radius !== "number"
+    ) {
+      return false;
+    }
+
     const newParams = {
       ...currentTransform.params,
       type: {
         ...currentTransform.params.type,
         params: {
-          ...currentTransform.params.type.params,
-          x: newPosition?.x ?? currentTransform.params.type.params.position.x,
-          y: newPosition?.y ?? currentTransform.params.type.params.position.y,
-          z: newPosition?.z ?? currentTransform.params.type.params.position.z,
-          radius: newRadius ?? currentTransform.params.type.params.radius,
-          color: newColor ?? currentTransform.params.type.params.color,
-          opacity: newOpacity ?? currentTransform.params.type.params.opacity,
+          ...params,
+          x: newPosition?.x ?? params.x,
+          y: newPosition?.y ?? params.y,
+          z: newPosition?.z ?? params.z,
+          radius: newRadius ?? params.radius,
+          color: newColor ?? params.color,
+          opacity: newOpacity ?? params.opacity,
         },
       },
     };
@@ -2652,7 +2681,7 @@ export default class HorusMolstar {
     newColor,
     newOpacity,
   }: {
-    boxRef: string;
+    boxRef?: string;
     newPosition?: {
       x0: number;
       y0: number;
@@ -2672,6 +2701,10 @@ export default class HorusMolstar {
     newColor?: Color;
     newOpacity?: number;
   }): Promise<boolean> {
+    if (!boxRef) {
+      return false;
+    }
+
     // Get the state object from the ref
     const stateObject = this.plugin!.state.data.select(boxRef)[0];
     if (!stateObject) {
@@ -2681,31 +2714,50 @@ export default class HorusMolstar {
     // Update the box's transform or recreate with new parameters
     const currentTransform = stateObject.transform;
 
+    // Ensure params and position exist before updating
+    const params = currentTransform.params?.type?.params;
+    if (
+      !params ||
+      typeof params.x0 !== "number" ||
+      typeof params.y0 !== "number" ||
+      typeof params.z0 !== "number" ||
+      typeof params.x1 !== "number" ||
+      typeof params.y1 !== "number" ||
+      typeof params.z1 !== "number" ||
+      typeof params.x2 !== "number" ||
+      typeof params.y2 !== "number" ||
+      typeof params.z2 !== "number" ||
+      typeof params.x3 !== "number" ||
+      typeof params.y3 !== "number" ||
+      typeof params.z3 !== "number" ||
+      typeof params.radiusScale !== "number" ||
+      typeof params.radialSegments !== "number"
+    ) {
+      return false;
+    }
+
     const newParams = {
       ...currentTransform.params,
       type: {
         ...currentTransform.params.type,
         params: {
-          ...currentTransform.params.type.params,
-          x0: newPosition?.x0 ?? currentTransform.params.type.params.x0,
-          y0: newPosition?.y0 ?? currentTransform.params.type.params.y0,
-          z0: newPosition?.z0 ?? currentTransform.params.type.params.z0,
-          x1: newPosition?.x1 ?? currentTransform.params.type.params.x1,
-          y1: newPosition?.y1 ?? currentTransform.params.type.params.y1,
-          z1: newPosition?.z1 ?? currentTransform.params.type.params.z1,
-          x2: newPosition?.x2 ?? currentTransform.params.type.params.x2,
-          y2: newPosition?.y2 ?? currentTransform.params.type.params.y2,
-          z2: newPosition?.z2 ?? currentTransform.params.type.params.z2,
-          x3: newPosition?.x3 ?? currentTransform.params.type.params.x3,
-          y3: newPosition?.y3 ?? currentTransform.params.type.params.y3,
-          z3: newPosition?.z3 ?? currentTransform.params.type.params.z3,
-          radiusScale:
-            newRadiusScale ?? currentTransform.params.type.params.radiusScale,
-          radialSegments:
-            newRadialSegments ??
-            currentTransform.params.type.params.radialSegments,
-          color: newColor ?? currentTransform.params.type.params.color,
-          opacity: newOpacity ?? currentTransform.params.type.params.opacity,
+          ...params,
+          x0: newPosition?.x0 ?? params.x0,
+          y0: newPosition?.y0 ?? params.y0,
+          z0: newPosition?.z0 ?? params.z0,
+          x1: newPosition?.x1 ?? params.x1,
+          y1: newPosition?.y1 ?? params.y1,
+          z1: newPosition?.z1 ?? params.z1,
+          x2: newPosition?.x2 ?? params.x2,
+          y2: newPosition?.y2 ?? params.y2,
+          z2: newPosition?.z2 ?? params.z2,
+          x3: newPosition?.x3 ?? params.x3,
+          y3: newPosition?.y3 ?? params.y3,
+          z3: newPosition?.z3 ?? params.z3,
+          radiusScale: newRadiusScale ?? params.radiusScale,
+          radialSegments: newRadialSegments ?? params.radialSegments,
+          color: newColor ?? params.color,
+          opacity: newOpacity ?? params.opacity,
         },
       },
     };

@@ -557,7 +557,15 @@ function ExtensionComponent(props: IDockviewPanelProps) {
     props.params?.onFocus?.();
   };
 
-  return <IFrameLoader page={page} data={page.data} onFocus={onFocus} />;
+  return (
+    <IFrameLoader
+      page={page}
+      data={page.data}
+      onFocus={onFocus}
+      panelApi={props.api}
+      onLoad={props.params?.onLoad}
+    />
+  );
 }
 type DockView = FunctionComponent<IDockviewPanelProps>;
 const components: Record<string, DockView> = {

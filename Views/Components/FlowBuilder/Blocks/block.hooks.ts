@@ -165,7 +165,6 @@ export function useBlockView({
         return;
       }
       let hasChanged = false;
-
       const updateValue = (variable: PluginVariable) => {
         if (
           variable.id === variableToChange.id &&

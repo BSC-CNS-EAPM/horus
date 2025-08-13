@@ -80,7 +80,6 @@ export function ConsentBanner() {
   useEffect(() => {
     // Show banner if no consent decision has been made
     const consent = analyticsSetting?.value ?? null;
-    console.log("Current consent:", consent);
     if (consent === null) {
       setIsVisible(true);
     }
