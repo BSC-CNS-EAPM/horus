@@ -7,6 +7,7 @@ importantly, it manages the execution of the individual blocks of the plugins.
 
 # Standard imports
 from collections import defaultdict, deque
+from ctypes import Union
 from multiprocessing import Process
 import os
 import signal
@@ -1765,7 +1766,7 @@ class PluginManager(metaclass=HorusSingleton):
         }
         return pg._pageInfo
 
-    def _getDevelopmentPage(self):
+    def _getDevelopmentPage(self) -> typing.Optional[typing.Dict[str, typing.Union[str, bool]]]:
         """
         If on development mode, returns the "Development" page
         """
@@ -1804,12 +1805,13 @@ class PluginManager(metaclass=HorusSingleton):
                 pages.append(pg)
         return pages
 
-    def getPages(self):
+    def getPages(self) -> typing.List[typing.Dict[str, typing.Union[str, bool]]]:
         """
         Returns a list of all the pages of all the plugins in JSON format.
         """
         self._initializePlugins()
-        pages: list[dict[str, str]] = []
+        pages: typing.List[typing.Dict[str, typing.Union[str, bool]]] = []
+
         for p in self.loadedPlugins:
             for pg in p.pages:
                 pages.append(self._getPageInfo(pg, p))
@@ -1818,6 +1820,7 @@ class PluginManager(metaclass=HorusSingleton):
         developmentPage = self._getDevelopmentPage()
 
         if developmentPage is not None:
+            developmentPage["developmentPage"] = True
             pages.append(developmentPage)
 
         return pages

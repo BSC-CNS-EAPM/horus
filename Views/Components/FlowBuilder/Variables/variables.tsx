@@ -49,6 +49,11 @@ import {
   FlowBuilderContext,
   PANEL_REGISTRY,
 } from "@/Components/MainApp/PanelView";
+import {
+  DEVELOPMENT_EXTENSION_ID,
+  getIframeExtensionID,
+} from "@/Components/IframeLoader/iframeloader";
+import { useSettings } from "@/Main/app";
 
 type PluginVariableViewProps = {
   variable: PluginVariable;
@@ -1103,17 +1108,92 @@ function CustomVariableRenderer(props: {
   onChange: (value: any) => void;
 }) {
   const { dockApi } = useContext(DockContext);
+  const flowBuilderContext = useContext(FlowBuilderContext);
 
-  const setupWindowVariables = () => {
-    // Load into the window the getVariable and setVariable functions
-    window.horus.getVariable = () => {
-      return props.variable;
+  const panelID = `variable-${props.variable.id}-${props.variable.placedID}`;
+
+  const updatedPluginPage: PluginPage = useMemo(() => {
+    return {
+      ...props.variable.customPage,
+      variable_id: props.variable.id,
+      placedID: props.variable.placedID,
+    };
+  }, [props.variable.customPage, props.variable.id, props.variable.placedID]);
+
+  const injectVariables = useCallback(() => {
+    const abortController = new AbortController();
+    const signal = abortController.signal;
+
+    // Inject variables on NON-development iframes
+    const prodIframe = getIframeExtensionID(updatedPluginPage);
+
+    const iframe = document.getElementById(
+      prodIframe
+    ) as HTMLIFrameElement | null;
+
+    const injectToProd = () => {
+      if (signal.aborted) {
+        return;
+      }
+
+      if (iframe?.contentWindow) {
+        iframe.contentWindow.horusVariable = {
+          getVariable: () => props.variable,
+          setVariable: (value: any) => {
+            props.onChange(value);
+          },
+        };
+      }
     };
 
-    window.horus.setVariable = (value: any) => {
-      props.onChange(value);
+    injectToProd();
+    iframe?.addEventListener("load", injectToProd, { signal });
+    const devIframes = (flowBuilderContext?.misc?.developmentIframes ?? [])
+      .filter(
+        (entry) =>
+          entry.variable_id === props.variable.id &&
+          entry.variable_placedID === props.variable.placedID
+      )
+      .map((entry) => {
+        const devIframe = document.getElementById(
+          entry.iframe_id
+        ) as HTMLIFrameElement | null;
+
+        return devIframe;
+      });
+
+    const injectToDev = (devIframe: HTMLIFrameElement | null) => {
+      if (signal.aborted) {
+        return;
+      }
+
+      if (devIframe?.contentWindow) {
+        if (!devIframe.contentWindow.horus) {
+          devIframe.contentWindow.horus = window.horus;
+        }
+
+        devIframe.contentWindow.horusVariable = {
+          getVariable: () => props.variable,
+          setVariable: (value: any) => props.onChange(value),
+        };
+      }
     };
-  };
+
+    devIframes.forEach((devIframe) => {
+      injectToDev(devIframe);
+      devIframe?.addEventListener("load", () => injectToDev(devIframe), {
+        signal,
+      });
+    });
+
+    return () => {
+      abortController.abort();
+    };
+  }, [props, flowBuilderContext?.misc.developmentIframes, updatedPluginPage]);
+
+  useEffect(() => {
+    return injectVariables();
+  }, [injectVariables]);
 
   return (
     <div className="w-full flex flex-col gap-2 items-center justify-center p-2">
@@ -1122,12 +1202,14 @@ function CustomVariableRenderer(props: {
           addPanel({
             dockApi,
             component: PANEL_REGISTRY.blockVariablesExtension.component,
-            panelID: `variable-${props.variable.id}-${props.variable.placedID}`,
+            panelID: panelID,
             params: {
-              ...props.variable.customPage,
-              placedID: props.variable.placedID,
-              onFocus: setupWindowVariables,
-            } as PluginPage,
+              ...updatedPluginPage,
+              onLoad: () => {
+                // Inject the variable into the iframe
+                injectVariables();
+              },
+            } as PluginPage & { onLoad?: () => void },
           });
         }}
       >

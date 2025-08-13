@@ -59,12 +59,19 @@ declare global {
     horusTerm: {
       ref: React.RefObject<Terminal> | null;
     };
-    // Horus flow builder
-    horus: {
+    horusVariable: {
       getVariable?: () => any;
       setVariable?: (value: any) => void;
+    };
+    // Horus flow builder
+    horus: {
       getFlow?: () => any;
       setFlow?: (newFlow: Flow) => void;
+      executeFlow?: (options?: {
+        placedID?: number;
+        resetFlow?: boolean;
+        continueSlurm?: boolean;
+      }) => Promise<void>;
       setExtraData?: (key: string, value: any) => void;
       getExtraData?: (key: string) => any;
       openExtensionFilePicker?: (
