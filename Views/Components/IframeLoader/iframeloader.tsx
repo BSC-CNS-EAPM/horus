@@ -173,7 +173,13 @@ function IFrameLoader({
   const hasSelectedVarRef = useRef(false);
 
   useEffect(() => {
-    const iframe = document.getElementById(iframeID) as HTMLIFrameElement;
+    const iframe = document.getElementById(
+      iframeID
+    ) as HTMLIFrameElement | null;
+
+    if (!iframe) {
+      return;
+    }
 
     const handleLoad = () => {
       if (!iframe?.contentWindow) return;
