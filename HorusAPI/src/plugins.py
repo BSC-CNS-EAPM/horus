@@ -18,7 +18,7 @@ from typing import Any, Callable, ClassVar, Dict, List, TypeVar, cast, Optional
 from pydantic import (  # pylint: disable=no-name-in-module. # Somehow pylint does not recognize BaseModel
     BaseModel,
     Field,
-    validator,
+    field_validator,
 )
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, Future
@@ -2300,7 +2300,8 @@ class SlurmJob(HorusPydanticModel):
     stderr_content: Optional[str] = Field(None, alias="StdErrContent")
     script_content: Optional[str] = Field(None, alias="SubmissionScript")
 
-    @validator("start_time", "end_time", pre=True)
+    @field_validator("start_time", "end_time", mode="before")
+    @classmethod
     def parse_datetime(cls, value):  # pylint: disable=no-self-argument
         """
         Converts datetimes
@@ -2319,7 +2320,8 @@ class SlurmJob(HorusPydanticModel):
         except ValueError:
             raise ValueError(f"Invalid datetime format: {value}")
 
-    @validator("state", pre=True)
+    @field_validator("state", mode="before")
+    @classmethod
     def parse_status(cls, value):  # pylint: disable=no-self-argument
         """
         Convert the status to Status enum
