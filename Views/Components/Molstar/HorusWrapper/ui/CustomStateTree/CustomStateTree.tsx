@@ -41,7 +41,7 @@ export function SingleStructureView({ structure }: StructureViewerProps) {
         // Use loci-based selection
         await horusMolstar.createComponent({
           structure: horusMolstar.plugin!.helpers.substructureParent.get(
-            params.loci.structure,
+            params.loci.structure
           ),
           newSelectionLabel: params.label,
           selectionOptions: { loci: params.loci },
@@ -87,7 +87,7 @@ export function SingleStructureView({ structure }: StructureViewerProps) {
             },
             representations: [params.representation], // Target specific representation type
           },
-          [structure.structureRef],
+          [structure.structureRef]
         );
       }
     } catch (error) {
@@ -104,15 +104,19 @@ export function SingleStructureView({ structure }: StructureViewerProps) {
         onToggleVisibility={toggleVisibility}
       />
 
-      <RepresentationsSection
-        structure={structure}
-        onAddComponent={handleAddComponent}
-      />
+      {structure.kind === "structure" && (
+        <>
+          <RepresentationsSection
+            structure={structure}
+            onAddComponent={handleAddComponent}
+          />
 
-      <ComponentsSection
-        structure={structure}
-        onAddComponent={handleAddComponent}
-      />
+          <ComponentsSection
+            structure={structure}
+            onAddComponent={handleAddComponent}
+          />
+        </>
+      )}
     </StructureContainer>
   );
 }

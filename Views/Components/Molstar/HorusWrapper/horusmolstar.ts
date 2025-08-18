@@ -96,6 +96,8 @@ export type BondInfo = {
   strucrureRef: string;
 };
 
+export type MolInfoKind = "structure" | "sphere" | "box";
+
 export type MolInfo = {
   id: string;
   label: string;
@@ -103,6 +105,7 @@ export type MolInfo = {
   fileName: string;
   format: string;
   rootRef: string;
+  kind: MolInfoKind;
 };
 
 export interface MolInfoWithRef extends MolInfo {
@@ -2029,7 +2032,16 @@ export default class HorusMolstar {
           structure.cell.sourceRef!
         );
 
+        let kind: MolInfoKind = "structure";
+        if (structure.genericRepresentations) {
+          const params =
+            structure.genericRepresentations[0]?.cell.params?.values || {};
+
+          kind = params?.type?.name ?? "structure";
+        }
+
         const molInfo: MolInfoWithRef | MolInfo = {
+          kind,
           id: structure.cell.sourceRef!,
           structureRef: includeRef ? structure : undefined,
           rootRef: rootRef,
