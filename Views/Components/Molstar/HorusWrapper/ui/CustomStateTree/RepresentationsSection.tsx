@@ -64,7 +64,7 @@ export function RepresentationsSection({
           },
           colorTheme: colorTheme,
           sizeTheme: sizeTheme,
-        },
+        }
       );
       if (opacity !== undefined) {
         // Apply transparency only to this specific component
@@ -76,7 +76,7 @@ export function RepresentationsSection({
             // Return all loci for the structure - this will be filtered by representation type
             return StructureElement.Loci.all(structure);
           },
-          [representationId], // This filters to only the specific representation type
+          [representationId] // This filters to only the specific representation type
         );
       }
     } catch (error) {
@@ -145,12 +145,12 @@ export function RepresentationsSection({
                 onRemove={() => {
                   const plugin = (window.molstar as HorusMolstar).plugin!;
                   const component = structure.structureRef.components.find(
-                    (comp) => comp.representations.includes(rep.ref),
+                    (comp) => comp.representations.includes(rep.ref)
                   );
                   if (component) {
                     plugin.managers.structure.hierarchy.remove(
                       [component],
-                      true,
+                      true
                     );
                   }
                 }}

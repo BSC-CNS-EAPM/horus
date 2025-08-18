@@ -28,7 +28,7 @@ export function StructureActions({ structure }: StructureActionsProps) {
 
   const downloadStructure = () => {
     window.horus.saveFile(
-      new File([structure.fileContents ?? "No content"], structure.label),
+      new File([structure.fileContents ?? "No content"], structure.label)
     );
   };
 
@@ -50,13 +50,15 @@ export function StructureActions({ structure }: StructureActionsProps) {
       >
         <EyeIcon className="w-4 h-4" />
       </button>
-      <button
-        className="p-1 text-gray-400 hover:text-gray-600"
-        onClick={downloadStructure}
-        title="Download structure"
-      >
-        <CloudDownload className="w-4 h-4" />
-      </button>
+      {structure.kind === "structure" && (
+        <button
+          className="p-1 text-gray-400 hover:text-gray-600"
+          onClick={downloadStructure}
+          title="Download structure"
+        >
+          <CloudDownload className="w-4 h-4" />
+        </button>
+      )}
       <button
         className="p-1 text-gray-400 hover:text-gray-600"
         onClick={removeStructure}
