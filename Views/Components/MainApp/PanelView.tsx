@@ -364,7 +364,7 @@ function EditableTitleTab(
       data-testid="dockview-dv-default-tab"
       {...rest}
       onClick={onClick}
-      className="dv-default-tab"
+      className="dv-default-tab gap-2"
     >
       {props.icon}
       {isEditing ? (

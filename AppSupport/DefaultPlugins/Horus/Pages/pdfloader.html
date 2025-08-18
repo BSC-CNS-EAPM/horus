@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <head>
     <title>Horus PDF Loader</title>
@@ -22,8 +22,8 @@
       }
 
       // Check if the extensionData object is available
-      if (window.parent.extensionData) {
-        const pdf = window.parent.extensionData.pdf;
+      if (window.extensionData) {
+        const pdf = window.extensionData.pdf;
 
         const blob = parent.horus
           .getFile(pdf)

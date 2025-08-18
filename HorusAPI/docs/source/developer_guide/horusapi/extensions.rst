@@ -126,12 +126,12 @@ will open with the provided data.
     # Open the extensions view
     Extensions().storeExtensionResults(pluginID="mypluginid", pageID="customView", data={"someData": data}, title="View results")
 
-You can access the data in JavaScript as follows:
+You can access the data in JavaScript from the window object (or as the global `horus` variable) as follows:
 
 .. code-block:: javascript
-    
-    // Get the data passed from the extension
-    const data = window.parent.extensionData; // Remember that extensions run inside an iframe
+
+    // Get the data passed from the extension. The data gets automatically injected into the window object
+    const data = window.extensionData;
     console.log(data.someData) // The object passed from the Extensions class
 
 Using the File Picker inside an Extension
@@ -141,7 +141,7 @@ You can call the Horus File Picker using the following JavaScript snippet:
 
 .. code-block:: javascript
     
-    parent.horus.openExtensionFilePicker()
+    window.horus.openExtensionFilePicker()
 
 This will open the Desktop / Server File Picker accordingly. You can provide custom options in order to select folders,
 allow only specific file extensions, or controlling what happens when the user selects a file:
@@ -158,7 +158,7 @@ allow only specific file extensions, or controlling what happens when the user s
 .. code-block:: javascript
 
     // Example usage
-    parent.horus.openExtensionFilePicker(
+    window.horus.openExtensionFilePicker(
         {
             onFileConfirm: (filePath) => {
                 console.log("Congrats! You have selected: ", filePath)
@@ -175,7 +175,7 @@ To save files either in desktop mode or server mode, you can use the following m
 .. code-block:: javascript
 
     // 'file' is an instance of the File class
-    parent.horus.saveFile(file)
+    window.horus.saveFile(file)
 
 This method will either download the file from the browser (when in server or webapp mode)
 or open the operating system's file picker to save it in the desired location (when in desktop mode).
@@ -192,7 +192,7 @@ trying to get files to which the user does not have acces to will throw an error
     // Returns a promise of a blob with the contents of the file.
     // Ideally, absolute path should be used, as relative paths 
     // will be so to the current working directory in which Horus is being executed.
-    const blob = await parent.horus.getFile("/path/to/my/file")
+    const blob = await window.horus.getFile("/path/to/my/file")
 
 Managing tabs, panes and views
 ------------------------------
@@ -201,22 +201,22 @@ You can edit, open and close other panels using the embedded functions:
 .. code-block:: javascript
 
     // You can edit the current panel tab name
-    parent.horus.setTabTitle("Modified!")
+    window.horus.setTabTitle("Modified!")
 
     // Or close it
-    parent.horus.closeTab()
+    window.horus.closeTab()
 
     // The available panels are "molstar", "flow", "smiles" and "extensions"
     // The openPanel functions requires 1 positional argument for the "molstar", "flow" and "smiles" panels
     // (only the panel type). For example, to open the Molstar panel
-    parent.horus.openPanel("molstar")
+    window.horus.openPanel("molstar")
 
     // For the extensions, you will need to give two more arguments, 
     // the ID of the panel (can be any string to identify the panel) and
     // the parameters for correctly loading the extension. Those parameters are 
     // the name of the panel, the plugin ID that provides the the extension and the
     // extension ID. Finally, you can pass any data inside the params argument.
-    parent.horus.openPanel("extensions", "results_1", { // The id will be results_1
+    window.horus.openPanel("extensions", "results_1", { // The id will be results_1
       name: "My cool results", // The title of the tab
       plugin: "horus", // The plugin that provides the view
       id: "html_loader", // The ID of the view, in this case, the embedded html_loader
@@ -226,7 +226,7 @@ You can edit, open and close other panels using the embedded functions:
     });
 
     // To close the flow panel. Give the panel ID
-    parent.horus.closePanel("results_1")
+    window.horus.closePanel("results_1")
 
 Storing data in the flow
 ------------------------
@@ -237,28 +237,33 @@ To store data in the flow, use the built-in functions :bdg-secondary-line:`setEx
 
     // To store data in the current flow, you will 
     // need to give a unique key which will identify your value
-    parent.horus.setExtraData("my_key", "my_value")
+    window.horus.setExtraData("my_key", "my_value")
 
     // To obtain the value, just use your key
-    const value = parent.horus.getExtraData("my_key")
+    const value = window.horus.getExtraData("my_key")
 
 Managing SMILES and Mol*
 ------------------------
 
-The Horus Mol* and SMILES instances are exposed in the parent window object which is accessible inside extensions.
+The Horus Mol* and SMILES instances are exposed in the window object which is accessible inside extensions. 
+
+.. warning::
+
+   Molstar and SMILES instances could not be available if the panels are not opened. Make sure to always check
+   for their existence before using them. e.g.: `if (window.molstar) {doSomething()}`
 
 .. code-block:: javascript
 
     // Mol*
 
     // Resets the viewer
-    parent.molstar.reset();
+    window.molstar.reset();
 
     // Updates the background
-    parent.molstar.setBackground(hexColor: string);
+    window.molstar.setBackground(hexColor: string);
 
     // Focuses a specific residue in a structure
-    parent.molstar.focus(
+    window.molstar.focus(
         structureLabel?: string,
         residueNumber?: number,
         chain?: string,
@@ -266,7 +271,7 @@ The Horus Mol* and SMILES instances are exposed in the parent window object whic
     );
 
     // Loads a file
-    parent.molstar.loadMoleculeFile(
+    window.molstar.loadMoleculeFile(
         file: File,
         options?: {
             label?: string;
@@ -274,29 +279,29 @@ The Horus Mol* and SMILES instances are exposed in the parent window object whic
     );
 
     // Loads a trajectory from a topology and coordinates file
-    parent.molstar.loadTrajectory({
+    window.molstar.loadTrajectory({
         topology: File;
         trajectory: File;
         label?: string;
     });
 
     // Returns a list of the loaded structures
-    parent.molstar.listStructures();
+    window.molstar.listStructures();
 
     // Returns a list of hetero atoms.
-    parent.molstar.listHeteroAtoms(label?: string)
+    window.molstar.listHeteroAtoms(label?: string)
 
     // Returns a list of hetero residues
-    parent.molstar.listHeteroRes(label?: string)
+    window.molstar.listHeteroRes(label?: string)
 
     // Returns a list of standard residues
-    parent.molstar.listStandardRes(label?: string)
+    window.molstar.listStandardRes(label?: string)
     
     // Returns a list of chains
-    parent.molstar.listChains(label?: string);
+    window.molstar.listChains(label?: string);
 
     // Adds a sphere/box at a specific location
-    parent.molstar.addSphere(
+    window.molstar.addSphere(
         position: {
           x: number;
           y: number;
@@ -308,7 +313,7 @@ The Horus Mol* and SMILES instances are exposed in the parent window object whic
     );
 
     // The positions represent each dimension of the box
-    parent.molstar.addBox(
+    window.molstar.addBox(
         position: {
             x0: number;
             y0: number;
@@ -332,19 +337,19 @@ The Horus Mol* and SMILES instances are exposed in the parent window object whic
     // SMILES
 
     // Returns the current list of smiles
-    parent.smiles.getSmilesList()
+    window.smiles.getSmilesList()
 
     // Sets a new list of smiles. Use the same format as the return type of getSmilesList
-    parent.smiles.setSmilesList(newSmilesList)
+    window.smiles.setSmilesList(newSmilesList)
 
     // Resets the manager
-    parent.smiles.reset()
+    window.smiles.reset()
 
     // Loads CSV, SDF or SMI files
-    parent.smiles.loadFiles(file: File | FileList);
+    window.smiles.loadFiles(file: File | FileList);
     
     // Loads a SMILES string and adds it to the list of SMILES structures.
-    parent.smiles.loadSmilesString(smiles: string,
+    window.smiles.loadSmilesString(smiles: string,
     options?: {
       label?: string;
       extraInfo?: string;
@@ -352,7 +357,7 @@ The Horus Mol* and SMILES instances are exposed in the parent window object whic
     });
 
     // To obtain the value, just use your key
-    const value = parent.horus.getExtraData("my_key")
+    const value = window.horus.getExtraData("my_key")
 
 
 Default extensions

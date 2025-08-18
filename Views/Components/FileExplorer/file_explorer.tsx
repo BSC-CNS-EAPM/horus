@@ -912,7 +912,7 @@ export type ExtensionsFilePickerOptions = Omit<
 >;
 
 function openExtensionFilePicker(
-  options: ExtensionsFilePickerOptions
+  options?: ExtensionsFilePickerOptions
 ): Promise<string | null> {
   return new Promise((resolve) => {
     let globalFilePicker = document.getElementById(
@@ -933,7 +933,7 @@ function openExtensionFilePicker(
         openDirectly
         onClose={(selectedPath) => {
           resolve(selectedPath);
-          options.onClose?.(selectedPath);
+          options?.onClose?.(selectedPath);
         }}
       />,
       globalFilePicker

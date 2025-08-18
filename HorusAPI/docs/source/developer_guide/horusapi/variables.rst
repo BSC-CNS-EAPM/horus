@@ -203,34 +203,41 @@ the specified :bdg-secondary-line:`PluginPage`. For more information about :bdg-
     :align: center
 
 Inside the custom view, the variable and the flow can be accessed in JavaScript
-using the :bdg-secondary-line:`parent.horus` object. For example:
+using the :bdg-secondary-line:`window.horusVariables` object.
+
+.. warning::
+    The `window.horusVariables` object is only available inside the view of a `CustomVariable`.
+
+    For the `flowChanged` event, attach the listener to the parent window, not the current one,
+    since extensions run inside iframes and the event is only dispatched on the parent window.
+
 
 .. code-block:: javascript
 
     // Get the current state of the variable which opened the custom view
-    const variable = parent.horus.getVariable();
+    const variable = window.horusVariables.getVariable();
 
     // Set a new value for the variable
-    parent.horus.setVariable("new_value");
+    window.horusVariables.setVariable("new_value");
 
     // Get the current state of the flow
-    const newFlow = parent.horus.getFlow();
+    const newFlow = window.horusVariables.getFlow();
 
     // For example, modify the title of the flow
     newFlow.title = "New title";
 
     // Set a new value for the flow
-    parent.horus.setFlow(newFlow)
+    window.horus.setFlow(newFlow)
 
     // Obtain an updated value from the flow when it is modified
-    // using an event listener
+    // using an event listener on the PARENT window
     parent.addEventListener("flowChanged", (event) => {
         const flow = event.detail;
         console.log("Flow changed", flow);
     });
 
     // You can execute the flow using the executeFlow function
-    await parent.horus.executeFlow({
+    await window.horus.executeFlow({
         placedID: 1, // Mandatory, the ID of the block to be executed
         resetFlow: true, // Optional, whether to reset the flow before executing
         continueSlurm: false, // Optional, whether to continue the Slurm execution

@@ -183,8 +183,10 @@ function IFrameLoader({
 
     const handleLoad = () => {
       if (!iframe?.contentWindow) return;
+
       iframe.contentWindow.extensionData = data;
       iframe.contentWindow.horus = window.horus;
+      iframe.contentWindow.molstar = window.molstar;
 
       iframe.contentWindow.horus.setTabTitle = (title: string) => {
         panelApi?.setTitle?.(title);
@@ -212,6 +214,9 @@ function IFrameLoader({
       setLoading(false);
       onLoad?.();
     };
+
+    // Handle load before the iframe has loaded to inject the variables
+    handleLoad();
 
     iframe.addEventListener("load", handleLoad);
     return () => {

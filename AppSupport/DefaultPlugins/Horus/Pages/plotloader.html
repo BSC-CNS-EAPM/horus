@@ -139,8 +139,8 @@
       }
 
       // Load CSV data and initialize chart options
-      if (window.parent?.extensionData?.plot) {
-        const plot = window.parent.extensionData.plot;
+      if (window.extensionData?.plot) {
+        const plot = window.extensionData.plot;
 
         if (plot.endsWith(".csv")) {
           parent.horus
