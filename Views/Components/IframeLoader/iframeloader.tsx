@@ -243,6 +243,14 @@ function IFrameLoader({
       {showModal &&
         (() => {
           const customVars = findCustomVars(flowBuilderContext);
+
+          if (customVars.length && !selectedVarID.id) {
+            setSelectedVarID({
+              id: customVars[0]!.id,
+              placedID: customVars[0]!.placedID,
+            });
+          }
+
           return (
             <div
               className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center"
