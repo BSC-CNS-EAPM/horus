@@ -244,7 +244,12 @@ function IFrameLoader({
         (() => {
           const customVars = findCustomVars(flowBuilderContext);
           return (
-            <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[9999]">
+            <div
+              className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center"
+              style={{
+                zIndex: 10000,
+              }}
+            >
               <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
                 <h2 className="text-2xl font-semibold text-gray-800">
                   Development Extension
@@ -253,7 +258,7 @@ function IFrameLoader({
 
                 <select
                   className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={selectedVarID.id}
+                  value={JSON.stringify(selectedVarID)}
                   onChange={(e) => {
                     if (e.target.value) {
                       const { id, placedID } = JSON.parse(e.target.value);
