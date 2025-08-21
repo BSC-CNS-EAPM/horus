@@ -248,7 +248,15 @@ class PluginPage:
     Internal variable used to store the page info.
     """
 
-    def __init__(self, id: str, name: str, description: str, html: str, hidden: bool = False):
+    def __init__(
+        self,
+        id: str,
+        name: str,
+        description: str,
+        html: str,
+        hidden: bool = False,
+        path: str = "/",
+    ):
         """
         Create a new PluginPage.
 
@@ -258,12 +266,14 @@ class PluginPage:
         :param html: The name of the HTML file (i.e. "my_page.html"). \
         The html file must be located in the "Pages" folder of the plugin.
         :param hidden: Whether the page should be hidden from the extension menu (default: False).
+        :param path: The path to the page (default: "/").
         """
         self.id = id
         self.name = name
         self.description = description
         self.html = html
         self.hidden = hidden
+        self.path = path or "/"
 
         # Initialize instance-specific variables
         self.endpoints = []
@@ -295,6 +305,8 @@ class PluginPage:
             "name": self.name,
             "description": self.description,
             "hidden": self.hidden,
+            "html": self.html,
+            "path": self.path,
         }
 
 

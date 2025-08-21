@@ -2455,9 +2455,9 @@ class HorusServer:
                         os.path.dirname(htmlPath), os.path.basename(htmlPath)
                     )
 
-                # Create a route for the static files
-                @newBluePrint.route(url + "<path:filename>")
-                def sendStatic(filename):
+                @newBluePrint.route(url, defaults={"subpath": ""})
+                @newBluePrint.route(url + "<path:subpath>")
+                def serve_plugin_page(subpath):
                     if (
                         self._isForUser
                         and self.webAppManager is not None
@@ -2470,7 +2470,15 @@ class HorusServer:
                             )
                         except ValueError:
                             return flask.redirect("/")
-                    return flask.send_from_directory(os.path.dirname(htmlPath), filename)
+
+                    file_path = os.path.join(os.path.dirname(htmlPath), subpath)
+                    if subpath and os.path.exists(file_path):
+                        return flask.send_from_directory(os.path.dirname(htmlPath), subpath)
+
+                    # fallback to React index.html
+                    return flask.send_from_directory(
+                        os.path.dirname(htmlPath), os.path.basename(htmlPath)
+                    )
 
                 # Add the required endpoints
                 for addEndPoint in page.endpoints:
@@ -2502,9 +2510,10 @@ class HorusServer:
                 self.server.register_blueprint(parsedBluePrint)
 
                 logging.getLogger("Horus").debug(
-                    "Registered page %s for plugin %s",
+                    "Registered page %s for plugin %s with URL %s",
                     page._pageInfo["id"],  # pylint: disable=protected-access
                     page._pageInfo["pluginDir"],  # pylint: disable=protected-access
+                    url,
                 )
             except Exception as exc:  # pylint: disable=broad-exception-caught
 
