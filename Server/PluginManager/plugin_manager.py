@@ -1759,7 +1759,7 @@ class PluginManager(metaclass=HorusSingleton):
             "plugin": p.pluginMeta.name,
             "pluginID": p.id,
             "html": f"{p._path}/Pages/{pg.html}",
-            "url": f"/plugins/pages/{pg.id}",
+            "url": f"/plugins/pages/{pg.id}".rstrip("/") + pg.path,
             "deps": PluginDepsBase.getFullPluginDepsDir(p._path),
             "pluginDir": p._path,
             "logo": p.logo,

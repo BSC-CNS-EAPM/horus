@@ -97,6 +97,78 @@ Examples
     # Add the endpoint to the page
     myCustomViewPage.addEndpoint(customEndpoint)
 
+Plugin Pages with React Router (HashRouter)
+===========================================
+
+.. note::
+
+   When building plugins that embed a React application using **react-router**, it is recommended to use the **HashRouter** instead of the BrowserRouter.  
+   This ensures that the plugin works under the Horus URL structure, where pages are always served under ``/plugins/pages/<plugin_id>``.  
+
+   The hash part of the URL (``#/route``) is handled entirely by the client (React), while Horus continues serving the same ``index.html`` file for every request.
+
+Why HashRouter?
+---------------
+
+- **Problem:** With BrowserRouter, React expects full control of the URL path. Since Horus always serves plugins under a nested path (e.g. ``/plugins/pages/my_plugin/``), routing will fail with 404 errors unless a server-side fallback is configured for every subpath.  
+- **Solution:** By using HashRouter, the React application relies only on the URL fragment (the part after ``#``), which is **never sent to the server**. This way, Horus only needs to serve the same ``index.html`` file, regardless of the client-side route.
+
+Defining Plugin Pages
+---------------------
+
+You can define multiple plugin pages that share the same HTML file but expose **different entry routes**:
+
+.. code-block:: python
+
+   main_plugin_page = PluginPage(
+       id="my_plugin",
+       name="Main Plugin Page",
+       description="Main entry point for the plugin",
+       html="index.html",
+       path="/#/main",
+   )
+
+   settings_plugin_page = PluginPage(
+       id="my_plugin_settings",
+       name="Plugin Settings",
+       description="Settings and configuration for the plugin",
+       html="index.html",
+       path="/#/settings",
+   )
+
+Both pages load the same ``index.html`` (your React app), but they open different routes inside the app (``#/main`` vs. ``#/settings``).
+
+Accessing API Endpoints
+-----------------------
+
+Since the plugin is loaded under a fixed URL prefix, API calls should ignore the hash part of the URL.  
+The following helper ensures that any API endpoint is built from the URL **before** the ``#``:
+
+.. code-block:: javascript
+
+   export function getAPIUrl(endpoint?: string): string {
+     // The plugin page gets loaded with the URL before the hash.
+     // Therefore, endpoints are added there too.
+     const strippedLocation = window.location.href.split('#')[0];
+
+     return endpoint ? `${strippedLocation}${endpoint}` : strippedLocation;
+   }
+
+Usage example:
+
+.. code-block:: javascript
+
+   fetch(getAPIUrl("/api/update"), {
+       method: "POST",
+       body: JSON.stringify(payload),
+   });
+
+This guarantees that:
+
+- The request is always made relative to the plugin’s base URL  
+- Client-side routes (after ``#``) do not leak into API calls
+
+
 Extensions class
 ----------------
 

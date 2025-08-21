@@ -67,7 +67,6 @@ export function useUser() {
     const data = await response.json();
 
     if (!data.logged) {
-      console.log("Redirecting user to login");
       window.location.href = "/users/login";
     }
 

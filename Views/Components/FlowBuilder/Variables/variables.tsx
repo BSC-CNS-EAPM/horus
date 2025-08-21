@@ -49,11 +49,7 @@ import {
   FlowBuilderContext,
   PANEL_REGISTRY,
 } from "@/Components/MainApp/PanelView";
-import {
-  DEVELOPMENT_EXTENSION_ID,
-  getIframeExtensionID,
-} from "@/Components/IframeLoader/iframeloader";
-import { useSettings } from "@/Main/app";
+import { getIframeExtensionID } from "@/Components/IframeLoader/iframeloader";
 
 type PluginVariableViewProps = {
   variable: PluginVariable;
