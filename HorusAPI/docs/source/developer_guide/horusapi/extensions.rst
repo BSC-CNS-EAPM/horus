@@ -213,7 +213,7 @@ You can call the Horus File Picker using the following JavaScript snippet:
 
 .. code-block:: javascript
     
-    window.horus.openExtensionFilePicker()
+    parent.horus.openExtensionFilePicker()
 
 This will open the Desktop / Server File Picker accordingly. You can provide custom options in order to select folders,
 allow only specific file extensions, or controlling what happens when the user selects a file:
@@ -230,7 +230,7 @@ allow only specific file extensions, or controlling what happens when the user s
 .. code-block:: javascript
 
     // Example usage
-    window.horus.openExtensionFilePicker(
+    parent.horus.openExtensionFilePicker(
         {
             onFileConfirm: (filePath) => {
                 console.log("Congrats! You have selected: ", filePath)
@@ -247,7 +247,7 @@ To save files either in desktop mode or server mode, you can use the following m
 .. code-block:: javascript
 
     // 'file' is an instance of the File class
-    window.horus.saveFile(file)
+    parent.horus.saveFile(file)
 
 This method will either download the file from the browser (when in server or webapp mode)
 or open the operating system's file picker to save it in the desired location (when in desktop mode).
@@ -264,7 +264,21 @@ trying to get files to which the user does not have acces to will throw an error
     // Returns a promise of a blob with the contents of the file.
     // Ideally, absolute path should be used, as relative paths 
     // will be so to the current working directory in which Horus is being executed.
-    const blob = await window.horus.getFile("/path/to/my/file")
+    const blob = await parent.horus.getFile("/path/to/my/file")
+
+Opening the Horus File Editor within an Extension
+-------------------------------------------------
+
+To open the Horus File Editor, you can use the following method:
+
+.. code-block:: javascript
+
+    parent.horus.openFileInEditor({
+      filePath: "/path/to/my/file",
+      name: "My File", // Optional, the name of the tab
+      readOnly: false, // Optional, if the file should be opened in read-only mode
+      format: "text" // Optional, the format of the file. If none is provided, it will be inferred from the file extension
+    })
 
 Managing tabs, panes and views
 ------------------------------

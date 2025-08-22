@@ -284,3 +284,42 @@ class Extensions(metaclass=SingletonMeta):
             )
         else:
             self.open(pluginID="horus", pageID="pdf_loader", data={"pdf": pdf}, title=title)
+
+    def loadFile(
+        self,
+        filePath: str,
+        title: str,
+        store: bool = True,
+        readOnly: bool = False,
+        format: typing.Optional[str] = None,
+    ) -> None:
+        """
+        Loads the given file into the Horus File Editor.
+
+        :param filePath: The path to the file to load.
+        :param title: The title of the 'Result'. \
+        This will be displayed on top of the block that produced the file.
+        :param store: Whether to store the file as results or to open it inmediately.
+        :param readOnly: Whether to open the file in read-only mode.
+        :param format: The format of the file (e.g., "text", "json", "csv", "shell"). If not provided, inferred from the file extension.
+        """
+
+        if not os.path.exists(filePath):
+            raise ValueError("File does not exist at path {}".format(filePath))
+
+        filePath = os.path.abspath(filePath)
+
+        if store:
+            self.storeExtensionResults(
+                pluginID="horus",
+                pageID="load_file",
+                data={"path": filePath, "readOnly": readOnly, "format": format},
+                title=title,
+            )
+        else:
+            self.open(
+                pluginID="horus",
+                pageID="load_file",
+                data={"path": filePath, "readOnly": readOnly, "format": format},
+                title=title,
+            )
