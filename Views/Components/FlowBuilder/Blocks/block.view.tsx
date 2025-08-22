@@ -16,6 +16,7 @@ import AppButton from "@/Components/appbutton";
 import {
   addPanel,
   DockContext,
+  handleExtensionPanelCreation,
   PANEL_REGISTRY,
 } from "@/Components/MainApp/PanelView";
 
@@ -252,14 +253,10 @@ function BlockExtensionsView(props: { block: Block }) {
               top: `-${(index + 1) * 2}rem`,
             }}
             onClick={() => {
-              addPanel({
+              handleExtensionPanelCreation({
                 dockApi,
-                component: PANEL_REGISTRY.extensions.component,
-                panelID: `extensions-${props.block.placedID}-${extension.dataID}`,
-                params: {
-                  ...extension,
-                  placedID: props.block.placedID,
-                },
+                extension,
+                placedID: props.block.placedID,
               });
             }}
           >

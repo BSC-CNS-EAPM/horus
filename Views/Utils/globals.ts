@@ -86,6 +86,17 @@ declare global {
       openPanel?: openPanel;
       closePanel?: (id: string) => void;
       addExtensions?: (e: PluginPageExtensionEvent) => void;
+      openFileInEditor?: ({
+        name,
+        path,
+        readOnly,
+        format,
+      }: {
+        path: string;
+        name?: string;
+        readOnly?: boolean;
+        format?: string;
+      }) => void;
     };
     // JSME viewer
     JSApplet: any;
