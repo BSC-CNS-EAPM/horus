@@ -88,7 +88,7 @@ publish_horusapi:
   script:
   - yum install -y zip unzip
   - export PATH=/opt/python/cp39-cp39/bin:$PATH
-  - pip install cython==3.0.2 twine==6.1.0 mypy==1.8 pydantic==2.11.7
+  - pip install cython==3.0.2 twine==6.1.0 mypy==1.8 pydantic==2.11.7 pathvalidate==3.2.0
   - bash Devtools/Compile/build_horusapi.sh
   - auditwheel repair dist/*.whl
   - twine upload wheelhouse/*.whl
