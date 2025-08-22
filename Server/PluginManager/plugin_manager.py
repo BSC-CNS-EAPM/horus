@@ -1602,6 +1602,19 @@ class PluginManager(metaclass=HorusSingleton):
         except Exception as exc:
             raise BlockNotFoundError(fromBlockID) from exc
 
+    def getPluginConfig(self, pluginID: str, remote: str = "Local") -> dict[str, typing.Any]:
+        """
+        Returns the config of a Plugin
+        """
+
+        plugin = self._getPluginByID(pluginID)
+        configPath = self._pluginConfigPath(plugin, remote)
+
+        with open(configPath, "r", encoding="utf-8") as configFile:
+            configs = json.load(configFile)
+
+        return configs
+
     def executeBlock(
         self,
         block: PluginBlock,
