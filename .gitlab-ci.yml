@@ -88,7 +88,7 @@ publish_horusapi:
   script:
   - yum install -y zip unzip
   - export PATH=/opt/python/cp39-cp39/bin:$PATH
-  - pip install cython==3.0.2 twine==6.1.0 mypy==1.8 pydantic==1.10.13
+  - pip install cython==3.0.2 twine==6.1.0 mypy==1.8 pydantic==2.11.7 pathvalidate==3.2.0
   - bash Devtools/Compile/build_horusapi.sh
   - auditwheel repair dist/*.whl
   - twine upload wheelhouse/*.whl
@@ -107,7 +107,7 @@ build_docs:
 
   - echo "Setting up Micromamba environment..."
   - $MICROMAMBA_BINARY_PATH remove --name horus_docs --yes || true
-  - $MICROMAMBA_BINARY_PATH create --name horus_docs --file Devtools/Environment/docs.yaml --yes
+  - $MICROMAMBA_BINARY_PATH create --name horus_docs --file Devtools/Environment/conda_horus.yaml --yes
   - source <($MICROMAMBA_BINARY_PATH shell hook --shell bash)
   - micromamba activate horus_docs
 
