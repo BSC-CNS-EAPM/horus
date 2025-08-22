@@ -11,6 +11,7 @@ import hashlib
 import subprocess
 from datetime import datetime
 
+
 # Horus imports
 if typing.TYPE_CHECKING:
     from Server.WebAppManager import HorusUser
@@ -193,7 +194,9 @@ class FileExplorer:
         if not self.path.is_dir():
             raise PathIsNotDirectory(self.path)
 
-        if allowedExtensions == ["*"]:
+        if allowedExtensions == ["*"] or (
+            isinstance(allowedExtensions, list) and len(allowedExtensions) == 0
+        ):
             allowedExtensions = None
 
         # Parse the allowed extensions to add a leading dot if they do not have it
@@ -386,6 +389,12 @@ class UserFileExplorer(FileExplorer):
         """
         Returns True if the current path is accessible, False otherwise.
         """
+
+        from Server.WebAppManager import overrideUserExplorer
+
+        if overrideUserExplorer():
+            # If the user is overriding the explorer, then the path is always accessible
+            return True
 
         from Server.FlowManager import FlowManager
 

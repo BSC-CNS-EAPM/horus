@@ -54,4 +54,9 @@ def get_git_version():
 # Get version from git tag or branch name
 branch, version = get_git_version()
 
+# If the environment variable HORUS_VERSION_OVERRIDE is set,
+# use that as the version
+if "HORUS_VERSION_OVERRIDE" in os.environ:
+    version = os.environ["HORUS_VERSION_OVERRIDE"]
+
 version = f"{version}-{branch}"

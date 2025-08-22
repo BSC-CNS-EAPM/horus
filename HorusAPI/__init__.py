@@ -18,10 +18,19 @@ from .src import (
     PlatformType,
     SlurmJob,
     Status,
+    CustomBlockParser,
 )
 
 # Export the Molstar API
-from .src import MolstarAPI
+from .src import (
+    MolstarAPI,
+    MolstarThemeOptions,
+    ColorTheme,
+    SizeTheme,
+    MolRepresentations,
+    MolecularSelection,
+    SelectionLanguage,
+)
 
 # Export the smiles API
 from .src import SmilesAPI
@@ -30,7 +39,14 @@ from .src import SmilesAPI
 from .src import Extensions
 
 # Export the utility SingletonMeta class
-from .src import HorusSingleton, TempFile, ResetRemoteException, getUserFolder
+from .src import (
+    HorusSingleton,
+    TempFile,
+    ResetRemoteException,
+    getUserFolder,
+    structureToFile,
+    multipleStructuresToFolder,
+)
 
 # Export the initPlugin function
 from .src import initPlugin

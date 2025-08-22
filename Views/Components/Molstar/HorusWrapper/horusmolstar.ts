@@ -29,16 +29,19 @@ import { addBoxTo } from "./box";
 import { DockingBoxRepresentationProvider } from "./box";
 import { ObjectKeys } from "molstar/lib/mol-util/type-helpers";
 import { PluginSpec } from "molstar/lib/mol-plugin/spec";
-import { StructureRef } from "molstar/lib/mol-plugin-state/manager/structure/hierarchy-state";
+import {
+  StructureComponentRef,
+  StructureRef,
+} from "molstar/lib/mol-plugin-state/manager/structure/hierarchy-state";
 import { Vec3 } from "molstar/lib/mol-math/linear-algebra";
 import { Expression } from "molstar/lib/mol-script/language/expression";
 
-// Import the molviewspec library
-import { loadMVS } from "molstar/lib/extensions/mvs/load";
-import { MVSData } from "molstar/lib/extensions/mvs/mvs-data";
-import { MolViewSpec } from "molstar/lib/extensions/mvs/behavior";
 import { Mp4Export } from "molstar/lib/extensions/mp4-export";
-import { StateObjectSelector } from "molstar/lib/mol-state";
+import {
+  StateObjectRef,
+  StateObjectSelector,
+  StateSelection,
+} from "molstar/lib/mol-state";
 import { BuiltInTrajectoryFormats } from "molstar/lib/mol-plugin-state/formats/trajectory";
 import { HorusMolstarViewportComponent } from "./ui/viewport";
 import { HorusLeftPanelControls } from "./ui/HorusLeftPanelControls";
@@ -48,6 +51,22 @@ import {
 } from "molstar/lib/mol-plugin-state/transforms/model";
 import { getFileNameInfo } from "molstar/lib/mol-util/file-info";
 import { Task } from "molstar/lib/mol-task";
+import { ColorTheme } from "molstar/lib/mol-theme/color";
+import { SizeTheme } from "molstar/lib/mol-theme/size";
+import {
+  presetStaticComponent,
+  PresetStructureRepresentations,
+} from "molstar/lib/mol-plugin-state/builder/structure/representation-preset";
+import { StructureRepresentationRegistry } from "molstar/lib/mol-repr/structure/registry";
+import { ParamDefinition } from "molstar/lib/mol-util/param-definition";
+import {
+  StructureSelectionQueries,
+  StructureSelectionQuery,
+} from "molstar/lib/mol-plugin-state/helpers/structure-selection-query";
+import { StaticStructureComponentType } from "molstar/lib/mol-plugin-state/helpers/structure-component";
+import { ColorName, HexColor } from "molstar/lib/extensions/mvs/helpers/utils";
+import { OrderedSet, Segmentation } from "molstar/lib/mol-data/int";
+import { UnitIndex } from "molstar/lib/mol-model/structure/structure/element/util";
 
 // Definition of useful types
 export type AtomInfo = {
@@ -77,6 +96,8 @@ export type BondInfo = {
   strucrureRef: string;
 };
 
+export type MolInfoKind = "structure" | "sphere" | "box";
+
 export type MolInfo = {
   id: string;
   label: string;
@@ -84,7 +105,12 @@ export type MolInfo = {
   fileName: string;
   format: string;
   rootRef: string;
+  kind: MolInfoKind;
 };
+
+export interface MolInfoWithRef extends MolInfo {
+  structureRef: StructureRef;
+}
 
 export type MolstarClickEventDetail = {
   x: number;
@@ -96,6 +122,21 @@ export type MolstarClickEventDetail = {
 export type MolstarStateEventDetail = {
   updating: boolean;
 };
+
+export interface StructureInfoWithLoci {
+  chains: Array<{
+    id: string;
+    loci: StructureElement.Loci;
+    residues: Array<{
+      id: string;
+      loci: StructureElement.Loci;
+    }>;
+    hetero: Array<{
+      id: string;
+      loci: StructureElement.Loci;
+    }>;
+  }>;
+}
 
 export enum StateElements {
   root = "-=root=-",
@@ -130,16 +171,97 @@ export type MolstarInitOptions = {
   showControls?: boolean;
 };
 
+export type RepresentationThemeOptions = _RepresentationThemeOptions<
+  ColorTheme.BuiltIn,
+  SizeTheme.BuiltIn
+>;
+
+type _RepresentationThemeOptions<
+  C extends ColorTheme.BuiltIn,
+  S extends SizeTheme.BuiltIn,
+> = {
+  representation: StructureRepresentationRegistry.BuiltIn;
+  representationParams: ParamDefinition.NamedParams;
+  color?: C;
+  size?: S;
+  colorParams?: ColorTheme.BuiltInParams<C> & { value: string };
+  sizeParams?: SizeTheme.BuiltInParams<S>;
+};
+
 // Type for the hook loadMoleculeFile
 export type LoadMoleculeFileType = (
   file: File,
   options?: {
     label?: string;
-  },
-) => Promise<void>;
+    theme?: RepresentationThemeOptions;
+  }
+) => Promise<StructureRef | null>;
+
+export type SelectionLanguage = "mol-script" | "vmd" | "pymol" | "jmol";
+
+export type ResidueRange = {
+  start: number;
+  end: number;
+};
+
+export type ChainAndResidue = {
+  chain: string;
+  residue: number;
+};
+
+export type AuthChainAndResidue = {
+  auth_chain: string;
+  auth_residue: number;
+};
+
+export type WithinDistance = {
+  radius: number;
+  target: MolecularSelection; // recursive type
+};
+
+export type MolecularSelection = {
+  // Script-based selections
+  script?: string;
+  language?: SelectionLanguage;
+  loci?: Loci;
+
+  // Chain selections
+  chain?: string;
+  auth_chain?: string;
+
+  // Entity selection
+  entity?: string;
+
+  // Residue selections
+  residue?: number;
+  auth_residue?: number;
+  residue_range?: ResidueRange;
+  auth_residue_range?: ResidueRange;
+
+  // Atom selections
+  atom_name?: string;
+  auth_atom_name?: string;
+  element_symbol?: string;
+  atom_id?: number;
+  atom_index?: number;
+
+  // Insertion code
+  insertion_code?: string;
+
+  // Combined selections
+  chain_and_residue?: ChainAndResidue;
+  auth_chain_and_residue?: AuthChainAndResidue;
+
+  // Structural selections
+  secondary_structure?: "helix" | "sheet" | "coil";
+  type?: StaticStructureComponentType;
+
+  // Proximity selections
+  within_distance?: WithinDistance;
+};
 
 export function isMolstarLoaded(
-  molstar: typeof window.molstar,
+  molstar: typeof window.molstar
 ): molstar is HorusMolstar {
   return Boolean((molstar as HorusMolstar | undefined)?.plugin);
 }
@@ -156,7 +278,6 @@ export default class HorusMolstar {
   private async initPlugin(options?: MolstarInitOptions) {
     const ExtensionMap = {
       // @ts-ignore
-      mvs: PluginSpec.Behavior(MolViewSpec),
       "mp4-export": PluginSpec.Behavior(Mp4Export),
     };
 
@@ -212,16 +333,36 @@ export default class HorusMolstar {
     });
 
     this.plugin.representation.structure.registry.add(
-      DockingSphereRepresentationProvider,
+      DockingSphereRepresentationProvider
     );
     this.plugin.representation.structure.registry.add(
-      DockingBoxRepresentationProvider,
+      DockingBoxRepresentationProvider
     );
     this.plugin.behaviors.layout.leftPanelTabName.next("data");
 
     // Add the molstar events
     this.molstarEvents();
-    // Add las structure loaded:
+
+    // Configure structures to always be model
+    // Override the structure creation to always use model
+    const originalCreateStructure =
+      this.plugin.builders.structure.createStructure;
+    this.plugin.builders.structure.createStructure = function (
+      modelRef,
+      params,
+      initialState,
+      tags
+    ) {
+      // Force model creation regardless of input params
+      const modelParams = { name: "model", params };
+      return originalCreateStructure.call(
+        this,
+        modelRef,
+        modelParams as any,
+        initialState,
+        tags
+      );
+    };
   }
 
   private molstarEvents() {
@@ -265,7 +406,12 @@ export default class HorusMolstar {
       const event = new CustomEvent(MolstarEvents.STATE, {
         detail: detail,
       });
+
       window.dispatchEvent(event);
+      // if (this.plugin) {
+      //   assemblyObliberator(this.plugin).then(() => {
+      //   })
+      // }
     });
   }
 
@@ -369,7 +515,7 @@ export default class HorusMolstar {
   public async setBackground(hexColor: string): Promise<void> {
     if (!this.plugin?.canvas3d) {
       throw new Error(
-        "3D canvas is not available. Cannot set background color.",
+        "3D canvas is not available. Cannot set background color."
       );
     }
 
@@ -388,7 +534,7 @@ export default class HorusMolstar {
       throw new Error(
         `Failed to set background color: ${
           error instanceof Error ? error.message : String(error)
-        }`,
+        }`
       );
     }
   }
@@ -432,7 +578,7 @@ export default class HorusMolstar {
       throw new Error(
         `Failed to toggle spin: ${
           error instanceof Error ? error.message : String(error)
-        }`,
+        }`
       );
     }
   }
@@ -502,7 +648,7 @@ export default class HorusMolstar {
       throw new Error(
         `Failed to get session: ${
           error instanceof Error ? error.message : String(error)
-        }`,
+        }`
       );
     }
   }
@@ -524,7 +670,7 @@ export default class HorusMolstar {
 
     if (session.size > MAX_SESSION_SIZE) {
       throw new Error(
-        `Session size exceeds the maximum size of ${ALLOWED_MB} MB.`,
+        `Session size exceeds the maximum size of ${ALLOWED_MB} MB.`
       );
     }
 
@@ -600,7 +746,7 @@ export default class HorusMolstar {
       throw new Error(
         `Failed to get structure from model ID '${modelID}': ${
           error instanceof Error ? error.message : String(error)
-        }`,
+        }`
       );
     }
   }
@@ -621,7 +767,7 @@ export default class HorusMolstar {
    * @throws {Error} If there's an error while accessing the state cells or their properties.
    */
   public getStructureIDFromStructureRef(
-    structure: StructureRef,
+    structure: StructureRef
   ): string | null {
     try {
       // Find the first cell with a "Structure" type that matches the given structure reference
@@ -637,7 +783,7 @@ export default class HorusMolstar {
       throw new Error(
         `Error finding model ID from structure: ${
           error instanceof Error ? error.message : String(error)
-        }`,
+        }`
       );
     }
   }
@@ -660,7 +806,7 @@ export default class HorusMolstar {
    */
   public getStructureObjectFromLabel(
     structureLabel: string,
-    first: boolean = true,
+    first: boolean = true
   ): StructureRef | null {
     try {
       const structures = this.structures();
@@ -672,14 +818,14 @@ export default class HorusMolstar {
       return (
         structures.find(
           (s) =>
-            this.getLabelFromStructureRef(s.cell.sourceRef!) === structureLabel,
+            this.getLabelFromStructureRef(s.cell.sourceRef!) === structureLabel
         ) ?? null
       );
     } catch (error) {
       throw new Error(
         `Failed to get structure from label '${structureLabel}': ${
           error instanceof Error ? error.message : String(error)
-        }`,
+        }`
       );
     }
   }
@@ -704,7 +850,7 @@ export default class HorusMolstar {
     structureLabel?: string,
     residueNumber?: number,
     chain?: string,
-    surroundRadius: number = 0,
+    surroundRadius: number = 0
   ): Promise<string> {
     let message = "";
 
@@ -717,22 +863,20 @@ export default class HorusMolstar {
       }
       structureLabel = structures[0]!.label;
       message = `No structure specified, focusing on '${structureLabel}'.`;
-    } else {
-      // Validate the existence of the specified structure
-      const structureRef = this.getStructureObjectFromLabel(structureLabel);
-      if (!structureRef) {
-        message = `No structure with label '${structureLabel}' found.`;
-        const structureList = structures.map((s) => s.label);
-        message += ` Available structures: ${structureList.join(", ")}`;
-        return message;
-      }
     }
 
+    // Validate the existence of the specified structure
     const structureRef = this.getStructureObjectFromLabel(structureLabel);
+    if (!structureRef) {
+      message = `No structure with label '${structureLabel}' found.`;
+      const structureList = structures.map((s) => s.label);
+      message += ` Available structures: ${structureList.join(", ")}`;
+      return message;
+    }
 
     if (!structureRef) {
       throw new Error(
-        `Could not find structure with label '${structureLabel}'`,
+        `Could not find structure with label '${structureLabel}'`
       );
     }
 
@@ -747,7 +891,7 @@ export default class HorusMolstar {
 
       const snapshot = this.plugin!.canvas3d!.camera.getFocus(
         boundary.center,
-        radius,
+        radius
       );
       await PluginCommands.Camera.SetSnapshot(this.plugin!, {
         snapshot,
@@ -780,7 +924,7 @@ export default class HorusMolstar {
       residueNumber,
       structureRef,
       chain,
-      surroundRadius,
+      surroundRadius
     );
 
     return message;
@@ -806,7 +950,7 @@ export default class HorusMolstar {
     residueID: number,
     structureObject: StructureRef,
     chain: string,
-    surroundRadius: number = 0,
+    surroundRadius: number = 0
   ) {
     // Get the 'Update' object from Mol*. This is used to update the state of the visualizer
     const update = this.state.build();
@@ -862,7 +1006,7 @@ export default class HorusMolstar {
       .group(
         StateTransforms.Misc.CreateGroup,
         { label: focusLabel },
-        { ref: StateElements.Selection },
+        { ref: StateElements.Selection }
       );
 
     // Inside the new group named 'Focus' we create the actual residue selection
@@ -870,7 +1014,7 @@ export default class HorusMolstar {
     const filteredResidueInner = group.apply(
       StateTransforms.Model.StructureSelectionFromExpression,
       { label: "Residue " + residueID, expression: filteredResidue },
-      { ref: StateElements.SelectionGroup },
+      { ref: StateElements.SelectionGroup }
     );
 
     // To our new selection, we add a representation based on the data of the structure
@@ -879,7 +1023,7 @@ export default class HorusMolstar {
       StateTransforms.Representation.StructureRepresentation3D,
       createStructureRepresentationParams(this.plugin!, model.data, {
         type: "ball-and-stick",
-      }),
+      })
     );
 
     // If the user specified a radius for the surroundings, we will create a new selection
@@ -901,7 +1045,7 @@ export default class HorusMolstar {
           StateTransforms.Representation.StructureRepresentation3D,
           createStructureRepresentationParams(this.plugin!, model.data, {
             type: "ball-and-stick",
-          }),
+          })
         );
     }
 
@@ -950,7 +1094,7 @@ export default class HorusMolstar {
     const radius = Math.max(boundingSphere.radius, 5);
     const snapshot = this.plugin!.canvas3d!.camera.getFocus(
       boundingSphere.center,
-      radius,
+      radius
     );
 
     // Finally, we will animate the camera to the new position
@@ -988,7 +1132,7 @@ export default class HorusMolstar {
 
       const ext = file.name.split(".").pop();
       const isAllowed = BuiltInTrajectoryFormats.find(
-        (format) => format[0] === ext,
+        (format) => format[0] === ext
       );
 
       if (isAllowed) {
@@ -1003,16 +1147,82 @@ export default class HorusMolstar {
           // @ts-ignore -> Ignore the extension
           await this.plugin!.builders.structure.parseTrajectory(data.data, ext);
 
-        await this.plugin.builders.structure.hierarchy.applyPreset(
-          trajectory,
-          "default",
+        // Create the model
+        const model =
+          await this.plugin.builders.structure.createModel(trajectory);
+
+        // Force model representation instead of assembly
+        const structure = await this.plugin.builders.structure.createStructure(
+          model,
+          { name: "model", params: {} }
         );
+
+        // Get the structure components from the hierarchy
+        const structureRef =
+          this.plugin.managers.structure.hierarchy.current.structures.find(
+            (s) => s.cell.transform.ref === structure.ref
+          );
+
+        const component = await presetStaticComponent(
+          this.plugin,
+          structure,
+          "all"
+        );
+        if (!structureRef || !component) {
+          return null;
+        }
+        const update = this.plugin.state.data.build();
+
+        if (options?.theme) {
+          update
+            .to(component)
+            .apply(StateTransforms.Representation.StructureRepresentation3D, {
+              type: {
+                name: options?.theme?.representation ?? "cartoon",
+                params: {
+                  ...options?.theme?.representationParams,
+                  value: options?.theme?.representation ?? "cartoon",
+                },
+              },
+              colorTheme: {
+                name: options?.theme?.color ?? "uniform",
+                params: {
+                  ...options?.theme?.colorParams,
+                  value: options?.theme?.colorParams?.value
+                    ? getColor(options?.theme?.colorParams?.value)
+                    : randomColor(),
+                },
+              },
+              sizeTheme: {
+                name: options?.theme?.size ?? "physical",
+                params: options?.theme?.sizeParams,
+              },
+            });
+        } else {
+          // Apply default preset using the component manager when no theme is provided
+          const defaultPreset =
+            this.plugin.config.get(
+              PluginConfig.Structure.DefaultRepresentationPreset
+            ) || PresetStructureRepresentations.auto.id;
+          const provider =
+            this.plugin.builders.structure.representation.resolveProvider(
+              defaultPreset
+            );
+          await this.plugin.managers.structure.component.applyPreset(
+            [structureRef],
+            provider
+          );
+        }
+
+        await update.commit();
+
+        return structureRef;
       } else {
         // Use the old method of dropping a file into molstar
         // Using "drag and drop action" to upload a structure
 
         console.warn(
-          `When loading ${ext} files, setting the label is not supported.`,
+          `When loading ${ext} files, setting the label is not supported.`
         );
 
         await this.plugin.runTask(
@@ -1020,15 +1230,19 @@ export default class HorusMolstar {
             files: [parseFileAsAsset],
             format: { name: "auto", params: {} },
             visuals: true,
-          }),
+          })
         );
+
+        return null;
       }
     } catch (error) {
       console.error(
         `Failed to load molecule file: ${
           error instanceof Error ? error.message : String(error)
-        }`,
+        }`
       );
+
+      return null;
     }
   };
   /**
@@ -1073,7 +1287,7 @@ export default class HorusMolstar {
 
             if (!provider) {
               ctx.log.warn(
-                `LoadTrajectory: could not find data provider for '${info.ext}'`,
+                `LoadTrajectory: could not find data provider for '${info.ext}'`
               );
               await ctx.state.data.build().delete(data).commit();
               return;
@@ -1108,7 +1322,7 @@ export default class HorusMolstar {
                   modelRef: model.ref,
                   coordinatesRef: coordinates.ref,
                 },
-                { dependsOn },
+                { dependsOn }
               )
               .apply(StateTransforms.Model.ModelFromTrajectory, {
                 modelIndex: 0,
@@ -1116,11 +1330,11 @@ export default class HorusMolstar {
 
             await this.state.updateTree(traj).runInContext(taskCtx);
             const structure = await ctx.builders.structure.createStructure(
-              traj.selector,
+              traj.selector
             );
             await ctx.builders.structure.representation.applyPreset(
               structure,
-              "auto",
+              "auto"
             );
           } catch (e) {
             console.error(e);
@@ -1136,7 +1350,7 @@ export default class HorusMolstar {
   // Deprecated method
   async loadPDBString(pdbString: string, label: string) {
     console.warn(
-      "loadPDBString will be soon deprecated use loadMoleculeString instead.",
+      "loadPDBString will be soon deprecated use loadMoleculeString instead."
     );
 
     // Parse the data from the string
@@ -1148,7 +1362,7 @@ export default class HorusMolstar {
     });
     const trajectory = await this.plugin!.builders.structure.parseTrajectory(
       data,
-      "pdb",
+      "pdb"
     );
     const model = await this.plugin!.builders.structure.createModel(trajectory);
     const structure =
@@ -1157,15 +1371,15 @@ export default class HorusMolstar {
     const components = {
       polymer: await this.plugin!.builders.structure.tryCreateComponentStatic(
         structure,
-        "polymer",
+        "polymer"
       ),
       ligand: await this.plugin!.builders.structure.tryCreateComponentStatic(
         structure,
-        "ligand",
+        "ligand"
       ),
       water: await this.plugin!.builders.structure.tryCreateComponentStatic(
         structure,
-        "water",
+        "water"
       ),
     };
 
@@ -1184,7 +1398,7 @@ export default class HorusMolstar {
           color: proteinColorType as any,
           colorParams: { value: Color.fromRgb(1, 0, 0) },
         },
-        { tag: "polymer" },
+        { tag: "polymer" }
       );
     if (components.ligand)
       builder.buildRepresentation(
@@ -1195,61 +1409,398 @@ export default class HorusMolstar {
           color: ligandColorType as any,
           colorParams: { value: Color.fromRgb(1, 0, 0) },
         },
-        { tag: "ligand" },
+        { tag: "ligand" }
       );
     if (components.water)
       builder.buildRepresentation(
         update,
         components.water,
         { type: "ball-and-stick", typeParams: { alpha: 0.6 } },
-        { tag: "water" },
+        { tag: "water" }
       );
     await update.commit();
   }
 
-  /**
-   * Generates a selection Loci for a given structure based on a predefined script.
-   *
-   * This method creates an atom group selection based on a specific condition,
-   * such as matching a particular chain label. It returns the selection in the
-   * form of a Loci, which can be used to identify specific atoms or regions within
-   * the structure.
-   *
-   * @param {Structure} structure The structure to generate the Loci for.
-   *
-   * @returns {Loci} The generated Loci representing the selection within the structure.
-   *
-   * @throws {Error} If there's an error creating the selection or converting it to a Loci.
-   */
-  private getLociForStructure(structure: Structure): Loci {
-    if (!structure) {
-      throw new Error("Structure is not provided. Cannot generate Loci.");
+  public async selectWithScript({
+    label,
+    script,
+    language,
+  }: {
+    label?: string;
+    script: string;
+    language: SelectionLanguage;
+  }): Promise<Loci | null> {
+    let structuresToProcess: StructureRef[];
+
+    if (label) {
+      // If label is provided, use the existing logic
+      const structureRef = this.getStructureObjectFromLabel(label);
+      if (!structureRef) {
+        return null;
+      }
+      structuresToProcess = [structureRef];
+    } else {
+      // If no label provided, get all loaded structures
+      structuresToProcess =
+        (this.plugin?.managers.structure.hierarchy.selection
+          .structures as StructureRef[]) || [];
+      if (structuresToProcess.length === 0) {
+        return null;
+      }
     }
 
-    try {
+    let combinedLoci: Loci | null = null;
+
+    for (const structureRef of structuresToProcess) {
       const selection = Script.getStructureSelection(
-        (Q) =>
-          Q.struct.generator.atomGroups({
-            "chain-test": Q.core.rel.eq(["B", Q.ammp("label_asym_id")]),
-          }),
-        structure,
+        Script.toExpression(createSelectionScript(script, language)),
+        structureRef.cell.obj!.data
       );
 
       const loci = StructureSelection.toLociWithSourceUnits(selection);
 
-      return loci;
-    } catch (error) {
-      throw new Error(
-        `Failed to generate Loci for structure: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      );
+      if (combinedLoci) {
+        // Combine loci from multiple structures
+        combinedLoci = Loci.union(combinedLoci, loci);
+      } else {
+        combinedLoci = loci;
+      }
     }
+
+    if (combinedLoci) {
+      this.plugin?.managers.interactivity.lociSelects.select({
+        loci: combinedLoci,
+      });
+    }
+
+    return combinedLoci;
+  }
+
+  async createComponentForSelection({
+    label,
+    representation,
+    color,
+  }: {
+    label?: string;
+    representation?: StructureRepresentationRegistry.BuiltIn;
+    color?: string;
+  }) {
+    if (!this.plugin) return null;
+
+    const structures =
+      this.plugin!.managers.structure.hierarchy.current.structures;
+
+    const newComponents = [];
+    for (const structureRef of structures) {
+      const component =
+        await this.plugin.builders.structure.tryCreateComponentFromSelection(
+          structureRef.cell,
+          StructureSelectionQueries.current,
+          `selection-${Date.now()}`,
+          { label: label ?? "Custom Selection" }
+        );
+
+      if (component) {
+        newComponents.push(component);
+
+        // Apply representation with color directly
+        const update = this.plugin.state.data.build();
+        await update
+          .to(component)
+          .apply(StateTransforms.Representation.StructureRepresentation3D, {
+            type: { name: representation ?? "ball-and-stick", params: {} },
+            colorTheme: {
+              name: "uniform",
+              params: {
+                value: color ? getColor(color) : randomColor(),
+              },
+            },
+          })
+          .commit();
+      }
+    }
+
+    return "Created";
+  }
+
+  async createComponent({
+    structure,
+    newSelectionLabel,
+    structureLabel,
+    selectionOptions,
+    representationParams,
+  }: {
+    structure?: StateObjectRef<PluginStateObject.Molecule.Structure>;
+    structureLabel?: string;
+    newSelectionLabel: string;
+    selectionOptions?: MolecularSelection;
+    representationParams?: RepresentationThemeOptions;
+  }) {
+    if (!this.plugin) {
+      return null;
+    }
+
+    // Build the selection expression based on options
+    let selectionExpression: Expression;
+
+    // If a script string is provided, compile it with language
+    if (selectionOptions?.loci) {
+      selectionExpression = StructureElement.Loci.toExpression(
+        selectionOptions.loci
+      );
+    } else if (selectionOptions?.script && selectionOptions?.language) {
+      selectionExpression = buildExpressionFromSelection(
+        selectionOptions.script,
+        selectionOptions.language
+      );
+    } else if (selectionOptions?.chain_and_residue) {
+      selectionExpression = MS.struct.generator.atomGroups({
+        "chain-test": MS.core.rel.eq([
+          MS.struct.atomProperty.macromolecular.label_asym_id(),
+          selectionOptions.chain_and_residue.chain,
+        ]),
+        "residue-test": MS.core.rel.eq([
+          MS.struct.atomProperty.macromolecular.label_seq_id(),
+          selectionOptions.chain_and_residue.residue,
+        ]),
+      });
+    } else if (selectionOptions?.auth_chain_and_residue) {
+      selectionExpression = MS.struct.generator.atomGroups({
+        "chain-test": MS.core.rel.eq([
+          MS.struct.atomProperty.macromolecular.auth_asym_id(),
+          selectionOptions.auth_chain_and_residue.auth_chain,
+        ]),
+        "residue-test": MS.core.rel.eq([
+          MS.struct.atomProperty.macromolecular.auth_seq_id(),
+          selectionOptions.auth_chain_and_residue.auth_residue,
+        ]),
+      });
+    } else {
+      const tests: Record<string, Expression> = {};
+
+      if (selectionOptions?.chain) {
+        tests["chain-test"] = MS.core.rel.eq([
+          MS.struct.atomProperty.macromolecular.label_asym_id(),
+          selectionOptions.chain,
+        ]);
+      } else if (selectionOptions?.auth_chain) {
+        tests["chain-test"] = MS.core.rel.eq([
+          MS.struct.atomProperty.macromolecular.auth_asym_id(),
+          selectionOptions.auth_chain,
+        ]);
+      }
+
+      if (selectionOptions?.entity) {
+        tests["entity-test"] = MS.core.rel.eq([
+          MS.struct.atomProperty.macromolecular.label_entity_id(),
+          selectionOptions.entity,
+        ]);
+      }
+
+      if (selectionOptions?.residue) {
+        tests["residue-test"] = selectionOptions.insertion_code
+          ? MS.core.logic.and([
+              MS.core.rel.eq([
+                MS.struct.atomProperty.macromolecular.label_seq_id(),
+                selectionOptions.residue,
+              ]),
+              MS.core.rel.eq([
+                MS.struct.atomProperty.macromolecular.pdbx_PDB_ins_code(),
+                selectionOptions.insertion_code,
+              ]),
+            ])
+          : MS.core.rel.eq([
+              MS.struct.atomProperty.macromolecular.label_seq_id(),
+              selectionOptions.residue,
+            ]);
+      } else if (selectionOptions?.auth_residue !== undefined) {
+        tests["residue-test"] = selectionOptions.insertion_code
+          ? MS.core.logic.and([
+              MS.core.rel.eq([
+                MS.struct.atomProperty.macromolecular.auth_seq_id(),
+                selectionOptions.auth_residue,
+              ]),
+              MS.core.rel.eq([
+                MS.struct.atomProperty.macromolecular.pdbx_PDB_ins_code(),
+                selectionOptions.insertion_code,
+              ]),
+            ])
+          : MS.core.rel.eq([
+              MS.struct.atomProperty.macromolecular.auth_seq_id(),
+              selectionOptions.auth_residue,
+            ]);
+      } else if (selectionOptions?.residue_range) {
+        tests["residue-test"] = MS.core.rel.inRange([
+          MS.struct.atomProperty.macromolecular.label_seq_id(),
+          selectionOptions.residue_range.start,
+          selectionOptions.residue_range.end,
+        ]);
+      } else if (selectionOptions?.auth_residue_range) {
+        tests["residue-test"] = MS.core.rel.inRange([
+          MS.struct.atomProperty.macromolecular.auth_seq_id(),
+          selectionOptions.auth_residue_range.start,
+          selectionOptions.auth_residue_range.end,
+        ]);
+      }
+
+      if (selectionOptions?.atom_name) {
+        tests["atom-test"] = MS.core.rel.eq([
+          MS.struct.atomProperty.macromolecular.label_atom_id(),
+          selectionOptions.atom_name,
+        ]);
+      } else if (selectionOptions?.auth_atom_name) {
+        tests["atom-test"] = MS.core.rel.eq([
+          MS.struct.atomProperty.macromolecular.auth_atom_id(),
+          selectionOptions.auth_atom_name,
+        ]);
+      } else if (selectionOptions?.element_symbol) {
+        tests["atom-test"] = MS.core.rel.eq([
+          MS.struct.atomProperty.core.elementSymbol(),
+          selectionOptions.element_symbol,
+        ]);
+      } else if (selectionOptions?.atom_id) {
+        tests["atom-test"] = MS.core.rel.eq([
+          MS.struct.atomProperty.macromolecular.id(),
+          selectionOptions.atom_id,
+        ]);
+      } else if (selectionOptions?.atom_index) {
+        tests["atom-test"] = MS.core.rel.eq([
+          MS.struct.atomProperty.core.sourceIndex(),
+          selectionOptions.atom_index,
+        ]);
+      }
+
+      if (selectionOptions?.secondary_structure) {
+        tests["ss-test"] = MS.core.rel.eq([
+          MS.struct.type.secondaryStructureFlags,
+          selectionOptions.secondary_structure,
+        ]);
+      }
+
+      if (selectionOptions?.type) {
+        const nucleicScript = Script(selectionOptions.type, "vmd");
+        selectionExpression = Script.toExpression(nucleicScript);
+      }
+
+      // Proximity selection is recursive
+      if (selectionOptions?.within_distance) {
+        const { radius, target } = selectionOptions.within_distance;
+        selectionExpression = MS.struct.modifier.includeSurroundings({
+          0: buildExpressionFromSelection(target.script, target.language),
+          radius,
+          "as-whole-residues": true,
+        });
+      } else {
+        selectionExpression = MS.struct.generator.atomGroups(tests);
+      }
+    }
+
+    if (!structure) {
+      // Get root-level structure cells using substructure parent helper
+      const structureCells = this.plugin.state.data.select(
+        StateSelection.Generators.ofType(PluginStateObject.Molecule.Structure)
+      );
+
+      // Find the root parent for each structure and check its label
+      structure =
+        structureCells.find((s) => {
+          if (!s.obj?.data) return false;
+
+          // Get the root parent cell using the substructure parent helper
+          const parentCell = this.plugin!.helpers.substructureParent.get(
+            s.obj.data
+          );
+          return parentCell?.obj?.label === structureLabel;
+        }) ?? structureCells[0];
+
+      if (!structure) {
+        return;
+      }
+    }
+    // Create a component from the selection
+    const component =
+      await this.plugin?.builders.structure.tryCreateComponentFromExpression(
+        structure,
+        selectionExpression,
+        `selection-${Date.now()}`,
+        { label: newSelectionLabel }
+      );
+
+    if (!component) {
+      console.log("expression", selectionExpression, "produced error");
+      throw new Error("Failed to create component from selection");
+    }
+
+    // Apply ball-and-stick representation
+    const update = this.plugin.state.data.build();
+    update
+      .to(component)
+      .apply(StateTransforms.Representation.StructureRepresentation3D, {
+        type: {
+          name: representationParams?.representation ?? "ball-and-stick",
+          params: representationParams?.representationParams,
+        },
+        colorTheme: {
+          name: representationParams?.color ?? newSelectionLabel,
+          params: {
+            ...representationParams?.colorParams,
+            value: representationParams?.colorParams?.value
+              ? getColor(representationParams.colorParams.value)
+              : randomColor(),
+          },
+        },
+        sizeTheme: {
+          name: representationParams?.size ?? "physical",
+          params: representationParams?.sizeParams,
+        },
+      });
+
+    await update.commit();
+    return component;
+  }
+
+  async createBallAndStickFromLoci(
+    loci: StructureElement.Loci,
+    structureRef: StructureRef
+  ): Promise<void> {
+    if (!this.plugin) return;
+
+    const expression = StructureElement.Loci.toExpression(loci);
+    const selectionQuery = StructureSelectionQuery(
+      "Custom Selection",
+      expression
+    );
+
+    // Create component from selection query
+    const component =
+      await this.plugin.builders.structure.tryCreateComponentFromSelection(
+        structureRef.cell,
+        selectionQuery,
+        "ball-stick-component",
+        { label: "Ball & Stick Selection" }
+      );
+
+    if (!component) return;
+
+    // Add ball-and-stick representation
+    await this.plugin.builders.structure.representation.addRepresentation(
+      component,
+      {
+        type: this.plugin.representation.structure.registry.get(
+          "ball-and-stick"
+        ),
+        typeParams: {
+          sizeFactor: 0.15,
+          sizeAspectRatio: 2 / 3,
+          quality: "auto",
+        },
+      }
+    );
   }
 
   private extractAtomInfo(
     loc: StructureElement.Location<Unit>,
-    structureID?: string,
+    structureID?: string
   ): AtomInfo {
     // auth_seq_id  : UniProt coordinate space
     // label_seq_id : PDB coordinate space
@@ -1341,11 +1892,11 @@ export default class HorusMolstar {
    * @throws {Error} If the `structureSourceRef` is not found or if there's an unexpected error during traversal.
    */
   private getStructureRootIDFromStructureSourceRef(
-    structureSourceRef: string,
+    structureSourceRef: string
   ): string {
     if (!this.plugin || !this.plugin.state || !this.plugin.state.data) {
       throw new Error(
-        "Plugin state is not initialized. Cannot find the structure root.",
+        "Plugin state is not initialized. Cannot find the structure root."
       );
     }
 
@@ -1354,7 +1905,7 @@ export default class HorusMolstar {
 
     if (!currentRef) {
       throw new Error(
-        `Unexpected error while finding the structure root. Cell '${structureSourceRef}' not found.`,
+        `Unexpected error while finding the structure root. Cell '${structureSourceRef}' not found.`
       );
     }
 
@@ -1381,29 +1932,44 @@ export default class HorusMolstar {
    *
    * @throws {Error} If the root reference is invalid, the file cannot be found, or an unexpected error occurs during conversion.
    */
+  // Gets file contents as hex string from root reference
   private getFileAsHexStringFromRootRef(rootRef: string): {
     fileContents: string | null;
     fileName: string;
     format: string;
   } {
     try {
-      const fileName =
-        this.plugin!.state.data.cells.get(rootRef)!.params!.values.file.name;
-      let fileContents = "";
-      if (fileName.endsWith(".bcif")) {
-        const uint8Arr = this.plugin!.state.data.cells.get(rootRef)?.obj?.data;
-        fileContents = uint8Arr.toString(16);
-      } else {
-        const data = this.plugin!.state.data.cells.get(rootRef)?.obj?.data;
-        fileContents = data.toString(16);
+      const cell = this.plugin?.state?.data?.cells?.get(rootRef);
+      if (!cell?.obj) {
+        return { fileContents: null, fileName: "Unknown", format: "Unknown" };
       }
+
+      // Try trajectory data first
+      const trajectoryData = cell.obj.data?.representative?.sourceData;
+      if (trajectoryData?.data?.source?.data?.lines?.data) {
+        return {
+          fileContents: trajectoryData.data.source.data.lines.data,
+          fileName: trajectoryData.name ?? "Unknown",
+          format: trajectoryData.data.source.kind ?? "unknown",
+        };
+      }
+
+      // Fall back to structure data
+      const fileName = cell.params?.values?.file?.name || "Unknown";
+      const data = cell.obj.data;
+      const fileContents = data ? data.toString(16) : null;
 
       return {
         fileContents,
         fileName,
-        format: fileName.split(".").pop() ?? "unknown", // Default to 'unknown' if no extension found
+        format: fileName.split(".").pop() || "unknown",
       };
     } catch (error) {
+      console.error(
+        `Error retrieving file contents from root reference '${rootRef}': ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
       return {
         fileContents: null,
         fileName: "Unknown",
@@ -1412,13 +1978,28 @@ export default class HorusMolstar {
     }
   }
 
-  // Will search iteratibely until finding the actual label of the structure (the one on the root)
-  public getLabelFromStructureRef(refID: string) {
+  // Searches iteratively until finding the actual label of the structure (the one on the root)
+  public getLabelFromStructureRef(refID: string): string {
+    if (!this.plugin?.state?.data?.cells) return "Unknown";
+
+    // Try getting the label from the topology data if it's a trajectory
+    const cell = this.plugin.state.data.cells.get(refID);
+    const trajectoryLabel = cell?.obj?.data?.representative?.label;
+    if (trajectoryLabel) return trajectoryLabel;
+
+    // If it fails, try getting the label from the structure cell (e.g. PDB files)
     try {
-      return this.plugin?.state.data.cells.get(
-        this.getStructureRootIDFromStructureSourceRef(refID),
-      )!.obj!.label;
+      const structureRootID =
+        this.getStructureRootIDFromStructureSourceRef(refID);
+      const structureLabel =
+        this.plugin.state.data.cells.get(structureRootID)?.obj?.label;
+      return structureLabel || "Unknown";
     } catch (error) {
+      console.error(
+        `Error retrieving label from structure reference '${refID}': ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
       return "Unknown";
     }
   }
@@ -1434,7 +2015,13 @@ export default class HorusMolstar {
    *
    * @throws {Error} If an unexpected error occurs while retrieving structures or their data.
    */
-  public listStructures(): MolInfo[] {
+  public listStructures<T extends boolean = false>(
+    {
+      includeRef,
+    }: {
+      includeRef?: T;
+    } = {} as { includeRef?: T }
+  ): T extends true ? MolInfoWithRef[] : MolInfo[] {
     const structures = this.structures();
 
     const molList: MolInfo[] = [];
@@ -1442,11 +2029,21 @@ export default class HorusMolstar {
     try {
       for (const structure of structures) {
         const rootRef = this.getStructureRootIDFromStructureSourceRef(
-          structure.cell.sourceRef!,
+          structure.cell.sourceRef!
         );
 
-        const molInfo = {
+        let kind: MolInfoKind = "structure";
+        if (structure.genericRepresentations) {
+          const params =
+            structure.genericRepresentations[0]?.cell.params?.values || {};
+
+          kind = params?.type?.name ?? "structure";
+        }
+
+        const molInfo: MolInfoWithRef | MolInfo = {
+          kind,
           id: structure.cell.sourceRef!,
+          structureRef: includeRef ? structure : undefined,
           rootRef: rootRef,
           label: this.getLabelFromStructureRef(rootRef) ?? "Unknown",
           ...this.getFileAsHexStringFromRootRef(rootRef),
@@ -1460,11 +2057,11 @@ export default class HorusMolstar {
       alert(
         `Failed to list structures: ${
           error instanceof Error ? error.message : String(error)
-        }`,
+        }`
       );
     }
 
-    return molList;
+    return molList as T extends true ? MolInfoWithRef[] : MolInfo[];
   }
 
   public listHeteroAtoms(label?: string): { [id: string]: AtomInfo[] } {
@@ -1544,7 +2141,7 @@ export default class HorusMolstar {
   private getResiduesFromStructure(
     structureRef: StructureRef,
     get?: "all" | "hetero" | "standard" | "chain",
-    unique: boolean = true,
+    unique: boolean = true
   ): AtomInfo[] {
     const resInfo: AtomInfo[] = [];
     Structure.eachAtomicHierarchyElement(structureRef.cell.obj!.data, {
@@ -1626,7 +2223,7 @@ export default class HorusMolstar {
 
     // Map each structure to its list of hetero residues
     return structuresToList.flatMap((s) =>
-      this.getResiduesFromStructure(s, "hetero"),
+      this.getResiduesFromStructure(s, "hetero")
     );
   }
 
@@ -1657,7 +2254,7 @@ export default class HorusMolstar {
 
     // Map each structure to its list of hetero residues
     return structuresToList.flatMap((s) =>
-      this.getResiduesFromStructure(s, "standard", false),
+      this.getResiduesFromStructure(s, "standard", false)
     );
   }
 
@@ -1688,8 +2285,126 @@ export default class HorusMolstar {
 
     // Map each structure to its list of hetero residues
     return structuresToList.flatMap((s) =>
-      this.getResiduesFromStructure(s, "chain"),
+      this.getResiduesFromStructure(s, "chain")
     );
+  }
+  private getStructureFromRef(
+    structureRef: StructureRef
+  ): Structure | undefined {
+    if (!this.plugin) return;
+
+    const structureCell = StateObjectRef.resolveAndCheck(
+      this.plugin.state.data,
+      structureRef.cell.transform.ref
+    );
+    return structureCell?.obj?.data;
+  }
+
+  public getStructureInfo(
+    structureRef: StructureRef
+  ): StructureInfoWithLoci | undefined {
+    const structure = this.getStructureFromRef(structureRef);
+    if (!structure) return;
+
+    const chains = new Map<
+      string,
+      {
+        loci: StructureElement.Loci;
+        residues: Map<string, StructureElement.Loci>;
+        hetero: Map<string, StructureElement.Loci>;
+      }
+    >();
+
+    const location = StructureElement.Location.create(structure);
+
+    // Iterate through all atomic units in the structure
+    for (const unit of structure.units) {
+      if (unit.kind !== 0) continue; // 0 are strictly atoms
+
+      location.unit = unit;
+      const elements = unit.elements;
+      const chainSegments = unit.model.atomicHierarchy.chainAtomSegments;
+      const residueSegments = unit.model.atomicHierarchy.residueAtomSegments;
+
+      const chainsIt = Segmentation.transientSegments(chainSegments, elements);
+      const residuesIt = Segmentation.transientSegments(
+        residueSegments,
+        elements
+      );
+
+      while (chainsIt.hasNext) {
+        const chainSegment = chainsIt.move();
+        location.element = elements[chainSegment.start]!;
+        const chainId = StructureProperties.chain.auth_asym_id(location);
+
+        // Create chain loci
+        const chainIndices = OrderedSet.ofRange(
+          chainSegment.start,
+          chainSegment.end
+        );
+        const chainLoci = StructureElement.Loci(structure, [
+          { unit, indices: chainIndices as OrderedSet<UnitIndex> },
+        ]);
+
+        // Initialize chain entry if it doesn't exist
+        if (!chains.has(chainId)) {
+          chains.set(chainId, {
+            loci: chainLoci,
+            residues: new Map<string, StructureElement.Loci>(),
+            hetero: new Map<string, StructureElement.Loci>(),
+          });
+        }
+
+        const chainData = chains.get(chainId)!;
+
+        residuesIt.setSegment(chainSegment);
+        while (residuesIt.hasNext) {
+          const residueSegment = residuesIt.move();
+          location.element = elements[residueSegment.start]!;
+          const resName = StructureProperties.atom.auth_comp_id(location);
+          const resSeqId = StructureProperties.residue.auth_seq_id(location);
+          const residueKey = `${chainId}:${resName}:${resSeqId}`;
+
+          // Create residue loci
+          const residueIndices = OrderedSet.ofRange(
+            residueSegment.start,
+            residueSegment.end
+          );
+          const residueLoci = StructureElement.Loci(structure, [
+            { unit, indices: residueIndices as OrderedSet<UnitIndex> },
+          ]);
+
+          // Check if it's a hetero residue
+          const isHet =
+            StructureProperties.residue.group_PDB(location) !== "ATOM";
+          if (isHet) {
+            chainData.hetero.set(residueKey, residueLoci);
+          } else {
+            // Add residue to the chain's residues
+            chainData.residues.set(residueKey, residueLoci);
+          }
+        }
+      }
+    }
+
+    return {
+      chains: Array.from(chains.entries()).map(([id, chainData]) => ({
+        id,
+        loci: chainData.loci,
+        residues: Array.from(chainData.residues.entries()).map(
+          ([residueId, loci]) => ({
+            id: residueId,
+            loci,
+          })
+        ),
+        hetero: Array.from(chainData.hetero.entries()).map(
+          ([heteroId, loci]) => ({
+            id: heteroId,
+            loci,
+          })
+        ),
+      })),
+    };
   }
 
   /**
@@ -1713,7 +2428,7 @@ export default class HorusMolstar {
     });
     const trajectory = await this.plugin!.builders.structure.parseTrajectory(
       data,
-      "pdb",
+      "pdb"
     );
     const model = await this.plugin!.builders.structure.createModel(trajectory);
     return await this.plugin!.builders.structure.createStructure(model);
@@ -1739,31 +2454,31 @@ export default class HorusMolstar {
    *
    * @throws {Error} If there is an issue adding the sphere to the structure or if the structure is invalid.
    */
-  public async addSphere(
+  public async addSphere({
+    position,
+    radius,
+    opacity,
+    color,
+    deletePrevious,
+  }: {
     position: {
       x: number;
       y: number;
       z: number;
-    },
-    radius: number,
-    opacity?: number,
-    color?: Color,
-    deletePrevious?: SphereRef,
-  ): Promise<SphereRef> {
+    };
+    radius: number;
+    opacity?: number;
+    color?: Color;
+    deletePrevious?: SphereRef;
+  }): Promise<SphereRef> {
     deletePrevious && this.removeShape(deletePrevious.ref);
 
-    // Get the first structure or null if no structures exist
-    const structureFirst = this.structures()[0];
-
     // Determine the structure to use based on the existence of structureFirst
-    const structureRef = structureFirst?.cell.transform.ref;
-    const structure = structureRef
-      ? this.plugin!.state.data.cells.get(structureRef)
-      : await this.createEmptyNode("Sphere");
+    const structure = await this.createEmptyNode("Sphere");
 
     if (!structure) {
       throw new Error(
-        "Failed to add sphere to mosltar. Could not get a valid structure to place it.",
+        "Failed to add sphere to molstar. Could not get a valid structure to place it."
       );
     }
 
@@ -1781,6 +2496,69 @@ export default class HorusMolstar {
     sphere.ref = await addSphereTo(this.plugin!, structure, sphere);
 
     return sphere;
+  }
+
+  public async moveSphere({
+    sphereRef,
+    newPosition,
+    newRadius,
+    newColor,
+    newOpacity,
+  }: {
+    sphereRef?: string;
+    newPosition?: { x: number; y: number; z: number };
+    newRadius?: number;
+    newColor?: Color;
+    newOpacity?: number;
+  }): Promise<boolean> {
+    if (!sphereRef) return false;
+
+    // Get the state object from the ref
+    const stateObject = this.plugin!.state.data.select(sphereRef)[0];
+
+    if (!stateObject) {
+      return false;
+    }
+
+    // Update the sphere's transform or recreate with new position
+    const currentTransform = stateObject.transform;
+
+    // Ensure params and position exist before updating
+    const params = currentTransform.params?.type?.params;
+    if (
+      !params ||
+      typeof params.x !== "number" ||
+      typeof params.y !== "number" ||
+      typeof params.z !== "number" ||
+      typeof params.radius !== "number"
+    ) {
+      return false;
+    }
+
+    const newParams = {
+      ...currentTransform.params,
+      type: {
+        ...currentTransform.params.type,
+        params: {
+          ...params,
+          x: newPosition?.x ?? params.x,
+          y: newPosition?.y ?? params.y,
+          z: newPosition?.z ?? params.z,
+          radius: newRadius ?? params.radius,
+          color: newColor ?? params.color,
+          opacity: newOpacity ?? params.opacity,
+        },
+      },
+    };
+
+    // Update the state object with new parameters
+    await this.plugin!.state.updateTransform(
+      this.plugin!.state.data,
+      sphereRef,
+      newParams
+    );
+
+    return true;
   }
 
   /**
@@ -1815,7 +2593,14 @@ export default class HorusMolstar {
    * @throws {Error} If there's an issue creating or adding the box, or if the structure is invalid.
    */
 
-  public async addBox(
+  public async addBox({
+    position,
+    radiusScale,
+    radialSegments,
+    opacity,
+    color,
+    deletePrevious,
+  }: {
     position: {
       x0: number;
       y0: number;
@@ -1829,27 +2614,21 @@ export default class HorusMolstar {
       x3: number;
       y3: number;
       z3: number;
-    },
-    radiusScale: number,
-    radialSegments: number,
-    opacity?: number,
-    color?: Color,
-    deletePrevious?: BoxRef,
-  ): Promise<BoxRef> {
+    };
+    radiusScale: number;
+    radialSegments: number;
+    opacity?: number;
+    color?: Color;
+    deletePrevious?: BoxRef;
+  }): Promise<BoxRef> {
     deletePrevious && this.removeShape(deletePrevious.ref);
 
-    // Get the first structure or null if no structures exist
-    const structureFirst = this.structures()[0];
-
-    // Determine the structure to use based on the existence of structureFirst
-    const structureRef = structureFirst?.cell.transform.ref;
-    const structure = structureRef
-      ? this.plugin!.state.data.cells.get(structureRef)
-      : await this.createEmptyNode("Box");
+    // Generate a box node
+    const structure = await this.createEmptyNode("Box");
 
     if (!structure) {
       throw new Error(
-        "Failed to add sphere to mosltar. Could not get a valid structure to place it.",
+        "Failed to add box to molstar. Could not get a valid structure to place it."
       );
     }
 
@@ -1877,6 +2656,132 @@ export default class HorusMolstar {
     box.ref = await addBoxTo(this.plugin!, structure, box);
 
     return box;
+  }
+
+  /**
+   * Moves an existing box to a new position and/or updates its properties.
+   *
+   * This method updates an existing box's position, radius scale, radial segments, and/or color
+   * by modifying the state object parameters. It follows the same pattern as moveSphere.
+   *
+   * @param {object} params The parameters for moving the box.
+   * @param {string} params.boxRef The reference ID of the box to move.
+   * @param {object} [params.newPosition] The new position for the box vertices (optional).
+   * @param {number} [params.newPosition.x0] New x-coordinate of the first vertex.
+   * @param {number} [params.newPosition.y0] New y-coordinate of the first vertex.
+   * @param {number} [params.newPosition.z0] New z-coordinate of the first vertex.
+   * @param {number} [params.newPosition.x1] New x-coordinate of the second vertex.
+   * @param {number} [params.newPosition.y1] New y-coordinate of the second vertex.
+   * @param {number} [params.newPosition.z1] New z-coordinate of the second vertex.
+   * @param {number} [params.newPosition.x2] New x-coordinate of the third vertex.
+   * @param {number} [params.newPosition.y2] New y-coordinate of the third vertex.
+   * @param {number} [params.newPosition.z2] New z-coordinate of the third vertex.
+   * @param {number} [params.newPosition.x3] New x-coordinate of the fourth vertex.
+   * @param {number} [params.newPosition.y3] New y-coordinate of the fourth vertex.
+   * @param {number} [params.newPosition.z3] New z-coordinate of the fourth vertex.
+   * @param {number} [params.newRadiusScale] The new radius scale for the box (optional).
+   * @param {number} [params.newRadialSegments] The new number of radial segments for the box (optional).
+   * @param {Color} [params.newColor] The new color for the box (optional).
+   *
+   * @returns {Promise<boolean>} A promise that resolves to true if the box was successfully moved, false otherwise.
+   */
+  public async moveBox({
+    boxRef,
+    newPosition,
+    newRadiusScale,
+    newRadialSegments,
+    newColor,
+    newOpacity,
+  }: {
+    boxRef?: string;
+    newPosition?: {
+      x0: number;
+      y0: number;
+      z0: number;
+      x1: number;
+      y1: number;
+      z1: number;
+      x2: number;
+      y2: number;
+      z2: number;
+      x3: number;
+      y3: number;
+      z3: number;
+    };
+    newRadiusScale?: number;
+    newRadialSegments?: number;
+    newColor?: Color;
+    newOpacity?: number;
+  }): Promise<boolean> {
+    if (!boxRef) {
+      return false;
+    }
+
+    // Get the state object from the ref
+    const stateObject = this.plugin!.state.data.select(boxRef)[0];
+    if (!stateObject) {
+      return false;
+    }
+
+    // Update the box's transform or recreate with new parameters
+    const currentTransform = stateObject.transform;
+
+    // Ensure params and position exist before updating
+    const params = currentTransform.params?.type?.params;
+    if (
+      !params ||
+      typeof params.x0 !== "number" ||
+      typeof params.y0 !== "number" ||
+      typeof params.z0 !== "number" ||
+      typeof params.x1 !== "number" ||
+      typeof params.y1 !== "number" ||
+      typeof params.z1 !== "number" ||
+      typeof params.x2 !== "number" ||
+      typeof params.y2 !== "number" ||
+      typeof params.z2 !== "number" ||
+      typeof params.x3 !== "number" ||
+      typeof params.y3 !== "number" ||
+      typeof params.z3 !== "number" ||
+      typeof params.radiusScale !== "number" ||
+      typeof params.radialSegments !== "number"
+    ) {
+      return false;
+    }
+
+    const newParams = {
+      ...currentTransform.params,
+      type: {
+        ...currentTransform.params.type,
+        params: {
+          ...params,
+          x0: newPosition?.x0 ?? params.x0,
+          y0: newPosition?.y0 ?? params.y0,
+          z0: newPosition?.z0 ?? params.z0,
+          x1: newPosition?.x1 ?? params.x1,
+          y1: newPosition?.y1 ?? params.y1,
+          z1: newPosition?.z1 ?? params.z1,
+          x2: newPosition?.x2 ?? params.x2,
+          y2: newPosition?.y2 ?? params.y2,
+          z2: newPosition?.z2 ?? params.z2,
+          x3: newPosition?.x3 ?? params.x3,
+          y3: newPosition?.y3 ?? params.y3,
+          z3: newPosition?.z3 ?? params.z3,
+          radiusScale: newRadiusScale ?? params.radiusScale,
+          radialSegments: newRadialSegments ?? params.radialSegments,
+          color: newColor ?? params.color,
+          opacity: newOpacity ?? params.opacity,
+        },
+      },
+    };
+
+    // Update the state object with new parameters
+    await this.plugin!.state.updateTransform(
+      this.plugin!.state.data,
+      boxRef,
+      newParams
+    );
+
+    return true;
   }
 
   /**
@@ -1924,7 +2829,7 @@ export default class HorusMolstar {
 
   public async addStructureRepresentation(
     structure: StructureRef | "all",
-    representation: "cartoon" | "ball-and-stick",
+    representation: "cartoon" | "ball-and-stick"
   ) {
     const structures = structure === "all" ? this.structures() : [structure];
 
@@ -1950,7 +2855,7 @@ export default class HorusMolstar {
         },
         {
           tag: reprTag,
-        },
+        }
       );
       this.addedReprs.push(newRepr);
     }
@@ -1979,6 +2884,21 @@ export default class HorusMolstar {
       builder.delete(repr);
     }
     await builder.commit();
+  }
+
+  public substractSelection() {
+    const sel =
+      this.plugin?.managers.structure.hierarchy.getStructuresWithSelection() ??
+      [];
+    const components: StructureComponentRef[] = [];
+    for (const s of sel) components.push(...s.components);
+    if (components.length === 0) return;
+    this.plugin?.managers.structure.component.modifyByCurrentSelection(
+      components,
+      "subtract"
+    );
+
+    return components.length;
   }
 
   /**
@@ -2038,36 +2958,42 @@ export default class HorusMolstar {
         case "addMolecule":
           const blob = await window.horus.getFile(data.molContent);
           await this.loadMoleculeFile(new File([blob], data.fileName), {
-            label: data.label,
+            ...data.options,
           });
           break;
-        case "loadMVJS":
-          await this.loadMolViewSpecSession(data.session, data.replaceExisting);
+        case "addComponent":
+          await this.createComponent({
+            structureLabel: data.label,
+            newSelectionLabel: data.selectionLabel ?? "Add Component",
+            selectionOptions: data.options?.selection,
+            representationParams: data.options?.theme,
+          });
           break;
         case "focus":
           await this.focus(
             data.structureLabel,
             data.residue,
             data.chain,
-            data.nearRadius,
+            data.nearRadius
           );
           break;
         case "addBox":
-          await this.addBox(
-            data.position,
-            data.radiousScale,
-            data.radialSegments,
-            data.opacity ?? 1,
-            data.color ? Color.fromHexStyle(data.color) : randomColor(),
-          );
+          await this.addBox({
+            position: data.position,
+            radiusScale: data.radiusScale,
+            radialSegments: data.radialSegments,
+            opacity: data.opacity ?? 1,
+            color: data.color ? Color.fromHexStyle(data.color) : randomColor(),
+          });
           break;
         case "addSphere":
-          await this.addSphere(
-            data.position,
-            data.radius,
-            data.opacity,
-            data.color ? Color.fromHexStyle(data.color) : randomColor(),
-          );
+          await this.addSphere({
+            position: data.position,
+            radius: data.radius,
+            opacity: data.opacity,
+            color: data.color ? Color.fromHexStyle(data.color) : randomColor(),
+            deletePrevious: data.deletePrevious,
+          });
           break;
         case "setBackgroundColor":
           await this.setBackground(data.color);
@@ -2086,37 +3012,12 @@ export default class HorusMolstar {
         "There was an error applying the following Mol* action: " +
           type +
           "\n\n" +
-          error,
+          error
       );
     } finally {
       // Once the action has been applied, remove it from the pending actions
       this.actionsQueue.shift();
     }
-  }
-
-  /**
-   * Loads a Mol* session from a serialized MolViewSpec (MVS) session string.
-   *
-   * This method takes a serialized MolViewSpec session string and loads it into
-   * the Mol* plugin. If `replaceExisting` is `true`, the existing session is replaced
-   * with the new one; otherwise, it is merged or added to the current session.
-   *
-   * @param {string} session The serialized MolViewSpec session string.
-   * @param {boolean} [replaceExisting=false] Whether to replace the existing session with the new one (optional, defaults to `false`).
-   *
-   * @returns {Promise<void>} A promise that resolves once the session is loaded.
-   *
-   */
-  private async loadMolViewSpecSession(
-    session: string,
-    replaceExisting: boolean = false,
-  ) {
-    const parsedData = MVSData.fromMVSJ(session);
-
-    // Loads the session
-    await loadMVS(this.plugin!, parsedData, {
-      replaceExisting: replaceExisting,
-    });
   }
 }
 
@@ -2193,27 +3094,6 @@ export type SphereRef = {
   ref: string;
 };
 
-/**
- * Converts a hexadecimal string into a Blob.
- *
- * This function takes a hexadecimal string, converts it into an array of bytes,
- * and then creates a Blob from those bytes. It is useful for converting hexadecimal
- * data into binary data that can be used in various applications, such as file storage
- * or network transmission.
- *
- * @param {string} hexString The hexadecimal string to convert.
- *
- * @returns {Blob} A Blob containing the binary representation of the hexadecimal string.
- *
- * @throws {Error} If the hexadecimal string contains invalid characters or is not a valid hex format.
- */
-function hexToBlob(hexString: string) {
-  const bytePairs = hexString.match(/.{1,2}/g) || [];
-  const byteArray = bytePairs.map((byte) => parseInt(byte, 16));
-
-  return new Blob([new Uint8Array(byteArray)]);
-}
-
 function parsePDB(pdbString: string) {
   const wantedLines = [
     "ATOM",
@@ -2239,4 +3119,38 @@ function parsePDB(pdbString: string) {
   const filteredPDB = filteredLines.join("\n");
 
   return filteredPDB;
+}
+
+function createSelectionScript(
+  selectionString: string,
+  targetLanguage: SelectionLanguage
+): Script {
+  return Script(selectionString, targetLanguage);
+}
+
+// Helper for nested withinDistance selections
+function buildExpressionFromSelection(
+  script?: string,
+  language?: SelectionLanguage
+): Expression {
+  if (script && language) {
+    return Script.toExpression(createSelectionScript(script, language));
+  }
+  // Otherwise, manually recurse
+  // (This can be expanded like the main function)
+  return MS.struct.generator.atomGroups({});
+}
+
+// Returns a Color instance given the color in Hexstyle (#FF0000)
+// or givena  color name 'red'
+function getColor(color: string) {
+  const isHexColor = (color: string): color is HexColor => {
+    return color.startsWith("#");
+  };
+
+  if (isHexColor(color)) {
+    return Color.fromHexStyle(color);
+  }
+
+  return ColorNames[color as ColorName] ?? ColorNames.blue;
 }

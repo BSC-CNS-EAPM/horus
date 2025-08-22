@@ -76,6 +76,8 @@ import { BlockView } from "../FlowBuilder/Blocks/block.view";
 import PlotIcon from "../Toolbar/Icons/Plot";
 import { MoleculePlotter } from "../MoleculePlotter/MoleculePlotter";
 import { HorusFileEditor } from "../FileEditor/FileEditor";
+import { BlockEditor } from "../FlowBuilder/BlockRegistry/BlockEditor";
+import { IconFile } from "@tabler/icons-react";
 
 const MOLSTAR_PANEL: AddPanelOptions = {
   id: "molstar",
@@ -92,7 +94,7 @@ const MOLSTAR_PANEL: AddPanelOptions = {
 const SMILES_PANEL: AddPanelOptions = {
   id: "smiles",
   component: "smiles",
-  renderer: "onlyWhenVisible",
+  renderer: "always",
   title: "Smiles",
   floating: false,
   position: {
@@ -105,7 +107,7 @@ const ERROR_PANEL: AddPanelOptions = {
   id: "error",
   title: "Error",
   component: "error",
-  renderer: "onlyWhenVisible",
+  renderer: "always",
 };
 
 const EXTENSIONS_PANEL: AddPanelOptions = {
@@ -128,42 +130,42 @@ const TERMINAL_PANEL: AddPanelOptions = {
   id: "terminal",
   title: "Terminal",
   component: "terminal",
-  renderer: "onlyWhenVisible",
+  renderer: "always",
 };
 
 const DEBUG_FLOW_PANEL: AddPanelOptions = {
   id: "debugFlow",
   title: "Debug Flow",
   component: "debugFlow",
-  renderer: "onlyWhenVisible",
+  renderer: "always",
 };
 
 const HORUS_SETTINGS_PANEL: AddPanelOptions = {
   id: "horusSettings",
   title: "Settings",
   component: "horusSettings",
-  renderer: "onlyWhenVisible",
+  renderer: "always",
 };
 
 const HORUS_PLUGINS_PANEL: AddPanelOptions = {
   id: "horusPlugins",
   title: "Plugins",
   component: "horusPlugins",
-  renderer: "onlyWhenVisible",
+  renderer: "always",
 };
 
 const HORUS_REMOTES_PANEL: AddPanelOptions = {
   id: "horusRemotes",
   title: "Remotes",
   component: "horusRemotes",
-  renderer: "onlyWhenVisible",
+  renderer: "always",
 };
 
 const BLOCK_VARIABLES_PANEL: AddPanelOptions = {
   id: "blockVariables",
   title: "Block Variables",
   component: "blockVariables",
-  renderer: "onlyWhenVisible",
+  renderer: "always",
   floating: false,
 };
 
@@ -177,7 +179,7 @@ const BLOCK_LOGS_PANEL: AddPanelOptions = {
   id: "blockLogs",
   title: "Block Logs",
   component: "blockLogs",
-  renderer: "onlyWhenVisible",
+  renderer: "always",
   floating: false,
 };
 
@@ -185,7 +187,7 @@ const CODE_EDITOR_PANEL: AddPanelOptions = {
   id: "codeEditor",
   title: "Code Editor",
   component: "codeEditor",
-  renderer: "onlyWhenVisible",
+  renderer: "always",
   floating: false,
 };
 
@@ -193,7 +195,7 @@ const FILE_EDITOR_PANEL: AddPanelOptions = {
   id: "fileEditor",
   title: "File Editor",
   component: "fileEditor",
-  renderer: "onlyWhenVisible",
+  renderer: "always",
   floating: false,
 };
 
@@ -201,7 +203,7 @@ const BLOCK_REGISTRY_PANEL: AddPanelOptions = {
   id: "blockRegistry",
   title: "Block Registry",
   component: "blockRegistry",
-  renderer: "onlyWhenVisible",
+  renderer: "always",
   floating: false,
   position: {
     direction: "left",
@@ -214,8 +216,15 @@ const MOLECULE_PLOTTER_PANEL: AddPanelOptions = {
   id: "moleculePlotter",
   title: "Molecule Plotter",
   component: "moleculePlotter",
-  renderer: "onlyWhenVisible",
+  renderer: "always",
   tabComponent: "editableTab",
+};
+
+const BLOCK_EDITOR_PANEL: AddPanelOptions = {
+  id: "blockEditor",
+  title: "Block Editor",
+  component: "blockEditor",
+  renderer: "always",
 };
 
 // To be used in other components
@@ -237,6 +246,7 @@ export const PANEL_REGISTRY = {
   fileEditor: FILE_EDITOR_PANEL,
   blockRegistry: BLOCK_REGISTRY_PANEL,
   moleculePlotter: MOLECULE_PLOTTER_PANEL,
+  blockEditor: BLOCK_EDITOR_PANEL,
 };
 
 // For DockApi
@@ -255,8 +265,9 @@ const PANEL_ICONS: Record<string, ReactElement> = {
   blockLogs: <LogFile />,
   blockRegistry: <NewFlowIcon />,
   codeEditor: <CodeIcon />,
-  fileEditor: <LogFile />,
+  fileEditor: <IconFile />,
   moleculePlotter: <PlotIcon />,
+  blockEditor: <SettingsIcon />,
 };
 
 function FlowTab(props: IDockviewPanelHeaderProps) {
@@ -354,7 +365,7 @@ function EditableTitleTab(
       data-testid="dockview-dv-default-tab"
       {...rest}
       onClick={onClick}
-      className="dv-default-tab"
+      className="dv-default-tab gap-2"
     >
       {props.icon}
       {isEditing ? (
@@ -426,7 +437,7 @@ function ExtensionsTab(
 function BaseTab(props: IDockviewDefaultTabProps) {
   const icon = PANEL_ICONS[props.api.component] ?? null;
   return (
-    <span className="dv-default-tab">
+    <span className="dv-default-tab flex flex-row gap-2">
       {icon}
       <DockviewDefaultTab {...props} />
     </span>
@@ -534,20 +545,19 @@ function ExtensionComponent(props: IDockviewPanelProps) {
   props.api.setTitle(page.name ?? "Unnamed");
 
   const onFocus = () => {
-    // Set the closetab and settabtitle into the window.horus object
-    window.horus.setTabTitle = (tabTitle: string) => {
-      props.api.setTitle(tabTitle);
-    };
-
-    window.horus.closeTab = () => {
-      props.api.close();
-    };
-
     // Continue the default onfocus
     props.params?.onFocus?.();
   };
 
-  return <IFrameLoader page={page} data={page.data} onFocus={onFocus} />;
+  return (
+    <IFrameLoader
+      page={page}
+      data={page.data}
+      onFocus={onFocus}
+      panelApi={props.api}
+      onLoad={props.params?.onLoad}
+    />
+  );
 }
 type DockView = FunctionComponent<IDockviewPanelProps>;
 const components: Record<string, DockView> = {
@@ -575,8 +585,11 @@ const components: Record<string, DockView> = {
       `${props.params.block.name} - Block ${props.params.block.placedID}`
     );
 
+    const key = `${props.params.block.id}-${props.params.block.placedID}`;
+
     return (
       <VariableSetupView
+        key={key}
         block={props.params.block}
         handleVariableChange={props.params.handleVariableChange}
       />
@@ -593,6 +606,21 @@ const components: Record<string, DockView> = {
   },
   extensions: ExtensionComponent,
   error: () => <Error error="View not found" />,
+  blockEditor: (props: IDockviewPanelProps) => {
+    // Update the title of the tab to the block ID
+    props.api.setTitle(
+      `Block Editor - ${props.params?.block?.id || "New Block"}`
+    );
+
+    return (
+      <BlockEditor
+        block={props.params.block}
+        onBlockChange={(newBlock) => {
+          props.api.setTitle(`Block Editor - ${newBlock.id || "New Block"}`);
+        }}
+      />
+    );
+  },
 };
 
 type PanelFunctions = {
@@ -777,6 +805,42 @@ const WatermarkComponent = () => {
   );
 };
 
+export function handleExtensionPanelCreation({
+  dockApi,
+  extension,
+  placedID,
+}: {
+  dockApi: DockviewApi | null;
+  extension: PluginPage & { pageID?: string; pluginID?: string };
+  placedID?: number;
+}) {
+  // Special case for opening files with the Horus File Editor
+  if (extension?.pluginID === "horus" && extension?.pageID === "load_file") {
+    addPanel({
+      dockApi: dockApi,
+      component: PANEL_REGISTRY.fileEditor.component,
+      panelID: `fileEditor-${placedID}-${extension.dataID}`,
+      title: extension.name,
+      params: {
+        ...extension.data,
+        title: extension.name,
+        placedID: placedID,
+      },
+    });
+    return;
+  }
+
+  addPanel({
+    dockApi: dockApi,
+    component: PANEL_REGISTRY.extensions.component,
+    panelID: `extensions-${placedID}-${extension.dataID}`,
+    params: {
+      ...extension,
+      placedID: placedID,
+    },
+  });
+}
+
 export function HorusPanelView() {
   // The flow context will be defined here as the flow is what controls everything (only one flow at a time)
 
@@ -836,6 +900,32 @@ export function HorusPanelView() {
       }
     };
 
+    // Add a new function to open the file editor
+    window.horus.openFileInEditor = ({
+      name,
+      path,
+      readOnly,
+      format,
+    }: {
+      path: string;
+      name?: string;
+      readOnly?: boolean;
+      format?: string;
+    }) => {
+      addPanel({
+        dockApi: dockApi,
+        component: PANEL_REGISTRY.fileEditor.component,
+        panelID: `fileEditor-${path}`,
+        title: name ?? path.split("/").pop() ?? "File",
+        params: {
+          title: name,
+          path,
+          readOnly,
+          format,
+        },
+      });
+    };
+
     setDockApi(dockApi);
 
     // Setup the hooks before loading the default panels
@@ -880,11 +970,10 @@ export function HorusPanelView() {
         return;
       }
 
-      addPanel({
-        dockApi: dockApi,
-        component: "extensions",
-        panelID: `extensions-${e.placedID}-${e.dataID}`,
-        params: e,
+      handleExtensionPanelCreation({
+        dockApi,
+        extension: e,
+        placedID: e.placedID,
       });
     };
 
@@ -967,7 +1056,7 @@ export function hooksInitializer() {
       }
 
       // Open the file
-      window.molstar?.loadMoleculeFile(file, options);
+      return window.molstar?.loadMoleculeFile(file, options);
     };
 
     window.molstar = {

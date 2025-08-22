@@ -57,6 +57,8 @@ ext_modules = [
         ["Server/__init__.py"],
         include_package_data=True,  # type: ignore
     ),
+    # Compile the utils extension
+    Extension("Server.Utils", ["Server/Utils.py"]),
     # Compile the server extension
     # Flow manager
     Extension("Server.FlowManager.flow_manager", ["Server/FlowManager/flow_manager.py"]),

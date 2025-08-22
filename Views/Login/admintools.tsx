@@ -655,7 +655,7 @@ function GroupDatabaseView() {
                 const parsed = JSON.parse(params.value);
 
                 if (parsed) {
-                  return `${parsed.lenght}`;
+                  return `${parsed.length}`;
                 }
 
                 return params.value;

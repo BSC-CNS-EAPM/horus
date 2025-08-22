@@ -13,14 +13,14 @@ Module.expectedDataFileDownloads++;
         window.location.pathname
           .toString()
           .substring(0, window.location.pathname.toString().lastIndexOf("/")) +
-          "/"
+          "/",
       );
     } else if (typeof location !== "undefined") {
       // worker
       PACKAGE_PATH = encodeURIComponent(
         location.pathname
           .toString()
-          .substring(0, location.pathname.toString().lastIndexOf("/")) + "/"
+          .substring(0, location.pathname.toString().lastIndexOf("/")) + "/",
       );
     } else {
       throw "using preloaded data can only be done on a web page or in a web worker";
@@ -33,7 +33,7 @@ Module.expectedDataFileDownloads++;
     ) {
       Module["locateFile"] = Module["locateFilePackage"];
       err(
-        "warning: you defined Module.locateFilePackage, that has been renamed to Module.locateFile (using your locateFilePackage for now)"
+        "warning: you defined Module.locateFilePackage, that has been renamed to Module.locateFile (using your locateFilePackage for now)",
       );
     }
     var REMOTE_PACKAGE_NAME = Module["locateFile"]
@@ -74,7 +74,7 @@ Module.expectedDataFileDownloads++;
           total = Math.ceil((total * Module.expectedDataFileDownloads) / num);
           if (Module["setStatus"])
             Module["setStatus"](
-              "Downloading data... (" + loaded + "/" + total + ")"
+              "Downloading data... (" + loaded + "/" + total + ")",
             );
         } else if (!Module.dataFileDownloads) {
           if (Module["setStatus"]) Module["setStatus"]("Downloading data...");
@@ -121,7 +121,7 @@ Module.expectedDataFileDownloads++;
             fetched = data;
           }
         },
-        handleError
+        handleError,
       );
 
     function runWithFS() {
@@ -156,7 +156,7 @@ Module.expectedDataFileDownloads++;
             byteArray,
             true,
             true,
-            true
+            true,
           ); // canOwn this data in the filesystem, it is a slide into the heap that will never change
           Module["removeRunDependency"]("fp " + that.name);
 
@@ -168,7 +168,7 @@ Module.expectedDataFileDownloads++;
       for (var i = 0; i < files.length; ++i) {
         new DataRequest(files[i].start, files[i].end, files[i].audio).open(
           "GET",
-          files[i].filename
+          files[i].filename,
         );
       }
 
@@ -177,7 +177,7 @@ Module.expectedDataFileDownloads++;
         assert(arrayBuffer, "Loading data file failed.");
         assert(
           arrayBuffer instanceof ArrayBuffer,
-          "bad input to processPackageData"
+          "bad input to processPackageData",
         );
         var byteArray = new Uint8Array(arrayBuffer);
         var curr;
@@ -188,7 +188,7 @@ Module.expectedDataFileDownloads++;
         Module["HEAPU8"].set(byteArray, ptr);
         DataRequest.prototype.byteArray = Module["HEAPU8"].subarray(
           ptr,
-          ptr + byteArray.length
+          ptr + byteArray.length,
         );
 
         var files = metadata.files;

@@ -7,6 +7,7 @@ importantly, it manages the execution of the individual blocks of the plugins.
 
 # Standard imports
 from collections import defaultdict, deque
+from ctypes import Union
 from multiprocessing import Process
 import os
 import signal
@@ -42,6 +43,9 @@ import pkg_resources
 # For the SocketIO type completion
 from flask_socketio import SocketIO
 import flask_login
+
+from HorusAPI import CustomBlockParser
+from Server.Utils import PrintTruncator
 
 # Plugin deps context manager, forking the process prevents
 # importend modules from being imported twice
@@ -79,6 +83,11 @@ if typing.TYPE_CHECKING:
 else:
     currentUser = flask_login.current_user
 
+URL_TOKEN = "://"
+REPOIDURL_PREFIX = f"repoID{URL_TOKEN}"
+PLUGINIDURL_PREFIX = f"pluginID{URL_TOKEN}"
+REPONAME_PREFIX = f"repoName{URL_TOKEN}"
+
 
 class DefaultPluginConfigException(Exception):
     """
@@ -96,6 +105,16 @@ class PluginMetaNotFound(Exception):
     """
     Exception raised when a plugin meta is not found.
     """
+
+
+class PluginRepos(BaseModel):
+    """
+    Model for the plugin repositories.
+    """
+
+    repository_url: str
+    repository_token: typing.Optional[str] = None
+    repository_name: typing.Optional[str] = None
 
 
 class PluginManager(metaclass=HorusSingleton):
@@ -136,7 +155,17 @@ class PluginManager(metaclass=HorusSingleton):
         self.workingDir = os.getcwd()
 
         # Initialize the plugins
-        self._initializePlugins()
+        try:
+            self._initializePlugins()
+        except Exception as e:
+            logging.getLogger("Horus").critical(
+                "Error initializing plugins: %s. "
+                "Please check the plugins in the Plugins directory. Booting Horus without plugins.",
+                str(e),
+            )
+
+            # Prevent the plugins from being reloaded
+            self.pluginChanges = False
 
     def _pluginsDepsDir(self):
         """
@@ -179,6 +208,20 @@ class PluginManager(metaclass=HorusSingleton):
             self.devPluginsFolders: list[str] = (
                 self.horusSettings.getSetting("pluginsFolders").value or []
             )
+
+            # Skip folders that do not exist or start with a #
+            self.devPluginsFolders = [
+                f for f in self.devPluginsFolders if os.path.exists(f) and not f.startswith("#")
+            ]
+
+            # Add more if added using the HORUS_DEV_PLUGINS_FOLDERS environment variable
+            additionalDevFolders = os.getenv("HORUS_DEV_PLUGINS_FOLDERS", "").split(",")
+            additionalDevFolders = [
+                f.strip() for f in additionalDevFolders if f.strip() and os.path.exists(f.strip())
+            ]
+
+            self.devPluginsFolders.extend(additionalDevFolders)
+
         except Exception as e:
             logging.getLogger("Horus").error(
                 "Could not read additional development plugins folders: %s", str(e)
@@ -226,23 +269,44 @@ class PluginManager(metaclass=HorusSingleton):
 
     def _loopPluginsToInstall(self, files: typing.Sequence[str], asDefault: bool = False):
         downloadDir = os.path.join(self.appSupportDir, "plugin_downloads")
+        os.makedirs(downloadDir, exist_ok=True)
         for f in files:  # pylint: disable=invalid-name
             try:
                 # If the file is a plugin URL from the web, download it
                 if f.startswith("https://") or f.startswith("http://"):
                     print("Downloading plugin from URL...")
-
-                    os.makedirs(downloadDir, exist_ok=True)
-
                     f = self._downloadPluginFromURL(f, downloadDir)
 
-                # If the file is a plugin from the plugin repo (starts with pluginID://)
+                # If the file is a plugin from the plugin repo (starts with pluginID:// or repoID://)
                 # then download the specific version
                 # for this system
-                if f.startswith("pluginID://"):
-                    pluginID = f.split("://")[1]
-                    os.makedirs(downloadDir, exist_ok=True)
-                    f = self._downloadPluginFromRepo(pluginID, downloadDir)
+                if f.startswith(REPOIDURL_PREFIX) or f.startswith(PLUGINIDURL_PREFIX):
+                    try:
+                        repoID = None
+                        pluginID = None
+                        repoName = None
+                        if f.startswith(REPOIDURL_PREFIX):
+
+                            # The URL is formed like:
+                            # repoID://<repo_url>/repoName://<repo_name>/pluginID://<plugin_id>
+                            # Therefore we need to split the URL
+                            repoID = "".join(f.split(REPOIDURL_PREFIX)[1]).split(
+                                REPONAME_PREFIX, maxsplit=1
+                            )[0]
+
+                            pluginID = f.split(PLUGINIDURL_PREFIX)[1]
+
+                            repoName = f.split(REPONAME_PREFIX)[1].split(PLUGINIDURL_PREFIX)[0]
+
+                        if f.startswith(PLUGINIDURL_PREFIX):
+                            pluginID = f.split(PLUGINIDURL_PREFIX)[1]
+
+                        if not pluginID:
+                            raise ValueError("Plugin ID not found in the URL.")
+
+                        f = self._downloadPluginFromRepo(pluginID, downloadDir, repoID, repoName)
+                    except Exception as e:
+                        raise Exception(f"Failed to download plugin from repository: {e}") from e
 
                 print("Installing plugin: " + f)
                 self._installPlugin(f, asDefault)
@@ -250,7 +314,27 @@ class PluginManager(metaclass=HorusSingleton):
                 if os.path.exists(downloadDir):
                     shutil.rmtree(downloadDir, ignore_errors=True)
 
-    def _downloadPluginFromRepo(self, pluginID: str, downloadDir: str) -> str:
+    def _getRepos(self) -> typing.List[PluginRepos]:
+        parsed_repos = []
+        for r in self.horusSettings.getSetting("repos").value or []:
+            try:
+                parsed_repos.append(PluginRepos(**r))
+            except ValidationError as e:
+                logging.getLogger("Horus").error(
+                    "Invalid plugin repository configuration: %s. Error: %s",
+                    r,
+                    e,
+                )
+                continue
+        return parsed_repos
+
+    def _downloadPluginFromRepo(
+        self,
+        pluginID: str,
+        downloadDir: str,
+        repo_url: typing.Optional[str] = None,
+        repo_name: typing.Optional[str] = None,
+    ) -> str:
         """
         Downloads a plugin from the repo.
 
@@ -265,13 +349,56 @@ class PluginManager(metaclass=HorusSingleton):
 
         print(f"Downloading plugin {pluginID}...")
 
-        # First get plugin info
-        urlForInfo = f"https://horus.bsc.es/repo_api/plugins/{pluginID}"
+        repos = self._getRepos()
+        headers = {}
 
-        pluginResponse = requests.get(urlForInfo, timeout=30)
+        pluginRepo = None
+        if repo_url:
+            for repo in repos:
+                if repo.repository_url == repo_url and repo.repository_name == repo_name:
+                    pluginRepo = repo
+                    urlForInfo = f"{repo.repository_url}/plugins/{pluginID}"
 
-        if pluginResponse.status_code != 200:
-            raise Exception(f"Failed to get plugin info: {pluginResponse.status_code}")
+                    headers["Authorization"] = f"Bearer {repo.repository_token}"
+
+                    pluginResponse = requests.get(urlForInfo, headers=headers, timeout=30)
+
+                    if pluginResponse.status_code != 200:
+                        logging.getLogger("Horus").debug(
+                            "Failed to get plugin info from %s: %s",
+                            urlForInfo,
+                            pluginResponse.status_code,
+                        )
+
+                    break
+        else:
+            # Find the plugin in the repositories
+            for repo in repos:
+                print(f"Searching in repository: {repo.repository_url}")
+
+                # First get plugin info
+                urlForInfo = f"{repo.repository_url}/plugins/{pluginID}"
+
+                if repo.repository_token:
+                    headers["Authorization"] = f"Bearer {repo.repository_token}"
+
+                pluginResponse = requests.get(urlForInfo, headers=headers, timeout=30)
+
+                if pluginResponse.status_code != 200:
+                    logging.getLogger("Horus").debug(
+                        "Failed to get plugin info from %s: %s",
+                        urlForInfo,
+                        pluginResponse.status_code,
+                    )
+                    continue
+
+                pluginRepo = repo
+                break
+
+        if pluginRepo is None:
+            raise Exception(
+                f"Failed to get {pluginID} plugin info from any repository. Does it exist?"
+            )
 
         jsonResponse = pluginResponse.json()
 
@@ -315,13 +442,15 @@ class PluginManager(metaclass=HorusSingleton):
 
         # Download the plugin
         urlForPlugin = (
-            f"https://horus.bsc.es/repo_api/download?"
+            f"{pluginRepo.repository_url}/download?"
             f"plugin_id={pluginID}&version={compatibleVersion}&platform={compatiblePlatform}"
         )
 
-        return self._downloadPluginFromURL(urlForPlugin, downloadDir)
+        return self._downloadPluginFromURL(urlForPlugin, downloadDir, headers=headers)
 
-    def _downloadPluginFromURL(self, url: str, downloadDir: str) -> str:
+    def _downloadPluginFromURL(
+        self, url: str, downloadDir: str, headers: typing.Optional[dict] = None
+    ) -> str:
         """
         Downloads a plugin from a URL.
 
@@ -337,7 +466,7 @@ class PluginManager(metaclass=HorusSingleton):
 
         print(f"Downloading plugin from {url}...")
 
-        with requests.get(url, stream=True, timeout=30) as pluginResponse:
+        with requests.get(url, stream=True, timeout=30, headers=headers) as pluginResponse:
             pluginResponse.raise_for_status()
 
             total = int(pluginResponse.headers.get("content-length", 1))
@@ -524,6 +653,12 @@ class PluginManager(metaclass=HorusSingleton):
         for p in self.errorPlugins:
             if p.id == id:
                 return p
+
+        # Could be a custom block "fake plugin"
+        for p in self.customBlocks.values():
+            if p.id == id:
+                return p
+
         raise PluginNotFoundError(f"PluginID '{id}' not found.")
 
     def uninstallPlugin(self, pluginID: str):
@@ -531,6 +666,7 @@ class PluginManager(metaclass=HorusSingleton):
         Uninstalls a plugin with the given ID.
         """
 
+        plugin = None
         try:
             plugin = self._getPluginByID(pluginID)
 
@@ -553,7 +689,11 @@ class PluginManager(metaclass=HorusSingleton):
             self._postRemovePlugin(pluginPath)
 
             # Delete the config and the plugin
-            shutil.rmtree(os.path.join(self.appSupportDir, "config", plugin.id))
+            if plugin:
+                config_dir = os.path.join(self.appSupportDir, "config", plugin.id)
+                if os.path.exists(config_dir):
+                    shutil.rmtree(config_dir)
+
             shutil.rmtree(pluginPath, ignore_errors=True)
 
         except Exception as exc:
@@ -589,7 +729,7 @@ class PluginManager(metaclass=HorusSingleton):
                     devPlugins.append(path)
 
         # plugins = defaultPlugins + installedPlugins
-        plugins = devPlugins + defaultPlugins + installedPlugins
+        plugins = devPlugins + installedPlugins + defaultPlugins
 
         return plugins
 
@@ -604,6 +744,7 @@ class PluginManager(metaclass=HorusSingleton):
 
         self.loadedPlugins: list[Plugin] = []
         self.errorPlugins: list[Plugin] = []
+        self.customBlocks: dict[str, Plugin] = {}
         pluginPaths = self._listPluginsPaths()
 
         for pth in self._getPluginsImportOrder(pluginPaths):
@@ -645,6 +786,15 @@ class PluginManager(metaclass=HorusSingleton):
             )
 
         self.pluginChanges = False
+
+        # Initialize custom blocks
+        self.customBlocks = {b.id: b for b in self.loadCustomBlocks()}
+
+        logging.getLogger("Horus").info(
+            "%i custom blocks loaded: %s.",
+            len(self.customBlocks),
+            ", ".join([block.id for block in self.customBlocks.values()]),
+        )
 
     def _getPluginsImportOrder(self, pluginPaths: list[str]) -> list[str]:
         """
@@ -696,16 +846,24 @@ class PluginManager(metaclass=HorusSingleton):
         if len(sorted_plugins) != len(metas):
 
             repeated = ""
+
+            longest_list = [
+                os.path.basename(d)
+                for d in (
+                    [m.p for m in metas] if len(metas) > len(sorted_plugins) else sorted_plugins
+                )
+            ]
             # Get the wrong values
-            for p in sorted_plugins:
-                c = sorted_plugins.count(p)
+            for p in longest_list:
+                c = longest_list.count(p)
                 if c > 1:
                     repeated += f"{p} was required {c} times. "
 
             raise ValueError(
                 "Circular dependency detected among plugins. "
                 "If you are the developer of such plugins, "
-                "please update the plugin.meta file accordingly."
+                "please update the plugin.meta file accordingly. This can happen "
+                "also if the same plugin is installed multiple times in different plugin folders. "
                 f" Errors were found for the following plugins: {repeated}"
             )
 
@@ -810,6 +968,7 @@ class PluginManager(metaclass=HorusSingleton):
             return pluginMetaModel
 
         except ValidationError as e:
+            msg = ""
             for error in e.errors():
                 field = error["loc"][0]
                 msg = f"Field '{field}': {error['msg']}."
@@ -831,7 +990,7 @@ class PluginManager(metaclass=HorusSingleton):
         if not pluginMetaModel:
             return None
 
-        pluginMeta = pluginMetaModel.dict()
+        pluginMeta = pluginMetaModel.model_dump()
 
         # Dependencies for the plugin, there they will be installed
         # inside a /lib/pythonX.X/site-packages folder
@@ -1011,6 +1170,9 @@ class PluginManager(metaclass=HorusSingleton):
         pluginName = pluginMeta.get("name", "Unknown")
         fullDepsDir = PluginDepsBase.getFullPluginDepsDir(pluginPath)
 
+        if not os.path.exists(fullDepsDir):
+            os.makedirs(fullDepsDir, exist_ok=True)
+
         # Create a new working set that includes the custom directory
         pluginWorkingSet = pkg_resources.WorkingSet(entries=[fullDepsDir])
 
@@ -1070,6 +1232,7 @@ class PluginManager(metaclass=HorusSingleton):
         # Iterate through the required dependencies
         depsToInstallStringList = []
         currentString = None
+        name = ""
         for dep in dependencies:
             parsedDep = dep.replace(" --no-deps", "").replace(" --isolated", "")
             versionSpecs = None
@@ -1339,7 +1502,7 @@ class PluginManager(metaclass=HorusSingleton):
 
         for p in self.loadedPlugins:
             try:
-                info = p.pluginMeta.dict()
+                info = p.pluginMeta.model_dump()
                 info["id"] = p.id
                 info["blocks"] = self._getBlocksFromList(p, p.blocks)
                 info["default"] = p.default
@@ -1361,7 +1524,7 @@ class PluginManager(metaclass=HorusSingleton):
                 logging.getLogger("Horus").error("Could not get a plugin: %s", str(exc))
 
         for ep in self.errorPlugins:
-            info = ep.pluginMeta.dict()
+            info = ep.pluginMeta.model_dump()
             info["id"] = ep.id
             info["blocks"] = []
             info["default"] = ep.default
@@ -1396,6 +1559,11 @@ class PluginManager(metaclass=HorusSingleton):
         blocks: list[dict[str, typing.Any]] = []
         for p in self.loadedPlugins:
             blocks += self._getBlocksFromList(p, p.blocks)
+
+        # Custom blocks
+        for b in self.customBlocks.values():
+            blocks += self._getBlocksFromList(b, b.blocks)
+
         return blocks
 
     def getVariables(self, block: PluginBlock):
@@ -1412,6 +1580,16 @@ class PluginManager(metaclass=HorusSingleton):
         """
         Finds a block from a 'plugin.block' ID format or raises an exception if not found.
         """
+
+        # If it does not have a ., then its a custom block
+        if "." not in fromBlockID:
+            # Check if the block is a custom block
+            if fromBlockID in self.customBlocks:
+                return self.customBlocks[fromBlockID].getBlock(fromBlockID)
+
+            # If not, raise an error
+            raise BlockNotFoundError(fromBlockID)
+
         # Split the id
         pluginID = fromBlockID.split(".")[0]
 
@@ -1423,6 +1601,19 @@ class PluginManager(metaclass=HorusSingleton):
 
         except Exception as exc:
             raise BlockNotFoundError(fromBlockID) from exc
+
+    def getPluginConfig(self, pluginID: str, remote: str = "Local") -> dict[str, typing.Any]:
+        """
+        Returns the config of a Plugin
+        """
+
+        plugin = self._getPluginByID(pluginID)
+        configPath = self._pluginConfigPath(plugin, remote)
+
+        with open(configPath, "r", encoding="utf-8") as configFile:
+            configs = json.load(configFile)
+
+        return configs
 
     def executeBlock(
         self,
@@ -1461,26 +1652,6 @@ class PluginManager(metaclass=HorusSingleton):
 
         # Set the block config to execute the block
         block.config = plugin.config
-
-        # Print debug info
-        # If the user has development mode activated, print useful information about the block
-        if developmentMode:
-            print("============================ Development mode ==============================")
-            print(f"Block starting time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-            print(f"Block ID: {block.id}")
-            print(f"Block name: {block.name}")
-            print(f"Block selected remote: {block.selectedRemote}")
-            print("Block config:")
-            print(json.dumps(block.config, indent=4))
-            print("Block inputs:")
-            print(json.dumps(block.inputs, indent=4))
-            print("Block variables:")
-            print(json.dumps(block.variables, indent=4))
-            print("Block initial extraData:")
-            print(json.dumps(block.extraData, indent=4))
-            print(
-                "============================================================================\n"
-            )
 
         appSupportDir = self.appSupportDir
         if hasattr(currentUser, "appSupportDir"):
@@ -1555,20 +1726,6 @@ class PluginManager(metaclass=HorusSingleton):
 
             logging.getLogger("Horus").info("Block %s executed in %s", block.id, formattedTime)
 
-            if developmentMode:
-                print(
-                    "\n============================ Development mode =============================="
-                )
-                print(f"Block execution time: {formattedTime}")
-                print(f"Block error: {error}")
-                print("Block outputs:")
-                print(json.dumps(outputs, indent=4))
-                print("Block final extraData:")
-                print(json.dumps(block.extraData, indent=4))
-                print(
-                    "============================================================================="
-                )
-
         if exception:
             raise exception
 
@@ -1581,14 +1738,14 @@ class PluginManager(metaclass=HorusSingleton):
             "plugin": p.pluginMeta.name,
             "pluginID": p.id,
             "html": f"{p._path}/Pages/{pg.html}",
-            "url": f"/plugins/pages/{pg.id}",
+            "url": f"/plugins/pages/{pg.id}".rstrip("/") + pg.path,
             "deps": PluginDepsBase.getFullPluginDepsDir(p._path),
             "pluginDir": p._path,
             "logo": p.logo,
         }
         return pg._pageInfo
 
-    def _getDevelopmentPage(self):
+    def _getDevelopmentPage(self) -> typing.Optional[typing.Dict[str, typing.Union[str, bool]]]:
         """
         If on development mode, returns the "Development" page
         """
@@ -1627,12 +1784,13 @@ class PluginManager(metaclass=HorusSingleton):
                 pages.append(pg)
         return pages
 
-    def getPages(self):
+    def getPages(self) -> typing.List[typing.Dict[str, typing.Union[str, bool]]]:
         """
         Returns a list of all the pages of all the plugins in JSON format.
         """
         self._initializePlugins()
-        pages: list[dict[str, str]] = []
+        pages: typing.List[typing.Dict[str, typing.Union[str, bool]]] = []
+
         for p in self.loadedPlugins:
             for pg in p.pages:
                 pages.append(self._getPageInfo(pg, p))
@@ -1641,6 +1799,7 @@ class PluginManager(metaclass=HorusSingleton):
         developmentPage = self._getDevelopmentPage()
 
         if developmentPage is not None:
+            developmentPage["developmentPage"] = True
             pages.append(developmentPage)
 
         return pages
@@ -1774,8 +1933,136 @@ class PluginManager(metaclass=HorusSingleton):
 
         return flows
 
+    @property
+    def customBlocksDir(self) -> str:
+        """
+        Returns the path to the custom blocks directory.
+        """
+        p = os.path.join(self.appSupportDir, "custom_blocks")
 
-class PrintCapturer(io.StringIO):
+        if not os.path.exists(p):
+            os.makedirs(p)
+
+        return p
+
+    def _internalGenerateFakeCustomPlugin(
+        self, block: dict, socket: typing.Optional[SocketIO] = None
+    ) -> Plugin:
+        # First get the fake plugin class that will hold the block
+        plugin_instance = CustomBlockParser.getFakePlugin(block, self.customBlocksDir)
+
+        # Install dependencies
+        if plugin_instance.pluginMeta.dependencies:
+            try:
+                if socket:
+                    with PrintSocketCapturer(socket, "installPluginDep"):
+                        self._installDependencies(
+                            plugin_instance.pluginMeta.model_dump(), plugin_instance._path
+                        )
+                else:
+                    self._installDependencies(
+                        plugin_instance.pluginMeta.model_dump(), plugin_instance._path
+                    )
+            except Exception as e:
+                logging.getLogger("Horus").error(
+                    "Could not install dependencies for custom block '%s': %s",
+                    plugin_instance.id,
+                    str(e),
+                )
+
+                raise e
+
+        # Now parse the block (and the block actions) inside the dependencies context
+        with PluginDepsBase([plugin_instance._path]):
+            block_instance = SubprocessManager.subprocessCall(
+                CustomBlockParser.parse, block, self.customBlocksDir
+            )
+
+        # If everything went correct, assign the block instance to the plugin
+        plugin_instance._blocks = [block_instance]
+
+        return plugin_instance
+
+    def saveCustomBlock(self, block: dict, socket: SocketIO):
+        """
+        Verifies and saves a custom block from the JSON representation.
+        """
+
+        # Try to load the block directly with the block parser class
+        try:
+            plugin_instance = self._internalGenerateFakeCustomPlugin(block, socket)
+        except Exception as e:
+            raise Exception(f"Could not save the custom block: {e}") from e
+
+        # Create a unique filename for the block
+        blockFileName = f"{plugin_instance.id}.json"
+        blockFilePath = os.path.join(self.customBlocksDir, blockFileName)
+
+        # Override the existing block if it exists
+        self.customBlocks[plugin_instance.id] = plugin_instance
+
+        # Save the block to the file
+        with open(blockFilePath, "w", encoding="utf-8") as f:
+            json.dump(block, f, indent=4)
+
+        logging.getLogger("Horus").info(
+            "Custom block '%s' saved successfully to '%s'.", plugin_instance.id, blockFilePath
+        )
+
+        return plugin_instance
+
+    def loadCustomBlocks(self) -> list[Plugin]:
+        """Loads all the custom blocks from the AppSupportDir/Custom blocks folder.
+        Returns a list of Plugin instances.
+        """
+
+        customBlocks: list[Plugin] = []
+        for file in os.listdir(self.customBlocksDir):
+            if file.endswith(".json"):
+                blockFilePath = os.path.join(self.customBlocksDir, file)
+                try:
+                    with open(blockFilePath, "r", encoding="utf-8") as f:
+                        blockData = json.load(f)
+                        # Parse the block data to a PluginBlock instance
+                        plugin_instance = self._internalGenerateFakeCustomPlugin(blockData)
+                        customBlocks.append(plugin_instance)
+                except Exception as e:
+                    logging.getLogger("Horus").error(
+                        "Could not load custom block from '%s': %s", blockFilePath, str(e)
+                    )
+
+        return customBlocks
+
+    def deleteCustomBlock(self, blockID: str):
+        """
+        Deletes a custom block by its ID.
+        """
+
+        # Check if the block exists
+        if blockID not in self.customBlocks:
+            raise ValueError(f"Custom block '{blockID}' does not exist.")
+
+        # Delete the block from the dictionary
+        block = self.customBlocks[blockID]
+
+        # Delete the block file
+        blockFilePath = os.path.join(self.customBlocksDir, f"{blockID}.json")
+        if os.path.exists(blockFilePath):
+            os.remove(blockFilePath)
+
+        # Delete the fake block plugin folder
+        if os.path.exists(block._path):
+            shutil.rmtree(block._path)
+
+        # Unload from memory
+        del self.customBlocks[blockID]
+
+        logging.getLogger("Horus").info(
+            "Custom block '%s' deleted successfully from '%s'.", blockID, blockFilePath
+        )
+
+
+class PrintCapturer(PrintTruncator):
     """
     Captures any print statement.
     """
@@ -1800,7 +2087,8 @@ class PrintCapturer(io.StringIO):
         """
         Writes the message to the terminal.
         """
-        self.oldStdout.write(message)
+
+        self.oldStdout.write(self.format(message))
 
     def flush(self):
         """
@@ -1851,7 +2139,7 @@ class PrintSocketCapturer(PrintCapturer):
         """
         Writes the message to the socketio event and to the terminal.
         """
-        self.socketio.emit(self.event, message, to=self.room)
+        self.socketio.emit(self.event, self.format(message), to=self.room)
         super().write(message)
         self.socketio.sleep(0)
 
@@ -2152,7 +2440,7 @@ class SubprocessManager:
 
                     import traceback
 
-                    msg = f"{traceback.format_exc()}\n{e}"
+                    forkedBlock.blockLogs += "".join(traceback.format_tb(sys.exc_info()[2]))
 
                 # Here we need to convert the exception because
                 # it may be a class which does not exist
@@ -2226,6 +2514,7 @@ class SubprocessManager:
         env: typing.Optional[dict] = None,
         wait: bool = True,
         comunicate: bool = True,
+        shell: bool = False,
     ) -> "SubprocessManager.HorusPopen":
         """
         Calls subprocess.Popen with a context manager and prints the STDOUT and STDERR
@@ -2250,6 +2539,8 @@ class SubprocessManager:
             env=env,
             text=True if comunicate else None,
             preexec_fn=os.setsid,
+            shell=shell,
+            universal_newlines=True if shell else None,
         )
 
         if wait:

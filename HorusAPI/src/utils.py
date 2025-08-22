@@ -1,7 +1,14 @@
 # pylint: disable=invalid-name
+import shutil
 import threading
 import os
 import typing
+from pathlib import PurePath
+
+if typing.TYPE_CHECKING:
+    from HorusAPI import PluginBlock
+
+from pathvalidate import sanitize_filepath
 
 
 # Define the SingletonMeta class for the AppDelegate and MolstarAPI classes
@@ -176,6 +183,95 @@ def getUserFolder() -> str:
     return user_folder
 
 
+def sanitizePath(path: str):
+    """
+    Replaces any invalid character in a path
+    """
+
+    path = (
+        path.replace(" ", "_")
+        .replace(":", "_")
+        .replace("/", "_")
+        .replace("\\", "_")
+        .replace("(", "")
+        .replace(")", "")
+    )
+
+    return sanitize_filepath(path, platform="universal", normalize=True)
+
+
+def structureToFile(structure: dict, filePathToWrite: typing.Optional[str] = None) -> str:
+    """
+    Save one structure in the correct format.
+    """
+
+    # Get the contents earlier and check if they exist
+    fileContents = structure.get("fileContents")
+
+    if fileContents is None:
+        raise Exception(f"File for structure {filePathToWrite} is empty")
+
+    if filePathToWrite is None or os.path.isdir(filePathToWrite):
+
+        name = structure.get("label", None)
+        format = structure.get("format")
+
+        if name is None or format is None:
+            raise Exception("Structure not loaded correctly")
+
+        format = "." + format
+
+        if not name.endswith(format):
+            name += format
+
+        name = sanitizePath(name)
+
+        filePathToWrite = os.getcwd() if filePathToWrite is None else filePathToWrite
+
+        filePathToWrite = os.path.join(filePathToWrite, name)
+
+    if "bcif" == filePathToWrite.split(".")[-1]:
+        with open(filePathToWrite, "wb") as ff:
+            # If file is bcif convert from type Uint8arr to binary file
+            newFileBytes = map(int, fileContents.split(","))
+            ff.write(bytes(newFileBytes))
+    else:
+        with open(filePathToWrite, "w", encoding="utf-8") as ff:
+            # If file isn't a bcif write directly
+            ff.write(fileContents)
+
+    print(f"Saved {filePathToWrite} to flow folder")
+
+    if not os.path.exists(filePathToWrite):
+        raise Exception(f"The file {filePathToWrite} wasn't generated correctly.")
+
+    return filePathToWrite
+
+
+def multipleStructuresToFolder(structureList: list, path: typing.Optional[str]):
+    """
+    Save more than one Mol* structure into a folder
+    """
+
+    if structureList is None:
+        raise Exception("No structure provided.")
+
+    if path is None:
+        path = os.path.join(os.getcwd(), "structures")
+
+    # Remove if directory already exists
+    if os.path.exists(path):
+        shutil.rmtree(path)
+
+    os.mkdir(path)
+
+    for structure in structureList:
+        # Save structure
+        structureToFile(structure, path)
+
+    return path
+
+
 class ResetRemoteException(Exception):
     """
     Exception raised when the remote server is reset.
@@ -263,3 +359,141 @@ def initPlugin():
         "Visit https://horus.bsc.es/repo for instructions on how to upload your "
         "plugin to the public repository."
     )
+
+
+def path_exists_local(path: str) -> bool:
+    """
+    Checks whether the given path exists locally.
+    """
+    return os.path.exists(path)
+
+
+def path_exists_remote(block: "PluginBlock", path: str) -> bool:
+    """
+    Checks whether the given path exists remotely.
+    """
+    try:
+        block.remote.command(f"test -e {path}")
+        return True
+    except Exception:
+        return False
+
+
+def path_exists(block: "PluginBlock", path: str) -> bool:
+    """
+    Checks whether the given path exists wherever the block is running (locally or remotely).
+    For remote execution, checks both local and remote existence.
+    """
+    local_exists = path_exists_local(path)
+
+    # If the block runs locally, check the path exists locally only
+    if block.remote.isLocal:
+        return local_exists
+
+    # If the block runs remotely, check the path exists remotely AND locally
+    remote_exists = path_exists_remote(block, path)
+    return remote_exists or local_exists
+
+
+def dir_name_exists_in_both_contexts(block: "PluginBlock", dir_name: str) -> bool:
+    """
+    Checks if a directory name exists in both local and remote parent directories.
+    This ensures the same directory name can be used consistently.
+    """
+
+    from Server.FlowManager import Flow
+
+    if not block.flow.path:
+        raise ValueError("The flow does not have a path.")
+
+    flow_dir = Flow.flowWorkDir(block.flow.path)
+    local_path = os.path.join(flow_dir, dir_name)
+
+    # Always check local existence
+    local_exists = path_exists_local(local_path)
+
+    # If running locally, only check local
+    if block.remote.isLocal:
+        return local_exists
+
+    # If running remotely, check both contexts
+    remote_path = os.path.join(block.remote.workDir, os.path.basename(flow_dir), dir_name)
+    remote_exists = path_exists_remote(block, remote_path)
+
+    return local_exists or remote_exists
+
+
+def get_unique_dir_name(block: "PluginBlock", base_name: str) -> str:
+    """
+    Returns a unique directory name that doesn't exist in either local or remote context.
+    This ensures the same directory name can be used for both local and remote paths.
+
+    Parameters
+    ----------
+    block : PluginBlock
+        The block in which context the directory name is being generated.
+    base_name : str
+        The base directory name.
+
+    Returns
+    -------
+    str
+        A unique directory name, guaranteed not to exist in either context.
+    """
+    dir_name = base_name
+
+    # Check if the directory name exists in either context
+    if dir_name_exists_in_both_contexts(block, dir_name):
+        i = 1
+        while dir_name_exists_in_both_contexts(block, dir_name):
+            dir_name = f"{base_name}_{i}"
+            i += 1
+
+    return dir_name
+
+
+def get_unique_path(block: "PluginBlock", path: str) -> str:
+    """
+    Returns a unique path for the given block context.
+    If it exists (locally or remotely), it creates a new path with a numeric suffix.
+    If it does not exist, it returns the original path.
+    If the path is a file, the suffix is inserted before the extension.
+
+    Parameters
+    ----------
+    block : PluginBlock
+        The block in which context the path is being generated.
+    path : str
+        The original path.
+
+    Returns
+    -------
+    str
+        A unique path, guaranteed not to exist in the block's runtime context.
+    """
+    pure_path = PurePath(path)
+    parent_path = pure_path.parent
+
+    # Check if the path exists in the block context
+    if path_exists(block, path):
+        if path.endswith("/") or "." not in pure_path.name:
+            # Treat as directory
+            name = pure_path.name
+            i = 1
+            new_path = path
+            while path_exists(block, new_path):
+                new_path = os.path.join(parent_path, f"{name}_{i}")
+                i += 1
+            return new_path
+        else:
+            # Treat as file
+            stem = pure_path.stem
+            suffix = pure_path.suffix
+            i = 1
+            new_path = path
+            while path_exists(block, new_path):
+                new_path = os.path.join(parent_path, f"{stem}_{i}{suffix}")
+                i += 1
+            return new_path
+    else:
+        return path

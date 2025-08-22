@@ -2,6 +2,8 @@ import { DockviewPanelApi } from "dockview-react";
 import { useEffect, useState, useRef } from "react";
 import AppButton from "../appbutton";
 import { Editor } from "@monaco-editor/react";
+import { HorusPopover } from "../reusable";
+import SaveIcon from "../Toolbar/Icons/Save";
 
 const getFileLanguage = (path: string): string => {
   const ext = path.split(".").pop()?.toLowerCase();
@@ -51,9 +53,9 @@ export function HorusFileEditor({
   useEffect(() => {
     if (!path) return;
 
-    dockApi.setTitle(path.split("/").pop() ?? "Untitled");
+    dockApi.setTitle(params.title ?? path.split("/").pop() ?? "Untitled");
     dockApi.updateParameters({ path });
-    setFileType(getFileLanguage(path));
+    setFileType(params?.format ?? getFileLanguage(path));
     setLoadingFile(true);
 
     window.horus
@@ -82,41 +84,78 @@ export function HorusFileEditor({
 
   return (
     <div className="h-full relative">
-      {hasChanges && (
-        <div className="absolute top-0 right-0 z-10 mt-2 mr-5">
-          <AppButton
-            action={async () => {
-              if (path) {
-                const filename =
-                  path.split("/").pop() ?? (await prompt("File name"));
+      <div className="absolute top-0 right-0 z-10 mt-2 mr-5">
+        <div className="flex flex-row gap-2">
+          {hasChanges && (
+            <AppButton
+              action={async () => {
+                if (path) {
+                  const filename =
+                    path.split("/").pop() ?? (await prompt("File name"));
 
-                if (!filename || filename === "") {
-                  await alert("Please enter a name for the file");
-                  return;
+                  if (!filename || filename === "") {
+                    await alert("Please enter a name for the file");
+                    return;
+                  }
+
+                  window.horus?.updateFile(
+                    new File([value], filename, { type: fileType }),
+                    path
+                  );
+
+                  setHasChanges(false);
                 }
-
-                window.horus?.updateFile(
-                  new File([value], filename, { type: fileType }),
-                  path,
-                );
-
-                setHasChanges(false);
-              }
-            }}
+              }}
+            >
+              Save
+            </AppButton>
+          )}
+          <HorusPopover
+            trigger={
+              <AppButton
+                action={() => {
+                  const file = new File(
+                    [value],
+                    `${path.split("/").pop() ?? "file"}`,
+                    {
+                      type: "text/plain",
+                    }
+                  );
+                  window.horus.saveFile(file);
+                }}
+              >
+                <SaveIcon />
+              </AppButton>
+            }
           >
-            Save
-          </AppButton>
+            <div
+              className="hover-description"
+              style={{
+                position: "absolute",
+                transform: "translateX(-30px) translateY(10px)",
+              }}
+            >
+              Save file
+            </div>
+          </HorusPopover>
         </div>
-      )}
+      </div>
+
       <Editor
+        key={JSON.stringify(params)}
+        options={{ readOnly: params?.readOnly }}
         value={value}
         loading={loadingFile}
         path={path}
         language={fileType}
-        onChange={(newValue) => {
-          setValue(newValue || "");
-          setHasChanges(true);
-        }}
+        onChange={
+          params.readOnly
+            ? undefined
+            : (newValue) => {
+                setValue(newValue || "");
+                setHasChanges(true);
+              }
+        }
       />
     </div>
   );

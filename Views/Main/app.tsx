@@ -21,7 +21,7 @@ import {
 import { setNavigate } from "@/Utils/navigationService";
 import HorusContainer from "@/Components/HorusContainer/horus_container";
 import { HorusSettingsObject } from "@/Settings/setting";
-import { checkCookies } from "@/Utils/CustomHooks/cookies";
+import { HorusAnalyticsProvider } from "@/Utils/analytics";
 
 export const SettingsContext = createContext<HorusSettingsObject | null>(null);
 
@@ -43,8 +43,6 @@ export function App() {
 
     // Set the global isDesktop variable
     await fetchDesktop();
-
-    checkCookies();
 
     // Set the working view after the settings are fetched
     setIsHorusLoaded(true);
@@ -101,7 +99,7 @@ export function App() {
   useEffect(() => {
     const updatedNavigate: NavigateFunction = (
       toOrDelta: To | number,
-      options?: NavigateOptions,
+      options?: NavigateOptions
     ) => {
       if (typeof toOrDelta === "number") {
         navigate(toOrDelta);
@@ -127,29 +125,31 @@ export function App() {
 
   return (
     <SettingsContext.Provider value={horusSettingsState}>
-      <HorusContainer
-        className="zoom-in-animation"
-        ref={notRespondingContainer}
-        style={{
-          display: "none",
-          position: "absolute",
-          bottom: "0.5rem",
-          right: "0.5rem",
-          zIndex: 99999,
-          padding: "1rem",
-          border: "1.5px solid red",
-        }}
-      >
-        <div className="flex flex-col gap-1 text-center justify-center items-center">
-          <div className="text-xl font-semibold">Horus is not responding</div>
-          <span></span>
-          <div className="flex flex-row gap-2 text-center justify-center items-center">
-            Changes will not be saved. Trying to reconnect...
-            <RotatingLines size="20px" />
+      <HorusAnalyticsProvider>
+        <HorusContainer
+          className="zoom-in-animation"
+          ref={notRespondingContainer}
+          style={{
+            display: "none",
+            position: "absolute",
+            bottom: "0.5rem",
+            right: "0.5rem",
+            zIndex: 99999,
+            padding: "1rem",
+            border: "1.5px solid red",
+          }}
+        >
+          <div className="flex flex-col gap-1 text-center justify-center items-center">
+            <div className="text-xl font-semibold">Horus is not responding</div>
+            <span></span>
+            <div className="flex flex-row gap-2 text-center justify-center items-center">
+              Changes will not be saved. Trying to reconnect...
+              <RotatingLines size="20px" />
+            </div>
           </div>
-        </div>
-      </HorusContainer>
-      <Outlet />
+        </HorusContainer>
+        <Outlet />
+      </HorusAnalyticsProvider>
     </SettingsContext.Provider>
   );
 }

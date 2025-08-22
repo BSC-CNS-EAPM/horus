@@ -1,7 +1,7 @@
 from HorusAPI.src.plugins import PluginMetaModel
 from Server.PluginManager import PluginManager
 from Server.RemotesManager import RemotesManager
-from HorusAPI import Plugin
+from HorusAPI import CustomBlockParser, Plugin
 import os
 import sys
 import pytest
@@ -849,3 +849,34 @@ def test_circular_dependency(PluginManagerSorter: PluginManager):
 
     with pytest.raises(ValueError, match="Circular dependency detected"):
         PluginManagerSorter._getPluginsImportOrder(paths)
+
+
+def test_custom_block():
+
+    custom_test_blocks_dir = os.path.join(os.path.dirname(__file__), "custom")
+
+    # First load the fake block present here
+    custom_block = os.path.join(custom_test_blocks_dir, "custom_block.json")
+
+    with open(custom_block, "r") as f:
+        block_data = json.load(f)
+
+    # Load the custom block into the plugin manager
+    plugin = CustomBlockParser.getFakePlugin(block_data, custom_test_blocks_dir)
+    block = CustomBlockParser.parse(block_data, custom_test_blocks_dir)
+    plugin._blocks = [block]
+
+    # Now we can use the block
+    assert plugin is not None
+    assert plugin.blocks[0].id == "new_block"
+    assert plugin.blocks[0].name == "Print random number"
+    assert plugin.blocks[0].category == "Numbers"
+    assert plugin.blocks[0]._outputs[0].id == "number"
+
+    # Execute the block
+    block = plugin.blocks[0]
+
+    output = block()
+
+    # Assert that the output works as expected
+    assert isinstance(output["number"], int)

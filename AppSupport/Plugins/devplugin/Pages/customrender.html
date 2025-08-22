@@ -1,53 +1,61 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
-
-<head>
+  <head>
     <title>Dev</title>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-</head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
 
-<body>
+  <body>
     <h1>Configure variable</h1>
     <button onclick="modifyFlow()">Modify flow</button>
+    <button onclick="executeFlow()">Execute flow</button>
 
     <script>
+      parent.addEventListener("flowChanged", (event) => {
+        const flow = event.detail;
+        console.log("Flow changed", flow);
+      });
 
-        function modifyFlow() {
-            flow = parent.horus.getFlow();
+      function executeFlow() {
+        parent.horus.executeFlow({
+          placedID: 1,
+          resetFlow: true,
+          continueSlurm: true,
+        });
+      }
 
-            console.log("flow", flow)
+      function modifyFlow() {
+        flow = parent.horus.getFlow();
 
-            // Modify from the flow the first block position
-            flow.name = "New name!!";
+        console.log("flow", flow);
 
-            // Create a new block
-            const newBlock = flow.blocks[0];
+        // Modify from the flow the first block position
+        flow.name = "New name!!";
 
-            // Modify the block
-            newBlock.name = "New block name!!";
+        // Create a new block
+        const newBlock = flow.blocks[0];
 
-            // Modify the position
-            newBlock.position = {
-                x: newBlock.position.x + 100,
-                y: newBlock.position.y + 100
-            }
+        // Modify the block
+        newBlock.name = "New block name!!";
 
-            // Replace the block with the new one
-            flow.blocks[0] = newBlock;
+        // Modify the position
+        newBlock.position = {
+          x: newBlock.position.x + 100,
+          y: newBlock.position.y + 100,
+        };
 
-            // Remove the second block
-            flow.blocks.splice(1, 1);
+        // Replace the block with the new one
+        flow.blocks[0] = newBlock;
 
-            // Set the flow
-            parent.horus.setFlow(flow);
+        // Remove the second block
+        flow.blocks.splice(1, 1);
 
-            console.log("flow modified")
+        // Set the flow
+        parent.horus.setFlow(flow);
 
-        }
-
+        console.log("flow modified");
+      }
     </script>
-
-</body>
-
+  </body>
 </html>

@@ -146,11 +146,11 @@ imports = [
     "flask_session",
     "multiprocess",
     "pathvalidate",
-    "molviewspec",
     "sqlalchemy",
     "secrets",
     "smtplib",
     "ssl",
+    "pydantic",
 ]
 
 imports += ["engineio", "engineio.async_drivers.threading"]

@@ -31,11 +31,13 @@ export type PluginPage = {
   description?: string;
   hidden?: boolean;
   id?: string;
+  variable_id?: string;
   plugin?: string;
   placedID?: number;
   logo?: string;
   data?: any;
   dataID?: number;
+  developmentPage?: boolean;
   onFocus?: () => void;
 };
 
@@ -76,7 +78,7 @@ export enum PluginVariableTypes {
   CUSTOM = "custom",
   CHECKBOX = "checkbox",
   RADIO = "radio",
-  PASSWORD = "PASSWORD",
+  PASSWORD = "password",
   CHAIN_INTERACTIVE = "chain_interactive",
   RESIDUE_RANGE = "residue_range",
 }
@@ -88,7 +90,7 @@ export type PluginVariable = {
   type: PluginVariableTypes;
   value: any;
   placedID: number;
-  allowedValues: Array<any>;
+  allowedValues?: Array<any>;
   defaultValue: any;
   category: string;
   disabled: boolean;
@@ -132,20 +134,29 @@ export type VariableConnection = {
   currentCycle: number;
 };
 
-export type Block = {
-  // Basic info about the block
+export type BaseBlock = {
   id: string;
   name: string;
   description: string;
-  plugin: HorusPlugin;
   type: BlockTypes;
   category: string | null;
-
-  // Variables, inputs, outputs
   variables: Array<PluginVariable>;
   inputs: Array<VariableGroup>;
   outputs: Array<PluginVariable>;
-  selectedInputGroup: string;
+  isCustom: boolean;
+};
+
+export type CustomBlockEditor = Omit<BaseBlock, "inputs"> & {
+  inputs: Array<PluginVariable>;
+  action: string;
+  finalAction: string;
+  dependencies: Array<string> | null;
+  [key: string]: any; // Allow additional properties for custom blocks
+};
+
+export type Block = BaseBlock & {
+  plugin: HorusPlugin;
+  rawBlock?: BaseBlock;
 
   // DEPRECATED AND CHANGED FOR PLUGIN CONFIG
   // Block config
@@ -179,6 +190,8 @@ export type Block = {
 
   // Remote connection
   selectedRemote: string;
+
+  selectedInputGroup: string;
 };
 
 export type SlurmJob = {

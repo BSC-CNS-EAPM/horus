@@ -323,3 +323,39 @@ The :bdg-secondary-line:`Block` has access to the instance of the :bdg-secondary
 This can be useful to access the list of blocks in the flow, the flow name, the flow ID or other
 properties. The flow instance can be obtained using the :bdg-secondary-line:`block.flow` property.
 
+Creating a unique folder for the block
+======================================
+
+Blocks in Horus are often executed multiple times, and it's essential to isolate each
+execution's data to avoid overwriting results. This is handled using unique directories
+that are automatically generated for each run. The logic for this mechanism is encapsulated
+in the :bdg-secondary-line:`unique_block_dir_local` and :bdg-secondary-line:`unique_block_dir_remote` 
+properties of the block.
+
+Both properties ensure that each execution of a block gets its own dedicated directory with the 
+same unique name, but located in different parent directories: one on the local machine and 
+one on the remote execution environment. The unique name is generated using a combination of 
+the block's internal ID and placement ID, avoiding naming collisions and ensuring safe, 
+traceable data storage across multiple runs.
+
+If you wish to persist the unique block directory paths across executions, you should save the values
+into the :bdg-secondary-line:`block.extraData` attribute.
+
+Example
+-------
+
+Here's an example of using the unique block directory to store a copy of an input file:
+
+.. code-block:: python
+
+   def my_block_action(block: PluginBlock):
+       input_file = block.inputs.get("input_data")
+       
+       # Use appropriate path based on execution context
+       if block.remote.isLocal:
+           unique_dir = block.unique_block_dir_local
+       else:
+           unique_dir = block.unique_block_dir_remote
+       
+       # Copy data to the unique directory
+       block.remote.sendData(input_file, unique_dir)

@@ -14,17 +14,17 @@ import shutil
 import typing
 from copy import deepcopy
 from enum import Enum
-from typing import Any, ClassVar, Dict, List, TypeVar, cast, Optional
+from typing import Any, Callable, ClassVar, Dict, List, TypeVar, cast, Optional
 from pydantic import (  # pylint: disable=no-name-in-module. # Somehow pylint does not recognize BaseModel
     BaseModel,
     Field,
-    validator,
+    field_validator,
 )
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, Future
 
 # Horus imports
-from .utils import ResetRemoteException
+from .utils import ResetRemoteException, get_unique_dir_name
 
 # Type checking
 if typing.TYPE_CHECKING:
@@ -57,22 +57,13 @@ class PluginRemote:
         self.cd = self._remote.cd
         self.block = block
 
-    def remoteCommand(self, command: str, timeout: typing.Optional[int] = None):
-        """
-        Deprecated. Use command instead.
-        """
-
-        print("WARNING: remoteCommand is deprecated. Use command instead.")
-        print("If you are not the developer of this plugin, ignore this warning.")
-
-        return self.command(command, timeout)
-
     def command(
         self,
         command: str,
         timeout: typing.Optional[int] = None,
         forceLocal: bool = False,
         mergeStdErr: bool = True,
+        env: typing.Optional[Dict[str, str]] = None,
     ):
         """
         Executes a command on the remote.
@@ -85,7 +76,7 @@ class PluginRemote:
 
         :return: The output of the command.
         """
-        output = self._remote.command(command, timeout, forceLocal, mergeStdErr)
+        output = self._remote.command(command, timeout, forceLocal, mergeStdErr, env)
 
         return output
 
@@ -118,13 +109,23 @@ class PluginRemote:
 
         return self._remote.transferFrom(source, destination)
 
-    def submitJob(self, script: T, changeDir: bool = True) -> T:
+    def submitJob(
+        self,
+        script: T,
+        changeDir: bool = True,
+        arguments: Optional[list[str]] = None,
+        env: Optional[dict] = None,
+    ) -> T:
         """
         Submit a slurm job to the queue system of the cluster (SLURM)
 
         :param script: The  absolute path to the script to submit or a list of path to submit more than one at once.
         :param: changeDir: automatically cd to the container folder of the script. \
         Disable this if using the cd context manager or for specific cases.
+        :param arguments: A list of arguments to pass to the SBATCH command. \
+            For example, ["--partition=short", "--time=01:00:00", "--dependency=afterok:12345"].
+        :param env: A dictionary of environment variables to set for the job. \
+            For example, {"MY_VAR": "value"}.
 
         :return: The job ID.
         """
@@ -141,7 +142,9 @@ class PluginRemote:
             scriptsToSubmit = script
 
         # _submitJob is not intended to be called by users
-        slurmJob = SlurmJob._submitJob(self, scriptsToSubmit, changeDir)
+        slurmJob = SlurmJob._submitJob(
+            self, scriptsToSubmit, changeDir, arguments=arguments, env=env
+        )
 
         if not self.block.jobs:
             self.block.jobs = slurmJob
@@ -245,7 +248,15 @@ class PluginPage:
     Internal variable used to store the page info.
     """
 
-    def __init__(self, id: str, name: str, description: str, html: str, hidden: bool = False):
+    def __init__(
+        self,
+        id: str,
+        name: str,
+        description: str,
+        html: str,
+        hidden: bool = False,
+        path: str = "/",
+    ):
         """
         Create a new PluginPage.
 
@@ -255,12 +266,14 @@ class PluginPage:
         :param html: The name of the HTML file (i.e. "my_page.html"). \
         The html file must be located in the "Pages" folder of the plugin.
         :param hidden: Whether the page should be hidden from the extension menu (default: False).
+        :param path: The path to the page (default: "/").
         """
         self.id = id
         self.name = name
         self.description = description
         self.html = html
         self.hidden = hidden
+        self.path = path or "/"
 
         # Initialize instance-specific variables
         self.endpoints = []
@@ -292,6 +305,8 @@ class PluginPage:
             "name": self.name,
             "description": self.description,
             "hidden": self.hidden,
+            "html": self.html,
+            "path": self.path,
         }
 
 
@@ -626,6 +641,12 @@ class VariableTypes(str, Enum):
     ["A", "B", "C"].
     """
 
+    PASSWORD = "password"
+    """
+    A password variable. It will render as a password input field.
+    The resulting value will be a string.
+    """
+
     @staticmethod
     def getTypes():
         """
@@ -663,6 +684,11 @@ class PluginVariable:
     """
 
     id: str = "baseplugin.variable"
+
+    placedID: int = 0
+    """
+    Same placedID as the block, used to identify the variable in the frontend.
+    """
 
     _isOriginal: bool = True
     """
@@ -787,6 +813,7 @@ class PluginVariable:
             varDict["disabled"] = self.disabled
             varDict["required"] = self.required
             varDict["placeholder"] = self.placeholder
+            varDict["placedID"] = self.placedID
 
         return varDict
 
@@ -824,7 +851,7 @@ class CustomVariable(PluginVariable):
         id: str,
         name: str,
         description: str,
-        type: VariableTypes,
+        type: typing.Union[VariableTypes, str],
         customPage: PluginPage,
         defaultValue: Any | None = None,
         allowedValues: List[Any] | None = None,
@@ -943,7 +970,7 @@ class VariableGroup(PluginVariable):
 
         return groupDict
 
-    def _updateVariablesInGroup(self, values: dict):
+    def _updateVariablesInGroup(self, values: typing.Union[None, dict]):
         """
         Update the values of the variables inside this group
         """
@@ -951,7 +978,7 @@ class VariableGroup(PluginVariable):
         for variable in self.variables:
             if variable.disabled:
                 continue
-            if variable.id in values.keys():
+            if values is not None and variable.id in values.keys():
                 variable.value = values[variable.id]
 
 
@@ -1321,6 +1348,74 @@ class PluginBlock:
     """
     The category of the block
     """
+
+    _unique_dir: typing.Union[None, str] = None
+    """
+    Internal property to store the unique directory name per block execution.
+    This is just the directory name, not the full path.
+    """
+
+    isCustom: bool = False
+    """
+    Whether the block is a custom block or not.
+    Custom blocks are blocks that are written with the block editor UI
+    """
+
+    rawBlock: typing.Union[None, dict] = None
+    """
+    Used only for custom blocks to store the raw block data.
+    """
+
+    @property
+    def unique_block_dir_local(self):
+        """
+        Returns a unique LOCAL path for the block based on its name and placedID.
+        Every time the block gets executed,
+        a new unique block dir is generated.
+        If you need to store previous runs paths, use the
+        block.extraData property.
+        https://horus.bsc.es/docs/developer_guide/horusapi/blocks.html#storing-data-on-blocks-or-flow
+        """
+        if not self._unique_dir:
+            # Generate the unique directory name once
+            block_unique_id = f"{self.id}_{self._placedID}"
+            self._unique_dir = get_unique_dir_name(self, block_unique_id)
+
+        # Return the full local path
+        if not self.flow.path:
+            raise ValueError("The flow does not have a path.")
+
+        from Server.FlowManager import Flow
+
+        return os.path.join(Flow.flowWorkDir(self.flow.path), self._unique_dir)
+
+    @property
+    def unique_block_dir_remote(self):
+        """
+        Returns a unique REMOTE path for the block based on its name and placedID.
+        Every time the block gets executed,
+        a new unique block dir is generated.
+        If you need to store previous runs paths, use the
+        block.extraData property.
+        https://horus.bsc.es/docs/developer_guide/horusapi/blocks.html#storing-data-on-blocks-or-flow
+        """
+        if not self._unique_dir:
+            # Generate the unique directory name once
+            block_unique_id = f"{self.id}_{self._placedID}"
+            self._unique_dir = get_unique_dir_name(self, block_unique_id)
+
+        # Return the full local path
+        if not self.flow.path:
+            raise ValueError("The flow does not have a path.")
+
+        from Server.FlowManager import Flow
+
+        remote_path = os.path.join(
+            self.remote.workDir, os.path.basename(Flow.flowWorkDir(self.flow.path))
+        )
+
+        # Return the full remote path
+        return os.path.join(remote_path, self._unique_dir)
 
     def _parseID(self, id: str) -> str:
         """
@@ -1826,7 +1921,7 @@ class PluginBlock:
             if varType == VariableTypes._GROUP.value:  # pylint: disable=protected-access
                 groupVariables = variable.get("variables", None)
                 variableGroupJSONParsed = {}
-                for var in groupVariables:
+                for var in groupVariables or []:
                     subVarID = var.get("id", None)
                     variableGroupJSONParsed[subVarID] = var.get("value", None)
 
@@ -1865,6 +1960,10 @@ class PluginBlock:
         self.time = blockTime
         self.extraData = extraData
         self.dirty = dirty
+
+        # Update all variables to have the same placedID as the block
+        for variable in self._variables:
+            variable.placedID = self._placedID
 
     def _minimalEncode(self):
         """
@@ -1914,6 +2013,8 @@ class PluginBlock:
         fullBlock["inputs"] = self._inputGroupsToDict(self._inputGroups)
         fullBlock["outputs"] = self._variablesToDict(self._outputs)
         fullBlock["type"] = str(self.TYPE)
+        fullBlock["isCustom"] = self.isCustom
+        fullBlock["rawBlock"] = self.rawBlock
 
         return fullBlock
 
@@ -2072,12 +2173,16 @@ class InputBlock(PluginBlock):
 
 
 class HorusPydanticModel(BaseModel):
+
     def update(self, newValues: "HorusPydanticModel"):
         # Map the dictionary keys to field names using aliases
-        alias_map = {field.alias: field.name for field in self.__fields__.values()}
+        alias_map = {
+            field.alias: field.title
+            for field in HorusPydanticModel.model_fields.values()  # pylint: disable=no-member
+        }
 
-        # Look here how we used the .dict() method and not the custom toDict()
-        updated_dict = {alias_map.get(k, k): v for k, v in newValues.dict().items()}
+        # Look here how we used the .model_dump() method and not the custom toDict()
+        updated_dict: dict = {alias_map.get(k, k): v for k, v in newValues.model_dump().items()}
         self.__dict__.update(updated_dict)
 
     def toDict(self) -> dict:
@@ -2088,7 +2193,11 @@ class HorusPydanticModel(BaseModel):
         or Status
         """
 
-        return json.loads(self.json(by_alias=True))
+        return json.loads(self.model_dump_json(by_alias=True))  # pylint: disable=no-member
+
+    model_config = {
+        "ignored_types": (type(update), type(toDict)),  # Will be cython_function_or_method
+    }
 
 
 # Define an enum for the statuses
@@ -2189,7 +2298,7 @@ class SlurmJob(HorusPydanticModel):
     job_name: Optional[str] = Field(None, alias="JobName")
     user_id: Optional[str] = Field(None, alias="UserId")
     group_id: Optional[str] = Field(None, alias="GroupId")
-    exit_code: str = Field(None, alias="ExitCode")
+    exit_code: Optional[str] = Field(None, alias="ExitCode")
     nodes: Optional[str] = Field(None, alias="NodeList")
     submit_time: Optional[datetime] = Field(None, alias="SubmitTime")
     start_time: Optional[datetime] = Field(None, alias="StartTime")
@@ -2201,10 +2310,14 @@ class SlurmJob(HorusPydanticModel):
     stderr_path: Optional[str] = Field(None, alias="StdErr")
     stdout_content: Optional[str] = Field(None, alias="StdOutContent")
     stderr_content: Optional[str] = Field(None, alias="StdErrContent")
-    script_content: str = Field(None, alias="SubmissionScript")
+    script_content: Optional[str] = Field(None, alias="SubmissionScript")
 
-    @validator("start_time", "end_time", pre=True)
-    def parse_datetime(cls, value):
+    @field_validator("start_time", "end_time", mode="before")
+    @classmethod
+    def parse_datetime(cls, value):  # pylint: disable=no-self-argument
+        """
+        Converts datetimes
+        """
         # Handle known "None" like values
         if value in (None, "Unknown", "None", "N/A"):
             return None
@@ -2219,8 +2332,12 @@ class SlurmJob(HorusPydanticModel):
         except ValueError:
             raise ValueError(f"Invalid datetime format: {value}")
 
-    @validator("state", pre=True)
-    def parse_status(cls, value):
+    @field_validator("state", mode="before")
+    @classmethod
+    def parse_status(cls, value):  # pylint: disable=no-self-argument
+        """
+        Convert the status to Status enum
+        """
         return Status(value)
 
     class Config:
@@ -2307,19 +2424,13 @@ class SlurmJob(HorusPydanticModel):
 
         remote.command(f"scancel {self.job_id}")
 
-    def reSubmit(self, remote: RemoteUnion) -> list["SlurmJob"]:
-        """
-        Submits again the job
-        """
-
-        if not self.command:
-            raise ValueError("Could not submit the job. Missing original submit command.")
-
-        return self._submitJob(remote, [self.command])
-
     @staticmethod
     def _submitJob(
-        remote: RemoteUnion, scripts: list[str], changeDir: bool = True
+        remote: RemoteUnion,
+        scripts: list[str],
+        changeDir: bool = True,
+        arguments: Optional[list[str]] = None,
+        env: Optional[dict] = None,
     ) -> list["SlurmJob"]:
         """
         Submit multiple slurm jobs to the queue system of the cluster (SLURM)
@@ -2330,11 +2441,28 @@ class SlurmJob(HorusPydanticModel):
 
         :return: List of SlurmJob instances.
         """
+
+        if arguments:
+            # Parse the arguments to ensure no spaces are present (convert to quotes if needed)
+
+            parguments = []
+            for arg in arguments:
+                if "=" in arg:
+                    # If the argument is in the format --arg=value, we can keep it as is
+                    arg, value = arg.split("=", 1)
+                    value = value.replace("'", "").replace('"', "").replace(" ", "_")
+                    parguments.append(f'{arg}="{value}"')
+                else:
+                    # Otherwise, we assume it's a simple argument and quote it
+                    parguments.append(f'"{arg}"')
+
+            arguments = parguments
+
         commands = []
         for script in scripts:
             scontrolCmd = SlurmJob.SCONTROL_COMMAND("$jobid")
-            command = "jobid=$(sbatch {} | awk '{{print $4}}'); if [ -z \"$jobid\" ]; then exit 1; fi; {}".format(
-                script, scontrolCmd
+            command = "jobid=$(sbatch {} {} | awk '{{print $4}}'); if [ -z \"$jobid\" ]; then exit 1; fi; {}".format(
+                " ".join(arguments) if arguments else "", script, scontrolCmd
             )
 
             if changeDir:
@@ -2346,11 +2474,13 @@ class SlurmJob(HorusPydanticModel):
         fullCommand = f"; echo {SlurmJob.SEPARATOR};".join(commands)
 
         try:
-            out = remote.command(fullCommand)
+            out = remote.command(fullCommand, env=env)
             jobOutputs = out.split(SlurmJob.SEPARATOR)
             slurmJobs = [SlurmJob.parseScontrolToSlurmJob(jobOutput) for jobOutput in jobOutputs]
         except Exception as exc:
-            raise Exception(f"Error submitting job: {exc}") from exc
+            raise Exception(
+                f"Error submitting job. Does the machine '{remote.name}' have SLURM installed? {exc}"
+            ) from exc
 
         arrayJobs = []
         for slurmJob in slurmJobs:
@@ -2472,8 +2602,8 @@ class SlurmBlock(PluginBlock):
         self,
         name: str,
         description: str,
-        initialAction: typing.Callable,
-        finalAction: typing.Callable,
+        initialAction: typing.Optional[typing.Callable],
+        finalAction: typing.Optional[typing.Callable],
         variables: typing.List[PluginVariable] = [],
         inputs: typing.List[PluginVariable] = [],
         inputGroups: typing.List[VariableGroup] = [],
@@ -2671,10 +2801,10 @@ class PluginMetaModel(BaseModel):
     author: str
     version: str
     pluginFile: str
-    minHorusVersion: typing.Optional[str]
-    maxHorusVersion: typing.Optional[str]
+    minHorusVersion: typing.Optional[str] = None
+    maxHorusVersion: typing.Optional[str] = None
     platforms: typing.Optional[PlatformType] = ["universal"]
-    externalURL: typing.Optional[str]
+    externalURL: typing.Optional[str] = None
     dependencies: typing.Optional[typing.List[str]] = []
     pluginRequires: typing.Optional[typing.List[str]] = []
 
@@ -3062,6 +3192,7 @@ class Plugin:
             self._createConfig(configPath)
 
         # Read the config file
+        configs = {}
         try:
             with open(configPath, "r", encoding="utf-8") as configFile:
                 configs = json.load(configFile)
@@ -3135,3 +3266,209 @@ class Plugin:
         for c in self._getConfigs():
             configList.append(c._toDict())
         return configList
+
+
+class CustomVariableParser:
+    """
+    Parses a variable from JSON format to a PluginVariable instance.
+    """
+
+    ALLOWED_FIELDS = [
+        "name",
+        "id",
+        "description",
+        "type",
+        "defaultValue",
+        "category",
+        "disabled",
+        "required",
+        "placeholder",
+    ]
+
+    @classmethod
+    def parse(cls, variable: dict) -> PluginVariable:
+        """
+        Parses a variable from a JSON representation.
+        """
+
+        # Verify the type of the variable
+        if not isinstance(variable, dict):
+            raise ValueError("Variable must be a dictionary.")
+
+        # Check if the variable has the required fields
+        requiredFields = ["id", "name", "type"]
+        for field in requiredFields:
+            if field not in variable:
+                raise ValueError(f"Variable is missing required field: {field}")
+
+        # Remove any fields that are not allowed
+        for field in list(variable.keys()):
+            if field not in CustomVariableParser.ALLOWED_FIELDS:
+                variable.pop(field)
+
+        # Create a PluginVariable from the variable dictionary
+        return PluginVariable(**variable)
+
+
+class CustomInputsParser(CustomVariableParser):
+
+    @classmethod
+    def parse(cls, variable: dict) -> PluginVariable:
+        """
+        Input variables require first instantiating a variable group, for custom variables, this will be as default the
+        """
+        return super().parse(variable)
+
+
+class CustomBlockParser:
+    """
+    CustomBlockParser is a class that can be used to parse custom blocks from a JSON representation.
+    It is used to verify the block and save it to the plugin.
+    """
+
+    @classmethod
+    def parse(cls, block: dict, customBlocksPath: str) -> PluginBlock:
+        """
+        Parses a custom block from a JSON representation.
+        """
+
+        # Verify the type of the block
+        if not isinstance(block, dict):
+            raise ValueError("Block must be a dictionary.")
+
+        # Check if the block has the required fields
+        requiredFields = ["id", "name", "description", "action", "variables", "inputs", "outputs"]
+        for field in requiredFields:
+            if field not in block:
+                raise ValueError(f"Block is missing required field: {field}")
+
+        # Verify the ID is alphanumeric, and contains no spaces, only underscores
+        if not re.match(r"^[a-zA-Z0-9_]+$", block["id"]):
+            raise ValueError("Block ID must be alphanumeric and can only contain underscores.")
+
+        # Parse inputs
+        inputs = []
+        if "inputs" in block:
+            for inputVar in block["inputs"]:
+                inputs.append(CustomVariableParser.parse(inputVar))
+
+        # Parse outputs
+        outputs = []
+        if "outputs" in block:
+            for outputVar in block["outputs"]:
+                outputs.append(CustomVariableParser.parse(outputVar))
+
+        # Parse the variables
+        variables = []
+        if "variables" in block:
+            for var in block["variables"]:
+                variables.append(CustomVariableParser.parse(var))
+
+        action: Optional[Callable] = None
+
+        if "action" in block:
+            action_code = block["action"]
+
+            # Prepare a namespace dictionary where the exec will execute
+            exec_namespace = {}
+
+            # Execute the code; this should define 'customBlock' in exec_namespace
+            exec(action_code, exec_namespace)
+
+            # Now get the function from the namespace
+            action = exec_namespace.get("blockAction")
+            if action is None:
+                raise ValueError(
+                    "No function named 'blockAction' was defined in the action code."
+                )
+
+        # If the block is of type SLURM, parse the finalAction
+        finalAction: Optional[Callable] = None
+        if block.get("blockType") == PluginBlockTypes.SLURM:
+            if "finalAction" in block:
+                finalAction_code = block["finalAction"]
+
+                # Prepare a namespace dictionary where the exec will execute
+                exec_namespace = {}
+
+                # Execute the code; this should define 'customBlock' in exec_namespace
+                exec(finalAction_code, exec_namespace)
+
+                # Now get the function from the namespace
+                finalAction = exec_namespace.get("finalAction")
+                if finalAction is None:
+                    raise ValueError(
+                        "No function named 'finalAction' was defined in the finalAction code."
+                    )
+
+        # Create a PluginBlock from the block dictionary
+        if block.get("blockType") == PluginBlockTypes.SLURM:
+            b = SlurmBlock(
+                name=block["name"],
+                description=block["description"],
+                initialAction=action,
+                finalAction=finalAction,
+                variables=variables,
+                inputs=inputs,
+                outputs=outputs,
+                id=block["id"],
+                failOnSlurmError=block.get("failOnSlurmError", True),
+                category=block["category"],
+            )
+        elif block.get("blockType") == PluginBlockTypes.INPUT:
+            b = InputBlock(
+                name=block["name"],
+                description=block["description"],
+                action=action,
+                variable=variables[0],
+                output=outputs[0] if outputs else None,
+            )
+        else:
+            b = PluginBlock(
+                name=block["name"],
+                description=block["description"],
+                action=action,
+                variables=variables,
+                inputs=inputs,
+                outputs=outputs,
+                id=block["id"],
+                category=block["category"],
+            )
+
+        b.isCustom = True
+        b.rawBlock = block
+
+        return b
+
+    @classmethod
+    def getFakePlugin(cls, block: dict, customBlocksPath: str) -> Plugin:
+        """
+        Returns  a fake plugin instance to hold the custom block
+        """
+
+        # Generate a fake plugin to hold the block
+        fakePlugin = Plugin(noMetaLoad=True)
+
+        fakePlugin.id = block["id"]
+
+        plugin_path = os.path.join(customBlocksPath, block["id"])
+        os.makedirs(plugin_path, exist_ok=True)
+
+        fakePlugin._path = plugin_path
+
+        # Assign a fake plugin meta
+        fakePlugin.pluginMeta = PluginMetaModel(
+            id=block["id"],
+            name=block["name"],
+            description=block["description"],
+            author="Custom",
+            version="1.0.0",
+            pluginFile=f"{block['id']}.py",
+            minHorusVersion=None,
+            maxHorusVersion=None,
+            platforms=["universal"],
+            externalURL=block.get("externalURL"),
+            dependencies=block.get("dependencies", []),
+        )
+
+        return fakePlugin

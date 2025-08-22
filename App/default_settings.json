@@ -2,8 +2,17 @@
   "dependenciesInterpreter": {
     "name": "Python interpreter",
     "description": "Python interpreter path to use for dependencies installation. Only required for special packages that need to be compiled from source. Must be python 3.9.",
-    "category": "Dependencies",
+    "category": "Python",
     "value": "python",
+    "type": "file",
+    "allowedValues": [],
+    "desktopOnly": true
+  },
+  "condaRuntime": {
+    "name": "Conda runtime",
+    "description": "Conda runtime path to use for environment management. This is used to create and manage conda environments for the application.",
+    "category": "Python",
+    "value": "conda",
     "type": "file",
     "allowedValues": [],
     "desktopOnly": true
@@ -106,5 +115,48 @@
       "shell"
     ],
     "desktopOnly": true
+  },
+  "repos": {
+    "name": "Plugin repositories",
+    "description": "A list of plugin repositories to use for the application. This is used to fetch plugins from remote sources.",
+    "category": "Plugin Repositories",
+    "value": [
+      {
+        "repository_name": "Official Plugin Repository",
+        "repository_url": "https://horus.bsc.es/repo_api/"
+      }
+    ],
+    "type": "_list",
+    "desktopOnly": true,
+    "variables": [
+      {
+        "description": "Repository Name",
+        "id": "repository_name",
+        "name": "Repository Name",
+        "placeholder": "Custom repository name",
+        "type": "string"
+      },
+      {
+        "description": "Repository URL",
+        "id": "repository_url",
+        "name": "Repository URL",
+        "placeholder": "API URL",
+        "type": "string"
+      },
+      {
+        "description": "Repository token",
+        "id": "repository_token",
+        "name": "Repository token",
+        "placeholder": "Private token (optional)",
+        "type": "password"
+      }
+    ]
+  },
+  "analytics": {
+    "name": "Analytics consent",
+    "description": "Manage your cookie preferences for analytics. This will allow us to collect data on how you use Horus, which helps us improve the platform.",
+    "category": "Analytics",
+    "value": null,
+    "type": "boolean"
   }
 }

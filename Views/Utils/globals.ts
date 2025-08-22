@@ -18,7 +18,6 @@ import {
   Flow,
   PluginPageExtensionEvent,
 } from "@/Components/FlowBuilder/flow.types";
-import { Dispatch, SetStateAction } from "react";
 
 export {};
 
@@ -39,6 +38,8 @@ declare global {
         allowRemotes: boolean;
         allowDemoUser: boolean;
         uploadSize: number;
+        allowFullFileSystemAccess: boolean;
+        allowCustomBlocks: boolean;
       };
       updateSettings: (settings: HorusSettingsObject) => void;
     };
@@ -58,15 +59,24 @@ declare global {
     horusTerm: {
       ref: React.RefObject<Terminal> | null;
     };
-    // Horus flow builder
-    horus: {
+    horusVariable: {
       getVariable?: () => any;
       setVariable?: (value: any) => void;
+    };
+    // Horus flow builder
+    horus: {
       getFlow?: () => any;
       setFlow?: (newFlow: Flow) => void;
+      executeFlow?: (options?: {
+        placedID?: number;
+        resetFlow?: boolean;
+        continueSlurm?: boolean;
+      }) => Promise<void>;
       setExtraData?: (key: string, value: any) => void;
       getExtraData?: (key: string) => any;
-      openExtensionFilePicker?: (options: ExtensionsFilePickerOptions) => void;
+      openExtensionFilePicker?: (
+        options: ExtensionsFilePickerOptions
+      ) => Promise<string | null>;
       saveFile: (file: File) => void;
       updateFile: (file: File, path: string) => void;
       getFile: (path: string) => Promise<Blob>;
@@ -76,6 +86,17 @@ declare global {
       openPanel?: openPanel;
       closePanel?: (id: string) => void;
       addExtensions?: (e: PluginPageExtensionEvent) => void;
+      openFileInEditor?: ({
+        name,
+        path,
+        readOnly,
+        format,
+      }: {
+        path: string;
+        name?: string;
+        readOnly?: boolean;
+        format?: string;
+      }) => void;
     };
     // JSME viewer
     JSApplet: any;
@@ -91,7 +112,7 @@ export type openPanel = {
   (
     type: "moleculePlotter",
     id: string,
-    params: { smilesToPlot: HorusSmilesType[] },
+    params: { smilesToPlot: HorusSmilesType[] }
   ): void;
   (
     type: "extensions",
@@ -101,7 +122,7 @@ export type openPanel = {
       plugin: string;
       id: string;
       data?: any;
-    },
+    }
   ): void;
 };
 
@@ -118,6 +139,6 @@ window.horus = {
   getFile: getFile,
   updateFile: updateFile,
   openFile: async () => {
-    alert("Open the flow editor before opnening files");
+    alert("Open the flow editor before opening files");
   },
 };

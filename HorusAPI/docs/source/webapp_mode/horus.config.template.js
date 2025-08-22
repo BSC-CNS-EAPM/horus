@@ -11,6 +11,10 @@ export const config = {
   appName: "My App Name",
   // Wether to allow users to configure and use remotes
   allowRemotes: false,
+  // Allow custom blocks definition. WARNING: Custom blocks allow for the execution of arbitrary code
+  // use at your own risk. If enabled, only admins can create custom blocks. Custom blocks loaded in the
+  // custom blocks folder will be available to all users
+  allowCustomBlocks: false,
   // CORS configuration, by default, all origins are allowed
   cors: {
     origins: "*",
@@ -46,6 +50,9 @@ export const config = {
     },
     // This setting regulates the behaviour of the File Picker system for variables like "folder" or "file"
     fileManagement: {
+      // If true, then users can access the entire file system. 
+      // Otherwise, they can only access their own user folder
+      allowFullFileSystemAccess: true,
       // Whether to allow users to upload files
       allowUpload: true,
       // For EACH file that they upload, the maximum size (in MB)

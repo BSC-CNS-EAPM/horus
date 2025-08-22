@@ -69,6 +69,10 @@ import { LogsData } from "./Logs/logs_connections";
 import { blockLogsPanelID } from "./Blocks/block.hooks";
 import { GLOBAL_IDS } from "@/Utils/globals";
 
+export enum FlowEvents {
+  FLOW_CHANGED = "flowChanged",
+}
+
 /**
  * An extended "PointerSensor" that prevent some
  * interactive html element(button, input, textarea, select, option...) from dragging
@@ -217,11 +221,21 @@ function newFlowObject(): Flow {
   };
 }
 
+type DevelopmentIframeVariableGetter = {
+  iframe_id: string;
+  variable_id: string;
+  variable_placedID: number;
+  panel_id: string;
+};
+
 // Create a new flow builder hook
 export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
   // Initialize the drag and drop tweaks
   const dndTweaks = useDNDTweaks();
 
+  //
+  const [developmentIframes, setDevelopmentIframes] = useState<DevelopmentIframeVariableGetter[]>([]);
+  
   // Store the state of the flow
   const [flow, setFlow] = useState<Flow>(newFlowObject());
 
@@ -1589,8 +1603,6 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
           }
         })();
 
-        console.log(hideFlowError.current);
-
         if (parsedFlow.flowError && !hideFlowError.current) {
           alert(parsedFlow.flowError);
         }
@@ -2224,6 +2236,9 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       setFlow({ ...newFlow });
     };
 
+    // Update the window.horus.executeFlow function
+    window.horus.executeFlow = executeFlow;
+
     // Add a new function to store extraData to the flow
     window.horus.setExtraData = (key: string, value: any) => {
       setFlow((currentFlow) => {
@@ -2241,6 +2256,14 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     window.horus.getExtraData = (key: string) => {
       return flow.extraData?.[key];
     };
+
+    // Emit an event "onFlowChange" when the flow changes
+    const newEvent = new CustomEvent(FlowEvents.FLOW_CHANGED, {
+      detail: flow,
+    });
+    window.dispatchEvent(newEvent);
+
+    // Add a onFlowChange function
   }, [flow, setFlow]);
 
   const updateBlockLogs = useCallback(
@@ -2362,6 +2385,10 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       // This second file explorer is only for browsing, uploading, removing files...
       showFileExplorer,
       setShowFileExplorer,
+
+      // Selected development custom variable 
+      developmentIframes,
+      setDevelopmentIframes,
     },
   };
 }
