@@ -11,17 +11,13 @@ import LogFile from "@/Components/Toolbar/Icons/LogFile";
 import { FlowStatusView } from "../../FlowStatus/flow_status";
 
 // TS types
-import {
-  Block,
-  BlockTypes,
-  FlowStatus,
-  Status,
-  SlurmJob,
-  JobStatus,
-} from "../flow.types";
+import { Block, FlowStatus, Status, SlurmJob, JobStatus } from "../flow.types";
 import { HorusLazyLog } from "../../HorusLazyLog/HorusLazyLog";
 import { HorusViewTabs, Tab } from "@/Components/Tabs";
 import { FlowBuilderContext } from "@/Components/MainApp/PanelView";
+import { useSettings } from "@/Main/app";
+import { Editor } from "@monaco-editor/react";
+import { IconCode } from "@tabler/icons-react";
 
 type BlockLogsViewProps = {
   block: Block;
@@ -36,13 +32,8 @@ export type LogsData = {
 export function BlockLogsView(props: BlockLogsViewProps) {
   const { block } = props;
 
-  return block.type === BlockTypes.SLURM ? (
-    <SlurmOutputModalView block={block} />
-  ) : (
-    <RegularBlockLogs block={block} />
-  );
+  return <BlockLogsViewWithTabs block={block} />;
 }
-
 function RegularBlockLogs({ block }: { block: Block }) {
   return (
     <HorusLazyLog
@@ -52,7 +43,9 @@ function RegularBlockLogs({ block }: { block: Block }) {
   );
 }
 
-function SlurmOutputModalView({ block }: { block: Block }) {
+function BlockLogsViewWithTabs({ block }: { block: Block }) {
+  const settings = useSettings();
+
   const tabs = () => {
     const t: { [key: string]: Tab } = {};
 
@@ -61,6 +54,24 @@ function SlurmOutputModalView({ block }: { block: Block }) {
       icon: <LogFile />,
       view: <RegularBlockLogs block={block} />,
     };
+
+    // If development mode is enabled, add tabs for viewing the block state
+    if (settings?.["developmentMode"]?.value) {
+      t["state"] = {
+        title: "Dev Block",
+        icon: <IconCode />,
+        view: (
+          <Editor
+            language="json"
+            value={JSON.stringify({ ...block, blockLogs: undefined }, null, 2)}
+            options={{
+              readOnly: true,
+              automaticLayout: true,
+            }}
+          />
+        ),
+      };
+    }
 
     block.jobs?.forEach((job) => {
       const statusNode = (() => {
