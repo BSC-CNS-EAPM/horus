@@ -312,7 +312,7 @@ class Database:
                     return
 
         raise UserError("User already exists")
-    
+
     def generateToken(self, email: str, secretKey: str) -> str:
         """
         Generates a token for the user. The token is used to verify the user's email address
@@ -357,7 +357,6 @@ class Database:
 
         return self.externalURL + "/users/reset?token=" + token
 
-
     def resetPassword(self, mail: str) -> str:
         """
         Resets the password of a user in the database with the given email
@@ -380,9 +379,7 @@ class Database:
         Given a correct token and a new password, resets the password of the user
         """
 
-        mail = self.validateToken(
-            token, self.dbConfig.secretKey, self.VALIDATION_MAIL_EXPIRATION
-        )
+        mail = self.validateToken(token, self.dbConfig.secretKey, self.VALIDATION_MAIL_EXPIRATION)
 
         self._validatePassword(newPassword)
 

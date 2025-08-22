@@ -40,7 +40,7 @@ function filterStructures(structures: MolInfo[], query?: string) {
   return structures.filter(
     (structure) =>
       structure.label.toLowerCase().includes(query.toLowerCase()) ||
-      structure.format.toLowerCase().includes(query.toLowerCase()),
+      structure.format.toLowerCase().includes(query.toLowerCase())
   );
 }
 
@@ -50,7 +50,7 @@ function filterChains(chains: AtomInfo[], query?: string) {
   }
 
   return chains.filter((chain) =>
-    chain.name.toLowerCase().includes(query.toLowerCase()),
+    chain.name.toLowerCase().includes(query.toLowerCase())
   );
 }
 
@@ -63,14 +63,14 @@ function filterStandardResidues(residues: AtomInfo[], query?: string) {
     (res) =>
       res.name.toLowerCase().includes(query.toLowerCase()) ||
       res.chainID.includes(query.toLowerCase()) ||
-      res.residue.toString().includes(query.toLowerCase()),
+      res.residue.toString().includes(query.toLowerCase())
   );
 }
 
 // Custom hooks
 function useStructureFilters(
   currentValue: MolInfo[] | MolInfo | null,
-  onChange: (value: any) => void,
+  onChange: (value: any) => void
 ) {
   const [currentFilter, _setCurrentFilter] = useState("");
   const [filteredStructures, setFilteredStructures] = useState<MolInfo[]>([]);
@@ -82,8 +82,8 @@ function useStructureFilters(
         isMolstarLoaded(window.molstar)
           ? window.molstar?.listStructures?.()
           : [],
-        query,
-      ),
+        query
+      )
     );
   };
 
@@ -98,7 +98,7 @@ function useStructureFilters(
 
       if (Array.isArray(currentValue)) {
         newValue = currentValue.filter((structure) =>
-          currentStructures.find((s) => s.id === structure.id),
+          currentStructures.find((s) => s.id === structure.id)
         );
       } else {
         newValue =
@@ -123,9 +123,7 @@ function useStructureFilters(
   // Fetch initially the structures
   useEffect(() => {
     setFilteredStructures(
-      isMolstarLoaded(window.molstar)
-        ? window?.molstar?.listStructures?.()
-        : [],
+      isMolstarLoaded(window.molstar) ? window?.molstar?.listStructures?.() : []
     );
   }, []);
 
@@ -137,7 +135,7 @@ function useStructureFilters(
 
 function useChainFilters(
   currentValue: AtomInfo[] | AtomInfo | null,
-  onChange: (value: any) => void,
+  onChange: (value: any) => void
 ) {
   const [currentFilter, _setCurrentFilter] = useState("");
   const [filteredChains, setFilteredChains] = useState<AtomInfo[]>([]);
@@ -147,8 +145,8 @@ function useChainFilters(
     setFilteredChains(
       filterChains(
         isMolstarLoaded(window.molstar) ? window?.molstar?.listChains() : [],
-        query,
-      ),
+        query
+      )
     );
   };
 
@@ -164,16 +162,15 @@ function useChainFilters(
         newValue = currentValue.filter((chain) =>
           currentChains.find(
             (c) =>
-              c.structureID === chain.structureID &&
-              c.chainID === chain.chainID,
-          ),
+              c.structureID === chain.structureID && c.chainID === chain.chainID
+          )
         );
       } else {
         newValue =
           currentChains.find(
             (c) =>
               c.structureID === currentValue.structureID &&
-              c.chainID === currentValue.chainID,
+              c.chainID === currentValue.chainID
           ) ?? null;
       }
 
@@ -195,7 +192,7 @@ function useChainFilters(
   // Fetch initially the structures
   useEffect(() => {
     setFilteredChains(
-      isMolstarLoaded(window.molstar) ? window?.molstar?.listChains() : [],
+      isMolstarLoaded(window.molstar) ? window?.molstar?.listChains() : []
     );
   }, []);
 
@@ -208,7 +205,7 @@ function useChainFilters(
 function useResidueFilters(
   type: "standard" | "hetero",
   currentValue: AtomInfo[] | AtomInfo | null,
-  onChange: (value: any) => void,
+  onChange: (value: any) => void
 ) {
   const [currentFilter, _setCurrentFilter] = useState("");
   const [filteredResidues, setFilteredResidues] = useState<AtomInfo[]>([]);
@@ -243,8 +240,8 @@ function useResidueFilters(
             (r) =>
               r.structureID === residue.structureID &&
               r.chainID === residue.chainID &&
-              r.residue === residue.residue,
-          ),
+              r.residue === residue.residue
+          )
         );
       } else {
         newValue =
@@ -252,7 +249,7 @@ function useResidueFilters(
             (r) =>
               r.structureID === currentValue.structureID &&
               r.chainID === currentValue.chainID &&
-              r.residue === currentValue.residue,
+              r.residue === currentValue.residue
           ) ?? null;
       }
 
@@ -289,13 +286,13 @@ export function StructureVariableView(props: VariableViewProps) {
 
   const { setCurrentFilter, filteredStructures } = useStructureFilters(
     currentValue,
-    onChange,
+    onChange
   );
 
   useEffect(() => {
     // Set the initial structures
     const structures = filterStructures(
-      isMolstarLoaded(window.molstar) ? window?.molstar?.listStructures() : [],
+      isMolstarLoaded(window.molstar) ? window?.molstar?.listStructures() : []
     );
 
     if (!currentValue && structures.length > 0) {
@@ -371,13 +368,13 @@ export function MultipleStructureVariableView(props: VariableViewProps) {
 
   const { setCurrentFilter, filteredStructures } = useStructureFilters(
     currentValue,
-    onChange,
+    onChange
   );
 
   useEffect(() => {
     // Set the initial structures
     const structures = filterStructures(
-      isMolstarLoaded(window.molstar) ? window?.molstar?.listStructures() : [],
+      isMolstarLoaded(window.molstar) ? window?.molstar?.listStructures() : []
     );
 
     if (!currentValue && structures.length > 0) {
@@ -460,8 +457,8 @@ function SelectMultipleStructures({
             e.target.checked
               ? [...(currentValue ?? []), structure]
               : (currentValue ?? []).filter(
-                  (s: MolInfo) => s.id !== structure.id,
-                ),
+                  (s: MolInfo) => s.id !== structure.id
+                )
           )
         }
       />
@@ -480,7 +477,7 @@ export function ChainView(props: VariableViewProps) {
 
   const { setCurrentFilter, filteredChains } = useChainFilters(
     currentValue,
-    onChange,
+    onChange
   );
 
   useEffect(() => {
@@ -574,7 +571,7 @@ function SelectMultipleChains({
                   !(
                     c.structureID === chain.structureID &&
                     c.chainID === chain.chainID
-                  ),
+                  )
               );
           onChange(newValue);
         }}
@@ -593,7 +590,7 @@ export function StandardResView(props: VariableViewProps) {
   const { setCurrentFilter, filteredResidues } = useResidueFilters(
     "standard",
     currentValue,
-    onChange,
+    onChange
   );
 
   useEffect(() => {
@@ -655,7 +652,7 @@ export function HeteroResView(props: VariableViewProps) {
   const { setCurrentFilter, filteredResidues } = useResidueFilters(
     "hetero",
     currentValue,
-    onChange,
+    onChange
   );
 
   useEffect(() => {
@@ -753,8 +750,8 @@ function SelectMultipleResidues({
                       r.structureID === residue.structureID &&
                       r.residue === residue.residue &&
                       r.chainID === residue.chainID
-                    ),
-                ),
+                    )
+                )
           )
         }
       />
@@ -779,20 +776,21 @@ export function ResidueView(props: VariableViewProps) {
     setResidue(atomInfo);
     onChange(atomInfo);
     // Deselect all residues once one is selected, because we only want to select one at a time
-    if (isMolstarLoaded(window.molstar)) {
+    if (active && isMolstarLoaded(window.molstar)) {
       window.molstar?.plugin?.managers.interactivity.lociSelects.deselectAll();
     }
   };
 
   useEffect(() => {
     if (isMolstarLoaded(window.molstar)) {
-      window.molstar.plugin!.selectionMode = active;
       // Set the granularity to element
       window.molstar.plugin!.managers.interactivity.setProps({
         granularity: "residue",
       });
       // Unselect selected residues
-      window.molstar.plugin!.managers.interactivity.lociSelects.deselectAll();
+      if (active) {
+        window.molstar.plugin!.managers.interactivity.lociSelects.deselectAll();
+      }
     }
 
     if (active) {
@@ -814,7 +812,13 @@ export function ResidueView(props: VariableViewProps) {
 
   return (
     <div
-      onClick={() => setActive(!active)}
+      onClick={() => {
+        if (isMolstarLoaded(window.molstar)) {
+          window.molstar.plugin!.selectionMode = !active;
+        }
+
+        setActive(!active);
+      }}
       className={`w-full h-full max-h-28 overflow-auto border-2 rounded-xl ${
         active && "bg-green-200 border-green-200"
       }`}
@@ -844,20 +848,21 @@ export function AtomView(props: VariableViewProps) {
     setAtom(atomInfo);
     onChange(atomInfo);
     // Deselect all atoms once one is selected, because we only want to select one at a time
-    if (isMolstarLoaded(window.molstar)) {
+    if (active && isMolstarLoaded(window.molstar)) {
       window.molstar?.plugin?.managers.interactivity.lociSelects.deselectAll();
     }
   };
 
   useEffect(() => {
     if (isMolstarLoaded(window.molstar)) {
-      window.molstar.plugin!.selectionMode = active;
       // Set the granularity to element
       window.molstar.plugin!.managers.interactivity.setProps({
         granularity: "element",
       });
       // Unselect selected residues
-      window.molstar.plugin!.managers.interactivity.lociSelects.deselectAll();
+      if (active) {
+        window.molstar.plugin!.managers.interactivity.lociSelects.deselectAll();
+      }
     }
 
     if (active) {
@@ -879,7 +884,13 @@ export function AtomView(props: VariableViewProps) {
 
   return (
     <div
-      onClick={() => setActive(!active)}
+      onClick={() => {
+        if (isMolstarLoaded(window.molstar)) {
+          window.molstar.plugin!.selectionMode = !active;
+        }
+
+        setActive(!active);
+      }}
       className={`w-full h-full max-h-28 overflow-auto border-2 rounded-xl ${
         active && "bg-green-200 border-green-200"
       }`}
@@ -904,7 +915,7 @@ export function BoxVariableView(props: VariableViewProps) {
 
   const [active, setActive] = useState(false);
   const [activeColor, setActiveColor] = useState(
-    boxRef.current ? Color.toHexStyle(boxRef.current.color) : "#a5d6a7",
+    boxRef.current ? Color.toHexStyle(boxRef.current.color) : "#a5d6a7"
   );
   const mounted = useRef(false);
 
@@ -925,7 +936,7 @@ export function BoxVariableView(props: VariableViewProps) {
         z3: number | string;
       },
       radiusScale: number | string,
-      radialSegments: number | string,
+      radialSegments: number | string
     ) => {
       const parsedBoxNumbers = {
         x0: Number(metrics.x0),
@@ -947,19 +958,35 @@ export function BoxVariableView(props: VariableViewProps) {
         const molstar = window.molstar;
 
         if (mounted.current) {
-          ref = await molstar.addBox(
-            parsedBoxNumbers,
-            Number(radiusScale),
-            Number(radialSegments),
-            1,
-            undefined,
-            boxRef.current ?? undefined,
-          );
+          let updated = false;
 
-          boxRef.current = ref;
+          if (boxRef.current) {
+            updated = await molstar.moveBox({
+              boxRef: boxRef.current.ref,
+              newPosition: parsedBoxNumbers,
+              newRadiusScale: Number(radiusScale),
+              newRadialSegments: Number(radialSegments),
+              newOpacity: 0.75,
+            });
+          }
 
-          setActiveColor(Color.toHexStyle(ref.color));
-          window.molstar?.plugin?.managers.interactivity.lociSelects.deselectAll();
+          if (!updated) {
+            ref = await molstar.addBox({
+              position: parsedBoxNumbers,
+              radiusScale: Number(radiusScale),
+              radialSegments: Number(radialSegments),
+              opacity: 0.75,
+              color: boxRef.current?.color ?? undefined,
+              deletePrevious: boxRef.current ?? undefined,
+            });
+
+            boxRef.current = ref;
+
+            setActiveColor(Color.toHexStyle(ref.color));
+          }
+          if (active) {
+            window.molstar?.plugin?.managers.interactivity.lociSelects.deselectAll();
+          }
         }
       }
 
@@ -985,7 +1012,7 @@ export function BoxVariableView(props: VariableViewProps) {
 
       onChange(boxData);
     },
-    [onChange],
+    [onChange]
   );
 
   // When unmounting, remove the box
@@ -1017,19 +1044,20 @@ export function BoxVariableView(props: VariableViewProps) {
             z3: currentValue.metrics.z3,
           },
           currentValue?.radiusScale ?? 10,
-          currentValue?.radialSegments ?? 2,
+          currentValue?.radialSegments ?? 2
         );
       }
     },
-    [active, currentValue, handleChange],
+    [active, currentValue, handleChange]
   );
 
   // Place the box in the center of the screen
   useEffect(() => {
     if (isMolstarLoaded(window.molstar)) {
-      window.molstar.plugin!.selectionMode = active;
       // Unselect selected residues
-      window.molstar.plugin!.managers.interactivity.lociSelects.deselectAll();
+      if (active) {
+        window.molstar.plugin!.managers.interactivity.lociSelects.deselectAll();
+      }
     }
 
     // Listen for the MolstarEvents.COORDINATES event
@@ -1061,13 +1089,14 @@ export function BoxVariableView(props: VariableViewProps) {
     };
 
     if (isMolstarLoaded(window.molstar)) {
-      const ref = await window.molstar.addBox(
-        boxData.metrics,
-        boxData.radius,
-        0.3,
-        undefined,
-        undefined,
-      );
+      const ref = await window.molstar.addBox({
+        position: boxData.metrics,
+        radiusScale: boxData.radiusScale,
+        radialSegments: boxData.radialSegments,
+        opacity: 0.75,
+        color: boxRef.current?.color ?? undefined,
+        deletePrevious: boxRef.current ?? undefined,
+      });
       boxRef.current = ref;
       setActiveColor(Color.toHexStyle(ref.color));
 
@@ -1114,20 +1143,20 @@ export function BoxVariableView(props: VariableViewProps) {
 
                   //UNCHANGED
 
-                  y0: currentValue.metrics.y0,
-                  z0: currentValue.metrics.z0,
-                  y1: currentValue.metrics.y1,
-                  x1: currentValue.metrics.x1,
-                  z1: currentValue.metrics.z1,
-                  x2: currentValue.metrics.x2,
-                  y2: currentValue.metrics.y2,
-                  z2: currentValue.metrics.z2,
-                  x3: currentValue.metrics.x3,
-                  y3: currentValue.metrics.y3,
-                  z3: currentValue.metrics.z3,
+                  y0: currentValue?.metrics?.y0,
+                  z0: currentValue?.metrics?.z0,
+                  y1: currentValue?.metrics?.y1,
+                  x1: currentValue?.metrics?.x1,
+                  z1: currentValue?.metrics?.z1,
+                  x2: currentValue?.metrics?.x2,
+                  y2: currentValue?.metrics?.y2,
+                  z2: currentValue?.metrics?.z2,
+                  x3: currentValue?.metrics?.x3,
+                  y3: currentValue?.metrics?.y3,
+                  z3: currentValue?.metrics?.z3,
                 },
-                currentValue.radiusScale,
-                currentValue.radialSegments,
+                currentValue?.radiusScale,
+                currentValue?.radialSegments
               );
             }}
           />
@@ -1153,20 +1182,20 @@ export function BoxVariableView(props: VariableViewProps) {
 
                   //UNCHANGED
 
-                  x0: currentValue.metrics.x0,
-                  z0: currentValue.metrics.z0,
-                  x1: currentValue.metrics.x1,
-                  y1: currentValue.metrics.y1,
-                  z1: currentValue.metrics.z1,
-                  x2: currentValue.metrics.x2,
-                  y2: currentValue.metrics.y2,
-                  z2: currentValue.metrics.z2,
-                  x3: currentValue.metrics.x3,
-                  y3: currentValue.metrics.y3,
-                  z3: currentValue.metrics.z3,
+                  x0: currentValue?.metrics?.x0,
+                  z0: currentValue?.metrics?.z0,
+                  x1: currentValue?.metrics?.x1,
+                  y1: currentValue?.metrics?.y1,
+                  z1: currentValue?.metrics?.z1,
+                  x2: currentValue?.metrics?.x2,
+                  y2: currentValue?.metrics?.y2,
+                  z2: currentValue?.metrics?.z2,
+                  x3: currentValue?.metrics?.x3,
+                  y3: currentValue?.metrics?.y3,
+                  z3: currentValue?.metrics?.z3,
                 },
-                currentValue.radiusScale,
-                currentValue.radialSegments,
+                currentValue?.radiusScale,
+                currentValue?.radialSegments
               );
             }}
           />
@@ -1192,20 +1221,20 @@ export function BoxVariableView(props: VariableViewProps) {
 
                   //UNCHANGED
 
-                  x0: currentValue.metrics.x0,
-                  y0: currentValue.metrics.y0,
-                  x1: currentValue.metrics.x1,
-                  y1: currentValue.metrics.y1,
-                  z1: currentValue.metrics.z1,
-                  x2: currentValue.metrics.x2,
-                  y2: currentValue.metrics.y2,
-                  z2: currentValue.metrics.z2,
-                  x3: currentValue.metrics.x3,
-                  y3: currentValue.metrics.y3,
-                  z3: currentValue.metrics.z3,
+                  x0: currentValue?.metrics?.x0,
+                  y0: currentValue?.metrics?.y0,
+                  x1: currentValue?.metrics?.x1,
+                  y1: currentValue?.metrics?.y1,
+                  z1: currentValue?.metrics?.z1,
+                  x2: currentValue?.metrics?.x2,
+                  y2: currentValue?.metrics?.y2,
+                  z2: currentValue?.metrics?.z2,
+                  x3: currentValue?.metrics?.x3,
+                  y3: currentValue?.metrics?.y3,
+                  z3: currentValue?.metrics?.z3,
                 },
-                currentValue.radiusScale,
-                currentValue.radialSegments,
+                currentValue?.radiusScale,
+                currentValue?.radialSegments
               );
             }}
           />
@@ -1233,20 +1262,20 @@ export function BoxVariableView(props: VariableViewProps) {
 
                   //UNCHANGED
 
-                  x0: currentValue.metrics.x0,
-                  y0: currentValue.metrics.y0,
-                  z0: currentValue.metrics.z0,
-                  y1: currentValue.metrics.y1,
-                  z1: currentValue.metrics.z1,
-                  x2: currentValue.metrics.x2,
-                  y2: currentValue.metrics.y2,
-                  z2: currentValue.metrics.z2,
-                  x3: currentValue.metrics.x3,
-                  y3: currentValue.metrics.y3,
-                  z3: currentValue.metrics.z3,
+                  x0: currentValue?.metrics?.x0,
+                  y0: currentValue?.metrics?.y0,
+                  z0: currentValue?.metrics?.z0,
+                  y1: currentValue?.metrics?.y1,
+                  z1: currentValue?.metrics?.z1,
+                  x2: currentValue?.metrics?.x2,
+                  y2: currentValue?.metrics?.y2,
+                  z2: currentValue?.metrics?.z2,
+                  x3: currentValue?.metrics?.x3,
+                  y3: currentValue?.metrics?.y3,
+                  z3: currentValue?.metrics?.z3,
                 },
-                currentValue.radiusScale,
-                currentValue.radialSegments,
+                currentValue?.radiusScale,
+                currentValue?.radialSegments
               );
             }}
           />
@@ -1272,20 +1301,20 @@ export function BoxVariableView(props: VariableViewProps) {
 
                   //UNCHANGED
 
-                  x0: currentValue.metrics.x0,
-                  y0: currentValue.metrics.y0,
-                  z0: currentValue.metrics.z0,
-                  x1: currentValue.metrics.x1,
-                  y1: currentValue.metrics.y1,
-                  z1: currentValue.metrics.z1,
-                  x2: currentValue.metrics.x2,
-                  z2: currentValue.metrics.z2,
-                  x3: currentValue.metrics.x3,
-                  y3: currentValue.metrics.y3,
-                  z3: currentValue.metrics.z3,
+                  x0: currentValue?.metrics?.x0,
+                  y0: currentValue?.metrics?.y0,
+                  z0: currentValue?.metrics?.z0,
+                  x1: currentValue?.metrics?.x1,
+                  y1: currentValue?.metrics?.y1,
+                  z1: currentValue?.metrics?.z1,
+                  x2: currentValue?.metrics?.x2,
+                  z2: currentValue?.metrics?.z2,
+                  x3: currentValue?.metrics?.x3,
+                  y3: currentValue?.metrics?.y3,
+                  z3: currentValue?.metrics?.z3,
                 },
-                currentValue.radiusScale,
-                currentValue.radialSegments,
+                currentValue?.radiusScale,
+                currentValue?.radialSegments
               );
             }}
           />
@@ -1311,20 +1340,20 @@ export function BoxVariableView(props: VariableViewProps) {
 
                   //UNCHANGED
 
-                  x0: currentValue.metrics.x0,
-                  y0: currentValue.metrics.y0,
-                  z0: currentValue.metrics.z0,
-                  x1: currentValue.metrics.x1,
-                  y1: currentValue.metrics.y1,
-                  z1: currentValue.metrics.z1,
-                  x2: currentValue.metrics.x2,
-                  y2: currentValue.metrics.y2,
-                  z2: currentValue.metrics.z2,
-                  x3: currentValue.metrics.x3,
-                  y3: currentValue.metrics.y3,
+                  x0: currentValue?.metrics?.x0,
+                  y0: currentValue?.metrics?.y0,
+                  z0: currentValue?.metrics?.z0,
+                  x1: currentValue?.metrics?.x1,
+                  y1: currentValue?.metrics?.y1,
+                  z1: currentValue?.metrics?.z1,
+                  x2: currentValue?.metrics?.x2,
+                  y2: currentValue?.metrics?.y2,
+                  z2: currentValue?.metrics?.z2,
+                  x3: currentValue?.metrics?.x3,
+                  y3: currentValue?.metrics?.y3,
                 },
-                currentValue.radiusScale,
-                currentValue.radialSegments,
+                currentValue?.radiusScale,
+                currentValue?.radialSegments
               );
             }}
           />
@@ -1332,7 +1361,13 @@ export function BoxVariableView(props: VariableViewProps) {
       </div>
 
       <div
-        onClick={() => setActive(!active)}
+        onClick={() => {
+          if (isMolstarLoaded(window.molstar)) {
+            window.molstar.plugin!.selectionMode = !active;
+          }
+
+          setActive(!active);
+        }}
         className={`w-full h-full max-h-28 overflow-auto border-2 rounded-xl ${
           active && "bg-green-200 border-green-200"
         }`}
@@ -1368,7 +1403,7 @@ export function SphereVariableView(props: VariableViewProps) {
 
   const [active, setActive] = useState(false);
   const [activeColor, setActiveColor] = useState(
-    sphereRef.current ? Color.toHexStyle(sphereRef.current.color) : "#a5d6a7",
+    sphereRef.current ? Color.toHexStyle(sphereRef.current.color) : "#a5d6a7"
   );
   const mounted = useRef(false);
 
@@ -1379,7 +1414,7 @@ export function SphereVariableView(props: VariableViewProps) {
         y: number | string;
         z: number | string;
       },
-      radius: number | string,
+      radius: number | string
     ) => {
       const parsedSphereNumbers = {
         x: Number(position.x),
@@ -1390,17 +1425,33 @@ export function SphereVariableView(props: VariableViewProps) {
       let ref = null;
       if (isMolstarLoaded(window.molstar)) {
         const molstar = window.molstar;
+
         if (mounted.current) {
-          ref = await molstar.addSphere(
-            parsedSphereNumbers,
-            Number(radius),
-            0.3,
-            undefined,
-            sphereRef.current ?? undefined,
-          );
-          setActiveColor(Color.toHexStyle(ref.color));
-          sphereRef.current = ref;
-          window.molstar?.plugin?.managers.interactivity.lociSelects.deselectAll();
+          let updated = false;
+
+          if (sphereRef.current) {
+            updated = await molstar.moveSphere({
+              sphereRef: sphereRef.current?.ref,
+              newPosition: parsedSphereNumbers,
+              newRadius: Number(radius),
+            });
+          }
+
+          if (!updated) {
+            ref = await molstar.addSphere({
+              position: parsedSphereNumbers,
+              radius: Number(radius),
+              opacity: 0.3,
+              color: sphereRef.current?.color ?? undefined,
+              deletePrevious: sphereRef.current ?? undefined,
+            });
+
+            setActiveColor(Color.toHexStyle(ref.color));
+            sphereRef.current = ref;
+          }
+          if (active) {
+            window.molstar?.plugin?.managers.interactivity.lociSelects.deselectAll();
+          }
         }
       }
 
@@ -1416,7 +1467,7 @@ export function SphereVariableView(props: VariableViewProps) {
 
       onChange(sphereData);
     },
-    [onChange],
+    [onChange]
   );
 
   // When unmounting, remove the sphere
@@ -1439,19 +1490,20 @@ export function SphereVariableView(props: VariableViewProps) {
             y: data.y,
             z: data.z,
           },
-          currentValue?.radius ?? 10,
+          currentValue?.radius ?? 10
         );
       }
     },
-    [active, currentValue, handleChange],
+    [active, currentValue, handleChange]
   );
 
   // Place the sphere in the center of the screen
   useEffect(() => {
     if (isMolstarLoaded(window.molstar)) {
-      window.molstar.plugin!.selectionMode = active;
       // Unselect selected residues
-      window.molstar.plugin!.managers.interactivity.lociSelects.deselectAll();
+      if (active) {
+        window.molstar.plugin!.managers.interactivity.lociSelects.deselectAll();
+      }
     }
 
     // Listen for the MolstarEvents.COORDINATES event
@@ -1473,13 +1525,12 @@ export function SphereVariableView(props: VariableViewProps) {
     };
 
     if (isMolstarLoaded(window.molstar)) {
-      const ref = await window.molstar.addSphere(
-        sphereData.center,
-        sphereData.radius,
-        0.3,
-        undefined,
-        undefined,
-      );
+      const ref = await window.molstar.addSphere({
+        position: sphereData.center,
+        radius: sphereData.radius,
+        opacity: 0.3,
+      });
+
       sphereRef.current = ref;
       setActiveColor(Color.toHexStyle(ref.color));
 
@@ -1522,10 +1573,10 @@ export function SphereVariableView(props: VariableViewProps) {
               handleChange(
                 {
                   x: parseNumberOrNegative(e.target.value),
-                  y: currentValue.center.y,
-                  z: currentValue.center.z,
+                  y: currentValue?.center?.y,
+                  z: currentValue?.center?.z,
                 },
-                currentValue.radius,
+                currentValue?.radius
               );
             }}
           />
@@ -1546,11 +1597,11 @@ export function SphereVariableView(props: VariableViewProps) {
             onChange={(e) => {
               handleChange(
                 {
-                  x: currentValue.center.x,
+                  x: currentValue?.center.x,
                   y: parseNumberOrNegative(e.target.value),
-                  z: currentValue.center.z,
+                  z: currentValue?.center.z,
                 },
-                currentValue.radius,
+                currentValue?.radius
               );
             }}
           />
@@ -1571,11 +1622,11 @@ export function SphereVariableView(props: VariableViewProps) {
             onChange={(e) => {
               handleChange(
                 {
-                  x: currentValue.center.x,
-                  y: currentValue.center.y,
+                  x: currentValue?.center.x,
+                  y: currentValue?.center.y,
                   z: parseNumberOrNegative(e.target.value),
                 },
-                currentValue.radius,
+                currentValue?.radius
               );
             }}
           />
@@ -1601,14 +1652,20 @@ export function SphereVariableView(props: VariableViewProps) {
                   y: currentValue.center.y,
                   z: currentValue.center.z,
                 },
-                newRadius,
+                newRadius
               );
             }}
           />
         </div>
       </div>
       <div
-        onClick={() => setActive(!active)}
+        onClick={() => {
+          if (isMolstarLoaded(window.molstar)) {
+            window.molstar.plugin!.selectionMode = !active;
+          }
+
+          setActive(!active);
+        }}
         className={`w-full h-full max-h-28 overflow-auto border-2 rounded-xl ${
           active && "bg-green-200 border-green-200"
         }`}
@@ -1643,6 +1700,9 @@ export function InteractiveChainView(props: VariableViewProps) {
   const [chain, setChain] = useState<AtomInfo | null>(null);
   const [active, setActive] = useState<boolean>(false);
   const handleAtomClick = (e: any) => {
+    if (isMolstarLoaded(window.molstar) && active) {
+      window.molstar.plugin!.managers.interactivity.lociSelects.deselectAll();
+    }
     const atomInfo = (e.detail as MolstarClickEventDetail).atom;
     setChain(atomInfo);
     onChange(atomInfo);
@@ -1650,13 +1710,10 @@ export function InteractiveChainView(props: VariableViewProps) {
 
   useEffect(() => {
     if (isMolstarLoaded(window.molstar)) {
-      window.molstar.plugin!.selectionMode = active;
       // Set the granularity to element
       window.molstar.plugin!.managers.interactivity.setProps({
         granularity: "chain",
       });
-      // Unselect selected residues
-      window.molstar.plugin!.managers.interactivity.lociSelects.deselectAll();
     }
 
     if (active) {
@@ -1692,7 +1749,7 @@ export function InteractiveChainView(props: VariableViewProps) {
             c,
           ]),
         }),
-      data!,
+      data!
     );
 
     const loci = StructureSelection.toLociWithSourceUnits(sel);
@@ -1716,7 +1773,13 @@ export function InteractiveChainView(props: VariableViewProps) {
         }
       }}
       onMouseLeave={unHighlight}
-      onClick={() => setActive(!active)}
+      onClick={() => {
+        if (isMolstarLoaded(window.molstar)) {
+          window.molstar.plugin!.selectionMode = !active;
+        }
+
+        setActive(!active);
+      }}
       className={`w-full h-full max-h-28 overflow-auto border-2 rounded-xl ${
         active && "bg-green-200 border-green-200"
       }`}
@@ -1860,11 +1923,11 @@ export function ResidueRangeView({
 
     const r1 = Math.min(
       Number(residues[0].residue),
-      Number(residues[1].residue),
+      Number(residues[1].residue)
     );
     const r2 = Math.max(
       Number(residues[0].residue),
-      Number(residues[1].residue),
+      Number(residues[1].residue)
     );
 
     if (isNaN(r1) || isNaN(r2)) {
@@ -1884,7 +1947,7 @@ export function ResidueRangeView({
             r2,
           ]),
         }),
-      data,
+      data
     );
 
     const loci = StructureSelection.toLociWithSourceUnits(sel);
@@ -1914,11 +1977,14 @@ export function ResidueRangeView({
       onChange(updated);
       return updated;
     });
+
+    if (isMolstarLoaded(window.molstar)) {
+      window.molstar.plugin!.managers.interactivity.lociSelects.deselectAll();
+    }
   };
 
   useEffect(() => {
     if (isMolstarLoaded(window.molstar)) {
-      window.molstar.plugin!.selectionMode = active !== 0;
       window.molstar.plugin!.managers.interactivity.setProps({
         granularity: "residue",
       });
@@ -1995,7 +2061,18 @@ function ResidueBox({
   return (
     <div
       onClick={() => {
-        isActive ? setActive(0) : setActive(index + 1);
+        const isActive = active === index + 1;
+        const newActive = isActive ? 0 : index + 1;
+
+        if (isMolstarLoaded(window.molstar)) {
+          window.molstar.plugin!.selectionMode = newActive !== 0;
+
+          if (newActive !== 0) {
+            window.molstar.plugin!.managers.interactivity.lociSelects.deselectAll();
+          }
+        }
+
+        setActive(newActive);
       }}
       onMouseOver={onMouseOver}
       onMouseLeave={onMouseLeave}

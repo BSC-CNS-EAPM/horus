@@ -16,6 +16,7 @@ import AppButton from "@/Components/appbutton";
 import {
   addPanel,
   DockContext,
+  handleExtensionPanelCreation,
   PANEL_REGISTRY,
 } from "@/Components/MainApp/PanelView";
 
@@ -28,7 +29,7 @@ import { PluginVariableView } from "../Variables/variables";
 import { PlacedBlockVariables } from "../Variables/variable_connections";
 
 // Typescript types
-import { Block, BlockTypes, Status } from "../flow.types";
+import { Block, BlockTypes, PluginPage, Status } from "../flow.types";
 
 // Block style
 import "./block.css";
@@ -48,9 +49,11 @@ import PausedIcon from "../../Toolbar/Icons/Paused";
 import ErrorLogFile from "../../Toolbar/Icons/ErrorLogFile";
 import ExternalIcon from "../../Toolbar/Icons/External";
 import Chevron from "@/Components/Toolbar/Icons/Chevron";
+import { IconPencilCog } from "@tabler/icons-react";
+import { unrelatedExtensionToBlockIDGenerator } from "@/Components/Toolbar/extensions_list";
 
 export function BlockView(
-  props: BlockViewProps & { extraStyle?: CSSProperties },
+  props: BlockViewProps & { extraStyle?: CSSProperties }
 ) {
   const { block, blockHooks, isFlowActive } = props;
 
@@ -208,7 +211,7 @@ export function BlockRemotes(props: BlockRemotesProps) {
           onChange={(e) => {
             props.blockHooks?.setBlockRemote(
               props.block.placedID,
-              e.target.value,
+              e.target.value
             );
           }}
         >
@@ -228,7 +231,7 @@ function BlockExtensionsView(props: { block: Block }) {
 
   const block = props.block;
 
-  if (block.extensionsToOpen.length === 0) {
+  if (!block?.extensionsToOpen || block.extensionsToOpen.length === 0) {
     return null;
   }
 
@@ -250,14 +253,10 @@ function BlockExtensionsView(props: { block: Block }) {
               top: `-${(index + 1) * 2}rem`,
             }}
             onClick={() => {
-              addPanel({
+              handleExtensionPanelCreation({
                 dockApi,
-                component: PANEL_REGISTRY.extensions.component,
-                panelID: `extensions-${props.block.placedID}-${extension.dataID}`,
-                params: {
-                  ...extension,
-                  placedID: props.block.placedID,
-                },
+                extension,
+                placedID: props.block.placedID,
               });
             }}
           >
@@ -360,6 +359,8 @@ function BlockToolbar({
   blockHooks?: BlockHooks;
   isPaused?: boolean;
 }) {
+  const { dockApi } = useContext(DockContext);
+
   return (
     <div className="flex flex-row gap-1 items-start cursor-auto">
       {/* Play button to execute the block */}
@@ -401,18 +402,65 @@ function BlockToolbar({
       )}
 
       {!block.isPlaced && (
-        <div
-          onMouseOver={() => blockState.blockViewHooks.setIsInfoHovering(true)}
-          onMouseLeave={() =>
-            blockState.blockViewHooks.setIsInfoHovering(false)
-          }
-          className={block.externalURL ? "cursor-pointer" : "cursor-help"}
-          onClick={() => {
-            // Open the external block URL if any
-            block.externalURL && window.open(block.externalURL, "_blank");
-          }}
-        >
-          {block.externalURL ? <ExternalIcon /> : <InfoIcon />}
+        <div className="flex flex-row gap-2">
+          {block.isCustom && (
+            <div
+              className="cursor-pointer"
+              onClick={() => {
+                addPanel({
+                  dockApi,
+                  component: PANEL_REGISTRY.blockEditor.component,
+                  panelID: `${PANEL_REGISTRY.blockEditor.id}.${block.id}`,
+                  params: {
+                    block: block.rawBlock,
+                  },
+                });
+              }}
+            >
+              <IconPencilCog title="Modify custom block" className="w-6 h-6" />
+            </div>
+          )}
+          <div
+            onMouseOver={() =>
+              blockState.blockViewHooks.setIsInfoHovering(true)
+            }
+            onMouseLeave={() =>
+              blockState.blockViewHooks.setIsInfoHovering(false)
+            }
+            className={block.externalURL ? "cursor-pointer" : "cursor-help"}
+            onClick={() => {
+              if (!block.externalURL) return;
+
+              // If the external URL is relative to the app, open the panel corresponding to the ID given
+              if (block.externalURL.startsWith("/")) {
+                // The ID of the extension must be the first part of the /{id}/ url
+                const extensionID = block.externalURL.split("/")[1];
+
+                const pageURL = block.externalURL.startsWith("/")
+                  ? block.externalURL.substring(1)
+                  : block.externalURL;
+
+                addPanel({
+                  dockApi,
+                  component: PANEL_REGISTRY.extensions.component,
+                  title: block.name,
+                  panelID: unrelatedExtensionToBlockIDGenerator({
+                    id: extensionID,
+                  }),
+                  params: {
+                    // Here the URL is the ID
+                    id: pageURL,
+                    name: block.name,
+                  } as PluginPage,
+                });
+              } else {
+                // Open the external block URL if any
+                window.open(block.externalURL, "_blank");
+              }
+            }}
+          >
+            {block.externalURL ? <ExternalIcon /> : <InfoIcon />}
+          </div>
         </div>
       )}
     </div>

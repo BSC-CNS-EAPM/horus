@@ -171,6 +171,8 @@ def test_setting_to_dict():
         "type": "string",
         "allowedValues": None,
         "desktopOnly": False,
+        "variables": None,
+        "id": "id",
     }
 
 
@@ -253,7 +255,7 @@ def test_horus_settings_get_setting(horus_settings):
         setting.description
         == "Python interpreter path to use for dependencies installation. Only required for special packages that need to be compiled from source. Must be python 3.9."
     )
-    assert setting.category == "Dependencies"
+    assert setting.category == "Python"
 
 
 def test_horus_settings_restore_defaults(horus_settings):

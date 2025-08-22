@@ -1,5 +1,5 @@
 // React
-import { useEffect, useState, useMemo, useContext } from "react";
+import { useEffect, useState, useMemo, useContext, useCallback } from "react";
 
 // Horus TS types
 import {
@@ -49,10 +49,11 @@ import {
   FlowBuilderContext,
   PANEL_REGISTRY,
 } from "@/Components/MainApp/PanelView";
+import { getIframeExtensionID } from "@/Components/IframeLoader/iframeloader";
 
 type PluginVariableViewProps = {
   variable: PluginVariable;
-  onChange: (value: any, id: string, groupID?: string) => void;
+  onChange: (value: any, variable: PluginVariable, groupID?: string) => void;
   hideName?: boolean;
   hideDescription?: boolean;
   applyStyle?: boolean;
@@ -64,18 +65,20 @@ type PluginVariableViewProps = {
 export function PluginVariableView(props: PluginVariableViewProps) {
   const { variable, onChange, hideName } = props;
   const flowContext = useContext(FlowBuilderContext);
-
   const isFlowActive = !!flowContext?.flow.isFlowActive;
 
-  const handleChange = (value: any, id?: string, groupID?: string) => {
-    if (!variable.disabled) {
-      if (variable.type === PluginVariableTypes.GROUP) {
-        onChange(value, id!, groupID);
-      } else {
-        onChange(value, variable.id);
+  const handleChange = useCallback(
+    (value: any, varToChange?: PluginVariable, groupID?: string) => {
+      if (!variable.disabled && !isFlowActive) {
+        if (variable.type === PluginVariableTypes.GROUP) {
+          varToChange && onChange(value, varToChange, groupID);
+        } else {
+          onChange(value, variable);
+        }
       }
-    }
-  };
+    },
+    [variable, onChange, isFlowActive]
+  );
 
   // If the variable is any of the list types or the group, always ocuppy the whole width using min-w-full
   const widthStyle = useMemo(() => {
@@ -159,9 +162,9 @@ export function PluginVariableView(props: PluginVariableViewProps) {
       </div>
       <div
         className={`plugin-variable-value flex justify-start w-full`}
-        style={{
-          pointerEvents: variable.disabled || isFlowActive ? "none" : "auto",
-        }}
+        // style={{
+        //   pointerEvents: variable.disabled || isFlowActive ? "none" : "auto",
+        // }}
       >
         <VariableRenderer
           variable={variable}
@@ -289,8 +292,17 @@ function VariableListView(props: VariableViewProps) {
                       ...variable,
                       value: value[variable.id],
                     }}
-                    onChange={(value: any, id: string, groupID?: string) => {
-                      internalOnChange(index, value, id, groupID);
+                    onChange={(
+                      value: any,
+                      variableToChange: PluginVariable,
+                      groupID?: string
+                    ) => {
+                      internalOnChange(
+                        index,
+                        value,
+                        variableToChange.id,
+                        groupID
+                      );
                     }}
                     hideDescription={true}
                     applyStyle={false}
@@ -317,7 +329,7 @@ function VariableListView(props: VariableViewProps) {
 function GroupVariableView(props: PluginVariableViewProps) {
   const variables = props.variable.variables;
 
-  const onChange = (value: any, id: string) => {
+  const onChange = (value: any, id: PluginVariable) => {
     props.onChange(value, id, props.variable.id);
   };
 
@@ -356,7 +368,7 @@ function VariableRenderer(props: {
   const [currentValue, setCurrentValue] = useState(variableToRender.value);
 
   const handleVariableChangeInternal = (value: any) => {
-    if (props.isFlowActive) {
+    if (props.isFlowActive || props.variable.disabled) {
       return;
     }
     onChange(value);
@@ -666,7 +678,7 @@ function DropdownVariableView({
 }
 
 function CheckboxVariableView(props: VariableViewProps & { radio?: boolean }) {
-  const allowedValues: string[] = props.variable.allowedValues;
+  const allowedValues: string[] = props.variable.allowedValues ?? [];
 
   let currentValue: string[] | string | null = props.currentValue;
   if (props.radio) {
@@ -742,10 +754,10 @@ function StringVariableView(props: VariableViewProps) {
 function PasswordVariableView(props: VariableViewProps) {
   return (
     <input
-      className="plugin-variable-value"
+      className="plugin-variable-value mask-password"
       id={props.variable.id}
-      type="password"
       autoComplete="off"
+      aria-autocomplete="none"
       placeholder={props.variable.placeholder ?? ""}
       value={(props.currentValue as string) ?? ""}
       onChange={(e) => props.onChange(e.target.value)}
@@ -1092,17 +1104,92 @@ function CustomVariableRenderer(props: {
   onChange: (value: any) => void;
 }) {
   const { dockApi } = useContext(DockContext);
+  const flowBuilderContext = useContext(FlowBuilderContext);
 
-  const setupWindowVariables = () => {
-    // Load into the window the getVariable and setVariable functions
-    window.horus.getVariable = () => {
-      return props.variable;
+  const panelID = `variable-${props.variable.id}-${props.variable.placedID}`;
+
+  const updatedPluginPage: PluginPage = useMemo(() => {
+    return {
+      ...props.variable.customPage,
+      variable_id: props.variable.id,
+      placedID: props.variable.placedID,
+    };
+  }, [props.variable.customPage, props.variable.id, props.variable.placedID]);
+
+  const injectVariables = useCallback(() => {
+    const abortController = new AbortController();
+    const signal = abortController.signal;
+
+    // Inject variables on NON-development iframes
+    const prodIframe = getIframeExtensionID(updatedPluginPage);
+
+    const iframe = document.getElementById(
+      prodIframe
+    ) as HTMLIFrameElement | null;
+
+    const injectToProd = () => {
+      if (signal.aborted) {
+        return;
+      }
+
+      if (iframe?.contentWindow) {
+        iframe.contentWindow.horusVariable = {
+          getVariable: () => props.variable,
+          setVariable: (value: any) => {
+            props.onChange(value);
+          },
+        };
+      }
     };
 
-    window.horus.setVariable = (value: any) => {
-      props.onChange(value);
+    injectToProd();
+    iframe?.addEventListener("load", injectToProd, { signal });
+    const devIframes = (flowBuilderContext?.misc?.developmentIframes ?? [])
+      .filter(
+        (entry) =>
+          entry.variable_id === props.variable.id &&
+          entry.variable_placedID === props.variable.placedID
+      )
+      .map((entry) => {
+        const devIframe = document.getElementById(
+          entry.iframe_id
+        ) as HTMLIFrameElement | null;
+
+        return devIframe;
+      });
+
+    const injectToDev = (devIframe: HTMLIFrameElement | null) => {
+      if (signal.aborted) {
+        return;
+      }
+
+      if (devIframe?.contentWindow) {
+        if (!devIframe.contentWindow.horus) {
+          devIframe.contentWindow.horus = window.horus;
+        }
+
+        devIframe.contentWindow.horusVariable = {
+          getVariable: () => props.variable,
+          setVariable: (value: any) => props.onChange(value),
+        };
+      }
     };
-  };
+
+    devIframes.forEach((devIframe) => {
+      injectToDev(devIframe);
+      devIframe?.addEventListener("load", () => injectToDev(devIframe), {
+        signal,
+      });
+    });
+
+    return () => {
+      abortController.abort();
+    };
+  }, [props, flowBuilderContext?.misc.developmentIframes, updatedPluginPage]);
+
+  useEffect(() => {
+    return injectVariables();
+  }, [injectVariables]);
 
   return (
     <div className="w-full flex flex-col gap-2 items-center justify-center p-2">
@@ -1111,12 +1198,14 @@ function CustomVariableRenderer(props: {
           addPanel({
             dockApi,
             component: PANEL_REGISTRY.blockVariablesExtension.component,
-            panelID: `variable-${props.variable.id}-${props.variable.placedID}`,
+            panelID: panelID,
             params: {
-              ...props.variable.customPage,
-              placedID: props.variable.placedID,
-              onFocus: setupWindowVariables,
-            } as PluginPage,
+              ...updatedPluginPage,
+              onLoad: () => {
+                // Inject the variable into the iframe
+                injectVariables();
+              },
+            } as PluginPage & { onLoad?: () => void },
           });
         }}
       >

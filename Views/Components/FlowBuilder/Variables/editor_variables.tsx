@@ -45,7 +45,7 @@ export function ObjectVariableView(props: VariableViewProps) {
         setIsWrongValue(true);
       }
     },
-    [props],
+    [props]
   );
 
   return (
@@ -72,16 +72,16 @@ export function CodeVariableView(props: VariableViewProps) {
       variable={props.variable}
       className="w-full h-full rounded-md border-2 overflow-hidden"
       height="300px"
-      defaultLanguage={props.variable.allowedValues[0] ?? "python"}
+      defaultLanguage={props.variable.allowedValues?.[0]}
       value={props.variable.value}
       defaultValue={props.variable.defaultValue}
-      onChange={(value) => props.onChange(value)}
+      onChange={props.onChange}
     />
   );
 }
 
 export function HorusSmallVariableCodeEditor(
-  props: EditorProps & { variable: PluginVariable },
+  props: EditorProps & { variable: PluginVariable }
 ) {
   const { dockApi } = useContext(DockContext);
 
@@ -196,7 +196,13 @@ export function HorusSmallVariableCodeEditor(
           </div>
         </HorusPopover>
       </div>
-      <Editor {...props} />
+      <Editor
+        {...props}
+        onChange={props.onChange}
+        options={{
+          readOnly: isFlowActive || props.variable.disabled,
+        }}
+      />
     </div>
   );
 }

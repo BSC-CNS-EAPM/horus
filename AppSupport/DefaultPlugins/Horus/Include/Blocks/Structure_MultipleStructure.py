@@ -1,8 +1,13 @@
 import os
 import shutil
-from HorusAPI import PluginVariable, VariableTypes, InputBlock
-from pathvalidate import sanitize_filepath
-from pathlib import Path
+
+from HorusAPI import (
+    PluginVariable,
+    VariableTypes,
+    InputBlock,
+    structureToFile,
+    multipleStructuresToFolder,
+)
 
 # Multiple Structure Variables
 multipleStructureVariable = PluginVariable(
@@ -34,23 +39,6 @@ structureVariableOutput = PluginVariable(
     type=VariableTypes.FILE,
     allowedValues=["*"],
 )
-
-
-def sanitizePath(path: str):
-    """
-    Replaces any invalid character in a path
-    """
-
-    path = (
-        path.replace(" ", "_")
-        .replace(":", "_")
-        .replace("/", "_")
-        .replace("\\", "_")
-        .replace("(", "")
-        .replace(")", "")
-    )
-
-    return sanitize_filepath(path, platform="universal", normalize=True)
 
 
 def saveAction(structure: dict, filePathToWrite: str) -> str:
@@ -87,27 +75,17 @@ def saveStructure(block: InputBlock):
     Save one Mol* structure into a file
     """
     structure = block.variables.get("structure", None)  # [0] Uncoment if type = list (Christian)
+
     if structure is None:
         raise Exception("No structure provided.")
 
-    name = structure.get("label", None)
-    format = "." + structure.get("format")
-
-    if name is None or format is None:
-        raise Exception("Structure not loaded correctly")
-
-    if not name.endswith(format):
-        name += format
-
-    name = sanitize_filepath(name)
-
     # Save structure
-    filePathToWrite = saveAction(structure, name)
+    filePathToWrite = structureToFile(structure)
 
     block.setOutput(structureVariableOutput.id, filePathToWrite)
 
 
-def saveMultipleStructure(block: InputBlock):
+def saveMultipleStructureAction(block: InputBlock):
     """
     Save more than one Mol* structure into a file
     """
@@ -124,25 +102,27 @@ def saveMultipleStructure(block: InputBlock):
 
     os.mkdir(directory)
 
-    for structure in structureList:
-        name = structure.get("label", None)
+    # for structure in structureList:
+    #     name = structure.get("label", None)
 
-        # Formats come without the "." for the extension
-        format = "." + structure.get("format")
+    #     # Formats come without the "." for the extension
+    #     format = "." + structure.get("format")
 
-        if name is None or format is None:
-            raise Exception("Structure not loaded correctly")
+    #     if name is None or format is None:
+    #         raise Exception("Structure not loaded correctly")
 
-        if not name.endswith(format):
-            name += format
+    #     if not name.endswith(format):
+    #         name += format
 
-        name = sanitize_filepath(name)
+    #     name = sanitize_filepath(name)
 
-        # Parse the filepath to write.
-        filePathToWrite = os.path.join(directory, name)
+    #     # Parse the filepath to write.
+    #     filePathToWrite = os.path.join(directory, name)
 
-        # Save structure
-        saveAction(structure, filePathToWrite)
+    #     # Save structure
+    #     saveAction(structure, filePathToWrite)
+
+    multipleStructuresToFolder(structureList, directory)
 
     block.setOutput(multipleStructureVariableOutput.id, directory)
 
@@ -164,7 +144,7 @@ multStrucBlock = InputBlock(
     "Multiple structures",
     id="multiple_structures",
     description="Save one or more structures from the visualizer into a folder.",
-    action=saveMultipleStructure,
+    action=saveMultipleStructureAction,
     variable=multipleStructureVariable,
     output=multipleStructureVariableOutput,
     category="Structures",

@@ -3,7 +3,6 @@ Download PDB block
 """
 
 import os
-import shutil
 from HorusAPI import PluginVariable, InputBlock, VariableTypes
 
 
@@ -61,6 +60,5 @@ getPDBBlock = InputBlock(
     variable=pdbID,
     output=structureOutput,
     id="get_pdb",
-            category="Files"
-
+    category="Files",
 )

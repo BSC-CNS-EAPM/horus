@@ -4,9 +4,15 @@ Visualize Molecule block
 
 import os
 import shutil
-from HorusAPI import PluginVariable, PluginBlock, VariableTypes, MolstarAPI, VariableGroup
-
 from typing import Union
+
+from HorusAPI import (
+    PluginVariable,
+    PluginBlock,
+    VariableTypes,
+    MolstarAPI,
+    VariableGroup,
+)
 
 
 class NoMoleculeFileException(Exception):

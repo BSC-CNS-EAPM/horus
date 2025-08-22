@@ -9,7 +9,6 @@ import CheckMark from "../Components/Toolbar/Icons/CheckMark";
 
 import PluginsIcon from "../Components/Toolbar/Icons/Plugins";
 import AppButton from "../Components/appbutton";
-import InfoIcon from "../Components/Toolbar/Icons/Info";
 import CloudDownload from "../Components/Toolbar/Icons/CloudDownload";
 import SettingsIcon from "../Components/Toolbar/Icons/Settings";
 import LogFile from "../Components/Toolbar/Icons/LogFile";
@@ -18,62 +17,85 @@ import { SearchComponent } from "@/Components/Search/Search";
 type DatabasePlugin = HorusPlugin & {
   downloads: number;
   latest_version: string;
+  repo_url: string;
 };
 
-export function PluginBrowserRoot(props: PluginInstallProps) {
+type RepoBrowserProps = PluginInstallProps & {
+  repoURL: string;
+  repoName: string;
+  repoToken?: string;
+};
+
+export function PluginBrowserRoot(props: RepoBrowserProps) {
   return <RepoBrowser {...props} />;
 }
 
-function RepoBrowser(props: PluginInstallProps) {
+function RepoBrowser(props: RepoBrowserProps) {
   const {
     data: installedPlugins,
     isLoading: installedPluginsLoading,
     error: installedPluginsError,
   } = useQuery({
-    queryKey: ["installed_plugins"],
+    queryKey: [
+      "installed_plugins",
+      props.repoURL,
+      props.repoName,
+      props.repoToken,
+    ],
     queryFn: () => {
       return horusGet("/api/plugins/list")
         .then((res) => res.json())
         .then((data) => data.plugins.plugins);
     },
+    refetchInterval: false,
   });
 
   if (installedPluginsLoading) {
-    return <LoadingPluginRepo />;
+    return <LoadingPluginRepo repoName={props.repoName} />;
   }
 
   if (installedPluginsError) {
-    return <CannotConnectError />;
+    return <CannotConnectError repoName={props.repoName} />;
   }
 
   return <_RepoBrowser {...props} installedPlugins={installedPlugins ?? []} />;
 }
 
 function _RepoBrowser(
-  props: PluginInstallProps & {
+  props: RepoBrowserProps & {
     installedPlugins: HorusPlugin[];
-  },
+  }
 ) {
   const [filterTerm, setFilterTerm] = useState("");
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ["plugins"],
+    queryKey: ["plugins", props.repoURL, props.repoName, props.repoToken],
     queryFn: () => {
-      const url = new URL("https://horus.bsc.es/repo_api/plugins");
+      const url = new URL(`${props.repoURL}/plugins/`);
+
       url.searchParams.append("query", filterTerm);
-      url.searchParams.append("query", filterTerm);
-      return fetch(url.toString())
+
+      return fetch(url.toString(), {
+        headers: {
+          Authorization: `Bearer ${props.repoToken}`,
+        },
+      })
         .then((res) => res.json())
-        .then((data) => data as { plugins: DatabasePlugin[]; total: number });
+        .then((data) => {
+          if (!data || !Array.isArray(data.plugins)) {
+            throw new Error("No plugins found in repository response");
+          }
+          return data as { plugins: DatabasePlugin[]; total: number };
+        });
     },
   });
 
   if (isLoading) {
-    return <LoadingPluginRepo />;
+    return <LoadingPluginRepo repoName={props.repoName} />;
   }
 
-  if (error) {
-    return <CannotConnectError />;
+  if (error || !data?.plugins) {
+    return <CannotConnectError repoName={props.repoName} />;
   }
 
   return (
@@ -92,7 +114,7 @@ function _RepoBrowser(
           action={() => {
             const button = document.createElement("a");
             button.target = "_blank";
-            button.href = "https://horus.bsc.es/repo";
+            button.href = props.repoURL;
             button.click();
             button.remove();
           }}
@@ -107,6 +129,8 @@ function _RepoBrowser(
             plugin={plugin}
             isInstalled={props.installedPlugins.find((p) => p.id === plugin.id)}
             onInstall={props.onPluginInstall}
+            repo={props.repoURL}
+            repoName={props.repoName}
           />
         ))}
       </div>
@@ -117,10 +141,14 @@ function _RepoBrowser(
 function PluginInRepo({
   plugin,
   isInstalled,
+  repo,
+  repoName,
   onInstall,
 }: {
   plugin: DatabasePlugin;
   isInstalled?: HorusPlugin;
+  repo: string;
+  repoName: string;
   onInstall: (file: string) => void;
 }) {
   return (
@@ -148,8 +176,8 @@ function PluginInRepo({
               </div>
               <div>Author: {plugin.author}</div>
             </div>
-            <a
-              href={`https://horus.bsc.es/repo/plugins/${plugin.id}`}
+            {/* <a
+              href={`${repo}/plugins/${plugin.id}`}
               className="hover:text-blue-500"
               target="_blank"
             >
@@ -159,12 +187,14 @@ function PluginInRepo({
               >
                 <InfoIcon /> View on repository
               </AppButton>
-            </a>
+            </a> */}
           </div>
           <RightSidePluginDownload
             isInstalled={isInstalled}
             plugin={plugin}
             onInstall={onInstall}
+            repoURL={repo}
+            repoName={repoName}
           />
         </div>
       </div>
@@ -175,10 +205,14 @@ function PluginInRepo({
 function RightSidePluginDownload({
   isInstalled,
   plugin,
+  repoURL,
+  repoName,
   onInstall,
 }: {
   isInstalled?: HorusPlugin;
   plugin: DatabasePlugin;
+  repoURL: string;
+  repoName: string;
   onInstall: (file: string) => void;
 }) {
   const width = "120px";
@@ -197,7 +231,7 @@ function RightSidePluginDownload({
                 : "green",
           }}
           action={() => {
-            const pluginURL = `pluginID://${plugin.id}`;
+            const pluginURL = `repoID://${repoURL}repoName://${repoName}pluginID://${plugin.id}`;
             onInstall(pluginURL);
           }}
         >
@@ -217,7 +251,7 @@ function RightSidePluginDownload({
           className="gap-2 flex flex-row flex-nowrap justify-between"
           style={{ color: "black", width: width }}
           action={() => {
-            const pluginURL = `pluginID://${plugin.id}`;
+            const pluginURL = `repoID://${repoURL}repoName://${repoName}pluginID://${plugin.id}`;
             onInstall(pluginURL);
           }}
         >
@@ -243,21 +277,21 @@ function RightSidePluginDownload({
   );
 }
 
-function LoadingPluginRepo() {
+function LoadingPluginRepo({ repoName }: { repoName: string }) {
   return (
     <div>
       <div className="grid place-items-center h-full">
         <RotatingLines />
-        Connecting to the Horus Plugin Repository...
+        Connecting to &quot;{repoName}&quot; plugin repository...
       </div>
     </div>
   );
 }
-function CannotConnectError() {
+function CannotConnectError({ repoName }: { repoName: string }) {
   return (
     <div className="grid place-items-center h-full text-red-500">
       <ErrorIcon className="w-10 h-10" />
-      Could not connect to the Horus Plugin Repository
+      Could not connect to &quot;{repoName}&quot; plugin repository
     </div>
   );
 }

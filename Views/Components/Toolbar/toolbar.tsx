@@ -1,7 +1,10 @@
 import { useCallback, useContext, useEffect } from "react";
 
 // Horus components
-import { usePluginPages } from "./extensions_list";
+import {
+  unrelatedExtensionToBlockIDGenerator,
+  usePluginPages,
+} from "./extensions_list";
 import { ToolBarItemProps, ToolbarMenu, ToolBarMenuProps } from "./ToolbarItem";
 import { HorusSearch } from "./ToolbarSearch";
 
@@ -178,7 +181,7 @@ export default function HorusToolbar() {
         if (flowContext && !flowContext.flow.saved) {
           if (
             !(await horusConfirm(
-              "The current flow is not saved. Are you sure you want to continue?",
+              "The current flow is not saved. Are you sure you want to continue?"
             ))
           ) {
             return;
@@ -262,7 +265,7 @@ export default function HorusToolbar() {
           onClick: async () => {
             if (
               !(await horusConfirm(
-                "Are you sure you want to clean the recent flows?",
+                "Are you sure you want to clean the recent flows?"
               ))
             ) {
               return;
@@ -448,9 +451,7 @@ export default function HorusToolbar() {
               addPanel({
                 dockApi: dockApi,
                 component: PANEL_REGISTRY.extensions.component,
-                panelID: `extensions-${page.id}-${Math.floor(
-                  Math.random() * 100000,
-                )}`,
+                panelID: unrelatedExtensionToBlockIDGenerator({ id: page.id }),
                 params: page,
               });
             },
@@ -466,7 +467,7 @@ export default function HorusToolbar() {
           svgPath: <PluginsIcon />,
           hidden: !!window.horusInternal.webApp,
           onClick: () => {
-            togglePanel({
+            addPanel({
               dockApi: dockApi,
               panelID: PANEL_REGISTRY.horusPlugins.id,
               component: PANEL_REGISTRY.horusPlugins.component,
@@ -478,7 +479,7 @@ export default function HorusToolbar() {
           svgPath: <RemoteIcon />,
           hidden: window.horusInternal.webApp?.allowRemotes == false,
           onClick: () => {
-            togglePanel({
+            addPanel({
               dockApi: dockApi,
               panelID: PANEL_REGISTRY.horusRemotes.id,
               component: PANEL_REGISTRY.horusRemotes.component,
@@ -489,7 +490,7 @@ export default function HorusToolbar() {
           name: "Settings",
           svgPath: <SettingsIcon />,
           onClick: () => {
-            togglePanel({
+            addPanel({
               dockApi: dockApi,
               panelID: PANEL_REGISTRY.horusSettings.id,
               component: PANEL_REGISTRY.horusSettings.component,

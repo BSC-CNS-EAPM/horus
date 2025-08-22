@@ -194,6 +194,18 @@ multipleInput2 = PluginVariable(
 
 
 def multipleInputOutputAction(block: PluginBlock):
+    i1 = block.inputs[multipleInput1.id]
+    i2 = block.inputs[multipleInput2.id]
+
+    if block.extraData.get("times") is None or not block.dirty:
+        block.extraData["times"] = 0
+
+    block.extraData["times"] += 1
+
+    print("input1", i1)
+    print("input2", i2)
+    print(f"Block executed {block.extraData['times']} times")
+
     block.setOutput("multipleOutput1", 1)
     block.setOutput("multipleOutput2", 2)
 
@@ -233,41 +245,6 @@ focusResidueBlock = PluginBlock(
 )
 
 plugin.addBlock(focusResidueBlock)
-
-
-def molviewSpecAciton(block: PluginBlock):
-    mol = MolstarAPI()
-
-    # Basic MolstarAPI
-    mol.reset()
-    mol.addSphere(0, 0, 0, 5, color="#0000ff", opacity=1)
-    mol.setSpin()
-    mol.setBackgroundColor("#ffffff")
-    mol.focusResidue(1, nearRadius=5)
-
-    # MolviewSpec
-    mvs = mol.mvs
-    builder = mvs.create_builder()
-    (
-        builder.download(url="https://www.ebi.ac.uk/pdbe/entry-files/download/1cbs_updated.cif")
-        .parse(format="mmcif")
-        .assembly_structure(assembly_id="1")
-        .component()
-        .representation()
-    )
-
-    # finally, we pretty-print everything to the console
-    mol.loadMVJS(builder.get_state())
-
-
-molviewSpecBlock = PluginBlock(
-    name="Molview spec",
-    description="Loads the molview spec",
-    action=molviewSpecAciton,
-    id="molview_spec",
-)
-
-plugin.addBlock(molviewSpecBlock)
 
 
 def storeBlockVariable(block: PluginBlock):
@@ -333,7 +310,12 @@ def testSlurmBlockAction(block: SlurmBlock):
     timeToWait = int(block.inputs.get("timeToWait", 0) or 0)
 
     # Submit test job to the current remote
-    script = block.variables[script_variable.id] + f"\n\nsleep {timeToWait}\n"
+    script = (
+        block.variables[script_variable.id]
+        + f"\n\nsleep {timeToWait}\n"
+        + "echo Slurm environment:\n"
+        + """echo ${TEST_SLURM_ENVIRONMENT}"""
+    )
 
     if block.extraData.get("submits") is None:
         block.extraData["submits"] = 0
@@ -354,7 +336,26 @@ def testSlurmBlockAction(block: SlurmBlock):
     except Exception as e:
         print("Error uploading script: ", e)
 
+    print("Submitting regular job")
     jobID = block.remote.submitJob(finalPath)
+    print("Job ID: ", jobID)
+
+    # Submitting with environment variables
+    print("Submitting job with environment variables")
+    env = {"TEST_SLURM_ENVIRONMENT": "test_value"}
+    jobID = block.remote.submitJob(finalPath, env=env)
+    print("Job ID with env: ", jobID)
+
+    print("Submitting with job arguments")
+    jobID = block.remote.submitJob(
+        finalPath,
+        arguments=[
+            "--qos=short",
+            "--partition=short",
+            "--job-name=TEST HORUS SLURM ARGUMENTS",
+            "--time=2:00:00",
+        ],
+    )
 
     print("Job ID: ", jobID)
 
@@ -637,6 +638,24 @@ customVariableTest = CustomVariable(
     category="Custom variables",
 )
 
+customVariableTest21 = CustomVariable(
+    id="custom_variable_test21",
+    name="Custom variable test21",
+    description="Custom variable test21",
+    customPage=devPage,
+    type=VariableTypes.NUMBER,
+    category="Custom variables",
+)
+
+customVariableTest22 = CustomVariable(
+    id="custom_variable_test22",
+    name="Custom variable test22",
+    description="Custom variable test22",
+    customPage=devPage,
+    type=VariableTypes.NUMBER,
+    category="Custom variables",
+)
+
 
 def customVariableAction(block: InputBlock):
     print(block.inputs["custom_variable_test"])
@@ -650,7 +669,34 @@ testCustomVariableInputBlock = InputBlock(
     id="test_custom_variable",
 )
 
+testCustomVariableInputBlock2 = InputBlock(
+    name="Test custom variable2",
+    description="Test custom variable2",
+    variable=VariableGroup(
+        id="variable_group2",
+        name="Variable group",
+        description="Variable group",
+        variables=[
+            customVariableTest21,
+            customVariableTest22,
+        ],
+    ),
+    action=customVariableAction,
+    id="test_custom_variable2",
+)
+
+customVars = PluginBlock(
+    name="Custom vars",
+    description="Custom vars",
+    variables=[
+        customVariableTest21,
+        customVariableTest22,
+    ],
+)
+
 plugin.addBlock(testCustomVariableInputBlock)
+plugin.addBlock(testCustomVariableInputBlock2)
+plugin.addBlock(customVars)
 
 
 def checkPluginPathAction(block: PluginBlock):
@@ -1082,3 +1128,55 @@ test_setoutput_first_action = SlurmBlock(
 )
 
 plugin.addBlock(test_setoutput_first_action)
+
+
+explicative_code_variable = PluginVariable(
+    id="explicative_code_variable",
+    name="Explicative code",
+    description="Explicative code",
+    type=VariableTypes.CODE,
+    disabled=True,
+    allowedValues=["python"],
+    defaultValue="""# This is an example of a code block
+print("Hello world")
+""",
+)
+
+disabled_string_list_variable = PluginVariable(
+    id="disabled_string_list_variable",
+    name="Disabled string list variable",
+    description="This variable is disabled",
+    type=VariableTypes.STRING_LIST,
+    allowedValues=["Value 1", "Value 2", "Value 3"],
+)
+
+explicative_block = PluginBlock(
+    id="explicative_block",
+    name="Explicative block",
+    description="This block is an example of a code block",
+    action=lambda block: None,
+    variables=[explicative_code_variable, disabled_string_list_variable],
+)
+
+plugin.addBlock(explicative_block)
+
+
+docs_page = PluginPage(
+    id="docs",
+    name="Docs Page",
+    description="Documentation for the dev plugin",
+    html="docs/index.html",  # This is inside the Pages directory
+)
+
+plugin.addPage(docs_page)
+
+docs_block = PluginBlock(
+    id="docs_block",
+    name="Docs Block",
+    description="Block for the Docs Page",
+    action=lambda block: None,
+    variables=[],
+    externalURL=f"/{docs_page.id}/installing_plugins/index.html",
+)
+
+plugin.addBlock(docs_block)

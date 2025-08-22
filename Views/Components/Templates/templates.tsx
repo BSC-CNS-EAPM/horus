@@ -33,8 +33,8 @@ function useTemplates() {
   const filterTemplates = useCallback(() => {
     setFilteredTemplates(
       templates.filter((t) =>
-        t.name.toLowerCase().includes(filterTerm.toLowerCase())
-      )
+        t.name.toLowerCase().includes(filterTerm.toLowerCase()),
+      ),
     );
   }, [filterTerm, templates]);
 
@@ -189,7 +189,7 @@ function DeleteTemplateModal({
   // Render the modal
   render(
     <_DeleteTemplateModal flow={flow} getTemplates={getTemplates} />,
-    modal
+    modal,
   );
 }
 

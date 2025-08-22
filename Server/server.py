@@ -76,7 +76,7 @@ from Server.PluginManager import PluginManager
 from Server.FileExplorer import FileExplorer, UserFileExplorer, File
 
 # User management for WebApp mode
-from Server.WebAppManager import WebAppManager, UserError, HorusUser
+from Server.WebAppManager import WebAppManager, UserError, HorusUser, overrideUserExplorer
 
 if typing.TYPE_CHECKING:
     from Server.WebAppManager import Database
@@ -455,7 +455,7 @@ class HorusServer:
         API requests. Also disables Flask logging when not in debug mode.
         """
         # Disable werkzeug logging when not in debug mode
-        # logging.getLogger("werkzeug").disabled = not self.debug
+        logging.getLogger("werkzeug").setLevel(logging.DEBUG if self.debug else logging.WARNING)
 
         from flask.sansio.scaffold import setupmethod, T_route
 
@@ -1307,6 +1307,8 @@ class HorusServer:
                     "allowRemotes": self.webAppManager.allowRemotes,
                     "allowDemoUser": self.webAppManager.userManagement.allowDemoUser,
                     "uploadSize": self.webAppManager.userManagement.fileManagement.maxUploadSize,
+                    "allowFullFileSystemAccess": self.webAppManager.userManagement.fileManagement.allowFullFileSystemAccess,
+                    "allowCustomBlocks": self.webAppManager.allowCustomBlocks,
                 }
 
             return flask.jsonify(internalSettings)
@@ -1354,6 +1356,53 @@ class HorusServer:
                     "msg": str(exc),
                 }
             return success
+
+        @self.server.route("/api/plugins/custom-block", methods=["POST", "DELETE"])
+        @self.verifyLogin
+        @self.verifyAdmin
+        def customBlock():
+            """
+            Saves a custom block to the custom blocks folder
+            """
+
+            # Prevent this function completely in web appmode if disabled
+            if self.webAppManager is not None and not self.webAppManager.allowCustomBlocks:
+                return flask.jsonify(
+                    {"ok": False, "msg": "Custom blocks are not allowed in this web app."}
+                )
+
+            data = request.get_json()
+
+            if request.method == "POST":
+                blockData = data.get("block", None)
+                if blockData is None:
+                    return flask.jsonify({"ok": False, "msg": "No block data provided."})
+
+                try:
+                    new_block = self.pluginManager.saveCustomBlock(blockData, self.socketio)
+
+                    return flask.jsonify(
+                        {
+                            "ok": True,
+                            "msg": "Block saved successfully.",
+                            "block": new_block.blocks[0]._toDict(),
+                        }
+                    )
+                except Exception as exc:
+                    return flask.jsonify({"ok": False, "msg": str(exc)})
+            elif request.method == "DELETE":
+                blockId = data.get("blockId", None)
+                if blockId is None:
+                    return flask.jsonify({"ok": False, "msg": "No block ID provided."})
+
+                try:
+                    self.pluginManager.deleteCustomBlock(blockId)
+
+                    return flask.jsonify({"ok": True, "msg": "Block deleted successfully."})
+                except Exception as exc:
+                    return flask.jsonify({"ok": False, "msg": str(exc)})
+            else:
+                return flask.jsonify({"ok": False, "msg": "Invalid request method."})
 
         @self.server.route("/api/desktop/appsupportdir", methods=["GET"])
         @self.noWebApp
@@ -1462,7 +1511,7 @@ class HorusServer:
         def executeFlow():
             # Get the request data
             data = request.get_json()
-
+            relativePath = ""
             try:
                 # Get the flow data
                 flowPath = data["flowPath"]
@@ -1838,9 +1887,15 @@ class HorusServer:
                             else currentUser.flowsDir
                         )
 
-                        fileExplorer = UserFileExplorer(
-                            path, currentUser, relativeTo=relativeTo, obfuscate=obfuscate
-                        )
+                        if overrideUserExplorer():
+                            fileExplorer = FileExplorer(
+                                (path if os.path.exists(path) else relativeTo),
+                            )
+                        else:
+                            fileExplorer = UserFileExplorer(
+                                path, currentUser, relativeTo=relativeTo, obfuscate=obfuscate
+                            )
+
                 else:
                     fileExplorer = FileExplorer(path)
 
@@ -2400,9 +2455,9 @@ class HorusServer:
                         os.path.dirname(htmlPath), os.path.basename(htmlPath)
                     )
 
-                # Create a route for the static files
-                @newBluePrint.route(url + "<path:filename>")
-                def sendStatic(filename):
+                @newBluePrint.route(url, defaults={"subpath": ""})
+                @newBluePrint.route(url + "<path:subpath>")
+                def serve_plugin_page(subpath):
                     if (
                         self._isForUser
                         and self.webAppManager is not None
@@ -2415,7 +2470,15 @@ class HorusServer:
                             )
                         except ValueError:
                             return flask.redirect("/")
-                    return flask.send_from_directory(os.path.dirname(htmlPath), filename)
+
+                    file_path = os.path.join(os.path.dirname(htmlPath), subpath)
+                    if subpath and os.path.exists(file_path):
+                        return flask.send_from_directory(os.path.dirname(htmlPath), subpath)
+
+                    # fallback to React index.html
+                    return flask.send_from_directory(
+                        os.path.dirname(htmlPath), os.path.basename(htmlPath)
+                    )
 
                 # Add the required endpoints
                 for addEndPoint in page.endpoints:
@@ -2447,9 +2510,10 @@ class HorusServer:
                 self.server.register_blueprint(parsedBluePrint)
 
                 logging.getLogger("Horus").debug(
-                    "Registered page %s for plugin %s",
+                    "Registered page %s for plugin %s with URL %s",
                     page._pageInfo["id"],  # pylint: disable=protected-access
                     page._pageInfo["pluginDir"],  # pylint: disable=protected-access
+                    url,
                 )
             except Exception as exc:  # pylint: disable=broad-exception-caught
 
@@ -2565,6 +2629,7 @@ class HorusServer:
                     {
                         "name": "Unhandled Horus Error",
                         "description": error,
+                        "msg": "An unhandled error occurred in the server.",
                         "code": 500,
                         "data": str(request.data),
                     }
@@ -3920,7 +3985,6 @@ class ExternalFlowRunnerSocket(HorusSocket):
         self.flowPath = flowPath
 
     def emit(self, event, *args, **kwargs):
-
         # Get the data from the queue
         data = {
             "event": event,
@@ -3938,16 +4002,37 @@ class ExternalFlowRunnerSocket(HorusSocket):
         else:
             return
 
-        # Send the data to the server
-        for url in URLS:
+        def send_request(url, data):
+            """Send request in a separate thread"""
+            # Temporarily disable urllib3 logging to prevent recursive calls
+            urllib3_logger = logging.getLogger("urllib3.connectionpool")
+            original_level = urllib3_logger.level
+            urllib3_logger.setLevel(logging.ERROR)
+
             try:
-                requests.post(
-                    url,
-                    json=data,
-                    timeout=1,
-                )
-            except:
+                with requests.Session() as session:
+                    session.headers.update({"Connection": "close"})
+                    response = session.post(
+                        url,
+                        json=data,
+                        timeout=(1, 1),
+                        headers={"Connection": "close"},
+                    )
+                    response.close()
+            except Exception:
                 pass
+            finally:
+                # Restore original logging level
+                urllib3_logger.setLevel(original_level)
+
+        threads = []
+        for url in URLS:
+            thread = threading.Thread(target=send_request, args=(url, data), daemon=True)
+            thread.start()
+            threads.append(thread)
+
+        for thread in threads:
+            thread.join(timeout=2)
 
     def removeFinishedFlowFromRunningFlows(self, flowPath: str):
         if self.baseURL is None:

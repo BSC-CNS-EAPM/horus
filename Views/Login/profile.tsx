@@ -51,10 +51,15 @@ function hourFormat(quota: UserQuota) {
   return `${used} / ${max}`;
 }
 
-export default function Profile() {
+export function useUser() {
   const [userData, setUserData] = useState<UserData | null>(null);
 
   const fetchUser = async () => {
+    // If horus is not running on webapp mode, skip this
+    if (!window.horusInternal?.webApp) {
+      return;
+    }
+
     const response = await horusPost("/users/profile", null, null);
     if (!response) {
       return;
@@ -68,6 +73,16 @@ export default function Profile() {
     setUserData(data.user);
   };
 
+  useEffect(() => {
+    fetchUser();
+  }, []);
+
+  return { userData, fetchUser };
+}
+
+export default function Profile() {
+  const { userData } = useUser();
+
   const horusConfirm = useConfirm();
   const horusAlert = useAlert();
 
@@ -80,7 +95,7 @@ export default function Profile() {
 
     if (data.ok) {
       await horusAlert(
-        "An email has been sent to your email address with instructions",
+        "An email has been sent to your email address with instructions"
       );
     } else {
       await horusAlert(data.msg || "An error occurred. Try again later.");
@@ -90,7 +105,7 @@ export default function Profile() {
   const deleteAccount = async () => {
     if (
       !(await horusConfirm(
-        "Are you sure you want to delete your account? This action is irreversible.",
+        "Are you sure you want to delete your account? This action is irreversible."
       ))
     ) {
       return;
@@ -109,10 +124,6 @@ export default function Profile() {
       await horusAlert(data.msg || "An error occurred. Try again later.");
     }
   };
-
-  useEffect(() => {
-    fetchUser();
-  }, []);
 
   if (!userData) {
     return (

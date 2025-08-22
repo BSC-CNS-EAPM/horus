@@ -20,7 +20,6 @@ import {
 import { useDisclosure } from "@mantine/hooks";
 import { useQuery } from "@tanstack/react-query";
 import HorusLogo from "../../Resources/horus.png";
-import { useAlert } from "../Components/HorusPrompt/horus_alert";
 import RotatingLines from "../Components/RotatingLines/rotatinglines";
 import { marked } from "marked";
 
@@ -33,34 +32,35 @@ type AppInfo = {
   PYTHON_VERSION?: string;
 };
 
+export async function getAppInfo(): Promise<AppInfo> {
+  const response = await horusGet("/api/version");
+  if (!response.ok) {
+    throw new Error("Error getting application info");
+  }
+  const data = await response.json();
+  if (!data.ok) {
+    throw new Error("Error getting application info: " + data.msg);
+  }
+  return data.appINFO;
+}
+
 export default function About() {
   const [appInfo, setAppInfo] = useState<AppInfo>({} as AppInfo);
 
   const [gettingInfo, setGettingInfo] = useState<boolean>(true);
 
-  const horusAlert = useAlert();
-
   const getVersion = async () => {
     setGettingInfo(true);
-    try {
-      const response = await horusGet("/api/version");
-      if (!response.ok) {
-        console.error("Error getting application info");
-        return;
-      }
-      const data = await response.json();
-
-      if (!data.ok) {
-        await horusAlert("Error getting application info: " + data.msg);
-        return;
-      }
-
-      const appInfo: AppInfo = data.appINFO;
-
-      setAppInfo(appInfo);
-    } finally {
-      setGettingInfo(false);
-    }
+    getAppInfo()
+      .then((info) => {
+        setAppInfo(info);
+      })
+      .catch((error) => {
+        alert(error.message);
+      })
+      .finally(() => {
+        setGettingInfo(false);
+      });
   };
 
   const [opened, { open, close }] = useDisclosure(false);

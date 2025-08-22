@@ -44,7 +44,11 @@ export type BlockViewState = {
     setIsInfoHovering: React.Dispatch<React.SetStateAction<boolean>>;
     toggleVariablesModal: () => void;
     toggleBlockLogsModal: () => void;
-    handleVariableChange: (value: any, id: string, groupID?: string) => void;
+    handleVariableChange: (
+      value: any,
+      variable: PluginVariable,
+      groupID?: string,
+    ) => void;
     handleSelectedInputGroupChange: (direction: "up" | "down") => void;
   };
   settings: {
@@ -156,15 +160,16 @@ export function useBlockView({
   };
 
   const handleVariableChange = useCallback(
-    (value: any, id: string, groupID?: string) => {
+    (value: any, variableToChange: PluginVariable, groupID?: string) => {
       if (isFlowActive) {
         return;
       }
-
       let hasChanged = false;
-
       const updateValue = (variable: PluginVariable) => {
-        if (variable.id === id) {
+        if (
+          variable.id === variableToChange.id &&
+          variable.placedID === variableToChange.placedID
+        ) {
           if (variable.value !== value) {
             hasChanged = true;
             variable.value = value;

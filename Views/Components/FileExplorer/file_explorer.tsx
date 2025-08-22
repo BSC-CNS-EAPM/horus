@@ -79,6 +79,7 @@ function useServerExplorer(
 
       if (
         window.horusInternal.webApp &&
+        !window.horusInternal.webApp.allowFullFileSystemAccess &&
         !flowBuilderContext?.flow?.flow?.path &&
         !openDirectly &&
         !openOutsideFlowContext
@@ -456,6 +457,7 @@ function useServerExplorer(
 }
 
 export type FileExplorerProps = {
+  label?: string;
   openAtPath?: string;
   children?: React.ReactNode;
   openFolder?: boolean;
@@ -464,6 +466,7 @@ export type FileExplorerProps = {
   allowedExtensions?: string[];
   openDirectly?: boolean;
   openOutsideFlowContext?: boolean;
+  onClose?: (selectedPath: string | null) => void;
 };
 
 type ServerFileExplorerModalProps = {
@@ -475,8 +478,17 @@ type ServerFileExplorerModalProps = {
 function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
   const { open, setOpen, fileProps } = props;
 
+  const [manualPath, setManualPath] = useState<string>("");
   const [goToPath, setGoToPath] = useState<string>("");
   const [selectedIsDir, setSelectedIsDir] = useState<boolean>(false);
+
+  const handleClose = useCallback(
+    (selectedPath: string | null = null) => {
+      setOpen(false);
+      fileProps?.onClose && fileProps.onClose(selectedPath);
+    },
+    [setOpen, fileProps]
+  );
 
   const onFileConfirm = (file: FileData) => {
     const path = file["path"];
@@ -486,7 +498,7 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
     }
 
     fileProps?.onFileConfirm ? fileProps.onFileConfirm(path) : null;
-    setOpen(false);
+    handleClose(path);
   };
 
   const onFileSelect = (file: FileData) => {
@@ -531,7 +543,12 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
     openFolder,
     onFileSelect,
     onFileConfirm,
-    setOpen,
+    (open) => {
+      if (!open) {
+        handleClose();
+      }
+      setOpen(open);
+    },
     fileProps?.allowedExtensions,
     fileProps?.openDirectly,
     fileProps?.openOutsideFlowContext
@@ -553,6 +570,8 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
   const [tabIndex, setTabIndex] = useState(0);
 
   const disabledSelect = () => {
+    if (manualPath) return false;
+
     if (!selectedFile) return true;
 
     const requiresFolder = props.fileProps?.openFolder ?? false;
@@ -584,10 +603,27 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  const getLabel = () => {
+    if (fileProps) {
+      if (fileProps.label) {
+        return fileProps.label;
+      }
+      return fileProps.openFolder ? "Select a folder" : "Select a file";
+    }
+
+    return "Browse";
+  };
+
+  useEffect(() => {
+    setManualPath(selectedFile?.["path"] || "");
+  }, [selectedFile]);
+
   return (
     <BlurredModal
       show={open}
-      onHide={() => setOpen(false)}
+      onHide={() => {
+        handleClose();
+      }}
       maxContentSize={{
         width: "90%",
       }}
@@ -595,15 +631,10 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
     >
       <div className="w-full flex flex-col gap-2 p-4">
         <div className="flex flex-col gap-2 flex-wrap justify-start items-start">
-          <div className="text-3xl font-bold min-w-[180px]">
-            {fileProps
-              ? openFolder
-                ? "Select a folder"
-                : "Select a file"
-              : "Browse"}
-          </div>
+          <div className="text-3xl font-bold min-w-[180px]">{getLabel()}</div>
           {(!window.horusInternal?.webApp ||
-            props.fileProps?.openOutsideFlowContext) && (
+            props.fileProps?.openOutsideFlowContext ||
+            window.horusInternal.webApp.allowFullFileSystemAccess) && (
             <div className="flex flex-row gap-2 w-full">
               <input
                 className="app-button w-full"
@@ -732,26 +763,49 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
             ref={filePicker}
             onChange={uploadFiles}
           ></input>
+          <div className="flex flex-row gap-2 flex-grow">
+            <div className="plugin-variable-value">
+              <input
+                placeholder="Select a path manually..."
+                className="plugin-variable-value"
+                value={manualPath || selectedFile?.["path"]}
+                onChange={(e) => {
+                  setSelectedFile(null);
+                  setManualPath(e.target.value);
+                }}
+              />
+            </div>
+            <AppButton
+              disabled={disabledSelect()}
+              className="min-w-[120px]"
+              action={() => {
+                fileProps?.onFileConfirm?.(manualPath);
+                handleClose(manualPath || null);
+              }}
+            >
+              Select
+            </AppButton>
+          </div>
           <AppButton
             action={() => {
-              setOpen(false);
+              handleClose();
             }}
           >
             Close
           </AppButton>
-          {fileProps?.onFileConfirm && (
+          {/* {fileProps?.onFileConfirm && (
             <AppButton
               disabled={disabledSelect()}
               action={() => {
                 fileProps?.onFileConfirm
                   ? fileProps.onFileConfirm(selectedFile?.["path"])
                   : null;
-                setOpen(false);
+                handleClose();
               }}
             >
               Select
             </AppButton>
-          )}
+          )} */}
         </div>
       </div>
     </BlurredModal>
@@ -857,20 +911,34 @@ export type ExtensionsFilePickerOptions = Omit<
   "openAtPath" | "children" | "openDirectly"
 >;
 
-function openExtensionFilePicker(options: ExtensionsFilePickerOptions) {
-  let globalFilePicker = document.getElementById(
-    GLOBAL_IDS.EXTENSIONS_FILEPICKER
-  );
+function openExtensionFilePicker(
+  options?: ExtensionsFilePickerOptions
+): Promise<string | null> {
+  return new Promise((resolve) => {
+    let globalFilePicker = document.getElementById(
+      GLOBAL_IDS.EXTENSIONS_FILEPICKER
+    );
 
-  if (globalFilePicker) {
-    globalFilePicker.remove();
-  }
+    if (globalFilePicker) {
+      globalFilePicker.remove();
+    }
 
-  globalFilePicker = document.createElement("div");
-  globalFilePicker.id = GLOBAL_IDS.EXTENSIONS_FILEPICKER;
-  document.body.appendChild(globalFilePicker);
+    globalFilePicker = document.createElement("div");
+    globalFilePicker.id = GLOBAL_IDS.EXTENSIONS_FILEPICKER;
+    document.body.appendChild(globalFilePicker);
 
-  render(<HorusFileExplorer {...options} openDirectly />, globalFilePicker);
+    render(
+      <HorusFileExplorer
+        {...options}
+        openDirectly
+        onClose={(selectedPath) => {
+          resolve(selectedPath);
+          options?.onClose?.(selectedPath);
+        }}
+      />,
+      globalFilePicker
+    );
+  });
 }
 
 window.horus.openExtensionFilePicker = openExtensionFilePicker;

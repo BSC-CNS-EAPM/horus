@@ -25,6 +25,8 @@ import requests
 import webview
 import webview.menu as wm
 
+from Server.Utils import PrintTruncator
+
 # Multiprocessing
 if typing.TYPE_CHECKING:
     import multiprocessing as mp
@@ -72,6 +74,7 @@ class HorusLogger:
     """
 
     def __init__(self, appSupportDir: str, debug: bool = False, verbose: bool = False) -> None:
+
         # Define the logs folder
         self.logDir = os.path.join(appSupportDir, "logs")
 
@@ -233,7 +236,7 @@ class HorusLogger:
         oldStdout = sys.stdout
         oldStderr = sys.stderr
 
-        class FakeWriter(io.StringIO):
+        class FakeWriter(PrintTruncator):
             """
             Fake writer class
             """
@@ -281,6 +284,8 @@ class HorusLogger:
                 Hook into the default stdout and stderr class
                 """
 
+                message = self.format(message)
+
                 try:
 
                     if not self.debug and not self.verbose:
@@ -300,10 +305,18 @@ class HorusLogger:
 
         # Set as the new stdout and stderr the capturer
         sys.stdout = FakeWriter(
-            logging.INFO, self.capturer, oldStdout, debug=self.debug, verbose=self.verbose
+            logging.INFO,
+            self.capturer,
+            oldStdout,
+            debug=self.debug,
+            verbose=self.verbose,
         )
         sys.stderr = FakeWriter(
-            logging.ERROR, self.capturer, oldStderr, debug=self.debug, verbose=self.verbose
+            logging.ERROR,
+            self.capturer,
+            oldStderr,
+            debug=self.debug,
+            verbose=self.verbose,
         )
 
         # If we are on debug, print all the loggers to the old stdout and stderr

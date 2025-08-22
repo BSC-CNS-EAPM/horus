@@ -215,6 +215,7 @@ class RemotesAPI:
         timeout: t.Optional[int] = None,
         forceLocal: bool = False,
         mergeStdErr: bool = True,
+        env: t.Optional[dict[str, str]] = None,
     ) -> str:  # pylint: disable=method-hidden
         """
         Runs a command on the remote (or locally).
@@ -232,6 +233,8 @@ class RemotesAPI:
             # Run command locally
             logging.getLogger("Horus").info("Running command: '%s' on local machine,", command)
             failed = False
+            out = ""
+            err = ""
             try:
                 process = subprocess.run(
                     command,
@@ -242,36 +245,36 @@ class RemotesAPI:
                     timeout=timeout,
                     text=True,
                     check=False,
+                    env=env,
                 )
+
+                def logCommandOutput(o: str):
+                    if len(o) > 250:
+                        logging.getLogger("Horus").debug(
+                            "Local command output (truncated): %s",
+                            o[:250],
+                        )
+                    else:
+                        logging.getLogger("Horus").debug("Local command output: %s", o)
+
+                # STDOUT
+                out = process.stdout.strip() if process.stdout else ""
+                logCommandOutput(out)
+
+                # STDERR
+                err = process.stderr.strip() if process.stderr else ""
+                logCommandOutput(err)
+
+                # If the command failed, raise an exception
+                if process.returncode != 0:
+                    raise CommandFailed(err, cmd=command, stdout=out, stderr=err)
+
             except subprocess.TimeoutExpired:
                 failed = True
-
-            def logCommandOutput(o: str):
-                if len(o) > 250:
-                    logging.getLogger("Horus").debug(
-                        "Local command output (truncated): %s",
-                        o[:250],
-                    )
-                else:
-                    logging.getLogger("Horus").debug("Local command output: %s", o)
-
-            # STDOUT
-            out = process.stdout.strip() if process.stdout else ""
-            logCommandOutput(out)
-
-            # STDERR
-            err = process.stderr.strip() if process.stderr else ""
-            logCommandOutput(err)
 
             if failed:
                 logging.getLogger("Horus").error("Command timed out: %s", command)
                 raise CommandFailed("Command timed out.", cmd=command, stdout=out, stderr=err)
-
-            # If the command failed, raise an exception
-            if process.returncode != 0:
-                raise CommandFailed(
-                    f"Command '{command}' failed: {err}", cmd=command, stdout=out, stderr=err
-                )
 
             # Return the stdout and stderr as a string
             return out + "\n" + err if mergeStdErr else out
@@ -289,7 +292,7 @@ class RemotesAPI:
 
             if not hasattr(self.conn, "transport") or not self.loadProfile:
                 # Execute the command the old way
-                return self._oldCommand(command, timeout)
+                return self._oldCommand(command, timeout, env)
 
             if not self.conn.transport:
                 raise Exception("Connection is not open.")
@@ -303,6 +306,11 @@ class RemotesAPI:
 
             # Construct command to source bashrc and execute the actual command
             bash_command = f'bash -l -c "source ~/.bashrc 2>/dev/null || source /etc/bash.bashrc 2>/dev/null; {command}"'
+
+            if env:
+                # Add environment variables to the command
+                env_vars = " ".join(f'export {key}="{value}"' for key, value in env.items())
+                bash_command = f'bash -l -c "{env_vars}; {bash_command}"'
 
             # Add timeout if specified for the command itself
             if timeout is not None:
@@ -340,9 +348,7 @@ class RemotesAPI:
                     exit_status,
                     stderr_str,
                 )
-                raise CommandFailed(
-                    f"Command '{command}' failed: {out}", cmd=command, stdout=out, stderr=out
-                )
+                raise CommandFailed(out, cmd=command, stdout=out, stderr=out)
 
             return out
 
@@ -363,7 +369,9 @@ class RemotesAPI:
                 except:
                     pass
 
-    def _oldCommand(self, command: str, timeout: t.Optional[int] = None):
+    def _oldCommand(
+        self, command: str, timeout: t.Optional[int] = None, env: t.Optional[dict] = None
+    ) -> str:
         # Run command on remote
         # Hide is needed to avoid the output to be printed on the console
         # in_stream is needed to avoid fabric raising OSError (fabric
@@ -374,15 +382,18 @@ class RemotesAPI:
             if timeout:
                 command = "timeout {timeout} {command}".format(timeout=timeout, command=command)
 
-            out_cmd = self.conn.run(command, hide=True, in_stream=False)
+            out_cmd = self.conn.run(
+                command,
+                hide=True,
+                in_stream=False,
+                env=env,
+            )
             out = str(out_cmd.stdout.strip())
             err = str(out_cmd.stderr.strip())
 
             # If the command failed, raise an exception
             if out_cmd.failed:
-                raise CommandFailed(
-                    f"Command '{command}' failed: {err}", cmd=command, stdout=out, stderr=err
-                )
+                raise CommandFailed(err, cmd=command, stdout=out, stderr=err)
 
             logging.getLogger("Horus").debug("Remote command output: %s", out)
 

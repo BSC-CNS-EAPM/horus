@@ -67,7 +67,7 @@ Examples
 
 .. code-block:: python
 
-    # Define the PELE results page
+    # Define a results page
     myCustomViewPage = PluginPage(
         id="customView",
         name="Custom view",
@@ -96,6 +96,78 @@ Examples
 
     # Add the endpoint to the page
     myCustomViewPage.addEndpoint(customEndpoint)
+
+Plugin Pages with React Router (HashRouter)
+===========================================
+
+.. note::
+
+   When building plugins that embed a React application using **react-router**, it is recommended to use the **HashRouter** instead of the BrowserRouter.  
+   This ensures that the plugin works under the Horus URL structure, where pages are always served under ``/plugins/pages/<plugin_id>``.  
+
+   The hash part of the URL (``#/route``) is handled entirely by the client (React), while Horus continues serving the same ``index.html`` file for every request.
+
+Why HashRouter?
+---------------
+
+- **Problem:** With BrowserRouter, React expects full control of the URL path. Since Horus always serves plugins under a nested path (e.g. ``/plugins/pages/my_plugin/``), routing will fail with 404 errors unless a server-side fallback is configured for every subpath.  
+- **Solution:** By using HashRouter, the React application relies only on the URL fragment (the part after ``#``), which is **never sent to the server**. This way, Horus only needs to serve the same ``index.html`` file, regardless of the client-side route.
+
+Defining Plugin Pages
+---------------------
+
+You can define multiple plugin pages that share the same HTML file but expose **different entry routes**:
+
+.. code-block:: python
+
+   main_plugin_page = PluginPage(
+       id="my_plugin",
+       name="Main Plugin Page",
+       description="Main entry point for the plugin",
+       html="index.html",
+       path="/#/main",
+   )
+
+   settings_plugin_page = PluginPage(
+       id="my_plugin_settings",
+       name="Plugin Settings",
+       description="Settings and configuration for the plugin",
+       html="index.html",
+       path="/#/settings",
+   )
+
+Both pages load the same ``index.html`` (your React app), but they open different routes inside the app (``#/main`` vs. ``#/settings``).
+
+Accessing API Endpoints
+-----------------------
+
+Since the plugin is loaded under a fixed URL prefix, API calls should ignore the hash part of the URL.  
+The following helper ensures that any API endpoint is built from the URL **before** the ``#``:
+
+.. code-block:: javascript
+
+   export function getAPIUrl(endpoint?: string): string {
+     // The plugin page gets loaded with the URL before the hash.
+     // Therefore, endpoints are added there too.
+     const strippedLocation = window.location.href.split('#')[0];
+
+     return endpoint ? `${strippedLocation}${endpoint}` : strippedLocation;
+   }
+
+Usage example:
+
+.. code-block:: javascript
+
+   fetch(getAPIUrl("/api/update"), {
+       method: "POST",
+       body: JSON.stringify(payload),
+   });
+
+This guarantees that:
+
+- The request is always made relative to the plugin’s base URL  
+- Client-side routes (after ``#``) do not leak into API calls
+
 
 Extensions class
 ----------------
@@ -126,12 +198,12 @@ will open with the provided data.
     # Open the extensions view
     Extensions().storeExtensionResults(pluginID="mypluginid", pageID="customView", data={"someData": data}, title="View results")
 
-You can access the data in JavaScript as follows:
+You can access the data in JavaScript from the window object (or as the global `horus` variable) as follows:
 
 .. code-block:: javascript
-    
-    // Get the data passed from the extension
-    const data = window.parent.extensionData; // Remember that extensions run inside an iframe
+
+    // Get the data passed from the extension. The data gets automatically injected into the window object
+    const data = window.extensionData;
     console.log(data.someData) // The object passed from the Extensions class
 
 Using the File Picker inside an Extension
@@ -194,6 +266,20 @@ trying to get files to which the user does not have acces to will throw an error
     // will be so to the current working directory in which Horus is being executed.
     const blob = await parent.horus.getFile("/path/to/my/file")
 
+Opening the Horus File Editor within an Extension
+-------------------------------------------------
+
+To open the Horus File Editor, you can use the following method:
+
+.. code-block:: javascript
+
+    parent.horus.openFileInEditor({
+      filePath: "/path/to/my/file",
+      name: "My File", // Optional, the name of the tab
+      readOnly: false, // Optional, if the file should be opened in read-only mode
+      format: "text" // Optional, the format of the file. If none is provided, it will be inferred from the file extension
+    })
+
 Managing tabs, panes and views
 ------------------------------
 You can edit, open and close other panels using the embedded functions:
@@ -201,22 +287,22 @@ You can edit, open and close other panels using the embedded functions:
 .. code-block:: javascript
 
     // You can edit the current panel tab name
-    parent.horus.setTabTitle("Modified!")
+    window.horus.setTabTitle("Modified!")
 
     // Or close it
-    parent.horus.closeTab()
+    window.horus.closeTab()
 
     // The available panels are "molstar", "flow", "smiles" and "extensions"
     // The openPanel functions requires 1 positional argument for the "molstar", "flow" and "smiles" panels
     // (only the panel type). For example, to open the Molstar panel
-    parent.horus.openPanel("molstar")
+    window.horus.openPanel("molstar")
 
     // For the extensions, you will need to give two more arguments, 
     // the ID of the panel (can be any string to identify the panel) and
     // the parameters for correctly loading the extension. Those parameters are 
     // the name of the panel, the plugin ID that provides the the extension and the
     // extension ID. Finally, you can pass any data inside the params argument.
-    parent.horus.openPanel("extensions", "results_1", { // The id will be results_1
+    window.horus.openPanel("extensions", "results_1", { // The id will be results_1
       name: "My cool results", // The title of the tab
       plugin: "horus", // The plugin that provides the view
       id: "html_loader", // The ID of the view, in this case, the embedded html_loader
@@ -226,7 +312,7 @@ You can edit, open and close other panels using the embedded functions:
     });
 
     // To close the flow panel. Give the panel ID
-    parent.horus.closePanel("results_1")
+    window.horus.closePanel("results_1")
 
 Storing data in the flow
 ------------------------
@@ -237,28 +323,33 @@ To store data in the flow, use the built-in functions :bdg-secondary-line:`setEx
 
     // To store data in the current flow, you will 
     // need to give a unique key which will identify your value
-    parent.horus.setExtraData("my_key", "my_value")
+    window.horus.setExtraData("my_key", "my_value")
 
     // To obtain the value, just use your key
-    const value = parent.horus.getExtraData("my_key")
+    const value = window.horus.getExtraData("my_key")
 
 Managing SMILES and Mol*
 ------------------------
 
-The Horus Mol* and SMILES instances are exposed in the parent window object which is accessible inside extensions.
+The Horus Mol* and SMILES instances are exposed in the window object which is accessible inside extensions. 
+
+.. warning::
+
+   Molstar and SMILES instances could not be available if the panels are not opened. Make sure to always check
+   for their existence before using them. e.g.: `if (window.molstar) {doSomething()}`
 
 .. code-block:: javascript
 
     // Mol*
 
     // Resets the viewer
-    parent.molstar.reset();
+    window.molstar.reset();
 
     // Updates the background
-    parent.molstar.setBackground(hexColor: string);
+    window.molstar.setBackground(hexColor: string);
 
     // Focuses a specific residue in a structure
-    parent.molstar.focus(
+    window.molstar.focus(
         structureLabel?: string,
         residueNumber?: number,
         chain?: string,
@@ -266,7 +357,7 @@ The Horus Mol* and SMILES instances are exposed in the parent window object whic
     );
 
     // Loads a file
-    parent.molstar.loadMoleculeFile(
+    window.molstar.loadMoleculeFile(
         file: File,
         options?: {
             label?: string;
@@ -274,29 +365,29 @@ The Horus Mol* and SMILES instances are exposed in the parent window object whic
     );
 
     // Loads a trajectory from a topology and coordinates file
-    parent.molstar.loadTrajectory({
+    window.molstar.loadTrajectory({
         topology: File;
         trajectory: File;
         label?: string;
     });
 
     // Returns a list of the loaded structures
-    parent.molstar.listStructures();
+    window.molstar.listStructures();
 
     // Returns a list of hetero atoms.
-    parent.molstar.listHeteroAtoms(label?: string)
+    window.molstar.listHeteroAtoms(label?: string)
 
     // Returns a list of hetero residues
-    parent.molstar.listHeteroRes(label?: string)
+    window.molstar.listHeteroRes(label?: string)
 
     // Returns a list of standard residues
-    parent.molstar.listStandardRes(label?: string)
+    window.molstar.listStandardRes(label?: string)
     
     // Returns a list of chains
-    parent.molstar.listChains(label?: string);
+    window.molstar.listChains(label?: string);
 
     // Adds a sphere/box at a specific location
-    parent.molstar.addSphere(
+    window.molstar.addSphere(
         position: {
           x: number;
           y: number;
@@ -308,7 +399,7 @@ The Horus Mol* and SMILES instances are exposed in the parent window object whic
     );
 
     // The positions represent each dimension of the box
-    parent.molstar.addBox(
+    window.molstar.addBox(
         position: {
             x0: number;
             y0: number;
@@ -332,19 +423,19 @@ The Horus Mol* and SMILES instances are exposed in the parent window object whic
     // SMILES
 
     // Returns the current list of smiles
-    parent.smiles.getSmilesList()
+    window.smiles.getSmilesList()
 
     // Sets a new list of smiles. Use the same format as the return type of getSmilesList
-    parent.smiles.setSmilesList(newSmilesList)
+    window.smiles.setSmilesList(newSmilesList)
 
     // Resets the manager
-    parent.smiles.reset()
+    window.smiles.reset()
 
     // Loads CSV, SDF or SMI files
-    parent.smiles.loadFiles(file: File | FileList);
+    window.smiles.loadFiles(file: File | FileList);
     
     // Loads a SMILES string and adds it to the list of SMILES structures.
-    parent.smiles.loadSmilesString(smiles: string,
+    window.smiles.loadSmilesString(smiles: string,
     options?: {
       label?: string;
       extraInfo?: string;
@@ -352,10 +443,41 @@ The Horus Mol* and SMILES instances are exposed in the parent window object whic
     });
 
     // To obtain the value, just use your key
-    const value = parent.horus.getExtraData("my_key")
+    const value = window.horus.getExtraData("my_key")
 
 
 Default extensions
 ------------------
 
 For more information about Horus default extensions, please refer to the :ref:`default` section. 
+
+
+Using an extension as a block's external URL
+--------------------------------------------
+
+You can use an embedded extension as the URL of a block. 
+This can be useful to display documentation of a block within the application. 
+First, you need to define the :bdg-secondary-line:`PluginPage`. Then, use the ID of such
+:bdg-secondary-line:`PluginPage` to generate the :bdg-secondary-line:`externalURL`.
+
+.. code-block:: python
+
+    # The ID of the plugin is automatically assigned from the plugin.meta
+    plugin = Plugin()
+
+    # Define a documentation page
+    docs = PluginPage(
+        id="docs",
+        name="Documentation",
+        description="Documentation for my plugin",
+        html="index.html", # The HTML file to load
+    )
+
+    plugin.addPage(docs) # ATTENTION! You MUST add the page to te plugin before using the page ID in order to have the updated ID value
+
+    my_block = PluginBlock(
+        id="my_block",
+        name="My Block",
+        description="A block that uses the documentation page",
+        externalURL=f"/{docs.id}/my_block_docs/index.html" # Make sure to construct the URL correctly if the specific page for the block is under a path
+    )

@@ -79,9 +79,40 @@ function parseSettingsIntoPluginVariable(
       allowedValues: settings[settingID]?.allowedValues ?? [],
       disabled: false,
       required: false,
+      variables: (settings[settingID]?.variables ??
+        []) as unknown as PluginVariable[],
     };
   });
 }
+
+export async function saveSettings({
+  settings,
+  forAdmin = false,
+}: {
+  settings: PluginVariable[];
+  forAdmin?: boolean;
+}): Promise<any> {
+  const header = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+
+  const body = JSON.stringify({
+    settings: settings,
+  });
+
+  let response;
+  if (forAdmin) {
+    response = await horusPost("/users/admintools/savesettings", header, body);
+  } else {
+    response = await horusPost("/api/savesettings", header, body);
+  }
+
+  const data = await response.json();
+
+  return data;
+}
+
 function useSettings(forAdmin?: boolean) {
   const [settings, setSettings] = useState<PluginVariable[] | null>(null);
   const [groupedSettings, setGroupedSettings] = useState<
@@ -144,55 +175,41 @@ function useSettings(forAdmin?: boolean) {
   }
 
   const [isSaving, setIsSaving] = useState<boolean>(false);
-
-  async function saveSettings() {
+  // Function to save settings
+  const internalSaveSettings = async () => {
     setIsSaving(true);
+    try {
+      const data = await saveSettings({
+        settings: settings ?? [],
+        forAdmin: forAdmin,
+      });
 
-    const header = {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    };
+      if (!data.ok) {
+        await alert("Error saving settings");
+      } else {
+        // Update the settings
+        await getSettings();
 
-    const body = JSON.stringify({
-      settings: settings,
-    });
+        // Send the "settingsChanged" event
+        window.dispatchEvent(new CustomEvent("settingsChanged"));
 
-    let response;
-    if (forAdmin) {
-      response = await horusPost(
-        "/users/admintools/savesettings",
-        header,
-        body
-      );
-    } else {
-      response = await horusPost("/api/savesettings", header, body);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        setHasChanges(false);
+      }
+
+      setIsSaving(false);
+    } finally {
+      setIsSaving(false);
     }
+  };
 
-    const data = await response.json();
-
-    if (!data.ok) {
-      await horusAlert("Error saving settings");
-    } else {
-      // Update the settings
-      await getSettings();
-
-      // Send the "settingsChanged" event
-      window.dispatchEvent(new CustomEvent("settingsChanged"));
-
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      setHasChanges(false);
-    }
-
-    setIsSaving(false);
-  }
-
-  const onSettingChange = (value: any, settingID: string) => {
+  const onSettingChange = (value: any, settingID: PluginVariable) => {
     if (settings === null) {
       return;
     }
 
-    const setting = settings.find((setting) => setting.id === settingID)!;
+    const setting = settings.find((setting) => setting.id === settingID.id)!;
     if (setting.value !== value) {
       setting.value = value;
       setSettings([...settings]);
@@ -208,7 +225,7 @@ function useSettings(forAdmin?: boolean) {
     groupedSettings,
     hasChanges,
     isSaving,
-    saveSettings,
+    saveSettings: internalSaveSettings,
     onSettingChange,
     restoreSettings,
     isLoading,

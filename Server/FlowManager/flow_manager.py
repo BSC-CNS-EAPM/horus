@@ -6,7 +6,6 @@ Flow manager
 from abc import ABC, abstractmethod
 import os
 import shutil
-import subprocess
 import sys
 import json
 import typing
@@ -106,11 +105,6 @@ class ErrorRunningBlock(BlocksException):
     """
     Custom error running block exception
     """
-
-    def __str__(self) -> str:
-        return "Block '{blockName}' ({blockID}) failed: {message}".format(
-            blockName=self.block.name, blockID=self.block.id, message=self.message
-        )
 
 
 class StoppedFlowException(Exception):
@@ -665,7 +659,7 @@ class Flow:
             "pendingExtensions": self.pendingExtensions,
             "panels": self.panels,
             "extraData": self.extraData,
-            "flowRunInfo": self.flowRunInfo.dict() if self.flowRunInfo else None,
+            "flowRunInfo": self.flowRunInfo.model_dump() if self.flowRunInfo else None,
             "flowError": self.flowError,
         }
 
@@ -675,11 +669,9 @@ class Flow:
         self, molState: typing.Optional[bytes] = None, smilesState: typing.Optional[dict] = None
     ) -> typing.Dict[str, typing.Any]:
         """
-        Writes the flow to the file
-
+        Writes the flow to the file atomically
         :returns: The encoded flow
         """
-
         if not self.path:
             raise Exception(f"The flow '{self.name}' has no path")
 
@@ -705,30 +697,43 @@ class Flow:
         else:
             smilesStateDict = smilesState
 
-        # Remove the current file
-        if os.path.exists(self.path):
-            os.remove(self.path)
+        # Write to temporary file first
+        temp_path = self.path + ".tmp"
 
         logging.getLogger("Horus").debug("Writing flow '%s'", self.name)
 
-        with zipfile.ZipFile(self.path, "w", zipfile.ZIP_DEFLATED) as zipFile:
-            zipFile.writestr(self.FLOW_FILE, json.dumps(encodedFlow, indent=4))
+        try:
+            with zipfile.ZipFile(temp_path, "w", zipfile.ZIP_DEFLATED) as zipFile:
+                zipFile.writestr(self.FLOW_FILE, json.dumps(encodedFlow, indent=4))
 
-            # Store again the molstar state
-            if molstarStateBytes is not None:
-                zipFile.writestr(self.MOLSTAR_STATE_FILE, molstarStateBytes)
+                # Store again the molstar state
+                if molstarStateBytes is not None:
+                    zipFile.writestr(self.MOLSTAR_STATE_FILE, molstarStateBytes)
 
-            # Store again the smiles state
-            if smilesStateDict is not None:
-                zipFile.writestr(self.SMILES_STATE_FILE, json.dumps(smilesStateDict, indent=4))
+                # Store again the smiles state
+                if smilesStateDict is not None:
+                    zipFile.writestr(
+                        self.SMILES_STATE_FILE, json.dumps(smilesStateDict, indent=4)
+                    )
 
+            # Atomic move - this prevents corruption if the write fails
+            if os.path.exists(self.path):
+                os.replace(temp_path, self.path)
+            else:
+                os.rename(temp_path, self.path)
+
+        except Exception as e:
+            # Clean up temp file if something went wrong
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            raise e
+
+        # Rest of your code remains the same...
         # Send the flow to the frontend on write
         if not self._socket:
             from Server import ExternalFlowRunnerSocket
 
-            # Assign the socket from the Socket File
             self._socket = ExternalFlowRunnerSocket(self.path)
-
         self._socket.emit("flow", self.encode(minimal=False), to=self.savedID)
 
         # Generate the results folder if needed
@@ -736,7 +741,6 @@ class Flow:
         if not os.path.exists(flowWorkDir):
             os.makedirs(flowWorkDir)
 
-        # Return the encoded flow in case its needed
         return encodedFlow
 
     @classmethod
@@ -954,6 +958,10 @@ class Flow:
 
         # If the block has input connections, execute first those blocks
         inputs = {}
+
+        # Track the blocks which obtained othe rinputs in order to not re-run the m multiple times
+        # https://gitlab.bsc.es/eapm/horus/-/issues/443
+        executedInputsPlacedIDs: list[int] = []
         for connection in runOrder:
             # Find the block that is connected to a variable of the block selected to run
             variableBlock = self.findBlockByPlacedID(connection.origin.blockPlacedID)
@@ -985,7 +993,13 @@ class Flow:
             # Execute the block that provides the variable by calling recursively this method
             # This ensures that if the variable is provided by another block that also requires
             # an input variable, the blocks will be executed in the correct order
-            outputs = self._runPreviousBlocks(variablePlacedID, resetRemoteBlock, comesFromCyclic)
+            outputs = self._runPreviousBlocks(
+                variablePlacedID,
+                resetRemoteBlock=(
+                    resetRemoteBlock if variablePlacedID not in executedInputsPlacedIDs else False
+                ),
+                comesFromCyclic=comesFromCyclic,
+            )
 
             # If we have connected a variable to an input, the outputs should exist
             # This is only for the whole outputs dictionary itself, as the inidvidual
@@ -1004,6 +1018,8 @@ class Flow:
                     + f"'{connection.origin.variableID}' to the block '{blockToRun.name}'. "
                     + "Did you forget to call setOutput() in the action of the block?",
                 ) from keye
+
+            executedInputsPlacedIDs.append(variablePlacedID)
 
         # With the generated inputs, update the block to run
         blockToRun._updateInputs(inputs)
@@ -1269,6 +1285,15 @@ class Flow:
         If None, no updates will be sent (intended for command line execution)
         """
 
+        logging.getLogger("Horus").info(
+            "Running flow '%s' with placedID %s, resetRemoteBlock=%s, resetFlow=%s, continueSlurm=%s",
+            self.path,
+            placedID,
+            resetRemoteBlock,
+            resetFlow,
+            continueSlurm,
+        )
+
         # Reset the flow error
         self.flowError = ""
 
@@ -1419,12 +1444,32 @@ class Flow:
             # Pause the flow so the user can fix the connection issues
             self.status = self.FlowStatus.PAUSED
             self.flowError = str(ce)
+
+            logging.getLogger("Horus").error(
+                "Connection failed while running flow '%s': %s",
+                self.path,
+                str(ce),
+            )
+
         except StoppedFlowException:
             self.stop()
+
+            logging.getLogger("Horus").info(
+                "Flow '%s' stopped.",
+                self.path,
+            )
         except ErrorRunningBlock as er:
             self.flowError = str(er)
             self.currentExecuting = None
             self.status = self.FlowStatus.ERROR
+
+            logging.getLogger("Horus").error(
+                "Error running block '%s' in flow '%s': %s",
+                er.block.id,
+                self.path,
+                str(er),
+            )
+
         except KeyboardInterrupt as ke:
             raise ke
         except BaseException as be:
@@ -1451,6 +1496,12 @@ class Flow:
             # Send the flow to the frontend if a socket is provided
             # Send a request to the main server to remove the flow from the running flows list
             self._socket.removeFinishedFlowFromRunningFlows(self.path) if self._socket else None
+
+        logging.getLogger("Horus").info(
+            "Flow '%s' finished with status '%s'.",
+            self.path,
+            self.status.value,
+        )
 
     def _computeFinalTime(self):
         """
@@ -1606,6 +1657,8 @@ class Flow:
             """
             Writes the text to the terminal output
             """
+
+            message = self.format(message)
 
             self.terminalOutput.append(message)
 

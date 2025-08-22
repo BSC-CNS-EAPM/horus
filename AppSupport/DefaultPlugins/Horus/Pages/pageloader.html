@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <head>
     <title>Horus HTML Loader</title>
@@ -27,9 +27,9 @@
       }
 
       // Check if the extensionData object is available
-      if (window.parent.extensionData) {
-        const htmlToLoad = window.parent.extensionData.html;
-        const type = window.parent.extensionData.type;
+      if (window.extensionData) {
+        const htmlToLoad = window.extensionData.html;
+        const type = window.extensionData.type;
 
         if (type === "html_file") {
           parent.horus.getFile(htmlToLoad).then((blob) => {

@@ -106,4 +106,16 @@ This extension loads and displays a PDF file directly in the extensions view. It
     ext.loadPDF("path/to/document.pdf", "Report")
 
 
+loadFile
+--------
+
+This extension loads and displays the Horus File Editor with the content of a specified file.
+It supports multiple text-based file formats and includes options for read-only access and syntax highlighting.
+If no title is provided, the file name will be used as the title.
+If no format is specified, it will be automatically inferred from the file extension.
+The extension is intended primarily for text files (e.g., JSON, XML, source code). For images or PDFs, use the dedicated functions described above.
+
+.. code-block:: python
+
+    ext.loadFile("path/to/file.txt", title="My File", readOnly=False, format="text")
 

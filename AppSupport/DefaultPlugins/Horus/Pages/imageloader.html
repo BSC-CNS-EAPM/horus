@@ -23,8 +23,8 @@
 
       let imageToLoad = "";
       // Check if the extensionData object is available
-      if (window.parent.extensionData) {
-        imageToLoad = window.parent.extensionData.image;
+      if (window.extensionData) {
+        imageToLoad = window.extensionData.image;
 
         // If the image is base64 data, display the image
         // else get the file

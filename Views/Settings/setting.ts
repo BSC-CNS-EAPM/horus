@@ -13,4 +13,6 @@ export type HorusSetting = {
   type: PluginVariableTypes;
   allowedValues?: Array<any>;
   value: any;
+  variables: Array<HorusSetting>;
+  id: string;
 };
