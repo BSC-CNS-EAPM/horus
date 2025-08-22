@@ -267,9 +267,7 @@ class RemotesAPI:
 
                 # If the command failed, raise an exception
                 if process.returncode != 0:
-                    raise CommandFailed(
-                        f"Command '{command}' failed: {err}", cmd=command, stdout=out, stderr=err
-                    )
+                    raise CommandFailed(err, cmd=command, stdout=out, stderr=err)
 
             except subprocess.TimeoutExpired:
                 failed = True
@@ -350,9 +348,7 @@ class RemotesAPI:
                     exit_status,
                     stderr_str,
                 )
-                raise CommandFailed(
-                    f"Command '{command}' failed: {out}", cmd=command, stdout=out, stderr=out
-                )
+                raise CommandFailed(out, cmd=command, stdout=out, stderr=out)
 
             return out
 
@@ -397,9 +393,7 @@ class RemotesAPI:
 
             # If the command failed, raise an exception
             if out_cmd.failed:
-                raise CommandFailed(
-                    f"Command '{command}' failed: {err}", cmd=command, stdout=out, stderr=err
-                )
+                raise CommandFailed(err, cmd=command, stdout=out, stderr=err)
 
             logging.getLogger("Horus").debug("Remote command output: %s", out)
 

@@ -2478,7 +2478,9 @@ class SlurmJob(HorusPydanticModel):
             jobOutputs = out.split(SlurmJob.SEPARATOR)
             slurmJobs = [SlurmJob.parseScontrolToSlurmJob(jobOutput) for jobOutput in jobOutputs]
         except Exception as exc:
-            raise Exception(f"Error submitting job: {exc}") from exc
+            raise Exception(
+                f"Error submitting job. Does the machine '{remote.name}' have SLURM installed? {exc}"
+            ) from exc
 
         arrayJobs = []
         for slurmJob in slurmJobs:

@@ -1653,26 +1653,6 @@ class PluginManager(metaclass=HorusSingleton):
         # Set the block config to execute the block
         block.config = plugin.config
 
-        # Print debug info
-        # If the user has development mode activated, print useful information about the block
-        if developmentMode:
-            print("============================ Development mode ==============================")
-            print(f"Block starting time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-            print(f"Block ID: {block.id}")
-            print(f"Block name: {block.name}")
-            print(f"Block selected remote: {block.selectedRemote}")
-            print("Block config:")
-            print(json.dumps(block.config, indent=4))
-            print("Block inputs:")
-            print(json.dumps(block.inputs, indent=4))
-            print("Block variables:")
-            print(json.dumps(block.variables, indent=4))
-            print("Block initial extraData:")
-            print(json.dumps(block.extraData, indent=4))
-            print(
-                "============================================================================\n"
-            )
-
         appSupportDir = self.appSupportDir
         if hasattr(currentUser, "appSupportDir"):
             appSupportDir = currentUser.appSupportDir
@@ -1745,20 +1725,6 @@ class PluginManager(metaclass=HorusSingleton):
             formattedTime = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
             logging.getLogger("Horus").info("Block %s executed in %s", block.id, formattedTime)
-
-            if developmentMode:
-                print(
-                    "\n============================ Development mode =============================="
-                )
-                print(f"Block execution time: {formattedTime}")
-                print(f"Block error: {error}")
-                print("Block outputs:")
-                print(json.dumps(outputs, indent=4))
-                print("Block final extraData:")
-                print(json.dumps(block.extraData, indent=4))
-                print(
-                    "============================================================================="
-                )
 
         if exception:
             raise exception
@@ -2474,7 +2440,7 @@ class SubprocessManager:
 
                     import traceback
 
-                    msg = f"{traceback.format_exc()}\n{e}"
+                    forkedBlock.blockLogs += "".join(traceback.format_tb(sys.exc_info()[2]))
 
                 # Here we need to convert the exception because
                 # it may be a class which does not exist

@@ -3985,7 +3985,6 @@ class ExternalFlowRunnerSocket(HorusSocket):
         self.flowPath = flowPath
 
     def emit(self, event, *args, **kwargs):
-
         # Get the data from the queue
         data = {
             "event": event,
@@ -4003,16 +4002,37 @@ class ExternalFlowRunnerSocket(HorusSocket):
         else:
             return
 
-        # Send the data to the server
-        for url in URLS:
+        def send_request(url, data):
+            """Send request in a separate thread"""
+            # Temporarily disable urllib3 logging to prevent recursive calls
+            urllib3_logger = logging.getLogger("urllib3.connectionpool")
+            original_level = urllib3_logger.level
+            urllib3_logger.setLevel(logging.ERROR)
+
             try:
-                requests.post(
-                    url,
-                    json=data,
-                    timeout=1,
-                )
-            except:
+                with requests.Session() as session:
+                    session.headers.update({"Connection": "close"})
+                    response = session.post(
+                        url,
+                        json=data,
+                        timeout=(1, 1),
+                        headers={"Connection": "close"},
+                    )
+                    response.close()
+            except Exception:
                 pass
+            finally:
+                # Restore original logging level
+                urllib3_logger.setLevel(original_level)
+
+        threads = []
+        for url in URLS:
+            thread = threading.Thread(target=send_request, args=(url, data), daemon=True)
+            thread.start()
+            threads.append(thread)
+
+        for thread in threads:
+            thread.join(timeout=2)
 
     def removeFinishedFlowFromRunningFlows(self, flowPath: str):
         if self.baseURL is None:

@@ -106,11 +106,6 @@ class ErrorRunningBlock(BlocksException):
     Custom error running block exception
     """
 
-    def __str__(self) -> str:
-        return "Block '{blockName}' ({blockID}) failed: {message}".format(
-            blockName=self.block.name, blockID=self.block.id, message=self.message
-        )
-
 
 class StoppedFlowException(Exception):
     """
