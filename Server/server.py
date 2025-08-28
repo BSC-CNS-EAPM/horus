@@ -2913,7 +2913,9 @@ class HorusServer:
                     not self.webAppManager
                     or not self.webAppManager.userManagement.requireRegistration
                 ):
-                    return flask.jsonify({"ok": True, "logged": False})
+                    return flask.jsonify(
+                        {"ok": True, "logged": False, "msg": "No user registration required"}
+                    )
 
                 if currentUser and currentUser.is_authenticated:
 
