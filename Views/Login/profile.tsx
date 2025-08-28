@@ -67,7 +67,7 @@ export function useUser() {
     const data = await response.json();
 
     if (!data.logged) {
-      window.location.href = "/users/login";
+      return;
     }
 
     setUserData(data.user);
