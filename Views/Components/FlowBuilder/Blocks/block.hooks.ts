@@ -47,7 +47,7 @@ export type BlockViewState = {
     handleVariableChange: (
       value: any,
       variable: PluginVariable,
-      groupID?: string,
+      groupID?: string
     ) => void;
     handleSelectedInputGroupChange: (direction: "up" | "down") => void;
   };
@@ -115,6 +115,15 @@ export function useBlockView({
       },
     });
   };
+
+  // Update the params of the block logs panel when opened
+  useEffect(() => {
+    const logsPanelID = blockLogsPanelID(block);
+    const exists = dockApi?.getPanel(logsPanelID);
+    exists?.api.updateParameters({
+      block: block,
+    });
+  }, [block, dockApi]);
 
   const handleSelectedInputGroupChange = (direction: "up" | "down") => {
     if (block.inputs.length === 1) {
@@ -194,7 +203,7 @@ export function useBlockView({
         blockHooks?.handleBlockChanges([block]);
       }
     },
-    [block, blockHooks, isFlowActive],
+    [block, blockHooks, isFlowActive]
   );
 
   // Update the params of the block variables panel when opened
@@ -202,8 +211,9 @@ export function useBlockView({
     const exists = dockApi?.getPanel(panelID);
     exists?.api.updateParameters({
       handleVariableChange,
+      block: block,
     });
-  }, [dockApi, handleVariableChange, panelID]);
+  }, [block, dockApi, handleVariableChange, panelID]);
 
   const style: CSSProperties = {
     top: 0,
