@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 
 // Horus components
 import {
@@ -54,6 +54,10 @@ import { navigateTo } from "@/Utils/navigationService";
 import SmilesIcon from "./Icons/Smiles";
 import StopIcon from "./Icons/Stop";
 import { queryClient } from "@/Main";
+import AppButton from "../appbutton";
+import { useSettings } from "@/Main/app";
+import { IconReload } from "@tabler/icons-react";
+import RotatingLines from "../RotatingLines/rotatinglines";
 
 // Define the logos for the shortcuts
 const modifierKeyLogo: string = navigator.userAgent.includes("Mac")
@@ -501,6 +505,9 @@ export default function HorusToolbar() {
     },
   ];
 
+  const [reloadingPlugins, setReloadingPlugins] = useState(false);
+  const horusSettings = useSettings();
+
   return (
     <div className="flex flex-row justify-between items-center toolbar">
       <div className="flex flex-row gap-1 ml-1 mr-1 h-full">
@@ -508,8 +515,46 @@ export default function HorusToolbar() {
           <ToolbarMenu key={index} {...menu} />
         ))}
       </div>
-      <div className="mr-1">
-        <HorusSearch pages={pages} />
+      <div className="flex flex-row items-center gap-2">
+        {horusSettings?.["developmentMode"]?.value && (
+          <AppButton
+            disabled={reloadingPlugins}
+            title="Reload plugins"
+            action={async () => {
+              setReloadingPlugins(true);
+              horusGet("/api/plugins/reload")
+                .then(() => {
+                  // Refetch the block list after reloading plugins
+                  return queryClient.invalidateQueries({
+                    queryKey: ["blocklist"],
+                  });
+                })
+                .then(() =>
+                  horusAlert(
+                    "Plugins reloaded! Blocks in the flow builder that changed need to be replaced"
+                  )
+                )
+                .finally(() => setReloadingPlugins(false));
+            }}
+          >
+            <div className="flex flex-row items-center gap-2">
+              {reloadingPlugins ? (
+                <>
+                  <RotatingLines size="16px" />
+                  Reloading plugins...
+                </>
+              ) : (
+                <>
+                  <IconReload size="18px" />
+                  Reload plugins
+                </>
+              )}
+            </div>
+          </AppButton>
+        )}
+        <div className="mr-1">
+          <HorusSearch pages={pages} />
+        </div>
       </div>
     </div>
   );
