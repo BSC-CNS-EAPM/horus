@@ -84,6 +84,10 @@ export function ToolbarMenu(props: ToolBarMenuProps) {
     return <></>;
   }
 
+  if (props.items?.length === 0 && !(props.link || props.onClick)) {
+    return <></>;
+  }
+
   return (
     <div className="h-full cursor-pointer">
       {props.link || props.onClick ? (
@@ -124,7 +128,7 @@ export function ToolbarMenu(props: ToolBarMenuProps) {
                       />
                     )}
                   </Menu.Item>
-                ),
+                )
               )}
             </Menu.Items>
           </Transition>
