@@ -2031,10 +2031,13 @@ class HorusServer:
                         os.remove(path)
                         return response
 
+                # Always send as a binary blob, never as application/json
+                # Sending a .json file was causing issues for the fronten, thinking it was an error
+                # instead of the file
                 return flask.send_file(
                     path,
                     download_name=os.path.basename(path),
-                    mimetype=mimetypes.guess_type(path)[0],
+                    mimetype="application/octet-stream",
                     as_attachment=True,
                 )
             except Exception as exc:
