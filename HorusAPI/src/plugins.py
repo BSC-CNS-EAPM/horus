@@ -3366,11 +3366,10 @@ class CustomBlockParser:
 
         action: Optional[Callable] = None
 
+        # Prepare a namespace dictionary where the exec will execute
+        exec_namespace = {}
         if "action" in block:
             action_code = block["action"]
-
-            # Prepare a namespace dictionary where the exec will execute
-            exec_namespace = {}
 
             # Execute the code; this should define 'customBlock' in exec_namespace
             exec(action_code, exec_namespace)
@@ -3384,12 +3383,9 @@ class CustomBlockParser:
 
         # If the block is of type SLURM, parse the finalAction
         finalAction: Optional[Callable] = None
-        if block.get("blockType") == PluginBlockTypes.SLURM:
+        if block.get("type") == PluginBlockTypes.SLURM:
             if "finalAction" in block:
                 finalAction_code = block["finalAction"]
-
-                # Prepare a namespace dictionary where the exec will execute
-                exec_namespace = {}
 
                 # Execute the code; this should define 'customBlock' in exec_namespace
                 exec(finalAction_code, exec_namespace)
@@ -3402,7 +3398,7 @@ class CustomBlockParser:
                     )
 
         # Create a PluginBlock from the block dictionary
-        if block.get("blockType") == PluginBlockTypes.SLURM:
+        if block.get("type") == PluginBlockTypes.SLURM:
             b = SlurmBlock(
                 name=block["name"],
                 description=block["description"],
@@ -3415,7 +3411,7 @@ class CustomBlockParser:
                 failOnSlurmError=block.get("failOnSlurmError", True),
                 category=block["category"],
             )
-        elif block.get("blockType") == PluginBlockTypes.INPUT:
+        elif block.get("type") == PluginBlockTypes.INPUT:
             b = InputBlock(
                 name=block["name"],
                 description=block["description"],
