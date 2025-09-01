@@ -1,13 +1,10 @@
 // React
 import { createRef, useContext, useEffect } from "react";
-
-// Horus web-server
-import { socket } from "../../Utils/socket";
-
 // Terminal component
 // @ts-ignore
 import Terminal from "react-console-emulator";
-
+// Horus web-server
+import { socket } from "../../Utils/socket";
 // Terminal commands
 import { DockContext, PANEL_REGISTRY, togglePanel } from "../MainApp/PanelView";
 import { isMolstarLoaded } from "../Molstar/HorusWrapper/horusmolstar";
@@ -70,7 +67,7 @@ export default function HorusTerm() {
         usage: "exit",
         fn: () => {
           togglePanel({
-            dockApi: dockApi,
+            dockApi,
             component: PANEL_REGISTRY.terminal.component,
             panelID: PANEL_REGISTRY.terminal.id,
           });
@@ -103,7 +100,7 @@ export default function HorusTerm() {
         fn: (...args: string[]) => {
           // The residue ID is the first argument (if provided)
           // The user can just type focus -r <residueID> and the residue ID will be the first argument
-          let structureLabel = args[0];
+          let structureLabel: string | undefined = args[0];
 
           // Check that the structure label is not -r, -c or -s
           if (
@@ -120,7 +117,7 @@ export default function HorusTerm() {
             if (arg === "-r") {
               // The residue ID must be an integer
               try {
-                acc.resID = parseInt(args[index + 1]!);
+                acc.resID = parseInt(args[index + 1]!, 10);
               } catch (e) {
                 return "The residue ID must be an integer.";
               }
@@ -129,7 +126,7 @@ export default function HorusTerm() {
             } else if (arg === "-s") {
               // The surround radius must be an integer
               try {
-                acc.surroundRadius = parseInt(args[index + 1]!);
+                acc.surroundRadius = parseInt(args[index + 1]!, 10);
               } catch (e) {
                 return "The surround radius must be an integer.";
               }
@@ -149,7 +146,7 @@ export default function HorusTerm() {
               options.surroundRadius,
             );
           } catch (e: any) {
-            return "Internal error focusing residue: " + e.message;
+            return `Internal error focusing residue: ${e.message}`;
           }
         },
       },
@@ -187,9 +184,9 @@ export default function HorusTerm() {
           if (!chainList || chainList.length === 0) {
             if (structureLabel) {
               return `No chains found in ${structureLabel}`;
-            } else {
-              return "No chains found";
             }
+
+            return "No chains found";
           }
 
           // Parse as a string with \n as a separator
@@ -420,10 +417,10 @@ export default function HorusTerm() {
   useEffect(() => {
     const printTerm = (data: string | Buffer) => {
       // Always convert to string
-      data = data.toString();
+      const data_string = data.toString();
 
       // Push the data to the terminal
-      term.current?.pushToStdout(data);
+      term.current?.pushToStdout(data_string);
 
       // Scroll to the bottom of the terminal
       term.current?.scrollToBottom();
@@ -440,7 +437,7 @@ export default function HorusTerm() {
   return (
     <Terminal
       commands={getCommands}
-      promptLabel={"horus:~$ "}
+      promptLabel="horus:~$ "
       ref={term}
       style={{
         borderRadius: "0px",
