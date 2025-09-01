@@ -128,8 +128,12 @@ function IFrameLoader({
 
     let url: null | string = page?.url ?? null;
 
+    if (url) {
+      url += page.path ?? "";
+    }
+
     if (!url) {
-      url = `/plugins/pages/${page.id}`;
+      url = `/plugins/pages/${page.id}${page.path ?? ""}`;
     }
 
     // Always end the URL with a final slash,

@@ -173,6 +173,7 @@ const BLOCK_VARIABLES_PANEL_EXTENSION: AddPanelOptions = {
   ...BLOCK_VARIABLES_PANEL,
   component: "blockVariablesExtension",
   renderer: "always",
+  tabComponent: "extensionsTab",
 };
 
 const BLOCK_LOGS_PANEL: AddPanelOptions = {
@@ -416,8 +417,17 @@ function ExtensionsTab(
     if (page.logo) {
       setExtensionIcon(<img className="w-5 h-5" src={page.logo} alt="logo" />);
     } else {
-      // Get the logo from the ID
-      const pluginID = page?.url?.split("/").pop()?.split(".")[0];
+      // Get the logo from the ID using regex
+      // Example: "/plugins/pages/xna_hub.rnaefficacy_results/#/rnaefficacy/results"
+      const match = page?.url?.match(/\/plugins\/pages\/([^\.\/]+)\./);
+      let pluginID = match ? match[1] : page.plugin;
+
+      if (!pluginID) {
+        // Try to extract the plugin ID from the page ID
+        const pageID = page?.id;
+        const pageMatch = pageID?.match(/([^\.\/]+)\./);
+        pluginID = pageMatch ? pageMatch[1] : undefined;
+      }
 
       if (!pluginID) {
         return;
@@ -476,6 +486,7 @@ function ConfirmCloseTab(props: IDockviewDefaultTabProps) {
   );
 }
 
+// Tabs
 const headerComponents = {
   extensionsTab: ExtensionsTab,
   editableTab: (props: IDockviewPanelHeaderProps) => {
