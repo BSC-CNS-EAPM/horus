@@ -58,7 +58,7 @@ function BlockLogsViewWithTabs({ block }: { block: Block }) {
     // If development mode is enabled, add tabs for viewing the block state
     if (settings?.["developmentMode"]?.value) {
       t["state"] = {
-        title: "Dev Block",
+        title: "Debug Block",
         icon: <IconCode />,
         view: (
           <Editor
