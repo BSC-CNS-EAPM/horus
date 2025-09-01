@@ -39,6 +39,7 @@ export type PluginPage = {
   dataID?: number;
   developmentPage?: boolean;
   onFocus?: () => void;
+  path?: string;
 };
 
 export type PluginPageExtensionEvent = {
