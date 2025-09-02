@@ -159,7 +159,6 @@ class TempFile:
         Deletes the tmp folder.
         """
         # Delete the tmp folder
-        import shutil
 
         shutil.rmtree(self.tmpFolder)
 
@@ -248,7 +247,7 @@ def structureToFile(structure: dict, filePathToWrite: typing.Optional[str] = Non
     return filePathToWrite
 
 
-def multipleStructuresToFolder(structureList: list, path: typing.Optional[str]):
+def multipleStructuresToFolder(structureList: list, path: typing.Optional[str] = None) -> str:
     """
     Save more than one Mol* structure into a folder
     """
