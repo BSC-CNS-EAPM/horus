@@ -1201,10 +1201,20 @@ class PluginManager(metaclass=HorusSingleton):
                     if vcsInfo is not None:
                         name = vcsInfo + "+" + name
 
+                    # The version of a pip dependency can be found from the folder name,
+                    # by splitting by "-" and taking the last part
+                    regex_version = re.search(r"-(.+).dist-info", idep)
+                    try:
+                        version = regex_version.group(1) if regex_version else "unknown"
+                    except IndexError:
+                        version = "unknown"
+
+                    # Sometimes the name contains the git specified version after @
+                    if "@" in name:
+                        name = name.split("@")[0]
+
                     # Add the git dependency to the installed dependencies
-                    installedDeps[name.lower()] = directUrl.get("vcs_info", {}).get(
-                        "commit_id", "unknown"
-                    )
+                    installedDeps[name.lower()] = version
 
         def versionSatisfies(
             installedVer: version_module.Version, specs: typing.Tuple[str, str]
@@ -1232,10 +1242,10 @@ class PluginManager(metaclass=HorusSingleton):
         # Iterate through the required dependencies
         depsToInstallStringList = []
         currentString = None
-        name = ""
         for dep in dependencies:
+            name = None
             parsedDep = dep.replace(" --no-deps", "").replace(" --isolated", "")
-            versionSpecs = None
+            versionSpecs: typing.Optional[list[typing.Tuple[str, str]]] = None
             if not parsedDep.startswith("git+"):
                 try:
                     requirement = pkg_resources.Requirement.parse(parsedDep)
@@ -1246,6 +1256,11 @@ class PluginManager(metaclass=HorusSingleton):
                         "Invalid requirement specification: %s", parsedDep
                     )
                     continue
+            else:
+                name = parsedDep.split("@")[0] if "@" in parsedDep else parsedDep
+
+                # For a git dependency, the version may have been specified after @ on the URL
+                versionSpecs = [("==", parsedDep.split("@")[-1])] if "@" in parsedDep else None
 
             # Check if the dependency is installed and if the version matches
             if name in installedDeps:
