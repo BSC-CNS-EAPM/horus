@@ -8,7 +8,7 @@ import {
   AddPanelOptions,
   DockviewPanelApi,
   IDockviewHeaderActionsProps,
-  IDockviewDefaultTabProps,
+  IDockviewDefaultTabProps
 } from "dockview";
 import { themeLight } from "dockview";
 
@@ -17,13 +17,13 @@ import "dockview/dist/styles/dockview.css";
 import Molstar from "../Molstar/molstar";
 import {
   isMolstarLoaded,
-  LoadMoleculeFileType,
+  LoadMoleculeFileType
 } from "../Molstar/HorusWrapper/horusmolstar";
 import {
   DebugFlow,
   FlowBuilderView,
   ModalContainer,
-  ServerFileExplorerContainers,
+  ServerFileExplorerContainers
 } from "../FlowBuilder/flow.view";
 import MolStarIcon from "../Toolbar/Icons/MolStar";
 import HorusTerm from "../Console/console";
@@ -32,7 +32,7 @@ import IFrameLoader from "../IframeLoader/iframeloader";
 import {
   FlowStatus,
   PluginPage,
-  PluginPageExtensionEvent,
+  PluginPageExtensionEvent
 } from "../FlowBuilder/flow.types";
 import {
   createContext,
@@ -41,7 +41,7 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useState,
+  useState
 } from "react";
 import { FlowStatusView } from "../FlowStatus/flow_status";
 import { Error } from "@/Error/ShemsuError";
@@ -86,9 +86,9 @@ const MOLSTAR_PANEL: AddPanelOptions = {
   renderer: "always",
   floating: false,
   position: {
-    direction: "right",
+    direction: "right"
   },
-  tabComponent: "confirmClose",
+  tabComponent: "confirmClose"
 };
 
 const SMILES_PANEL: AddPanelOptions = {
@@ -98,16 +98,16 @@ const SMILES_PANEL: AddPanelOptions = {
   title: "Smiles",
   floating: false,
   position: {
-    direction: "right",
+    direction: "right"
   },
-  tabComponent: "confirmClose",
+  tabComponent: "confirmClose"
 };
 
 const ERROR_PANEL: AddPanelOptions = {
   id: "error",
   title: "Error",
   component: "error",
-  renderer: "always",
+  renderer: "always"
 };
 
 const EXTENSIONS_PANEL: AddPanelOptions = {
@@ -115,7 +115,7 @@ const EXTENSIONS_PANEL: AddPanelOptions = {
   title: "Extensions",
   component: "extensions",
   renderer: "always",
-  tabComponent: "extensionsTab",
+  tabComponent: "extensionsTab"
 };
 
 const FLOW_PANEL: AddPanelOptions = {
@@ -123,42 +123,42 @@ const FLOW_PANEL: AddPanelOptions = {
   title: "New flow",
   component: "flow",
   renderer: "always",
-  tabComponent: "flow",
+  tabComponent: "flow"
 };
 
 const TERMINAL_PANEL: AddPanelOptions = {
   id: "terminal",
   title: "Terminal",
   component: "terminal",
-  renderer: "always",
+  renderer: "always"
 };
 
 const DEBUG_FLOW_PANEL: AddPanelOptions = {
   id: "debugFlow",
   title: "Debug Flow",
   component: "debugFlow",
-  renderer: "always",
+  renderer: "always"
 };
 
 const HORUS_SETTINGS_PANEL: AddPanelOptions = {
   id: "horusSettings",
   title: "Settings",
   component: "horusSettings",
-  renderer: "always",
+  renderer: "always"
 };
 
 const HORUS_PLUGINS_PANEL: AddPanelOptions = {
   id: "horusPlugins",
   title: "Plugins",
   component: "horusPlugins",
-  renderer: "always",
+  renderer: "always"
 };
 
 const HORUS_REMOTES_PANEL: AddPanelOptions = {
   id: "horusRemotes",
   title: "Remotes",
   component: "horusRemotes",
-  renderer: "always",
+  renderer: "always"
 };
 
 const BLOCK_VARIABLES_PANEL: AddPanelOptions = {
@@ -166,13 +166,14 @@ const BLOCK_VARIABLES_PANEL: AddPanelOptions = {
   title: "Block Variables",
   component: "blockVariables",
   renderer: "always",
-  floating: false,
+  floating: false
 };
 
 const BLOCK_VARIABLES_PANEL_EXTENSION: AddPanelOptions = {
   ...BLOCK_VARIABLES_PANEL,
   component: "blockVariablesExtension",
   renderer: "always",
+  tabComponent: "extensionsTab"
 };
 
 const BLOCK_LOGS_PANEL: AddPanelOptions = {
@@ -180,7 +181,7 @@ const BLOCK_LOGS_PANEL: AddPanelOptions = {
   title: "Block Logs",
   component: "blockLogs",
   renderer: "always",
-  floating: false,
+  floating: false
 };
 
 const CODE_EDITOR_PANEL: AddPanelOptions = {
@@ -188,7 +189,7 @@ const CODE_EDITOR_PANEL: AddPanelOptions = {
   title: "Code Editor",
   component: "codeEditor",
   renderer: "always",
-  floating: false,
+  floating: false
 };
 
 const FILE_EDITOR_PANEL: AddPanelOptions = {
@@ -196,7 +197,7 @@ const FILE_EDITOR_PANEL: AddPanelOptions = {
   title: "File Editor",
   component: "fileEditor",
   renderer: "always",
-  floating: false,
+  floating: false
 };
 
 const BLOCK_REGISTRY_PANEL: AddPanelOptions = {
@@ -206,10 +207,10 @@ const BLOCK_REGISTRY_PANEL: AddPanelOptions = {
   renderer: "always",
   floating: false,
   position: {
-    direction: "left",
+    direction: "left"
   },
   minimumWidth: 300,
-  maximumWidth: 300,
+  maximumWidth: 300
 };
 
 const MOLECULE_PLOTTER_PANEL: AddPanelOptions = {
@@ -217,14 +218,14 @@ const MOLECULE_PLOTTER_PANEL: AddPanelOptions = {
   title: "Molecule Plotter",
   component: "moleculePlotter",
   renderer: "always",
-  tabComponent: "editableTab",
+  tabComponent: "editableTab"
 };
 
 const BLOCK_EDITOR_PANEL: AddPanelOptions = {
   id: "blockEditor",
   title: "Block Editor",
   component: "blockEditor",
-  renderer: "always",
+  renderer: "always"
 };
 
 // To be used in other components
@@ -246,7 +247,7 @@ export const PANEL_REGISTRY = {
   fileEditor: FILE_EDITOR_PANEL,
   blockRegistry: BLOCK_REGISTRY_PANEL,
   moleculePlotter: MOLECULE_PLOTTER_PANEL,
-  blockEditor: BLOCK_EDITOR_PANEL,
+  blockEditor: BLOCK_EDITOR_PANEL
 };
 
 // For DockApi
@@ -267,7 +268,7 @@ const PANEL_ICONS: Record<string, ReactElement> = {
   codeEditor: <CodeIcon />,
   fileEditor: <IconFile />,
   moleculePlotter: <PlotIcon />,
-  blockEditor: <SettingsIcon />,
+  blockEditor: <SettingsIcon />
 };
 
 function FlowTab(props: IDockviewPanelHeaderProps) {
@@ -416,8 +417,17 @@ function ExtensionsTab(
     if (page.logo) {
       setExtensionIcon(<img className="w-5 h-5" src={page.logo} alt="logo" />);
     } else {
-      // Get the logo from the ID
-      const pluginID = page?.url?.split("/").pop()?.split(".")[0];
+      // Get the logo from the ID using regex
+      // Example: "/plugins/pages/xna_hub.rnaefficacy_results/#/rnaefficacy/results"
+      const match = page?.url?.match(/\/plugins\/pages\/([^\.\/]+)\./);
+      let pluginID = match ? match[1] : page.plugin;
+
+      if (!pluginID) {
+        // Try to extract the plugin ID from the page ID
+        const pageID = page?.id;
+        const pageMatch = pageID?.match(/([^\.\/]+)\./);
+        pluginID = pageMatch ? pageMatch[1] : undefined;
+      }
 
       if (!pluginID) {
         return;
@@ -476,6 +486,7 @@ function ConfirmCloseTab(props: IDockviewDefaultTabProps) {
   );
 }
 
+// Tabs
 const headerComponents = {
   extensionsTab: ExtensionsTab,
   editableTab: (props: IDockviewPanelHeaderProps) => {
@@ -484,7 +495,7 @@ const headerComponents = {
   },
   flow: FlowTab,
   confirmClose: ConfirmCloseTab,
-  default: BaseTab,
+  default: BaseTab
 };
 
 export function addBlockRegistryGroup(api: DockviewApi) {
@@ -495,15 +506,15 @@ export function addBlockRegistryGroup(api: DockviewApi) {
       referenceGroup: api.addGroup({
         ...BLOCK_REGISTRY_PANEL,
         referencePanel: FLOW_PANEL.id,
-        locked: true,
-      }),
-    },
+        locked: true
+      })
+    }
   });
 }
 
 async function defaultConfig({
   urlProps,
-  api,
+  api
 }: {
   urlProps: any;
   api: DockviewApi;
@@ -531,7 +542,7 @@ async function defaultConfig({
   if (urlProps.has("ext")) {
     const page: PluginPage = {
       name: urlProps.get("ext"),
-      url: urlProps.get("url"),
+      url: urlProps.get("url")
     };
 
     api.addPanel({ ...EXTENSIONS_PANEL, params: page });
@@ -620,7 +631,7 @@ const components: Record<string, DockView> = {
         }}
       />
     );
-  },
+  }
 };
 
 type PanelFunctions = {
@@ -638,7 +649,7 @@ export function addPanel({
   panelID,
   noFocus,
   params,
-  title,
+  title
 }: PanelFunctions) {
   if (!dockApi) {
     return;
@@ -662,13 +673,13 @@ export function addPanel({
     params: params,
     inactive: noFocus,
     floating: panel.floating ?? false,
-    position: panel.position,
+    position: panel.position
   };
 
   const referencePanel = dockApi.getPanel(FLOW_PANEL.id);
   if (referencePanel && !panelToAdd.position) {
     panelToAdd.position = {
-      referencePanel: referencePanel,
+      referencePanel: referencePanel
     };
   }
 
@@ -680,7 +691,7 @@ export function togglePanel({
   component,
   panelID,
   params,
-  title,
+  title
 }: PanelFunctions & { panelID: string }): ReturnType<typeof addPanel> | void {
   if (!dockApi) {
     return;
@@ -716,7 +727,7 @@ type DockContextType = {
   dockApi: DockviewApi | null;
 };
 export const DockContext = createContext<DockContextType>({
-  dockApi: null,
+  dockApi: null
 });
 
 const Icon = (props: {
@@ -734,7 +745,7 @@ const Icon = (props: {
         width: "30px",
         height: "100%",
         color: "black",
-        fontSize: "18px",
+        fontSize: "18px"
       }}
       onClick={props.onClick}
     >
@@ -795,7 +806,7 @@ const WatermarkComponent = () => {
           addPanel({
             dockApi: dockApi,
             component: PANEL_REGISTRY.flow.component,
-            panelID: PANEL_REGISTRY.flow.id,
+            panelID: PANEL_REGISTRY.flow.id
           });
         }}
       >
@@ -808,7 +819,7 @@ const WatermarkComponent = () => {
 export function handleExtensionPanelCreation({
   dockApi,
   extension,
-  placedID,
+  placedID
 }: {
   dockApi: DockviewApi | null;
   extension: PluginPage & { pageID?: string; pluginID?: string };
@@ -824,8 +835,8 @@ export function handleExtensionPanelCreation({
       params: {
         ...extension.data,
         title: extension.name,
-        placedID: placedID,
-      },
+        placedID: placedID
+      }
     });
     return;
   }
@@ -836,8 +847,8 @@ export function handleExtensionPanelCreation({
     panelID: `extensions-${placedID}-${extension.dataID}`,
     params: {
       ...extension,
-      placedID: placedID,
-    },
+      placedID: placedID
+    }
   });
 }
 
@@ -879,7 +890,7 @@ export function HorusPanelView() {
         const incomingParams = params as PluginPage;
         params = {
           ...incomingParams,
-          url: `/plugins/pages/${incomingParams?.plugin}.${incomingParams?.id}`,
+          url: `/plugins/pages/${incomingParams?.plugin}.${incomingParams?.id}`
         } as PluginPage;
       }
 
@@ -889,7 +900,7 @@ export function HorusPanelView() {
           PANEL_REGISTRY[type].component ?? PANEL_REGISTRY.error.component,
         panelID:
           (id as string) || PANEL_REGISTRY[type].id || PANEL_REGISTRY.error.id,
-        params: params,
+        params: params
       });
     };
 
@@ -905,7 +916,7 @@ export function HorusPanelView() {
       name,
       path,
       readOnly,
-      format,
+      format
     }: {
       path: string;
       name?: string;
@@ -921,8 +932,8 @@ export function HorusPanelView() {
           title: name,
           path,
           readOnly,
-          format,
-        },
+          format
+        }
       });
     };
 
@@ -947,7 +958,7 @@ export function HorusPanelView() {
         component: e.detail.component,
         panelID: e.detail.panelID,
         noFocus: e.detail.noFocus,
-        params: e.detail.params,
+        params: e.detail.params
       });
     };
 
@@ -957,7 +968,7 @@ export function HorusPanelView() {
         component: e.detail.component,
         panelID: e.detail.panelID,
         noFocus: e.detail.noFocus,
-        params: e.detail.params,
+        params: e.detail.params
       });
     };
 
@@ -973,7 +984,7 @@ export function HorusPanelView() {
       handleExtensionPanelCreation({
         dockApi,
         extension: e,
-        placedID: e.placedID,
+        placedID: e.placedID
       });
     };
 
@@ -1000,7 +1011,7 @@ export function HorusPanelView() {
     >
       <DockContext.Provider
         value={{
-          dockApi: dockApi,
+          dockApi: dockApi
         }}
       >
         <FlowBuilderContext.Provider value={flowBuilderState}>
@@ -1060,7 +1071,7 @@ export function hooksInitializer() {
     };
 
     window.molstar = {
-      loadMoleculeFile: hookFunction,
+      loadMoleculeFile: hookFunction
     };
   }
 }

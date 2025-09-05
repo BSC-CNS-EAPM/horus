@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 export function FlowElapsed({
   startedTime,
   finishedTime,
-  elapsed,
+  elapsed
 }: {
   startedTime: number | undefined;
   finishedTime: number | undefined;
@@ -60,7 +60,7 @@ export function FlowElapsed({
 function HoursMinutesSeconds({
   hours,
   minutes,
-  seconds,
+  seconds
 }: {
   hours: number;
   minutes: number;

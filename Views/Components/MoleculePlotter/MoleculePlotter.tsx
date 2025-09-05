@@ -7,7 +7,7 @@ import {
   getDataColor,
   HorusPlotly,
   HorusPlotData,
-  HorusPlotlyAPI,
+  HorusPlotlyAPI
 } from "./HorusPlot";
 import AppButton from "../appbutton";
 
@@ -30,7 +30,7 @@ function getAxisValues(smiles: HorusSmilesType[], axis: string) {
 }
 
 export function MoleculePlotter({
-  smilesToPlot,
+  smilesToPlot
 }: {
   smilesToPlot?: HorusSmilesType[];
 }) {
@@ -44,12 +44,12 @@ export function MoleculePlotter({
 
   const x = useMemo(
     () => getAxisValues(smilesToPlot ?? [], xAxis),
-    [smilesToPlot, xAxis],
+    [smilesToPlot, xAxis]
   );
 
   const y = useMemo(
     () => getAxisValues(smilesToPlot ?? [], yAxis),
-    [smilesToPlot, yAxis],
+    [smilesToPlot, yAxis]
   );
 
   const plotData = useMemo(() => {
@@ -72,10 +72,10 @@ export function MoleculePlotter({
             color: "rgba(75, 192, 192, 0.7)",
             linewidth: 2,
             line: { width: 2, color: "rgba(75, 192, 192, 1)" },
-            symbol: "circle",
+            symbol: "circle"
           },
-          name: "All Data", // Add a name for the legend
-        },
+          name: "All Data" // Add a name for the legend
+        }
       ] as HorusPlotData[];
     }
 
@@ -104,8 +104,8 @@ export function MoleculePlotter({
           color: getDataColor(index), // Use a consistent color for each unique value
           linewidth: 2,
           line: { width: 2, color: getDataColor(index) },
-          symbol: "circle",
-        },
+          symbol: "circle"
+        }
       } as HorusPlotData;
     });
   }, [smilesToPlot, colorBy, x, y, plotType]);
@@ -121,7 +121,7 @@ export function MoleculePlotter({
   }, [smilesToPlot]);
 
   const [clickedSmiles, setClickedSmiles] = useState<HorusSmilesType | null>(
-    null,
+    null
   );
 
   const onPointClick = useCallback(
@@ -131,7 +131,7 @@ export function MoleculePlotter({
         setClickedSmiles(smiles);
       }
     },
-    [smilesToPlot],
+    [smilesToPlot]
   );
 
   if (!smilesToPlot) {
@@ -220,7 +220,7 @@ export function MoleculePlotter({
                     format: "png",
                     width,
                     height,
-                    filename,
+                    filename
                   })
                   .then((base64: string) => {
                     parent.horus.saveFile(base64ToFile(base64, filename));
@@ -236,8 +236,8 @@ export function MoleculePlotter({
         ref={plotRef}
         container={{
           style: {
-            height: "calc(100% - 85px)",
-          },
+            height: "calc(100% - 85px)"
+          }
         }}
         xAxisTitle={xAxis}
         yAxisTitle={yAxis}
@@ -273,7 +273,7 @@ function PlotSettings({ children }: { children: React.ReactNode }) {
     <div
       className={`relative z-10 flex flex-col pt-2 items-center`}
       style={{
-        transform: "translateY(10px)",
+        transform: "translateY(10px)"
       }}
     >
       <HorusContainer
@@ -294,7 +294,7 @@ function PlotSettings({ children }: { children: React.ReactNode }) {
         style={{
           transform: "translateY(45px)",
           maxWidth: "500px",
-          paddingInline: "0.5rem",
+          paddingInline: "0.5rem"
         }}
         className={`fixed z-10 settings-children mt-2 ${isHovered ? "settings-children-shown plot-settings-shown" : ""}`}
       >

@@ -7,7 +7,7 @@ import {
   useEffect,
   useMemo,
   useRef,
-  useState,
+  useState
 } from "react";
 
 // 3rd party libraries
@@ -160,7 +160,7 @@ function UsersTableView() {
 function _UserTable({
   users,
   groups,
-  getDatabase,
+  getDatabase
 }: {
   users: UsersDatabase[];
   groups: string[];
@@ -197,7 +197,7 @@ function _UserTable({
       "maxFlows",
       "maxTemplates",
       "maxStorage",
-      "maxTime",
+      "maxTime"
     ];
 
     const sampleUser = users[0]!;
@@ -211,7 +211,7 @@ function _UserTable({
         cellEditorParams:
           k === "group"
             ? {
-                values: groups,
+                values: groups
               }
             : undefined,
         cellRenderer: undefined as any,
@@ -224,7 +224,7 @@ function _UserTable({
 
                 return params.value;
               }
-            : undefined,
+            : undefined
       };
     });
 
@@ -245,7 +245,7 @@ function _UserTable({
                 if (confirmDelete) {
                   horusDelete({
                     url: "/users/admintools/deleteuser",
-                    body: { email },
+                    body: { email }
                   }).then(async (res) => {
                     // Check if the response is ok
                     const response = await res.json();
@@ -276,11 +276,11 @@ function _UserTable({
 
                 const header = {
                   "Content-Type": "application/json",
-                  "Access-Control-Allow-Origin": "*",
+                  "Access-Control-Allow-Origin": "*"
                 };
 
                 const body = JSON.stringify({
-                  email: email,
+                  email: email
                 });
 
                 if (confirmChangePassword) {
@@ -310,7 +310,7 @@ function _UserTable({
       },
       cellEditor: undefined,
       cellEditorParams: undefined,
-      valueFormatter: undefined,
+      valueFormatter: undefined
     });
 
     return generatedColumns;
@@ -330,7 +330,7 @@ function _UserTable({
   return (
     <HorusTable
       allowDownload={{
-        filename: "users.csv",
+        filename: "users.csv"
       }}
       ref={tableRef}
       columnDefs={columns}
@@ -375,7 +375,7 @@ function FlowsTableView() {
       return {
         field: f,
         filter: true,
-        flex: 1,
+        flex: 1
       };
     });
   }, [database]);
@@ -504,7 +504,7 @@ function TopBar() {
         borderRight: "none",
         borderRadius: "0",
         width: "100%",
-        height: "5rem",
+        height: "5rem"
       }}
     >
       <div>
@@ -527,7 +527,7 @@ function ManagePlugins() {
         // Set the developmentMode to true artifically in order to show the "reload plugins" button
         // @ts-ignore
         window.horusSettings["developmentMode"] = {
-          value: true,
+          value: true
         };
 
         adminContext?.setCurrentView(<PluginManager />);
@@ -618,7 +618,7 @@ function GroupDatabaseView() {
   const deleteGroup = async (g: string) => {
     const response = await horusDelete({
       url: "/users/admintools/modify_group",
-      body: { group: g },
+      body: { group: g }
     });
 
     const data = await response.json();
@@ -686,7 +686,7 @@ function GroupDatabaseView() {
                   );
                 }
               }
-            : undefined,
+            : undefined
       };
     });
     //  Add the delete column
@@ -703,7 +703,7 @@ function GroupDatabaseView() {
             <TrashIcon style={{ color: "red" }} />
           </div>
         );
-      },
+      }
     });
 
     return groupsCols;
@@ -744,7 +744,7 @@ function GroupDatabaseView() {
 function ModifyGroupBlocks({
   group,
   blocks,
-  getDatabase,
+  getDatabase
 }: {
   group: string;
   blocks: string;
@@ -766,7 +766,7 @@ function ModifyGroupBlocks({
       </div>
       <BlurredModal
         maxContentSize={{
-          width: "90vw",
+          width: "90vw"
         }}
         overRoot
         show={showModal}
@@ -820,7 +820,7 @@ export function BlockViewModify(props: {
       null,
       JSON.stringify({
         group,
-        blockIDs: editedBlocks.map((b) => b.id),
+        blockIDs: editedBlocks.map((b) => b.id)
       })
     );
 
@@ -858,7 +858,7 @@ export function BlockViewModify(props: {
       className="plugin-variable-value p-4"
       style={{
         height: "70vh",
-        overflow: "auto",
+        overflow: "auto"
       }}
     >
       <div className="flex flex-row gap-2 w-full">
@@ -913,7 +913,7 @@ export function BlockViewModify(props: {
               style={{
                 gap: "1rem",
                 textAlign: "left",
-                paddingInline: "0.5rem",
+                paddingInline: "0.5rem"
               }}
             >
               <input
@@ -949,7 +949,7 @@ export function BlockViewModify(props: {
 function ModifyGroupPages({
   group,
   pages,
-  getDatabase,
+  getDatabase
 }: {
   group: string;
   pages: string;
@@ -975,7 +975,7 @@ function ModifyGroupPages({
           setShowModal(false);
         }}
         maxContentSize={{
-          width: "90vw",
+          width: "90vw"
         }}
       >
         <ExtensionViewModify
@@ -1021,7 +1021,7 @@ export function ExtensionViewModify(props: {
       null,
       JSON.stringify({
         group,
-        pages: editedPages.map((b) => b.id),
+        pages: editedPages.map((b) => b.id)
       })
     );
 
@@ -1059,7 +1059,7 @@ export function ExtensionViewModify(props: {
       className="plugin-variable-value p-4"
       style={{
         height: "70vh",
-        overflow: "auto",
+        overflow: "auto"
       }}
     >
       <div className="flex flex-row gap-2 w-full">
@@ -1114,7 +1114,7 @@ export function ExtensionViewModify(props: {
               style={{
                 gap: "1rem",
                 textAlign: "left",
-                paddingInline: "0.5rem",
+                paddingInline: "0.5rem"
               }}
             >
               <input

@@ -5,7 +5,7 @@ export default function Logo(
   props: DetailedHTMLProps<
     React.ImgHTMLAttributes<HTMLImageElement>,
     HTMLImageElement
-  >,
+  >
 ) {
   return (
     <img
@@ -14,7 +14,7 @@ export default function Logo(
       {...props}
       style={{
         objectFit: "contain",
-        ...props.style,
+        ...props.style
       }}
     />
   );

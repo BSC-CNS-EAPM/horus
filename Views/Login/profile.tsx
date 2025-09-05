@@ -67,7 +67,7 @@ export function useUser() {
     const data = await response.json();
 
     if (!data.logged) {
-      window.location.href = "/users/login";
+      return;
     }
 
     setUserData(data.user);
@@ -137,7 +137,7 @@ export default function Profile() {
     <div
       className="container mx-auto px-4"
       style={{
-        maxWidth: "600px",
+        maxWidth: "600px"
       }}
     >
       <Logo className="h-32 mx-auto my-4" />
@@ -177,7 +177,7 @@ export default function Profile() {
               <a
                 className="plugin-block mb-2 p-2 flex flex-row justify-between items-center cursor-pointer"
                 style={{
-                  color: "var(--waring-orange)",
+                  color: "var(--waring-orange)"
                 }}
                 href="/users/admintools"
                 target="_blank"
@@ -203,7 +203,7 @@ export default function Profile() {
               className="bsc-btn animated-gradient w-100 cursor-pointer font-bold"
               onClick={deleteAccount}
               style={{
-                color: "red",
+                color: "red"
               }}
             >
               Delete account

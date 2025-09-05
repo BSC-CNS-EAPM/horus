@@ -1,9 +1,9 @@
 // Molstar wrapper
 import HorusMolstar, {
-  LoadMoleculeFileType,
+  LoadMoleculeFileType
 } from "../Components/Molstar/HorusWrapper/horusmolstar";
 import HorusSmilesManager, {
-  HorusSmilesType,
+  HorusSmilesType
 } from "../Components/Smiles/SmilesWrapper/horusSmiles";
 
 // The settings object type
@@ -16,7 +16,7 @@ import Terminal from "react-console-emulator";
 import { getFile, saveFile, updateFile } from "../Components/reusable";
 import {
   Flow,
-  PluginPageExtensionEvent,
+  PluginPageExtensionEvent
 } from "@/Components/FlowBuilder/flow.types";
 
 export {};
@@ -90,7 +90,7 @@ declare global {
         name,
         path,
         readOnly,
-        format,
+        format
       }: {
         path: string;
         name?: string;
@@ -130,7 +130,7 @@ export enum GLOBAL_IDS {
   FLOW_BUILDER_DIV = "flow-builder-div",
   EXTENSIONS_IFRAME = "extensions-iframe",
   EXTENSIONS_FILEPICKER = "extensions-filepicker",
-  FLOW_BUILDER_CONTAINER = "flow-builder-container",
+  FLOW_BUILDER_CONTAINER = "flow-builder-container"
 }
 
 // Define an empty window.horus object
@@ -140,5 +140,5 @@ window.horus = {
   updateFile: updateFile,
   openFile: async () => {
     alert("Open the flow editor before opening files");
-  },
+  }
 };

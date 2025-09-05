@@ -7,7 +7,7 @@ import {
   PluginPage,
   PluginVariable,
   PluginVariableTypes,
-  VariableGroup,
+  VariableGroup
 } from "../flow.types";
 
 // Components
@@ -32,7 +32,7 @@ import {
   ResidueView,
   SphereVariableView,
   StandardResView,
-  StructureVariableView,
+  StructureVariableView
 } from "./molstar_variables";
 
 // Code editor variables
@@ -47,7 +47,7 @@ import {
   addPanel,
   DockContext,
   FlowBuilderContext,
-  PANEL_REGISTRY,
+  PANEL_REGISTRY
 } from "@/Components/MainApp/PanelView";
 import { getIframeExtensionID } from "@/Components/IframeLoader/iframeloader";
 
@@ -119,7 +119,7 @@ export function PluginVariableView(props: PluginVariableViewProps) {
           ? "wait"
           : variable.disabled
             ? "not-allowed"
-            : "auto",
+            : "auto"
       }}
     >
       <div className="flex flex-row w-full justify-between">
@@ -127,7 +127,7 @@ export function PluginVariableView(props: PluginVariableViewProps) {
           {!hideName && (
             <span
               style={{
-                marginRight: "0.5rem",
+                marginRight: "0.5rem"
               }}
               className={`${
                 props.hideDescription
@@ -148,7 +148,7 @@ export function PluginVariableView(props: PluginVariableViewProps) {
               <LockIcon
                 style={{
                   display: "inline",
-                  transform: "translateY(-3px)",
+                  transform: "translateY(-3px)"
                 }}
               />
             </span>
@@ -241,7 +241,7 @@ function VariableListView(props: VariableViewProps) {
         key={variable.id}
         style={{
           minWidth: "200px",
-          textAlign: "center",
+          textAlign: "center"
         }}
         // className="break-all"
       >
@@ -261,7 +261,7 @@ function VariableListView(props: VariableViewProps) {
   const colsNum = cols.length;
 
   const gridColsStyle = {
-    gridTemplateColumns: `repeat(${colsNum}, auto)`,
+    gridTemplateColumns: `repeat(${colsNum}, auto)`
   };
 
   return (
@@ -290,7 +290,7 @@ function VariableListView(props: VariableViewProps) {
                     key={i}
                     variable={{
                       ...variable,
-                      value: value[variable.id],
+                      value: value[variable.id]
                     }}
                     onChange={(
                       value: any,
@@ -638,7 +638,7 @@ function VariableRenderer(props: {
 function DropdownVariableView({
   currentValue,
   variable: variableToRender,
-  onChange,
+  onChange
 }: VariableViewProps) {
   useEffect(() => {
     // If the current value is not set, set i to the first allowed value
@@ -656,7 +656,7 @@ function DropdownVariableView({
     currentValue,
     variableToRender.allowedValues,
     variableToRender.defaultValue,
-    onChange,
+    onChange
   ]);
 
   return (
@@ -882,7 +882,7 @@ function SliderVariableView(props: VariableViewProps) {
         value={currentValue}
         onChange={onChange}
         style={{
-          width: "300%",
+          width: "300%"
         }}
         styles={{
           track: { backgroundColor: "var(--pop-code)" },
@@ -891,8 +891,8 @@ function SliderVariableView(props: VariableViewProps) {
             border: "none",
             outline: "none",
             opacity: 1,
-            borderColor: "black",
-          },
+            borderColor: "black"
+          }
         }}
       />
       <IntegerFloatVariableView
@@ -953,7 +953,7 @@ function ConstrainedSliderVariableView(props: VariableViewProps) {
         onChange={onChange}
         count={1}
         style={{
-          width: "300%",
+          width: "300%"
         }}
         styles={{
           track: { backgroundColor: "var(--pop-code)" },
@@ -962,8 +962,8 @@ function ConstrainedSliderVariableView(props: VariableViewProps) {
             border: "none",
             outline: "none",
             opacity: 1,
-            borderColor: "black",
-          },
+            borderColor: "black"
+          }
         }}
       />
       <IntegerFloatVariableView
@@ -1061,7 +1061,7 @@ function ListView(props: VariableViewProps) {
               className="flex flex-row gap-2 items-center justify-between px-2 zoom-out-animation "
               style={{
                 pointerEvents: props.isFlowActive ? "none" : "auto",
-                cursor: props.isFlowActive ? "wait" : "auto",
+                cursor: props.isFlowActive ? "wait" : "auto"
               }}
             >
               <VariableRenderer
@@ -1069,7 +1069,7 @@ function ListView(props: VariableViewProps) {
                   ...variable,
                   value: value,
                   type: rowsTypes,
-                  allowedValues: [],
+                  allowedValues: []
                 }}
                 onChange={(newValue: any) => {
                   handleRowValueChange(index, newValue);
@@ -1086,7 +1086,7 @@ function ListView(props: VariableViewProps) {
               <button
                 onClick={() => removeRow(index)}
                 style={{
-                  width: "unset",
+                  width: "unset"
                 }}
               >
                 <TrashIcon stroke="none" color="red" />
@@ -1112,7 +1112,7 @@ function CustomVariableRenderer(props: {
     return {
       ...props.variable.customPage,
       variable_id: props.variable.id,
-      placedID: props.variable.placedID,
+      placedID: props.variable.placedID
     };
   }, [props.variable.customPage, props.variable.id, props.variable.placedID]);
 
@@ -1137,7 +1137,7 @@ function CustomVariableRenderer(props: {
           getVariable: () => props.variable,
           setVariable: (value: any) => {
             props.onChange(value);
-          },
+          }
         };
       }
     };
@@ -1170,7 +1170,7 @@ function CustomVariableRenderer(props: {
 
         devIframe.contentWindow.horusVariable = {
           getVariable: () => props.variable,
-          setVariable: (value: any) => props.onChange(value),
+          setVariable: (value: any) => props.onChange(value)
         };
       }
     };
@@ -1178,7 +1178,7 @@ function CustomVariableRenderer(props: {
     devIframes.forEach((devIframe) => {
       injectToDev(devIframe);
       devIframe?.addEventListener("load", () => injectToDev(devIframe), {
-        signal,
+        signal
       });
     });
 
@@ -1204,8 +1204,8 @@ function CustomVariableRenderer(props: {
               onLoad: () => {
                 // Inject the variable into the iframe
                 injectVariables();
-              },
-            } as PluginPage & { onLoad?: () => void },
+              }
+            } as PluginPage & { onLoad?: () => void }
           });
         }}
       >
@@ -1240,7 +1240,7 @@ export function VariableGroupInfoView({ group }: { group: VariableGroup }) {
     <div
       className="flex flex-col gap-2 rounded-xl p-2 shadow-md w-full flex-1 whitespace-normal"
       style={{
-        border: "1px solid var(--pop-code)",
+        border: "1px solid var(--pop-code)"
       }}
       key={group.id}
     >
@@ -1276,7 +1276,7 @@ export function SimpleVariableView(props: {
     <div
       className="plugin-variable animated-gradient"
       style={{
-        border: props.border ? "1px solid var(--pop-code)" : "none",
+        border: props.border ? "1px solid var(--pop-code)" : "none"
       }}
     >
       <div className="flex flex-row justify-between w-full">
@@ -1286,7 +1286,7 @@ export function SimpleVariableView(props: {
             <LockIcon
               style={{
                 display: "inline",
-                transform: "translateY(-3px)",
+                transform: "translateY(-3px)"
               }}
             />
           )}
@@ -1313,7 +1313,7 @@ function RequiredVariable() {
       style={{
         marginLeft: "5px",
         display: "inline",
-        color: "var(--waring-orange)",
+        color: "var(--waring-orange)"
       }}
     >
       <ErrorIcon
@@ -1322,7 +1322,7 @@ function RequiredVariable() {
         style={{
           display: "inline",
           marginRight: "5px",
-          transform: "translateY(-3px)",
+          transform: "translateY(-3px)"
         }}
       />
       Required

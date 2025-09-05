@@ -8,7 +8,7 @@ export function Cookies() {
         margin: "auto",
         padding: "2em",
         fontFamily: "Arial, sans-serif",
-        lineHeight: 1.6,
+        lineHeight: 1.6
       }}
     >
       <h1 className="text-3xl font-bold text-gray-800 mb-4">

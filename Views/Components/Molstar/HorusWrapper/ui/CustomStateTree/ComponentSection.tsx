@@ -12,7 +12,7 @@ interface ComponentsSectionProps {
 
 export function ComponentsSection({
   structure,
-  onAddComponent,
+  onAddComponent
 }: ComponentsSectionProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -23,7 +23,7 @@ export function ComponentsSection({
     Set<string>
   >(new Set());
   const [expandedHeteroGroups, setExpandedHeteroGroups] = useState<Set<string>>(
-    new Set(),
+    new Set()
   );
 
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -91,7 +91,7 @@ export function ComponentsSection({
     (components?.chains?.length || 0) +
     (components?.chains.reduce(
       (acc, c) => acc + c.residues.length + c.hetero.length,
-      0,
+      0
     ) || 0);
 
   return (
@@ -153,7 +153,7 @@ export function ComponentsSection({
                                 >
                                   <MovingChevron
                                     down={expandedResidueGroups.has(
-                                      `${chain.id}_residues`,
+                                      `${chain.id}_residues`
                                     )}
                                   />
                                   <span className="font-bold">
@@ -163,7 +163,7 @@ export function ComponentsSection({
                               </div>
 
                               {expandedResidueGroups.has(
-                                `${chain.id}_residues`,
+                                `${chain.id}_residues`
                               ) && (
                                 <div className="ml-4 space-y-1 max-h-32 overflow-y-auto border-l-2 border-blue-100">
                                   {chain.residues.map((residue) => (
@@ -194,7 +194,7 @@ export function ComponentsSection({
                                 >
                                   <MovingChevron
                                     down={expandedHeteroGroups.has(
-                                      `${chain.id}_hetero`,
+                                      `${chain.id}_hetero`
                                     )}
                                   />
                                   <span className="font-bold">
@@ -204,7 +204,7 @@ export function ComponentsSection({
                               </div>
 
                               {expandedHeteroGroups.has(
-                                `${chain.id}_hetero`,
+                                `${chain.id}_hetero`
                               ) && (
                                 <div className="ml-4 space-y-1 max-h-32 overflow-y-auto border-l-2 border-orange-100">
                                   {chain.hetero.map((hetero) => (

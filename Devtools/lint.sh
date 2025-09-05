@@ -19,7 +19,7 @@ else
 fi
 
 # Run prettier (does not affect the pipeline, just formatting)
-$RUNNER prettier --write Views/ --ignore-pattern "Views/Static/**"
+$RUNNER prettier --write Views/
 
 # Check for Python linting errors with pylint
 if pylint App Server HorusAPI --fail-under 9.5; then

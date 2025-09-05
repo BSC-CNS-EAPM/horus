@@ -21,7 +21,7 @@ import AppButton from "@/Components/appbutton";
 import {
   DockContext,
   PANEL_REGISTRY,
-  togglePanel,
+  togglePanel
 } from "@/Components/MainApp/PanelView";
 import { useContext } from "react";
 import { HorusPopover } from "@/Components/reusable";
@@ -39,7 +39,7 @@ export function FlowCanvas(props: FlowCanvasProps) {
 
   const { setNodeRef } = useDroppable({
     id: DroppableEntity.CANVAS,
-    disabled: isFlowActive,
+    disabled: isFlowActive
   });
 
   return (
@@ -57,7 +57,7 @@ export function FlowCanvas(props: FlowCanvasProps) {
         <div
           style={{
             pointerEvents: isFlowActive ? "none" : "auto",
-            filter: isFlowActive ? "opacity(0.8)" : "none",
+            filter: isFlowActive ? "opacity(0.8)" : "none"
           }}
         >
           {children}
@@ -76,14 +76,14 @@ function FlowBottomToolbar({ flowHooks }: { flowHooks: FlowHooks }) {
       className="flex flex-row items-end justify-between gap-2 w-full p-2"
       style={{
         position: "absolute",
-        bottom: 0,
+        bottom: 0
       }}
     >
       <div
         id="add-block"
         style={{
           paddingTop: "0.5rem",
-          paddingBottom: "0.5rem",
+          paddingBottom: "0.5rem"
         }}
       >
         <HorusPopover
@@ -93,7 +93,7 @@ function FlowBottomToolbar({ flowHooks }: { flowHooks: FlowHooks }) {
                 togglePanel({
                   dockApi,
                   panelID: PANEL_REGISTRY.blockRegistry.id,
-                  component: PANEL_REGISTRY.blockRegistry.component,
+                  component: PANEL_REGISTRY.blockRegistry.component
                 });
               }}
             >
@@ -104,7 +104,7 @@ function FlowBottomToolbar({ flowHooks }: { flowHooks: FlowHooks }) {
           <div
             className="hover-description"
             style={{
-              transform: "translateY(-70px) translateX(70px)",
+              transform: "translateY(-70px) translateX(70px)"
             }}
           >
             Toggle the Block Registry panel
@@ -162,7 +162,7 @@ function FlowTopBar(props: { flowHooks: FlowHooks }) {
     saved,
     handleFlowChange,
     stopFlow,
-    executeFlow: resumeFlow,
+    executeFlow: resumeFlow
   } = props.flowHooks;
 
   const hasPendingActions = flow.pendingActions.length > 0;
@@ -193,7 +193,7 @@ function FlowTopBar(props: { flowHooks: FlowHooks }) {
 function FlowNameInput({
   flow,
   saved,
-  handleFlowChange,
+  handleFlowChange
 }: {
   flow: Flow;
   saved: boolean;
@@ -203,7 +203,7 @@ function FlowNameInput({
     <input
       style={{
         borderColor: saved ? "var(--digital-grey-IV)" : "orange",
-        width: "100%",
+        width: "100%"
       }}
       className="flow-name flow-title"
       type="text"
@@ -221,7 +221,7 @@ function FlowElapsedDisplay({ flow, saved }: { flow: Flow; saved: boolean }) {
       className="flex flex-col gap-0 items-center text-center justify-center bg-white flow-name"
       style={{
         borderColor: saved ? "var(--digital-grey-IV)" : "orange",
-        minWidth: "100px",
+        minWidth: "100px"
       }}
     >
       <FlowElapsed
@@ -238,7 +238,7 @@ function FlowStatusControl({
   saved,
   hasActions,
   stopFlow,
-  resumeFlow,
+  resumeFlow
 }: {
   flow: Flow;
   saved: boolean;
@@ -264,7 +264,7 @@ function FlowStatusControl({
       }}
       style={{
         borderColor: saved ? "var(--digital-grey-IV)" : "orange",
-        minWidth: "200px",
+        minWidth: "200px"
       }}
     >
       <FlowStatusIcons flow={flow} saved={saved} />
@@ -299,7 +299,7 @@ function FlowStatusIcons({ flow, saved }: { flow: Flow; saved: boolean }) {
           }}
           className="flex flex-row gap-2"
           style={{
-            cursor: "pointer",
+            cursor: "pointer"
           }}
         >
           <FlowStatusView status={FlowStatus.UNSAVED} />
@@ -315,7 +315,7 @@ function FlowActionsIndicator() {
       className="text-xs text-green-500 text-center"
       style={{
         position: "absolute",
-        bottom: "-1.5rem",
+        bottom: "-1.5rem"
       }}
     >
       Applying actions

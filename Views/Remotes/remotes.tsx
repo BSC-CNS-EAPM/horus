@@ -46,7 +46,7 @@ export default function ConfigRemotes() {
 
   const handleNewRemote = () => {
     handleSubView(
-      <DetailedRemote key="new-remote" setEditingRemote={setEditingRemote} />,
+      <DetailedRemote key="new-remote" setEditingRemote={setEditingRemote} />
     );
   };
 
@@ -63,7 +63,7 @@ export default function ConfigRemotes() {
   const handleRemoteEdit = async (remoteData: Remote) => {
     const header = {
       "Content-Type": "application/json",
-      Accept: "application/json",
+      Accept: "application/json"
     };
 
     const body = JSON.stringify(remoteData);
@@ -107,7 +107,7 @@ export default function ConfigRemotes() {
               <AppButton
                 id={BUTTON_ID}
                 style={{
-                  background: subView ? "orange" : undefined,
+                  background: subView ? "orange" : undefined
                 }}
                 action={
                   subView && editingRemote
@@ -196,7 +196,7 @@ function RemoteListView(props: RemoteListProps) {
               <DetailedRemote
                 remote={remote}
                 setEditingRemote={setEditingRemote}
-              />,
+              />
             )
           }
           updateList={returnToMainView}
@@ -217,12 +217,12 @@ function RemoteView(props: RemoteViewProps) {
 
   const handleDelete = async () => {
     const data = {
-      name: remote.name,
+      name: remote.name
     };
 
     const header = {
       "Content-Type": "application/json",
-      Accept: "application/json",
+      Accept: "application/json"
     };
 
     const body = JSON.stringify(data);
@@ -294,7 +294,7 @@ interface DetailedRemoteViewProps {
 
 function DetailedRemote(props: DetailedRemoteViewProps) {
   const [remoteData, _setRemoteData] = useState<Remote | null>(
-    props.remote ?? null,
+    props.remote ?? null
   );
 
   const setRemoteData = useCallback(
@@ -302,7 +302,7 @@ function DetailedRemote(props: DetailedRemoteViewProps) {
       props?.setEditingRemote && props.setEditingRemote(remote);
       _setRemoteData(remote);
     },
-    [props],
+    [props]
   );
 
   return (
@@ -352,7 +352,7 @@ function RemoteVariablesView(props: RemoteVariablesViewProps) {
             defaultValue: "",
             category: "Remote",
             disabled: false,
-            required: true,
+            required: true
           }}
           onChange={(value) => {
             setRemoteData({ ...remoteData, name: value } as Remote);
@@ -384,7 +384,7 @@ function RemoteVariablesView(props: RemoteVariablesViewProps) {
             defaultValue: "",
             category: "Remote",
             disabled: false,
-            required: true,
+            required: true
           }}
           onChange={(value) =>
             setRemoteData({ ...remoteData, host: value } as Remote)
@@ -403,7 +403,7 @@ function RemoteVariablesView(props: RemoteVariablesViewProps) {
             defaultValue: "",
             category: "Remote",
             disabled: false,
-            required: true,
+            required: true
           }}
           onChange={(value) =>
             setRemoteData({ ...remoteData, username: value } as Remote)
@@ -422,7 +422,7 @@ function RemoteVariablesView(props: RemoteVariablesViewProps) {
             defaultValue: "",
             category: "Remote",
             disabled: false,
-            required: true,
+            required: true
           }}
           onChange={(value) =>
             setRemoteData({ ...remoteData, port: value } as Remote)
@@ -442,7 +442,7 @@ function RemoteVariablesView(props: RemoteVariablesViewProps) {
             category: "Remote",
             disabled: false,
             required: false,
-            placeholder: "Optional if using key file",
+            placeholder: "Optional if using key file"
           }}
           onChange={(value) =>
             setRemoteData({ ...remoteData, password: value } as Remote)
@@ -462,7 +462,7 @@ function RemoteVariablesView(props: RemoteVariablesViewProps) {
             category: "Remote",
             disabled: false,
             required: false,
-            placeholder: "Optional if using password",
+            placeholder: "Optional if using password"
           }}
           onChange={(value) =>
             setRemoteData({ ...remoteData, keyPath: value } as Remote)
@@ -481,7 +481,7 @@ function RemoteVariablesView(props: RemoteVariablesViewProps) {
             defaultValue: "",
             category: "Remote",
             disabled: false,
-            required: false,
+            required: false
           }}
           onChange={(value) =>
             setRemoteData({ ...remoteData, proxyCommand: value } as Remote)
@@ -501,7 +501,7 @@ function RemoteVariablesView(props: RemoteVariablesViewProps) {
             category: "Remote",
             disabled: false,
             required: false,
-            placeholder: "~/.horus",
+            placeholder: "~/.horus"
           }}
           onChange={(value) =>
             setRemoteData({ ...remoteData, workDir: value } as Remote)
@@ -521,7 +521,7 @@ function RemoteVariablesView(props: RemoteVariablesViewProps) {
             defaultValue: false,
             category: "Remote",
             disabled: false,
-            required: false,
+            required: false
           }}
           onChange={(value) =>
             setRemoteData({ ...remoteData, loadProfile: value } as Remote)

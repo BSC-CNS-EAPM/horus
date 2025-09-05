@@ -203,10 +203,10 @@ the specified :bdg-secondary-line:`PluginPage`. For more information about :bdg-
     :align: center
 
 Inside the custom view, the variable and the flow can be accessed in JavaScript
-using the :bdg-secondary-line:`window.horusVariables` object.
+using the :bdg-secondary-line:`window.horusVariable` object.
 
 .. warning::
-    The `window.horusVariables` object is only available inside the view of a `CustomVariable`.
+    The `window.horusVariable` object is only available inside the view of a `CustomVariable`.
 
     For the `flowChanged` event, attach the listener to the parent window, not the current one,
     since extensions run inside iframes and the event is only dispatched on the parent window.
@@ -215,13 +215,13 @@ using the :bdg-secondary-line:`window.horusVariables` object.
 .. code-block:: javascript
 
     // Get the current state of the variable which opened the custom view
-    const variable = window.horusVariables.getVariable();
+    const variable = window.horusVariable.getVariable();
 
     // Set a new value for the variable
-    window.horusVariables.setVariable("new_value");
+    window.horusVariable.setVariable("new_value");
 
     // Get the current state of the flow
-    const newFlow = window.horusVariables.getFlow();
+    const newFlow = window.horusVariable.getFlow();
 
     // For example, modify the title of the flow
     newFlow.title = "New title";

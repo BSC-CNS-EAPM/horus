@@ -14,7 +14,7 @@ import { PluginVariableView } from "../Components/FlowBuilder/Variables/variable
 // TS types
 import {
   PluginVariable,
-  PluginVariableTypes,
+  PluginVariableTypes
 } from "../Components/FlowBuilder/flow.types";
 import { HorusSettingsObject } from "./setting";
 
@@ -80,25 +80,25 @@ function parseSettingsIntoPluginVariable(
       disabled: false,
       required: false,
       variables: (settings[settingID]?.variables ??
-        []) as unknown as PluginVariable[],
+        []) as unknown as PluginVariable[]
     };
   });
 }
 
 export async function saveSettings({
   settings,
-  forAdmin = false,
+  forAdmin = false
 }: {
   settings: PluginVariable[];
   forAdmin?: boolean;
 }): Promise<any> {
   const header = {
     "Content-Type": "application/json",
-    Accept: "application/json",
+    Accept: "application/json"
   };
 
   const body = JSON.stringify({
-    settings: settings,
+    settings: settings
   });
 
   let response;
@@ -181,7 +181,7 @@ function useSettings(forAdmin?: boolean) {
     try {
       const data = await saveSettings({
         settings: settings ?? [],
-        forAdmin: forAdmin,
+        forAdmin: forAdmin
       });
 
       if (!data.ok) {
@@ -228,7 +228,7 @@ function useSettings(forAdmin?: boolean) {
     saveSettings: internalSaveSettings,
     onSettingChange,
     restoreSettings,
-    isLoading,
+    isLoading
   };
 }
 
@@ -240,7 +240,7 @@ function SettingsView({ forAdmin }: { forAdmin?: boolean }) {
     saveSettings,
     onSettingChange,
     restoreSettings,
-    isLoading,
+    isLoading
   } = useSettings(forAdmin);
 
   const getGroupedSettings = () => {
@@ -263,7 +263,7 @@ function SettingsView({ forAdmin }: { forAdmin?: boolean }) {
       groupedViews[category] = [
         <div className="flex flex-col gap-2 flex-wrap" key={category}>
           {variableViews}
-        </div>,
+        </div>
       ];
     }
 

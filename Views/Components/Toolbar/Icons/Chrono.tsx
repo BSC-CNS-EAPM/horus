@@ -10,7 +10,7 @@ export default function ChronoIcon(props: IconProps) {
       strokeWidth={0}
       stroke="currentColor"
       style={{
-        transform: "translateX(1px)",
+        transform: "translateX(1px)"
       }}
       {...props}
     >

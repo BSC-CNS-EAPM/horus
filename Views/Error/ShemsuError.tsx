@@ -25,7 +25,7 @@ export function RouterError() {
 // Create a component for the error window
 export function Error({
   error,
-  children,
+  children
 }: {
   error?: any;
   children?: React.ReactNode;
@@ -56,7 +56,7 @@ export function Error({
         <p
           className="font-bold text-start"
           style={{
-            textAlign: "left",
+            textAlign: "left"
           }}
         >
           {window.flaskError ? window.flaskError : getErrorMessage()}

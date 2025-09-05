@@ -39,6 +39,7 @@ export type PluginPage = {
   dataID?: number;
   developmentPage?: boolean;
   onFocus?: () => void;
+  path?: string;
 };
 
 export type PluginPageExtensionEvent = {
@@ -80,7 +81,7 @@ export enum PluginVariableTypes {
   RADIO = "radio",
   PASSWORD = "password",
   CHAIN_INTERACTIVE = "chain_interactive",
-  RESIDUE_RANGE = "residue_range",
+  RESIDUE_RANGE = "residue_range"
 }
 
 export type PluginVariable = {
@@ -116,7 +117,7 @@ export enum BlockTypes {
   ACTION = "action",
   SLURM = "slurm",
   CONFIG = "config",
-  GHOST = "ghost",
+  GHOST = "ghost"
 }
 
 export type VariableGroup = {
@@ -244,7 +245,7 @@ export enum Status {
   SUSPENDED = "SUSPENDED", // SS
   TIMEOUT = "TIMEOUT", // TO
   UNKNOWN = "UNKNOWN",
-  IDLE = "IDLE",
+  IDLE = "IDLE"
 }
 
 export class JobStatus {
@@ -256,7 +257,7 @@ export class JobStatus {
       Status.CONFIGURING,
       Status.COMPLETING,
       Status.RESIZING,
-      Status.SIGNALING,
+      Status.SIGNALING
     ];
   }
 
@@ -272,7 +273,7 @@ export class JobStatus {
       Status.PREEMPTED,
       Status.REVOKED,
       Status.STOPPED,
-      Status.SPECIAL_EXIT,
+      Status.SPECIAL_EXIT
     ];
   }
 
@@ -328,7 +329,7 @@ export enum FlowStatus {
    */
   QUEUED = "QUEUED",
 
-  UNSAVED = "UNSAVED",
+  UNSAVED = "UNSAVED"
 }
 
 export class FlowStatusUtil {
@@ -337,7 +338,7 @@ export class FlowStatusUtil {
       FlowStatus.QUEUED,
       FlowStatus.RUNNING,
       FlowStatus.CANCELLING,
-      FlowStatus.PAUSED,
+      FlowStatus.PAUSED
     ];
   }
 }
@@ -435,13 +436,13 @@ export type Flow = {
 
 export enum DraggableEntity {
   BLOCK = "block",
-  CONNECTOR = "connector",
+  CONNECTOR = "connector"
 }
 
 export enum DroppableEntity {
   VARIABLE_CONNECTION = "variable_connection",
   CANVAS = "canvas",
-  SCALED_CANVAS = "scaled_canvas",
+  SCALED_CANVAS = "scaled_canvas"
 }
 
 export type FlowCanvasObject = {

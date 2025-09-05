@@ -5,7 +5,7 @@ import { useState } from "react";
 import HorusContainer from "../HorusContainer/horus_container";
 import RecentUserFlows, {
   PredefinedFlows,
-  useGetRecentFlows,
+  useGetRecentFlows
 } from "../FlowStatus/recent_flows";
 import RotatingLines from "../RotatingLines/rotatinglines";
 import PluginPagesView, { usePluginPages } from "../Toolbar/extensions_list";
@@ -100,7 +100,7 @@ function ModalView(props: {
       noCentered
       show={props.isOpen}
       maxContentSize={{
-        width: "80vw",
+        width: "80vw"
       }}
       onHide={(props.modal.allowBlurClose ?? true) ? props.onHide : () => {}}
     >
@@ -127,7 +127,7 @@ function WelcomeToHorus(props: {
         borderLeft: "none",
         borderRight: "none",
         borderRadius: "0",
-        width: "100%",
+        width: "100%"
       }}
     >
       <div>
@@ -140,18 +140,18 @@ function WelcomeToHorus(props: {
         <div className="flex flex-row gap-2 z-10">
           <UserIcon
             style={{
-              cursor: "pointer",
+              cursor: "pointer"
             }}
             onClick={() => {
               props.setModalContent({
-                body: <Profile />,
+                body: <Profile />
               });
             }}
           />
           <a
             className="flex flex-row gap-2 items-center text-decoration-none"
             style={{
-              color: "var(--digital-grey-IV)",
+              color: "var(--digital-grey-IV)"
             }}
             href="/users/logout"
           >
@@ -169,7 +169,7 @@ function CreateNewFlow() {
       <HorusContainer
         className="zoom-on-hover"
         style={{
-          cursor: "pointer",
+          cursor: "pointer"
         }}
       >
         <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full w-[150px]">
@@ -187,7 +187,7 @@ function OpenMolstar() {
       <HorusContainer
         className="zoom-on-hover"
         style={{
-          cursor: "pointer",
+          cursor: "pointer"
         }}
       >
         <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full w-[150px]">
@@ -205,7 +205,7 @@ function OpenFlow() {
       <HorusContainer
         className="zoom-on-hover"
         style={{
-          cursor: "pointer",
+          cursor: "pointer"
         }}
       >
         <div className="flex flex-row gap-2 justify-stretch items-center font-semibold h-full w-[150px]">
@@ -224,7 +224,7 @@ type ButtonOpensModalProps = {
 function ManageTemplates(props: ButtonOpensModalProps) {
   const setModalContent = () => {
     props.setModalContent({
-      body: <TemplatesView />,
+      body: <TemplatesView />
     });
   };
 
@@ -241,7 +241,7 @@ function ManageTemplates(props: ButtonOpensModalProps) {
 function ManagePlugins(props: ButtonOpensModalProps) {
   const setModalContent = () => {
     props.setModalContent({
-      body: <PluginManager />,
+      body: <PluginManager />
     });
   };
 
@@ -260,7 +260,7 @@ function ManageRemotes(props: ButtonOpensModalProps) {
     const body = <ConfigRemotes />;
 
     props.setModalContent({
-      body: body,
+      body: body
     });
   };
 
@@ -278,7 +278,7 @@ function ManageSettings(props: ButtonOpensModalProps) {
     const body = <SettingsView />;
 
     props.setModalContent({
-      body: body,
+      body: body
     });
   };
 
@@ -340,7 +340,7 @@ function RecentFlowsSplash() {
   const {
     isLoading: fetchingRecents,
     recentFlows,
-    presetFlows: predefinedFlows,
+    presetFlows: predefinedFlows
   } = useGetRecentFlows();
 
   return (
@@ -449,7 +449,7 @@ function ScrollableViewWelcomeBody(props: {
       className="overflow-y-auto scrollable-welcome"
       style={{
         width: "420px",
-        maxHeight: props.maxHeight || "50vh",
+        maxHeight: props.maxHeight || "50vh"
       }}
     >
       {props.children}
@@ -465,5 +465,5 @@ const ScrollableViewWelcome = {
   Root: ScrollableViewWelcomeRoot,
   Header: ScrollableViewWelcomeHeader,
   Body: ScrollableViewWelcomeBody,
-  Footer: ScrollableViewWelcomeFooter,
+  Footer: ScrollableViewWelcomeFooter
 };

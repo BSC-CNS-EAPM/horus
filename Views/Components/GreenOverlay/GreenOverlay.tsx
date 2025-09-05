@@ -9,7 +9,7 @@ export function GreenOverlay({ children }: { children: ReactNode }) {
         display: "grid",
         position: "absolute",
         zIndex: 100,
-        cursor: "copy !important",
+        cursor: "copy !important"
       }}
     >
       {children}

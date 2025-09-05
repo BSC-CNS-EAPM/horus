@@ -38,7 +38,7 @@ export default function WebAppUserFlows() {
     recentFlows,
     otherDirectories,
     corruptedFlows,
-    refetch: getFlows,
+    refetch: getFlows
   } = useGetRecentFlows(true);
 
   const [hasFetchedInitally, setHasFetchedInitally] = useState(false);
@@ -56,7 +56,7 @@ export default function WebAppUserFlows() {
         <span
           className="text-xl font-semibold"
           style={{
-            color: "var(--digital-grey-IV)",
+            color: "var(--digital-grey-IV)"
           }}
         >
           Loading flows
@@ -72,7 +72,7 @@ export default function WebAppUserFlows() {
           className="w-full flex flex-col justify-center items-center gap-2"
           style={{
             maxWidth: "1075px",
-            minWidth: "650px",
+            minWidth: "650px"
           }}
         >
           <h1 className="text-xl font-semibold">Your Flows</h1>
@@ -106,7 +106,7 @@ export default function WebAppUserFlows() {
           className="w-full flex flex-col justify-center items-center gap-2"
           style={{
             maxWidth: "1075px",
-            minWidth: "650px",
+            minWidth: "650px"
           }}
         >
           <h1 className="text-xl font-semibold">Corrupted flows</h1>
@@ -138,7 +138,7 @@ export default function WebAppUserFlows() {
           className="w-full flex flex-col justify-center items-center gap-2"
           style={{
             maxWidth: "1075px",
-            minWidth: "650px",
+            minWidth: "650px"
           }}
         >
           <h1 className="text-xl font-semibold">Other files</h1>
@@ -203,7 +203,7 @@ function CorruptedFlowView(props: {
 
     try {
       const body = JSON.stringify({
-        path: props.corruptedFlow["path"],
+        path: props.corruptedFlow["path"]
       });
 
       const response = await horusPost("/users/deletefile", null, body);
@@ -234,7 +234,7 @@ function CorruptedFlowView(props: {
         size="25px"
         style={{
           // Center the loading icon
-          margin: "0 auto",
+          margin: "0 auto"
         }}
       />
     );
@@ -251,7 +251,7 @@ function CorruptedFlowView(props: {
       <CloudDownload
         className="cursor-pointer w-6 h-6"
         style={{
-          color: "var(--pop-code)",
+          color: "var(--pop-code)"
         }}
         onClick={downloadFile}
       />
@@ -260,14 +260,14 @@ function CorruptedFlowView(props: {
         onClick={async () => {
           if (
             await horusConfirm(
-              "Do you want to delete this corrupted flow? This action is irreversible.",
+              "Do you want to delete this corrupted flow? This action is irreversible."
             )
           ) {
             deleteFile();
           }
         }}
         style={{
-          color: "var(--danger-red)",
+          color: "var(--danger-red)"
         }}
       />
     </>
@@ -308,7 +308,7 @@ function OtherFileView(props: { directory: FileData; getFlows: () => void }) {
 
     try {
       const body = JSON.stringify({
-        path: props.directory["path"],
+        path: props.directory["path"]
       });
 
       const response = await horusPost("/users/deletefile", null, body);
@@ -339,7 +339,7 @@ function OtherFileView(props: { directory: FileData; getFlows: () => void }) {
         size="25px"
         style={{
           // Center the loading icon
-          margin: "0 auto",
+          margin: "0 auto"
         }}
       />
     );
@@ -358,7 +358,7 @@ function OtherFileView(props: { directory: FileData; getFlows: () => void }) {
       <CloudDownload
         className="cursor-pointer w-6 h-6"
         style={{
-          color: "var(--pop-code)",
+          color: "var(--pop-code)"
         }}
         onClick={downloadFile}
       />
@@ -367,14 +367,14 @@ function OtherFileView(props: { directory: FileData; getFlows: () => void }) {
         onClick={async () => {
           if (
             await horusConfirm(
-              "Do you want to delete this file? This action is irreversible.",
+              "Do you want to delete this file? This action is irreversible."
             )
           ) {
             deleteFile();
           }
         }}
         style={{
-          color: "var(--danger-red)",
+          color: "var(--danger-red)"
         }}
       />
     </>
@@ -419,7 +419,7 @@ function DeleteFlow({ flow, getFlows }: { flow: Flow; getFlows: () => void }) {
         DeleteFlowModal({ flow, getFlows });
       }}
       style={{
-        color: "var(--danger-red)",
+        color: "var(--danger-red)"
       }}
     />
   );
@@ -436,7 +436,7 @@ function FlowDownload({ flow }: { flow: Flow }) {
     try {
       // Generate the tar file
       const body = JSON.stringify({
-        path: flow.path,
+        path: flow.path
       });
 
       const response = await horusPost("/users/downloadflow", null, body);
@@ -482,7 +482,7 @@ function FlowDownload({ flow }: { flow: Flow }) {
         <CloudDownload
           className="cursor-pointer w-6 h-6"
           style={{
-            color: "var(--pop-code)",
+            color: "var(--pop-code)"
           }}
           onClick={downloadFlow}
         />
@@ -502,7 +502,7 @@ function FlowClone({ flow, getFlows }: { flow: Flow; getFlows: () => void }) {
     try {
       // Generate the tar file
       const body = JSON.stringify({
-        path: flow.path,
+        path: flow.path
       });
 
       const response = await horusPost("/users/clone_flow", null, body);
@@ -534,7 +534,7 @@ function FlowClone({ flow, getFlows }: { flow: Flow; getFlows: () => void }) {
         size="25px"
         style={{
           // Center the loading icon
-          margin: "0 auto",
+          margin: "0 auto"
         }}
       />
     );
@@ -560,7 +560,7 @@ function FlowSize({ size }: { size?: number }) {
 
 function DeleteFlowModal({
   flow,
-  getFlows,
+  getFlows
 }: {
   flow: Flow;
   getFlows: () => void;
@@ -575,7 +575,7 @@ function DeleteFlowModal({
 
 function _DeleteFlowModal({
   flow,
-  getFlows,
+  getFlows
 }: {
   flow: Flow;
   getFlows: () => void;
@@ -592,7 +592,7 @@ function _DeleteFlowModal({
 
     try {
       const body = JSON.stringify({
-        path: flow.path,
+        path: flow.path
       });
 
       const response = await horusPost("/users/deleteflow", null, body);
@@ -634,7 +634,7 @@ function _DeleteFlowModal({
         <div
           className="text-xl font-semibold flow-title"
           style={{
-            height: "unset",
+            height: "unset"
           }}
         >
           Delete Flow
@@ -642,7 +642,7 @@ function _DeleteFlowModal({
         <hr
           style={{
             width: "100%",
-            margin: "0 0",
+            margin: "0 0"
           }}
         ></hr>
         <p className="text-center">
@@ -669,7 +669,7 @@ function _DeleteFlowModal({
               <button
                 className="app-button btn-danger"
                 style={{
-                  color: "var(--danger-red)",
+                  color: "var(--danger-red)"
                 }}
                 onClick={() => {
                   removeFlow();

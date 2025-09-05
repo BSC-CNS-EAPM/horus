@@ -5,7 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useState,
+  useState
 } from "react";
 
 // Types for TypeScript
@@ -25,7 +25,6 @@ import { horusGet } from "../../../Utils/utils";
 
 // CSS
 import "../Blocks/block.css";
-import { useAlert } from "../../HorusPrompt/horus_alert";
 import { SearchComponent } from "@/Components/Search/Search";
 import PluginsIcon from "@/Components/Toolbar/Icons/Plugins";
 import { useQuery } from "@tanstack/react-query";
@@ -33,16 +32,11 @@ import { getPluginLogo } from "@/Components/logo";
 import { useSettings } from "@/Main/app";
 
 // Icons
-import {
-  IconChevronsUp,
-  IconPlus,
-  IconReload,
-  IconSelector,
-} from "@tabler/icons-react";
+import { IconChevronsUp, IconPlus, IconSelector } from "@tabler/icons-react";
 import {
   DockContext,
   PANEL_REGISTRY,
-  addPanel,
+  addPanel
 } from "@/Components/MainApp/PanelView";
 import { useUser } from "@/Login/profile";
 
@@ -52,7 +46,7 @@ function PluginLogo({
 }: ImgHTMLAttributes<HTMLImageElement> & { pluginID: string }) {
   const { data } = useQuery({
     queryKey: [`pluginLogo-${pluginID}`],
-    queryFn: () => getPluginLogo({ pluginID }),
+    queryFn: () => getPluginLogo({ pluginID })
   });
   return data ? (
     <img {...rest} src={data}></img>
@@ -70,9 +64,6 @@ export function BlockRegistry() {
   // View state
   const [filteredBlocks, setFilteredBlocks] = useState<Array<Block>>([]);
   const [search, setSearch] = useState<string>("");
-
-  const horusSettings = useSettings();
-  const [reloadingPlugins, setReloadingPlugins] = useState(false);
 
   /**
    * Fetches the list of available blocks from the server.
@@ -93,7 +84,7 @@ export function BlockRegistry() {
         isPlaced: false,
         position: { x: 0, y: 0 },
         variableConnections: [],
-        variableConnectionsReference: [],
+        variableConnectionsReference: []
       };
       blockList.push(newBlock);
     });
@@ -101,13 +92,9 @@ export function BlockRegistry() {
     return blockList;
   };
 
-  const {
-    data: blocks,
-    isLoading: loadingBlocks,
-    refetch,
-  } = useQuery({
+  const { data: blocks, isLoading: loadingBlocks } = useQuery({
     queryKey: ["blocklist"],
-    queryFn: fetchBlocks,
+    queryFn: fetchBlocks
   });
 
   const { userData } = useUser();
@@ -159,8 +146,6 @@ export function BlockRegistry() {
     };
   }, []);
 
-  const horusAlert = useAlert();
-
   const [showAllSignal, setShowAllSignal] = useState(0);
   const [collapseAllSignal, setCollapseAllSignal] = useState(0);
   const [turn, setTurn] = useState(0);
@@ -175,40 +160,22 @@ export function BlockRegistry() {
   // Render
   return (
     <div className="block-sidebar overflow-y-auto h-full min-w-[200px]">
-      {loadingBlocks || reloadingPlugins ? (
+      {loadingBlocks ? (
         <div className="h-full flex flex-col gap-2 items-center justify-center">
           <RotatingLines />
-          {reloadingPlugins ? "Reloading plugins..." : "Loading blocks..."}
+          Loading blocks...
         </div>
       ) : (
         <>
           <div
             className="sticky top-0 bg-white p-2 pb-0"
             style={{
-              zIndex: 1,
+              zIndex: 1
             }}
           >
             <div className="flex flex-row items-center justify-between w-full">
               <div className="flow-title">Blocks</div>
               <div className="flex flex-row flex-wrap justify-end items-center gap-2 pb-2">
-                {horusSettings?.["developmentMode"]?.value && (
-                  <AppButton
-                    title="Reload plugins"
-                    action={async () => {
-                      setReloadingPlugins(true);
-                      horusGet("/api/plugins/reload")
-                        .then(() => refetch())
-                        .then(() =>
-                          horusAlert(
-                            "Plugins reloaded! Blocks in the flow builder that changed need to be replaced"
-                          )
-                        )
-                        .finally(() => setReloadingPlugins(false));
-                    }}
-                  >
-                    <IconReload />
-                  </AppButton>
-                )}
                 {turn % 2 === 0 ? (
                   <AppButton
                     action={() => setShowAllSignal(showAllSignal + 1)}
@@ -235,7 +202,7 @@ export function BlockRegistry() {
                       addPanel({
                         dockApi,
                         component: PANEL_REGISTRY.blockEditor.component,
-                        panelID: PANEL_REGISTRY.blockEditor.id,
+                        panelID: PANEL_REGISTRY.blockEditor.id
                       });
                     }}
                   >
@@ -263,7 +230,7 @@ export function BlockRegistry() {
             <hr
               style={{
                 marginTop: "10px",
-                marginBottom: "5px",
+                marginBottom: "5px"
               }}
             ></hr>
           </div>
@@ -282,7 +249,7 @@ export function BlockRegistry() {
 function PluginBlocksGroupList({
   blocks,
   showAllSignal,
-  collapseAllSignal,
+  collapseAllSignal
 }: {
   blocks: Block[];
   collapseAllSignal: number;
@@ -353,7 +320,7 @@ function PluginBlocksGroupList({
 
 function useCollapsible({
   collapseAllSignal,
-  showAllSignal,
+  showAllSignal
 }: {
   collapseAllSignal: number;
   showAllSignal: number;
@@ -385,7 +352,7 @@ function PluginBlocksGroup({
   groupedBlocks,
   pluginID,
   collapseAllSignal,
-  showAllSignal,
+  showAllSignal
 }: {
   groupedBlocks: Block[];
   pluginID: string;
@@ -470,7 +437,7 @@ function _CategoryView({
   category,
   blocks,
   collapseAllSignal,
-  showAllSignal,
+  showAllSignal
 }: {
   category: string;
   blocks: Block[];

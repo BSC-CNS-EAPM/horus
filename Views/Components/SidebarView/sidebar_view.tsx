@@ -33,7 +33,7 @@ export default function SidebarView(props: SidebarViewProps) {
     for (const k in views) {
       newTabs[k] = {
         view: views[k]![0]! as JSX.Element,
-        title: k,
+        title: k
       };
     }
 
@@ -41,7 +41,7 @@ export default function SidebarView(props: SidebarViewProps) {
   }, [views, tabs]);
 
   const [currentCategory, setCurrentCategory] = useState(
-    Object.keys(parsedViews)[0]!,
+    Object.keys(parsedViews)[0]!
   );
 
   useEffect(() => {

@@ -3,7 +3,7 @@ import {
   CustomBlockEditor,
   BlockTypes,
   PluginVariable,
-  PluginVariableTypes,
+  PluginVariableTypes
 } from "../flow.types";
 import { HorusViewTabs, Tab } from "@/Components/Tabs";
 import { Editor } from "@monaco-editor/react";
@@ -28,12 +28,12 @@ const NEW_BLOCK: CustomBlockEditor = {
     'from HorusAPI import PluginBlock\n\ndef blockAction(block: PluginBlock):\n    print("A custom block")',
   finalAction: "def finalAction(block: SlurmBlock):\n    print('Final action')",
   dependencies: [],
-  isCustom: true,
+  isCustom: true
 };
 
 export function BlockEditor({
   block,
-  onBlockChange,
+  onBlockChange
 }: {
   block?: CustomBlockEditor;
   onBlockChange?: (block: CustomBlockEditor) => void;
@@ -56,7 +56,7 @@ export function BlockEditor({
       "/api/plugins/custom-block",
       null,
       JSON.stringify({
-        block: editingBlock,
+        block: editingBlock
       })
     )
       .then((res) => res.json())
@@ -76,7 +76,7 @@ export function BlockEditor({
   const handleBlockExport = async () => {
     // Generate a .json file with the block data content for download
     const blob = new Blob([JSON.stringify(editingBlock, null, 2)], {
-      type: "application/json",
+      type: "application/json"
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -90,7 +90,7 @@ export function BlockEditor({
     setIsRemoving(true);
     const response = await horusDelete({
       url: `/api/plugins/custom-block`,
-      body: { blockId: editingBlock.id },
+      body: { blockId: editingBlock.id }
     })
       .then((res) => res.json())
       .finally(() => setIsRemoving(false));
@@ -113,7 +113,7 @@ export function BlockEditor({
           block={editingBlock}
           onBlockChange={handleBlockChange}
         />
-      ),
+      )
     },
     "block-json": {
       title: "JSON Editor",
@@ -122,8 +122,8 @@ export function BlockEditor({
           block={editingBlock}
           onBlockChange={handleBlockChange}
         />
-      ),
-    },
+      )
+    }
   };
 
   const isSavingOrRemoving = isSaving || isRemoving;
@@ -177,7 +177,7 @@ export function BlockEditor({
 
 function VisualBlockEditor({
   block,
-  onBlockChange,
+  onBlockChange
 }: {
   block: CustomBlockEditor;
   onBlockChange: (block: CustomBlockEditor) => void;
@@ -306,7 +306,7 @@ function VisualBlockEditor({
                       dependencies: e.target.value
                         .split(",")
                         .map((dep) => dep.trim())
-                        .filter((dep) => dep),
+                        .filter((dep) => dep)
                     });
                   }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
@@ -388,7 +388,7 @@ function VisualBlockEditor({
 function VariableListEditor({
   title,
   items,
-  onItemsChange,
+  onItemsChange
 }: {
   title: string;
   items: PluginVariable[];
@@ -405,7 +405,7 @@ function VariableListEditor({
       category: "",
       disabled: false,
       required: false,
-      placeholder: "",
+      placeholder: ""
     } as PluginVariable;
   };
 
@@ -484,7 +484,7 @@ function VariableListEditor({
                 value={item.type || "string"}
                 onChange={(e) =>
                   updateItem(index, {
-                    type: e.target.value as PluginVariableTypes,
+                    type: e.target.value as PluginVariableTypes
                   })
                 }
                 className="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
@@ -555,7 +555,7 @@ function VariableListEditor({
                       allowedValues: e.target.value
                         .split(",")
                         .map((v) => v.trim())
-                        .filter((v) => v),
+                        .filter((v) => v)
                     })
                   }
                   className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
@@ -606,7 +606,7 @@ function VariableListEditor({
 
 function JSONBlockEditor({
   block,
-  onBlockChange,
+  onBlockChange
 }: {
   block: CustomBlockEditor;
   onBlockChange: (block: CustomBlockEditor) => void;
@@ -670,7 +670,7 @@ function JSONBlockEditor({
             wordWrap: "on",
             automaticLayout: true,
             scrollBeyondLastLine: false,
-            padding: { top: 16, bottom: 16 },
+            padding: { top: 16, bottom: 16 }
           }}
         />
       </div>
@@ -700,7 +700,7 @@ function BlockDepsLog({ show }: { show: boolean }) {
       overRoot
       maxContentSize={{
         height: "80vh",
-        width: "80vw",
+        width: "80vw"
       }}
     >
       <div className="p-4 flex flex-col h-full">

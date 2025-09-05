@@ -1,56 +1,48 @@
 {
-    "compilerOptions": {
-        // Strict Checks
-        "alwaysStrict": true,
-        "noImplicitAny": true,
-        "strictNullChecks": true,
-        "useUnknownInCatchVariables": true,
-        "strictPropertyInitialization": true,
-        "strictFunctionTypes": true,
-        "noImplicitThis": true,
-        "strictBindCallApply": true,
-        "noPropertyAccessFromIndexSignature": true,
-        "noUncheckedIndexedAccess": true,
-        "exactOptionalPropertyTypes": false,
-        // Linter Checks
-        "noImplicitReturns": true,
-        "noImplicitOverride": true,
-        "forceConsistentCasingInFileNames": true,
-        // https://eslint.org/docs/rules/consistent-return ?
-        "noFallthroughCasesInSwitch": true,
-        // https://eslint.org/docs/rules/no-fallthrough
-        "noUnusedLocals": false,
-        // https://eslint.org/docs/rules/no-unused-vars
-        "noUnusedParameters": false,
-        // https://eslint.org/docs/rules/no-unused-vars#args
-        "allowUnreachableCode": false,
-        // https://eslint.org/docs/rules/no-unreachable ?
-        "allowUnusedLabels": false,
-        // https://eslint.org/docs/rules/no-unused-labels
-        // Base Strict Checks
-        "noImplicitUseStrict": false,
-        "suppressExcessPropertyErrors": false,
-        "suppressImplicitAnyIndexErrors": false,
-        "noStrictGenericChecks": false,
-        "downlevelIteration": true,
-        "jsx": "react-jsx",
-        "paths": {
-            "@/*": [
-                "./Views/*"
-            ],
-            "@resources/*": [
-                "./Resources/*"
-            ],
-            "@components/*": [
-                "./Views/Components/*"
-            ]
-        }
-    },
-    "include": [
-        "Views/**/*"
-    ],
-    "typeRoots": [
-        "/Users/cdominguez/Developer/Horus/Views/Utils/CustomTypings",
-        "node_modules/@types"
-    ]
+  "compilerOptions": {
+    // Strict Checks
+    "alwaysStrict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "useUnknownInCatchVariables": true,
+    "strictPropertyInitialization": true,
+    "strictFunctionTypes": true,
+    "noImplicitThis": true,
+    "strictBindCallApply": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": false,
+    // Linter Checks
+    "noImplicitReturns": true,
+    "noImplicitOverride": true,
+    "forceConsistentCasingInFileNames": true,
+    // https://eslint.org/docs/rules/consistent-return ?
+    "noFallthroughCasesInSwitch": true,
+    // https://eslint.org/docs/rules/no-fallthrough
+    "noUnusedLocals": false,
+    // https://eslint.org/docs/rules/no-unused-vars
+    "noUnusedParameters": false,
+    // https://eslint.org/docs/rules/no-unused-vars#args
+    "allowUnreachableCode": false,
+    // https://eslint.org/docs/rules/no-unreachable ?
+    "allowUnusedLabels": false,
+    // https://eslint.org/docs/rules/no-unused-labels
+    // Base Strict Checks
+    "noImplicitUseStrict": false,
+    "suppressExcessPropertyErrors": false,
+    "suppressImplicitAnyIndexErrors": false,
+    "noStrictGenericChecks": false,
+    "downlevelIteration": true,
+    "jsx": "react-jsx",
+    "paths": {
+      "@/*": ["./Views/*"],
+      "@resources/*": ["./Resources/*"],
+      "@components/*": ["./Views/Components/*"]
+    }
+  },
+  "include": ["Views/**/*"],
+  "typeRoots": [
+    "/Users/cdominguez/Developer/Horus/Views/Utils/CustomTypings",
+    "node_modules/@types"
+  ]
 }

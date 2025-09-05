@@ -1,8 +1,8 @@
 stages:
-- test-and-lint
-- build_horus
-- publish_horusapi
-- build_docs
+  - test-and-lint
+  - build_horus
+  - publish_horusapi
+  - build_docs
 
 variables:
   MICROMAMBA_BINARY_PATH: "/home/perry/data/bin/micromamba"
@@ -12,110 +12,110 @@ variables:
 test-and-lint:
   stage: test-and-lint
   tags:
-  - perry
+    - perry
   before_script:
-  - source <($MICROMAMBA_BINARY_PATH shell hook --shell bash)
-  - $MICROMAMBA_BINARY_PATH create -f Devtools/Environment/conda_horus.yaml -n horus_test_ci -y
-  - micromamba activate horus_test_ci
-  - npm i
+    - source <($MICROMAMBA_BINARY_PATH shell hook --shell bash)
+    - $MICROMAMBA_BINARY_PATH create -f Devtools/Environment/conda_horus.yaml -n horus_test_ci -y
+    - micromamba activate horus_test_ci
+    - npm i
   script:
-  - npm run buildparcel
-  - npm run test
-  - source Devtools/lint.sh
+    - npm run buildparcel
+    - npm run test
+    - source Devtools/lint.sh
   rules:
-  - if: $CI_COMMIT_TAG
-  - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_COMMIT_TAG
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
 
 build_horus:
   stage: build_horus
   tags:
-  - perry
+    - perry
   before_script:
-  - git fetch --all --tags
-  - git checkout tags/$CI_COMMIT_TAG
-  - export GIT_TAG=$CI_COMMIT_TAG
-  - export GIT_COMMIT=$CI_COMMIT_SHORT_SHA
-  - export GIT_BRANCH=$CI_COMMIT_REF_NAME
-  - export VERSION=$CI_COMMIT_TAG
-  - echo "GIT_TAG=$GIT_TAG"
-  - echo "GIT_COMMIT=$GIT_COMMIT"
-  - echo "GIT_BRANCH=$GIT_BRANCH"
-  - echo "VERSION=$VERSION"
+    - git fetch --all --tags
+    - git checkout tags/$CI_COMMIT_TAG
+    - export GIT_TAG=$CI_COMMIT_TAG
+    - export GIT_COMMIT=$CI_COMMIT_SHORT_SHA
+    - export GIT_BRANCH=$CI_COMMIT_REF_NAME
+    - export VERSION=$CI_COMMIT_TAG
+    - echo "GIT_TAG=$GIT_TAG"
+    - echo "GIT_COMMIT=$GIT_COMMIT"
+    - echo "GIT_BRANCH=$GIT_BRANCH"
+    - echo "VERSION=$VERSION"
   script:
-  - source Devtools/Docker/build_standalone_horus_docker.sh
-  - bash Devtools/Singularity/build_multiplatform.sh
-  - |
-    for file in dist/*.tar.gz; do
-      echo "Uploading $file..."
-      curl --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file "$file" "${PACKAGE_REGISTRY_URL}/$(basename $file)"
-    done
-  - |
-    # Initialize the release command
-    release_command="release-cli create --name \"Horus $CI_COMMIT_TAG\" --tag-name $CI_COMMIT_TAG"
+    - source Devtools/Docker/build_standalone_horus_docker.sh
+    - bash Devtools/Singularity/build_multiplatform.sh
+    - |
+      for file in dist/*.tar.gz; do
+        echo "Uploading $file..."
+        curl --header "JOB-TOKEN: ${CI_JOB_TOKEN}" --upload-file "$file" "${PACKAGE_REGISTRY_URL}/$(basename $file)"
+      done
+    - |
+      # Initialize the release command
+      release_command="release-cli create --name \"Horus $CI_COMMIT_TAG\" --tag-name $CI_COMMIT_TAG"
 
-    # Loop over each .tar.gz file in the dist/ directory
-    for file in dist/*.tar.gz; do
-      echo "Adding $file to release assets..."
-      asset_name=$(basename "$file")
-      asset_url="${PACKAGE_REGISTRY_URL}/$asset_name"
-      
-      # Append each asset to the release command
-      release_command="$release_command --assets-link \"{\\\"name\\\":\\\"$asset_name\\\", \\\"url\\\":\\\"$asset_url\\\"}\""
-    done
+      # Loop over each .tar.gz file in the dist/ directory
+      for file in dist/*.tar.gz; do
+        echo "Adding $file to release assets..."
+        asset_name=$(basename "$file")
+        asset_url="${PACKAGE_REGISTRY_URL}/$asset_name"
+        
+        # Append each asset to the release command
+        release_command="$release_command --assets-link \"{\\\"name\\\":\\\"$asset_name\\\", \\\"url\\\":\\\"$asset_url\\\"}\""
+      done
 
-    # Execute the release command with all assets
-    echo "Executing: $release_command"
-    eval "$release_command"
+      # Execute the release command with all assets
+      echo "Executing: $release_command"
+      eval "$release_command"
   rules:
-  - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_TAG
 
 publish_horusapi:
   stage: publish_horusapi
   image: quay.io/pypa/manylinux2014_x86_64
   tags:
-  - docker
+    - docker
   before_script:
-  - git fetch --all --tags
-  - git checkout tags/$CI_COMMIT_TAG
-  - export GIT_TAG=$CI_COMMIT_TAG
-  - export GIT_COMMIT=$CI_COMMIT_SHORT_SHA
-  - export GIT_BRANCH=$CI_COMMIT_REF_NAME
-  - export VERSION=$CI_COMMIT_TAG
-  - echo "GIT_TAG=$GIT_TAG"
-  - echo "GIT_COMMIT=$GIT_COMMIT"
-  - echo "GIT_BRANCH=$GIT_BRANCH"
-  - echo "VERSION=$VERSION"
+    - git fetch --all --tags
+    - git checkout tags/$CI_COMMIT_TAG
+    - export GIT_TAG=$CI_COMMIT_TAG
+    - export GIT_COMMIT=$CI_COMMIT_SHORT_SHA
+    - export GIT_BRANCH=$CI_COMMIT_REF_NAME
+    - export VERSION=$CI_COMMIT_TAG
+    - echo "GIT_TAG=$GIT_TAG"
+    - echo "GIT_COMMIT=$GIT_COMMIT"
+    - echo "GIT_BRANCH=$GIT_BRANCH"
+    - echo "VERSION=$VERSION"
   script:
-  - yum install -y zip unzip
-  - export PATH=/opt/python/cp39-cp39/bin:$PATH
-  - pip install cython==3.0.2 twine==6.1.0 mypy==1.8 pydantic==2.11.7 pathvalidate==3.2.0
-  - bash Devtools/Compile/build_horusapi.sh
-  - auditwheel repair dist/*.whl
-  - twine upload wheelhouse/*.whl
+    - yum install -y zip unzip
+    - export PATH=/opt/python/cp39-cp39/bin:$PATH
+    - pip install cython==3.0.2 twine==6.1.0 mypy==1.8 pydantic==2.11.7 pathvalidate==3.2.0
+    - bash Devtools/Compile/build_horusapi.sh
+    - auditwheel repair dist/*.whl
+    - twine upload wheelhouse/*.whl
   allow_failure: true
   rules:
-  - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_TAG
 
 build_docs:
   stage: build_docs
   tags:
-  - perry
+    - perry
   script:
-  - echo "Checking out the code..."
-  - git fetch --all
-  - git checkout $CI_COMMIT_REF_NAME
+    - echo "Checking out the code..."
+    - git fetch --all
+    - git checkout $CI_COMMIT_REF_NAME
 
-  - echo "Setting up Micromamba environment..."
-  - $MICROMAMBA_BINARY_PATH remove --name horus_docs --yes || true
-  - $MICROMAMBA_BINARY_PATH create --name horus_docs --file Devtools/Environment/conda_horus.yaml --yes
-  - source <($MICROMAMBA_BINARY_PATH shell hook --shell bash)
-  - micromamba activate horus_docs
+    - echo "Setting up Micromamba environment..."
+    - $MICROMAMBA_BINARY_PATH remove --name horus_docs --yes || true
+    - $MICROMAMBA_BINARY_PATH create --name horus_docs --file Devtools/Environment/conda_horus.yaml --yes
+    - source <($MICROMAMBA_BINARY_PATH shell hook --shell bash)
+    - micromamba activate horus_docs
 
-  - echo "Building the documentation..."
-  - bash Devtools/build_docs.sh
+    - echo "Building the documentation..."
+    - bash Devtools/build_docs.sh
 
-  - echo "Pushing the documentation..."
-  - mkdir -p $DOCS_BUILD_DIR
-  - cp -r HorusAPI/docs/build/html/* $DOCS_BUILD_DIR
+    - echo "Pushing the documentation..."
+    - mkdir -p $DOCS_BUILD_DIR
+    - cp -r HorusAPI/docs/build/html/* $DOCS_BUILD_DIR
   rules:
-  - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_TAG
