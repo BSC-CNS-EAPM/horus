@@ -20,9 +20,10 @@ import {
   Structure,
   StructureElement,
   StructureProperties,
-  Unit,
+  Unit
 } from "molstar/lib/mol-model/structure";
-import { Loci } from "molstar/lib/mol-model/structure/structure/element/loci";
+import { Loci as LociType } from "molstar/lib/mol-model/structure/structure/element/loci";
+import { Loci } from "molstar/lib/mol-model/loci";
 import { addSphereTo } from "./sphere";
 import { DockingSphereRepresentationProvider } from "./sphere";
 import { addBoxTo } from "./box";
@@ -31,7 +32,7 @@ import { ObjectKeys } from "molstar/lib/mol-util/type-helpers";
 import { PluginSpec } from "molstar/lib/mol-plugin/spec";
 import {
   StructureComponentRef,
-  StructureRef,
+  StructureRef
 } from "molstar/lib/mol-plugin-state/manager/structure/hierarchy-state";
 import { Vec3 } from "molstar/lib/mol-math/linear-algebra";
 import { Expression } from "molstar/lib/mol-script/language/expression";
@@ -40,14 +41,14 @@ import { Mp4Export } from "molstar/lib/extensions/mp4-export";
 import {
   StateObjectRef,
   StateObjectSelector,
-  StateSelection,
+  StateSelection
 } from "molstar/lib/mol-state";
 import { BuiltInTrajectoryFormats } from "molstar/lib/mol-plugin-state/formats/trajectory";
 import { HorusMolstarViewportComponent } from "./ui/viewport";
 import { HorusLeftPanelControls } from "./ui/HorusLeftPanelControls";
 import {
   ModelFromTrajectory,
-  TrajectoryFromModelAndCoordinates,
+  TrajectoryFromModelAndCoordinates
 } from "molstar/lib/mol-plugin-state/transforms/model";
 import { getFileNameInfo } from "molstar/lib/mol-util/file-info";
 import { Task } from "molstar/lib/mol-task";
@@ -55,18 +56,19 @@ import { ColorTheme } from "molstar/lib/mol-theme/color";
 import { SizeTheme } from "molstar/lib/mol-theme/size";
 import {
   presetStaticComponent,
-  PresetStructureRepresentations,
+  PresetStructureRepresentations
 } from "molstar/lib/mol-plugin-state/builder/structure/representation-preset";
 import { StructureRepresentationRegistry } from "molstar/lib/mol-repr/structure/registry";
 import { ParamDefinition } from "molstar/lib/mol-util/param-definition";
 import {
   StructureSelectionQueries,
-  StructureSelectionQuery,
+  StructureSelectionQuery
 } from "molstar/lib/mol-plugin-state/helpers/structure-selection-query";
 import { StaticStructureComponentType } from "molstar/lib/mol-plugin-state/helpers/structure-component";
 import { ColorName, HexColor } from "molstar/lib/extensions/mvs/helpers/utils";
 import { OrderedSet, Segmentation } from "molstar/lib/mol-data/int";
 import { UnitIndex } from "molstar/lib/mol-model/structure/structure/element/util";
+import { InteractivityManager } from "molstar/lib/mol-plugin-state/manager/interactivity";
 
 // Definition of useful types
 export type AtomInfo = {
@@ -81,7 +83,7 @@ export type AtomInfo = {
   y: number;
   z: number;
   label: string;
-  structureID?: string;
+  structure: MolInfo;
 };
 
 export type BondInfo = {
@@ -117,6 +119,7 @@ export type MolstarClickEventDetail = {
   y: number;
   z: number;
   atom: AtomInfo | null;
+  rawEvent: InteractivityManager.ClickEvent;
 };
 
 export type MolstarStateEventDetail = {
@@ -159,13 +162,13 @@ export enum StateElements {
   HetGroupFocusGroup = "het-group-focus-group",
 
   Selection = "selection",
-  SelectionGroup = "selection-group",
+  SelectionGroup = "selection-group"
 }
 
 // Mol* events
 export enum MolstarEvents {
   COORDINATES = "molstar-coordinates",
-  STATE = "molstar-state-event",
+  STATE = "molstar-state-event"
 }
 export type MolstarInitOptions = {
   showControls?: boolean;
@@ -178,7 +181,7 @@ export type RepresentationThemeOptions = _RepresentationThemeOptions<
 
 type _RepresentationThemeOptions<
   C extends ColorTheme.BuiltIn,
-  S extends SizeTheme.BuiltIn,
+  S extends SizeTheme.BuiltIn
 > = {
   representation: StructureRepresentationRegistry.BuiltIn;
   representationParams: ParamDefinition.NamedParams;
@@ -223,7 +226,7 @@ export type MolecularSelection = {
   // Script-based selections
   script?: string;
   language?: SelectionLanguage;
-  loci?: Loci;
+  loci?: LociType;
 
   // Chain selections
   chain?: string;
@@ -278,7 +281,7 @@ export default class HorusMolstar {
   private async initPlugin(options?: MolstarInitOptions) {
     const ExtensionMap = {
       // @ts-ignore
-      "mp4-export": PluginSpec.Behavior(Mp4Export),
+      "mp4-export": PluginSpec.Behavior(Mp4Export)
     };
 
     this.plugin = await createPluginUI({
@@ -288,33 +291,33 @@ export default class HorusMolstar {
         ...DefaultPluginUISpec(),
         behaviors: [
           ...DefaultPluginUISpec().behaviors,
-          ...ObjectKeys(ExtensionMap).map((k) => ExtensionMap[k]),
+          ...ObjectKeys(ExtensionMap).map((k) => ExtensionMap[k])
         ],
         animations: [AnimateModelIndex],
         config: [
           [PluginConfig.Viewport.ShowExpand, false],
           [PluginConfig.Viewport.ShowControls, true],
           [PluginConfig.Viewport.ShowSelectionMode, true],
-          [PluginConfig.Viewport.ShowSettings, true],
+          [PluginConfig.Viewport.ShowSettings, true]
         ],
         layout: {
           initial: {
             isExpanded: true,
-            showControls: options?.showControls ?? false,
-          },
+            showControls: options?.showControls ?? false
+          }
         },
         components: {
           controls: {
             right: "none",
             bottom: "none",
-            left: HorusLeftPanelControls,
+            left: HorusLeftPanelControls
           },
           remoteState: "none",
           viewport: {
-            view: HorusMolstarViewportComponent,
-          },
-        },
-      },
+            view: HorusMolstarViewportComponent
+          }
+        }
+      }
     });
 
     const renderer = this.plugin?.canvas3d?.props?.renderer;
@@ -327,9 +330,9 @@ export default class HorusMolstar {
       settings: {
         renderer: {
           ...renderer,
-          backgroundColor: ColorNames.white,
-        },
-      },
+          backgroundColor: ColorNames.white
+        }
+      }
     });
 
     this.plugin.representation.structure.registry.add(
@@ -373,19 +376,24 @@ export default class HorusMolstar {
         const y: number = Number(e.position[1]?.toFixed(1) ?? 0);
         const z: number = Number(e.position[2]?.toFixed(1) ?? 0);
 
+        // If the item we clicked can be interacted, extract its information
+        // To do se, first we need to normalize the loci. This fixes an issue
+        // where clicking a bond, instead of an atom, did not return any atom information
+        const normalizedLoci = Loci.normalize(e.current.loci);
+
         const detail: MolstarClickEventDetail = {
-          x: Number(x),
-          y: Number(y),
-          z: Number(z),
-          // If the item we clicked can be interacted, extract its information
-          atom: StructureElement.Loci.is(e.current.loci)
-            ? this.extractAtomInfoFromLoci(e.current.loci)
+          x,
+          y,
+          z,
+          atom: StructureElement.Loci.is(normalizedLoci)
+            ? this.extractAtomInfoFromLoci(normalizedLoci)
             : null,
+          rawEvent: e
         };
 
         // Send the values through a custom event "molstar-coordinates"
         const event = new CustomEvent(MolstarEvents.COORDINATES, {
-          detail: detail,
+          detail: detail
         });
 
         window.dispatchEvent(event);
@@ -400,11 +408,11 @@ export default class HorusMolstar {
 
       // Send the values through a custom event "molstar-state-event"
       const detail: MolstarStateEventDetail = {
-        updating: e,
+        updating: e
       };
 
       const event = new CustomEvent(MolstarEvents.STATE, {
-        detail: detail,
+        detail: detail
       });
 
       window.dispatchEvent(event);
@@ -457,7 +465,7 @@ export default class HorusMolstar {
 
     // Launch a STATE event
     const event = new CustomEvent(MolstarEvents.STATE, {
-      detail: {},
+      detail: {}
     });
     window.dispatchEvent(event);
   }
@@ -526,9 +534,9 @@ export default class HorusMolstar {
         settings: {
           renderer: {
             ...renderer,
-            backgroundColor: Color.fromHexStyle(hexColor),
-          },
-        },
+            backgroundColor: Color.fromHexStyle(hexColor)
+          }
+        }
       });
     } catch (error) {
       throw new Error(
@@ -570,9 +578,9 @@ export default class HorusMolstar {
           trackball: {
             ...trackball,
             // @ts-ignore
-            animate: newAnimation,
-          },
-        },
+            animate: newAnimation
+          }
+        }
       });
     } catch (error) {
       throw new Error(
@@ -605,7 +613,7 @@ export default class HorusMolstar {
      */
     resetPosition: async () => {
       await PluginCommands.Camera.Reset(this.plugin!, {});
-    },
+    }
   };
 
   /**
@@ -637,8 +645,8 @@ export default class HorusMolstar {
           componentManager: true,
           canvas3d: true,
           interactivity: true,
-          camera: true,
-        },
+          camera: true
+        }
       });
 
       // The molx format is a ZIP file that can store the Mol* state
@@ -675,7 +683,7 @@ export default class HorusMolstar {
     }
 
     const file = new File([session], "session.molx", {
-      type: "application/zip",
+      type: "application/zip"
     });
 
     // Load the session
@@ -719,7 +727,7 @@ export default class HorusMolstar {
      */
     set: async (snapshot: Blob): Promise<void> => {
       await this.loadSession(snapshot);
-    },
+    }
   };
 
   /**
@@ -885,7 +893,7 @@ export default class HorusMolstar {
       message += " No residue specified, focusing on the whole structure.";
       const boundary = structureRef.cell.obj?.data.boundary.sphere ?? {
         radius: 5,
-        center: Vec3.zero(),
+        center: Vec3.zero()
       };
       const radius = Math.max(boundary.radius, 5);
 
@@ -895,7 +903,7 @@ export default class HorusMolstar {
       );
       await PluginCommands.Camera.SetSnapshot(this.plugin!, {
         snapshot,
-        durationMs: 250,
+        durationMs: 250
       });
 
       return message;
@@ -966,25 +974,25 @@ export default class HorusMolstar {
     const filterGroups: Record<string, Expression> = {
       "residue-test": MS.core.rel.eq([
         MS.struct.atomProperty.macromolecular.auth_seq_id(),
-        residueID,
+        residueID
       ]),
       "group-by": MS.core.str.concat([
         MS.struct.atomProperty.core.operatorName(),
-        MS.struct.atomProperty.macromolecular.residueKey(),
-      ]),
+        MS.struct.atomProperty.macromolecular.residueKey()
+      ])
     };
 
     // If a chain is specified, add the chain filter to the filter group
     if (chain) {
       filterGroups["chain-test"] = MS.core.rel.eq([
         MS.struct.atomProperty.macromolecular.auth_asym_id(),
-        chain || "A",
+        chain || "A"
       ]);
     }
 
     // We call the filter function to filter the structure and obtain the first residue that matches the filter
     const filteredResidue = MS.struct.filter.first([
-      MS.struct.generator.atomGroups(filterGroups),
+      MS.struct.generator.atomGroups(filterGroups)
     ]);
 
     // Select the model where we will place the new focus group
@@ -1022,7 +1030,7 @@ export default class HorusMolstar {
     filteredResidueInner.apply(
       StateTransforms.Representation.StructureRepresentation3D,
       createStructureRepresentationParams(this.plugin!, model.data, {
-        type: "ball-and-stick",
+        type: "ball-and-stick"
       })
     );
 
@@ -1032,19 +1040,19 @@ export default class HorusMolstar {
       const surroundings = MS.struct.modifier.includeSurroundings({
         0: filteredResidue,
         radius: surroundRadius,
-        "as-whole-residues": true,
+        "as-whole-residues": true
       });
 
       // Then, to the existing group, we will add a new selection which represents the surroundings
       group
         .apply(StateTransforms.Model.StructureSelectionFromExpression, {
           label: "Surroundings",
-          expression: surroundings,
+          expression: surroundings
         })
         .apply(
           StateTransforms.Representation.StructureRepresentation3D,
           createStructureRepresentationParams(this.plugin!, model.data, {
-            type: "ball-and-stick",
+            type: "ball-and-stick"
           })
         );
     }
@@ -1057,7 +1065,7 @@ export default class HorusMolstar {
       // (basically everithing inside the 'update' object)
       await PluginCommands.State.Update(this.plugin!, {
         state: this.state,
-        tree: update,
+        tree: update
       });
 
       // Get the bounding sphere of the selection, this will be useful to center the camera
@@ -1081,7 +1089,7 @@ export default class HorusMolstar {
       // Update the state
       await PluginCommands.State.Update(this.plugin!, {
         state: this.state,
-        tree: newUpdate,
+        tree: newUpdate
       });
 
       message = " No residues to focus found. Focusing whole structure.";
@@ -1100,7 +1108,7 @@ export default class HorusMolstar {
     // Finally, we will animate the camera to the new position
     PluginCommands.Camera.SetSnapshot(this.plugin!, {
       snapshot,
-      durationMs: 250,
+      durationMs: 250
     });
 
     return message;
@@ -1139,7 +1147,7 @@ export default class HorusMolstar {
         // Read the file and parse it as a molecule data asset
         const data = await this.plugin.builders.data.readFile({
           file: parseFileAsAsset,
-          label: options?.label ?? void 0,
+          label: options?.label ?? void 0
         });
 
         // Parse the trajectory data and apply default presets for visualization
@@ -1181,8 +1189,8 @@ export default class HorusMolstar {
                 name: options?.theme?.representation ?? "cartoon",
                 params: {
                   ...options?.theme?.representationParams,
-                  value: options?.theme?.representation ?? "cartoon",
-                },
+                  value: options?.theme?.representation ?? "cartoon"
+                }
               },
               colorTheme: {
                 name: options?.theme?.color ?? "uniform",
@@ -1190,13 +1198,13 @@ export default class HorusMolstar {
                   ...options?.theme?.colorParams,
                   value: options?.theme?.colorParams?.value
                     ? getColor(options?.theme?.colorParams?.value)
-                    : randomColor(),
-                },
+                    : randomColor()
+                }
               },
               sizeTheme: {
                 name: options?.theme?.size ?? "physical",
-                params: options?.theme?.sizeParams,
-              },
+                params: options?.theme?.sizeParams
+              }
             });
         } else {
           // Apply default preset using the component manager when no theme is provided
@@ -1229,7 +1237,7 @@ export default class HorusMolstar {
           this.plugin.state.data.applyAction(OpenFiles, {
             files: [parseFileAsAsset],
             format: { name: "auto", params: {} },
-            visuals: true,
+            visuals: true
           })
         );
 
@@ -1256,7 +1264,7 @@ export default class HorusMolstar {
   public async loadTrajectory({
     topology,
     trajectory,
-    label = "Loaded Trajectory",
+    label = "Loaded Trajectory"
   }: {
     topology: File;
     trajectory: File;
@@ -1279,7 +1287,7 @@ export default class HorusMolstar {
             const { data } = await ctx.builders.data.readFile({
               file,
               isBinary,
-              label,
+              label
             });
 
             // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain
@@ -1320,12 +1328,12 @@ export default class HorusMolstar {
                 TrajectoryFromModelAndCoordinates,
                 {
                   modelRef: model.ref,
-                  coordinatesRef: coordinates.ref,
+                  coordinatesRef: coordinates.ref
                 },
                 { dependsOn }
               )
               .apply(StateTransforms.Model.ModelFromTrajectory, {
-                modelIndex: 0,
+                modelIndex: 0
               });
 
             await this.state.updateTree(traj).runInContext(taskCtx);
@@ -1358,7 +1366,7 @@ export default class HorusMolstar {
     // Load the parsed data
     const data = await this.plugin!.builders.data.rawData({
       data: pdbString,
-      label: label,
+      label: label
     });
     const trajectory = await this.plugin!.builders.structure.parseTrajectory(
       data,
@@ -1380,7 +1388,7 @@ export default class HorusMolstar {
       water: await this.plugin!.builders.structure.tryCreateComponentStatic(
         structure,
         "water"
-      ),
+      )
     };
 
     const proteinColorType = "polymer-id";
@@ -1396,7 +1404,7 @@ export default class HorusMolstar {
           type: "cartoon",
           typeParams: { alpha: 1 },
           color: proteinColorType as any,
-          colorParams: { value: Color.fromRgb(1, 0, 0) },
+          colorParams: { value: Color.fromRgb(1, 0, 0) }
         },
         { tag: "polymer" }
       );
@@ -1407,7 +1415,7 @@ export default class HorusMolstar {
         {
           type: "ball-and-stick",
           color: ligandColorType as any,
-          colorParams: { value: Color.fromRgb(1, 0, 0) },
+          colorParams: { value: Color.fromRgb(1, 0, 0) }
         },
         { tag: "ligand" }
       );
@@ -1424,12 +1432,12 @@ export default class HorusMolstar {
   public async selectWithScript({
     label,
     script,
-    language,
+    language
   }: {
     label?: string;
     script: string;
     language: SelectionLanguage;
-  }): Promise<Loci | null> {
+  }): Promise<LociType | null> {
     let structuresToProcess: StructureRef[];
 
     if (label) {
@@ -1449,7 +1457,7 @@ export default class HorusMolstar {
       }
     }
 
-    let combinedLoci: Loci | null = null;
+    let combinedLoci: LociType | null = null;
 
     for (const structureRef of structuresToProcess) {
       const selection = Script.getStructureSelection(
@@ -1461,7 +1469,7 @@ export default class HorusMolstar {
 
       if (combinedLoci) {
         // Combine loci from multiple structures
-        combinedLoci = Loci.union(combinedLoci, loci);
+        combinedLoci = LociType.union(combinedLoci, loci);
       } else {
         combinedLoci = loci;
       }
@@ -1469,7 +1477,7 @@ export default class HorusMolstar {
 
     if (combinedLoci) {
       this.plugin?.managers.interactivity.lociSelects.select({
-        loci: combinedLoci,
+        loci: combinedLoci
       });
     }
 
@@ -1479,7 +1487,7 @@ export default class HorusMolstar {
   async createComponentForSelection({
     label,
     representation,
-    color,
+    color
   }: {
     label?: string;
     representation?: StructureRepresentationRegistry.BuiltIn;
@@ -1512,9 +1520,9 @@ export default class HorusMolstar {
             colorTheme: {
               name: "uniform",
               params: {
-                value: color ? getColor(color) : randomColor(),
-              },
-            },
+                value: color ? getColor(color) : randomColor()
+              }
+            }
           })
           .commit();
       }
@@ -1528,7 +1536,7 @@ export default class HorusMolstar {
     newSelectionLabel,
     structureLabel,
     selectionOptions,
-    representationParams,
+    representationParams
   }: {
     structure?: StateObjectRef<PluginStateObject.Molecule.Structure>;
     structureLabel?: string;
@@ -1557,23 +1565,23 @@ export default class HorusMolstar {
       selectionExpression = MS.struct.generator.atomGroups({
         "chain-test": MS.core.rel.eq([
           MS.struct.atomProperty.macromolecular.label_asym_id(),
-          selectionOptions.chain_and_residue.chain,
+          selectionOptions.chain_and_residue.chain
         ]),
         "residue-test": MS.core.rel.eq([
           MS.struct.atomProperty.macromolecular.label_seq_id(),
-          selectionOptions.chain_and_residue.residue,
-        ]),
+          selectionOptions.chain_and_residue.residue
+        ])
       });
     } else if (selectionOptions?.auth_chain_and_residue) {
       selectionExpression = MS.struct.generator.atomGroups({
         "chain-test": MS.core.rel.eq([
           MS.struct.atomProperty.macromolecular.auth_asym_id(),
-          selectionOptions.auth_chain_and_residue.auth_chain,
+          selectionOptions.auth_chain_and_residue.auth_chain
         ]),
         "residue-test": MS.core.rel.eq([
           MS.struct.atomProperty.macromolecular.auth_seq_id(),
-          selectionOptions.auth_chain_and_residue.auth_residue,
-        ]),
+          selectionOptions.auth_chain_and_residue.auth_residue
+        ])
       });
     } else {
       const tests: Record<string, Expression> = {};
@@ -1581,19 +1589,19 @@ export default class HorusMolstar {
       if (selectionOptions?.chain) {
         tests["chain-test"] = MS.core.rel.eq([
           MS.struct.atomProperty.macromolecular.label_asym_id(),
-          selectionOptions.chain,
+          selectionOptions.chain
         ]);
       } else if (selectionOptions?.auth_chain) {
         tests["chain-test"] = MS.core.rel.eq([
           MS.struct.atomProperty.macromolecular.auth_asym_id(),
-          selectionOptions.auth_chain,
+          selectionOptions.auth_chain
         ]);
       }
 
       if (selectionOptions?.entity) {
         tests["entity-test"] = MS.core.rel.eq([
           MS.struct.atomProperty.macromolecular.label_entity_id(),
-          selectionOptions.entity,
+          selectionOptions.entity
         ]);
       }
 
@@ -1602,78 +1610,78 @@ export default class HorusMolstar {
           ? MS.core.logic.and([
               MS.core.rel.eq([
                 MS.struct.atomProperty.macromolecular.label_seq_id(),
-                selectionOptions.residue,
+                selectionOptions.residue
               ]),
               MS.core.rel.eq([
                 MS.struct.atomProperty.macromolecular.pdbx_PDB_ins_code(),
-                selectionOptions.insertion_code,
-              ]),
+                selectionOptions.insertion_code
+              ])
             ])
           : MS.core.rel.eq([
               MS.struct.atomProperty.macromolecular.label_seq_id(),
-              selectionOptions.residue,
+              selectionOptions.residue
             ]);
       } else if (selectionOptions?.auth_residue !== undefined) {
         tests["residue-test"] = selectionOptions.insertion_code
           ? MS.core.logic.and([
               MS.core.rel.eq([
                 MS.struct.atomProperty.macromolecular.auth_seq_id(),
-                selectionOptions.auth_residue,
+                selectionOptions.auth_residue
               ]),
               MS.core.rel.eq([
                 MS.struct.atomProperty.macromolecular.pdbx_PDB_ins_code(),
-                selectionOptions.insertion_code,
-              ]),
+                selectionOptions.insertion_code
+              ])
             ])
           : MS.core.rel.eq([
               MS.struct.atomProperty.macromolecular.auth_seq_id(),
-              selectionOptions.auth_residue,
+              selectionOptions.auth_residue
             ]);
       } else if (selectionOptions?.residue_range) {
         tests["residue-test"] = MS.core.rel.inRange([
           MS.struct.atomProperty.macromolecular.label_seq_id(),
           selectionOptions.residue_range.start,
-          selectionOptions.residue_range.end,
+          selectionOptions.residue_range.end
         ]);
       } else if (selectionOptions?.auth_residue_range) {
         tests["residue-test"] = MS.core.rel.inRange([
           MS.struct.atomProperty.macromolecular.auth_seq_id(),
           selectionOptions.auth_residue_range.start,
-          selectionOptions.auth_residue_range.end,
+          selectionOptions.auth_residue_range.end
         ]);
       }
 
       if (selectionOptions?.atom_name) {
         tests["atom-test"] = MS.core.rel.eq([
           MS.struct.atomProperty.macromolecular.label_atom_id(),
-          selectionOptions.atom_name,
+          selectionOptions.atom_name
         ]);
       } else if (selectionOptions?.auth_atom_name) {
         tests["atom-test"] = MS.core.rel.eq([
           MS.struct.atomProperty.macromolecular.auth_atom_id(),
-          selectionOptions.auth_atom_name,
+          selectionOptions.auth_atom_name
         ]);
       } else if (selectionOptions?.element_symbol) {
         tests["atom-test"] = MS.core.rel.eq([
           MS.struct.atomProperty.core.elementSymbol(),
-          selectionOptions.element_symbol,
+          selectionOptions.element_symbol
         ]);
       } else if (selectionOptions?.atom_id) {
         tests["atom-test"] = MS.core.rel.eq([
           MS.struct.atomProperty.macromolecular.id(),
-          selectionOptions.atom_id,
+          selectionOptions.atom_id
         ]);
       } else if (selectionOptions?.atom_index) {
         tests["atom-test"] = MS.core.rel.eq([
           MS.struct.atomProperty.core.sourceIndex(),
-          selectionOptions.atom_index,
+          selectionOptions.atom_index
         ]);
       }
 
       if (selectionOptions?.secondary_structure) {
         tests["ss-test"] = MS.core.rel.eq([
           MS.struct.type.secondaryStructureFlags,
-          selectionOptions.secondary_structure,
+          selectionOptions.secondary_structure
         ]);
       }
 
@@ -1688,7 +1696,7 @@ export default class HorusMolstar {
         selectionExpression = MS.struct.modifier.includeSurroundings({
           0: buildExpressionFromSelection(target.script, target.language),
           radius,
-          "as-whole-residues": true,
+          "as-whole-residues": true
         });
       } else {
         selectionExpression = MS.struct.generator.atomGroups(tests);
@@ -1738,7 +1746,7 @@ export default class HorusMolstar {
       .apply(StateTransforms.Representation.StructureRepresentation3D, {
         type: {
           name: representationParams?.representation ?? "ball-and-stick",
-          params: representationParams?.representationParams,
+          params: representationParams?.representationParams
         },
         colorTheme: {
           name: representationParams?.color ?? newSelectionLabel,
@@ -1746,13 +1754,13 @@ export default class HorusMolstar {
             ...representationParams?.colorParams,
             value: representationParams?.colorParams?.value
               ? getColor(representationParams.colorParams.value)
-              : randomColor(),
-          },
+              : randomColor()
+          }
         },
         sizeTheme: {
           name: representationParams?.size ?? "physical",
-          params: representationParams?.sizeParams,
-        },
+          params: representationParams?.sizeParams
+        }
       });
 
     await update.commit();
@@ -1792,10 +1800,31 @@ export default class HorusMolstar {
         typeParams: {
           sizeFactor: 0.15,
           sizeAspectRatio: 2 / 3,
-          quality: "auto",
-        },
+          quality: "auto"
+        }
       }
     );
+  }
+
+  private getStructureFromLoci(loci: StructureElement.Location<Unit>): MolInfo {
+    const lociID = loci.structure.model.id;
+
+    const structure = this.listStructures({ includeRef: true }).find((s) =>
+      s.structureRef.cell.obj?.data.units
+        .map((u) => u.model.id)
+        .includes(lociID)
+    );
+
+    if (!structure)
+      throw new Error("Could not find structure for the given loci");
+
+    // Remove the structureRef, the structure already contains the ID, and the structureRef
+    // is a big object which we prefer to not include. In case a developer needs it,
+    // it can be accessed from the listStructures({includeRef: true}) method.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { structureRef, ...structureWithoutRef } = structure;
+
+    return structureWithoutRef satisfies MolInfo;
   }
 
   private extractAtomInfo(
@@ -1816,6 +1845,7 @@ export default class HorusMolstar {
     const label = structureID
       ? this.getLabelFromStructureRef(structureID)
       : StructureProperties.unit.model_label(loc);
+    const structure = this.getStructureFromLoci(loc);
 
     // If auth_comp_id has 2 characters instead of 3, then add a space
     // before it
@@ -1836,7 +1866,7 @@ export default class HorusMolstar {
       y: y,
       z: z,
       label: label ?? "No label",
-      structureID: structureID,
+      structure: structure
     };
   }
 
@@ -1950,7 +1980,7 @@ export default class HorusMolstar {
         return {
           fileContents: trajectoryData.data.source.data.lines.data,
           fileName: trajectoryData.name ?? "Unknown",
-          format: trajectoryData.data.source.kind ?? "unknown",
+          format: trajectoryData.data.source.kind ?? "unknown"
         };
       }
 
@@ -1962,7 +1992,7 @@ export default class HorusMolstar {
       return {
         fileContents,
         fileName,
-        format: fileName.split(".").pop() || "unknown",
+        format: fileName.split(".").pop() || "unknown"
       };
     } catch (error) {
       console.error(
@@ -1973,7 +2003,7 @@ export default class HorusMolstar {
       return {
         fileContents: null,
         fileName: "Unknown",
-        format: "Unknown",
+        format: "Unknown"
       };
     }
   }
@@ -2017,7 +2047,7 @@ export default class HorusMolstar {
    */
   public listStructures<T extends boolean = false>(
     {
-      includeRef,
+      includeRef
     }: {
       includeRef?: T;
     } = {} as { includeRef?: T }
@@ -2046,7 +2076,7 @@ export default class HorusMolstar {
           structureRef: includeRef ? structure : undefined,
           rootRef: rootRef,
           label: this.getLabelFromStructureRef(rootRef) ?? "Unknown",
-          ...this.getFileAsHexStringFromRootRef(rootRef),
+          ...this.getFileAsHexStringFromRootRef(rootRef)
         };
 
         if (molInfo.fileContents !== null) {
@@ -2111,7 +2141,7 @@ export default class HorusMolstar {
 
         const res = this.extractAtomInfo(loc, structureRef.cell.sourceRef);
         resInfo.push(res);
-      },
+      }
     });
 
     return resInfo;
@@ -2163,7 +2193,7 @@ export default class HorusMolstar {
         if (unique) {
           for (const info of resInfo) {
             if (
-              info.structureID === res.structureID &&
+              info.structure?.id === res.structure?.id &&
               info.auth_comp_id === res.auth_comp_id &&
               info.residue === res.residue &&
               info.chainID === res.chainID
@@ -2190,7 +2220,7 @@ export default class HorusMolstar {
           }
         }
         resInfo.push(res);
-      },
+      }
     });
 
     return resInfo;
@@ -2343,7 +2373,7 @@ export default class HorusMolstar {
           chainSegment.end
         );
         const chainLoci = StructureElement.Loci(structure, [
-          { unit, indices: chainIndices as OrderedSet<UnitIndex> },
+          { unit, indices: chainIndices as OrderedSet<UnitIndex> }
         ]);
 
         // Initialize chain entry if it doesn't exist
@@ -2351,7 +2381,7 @@ export default class HorusMolstar {
           chains.set(chainId, {
             loci: chainLoci,
             residues: new Map<string, StructureElement.Loci>(),
-            hetero: new Map<string, StructureElement.Loci>(),
+            hetero: new Map<string, StructureElement.Loci>()
           });
         }
 
@@ -2371,7 +2401,7 @@ export default class HorusMolstar {
             residueSegment.end
           );
           const residueLoci = StructureElement.Loci(structure, [
-            { unit, indices: residueIndices as OrderedSet<UnitIndex> },
+            { unit, indices: residueIndices as OrderedSet<UnitIndex> }
           ]);
 
           // Check if it's a hetero residue
@@ -2394,16 +2424,16 @@ export default class HorusMolstar {
         residues: Array.from(chainData.residues.entries()).map(
           ([residueId, loci]) => ({
             id: residueId,
-            loci,
+            loci
           })
         ),
         hetero: Array.from(chainData.hetero.entries()).map(
           ([heteroId, loci]) => ({
             id: heteroId,
-            loci,
+            loci
           })
-        ),
-      })),
+        )
+      }))
     };
   }
 
@@ -2424,7 +2454,7 @@ export default class HorusMolstar {
     // Use fake data to create a node
     const data = await this.plugin!.builders.data.rawData({
       data: "HETATM 1  H   H   A   1       0.000   0.000   0.000  1.00  0.00           H",
-      label: nodeName,
+      label: nodeName
     });
     const trajectory = await this.plugin!.builders.structure.parseTrajectory(
       data,
@@ -2459,7 +2489,7 @@ export default class HorusMolstar {
     radius,
     opacity,
     color,
-    deletePrevious,
+    deletePrevious
   }: {
     position: {
       x: number;
@@ -2489,7 +2519,7 @@ export default class HorusMolstar {
       radius: radius,
       color: deletePrevious?.color ?? color ?? randomColor(),
       alpha: opacity ?? 0.3,
-      ref: "",
+      ref: ""
     };
 
     // @ts-ignore
@@ -2503,7 +2533,7 @@ export default class HorusMolstar {
     newPosition,
     newRadius,
     newColor,
-    newOpacity,
+    newOpacity
   }: {
     sphereRef?: string;
     newPosition?: { x: number; y: number; z: number };
@@ -2546,9 +2576,9 @@ export default class HorusMolstar {
           z: newPosition?.z ?? params.z,
           radius: newRadius ?? params.radius,
           color: newColor ?? params.color,
-          opacity: newOpacity ?? params.opacity,
-        },
-      },
+          opacity: newOpacity ?? params.opacity
+        }
+      }
     };
 
     // Update the state object with new parameters
@@ -2599,7 +2629,7 @@ export default class HorusMolstar {
     radialSegments,
     opacity,
     color,
-    deletePrevious,
+    deletePrevious
   }: {
     position: {
       x0: number;
@@ -2649,7 +2679,7 @@ export default class HorusMolstar {
       radialSegments: radialSegments,
       color: deletePrevious?.color ?? color ?? randomColor(),
       alpha: opacity ?? 0.3,
-      ref: "",
+      ref: ""
     };
 
     // @ts-ignore
@@ -2691,7 +2721,7 @@ export default class HorusMolstar {
     newRadiusScale,
     newRadialSegments,
     newColor,
-    newOpacity,
+    newOpacity
   }: {
     boxRef?: string;
     newPosition?: {
@@ -2769,9 +2799,9 @@ export default class HorusMolstar {
           radiusScale: newRadiusScale ?? params.radiusScale,
           radialSegments: newRadialSegments ?? params.radialSegments,
           color: newColor ?? params.color,
-          opacity: newOpacity ?? params.opacity,
-        },
-      },
+          opacity: newOpacity ?? params.opacity
+        }
+      }
     };
 
     // Update the state object with new parameters
@@ -2851,10 +2881,10 @@ export default class HorusMolstar {
         update,
         structure.cell,
         {
-          type: representation,
+          type: representation
         },
         {
-          tag: reprTag,
+          tag: reprTag
         }
       );
       this.addedReprs.push(newRepr);
@@ -2951,14 +2981,14 @@ export default class HorusMolstar {
           await this.loadTrajectory({
             topology: new File([topology], data.topologyFileName),
             trajectory: new File([trajectory], data.trajectoryFileName),
-            label,
+            label
           });
           break;
 
         case "addMolecule":
           const blob = await window.horus.getFile(data.molContent);
           await this.loadMoleculeFile(new File([blob], data.fileName), {
-            ...data.options,
+            ...data.options
           });
           break;
         case "addComponent":
@@ -2966,7 +2996,7 @@ export default class HorusMolstar {
             structureLabel: data.label,
             newSelectionLabel: data.selectionLabel ?? "Add Component",
             selectionOptions: data.options?.selection,
-            representationParams: data.options?.theme,
+            representationParams: data.options?.theme
           });
           break;
         case "focus":
@@ -2983,7 +3013,7 @@ export default class HorusMolstar {
             radiusScale: data.radiusScale,
             radialSegments: data.radialSegments,
             opacity: data.opacity ?? 1,
-            color: data.color ? Color.fromHexStyle(data.color) : randomColor(),
+            color: data.color ? Color.fromHexStyle(data.color) : randomColor()
           });
           break;
         case "addSphere":
@@ -2992,7 +3022,7 @@ export default class HorusMolstar {
             radius: data.radius,
             opacity: data.opacity,
             color: data.color ? Color.fromHexStyle(data.color) : randomColor(),
-            deletePrevious: data.deletePrevious,
+            deletePrevious: data.deletePrevious
           });
           break;
         case "setBackgroundColor":
@@ -3049,7 +3079,7 @@ const standardResidues = [
   "ASH",
   "CYX",
   "HID",
-  "HIE",
+  "HIE"
 ];
 
 /*
@@ -3103,7 +3133,7 @@ function parsePDB(pdbString: string) {
     "ENDMDL",
     "CONNECT",
     "MASTER",
-    "END",
+    "END"
   ];
   const lines = pdbString.split("\n");
 

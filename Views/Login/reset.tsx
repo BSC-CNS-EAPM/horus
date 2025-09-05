@@ -31,7 +31,7 @@ export default function Reset() {
 
     const body = JSON.stringify({
       token,
-      newPassword: newPassword,
+      newPassword: newPassword
     });
 
     const response = await horusPost("/users/reset", null, body);
@@ -46,14 +46,14 @@ export default function Reset() {
     if (data.ok) {
       setMessage({
         text: "Password reset successfully, redirecting to login...",
-        type: "success",
+        type: "success"
       });
       await new Promise((resolve) => setTimeout(resolve, 2000));
       window.location.href = "/users/login";
     } else {
       setMessage({
         text: data.msg ?? "An error occurred. Try again later.",
-        type: "error",
+        type: "error"
       });
     }
   };
@@ -71,7 +71,7 @@ export default function Reset() {
       className="container mx-auto px-4"
       style={{
         maxWidth: "600px",
-        minWidth: "300px",
+        minWidth: "300px"
       }}
     >
       <Logo className="h-32 mx-auto my-4" />

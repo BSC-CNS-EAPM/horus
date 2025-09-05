@@ -18,7 +18,7 @@ import SidebarView from "../Components/SidebarView/sidebar_view";
 import {
   HorusPlugin,
   Block,
-  PluginVariable,
+  PluginVariable
 } from "../Components/FlowBuilder/flow.types";
 
 // Styles
@@ -58,7 +58,7 @@ function getModal() {
 
   return {
     root,
-    buttons,
+    buttons
   };
 }
 
@@ -188,12 +188,12 @@ function PluginConfigView(props: PluginConfigViewProps) {
       // Send the changes to the server
       const header = {
         "Content-Type": "application/json",
-        Accept: "application/json",
+        Accept: "application/json"
       };
 
       const body = JSON.stringify({
         config: newConfig,
-        remote: selectedRemote,
+        remote: selectedRemote
       });
 
       const response = await horusPost("/api/plugins/config", header, body);
@@ -240,7 +240,7 @@ function PluginConfigView(props: PluginConfigViewProps) {
         );
       });
       groupedViews[category] = [
-        <div className="flex flex-col gap-2 flex-wrap">{variableViews}</div>,
+        <div className="flex flex-col gap-2 flex-wrap">{variableViews}</div>
       ];
     }
 
@@ -277,7 +277,7 @@ function PluginConfigView(props: PluginConfigViewProps) {
             )}
           </div>
         ),
-        icon: <RemoteIcon />,
+        icon: <RemoteIcon />
       };
     }
   });
@@ -387,12 +387,12 @@ function PluginCard(props: PluginCardProps) {
 
     try {
       const body = JSON.stringify({
-        id: plugin.id,
+        id: plugin.id
       });
 
       const headers = {
         "Content-Type": "application/json",
-        Accept: "application/json",
+        Accept: "application/json"
       };
 
       // Wait for the animation to finish
@@ -620,7 +620,7 @@ export function PluginManager() {
 
     setFilteredPluginList({
       plugins: filteredPlugins ?? [],
-      errors: filteredErrors ?? [],
+      errors: filteredErrors ?? []
     });
   };
 
@@ -658,7 +658,7 @@ export function PluginManager() {
     <div
       className="w-full h-full"
       style={{
-        overflowY: "auto",
+        overflowY: "auto"
       }}
     >
       <div className="flex flex-col">
@@ -733,7 +733,7 @@ function getFileName(path: string) {
 }
 
 function InstallingPluginView({
-  onPluginInstall,
+  onPluginInstall
 }: {
   onPluginInstall: () => void;
 }) {
@@ -761,11 +761,11 @@ function InstallingPluginView({
 
     const header = {
       "Content-Type": "application/json",
-      Accept: "application/json",
+      Accept: "application/json"
     };
 
     const body = JSON.stringify({
-      file: file,
+      file: file
     });
 
     horusPost("/api/plugins/install", header, body)
@@ -876,7 +876,7 @@ function InstallingPluginView({
             style={{
               height: "500px",
               borderRadius: "10px",
-              overflow: "hidden",
+              overflow: "hidden"
             }}
           >
             <HorusLazyLog
@@ -907,7 +907,7 @@ function ManualOrStoreInstall({
   selectedFile,
   setSelectedFile,
   isInstalling,
-  onPluginInstall,
+  onPluginInstall
 }: PluginInstallProps) {
   const settings = useSettings();
 
@@ -930,7 +930,7 @@ function ManualOrStoreInstall({
           repoToken={r.repository_token}
           repoName={r.repository_name}
         />
-      ),
+      )
     }));
 
     return repos;
@@ -954,8 +954,8 @@ function ManualOrStoreInstall({
           setSelectedFile={setSelectedFile}
           onPluginInstall={onPluginInstall}
         />
-      ),
-    },
+      )
+    }
   };
 
   return <HorusViewTabs tabs={tabs} disabled={isInstalling} />;
@@ -964,7 +964,7 @@ function ManualOrStoreInstall({
 function ManualFileSelectionInstall({
   selectedFile,
   setSelectedFile,
-  onPluginInstall,
+  onPluginInstall
 }: PluginInstallProps) {
   return (
     <div>

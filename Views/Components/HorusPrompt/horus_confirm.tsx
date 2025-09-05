@@ -45,7 +45,7 @@ export const useConfirm = () => {
     if (showConfirm) {
       render(
         <ConfirmComponent message={message} onSubmit={handleSubmit} />,
-        document.getElementById("confirm-root"),
+        document.getElementById("confirm-root")
       );
     } else {
       unmountComponentAtNode(document.getElementById("confirm-root")!);
@@ -57,7 +57,7 @@ export const useConfirm = () => {
 
 const ConfirmComponent = ({
   message,
-  onSubmit,
+  onSubmit
 }: {
   message: string;
   onSubmit: (confirmed: boolean) => void;
@@ -75,7 +75,7 @@ const ConfirmComponent = ({
         onSubmit(false);
       }
     },
-    [onSubmit],
+    [onSubmit]
   );
 
   useEffect(() => {
@@ -112,7 +112,7 @@ const ConfirmComponent = ({
               height: 0,
               opacity: "0",
               position: "absolute",
-              zIndex: -1,
+              zIndex: -1
             }}
           />
         </form>

@@ -9,7 +9,7 @@ import {
   Unit,
   StructureProperties,
   StructureElement,
-  Bond,
+  Bond
 } from "molstar/lib/mol-model/structure";
 
 import { Color } from "molstar/lib/mol-util/color";
@@ -27,8 +27,8 @@ export function createProteopediaCustomTheme(colors: number[]) {
     colors: PD.ObjectList(
       { color: PD.Color(Color(0xffffff)) },
       ({ color }) => Color.toHexString(color),
-      { defaultValue: colors.map((c) => ({ color: Color(c) })) },
-    ),
+      { defaultValue: colors.map((c) => ({ color: Color(c) })) }
+    )
   };
   type ProteopediaCustomColorThemeParams =
     typeof ProteopediaCustomColorThemeParams;
@@ -59,7 +59,7 @@ export function createProteopediaCustomTheme(colors: number[]) {
 
   function ProteopediaCustomColorTheme(
     ctx: ThemeDataContext,
-    props: PD.Values<ProteopediaCustomColorThemeParams>,
+    props: PD.Values<ProteopediaCustomColorThemeParams>
   ): ColorTheme<ProteopediaCustomColorThemeParams> {
     let color: LocationColor;
 
@@ -104,7 +104,7 @@ export function createProteopediaCustomTheme(colors: number[]) {
       color,
       props,
       description: Description,
-      legend: undefined,
+      legend: undefined
     } as any;
   }
 
@@ -115,6 +115,6 @@ export function createProteopediaCustomTheme(colors: number[]) {
     factory: ProteopediaCustomColorTheme,
     getParams: getChainIdColorThemeParams,
     defaultValues: PD.getDefaultValues(ProteopediaCustomColorThemeParams),
-    isApplicable: (ctx: ThemeDataContext) => !!ctx.structure,
+    isApplicable: (ctx: ThemeDataContext) => !!ctx.structure
   };
 }

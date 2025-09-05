@@ -10,7 +10,7 @@ import {
   Model,
   ElementIndex,
   ResidueIndex,
-  ChainIndex,
+  ChainIndex
 } from "molstar/lib/mol-model/structure";
 import { Color } from "molstar/lib/mol-util/color";
 import { CustomProperty } from "molstar/lib/mol-model-props/common/custom-property";
@@ -26,7 +26,7 @@ const EvolutionaryConservationPalette: Color[] = [
   [234, 255, 255],
   [215, 255, 255],
   [140, 255, 255],
-  [16, 200, 209], // 1
+  [16, 200, 209] // 1
 ]
   .reverse()
   .map(([r, g, b]) => Color.fromRgb(r ?? 0, g ?? 0, b ?? 0));
@@ -40,7 +40,7 @@ export const EvolutionaryConservation = CustomElementProperty.create<number>({
     const id = model.entryId.toLowerCase();
     const url = Asset.getUrlAsset(
       ctx.assetManager,
-      `https://proteopedia.org/cgi-bin/cnsrf?${id}`,
+      `https://proteopedia.org/cgi-bin/cnsrf?${id}`
     );
     const json = await ctx.assetManager
       .resolve(url, "json")
@@ -65,7 +65,7 @@ export const EvolutionaryConservation = CustomElementProperty.create<number>({
     for (let rI = 0 as ResidueIndex; rI < residueCount; rI++) {
       const cI = chainIndex[residueOffsets[rI] as ElementIndex];
       const key = `${model.atomicHierarchy.chains.auth_asym_id.value(
-        cI as ChainIndex,
+        cI as ChainIndex
       )} ${model.atomicHierarchy.residues.auth_seq_id.value(rI)}`;
       if (!conservationMap.has(key)) continue;
       const ann = conservationMap.get(key)!;
@@ -81,10 +81,10 @@ export const EvolutionaryConservation = CustomElementProperty.create<number>({
       if (e < 1 || e > 10) return EvolutionaryConservationDefaultColor;
       return EvolutionaryConservationPalette[e - 1]!;
     },
-    defaultColor: EvolutionaryConservationDefaultColor,
+    defaultColor: EvolutionaryConservationDefaultColor
   },
   getLabel(e) {
     if (e === 10) return `Evolutionary Conservation: Insufficient Data`;
     return e ? `Evolutionary Conservation: ${e}` : void 0;
-  },
+  }
 });

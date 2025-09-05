@@ -3,7 +3,7 @@ import {
   IconCookie,
   IconX,
   IconShield,
-  IconChartBar,
+  IconChartBar
 } from "@tabler/icons-react";
 import ReactGA from "react-ga4";
 
@@ -31,8 +31,8 @@ function HorusGoogleAnalytics() {
       if (!isInitialized) {
         ReactGA.initialize("G-D9DT7B1QHG", {
           gtagOptions: {
-            anonymize_ip: true,
-          },
+            anonymize_ip: true
+          }
         });
 
         // Custom set the platform data
@@ -42,7 +42,7 @@ function HorusGoogleAnalytics() {
             app_version: appInfo.APP_VERSION,
             platform: appInfo.platform || "unknown",
             debug: appInfo.debug || false,
-            mode: appInfo.mode || "unknown",
+            mode: appInfo.mode || "unknown"
           });
         });
 
@@ -56,7 +56,7 @@ function HorusGoogleAnalytics() {
 }
 
 export function HorusAnalyticsProvider({
-  children,
+  children
 }: {
   children?: React.ReactNode;
 }) {
@@ -92,8 +92,8 @@ export function ConsentBanner() {
 
     saveSettings({
       settings: [
-        { ...(analyticsSetting as unknown as PluginVariable), value: true },
-      ],
+        { ...(analyticsSetting as unknown as PluginVariable), value: true }
+      ]
     });
     setIsVisible(false);
     // Optional: Reload to initialize analytics
@@ -107,8 +107,8 @@ export function ConsentBanner() {
 
     saveSettings({
       settings: [
-        { ...(analyticsSetting as unknown as PluginVariable), value: false },
-      ],
+        { ...(analyticsSetting as unknown as PluginVariable), value: false }
+      ]
     });
     setIsVisible(false);
   };
@@ -119,7 +119,7 @@ export function ConsentBanner() {
     <div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center p-4"
       style={{
-        zIndex: 1000,
+        zIndex: 1000
       }}
     >
       <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">

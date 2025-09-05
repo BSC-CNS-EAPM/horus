@@ -13,22 +13,22 @@ const router = createBrowserRouter([
     children: [
       {
         path: "",
-        element: <SplashScreen />,
+        element: <SplashScreen />
       },
       {
         path: "flow",
-        element: <HorusPanelView />,
+        element: <HorusPanelView />
       },
       {
         path: "*",
-        element: <RouterError />,
-      },
-    ],
+        element: <RouterError />
+      }
+    ]
   },
   {
     path: `${window.__HORUS_ROOT__}/privacy`,
-    element: <Cookies />,
-  },
+    element: <Cookies />
+  }
 ]);
 
 export function HorusRouter() {

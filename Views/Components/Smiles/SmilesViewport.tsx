@@ -9,7 +9,7 @@ import { isMolstarLoaded } from "../Molstar/HorusWrapper/horusmolstar";
 
 export function Smiles2DMolstarViewportComponent() {
   const [currentSmiles, setCurrentSmiles] = useState<HorusSmilesType | null>(
-    null,
+    null
   );
   const [availableSmiles, setAvailableSmiles] = useState<HorusSmilesType[]>([]);
   const [hidden, setHidden] = useState<boolean>(false);
@@ -21,7 +21,7 @@ export function Smiles2DMolstarViewportComponent() {
   useEffect(() => {
     const updateSmilesEventListener = () => {
       setAvailableSmiles(
-        window.smiles?.getSmilesList().filter((s) => s.structureRef) ?? [],
+        window.smiles?.getSmilesList().filter((s) => s.structureRef) ?? []
       );
       setCurrentSmiles(window.smiles?.getCurrentSmiles() ?? null);
     };
@@ -70,7 +70,7 @@ export function Smiles2DMolstarViewportComponent() {
           className="flex flex-col gap-1 bg-white"
           style={{
             height: hidden ? "0px" : "auto",
-            minWidth: "240px",
+            minWidth: "240px"
           }}
         >
           <div className="border">
@@ -91,7 +91,7 @@ export function Smiles2DMolstarViewportComponent() {
                       window?.molstar?.focus(label, residueNum, chain);
                     }
                   }
-                },
+                }
               }}
               removePolygon={true}
               width={"100%"}
@@ -99,7 +99,7 @@ export function Smiles2DMolstarViewportComponent() {
               options={{
                 depict: true,
                 contextmenu: false,
-                zoom: false,
+                zoom: false
                 // showdragandDropIconindepictmode: false,
               }}
               smiles={currentSmiles?.smi}
@@ -108,9 +108,9 @@ export function Smiles2DMolstarViewportComponent() {
                   new CustomEvent("addPanel", {
                     detail: {
                       component: PANEL_REGISTRY.smiles.component,
-                      panelID: PANEL_REGISTRY.smiles.id,
-                    },
-                  }),
+                      panelID: PANEL_REGISTRY.smiles.id
+                    }
+                  })
                 );
               }}
             />
@@ -123,7 +123,7 @@ export function Smiles2DMolstarViewportComponent() {
                 const smilesID = e.target.value;
 
                 const wantedSmiles = availableSmiles.find(
-                  (smi) => smi.id === smilesID,
+                  (smi) => smi.id === smilesID
                 );
 
                 if (!wantedSmiles) return;
@@ -139,7 +139,7 @@ export function Smiles2DMolstarViewportComponent() {
                         {`${smi.label} - ${
                           isMolstarLoaded(window.molstar)
                             ? (window.molstar?.getLabelFromStructureRef?.(
-                                smi.structureRef?.id ?? "",
+                                smi.structureRef?.id ?? ""
                               ) ?? "Unknown")
                             : "Unknown"
                         }` || "Unnamed SMILES"}
@@ -159,7 +159,7 @@ function CustomViewportButton({
   children,
   title,
   onClick,
-  visible,
+  visible
 }: {
   children: ReactNode;
   title: string;
@@ -174,7 +174,7 @@ function CustomViewportButton({
         position: visible ? "absolute" : "relative",
         width: "32px",
         height: "32px",
-        padding: 0,
+        padding: 0
       }}
       title={title}
       onClick={onClick}

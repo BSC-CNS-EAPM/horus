@@ -39,7 +39,7 @@ addEventListener("message", async (event) => {
   } catch (error) {
     postMessage({
       error: error?.message ?? error,
-      conversionId,
+      conversionId
     });
   }
 });

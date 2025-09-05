@@ -3,7 +3,7 @@ import {
   AtomInfo,
   isMolstarLoaded,
   MolInfo,
-  MolstarEvents,
+  MolstarEvents
 } from "../../Molstar/HorusWrapper/horusmolstar";
 import { delay } from "@/Utils/utils";
 
@@ -35,7 +35,7 @@ const PROPERTIES_NOT_ALLOWED = [
   "structureref",
   "selected",
   "group",
-  "properties",
+  "properties"
 ];
 
 const TRIM_REGEX = /[\r\n\u2028\u2029]+/g;
@@ -43,7 +43,7 @@ const TRIM_REGEX = /[\r\n\u2028\u2029]+/g;
 // Smiles events
 export enum SmilesEvents {
   STATE = "smiles-state-event",
-  CONVERSIONS = "smiles-conversions-event",
+  CONVERSIONS = "smiles-conversions-event"
 }
 
 export type HorusSmilesManagerState = {
@@ -65,8 +65,8 @@ export default class HorusSmilesManager {
     // Emit the CONVERSIONS event
     window.dispatchEvent(
       new CustomEvent(SmilesEvents.CONVERSIONS, {
-        detail: value,
-      }),
+        detail: value
+      })
     );
   }
 
@@ -94,7 +94,7 @@ export default class HorusSmilesManager {
 
     this.openBabelWorker = new Worker(
       // @ts-ignore
-      new URL("./moleculeConverter.worker.js", import.meta.url),
+      new URL("./moleculeConverter.worker.js", import.meta.url)
     );
 
     const constructedSmilesEventUpdater =
@@ -102,7 +102,7 @@ export default class HorusSmilesManager {
 
     window.removeEventListener(
       MolstarEvents.STATE,
-      constructedSmilesEventUpdater,
+      constructedSmilesEventUpdater
     );
 
     // Add an event listener from Mol* state in order to update the smiles list
@@ -122,7 +122,7 @@ export default class HorusSmilesManager {
     return {
       smilesList: this._smilesList,
       currentSmiles: this._currentSmiles,
-      loadedRefs: this.loadedRefs,
+      loadedRefs: this.loadedRefs
     };
   }
 
@@ -155,7 +155,7 @@ export default class HorusSmilesManager {
       ? window?.molstar?.listStructures()
       : [];
     const newStructures = structures.filter(
-      (s) => !this.loadedRefs.includes(s.rootRef),
+      (s) => !this.loadedRefs.includes(s.rootRef)
     );
 
     // If a structure was removed, filter from the loadedRefs
@@ -210,8 +210,8 @@ export default class HorusSmilesManager {
     return new CustomEvent(SmilesEvents.STATE, {
       detail: {
         smilesList: this._smilesList,
-        currentSmiles: this._currentSmiles,
-      },
+        currentSmiles: this._currentSmiles
+      }
     });
   }
 
@@ -229,7 +229,7 @@ export default class HorusSmilesManager {
     } else {
       // If a smiles was set to currentSmiles, check that it exists in the new smiles list
       const currentSmilesExistsOnNewList = smiles.find(
-        (s) => s.id === this._currentSmiles?.id,
+        (s) => s.id === this._currentSmiles?.id
       );
 
       if (currentSmilesExistsOnNewList) {
@@ -299,7 +299,7 @@ export default class HorusSmilesManager {
     this.setSmilesList(
       this.getSmilesList().filter((smi) => {
         return smi.structureRef?.rootRef !== sourceRef;
-      }),
+      })
     );
   }
 
@@ -310,7 +310,7 @@ export default class HorusSmilesManager {
     ).map((ref) => {
       return {
         rootRef: ref.rootRef,
-        label: ref.label,
+        label: ref.label
       };
     });
 
@@ -322,9 +322,9 @@ export default class HorusSmilesManager {
           group:
             currentLabels.find((label) => {
               return label.rootRef === smi.structureRef?.rootRef;
-            })?.label ?? smi.group,
+            })?.label ?? smi.group
         };
-      }),
+      })
     );
   }
 
@@ -338,7 +338,7 @@ export default class HorusSmilesManager {
       id: this.getNewID(),
       label: "New molecule",
       smi: "[HORUS-]",
-      group: group ?? "Horus",
+      group: group ?? "Horus"
     };
 
     this.setSmilesList([...this.getSmilesList(), newSmiles]);
@@ -357,7 +357,7 @@ export default class HorusSmilesManager {
       ...smi,
       id: this.getNewID(),
       label: smi.label + " copy",
-      structureRef: undefined,
+      structureRef: undefined
     } as HorusSmilesType;
   }
 
@@ -447,14 +447,14 @@ export default class HorusSmilesManager {
         // First convert to PDB
         const pdbFile = await this.moleculeConverter(atomFile, {
           inputFormat: "xyz",
-          outputFormat: "pdb",
+          outputFormat: "pdb"
         });
 
         // Then to Mol
         const molFile = await this.moleculeConverter(pdbFile, {
           inputFormat: "pdb",
           outputFormat: "mol",
-          generate2D: true,
+          generate2D: true
         });
 
         // Finally to SMILES
@@ -462,8 +462,8 @@ export default class HorusSmilesManager {
           await this.moleculeConverter(molFile, {
             inputFormat: "mol",
             outputFormat: "smiles",
-            decreaseConvertingMolecules: true,
-          }),
+            decreaseConvertingMolecules: true
+          })
         );
 
         // Add the new smiles
@@ -479,11 +479,11 @@ export default class HorusSmilesManager {
               residue: groupedAtoms[key]![0]!,
               molecule: {
                 contents: pdbFile,
-                format: "pdb",
-              },
+                format: "pdb"
+              }
             },
-            group: structureLabel,
-          },
+            group: structureLabel
+          }
         ]);
       }
     }
@@ -506,7 +506,7 @@ export default class HorusSmilesManager {
       id: this.getNewID(),
       label: label || smiles,
       smi: HorusSmilesManager.cleanSmiles(smiles),
-      group: group,
+      group: group
     } as HorusSmilesType;
   }
 
@@ -525,11 +525,11 @@ export default class HorusSmilesManager {
       label?: string;
       extraInfo?: string;
       group?: string;
-    },
+    }
   ) {
     const newSmiles = this.parseSingleSmilesStringAsMolecule(
       smiles,
-      options?.group,
+      options?.group
     );
 
     // Otherwise the parseSingleSmilesStringAsMolecule will define the label
@@ -549,7 +549,7 @@ export default class HorusSmilesManager {
     // Verify that the file is .CSV or .SMI
     if (!HorusSmilesManager.isFileAllowed(file)) {
       console.error(
-        "File is not allowed. Allowed filetypes are .smi, .csv and .sdf",
+        "File is not allowed. Allowed filetypes are .smi, .csv and .sdf"
       );
 
       return;
@@ -561,9 +561,9 @@ export default class HorusSmilesManager {
         new CustomEvent("addPanel", {
           detail: {
             component: PANEL_REGISTRY.molstar.component,
-            panelID: PANEL_REGISTRY.molstar.id,
-          },
-        }),
+            panelID: PANEL_REGISTRY.molstar.id
+          }
+        })
       );
 
       while (!isMolstarLoaded(window.molstar)) {
@@ -629,7 +629,7 @@ export default class HorusSmilesManager {
             smi: smiles.smi,
             extraInfo: smiles.extraInfo,
             group: smiles.group,
-            properties: smiles.properties,
+            properties: smiles.properties
           });
         } else {
           parsedSmiles.push(this.parseSingleSmilesStringAsMolecule(smiles));
@@ -644,7 +644,7 @@ export default class HorusSmilesManager {
         label: data.label || data.smi,
         smi: data.smi,
         extraInfo: data.extraInfo,
-        group: data.group,
+        group: data.group
       });
     }
 
@@ -690,7 +690,7 @@ export default class HorusSmilesManager {
 
     // Get the column SMILES or SMI
     const smilesColumn = splittedHeader.findIndex(
-      (v) => v.toLowerCase() === "smiles" || v.toLowerCase() === "smi",
+      (v) => v.toLowerCase() === "smiles" || v.toLowerCase() === "smi"
     );
 
     if (smilesColumn === -1) {
@@ -702,7 +702,7 @@ export default class HorusSmilesManager {
       (v) =>
         v.toLowerCase() === "label" ||
         v.toLowerCase() === "name" ||
-        v.toLowerCase() === "id",
+        v.toLowerCase() === "id"
     );
 
     // Extract the other columns
@@ -749,7 +749,7 @@ export default class HorusSmilesManager {
           label: label,
           smi: smiles,
           group: group,
-          properties: propertiesObj,
+          properties: propertiesObj
         });
       }
     }
@@ -783,11 +783,11 @@ export default class HorusSmilesManager {
         inputFormat: "sdf",
         outputFormat: "smi",
         generate2D: true,
-        decreaseConvertingMolecules: true,
+        decreaseConvertingMolecules: true
       }).then((s) => {
         const horusSmiles = this.parseSingleSmilesStringAsMolecule(
           s,
-          structure.label,
+          structure.label
         );
 
         this.setSmilesList([
@@ -801,10 +801,10 @@ export default class HorusSmilesManager {
               residue: { label: structure.label } as AtomInfo,
               molecule: {
                 contents: m,
-                format: "sdf",
-              },
-            },
-          } as HorusSmilesType,
+                format: "sdf"
+              }
+            }
+          } as HorusSmilesType
         ]);
       });
     });
@@ -818,7 +818,7 @@ export default class HorusSmilesManager {
           return;
         }
         data[match[1]] = match[2];
-      },
+      }
     );
     return data;
   }
@@ -834,7 +834,7 @@ export default class HorusSmilesManager {
     // Generate a .smi file
     let sdfContents = "";
     this.convertingMolecules += selectedSmiles.filter(
-      (s) => s.structureRef?.molecule.format !== "sdf",
+      (s) => s.structureRef?.molecule.format !== "sdf"
     ).length;
     for (const smiles of selectedSmiles) {
       let currentSDF;
@@ -847,7 +847,7 @@ export default class HorusSmilesManager {
           inputFormat: "smiles",
           outputFormat: "sdf",
           generate3D: true,
-          decreaseConvertingMolecules: true,
+          decreaseConvertingMolecules: true
         });
       }
 
@@ -870,13 +870,13 @@ export default class HorusSmilesManager {
             ...s,
             properties: {
               ...(s.properties ?? {}),
-              [parsedProperty]: value,
-            },
+              [parsedProperty]: value
+            }
           };
         }
 
         return s;
-      }),
+      })
     );
   }
 
@@ -902,7 +902,7 @@ export default class HorusSmilesManager {
     this.removeIDs(
       this.getSelectedSmiles()
         .filter((s) => !s.structureRef)
-        .map((s) => s.id),
+        .map((s) => s.id)
     );
   }
 
@@ -923,8 +923,8 @@ export default class HorusSmilesManager {
       new Set(
         selectedSmiles
           .flatMap((s) => Object.keys(s.properties || {}))
-          .filter((p) => p),
-      ),
+          .filter((p) => p)
+      )
     );
 
     const safeProperty = (p: string) =>
@@ -935,8 +935,8 @@ export default class HorusSmilesManager {
       ...selectedSmiles.map((s) => [
         s.smi,
         s.label.replace(TRIM_REGEX, "").trim(),
-        ...properties.map((p) => safeProperty(s.properties?.[p] || "")),
-      ]),
+        ...properties.map((p) => safeProperty(s.properties?.[p] || ""))
+      ])
     ];
 
     const csv = [header, ...data].map((row) => row.join(",")).join("\n");
@@ -1003,7 +1003,7 @@ export default class HorusSmilesManager {
         "There was an error applying the following Smiles action: " +
           type +
           "\n\n" +
-          error,
+          error
       );
     } finally {
       // Once the action has been applied, remove it from the pending actions
@@ -1047,7 +1047,7 @@ export default class HorusSmilesManager {
       generate2D?: boolean;
       generate3D?: boolean;
       decreaseConvertingMolecules?: boolean;
-    },
+    }
   ): Promise<string> {
     const conversionId = this.generateConversionId();
 
@@ -1081,7 +1081,7 @@ export default class HorusSmilesManager {
       molecule,
       options,
       conversionId,
-      baseURL: location.origin + window.__HORUS_ROOT__,
+      baseURL: location.origin + window.__HORUS_ROOT__
     });
 
     return promise.finally(() => {

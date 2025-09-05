@@ -45,7 +45,7 @@ export const usePrompt = () => {
     if (showPrompt) {
       render(
         <PromptComponent message={message} onSubmit={handleSubmit} />,
-        document.getElementById("prompt-root"),
+        document.getElementById("prompt-root")
       );
     } else {
       unmountComponentAtNode(document.getElementById("prompt-root")!);
@@ -57,7 +57,7 @@ export const usePrompt = () => {
 
 const PromptComponent = ({
   message,
-  onSubmit,
+  onSubmit
 }: {
   message: string;
   onSubmit: (inputValue: string | null) => void;
@@ -82,7 +82,7 @@ const PromptComponent = ({
         onSubmit(null);
       }
     },
-    [inputValue, onSubmit],
+    [inputValue, onSubmit]
   );
 
   useEffect(() => {

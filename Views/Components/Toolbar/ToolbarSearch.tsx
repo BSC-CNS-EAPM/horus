@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Flow, PluginPage } from "../FlowBuilder/flow.types";
 import RecentUserFlows, {
   PredefinedFlows,
-  useGetRecentFlows,
+  useGetRecentFlows
 } from "../FlowStatus/recent_flows";
 import RotatingLines from "../RotatingLines/rotatinglines";
 import { SearchComponent } from "../Search/Search";
@@ -28,7 +28,7 @@ export function HorusSearch({ pages }: { pages: PluginPage[] }) {
     isLoading: fetchingRecents,
     recentFlows,
     presetFlows: predefinedFlows,
-    templates,
+    templates
   } = useGetRecentFlows(webAppMode);
 
   useEffect(() => {
@@ -157,7 +157,7 @@ export function HorusSearch({ pages }: { pages: PluginPage[] }) {
           className="flex flex-col gap-2 absolute p-2 mt-3 origin-top-right rounded-xl bg-white toolbar-menu overflow-y-auto zoom-out-animation"
           style={{
             right: 4,
-            maxHeight: "calc(100vh - 4rem)",
+            maxHeight: "calc(100vh - 4rem)"
           }}
         >
           {!hasContent && (

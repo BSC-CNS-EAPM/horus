@@ -33,7 +33,7 @@ function getPropertiesAsColDef(properties: Set<string>): ColDef[] {
       sortable: true,
       editable: true,
       valueGetter: (params: { data: HorusSmilesType }) =>
-        params.data.properties?.[property] ?? null,
+        params.data.properties?.[property] ?? null
     });
   });
   return colDef;
@@ -57,7 +57,7 @@ export function SmilesList(props: {
         width: 50,
         checkboxSelection: true,
         headerCheckboxSelection: true,
-        headerCheckboxSelectionFilteredOnly: true,
+        headerCheckboxSelectionFilteredOnly: true
       },
       {
         resizable: false,
@@ -67,7 +67,7 @@ export function SmilesList(props: {
         sortable: false,
         cellStyle: { padding: "0px" },
         refData: {
-          smi: "smi",
+          smi: "smi"
         },
         cellRenderer: (params: any) => {
           const data = params.data as HorusSmilesType;
@@ -91,15 +91,15 @@ export function SmilesList(props: {
               containerProps={{
                 onClick: () => {
                   onClickEdit?.(data);
-                },
+                }
               }}
               options={{
                 depict: true,
-                zoom: false,
+                zoom: false
               }}
             />
           );
-        },
+        }
       },
       {
         field: "smi",
@@ -107,19 +107,19 @@ export function SmilesList(props: {
         filter: true,
         sortable: true,
         editable: true,
-        singleClickEdit: true,
+        singleClickEdit: true
       },
       {
         field: "label",
         filter: true,
         sortable: true,
-        editable: true,
+        editable: true
       },
       {
         field: "group",
         filter: true,
         sortable: true,
-        editable: true,
+        editable: true
       },
       {
         field: "structureRef",
@@ -132,7 +132,7 @@ export function SmilesList(props: {
         cellRenderer: "agCheckboxCellRenderer",
         sortable: true,
         filter: true,
-        editable: false,
+        editable: false
       },
       {
         field: "extraInfo",
@@ -142,8 +142,8 @@ export function SmilesList(props: {
         valueGetter: (params: any) => {
           const data = params.data as HorusSmilesType;
           return data.extraInfo ?? "-";
-        },
-      },
+        }
+      }
     ];
   }, [onClickEdit, previewSmiles]);
 
@@ -186,7 +186,7 @@ export function SmilesList(props: {
     const newSmiles = availableSmiles.map((s) => {
       return {
         ...s,
-        selected: selectedData.includes(s.id),
+        selected: selectedData.includes(s.id)
       };
     });
 
@@ -207,7 +207,7 @@ export function SmilesList(props: {
     if (!api) return;
 
     const selectedData = new Set<string>(
-      availableSmiles.filter((s) => s.selected).map((s) => s.id),
+      availableSmiles.filter((s) => s.selected).map((s) => s.id)
     );
     const nodesToSelect: IRowNode[] = [];
     api.forEachNode((node: IRowNode) => {
@@ -218,13 +218,13 @@ export function SmilesList(props: {
     api.setNodesSelected({
       nodes: nodesToSelect,
       newValue: true,
-      source: "rowDataChanged",
+      source: "rowDataChanged"
     });
   }, [tableRef, availableSmiles]);
 
   const columnDefs = useMemo(
     () => BASIC_COLDEF.concat(additionalProperties ?? []),
-    [BASIC_COLDEF, additionalProperties],
+    [BASIC_COLDEF, additionalProperties]
   );
 
   return (
@@ -245,10 +245,10 @@ export function SmilesList(props: {
         defaultColDef: {
           cellStyle: {
             display: "flex",
-            alignItems: "center ",
-          },
+            alignItems: "center "
+          }
         },
-        onCellEditingStarted: handleRowEditingStarted,
+        onCellEditingStarted: handleRowEditingStarted
       }}
       onCellEdit={editCell}
     ></HorusTable>

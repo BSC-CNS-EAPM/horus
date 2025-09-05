@@ -29,7 +29,7 @@ function FlowBuilderView() {
       ? "grabbing"
       : flowBuilderState.flow.isFlowActive
         ? "wait"
-        : "auto",
+        : "auto"
   };
 
   return (
@@ -46,7 +46,7 @@ function FlowBuilderView() {
 // Subcomponents
 function FlowCanvasContainer({
   flowBuilderState,
-  style,
+  style
 }: {
   flowBuilderState: FlowBuilderHooks;
   style: CSSProperties;
@@ -122,7 +122,7 @@ function EmptyCanvas() {
 }
 
 function ConnectedArrowsList({
-  flowBuilderState,
+  flowBuilderState
 }: {
   flowBuilderState: FlowBuilderHooks;
 }) {
@@ -141,14 +141,14 @@ function ConnectedArrowsList({
 }
 
 function ScaledCanvas({
-  flowBuilderState,
+  flowBuilderState
 }: {
   flowBuilderState: FlowBuilderHooks;
 }) {
   return (
     <div
       style={{
-        transform: `scale(${flowBuilderState.flow.scale})`,
+        transform: `scale(${flowBuilderState.flow.scale})`
       }}
       className="scaled-flow-canvas"
       id={DroppableEntity.SCALED_CANVAS}
@@ -168,7 +168,7 @@ function ScaledCanvas({
 }
 
 function ModalContainer({
-  flowBuilderState,
+  flowBuilderState
 }: {
   flowBuilderState: FlowBuilderHooks;
 }) {
@@ -185,7 +185,7 @@ function ModalContainer({
 }
 
 function ServerFileExplorerContainers({
-  flowBuilderState,
+  flowBuilderState
 }: {
   flowBuilderState: FlowBuilderHooks;
 }) {

@@ -15,7 +15,7 @@ import {
   Paper,
   Stack,
   Text,
-  TypographyStylesProvider,
+  TypographyStylesProvider
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { useQuery } from "@tanstack/react-query";
@@ -132,7 +132,7 @@ export default function About() {
         overRoot
         maxContentSize={{
           width: "90vw",
-          height: "90vh",
+          height: "90vh"
         }}
       >
         <LicenseView />
@@ -144,7 +144,7 @@ export default function About() {
 function LicenseView() {
   const { data, isLoading } = useQuery({
     queryKey: [`license`],
-    queryFn: () => horusGet("/license").then((r) => r.text()),
+    queryFn: () => horusGet("/license").then((r) => r.text())
   });
 
   if (isLoading || !data) {
@@ -176,7 +176,7 @@ function LicenseView() {
               // fontSize: "20px",
               // fontWeight: 700,
               lineHeight: 1.6,
-              color: "var(--mantine-color-text)",
+              color: "var(--mantine-color-text)"
             }}
             dangerouslySetInnerHTML={{
               __html: `
@@ -200,7 +200,7 @@ function LicenseView() {
                   }
                 </style>
                 ${marked.parse(data)}
-              `,
+              `
             }}
           />
         </TypographyStylesProvider>

@@ -5,7 +5,7 @@ import { ColorTheme } from "molstar/lib/mol-theme/color";
 import {
   MolInfoWithRef,
   RepresentationThemeOptions,
-  SelectionLanguage,
+  SelectionLanguage
 } from "../../horusmolstar";
 import { SizeTheme } from "molstar/lib/mol-theme/size";
 
@@ -43,50 +43,50 @@ export const REPRESENTATIONS: {
   {
     id: "ball-and-stick",
     label: "Ball & Stick",
-    description: "Ball and stick model",
+    description: "Ball and stick model"
   },
   {
     id: "carbohydrate",
     label: "Carbohydrate",
-    description: "Carbohydrate representation",
+    description: "Carbohydrate representation"
   },
   {
     id: "ellipsoid",
     label: "Ellipsoid",
-    description: "Ellipsoid representation",
+    description: "Ellipsoid representation"
   },
   {
     id: "gaussian-surface",
     label: "Gaussian Surface",
-    description: "Gaussian surface",
+    description: "Gaussian surface"
   },
   {
     id: "gaussian-volume",
     label: "Gaussian Volume",
-    description: "Gaussian volume",
+    description: "Gaussian volume"
   },
   { id: "label", label: "Label", description: "Text labels" },
   { id: "line", label: "Line", description: "Line representation" },
   {
     id: "molecular-surface",
     label: "Molecular Surface",
-    description: "Molecular surface",
+    description: "Molecular surface"
   },
   {
     id: "orientation",
     label: "Orientation",
-    description: "Orientation representation",
+    description: "Orientation representation"
   },
   { id: "plane", label: "Plane", description: "Plane representation" },
   { id: "point", label: "Point", description: "Point representation" },
   { id: "putty", label: "Putty", description: "Putty representation" },
-  { id: "spacefill", label: "Spacefill", description: "Space-filling model" },
+  { id: "spacefill", label: "Spacefill", description: "Space-filling model" }
 ];
 
 export const SELECTION_LANGUAGES: { id: SelectionLanguage; label: string }[] = [
   { id: "vmd", label: "VMD" },
   { id: "pymol", label: "PyMOL" },
-  { id: "mol-script", label: "Mol*" },
+  { id: "mol-script", label: "Mol*" }
 ];
 
 export const COLOR_TYPES: { id: ColorTheme.BuiltIn; label: string }[] = [
@@ -94,7 +94,7 @@ export const COLOR_TYPES: { id: ColorTheme.BuiltIn; label: string }[] = [
   { id: "element-symbol", label: "Element Symbol" },
   { id: "residue-name", label: "Residue Name" },
   { id: "chain-id", label: "Chain ID" },
-  { id: "uncertainty", label: "B-Factor" },
+  { id: "uncertainty", label: "B-Factor" }
 ];
 
 export const SIZE_THEME_OPTIONS: { value: SizeTheme.BuiltIn; label: string }[] =
@@ -103,7 +103,7 @@ export const SIZE_THEME_OPTIONS: { value: SizeTheme.BuiltIn; label: string }[] =
     { value: "physical", label: "Physical Size" },
     { value: "uncertainty", label: "Uncertainty" },
     { value: "volume-value", label: "Volume Value" },
-    { value: "shape-group", label: "Shape Group" },
+    { value: "shape-group", label: "Shape Group" }
   ];
 
 export type OnChangeRepresentationParams = {

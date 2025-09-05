@@ -9,7 +9,7 @@ import * as React from "react";
 import { throttleTime } from "rxjs";
 import {
   Canvas3DContext,
-  Canvas3DParams,
+  Canvas3DParams
 } from "molstar/lib/mol-canvas3d/canvas3d";
 import { PluginCommands } from "molstar/lib/mol-plugin/commands";
 import { State, StateTransform } from "molstar/lib/mol-state";
@@ -17,7 +17,7 @@ import { ParamDefinition as PD } from "molstar/lib/mol-util/param-definition";
 import { PluginUIComponent } from "molstar/lib/mol-plugin-ui/base";
 import {
   IconButton,
-  SectionHeader,
+  SectionHeader
 } from "molstar/lib/mol-plugin-ui/controls/common";
 import {
   AccountTreeOutlinedSvg,
@@ -26,13 +26,13 @@ import {
   HelpOutlineSvg,
   HomeOutlinedSvg,
   SaveOutlinedSvg,
-  TuneSvg,
+  TuneSvg
 } from "molstar/lib/mol-plugin-ui/controls/icons";
 import { ParameterControls } from "molstar/lib/mol-plugin-ui/controls/parameters";
 import { StateObjectActions } from "molstar/lib/mol-plugin-ui/state/actions";
 import {
   RemoteStateSnapshots,
-  StateSnapshots,
+  StateSnapshots
 } from "molstar/lib/mol-plugin-ui/state/snapshots";
 import { StateTree } from "molstar/lib/mol-plugin-ui/state/tree";
 import { HelpContent } from "molstar/lib/mol-plugin-ui/viewport/help";
@@ -75,7 +75,7 @@ export class HorusLeftPanelControls extends PluginUIComponent<
 > {
   override state = {
     tab: this.plugin.behaviors.layout.leftPanelTabName
-      .value as HorusLeftPanelTypes,
+      .value as HorusLeftPanelTypes
   };
 
   override componentDidMount() {
@@ -89,9 +89,9 @@ export class HorusLeftPanelControls extends PluginUIComponent<
           state: {
             regionState: {
               ...this.plugin.layout.state.regionState,
-              left: "collapsed",
-            },
-          },
+              left: "collapsed"
+            }
+          }
         });
       }
     });
@@ -106,9 +106,9 @@ export class HorusLeftPanelControls extends PluginUIComponent<
         state: {
           regionState: {
             ...this.plugin.layout.state.regionState,
-            left: "collapsed",
-          },
-        },
+            left: "collapsed"
+          }
+        }
       });
       return;
     }
@@ -123,9 +123,9 @@ export class HorusLeftPanelControls extends PluginUIComponent<
         state: {
           regionState: {
             ...this.plugin.layout.state.regionState,
-            left: "full",
-          },
-        },
+            left: "full"
+          }
+        }
       });
     }
   };
@@ -162,7 +162,7 @@ export class HorusLeftPanelControls extends PluginUIComponent<
         <SectionHeader icon={HelpOutlineSvg} title="Help" />
         <HelpContent />
       </>
-    ),
+    )
   };
 
   override render() {
@@ -265,7 +265,7 @@ class FullSettings extends PluginUIComponent {
     value: any;
   }) => {
     PluginCommands.Canvas3D.SetSettings(this.plugin, {
-      settings: { [p.name]: p.value },
+      settings: { [p.name]: p.value }
     });
   };
 
@@ -339,7 +339,7 @@ class RemoveAllButton extends PluginUIComponent<object> {
     e.preventDefault();
     PluginCommands.State.RemoveObject(this.plugin, {
       state: this.plugin.state.data,
-      ref: StateTransform.RootRef,
+      ref: StateTransform.RootRef
     });
   };
 
@@ -431,7 +431,7 @@ function SimpleStateTree() {
     for (const structure of structuresToTogle) {
       PluginCommands.State.ToggleVisibility(plugin, {
         state: structure.cell.parent!,
-        ref: structure.cell.transform.ref,
+        ref: structure.cell.transform.ref
       });
     }
 
@@ -495,7 +495,7 @@ function OpenFileStructure() {
       }
       const blob = await response.blob();
       const file = new File([blob], `${trimmedID}.pdb`, {
-        type: "chemical/x-pdb",
+        type: "chemical/x-pdb"
       });
       window.molstar?.loadMoleculeFile(file, { label: trimmedID });
       setPDBID("");
@@ -538,7 +538,7 @@ function OpenFileStructure() {
                 const f = new File([b], filename);
                 window.molstar?.loadMoleculeFile(f, { label: filename });
               });
-            },
+            }
           });
         }}
       >
@@ -560,7 +560,7 @@ function OpenTrajectoryStructure() {
           let trajectory: File | undefined;
 
           const topPath = await window.horus.openExtensionFilePicker?.({
-            label: "Select topology",
+            label: "Select topology"
           });
 
           if (!topPath) {
@@ -574,7 +574,7 @@ function OpenTrajectoryStructure() {
           });
 
           const trajPath = await window.horus.openExtensionFilePicker?.({
-            label: "Select trajectory",
+            label: "Select trajectory"
           });
 
           if (!trajPath) {
@@ -591,7 +591,7 @@ function OpenTrajectoryStructure() {
             molstar.loadTrajectory({
               topology: top,
               trajectory: trajectory,
-              label: top.name,
+              label: top.name
             });
           }
         }}

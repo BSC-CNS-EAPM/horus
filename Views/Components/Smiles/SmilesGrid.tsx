@@ -18,7 +18,7 @@ import { SmilesView } from "./SmilesComponent";
 import { SmilesList } from "./SmilesList";
 import HorusSmilesManager, {
   HorusSmilesType,
-  SmilesEvents,
+  SmilesEvents
 } from "./SmilesWrapper/horusSmiles";
 import { GreenOverlay } from "../GreenOverlay/GreenOverlay";
 import { ToolbarMenu, ToolBarMenuProps } from "../Toolbar/ToolbarItem";
@@ -44,7 +44,7 @@ export const CannotEdit3D =
 export function SmilesGrid() {
   const [availableSmiles, setAvailableSmiles] = useState<HorusSmilesType[]>([]);
   const [editingSmiles, setEditingSmiles] = useState<HorusSmilesType | null>(
-    null,
+    null
   );
   const [loadingFile, setLoadingFile] = useState<boolean>(false);
   const [currentGroup, setCurrentGroup] = useState<string | undefined>();
@@ -73,7 +73,7 @@ export function SmilesGrid() {
     // Add an event listener for the smiles manager
     window.addEventListener(
       SmilesEvents.STATE,
-      updateAvailableSmilesEventListener,
+      updateAvailableSmilesEventListener
     );
 
     window.addEventListener(SmilesEvents.CONVERSIONS, updateConversions);
@@ -86,7 +86,7 @@ export function SmilesGrid() {
 
       window.removeEventListener(
         SmilesEvents.STATE,
-        updateAvailableSmilesEventListener,
+        updateAvailableSmilesEventListener
       );
 
       window.removeEventListener(SmilesEvents.CONVERSIONS, updateConversions);
@@ -100,7 +100,7 @@ export function SmilesGrid() {
           return newSmiles;
         }
         return s;
-      }),
+      })
     );
   };
 
@@ -150,7 +150,7 @@ export function SmilesGrid() {
       setPreviewSmiles(false);
       setAlertShownAtLeastOnce(true);
       horusAlert(
-        `Disabled SMILES preview due to the list being too large. Click 'View' -> 'Toggle SMILES preview' to enable previews again at the cost of performance.`,
+        `Disabled SMILES preview due to the list being too large. Click 'View' -> 'Toggle SMILES preview' to enable previews again at the cost of performance.`
       );
     }
   }, [availableSmiles, alertShownAtLeastOnce]);
@@ -186,7 +186,7 @@ export function SmilesGrid() {
             position: "absolute",
             bottom: "0.5rem",
             right: "0.5rem",
-            zIndex: 1,
+            zIndex: 1
           }}
         >
           Converting {conversions} molecules...
@@ -221,7 +221,7 @@ export function SmilesGrid() {
         <div
           className="flex flex-col justify-center items-center h-full text-gray-400 text-center p-2"
           style={{
-            margin: "auto",
+            margin: "auto"
           }}
         >
           Load a protein with ligands in Mol*, draw manually one using the "New
@@ -271,7 +271,7 @@ function InternalSmilesGridView(props: InternalSmilesGridViewProps) {
           {...props}
           availableSmiles={smilesGrouped[group]!}
           key={group}
-        />,
+        />
       ];
     }
 
@@ -366,7 +366,7 @@ function _GroupingVirtualizedOfSmilesView(props: InternalSmilesGridViewProps) {
                     setEditingSmiles={props.setEditingSmiles}
                     isScrolling={!isVisible}
                     previewSmiles={props.previewSmiles}
-                  />,
+                  />
                 );
               }
               return (
@@ -397,7 +397,7 @@ function _VirtualizedSmilesView({
   updateExistingSmiles,
   setEditingSmiles,
   isScrolling,
-  previewSmiles,
+  previewSmiles
 }: VirtualizedSmilesViewType) {
   const horusAlert = useAlert();
 
@@ -406,7 +406,7 @@ function _VirtualizedSmilesView({
       className="border relative"
       key={smiles.id}
       style={{
-        cursor: smiles.structureRef ? "not-allowed" : "default",
+        cursor: smiles.structureRef ? "not-allowed" : "default"
       }}
       onClick={() => {
         if (smiles.structureRef) {
@@ -419,7 +419,7 @@ function _VirtualizedSmilesView({
         style={{
           top: "0",
           left: "1px",
-          zIndex: 10,
+          zIndex: 10
         }}
       >
         {index + 1}
@@ -433,7 +433,7 @@ function _VirtualizedSmilesView({
           bottom: "2px",
           left: "2px",
           zIndex: 10,
-          backgroundColor: "transparent",
+          backgroundColor: "transparent"
         }}
         type="text"
         placeholder="Unnamed SMILES"
@@ -455,7 +455,7 @@ function _VirtualizedSmilesView({
             bottom: "2px",
             right: "2px",
             zIndex: 10,
-            backgroundColor: "white",
+            backgroundColor: "white"
           }}
         />
       )}
@@ -465,7 +465,7 @@ function _VirtualizedSmilesView({
         style={{
           top: "2px",
           right: "2px",
-          zIndex: 10,
+          zIndex: 10
         }}
         type="checkbox"
         checked={smiles.selected ?? false}
@@ -482,7 +482,7 @@ function _VirtualizedSmilesView({
           className="w-full h-full grid place-content-center"
           style={{
             width: `${SMILES_GRID_WIDTH}px`,
-            height: `${SMILES_GRID_HEIGTH}px`,
+            height: `${SMILES_GRID_HEIGTH}px`
           }}
         >
           <RotatingLines />
@@ -493,7 +493,7 @@ function _VirtualizedSmilesView({
           onClickEdit={() => setEditingSmiles(smiles)}
           containerStyle={{
             width: `${SMILES_GRID_WIDTH}px`,
-            height: `${SMILES_GRID_HEIGTH}px`,
+            height: `${SMILES_GRID_HEIGTH}px`
           }}
         />
       ) : (
@@ -504,7 +504,7 @@ function _VirtualizedSmilesView({
           options={{
             depict: true,
             contextmenu: false,
-            zoom: false,
+            zoom: false
             // showdragandDropIconindepictmode: false,
           }}
           smiles={smiles?.smi ?? ""}
@@ -524,7 +524,7 @@ function _VirtualizedSmilesView({
 export function NoPreviewSmilesView({
   smiles,
   containerStyle,
-  onClickEdit,
+  onClickEdit
 }: {
   smiles: HorusSmilesType;
   containerStyle?: React.CSSProperties;
@@ -555,14 +555,14 @@ function SmilesToolBox(props: {
 
   const getSDFFile = async () => {
     const fileName = await horusPrompt(
-      "Enter the name of the file to save the converted SDF",
+      "Enter the name of the file to save the converted SDF"
     );
 
     const sdfContents = await window.smiles?.convertSelectedToSDF();
     if (!fileName || !sdfContents) return null;
 
     return new File([sdfContents], fileName + ".sdf", {
-      type: "text/plain",
+      type: "text/plain"
     });
   };
 
@@ -576,7 +576,7 @@ function SmilesToolBox(props: {
         });
 
         window.smiles?.setSmilesList(updatedSmiles);
-      },
+      }
     },
     {
       name: "Unselect all",
@@ -587,7 +587,7 @@ function SmilesToolBox(props: {
         });
 
         window.smiles?.setSmilesList(updatedSmiles);
-      },
+      }
     },
     {
       name: "Select molecules in current group",
@@ -602,7 +602,7 @@ function SmilesToolBox(props: {
         });
 
         window.smiles?.setSmilesList(updatedSmiles);
-      },
+      }
     },
     {
       name: "Unselect molecules in current group",
@@ -621,7 +621,7 @@ function SmilesToolBox(props: {
         });
 
         window.smiles?.setSmilesList(updatedSmiles);
-      },
+      }
     },
     {
       name: "Change group of selection",
@@ -641,10 +641,10 @@ function SmilesToolBox(props: {
                 return { ...s, group: newGroup };
               }
               return s;
-            }),
+            })
           );
         }
-      },
+      }
     },
     {
       name: "Add new property to selected molecules",
@@ -653,10 +653,10 @@ function SmilesToolBox(props: {
         const newProperty = await horusPrompt("Enter new property name");
         if (!newProperty) return;
         const propertyValue = await horusPrompt(
-          "Enter new property value (leave blank for none)",
+          "Enter new property value (leave blank for none)"
         );
         window.smiles?.addPropertyToSelected(newProperty, propertyValue);
-      },
+      }
     },
     {
       name: "Duplicate selection",
@@ -683,7 +683,7 @@ function SmilesToolBox(props: {
 
             window.smiles?.setSmilesList([
               ...window.smiles!.getSmilesList(),
-              ...newSmiles,
+              ...newSmiles
             ]);
 
             resolve(true);
@@ -691,7 +691,7 @@ function SmilesToolBox(props: {
         });
 
         setBusy(null);
-      },
+      }
     },
     {
       name: "Remove selected molecules",
@@ -699,8 +699,8 @@ function SmilesToolBox(props: {
 
       onClick: () => {
         window.smiles?.removeSelected();
-      },
-    },
+      }
+    }
   ];
 
   const plotMenu: ToolBarMenuProps[] = [
@@ -714,12 +714,12 @@ function SmilesToolBox(props: {
             "moleculePlotter",
             `moleculePlotter-${Date.now()}`,
             {
-              smilesToPlot: window.smiles?.getSelectedSmiles() ?? [],
-            },
+              smilesToPlot: window.smiles?.getSelectedSmiles() ?? []
+            }
           );
         }
-      },
-    },
+      }
+    }
   ];
 
   const convertMenu: ToolBarMenuProps[] = [
@@ -735,9 +735,9 @@ function SmilesToolBox(props: {
             detail: {
               component: "molstar",
               panelID: "molstar",
-              noFocus: true,
-            },
-          }),
+              noFocus: true
+            }
+          })
         );
 
         // Wait for Mol* to be available
@@ -754,7 +754,7 @@ function SmilesToolBox(props: {
         } finally {
           setBusy(null);
         }
-      },
+      }
     },
     {
       name: "Convert to SDF and save",
@@ -773,8 +773,8 @@ function SmilesToolBox(props: {
             setBusy(null);
           }
         }, 1000);
-      },
-    },
+      }
+    }
   ];
 
   const saveMenu: ToolBarMenuProps[] = [
@@ -783,7 +783,7 @@ function SmilesToolBox(props: {
       disabled: !window.smiles?.getSelectedSmiles().length,
       onClick: async () => {
         const fileName = await horusPrompt(
-          "Enter the name of the file to save the SMILES",
+          "Enter the name of the file to save the SMILES"
         );
         const selectedSmiles = window.smiles?.getSelectedSmiles();
 
@@ -796,18 +796,18 @@ function SmilesToolBox(props: {
           .join("\n");
 
         const file = new File([smiles], fileName + ".smi", {
-          type: "text/plain",
+          type: "text/plain"
         });
 
         window.horus.saveFile(file);
-      },
+      }
     },
     {
       name: "Save selected as .csv",
       disabled: !window.smiles?.getSelectedSmiles().length,
       onClick: async () => {
         const fileName = await horusPrompt(
-          "Enter the CSV file name to save the SMILES",
+          "Enter the CSV file name to save the SMILES"
         );
 
         if (!fileName) return;
@@ -816,13 +816,13 @@ function SmilesToolBox(props: {
           [window.smiles?.toCSV() ?? "No smiles"],
           fileName + ".csv",
           {
-            type: "text/plain",
-          },
+            type: "text/plain"
+          }
         );
 
         window.horus.saveFile(file);
-      },
-    },
+      }
+    }
   ];
 
   const viewMenu: ToolBarMenuProps[] = [
@@ -831,22 +831,22 @@ function SmilesToolBox(props: {
       onClick: () => {
         props.setViewMode("grid");
       },
-      svgPath: <CenterView />,
+      svgPath: <CenterView />
     },
     {
       name: "View as list",
       onClick: () => {
         props.setViewMode("list");
       },
-      svgPath: <LogFile />,
+      svgPath: <LogFile />
     },
     {
       name: "Toggle SMILES preview",
       onClick: () => {
         props.toggleSMILESPreview();
       },
-      svgPath: props.smilesPreview ? <EyeIcon /> : <EyeDashIcon />,
-    },
+      svgPath: props.smilesPreview ? <EyeIcon /> : <EyeDashIcon />
+    }
   ];
 
   return (
@@ -854,7 +854,7 @@ function SmilesToolBox(props: {
       className="flex flex-row w-full justify-between items-center gap-2 flex-wrap z-50"
       style={{
         padding: "5px",
-        borderBottom: "1px solid black",
+        borderBottom: "1px solid black"
       }}
     >
       <div className="flex flex-row flex-wrap gap-2">
@@ -870,7 +870,7 @@ function SmilesToolBox(props: {
             window.smiles?.newEmptyMolecule(
               !isGroupEditable || props.viewMode !== "grid"
                 ? "Horus"
-                : props.currentGroup,
+                : props.currentGroup
             );
           }}
         />
@@ -903,7 +903,7 @@ export function EditSmilesModal(props: {
   isShowingList: boolean;
 }) {
   const [smilesState, setSmilesState] = useState<HorusSmilesType | null>(
-    props.smiles,
+    props.smiles
   );
 
   const editingRef = useRef<HTMLDivElement>(null);
@@ -941,7 +941,7 @@ export function EditSmilesModal(props: {
       noMargin
       maxContentSize={{
         height: "90%",
-        width: "90%",
+        width: "90%"
       }}
     >
       <div
@@ -1001,7 +1001,7 @@ export function EditSmilesModal(props: {
               </label>
               <textarea
                 style={{
-                  minHeight: "200px",
+                  minHeight: "200px"
                 }}
                 id="extra-info-textarea"
                 className="plugin-variable-value block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm overflow-y-auto"
@@ -1010,7 +1010,7 @@ export function EditSmilesModal(props: {
                 onChange={(e) => {
                   handleNewSmiles({
                     ...smilesState,
-                    extraInfo: e.target.value,
+                    extraInfo: e.target.value
                   });
                 }}
               />
@@ -1023,16 +1023,16 @@ export function EditSmilesModal(props: {
               onFocus: () => {
                 setCurrentFocusOn("jsme");
               },
-              onBlur: () => setCurrentFocusOn(null),
+              onBlur: () => setCurrentFocusOn(null)
             }}
             options={{
               depict: props.smiles?.structureRef ? true : false,
-              contextmenu: false,
+              contextmenu: false
             }}
             parameters={{
               markerIconColor: "#00cfbf",
               guicolor: "#f8fafa",
-              guiAtomColor: "#00a9ae",
+              guiAtomColor: "#00a9ae"
             }}
             width={`${width}px`}
             height={`${height}px`}
@@ -1041,7 +1041,7 @@ export function EditSmilesModal(props: {
               if (currentFocusOn === "jsme") {
                 handleNewSmiles({
                   ...smilesState,
-                  smi: newSmiles.src.smiles(),
+                  smi: newSmiles.src.smiles()
                 });
               }
             }}

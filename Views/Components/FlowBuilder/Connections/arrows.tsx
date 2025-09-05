@@ -28,7 +28,7 @@ export function ConnectedArrows(props: ConnectedArrows) {
 
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({
     x: 0,
-    y: 0,
+    y: 0
   });
 
   const arrowAppareance = settings?.["arrowLook"]?.value ?? "Curved";
@@ -42,7 +42,7 @@ export function ConnectedArrows(props: ConnectedArrows) {
     props.connection.origin.variableType,
     props.connection.destination.variableType,
     props.connection.origin.variableAllowedValues ?? [],
-    props.connection.destination.variableAllowedValues ?? [],
+    props.connection.destination.variableAllowedValues ?? []
   );
 
   const arrowColor = allowedConnection
@@ -76,7 +76,7 @@ export function ConnectedArrows(props: ConnectedArrows) {
         // Get the mouse position relative to the canvas
         setMousePos({
           x: event.clientX - (canvasRect!.left + 15),
-          y: event.clientY - (canvasRect!.top + 15),
+          y: event.clientY - (canvasRect!.top + 15)
         });
       }}
       onMouseLeave={() => setIsHovering(false)}
@@ -100,14 +100,14 @@ export function ConnectedArrows(props: ConnectedArrows) {
               destination={props.connection.destination}
               currentCycle={props.connection.currentCycle}
             />
-          ) : null,
+          ) : null
         }}
       />
       <div
         className="flex flex-row gap-1 items-center absolute z-10"
         style={{
           left: mousePos.x,
-          top: mousePos.y,
+          top: mousePos.y
         }}
       >
         <div
@@ -119,7 +119,7 @@ export function ConnectedArrows(props: ConnectedArrows) {
         >
           <CrossIcon
             style={{
-              color: "var(--red-error)",
+              color: "var(--red-error)"
             }}
           />
         </div>
@@ -167,7 +167,7 @@ function CyclesView(props: {
       className="cycles-box flex flex-row gap-1 w-48 justify-around bg-white"
       id="cycles-view"
       style={{
-        transform: `scale(${props.scale})`,
+        transform: `scale(${props.scale})`
       }}
     >
       Cycles:

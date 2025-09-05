@@ -16,7 +16,7 @@ import {
   NavigateOptions,
   Outlet,
   To,
-  useNavigate,
+  useNavigate
 } from "react-router";
 import { setNavigate } from "@/Utils/navigationService";
 import HorusContainer from "@/Components/HorusContainer/horus_container";
@@ -57,7 +57,7 @@ export function App() {
       ...window.horusInternal,
       updateSettings: (s: HorusSettingsObject) => {
         setHorusSettings(s);
-      },
+      }
     };
 
     const displayServerInactive = (show: boolean = true) => {
@@ -136,7 +136,7 @@ export function App() {
             right: "0.5rem",
             zIndex: 99999,
             padding: "1rem",
-            border: "1.5px solid red",
+            border: "1.5px solid red"
           }}
         >
           <div className="flex flex-col gap-1 text-center justify-center items-center">
