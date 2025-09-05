@@ -84,6 +84,10 @@ export function ToolbarMenu(props: ToolBarMenuProps) {
     return <></>;
   }
 
+  if (props.items?.length === 0 && !(props.link || props.onClick)) {
+    return <></>;
+  }
+
   return (
     <div className="h-full cursor-pointer">
       {props.link || props.onClick ? (
@@ -106,7 +110,7 @@ export function ToolbarMenu(props: ToolBarMenuProps) {
               className="absolute p-md-2 p-2 mt-3 w-56 origin-top-left rounded-xl bg-white toolbar-menu outline-none overflow-y-auto"
               style={{
                 maxHeight: "calc(100vh - 4rem)",
-                width: "auto",
+                width: "auto"
               }}
             >
               {/* // Here the items will be rendered */}
@@ -124,7 +128,7 @@ export function ToolbarMenu(props: ToolBarMenuProps) {
                       />
                     )}
                   </Menu.Item>
-                ),
+                )
               )}
             </Menu.Items>
           </Transition>

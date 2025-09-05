@@ -5,7 +5,7 @@ import { PanelResizeHandle } from "react-resizable-panels";
 export default function ResizeHandle({
   horizontal = false,
   onDragging,
-  className,
+  className
 }: {
   horizontal?: boolean;
   onDragging?: (e: boolean) => void;

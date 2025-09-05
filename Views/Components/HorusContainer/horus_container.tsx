@@ -15,7 +15,7 @@ function _HorusContainer(props: HorusContainerProps, ref: any) {
       ref={ref}
       style={{
         cursor: props.onClick ? "pointer" : "auto",
-        ...props.style,
+        ...props.style
       }}
       className={`${props.className} horus-container animated-gradient`}
     >

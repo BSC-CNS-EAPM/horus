@@ -28,7 +28,7 @@ function AppButton(props: AppButtonProps) {
       onClick={() => props.action && props.action()}
       style={{
         color: "black",
-        ...props.style,
+        ...props.style
       }}
     >
       {props?.text}

@@ -3,7 +3,7 @@ import {
   FileActionState,
   FileArray,
   FileData,
-  setChonkyDefaults,
+  setChonkyDefaults
 } from "chonky";
 import { ChonkyIconFA } from "chonky-icon-fontawesome";
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
@@ -56,7 +56,7 @@ function useServerExplorer(
     status: false,
     progress: 0,
     file: "",
-    text: "",
+    text: ""
   });
 
   const flowBuilderContext = useContext(FlowBuilderContext);
@@ -74,7 +74,7 @@ function useServerExplorer(
     ) => {
       const header = {
         "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": "*"
       };
 
       if (
@@ -110,7 +110,7 @@ function useServerExplorer(
         openFolder: openFolder,
         flowContextPath: flowBuilderContext?.flow?.flow?.path,
         obfuscate: !openDirectly,
-        openOutsideFlowContext: openOutsideFlowContext,
+        openOutsideFlowContext: openOutsideFlowContext
       });
 
       const response = await horusPost("/api/filepicker", header, body);
@@ -157,7 +157,7 @@ function useServerExplorer(
       openDirectly,
       files,
       onFileSelect,
-      openOutsideFlowContext,
+      openOutsideFlowContext
     ]
   );
 
@@ -219,13 +219,13 @@ function useServerExplorer(
 
     const header = {
       "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": "*"
     };
 
     const body = JSON.stringify({
       path: currentPath.current,
       folderName: folderName,
-      flowContextPath: flowBuilderContext?.flow?.flow?.path,
+      flowContextPath: flowBuilderContext?.flow?.flow?.path
     });
 
     const response = await horusPost(
@@ -248,7 +248,7 @@ function useServerExplorer(
       status: false,
       progress: 0,
       file: "",
-      text: "",
+      text: ""
     });
 
     // Re-fetch the items
@@ -271,7 +271,7 @@ function useServerExplorer(
 
     const header = {
       Accept: "application/json",
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": "*"
     };
 
     for (let i = 0; i < files.length; i++) {
@@ -300,7 +300,7 @@ function useServerExplorer(
         status: true,
         progress: 0,
         file: files[i]!.name,
-        text: "Uploading files...",
+        text: "Uploading files..."
       });
 
       const data: any = await POSTUploadWithProgress(
@@ -309,7 +309,7 @@ function useServerExplorer(
         (percentage) => {
           setActionFilesActive((currentText) => ({
             ...currentText,
-            progress: percentage,
+            progress: percentage
           }));
         }
       );
@@ -327,14 +327,14 @@ function useServerExplorer(
     currentPath,
     fetchFolders,
     resetActionFiles,
-    flowBuilderContext?.flow?.flow?.path,
+    flowBuilderContext?.flow?.flow?.path
   ]);
 
   const downloadFiles = useCallback(
     async (filePaths: FileData[]) => {
       const header = {
         "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": "*"
       };
 
       for (let i = 0; i < filePaths.length; i++) {
@@ -344,12 +344,12 @@ function useServerExplorer(
           status: true,
           progress: ((2 * i + 1) / (filePaths.length * 2)) * 100,
           file: filePath.name,
-          text: "Downloading files...",
+          text: "Downloading files..."
         });
 
         const body = JSON.stringify({
           path: filePath["path"],
-          flowContextPath: flowBuilderContext?.flow?.flow?.path,
+          flowContextPath: flowBuilderContext?.flow?.flow?.path
         });
 
         const response = await horusPost(
@@ -378,14 +378,14 @@ function useServerExplorer(
         }
 
         const file = new File([data], fileName ?? "downloaded_file", {
-          type: "application/octet-stream",
+          type: "application/octet-stream"
         });
 
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
         setActionFilesActive((currentText) => ({
           ...currentText,
-          progress: ((2 * i + 2) / (filePaths.length * 2)) * 100,
+          progress: ((2 * i + 2) / (filePaths.length * 2)) * 100
         }));
 
         window.horus.saveFile(file);
@@ -400,12 +400,12 @@ function useServerExplorer(
       filePaths: [
         {
           path: string;
-        },
+        }
       ]
     ) => {
       const header = {
         "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Origin": "*"
       };
 
       for (let i = 0; i < filePaths.length; i++) {
@@ -415,12 +415,12 @@ function useServerExplorer(
           status: true,
           progress: (i / filePaths.length) * 100,
           file: filePath.path,
-          text: "Deleting files...",
+          text: "Deleting files..."
         });
 
         const body = JSON.stringify({
           path: filePath.path,
-          flowContextPath: flowBuilderContext?.flow?.flow?.path,
+          flowContextPath: flowBuilderContext?.flow?.flow?.path
         });
 
         const response = await horusPost(
@@ -452,7 +452,7 @@ function useServerExplorer(
     handleFileAction,
     fetchFolders,
     filePicker,
-    uploadFiles,
+    uploadFiles
   };
 }
 
@@ -538,7 +538,7 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
     setSelectedFile,
     setFolderChain,
     filePicker,
-    uploadFiles,
+    uploadFiles
   } = useServerExplorer(
     openFolder,
     onFileSelect,
@@ -564,7 +564,7 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
     ChonkyActions.UploadFiles,
     ChonkyActions.DownloadFiles,
     ChonkyActions.CreateFolder,
-    ChonkyActions.DeleteFiles,
+    ChonkyActions.DeleteFiles
   ];
 
   const [tabIndex, setTabIndex] = useState(0);
@@ -625,7 +625,7 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
         handleClose();
       }}
       maxContentSize={{
-        width: "90%",
+        width: "90%"
       }}
       overRoot
     >
@@ -647,7 +647,7 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
                   if (e.key === "Enter") {
                     if (goToPath) {
                       fetchFolders(goToPath, {
-                        setGoToPathAsSelected: true,
+                        setGoToPathAsSelected: true
                       });
 
                       if (
@@ -670,7 +670,7 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
                       const goingTo = goToPath.slice(0, -1);
                       setGoToPath(goingTo);
                       fetchFolders(goingTo, {
-                        setGoToPathAsSelected: true,
+                        setGoToPathAsSelected: true
                       });
                       return;
                     }
@@ -717,7 +717,7 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
                 action={() => {
                   goToPath &&
                     fetchFolders(goToPath, {
-                      setGoToPathAsSelected: true,
+                      setGoToPathAsSelected: true
                     });
                 }}
               >
@@ -850,11 +850,11 @@ function useDesktopExplorer(
   const openFilePicker = async () => {
     const header = {
       "Content-Type": "application/json",
-      accept: "application/json",
+      accept: "application/json"
     };
 
     const body = JSON.stringify({
-      extensions: allowedExtensions,
+      extensions: allowedExtensions
     });
 
     const postTo = openFolder ? "/api/openfolder" : "/api/openfile";
@@ -871,7 +871,7 @@ function useDesktopExplorer(
   };
 
   return {
-    openFilePicker,
+    openFilePicker
   };
 }
 

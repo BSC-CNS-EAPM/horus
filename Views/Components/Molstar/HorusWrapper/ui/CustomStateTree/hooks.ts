@@ -5,7 +5,7 @@ import HorusMolstar, { MolInfoWithRef } from "../../horusmolstar";
 export function useStructureVisibility(structure: MolInfoWithRef) {
   const plugin = (window.molstar as HorusMolstar).plugin!;
   const [isVisible, setIsVisible] = useState(
-    !structure.structureRef.cell.state.isHidden,
+    !structure.structureRef.cell.state.isHidden
   );
 
   useEffect(() => {
@@ -17,7 +17,7 @@ export function useStructureVisibility(structure: MolInfoWithRef) {
         ) {
           setIsVisible(!e.cell.state.isHidden);
         }
-      },
+      }
     );
 
     return () => subscription.unsubscribe();
@@ -27,7 +27,7 @@ export function useStructureVisibility(structure: MolInfoWithRef) {
     setIsVisible(!isVisible);
     PluginCommands.State.ToggleVisibility(plugin, {
       state: structure.structureRef.cell.parent!,
-      ref: structure.structureRef.cell.transform.ref,
+      ref: structure.structureRef.cell.transform.ref
     });
   };
 
@@ -36,7 +36,7 @@ export function useStructureVisibility(structure: MolInfoWithRef) {
 
 export function useClickOutside(
   ref: React.RefObject<HTMLElement | null>,
-  callback: () => void,
+  callback: () => void
 ) {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

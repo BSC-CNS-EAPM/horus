@@ -7,13 +7,13 @@ import { StructureRepresentationRegistry } from "molstar/lib/mol-repr/structure/
 interface RepresentationDropdownProps {
   representation?: RepresentationInfo;
   onChangeRepresentation: (
-    repId: StructureRepresentationRegistry.BuiltIn,
+    repId: StructureRepresentationRegistry.BuiltIn
   ) => void;
 }
 
 export function RepresentationDropdown({
   representation,
-  onChangeRepresentation,
+  onChangeRepresentation
 }: RepresentationDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -25,7 +25,7 @@ export function RepresentationDropdown({
   }
 
   const currentRep = REPRESENTATIONS.find(
-    (rep) => rep.id === representation.type,
+    (rep) => rep.id === representation.type
   );
   const currentLabel = currentRep?.label || representation.type;
 

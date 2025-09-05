@@ -16,17 +16,17 @@ import {
   StructureRepresentation,
   StructureRepresentationProvider,
   StructureRepresentationStateBuilder,
-  UnitsRepresentation,
+  UnitsRepresentation
 } from "molstar/lib/mol-repr/structure/representation";
 import {
   Representation,
   RepresentationContext,
-  RepresentationParamsGetter,
+  RepresentationParamsGetter
 } from "molstar/lib/mol-repr/representation";
 import {
   UnitsMeshParams,
   UnitsMeshVisual,
-  UnitsVisual,
+  UnitsVisual
 } from "molstar/lib/mol-repr/structure/units-visual";
 import { StructureGroup } from "molstar/lib/mol-repr/structure/visual/util/common";
 import { VisualUpdateState } from "molstar/lib/mol-repr/util";
@@ -38,14 +38,14 @@ import { StructureRepresentationProps } from "molstar/lib/mol-plugin-state/helpe
 const DockingSphereVisuals = {
   sphere: (
     ctx: RepresentationContext,
-    getParams: RepresentationParamsGetter<Structure, DockingSphereParams>,
+    getParams: RepresentationParamsGetter<Structure, DockingSphereParams>
   ) =>
     UnitsRepresentation(
       "Docking sphere mesh",
       ctx,
       getParams,
-      DockingSphereVisual,
-    ),
+      DockingSphereVisual
+    )
 };
 
 // Parameters that allow us to control the appearance of the sphere
@@ -58,14 +58,14 @@ const DockingSphereParams = {
   alpha: PD.Numeric(1, {
     min: 0,
     max: 1,
-    step: 0.01,
-  }),
+    step: 0.01
+  })
 };
 type DockingSphereParams = typeof DockingSphereParams;
 
 // Factory function that creates our Representation object
 function DockingSphereVisual(
-  materialId: number,
+  materialId: number
 ): UnitsVisual<DockingSphereParams> {
   return UnitsMeshVisual<DockingSphereParams>(
     {
@@ -89,7 +89,7 @@ function DockingSphereVisual(
           structureGroup.group.units.length,
 
           1,
-          () => NullLocation, // We do not have any actual information to attach to the sphere
+          () => NullLocation // We do not have any actual information to attach to the sphere
         );
       },
 
@@ -98,7 +98,7 @@ function DockingSphereVisual(
       getLoci: (
         pickingId: PickingId,
         structureGroup: StructureGroup,
-        id: number,
+        id: number
       ) => {
         // const { objectId } = pickingId;
         // if (objectId !== id) return EmptyLoci; // Return EmptyLoci if the call was not for us
@@ -130,7 +130,7 @@ function DockingSphereVisual(
       eachLocation: (
         loci: Loci,
         structureGroup: StructureGroup,
-        apply: (interval: Interval) => boolean,
+        apply: (interval: Interval) => boolean
       ) => {
         return false; // You can simply return false, the spheres will then be ignored by picking
       },
@@ -139,7 +139,7 @@ function DockingSphereVisual(
       setUpdateState: (
         state: VisualUpdateState,
         newProps: PD.Values<DockingSphereParams>,
-        currentProps: PD.Values<DockingSphereParams>,
+        currentProps: PD.Values<DockingSphereParams>
       ) => {
         state.createGeometry =
           newProps.x !== currentProps.x ||
@@ -147,9 +147,9 @@ function DockingSphereVisual(
           newProps.z !== currentProps.z ||
           newProps.radius !== currentProps.radius ||
           newProps.alpha !== currentProps.alpha;
-      },
+      }
     },
-    materialId,
+    materialId
   );
 }
 
@@ -157,7 +157,7 @@ export type DockingSphereRepresentation =
   StructureRepresentation<DockingSphereParams>;
 export function ConfalPyramidsRepresentation(
   ctx: RepresentationContext,
-  getParams: RepresentationParamsGetter<Structure, DockingSphereParams>,
+  getParams: RepresentationParamsGetter<Structure, DockingSphereParams>
 ): DockingSphereRepresentation {
   const repr = Representation.createMulti(
     "Confal Pyramids",
@@ -167,7 +167,7 @@ export function ConfalPyramidsRepresentation(
     DockingSphereVisuals as unknown as Representation.Def<
       Structure,
       DockingSphereParams
-    >,
+    >
   );
   return repr;
 }
@@ -183,7 +183,7 @@ export const DockingSphereRepresentationProvider =
     defaultValues: PD.getDefaultValues(DockingSphereParams),
     defaultColorTheme: { name: "uniform" },
     defaultSizeTheme: { name: "uniform" },
-    isApplicable: (structure: Structure) => true, // Assume that we can always draw a sphere
+    isApplicable: (structure: Structure) => true // Assume that we can always draw a sphere
   });
 
 function createDockingSphereMesh(
@@ -192,7 +192,7 @@ function createDockingSphereMesh(
   structure: Structure,
   theme: Theme,
   props: PD.Values<DockingSphereParams>,
-  mesh?: Mesh,
+  mesh?: Mesh
 ) {
   const mb = MeshBuilder.createState(16, 16, mesh);
 
@@ -221,15 +221,15 @@ async function addSphereTo(
     radius: number;
     color: Color;
     alpha: number;
-  },
+  }
 ) {
   const struc = await ms.builders.structure.representation.addRepresentation(
     structure,
     {
       type: "sphere" as any, // Coerce TypeScript into accepting the representation name
       typeParams: sphere,
-      colorParams: sphere.color ? { value: sphere.color } : void 0,
-    } as StructureRepresentationProps,
+      colorParams: sphere.color ? { value: sphere.color } : void 0
+    } as StructureRepresentationProps
   );
 
   return struc.ref;

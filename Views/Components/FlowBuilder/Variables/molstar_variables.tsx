@@ -6,7 +6,7 @@ import {
   useCallback,
   useEffect,
   useRef,
-  useState,
+  useState
 } from "react";
 
 // Mol*
@@ -24,7 +24,7 @@ import {
   BoxRef,
   MolstarClickEventDetail,
   MolstarEvents,
-  isMolstarLoaded,
+  isMolstarLoaded
 } from "../../Molstar/HorusWrapper/horusmolstar";
 import { SearchComponent } from "@/Components/Search/Search";
 import { StructureSelection } from "molstar/lib/mol-model/structure";
@@ -129,7 +129,7 @@ function useStructureFilters(
 
   return {
     setCurrentFilter,
-    filteredStructures,
+    filteredStructures
   };
 }
 
@@ -162,14 +162,15 @@ function useChainFilters(
         newValue = currentValue.filter((chain) =>
           currentChains.find(
             (c) =>
-              c.structureID === chain.structureID && c.chainID === chain.chainID
+              c.structure.id === chain.structure.id &&
+              c.chainID === chain.chainID
           )
         );
       } else {
         newValue =
           currentChains.find(
             (c) =>
-              c.structureID === currentValue.structureID &&
+              c.structure.id === currentValue.structure.id &&
               c.chainID === currentValue.chainID
           ) ?? null;
       }
@@ -198,7 +199,7 @@ function useChainFilters(
 
   return {
     setCurrentFilter,
-    filteredChains,
+    filteredChains
   };
 }
 
@@ -238,7 +239,7 @@ function useResidueFilters(
         newValue = currentValue.filter((residue) =>
           currentResidues.find(
             (r) =>
-              r.structureID === residue.structureID &&
+              r.structure.id === residue.structure.id &&
               r.chainID === residue.chainID &&
               r.residue === residue.residue
           )
@@ -247,7 +248,7 @@ function useResidueFilters(
         newValue =
           currentResidues.find(
             (r) =>
-              r.structureID === currentValue.structureID &&
+              r.structure.id === currentValue.structure.id &&
               r.chainID === currentValue.chainID &&
               r.residue === currentValue.residue
           ) ?? null;
@@ -276,7 +277,7 @@ function useResidueFilters(
 
   return {
     setCurrentFilter,
-    filteredResidues,
+    filteredResidues
   };
 }
 
@@ -331,7 +332,7 @@ export function StructureVariableView(props: VariableViewProps) {
 function SelectSingleStructure({
   structure,
   currentValue,
-  onChange,
+  onChange
 }: {
   structure: MolInfo;
   currentValue: MolInfo | null;
@@ -344,7 +345,7 @@ function SelectSingleStructure({
       style={{
         gap: "1rem",
         textAlign: "left",
-        paddingInline: "0.25rem",
+        paddingInline: "0.25rem"
       }}
     >
       <input
@@ -432,7 +433,7 @@ export function MultipleStructureVariableView(props: VariableViewProps) {
 function SelectMultipleStructures({
   structure,
   currentValue,
-  onChange,
+  onChange
 }: {
   structure: MolInfo;
   currentValue: MolInfo[] | null;
@@ -445,7 +446,7 @@ function SelectMultipleStructures({
       style={{
         gap: "1rem",
         textAlign: "left",
-        paddingInline: "0.25rem",
+        paddingInline: "0.25rem"
       }}
     >
       <input
@@ -522,7 +523,7 @@ export function ChainView(props: VariableViewProps) {
         <div className="w-full overflow-auto max-h-28 min-h-12 mt-1">
           {filteredChains.map((chain) => (
             <SelectMultipleChains
-              key={chain.structureID + chain.chainID}
+              key={chain.structure.id + chain.chainID}
               chain={chain}
               currentValue={props.currentValue}
               onChange={props.onChange}
@@ -537,7 +538,7 @@ export function ChainView(props: VariableViewProps) {
 function SelectMultipleChains({
   chain,
   currentValue,
-  onChange,
+  onChange
 }: {
   chain: AtomInfo;
   currentValue: AtomInfo[] | null;
@@ -545,12 +546,12 @@ function SelectMultipleChains({
 }) {
   return (
     <div
-      key={chain.structureID}
+      key={chain.structure.id}
       className="flex flex-row items-center justify-between"
       style={{
         gap: "1rem",
         textAlign: "left",
-        paddingInline: "0.25rem",
+        paddingInline: "0.25rem"
       }}
     >
       <input
@@ -559,7 +560,8 @@ function SelectMultipleChains({
         checked={
           currentValue?.find((c) => {
             return (
-              c.structureID === chain.structureID && c.chainID === chain.chainID
+              c.structure.id === chain.structure.id &&
+              c.chainID === chain.chainID
             );
           }) !== undefined
         }
@@ -569,7 +571,7 @@ function SelectMultipleChains({
             : (currentValue ?? []).filter(
                 (c: AtomInfo) =>
                   !(
-                    c.structureID === chain.structureID &&
+                    c.structure.id === chain.structure.id &&
                     c.chainID === chain.chainID
                   )
               );
@@ -634,7 +636,7 @@ export function StandardResView(props: VariableViewProps) {
         <div className="w-full overflow-auto max-h-28 min-h-12 mt-1">
           {filteredResidues.map((residue) => (
             <SelectMultipleResidues
-              key={residue.structureID + residue.chainID + residue.residue}
+              key={residue.structure.id + residue.chainID + residue.residue}
               residue={residue}
               currentValue={props.currentValue}
               onChange={props.onChange}
@@ -697,7 +699,7 @@ export function HeteroResView(props: VariableViewProps) {
         <div className="w-full overflow-auto max-h-28 min-h-12 mt-1">
           {filteredResidues.map((residue) => (
             <SelectMultipleResidues
-              key={residue.structureID + residue.chainID + residue.residue}
+              key={residue.structure.id + residue.chainID + residue.residue}
               residue={residue}
               currentValue={props.currentValue}
               onChange={props.onChange}
@@ -712,7 +714,7 @@ export function HeteroResView(props: VariableViewProps) {
 function SelectMultipleResidues({
   residue,
   currentValue,
-  onChange,
+  onChange
 }: {
   residue: AtomInfo;
   currentValue: AtomInfo[] | null;
@@ -720,12 +722,12 @@ function SelectMultipleResidues({
 }) {
   return (
     <div
-      key={residue.structureID}
+      key={residue.structure.id}
       className="flex flex-row items-center justify-between"
       style={{
         gap: "1rem",
         textAlign: "left",
-        paddingInline: "0.25rem",
+        paddingInline: "0.25rem"
       }}
     >
       <input
@@ -734,7 +736,7 @@ function SelectMultipleResidues({
         checked={
           currentValue?.find((r) => {
             return (
-              r.structureID === residue.structureID &&
+              r.structure.id === residue.structure.id &&
               r.residue === residue.residue &&
               r.chainID === residue.chainID
             );
@@ -747,7 +749,7 @@ function SelectMultipleResidues({
               : (currentValue || []).filter(
                   (r: AtomInfo) =>
                     !(
-                      r.structureID === residue.structureID &&
+                      r.structure.id === residue.structure.id &&
                       r.residue === residue.residue &&
                       r.chainID === residue.chainID
                     )
@@ -785,7 +787,7 @@ export function ResidueView(props: VariableViewProps) {
     if (isMolstarLoaded(window.molstar)) {
       // Set the granularity to element
       window.molstar.plugin!.managers.interactivity.setProps({
-        granularity: "residue",
+        granularity: "residue"
       });
       // Unselect selected residues
       if (active) {
@@ -857,7 +859,7 @@ export function AtomView(props: VariableViewProps) {
     if (isMolstarLoaded(window.molstar)) {
       // Set the granularity to element
       window.molstar.plugin!.managers.interactivity.setProps({
-        granularity: "element",
+        granularity: "element"
       });
       // Unselect selected residues
       if (active) {
@@ -950,7 +952,7 @@ export function BoxVariableView(props: VariableViewProps) {
         z2: Number(metrics.z2),
         x3: Number(metrics.x3),
         y3: Number(metrics.y3),
-        z3: Number(metrics.z3),
+        z3: Number(metrics.z3)
       };
 
       let ref = null;
@@ -966,7 +968,7 @@ export function BoxVariableView(props: VariableViewProps) {
               newPosition: parsedBoxNumbers,
               newRadiusScale: Number(radiusScale),
               newRadialSegments: Number(radialSegments),
-              newOpacity: 0.75,
+              newOpacity: 0.75
             });
           }
 
@@ -977,7 +979,7 @@ export function BoxVariableView(props: VariableViewProps) {
               radialSegments: Number(radialSegments),
               opacity: 0.75,
               color: boxRef.current?.color ?? undefined,
-              deletePrevious: boxRef.current ?? undefined,
+              deletePrevious: boxRef.current ?? undefined
             });
 
             boxRef.current = ref;
@@ -1003,11 +1005,11 @@ export function BoxVariableView(props: VariableViewProps) {
           z2: metrics.z2,
           x3: metrics.x3,
           y3: metrics.y3,
-          z3: metrics.z3,
+          z3: metrics.z3
         },
         radiusScale: radiusScale,
         radialSegments: radialSegments,
-        ref: ref,
+        ref: ref
       };
 
       onChange(boxData);
@@ -1041,7 +1043,7 @@ export function BoxVariableView(props: VariableViewProps) {
             z2: currentValue.metrics.z2,
             x3: currentValue.metrics.x3,
             y3: currentValue.metrics.y3,
-            z3: currentValue.metrics.z3,
+            z3: currentValue.metrics.z3
           },
           currentValue?.radiusScale ?? 10,
           currentValue?.radialSegments ?? 2
@@ -1081,11 +1083,11 @@ export function BoxVariableView(props: VariableViewProps) {
         z2: 0,
         x3: 0,
         y3: 0,
-        z3: 5,
+        z3: 5
       },
       radiusScale: 5,
       radialSegments: 2,
-      ref: null,
+      ref: null
     };
 
     if (isMolstarLoaded(window.molstar)) {
@@ -1095,7 +1097,7 @@ export function BoxVariableView(props: VariableViewProps) {
         radialSegments: boxData.radialSegments,
         opacity: 0.75,
         color: boxRef.current?.color ?? undefined,
-        deletePrevious: boxRef.current ?? undefined,
+        deletePrevious: boxRef.current ?? undefined
       });
       boxRef.current = ref;
       setActiveColor(Color.toHexStyle(ref.color));
@@ -1118,7 +1120,7 @@ export function BoxVariableView(props: VariableViewProps) {
     <div
       className="flex flex-col p-2 gap-2"
       style={{
-        padding: "0 !important",
+        padding: "0 !important"
       }}
     >
       <div className="flex flex-row gap-2">
@@ -1126,7 +1128,7 @@ export function BoxVariableView(props: VariableViewProps) {
           <span
             className="font-semibold"
             style={{
-              color: "darkgray",
+              color: "darkgray"
             }}
           >
             X:
@@ -1153,7 +1155,7 @@ export function BoxVariableView(props: VariableViewProps) {
                   z2: currentValue?.metrics?.z2,
                   x3: currentValue?.metrics?.x3,
                   y3: currentValue?.metrics?.y3,
-                  z3: currentValue?.metrics?.z3,
+                  z3: currentValue?.metrics?.z3
                 },
                 currentValue?.radiusScale,
                 currentValue?.radialSegments
@@ -1165,7 +1167,7 @@ export function BoxVariableView(props: VariableViewProps) {
           <span
             className="font-semibold"
             style={{
-              color: "darkgray",
+              color: "darkgray"
             }}
           >
             Y:
@@ -1192,7 +1194,7 @@ export function BoxVariableView(props: VariableViewProps) {
                   z2: currentValue?.metrics?.z2,
                   x3: currentValue?.metrics?.x3,
                   y3: currentValue?.metrics?.y3,
-                  z3: currentValue?.metrics?.z3,
+                  z3: currentValue?.metrics?.z3
                 },
                 currentValue?.radiusScale,
                 currentValue?.radialSegments
@@ -1204,7 +1206,7 @@ export function BoxVariableView(props: VariableViewProps) {
           <span
             className="font-semibold"
             style={{
-              color: "darkgray",
+              color: "darkgray"
             }}
           >
             Z:
@@ -1231,7 +1233,7 @@ export function BoxVariableView(props: VariableViewProps) {
                   z2: currentValue?.metrics?.z2,
                   x3: currentValue?.metrics?.x3,
                   y3: currentValue?.metrics?.y3,
-                  z3: currentValue?.metrics?.z3,
+                  z3: currentValue?.metrics?.z3
                 },
                 currentValue?.radiusScale,
                 currentValue?.radialSegments
@@ -1245,7 +1247,7 @@ export function BoxVariableView(props: VariableViewProps) {
           <span
             className="font-semibold"
             style={{
-              color: "darkgray",
+              color: "darkgray"
             }}
           >
             A:
@@ -1272,7 +1274,7 @@ export function BoxVariableView(props: VariableViewProps) {
                   z2: currentValue?.metrics?.z2,
                   x3: currentValue?.metrics?.x3,
                   y3: currentValue?.metrics?.y3,
-                  z3: currentValue?.metrics?.z3,
+                  z3: currentValue?.metrics?.z3
                 },
                 currentValue?.radiusScale,
                 currentValue?.radialSegments
@@ -1284,7 +1286,7 @@ export function BoxVariableView(props: VariableViewProps) {
           <span
             className="font-semibold"
             style={{
-              color: "darkgray",
+              color: "darkgray"
             }}
           >
             B:
@@ -1311,7 +1313,7 @@ export function BoxVariableView(props: VariableViewProps) {
                   z2: currentValue?.metrics?.z2,
                   x3: currentValue?.metrics?.x3,
                   y3: currentValue?.metrics?.y3,
-                  z3: currentValue?.metrics?.z3,
+                  z3: currentValue?.metrics?.z3
                 },
                 currentValue?.radiusScale,
                 currentValue?.radialSegments
@@ -1323,7 +1325,7 @@ export function BoxVariableView(props: VariableViewProps) {
           <span
             className="font-semibold"
             style={{
-              color: "darkgray",
+              color: "darkgray"
             }}
           >
             C:
@@ -1350,7 +1352,7 @@ export function BoxVariableView(props: VariableViewProps) {
                   y2: currentValue?.metrics?.y2,
                   z2: currentValue?.metrics?.z2,
                   x3: currentValue?.metrics?.x3,
-                  y3: currentValue?.metrics?.y3,
+                  y3: currentValue?.metrics?.y3
                 },
                 currentValue?.radiusScale,
                 currentValue?.radialSegments
@@ -1382,7 +1384,7 @@ export function BoxVariableView(props: VariableViewProps) {
                 <div
                   className="w-4 h-4 rounded-full"
                   style={{
-                    backgroundColor: activeColor,
+                    backgroundColor: activeColor
                   }}
                 ></div>
               </div>
@@ -1419,7 +1421,7 @@ export function SphereVariableView(props: VariableViewProps) {
       const parsedSphereNumbers = {
         x: Number(position.x),
         y: Number(position.y),
-        z: Number(position.z),
+        z: Number(position.z)
       };
 
       let ref = null;
@@ -1433,7 +1435,7 @@ export function SphereVariableView(props: VariableViewProps) {
             updated = await molstar.moveSphere({
               sphereRef: sphereRef.current?.ref,
               newPosition: parsedSphereNumbers,
-              newRadius: Number(radius),
+              newRadius: Number(radius)
             });
           }
 
@@ -1443,7 +1445,7 @@ export function SphereVariableView(props: VariableViewProps) {
               radius: Number(radius),
               opacity: 0.3,
               color: sphereRef.current?.color ?? undefined,
-              deletePrevious: sphereRef.current ?? undefined,
+              deletePrevious: sphereRef.current ?? undefined
             });
 
             setActiveColor(Color.toHexStyle(ref.color));
@@ -1459,10 +1461,10 @@ export function SphereVariableView(props: VariableViewProps) {
         center: {
           x: position.x,
           y: position.y,
-          z: position.z,
+          z: position.z
         },
         radius: radius,
-        ref: ref,
+        ref: ref
       };
 
       onChange(sphereData);
@@ -1488,7 +1490,7 @@ export function SphereVariableView(props: VariableViewProps) {
           {
             x: data.x,
             y: data.y,
-            z: data.z,
+            z: data.z
           },
           currentValue?.radius ?? 10
         );
@@ -1518,17 +1520,17 @@ export function SphereVariableView(props: VariableViewProps) {
       center: {
         x: 0,
         y: 0,
-        z: 0,
+        z: 0
       },
       radius: 10,
-      ref: null,
+      ref: null
     };
 
     if (isMolstarLoaded(window.molstar)) {
       const ref = await window.molstar.addSphere({
         position: sphereData.center,
         radius: sphereData.radius,
-        opacity: 0.3,
+        opacity: 0.3
       });
 
       sphereRef.current = ref;
@@ -1552,7 +1554,7 @@ export function SphereVariableView(props: VariableViewProps) {
     <div
       className="flex flex-col p-2 gap-2"
       style={{
-        padding: "0 !important",
+        padding: "0 !important"
       }}
     >
       <div className="flex flex-row gap-2">
@@ -1560,7 +1562,7 @@ export function SphereVariableView(props: VariableViewProps) {
           <span
             className="font-semibold"
             style={{
-              color: "darkgray",
+              color: "darkgray"
             }}
           >
             X:
@@ -1574,7 +1576,7 @@ export function SphereVariableView(props: VariableViewProps) {
                 {
                   x: parseNumberOrNegative(e.target.value),
                   y: currentValue?.center?.y,
-                  z: currentValue?.center?.z,
+                  z: currentValue?.center?.z
                 },
                 currentValue?.radius
               );
@@ -1585,7 +1587,7 @@ export function SphereVariableView(props: VariableViewProps) {
           <span
             className="font-semibold"
             style={{
-              color: "darkgray",
+              color: "darkgray"
             }}
           >
             Y:
@@ -1599,7 +1601,7 @@ export function SphereVariableView(props: VariableViewProps) {
                 {
                   x: currentValue?.center.x,
                   y: parseNumberOrNegative(e.target.value),
-                  z: currentValue?.center.z,
+                  z: currentValue?.center.z
                 },
                 currentValue?.radius
               );
@@ -1610,7 +1612,7 @@ export function SphereVariableView(props: VariableViewProps) {
           <span
             className="font-semibold"
             style={{
-              color: "darkgray",
+              color: "darkgray"
             }}
           >
             Z:
@@ -1624,7 +1626,7 @@ export function SphereVariableView(props: VariableViewProps) {
                 {
                   x: currentValue?.center.x,
                   y: currentValue?.center.y,
-                  z: parseNumberOrNegative(e.target.value),
+                  z: parseNumberOrNegative(e.target.value)
                 },
                 currentValue?.radius
               );
@@ -1635,7 +1637,7 @@ export function SphereVariableView(props: VariableViewProps) {
           <span
             className="font-semibold"
             style={{
-              color: "darkgray",
+              color: "darkgray"
             }}
           >
             R:
@@ -1650,7 +1652,7 @@ export function SphereVariableView(props: VariableViewProps) {
                 {
                   x: currentValue.center.x,
                   y: currentValue.center.y,
-                  z: currentValue.center.z,
+                  z: currentValue.center.z
                 },
                 newRadius
               );
@@ -1680,7 +1682,7 @@ export function SphereVariableView(props: VariableViewProps) {
                 <div
                   className="w-4 h-4 rounded-full"
                   style={{
-                    backgroundColor: activeColor,
+                    backgroundColor: activeColor
                   }}
                 ></div>
               </div>
@@ -1712,7 +1714,7 @@ export function InteractiveChainView(props: VariableViewProps) {
     if (isMolstarLoaded(window.molstar)) {
       // Set the granularity to element
       window.molstar.plugin!.managers.interactivity.setProps({
-        granularity: "chain",
+        granularity: "chain"
       });
     }
 
@@ -1746,8 +1748,8 @@ export function InteractiveChainView(props: VariableViewProps) {
         Q.struct.generator.atomGroups({
           "chain-test": Q.core.rel.eq([
             Q.struct.atomProperty.macromolecular.auth_asym_id(),
-            c,
-          ]),
+            c
+          ])
         }),
       data!
     );
@@ -1906,7 +1908,7 @@ export function InteractiveChainView(props: VariableViewProps) {
 
 export function ResidueRangeView({
   currentValue,
-  onChange,
+  onChange
 }: VariableViewProps) {
   const [residues, setResidues] = useState<AtomInfo[] | null>(null);
   const [active, setActive] = useState<number>(0); // 0 = inactive, 1 = selecting first, 2 = selecting second
@@ -1939,13 +1941,13 @@ export function ResidueRangeView({
         Q.struct.generator.atomGroups({
           "chain-test": MolScriptBuilder.core.rel.eq([
             MolScriptBuilder.ammp("auth_asym_id"),
-            residues[0]?.chainID,
+            residues[0]?.chainID
           ]),
           "residue-test": MolScriptBuilder.core.rel.inRange([
             MolScriptBuilder.ammp("auth_seq_id"),
             r1,
-            r2,
-          ]),
+            r2
+          ])
         }),
       data
     );
@@ -1986,7 +1988,7 @@ export function ResidueRangeView({
   useEffect(() => {
     if (isMolstarLoaded(window.molstar)) {
       window.molstar.plugin!.managers.interactivity.setProps({
-        granularity: "residue",
+        granularity: "residue"
       });
       window.molstar.plugin!.managers.interactivity.lociSelects.deselectAll();
     }
@@ -2046,7 +2048,7 @@ function ResidueBox({
   residue,
   setActive,
   onMouseOver,
-  onMouseLeave,
+  onMouseLeave
 }: {
   index: 0 | 1;
   label: string;
@@ -2098,7 +2100,7 @@ export function NotFoundView(props: { children: ReactNode }) {
       role="placeholder"
       className="text-center pt-2"
       style={{
-        color: "darkgray",
+        color: "darkgray"
       }}
     >
       {props.children}

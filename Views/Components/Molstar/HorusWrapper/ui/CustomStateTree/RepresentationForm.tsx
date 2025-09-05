@@ -9,7 +9,7 @@ import {
   REPRESENTATIONS,
   SELECTION_LANGUAGES,
   COLOR_TYPES,
-  SIZE_THEME_OPTIONS,
+  SIZE_THEME_OPTIONS
 } from "./types";
 import { SizeTheme } from "molstar/lib/mol-theme/size";
 
@@ -24,7 +24,7 @@ export function RepresentationForm({
   onAddComponent,
   onCancel,
   initialSelection = "",
-  initialLoci,
+  initialLoci
 }: RepresentationFormProps) {
   const [selection, setSelection] = useState(initialSelection);
   const [label, setLabel] = useState("Custom selection");
@@ -61,18 +61,18 @@ export function RepresentationForm({
       representation: representation,
       representationParams: {
         name: label,
-        params: {},
+        params: {}
       },
       color: color,
       colorParams: {
-        value: customColor,
+        value: customColor
       },
       opacity,
 
       size: sizeTheme,
       sizeParams: {
-        value: uniformSize,
-      },
+        value: uniformSize
+      }
     };
 
     if (hasLoci) {
@@ -160,7 +160,7 @@ export function RepresentationForm({
             value={representation}
             onChange={(e) =>
               setRepresentation(
-                e.target.value as StructureRepresentationRegistry.BuiltIn,
+                e.target.value as StructureRepresentationRegistry.BuiltIn
               )
             }
             className="w-full px-2 py-1 text-xs border border-gray-300 rounded"

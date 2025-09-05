@@ -5,7 +5,7 @@ import {
   useRef,
   ReactNode,
   useContext,
-  CSSProperties,
+  CSSProperties
 } from "react";
 
 // Horus components
@@ -17,7 +17,7 @@ import {
   addPanel,
   DockContext,
   handleExtensionPanelCreation,
-  PANEL_REGISTRY,
+  PANEL_REGISTRY
 } from "@/Components/MainApp/PanelView";
 
 // Utilities
@@ -119,7 +119,7 @@ function BlockID({ block, show }: { block: Block; show: boolean }) {
 function BlockBox({
   block,
   children,
-  blockState,
+  blockState
 }: {
   block: Block;
   children: ReactNode;
@@ -145,7 +145,7 @@ function BlockWrapper({
   blockState,
   block,
   children,
-  extraStyle,
+  extraStyle
 }: BlockViewProps & {
   children: ReactNode;
   blockState: BlockViewState;
@@ -171,7 +171,7 @@ type BlockRemotesProps = {
 function BlockVariablesAndConnections({
   block,
   blockState,
-  blockHooks,
+  blockHooks
 }: {
   block: Block;
   blockState: BlockViewState;
@@ -241,7 +241,7 @@ function BlockExtensionsView(props: { block: Block }) {
       style={{
         transform: "translateY(0rem)",
         position: "absolute",
-        pointerEvents: "all",
+        pointerEvents: "all"
       }}
     >
       {block.extensionsToOpen.map((extension, index) => {
@@ -250,13 +250,13 @@ function BlockExtensionsView(props: { block: Block }) {
             key={index}
             className="w-full mb-2 extensions-box cursor-pointer"
             style={{
-              top: `-${(index + 1) * 2}rem`,
+              top: `-${(index + 1) * 2}rem`
             }}
             onClick={() => {
               handleExtensionPanelCreation({
                 dockApi,
                 extension,
-                placedID: props.block.placedID,
+                placedID: props.block.placedID
               });
             }}
           >
@@ -277,7 +277,7 @@ function FinishedCheck(props: { error: boolean; blockLogs?: string }) {
     <CheckMark
       color="var(--pop-code)"
       style={{
-        transform: "translateY(-3px)",
+        transform: "translateY(-3px)"
       }}
     />
   );
@@ -322,7 +322,7 @@ function BlockTime(props: { time?: number }) {
     <div
       className="max-w-14"
       style={{
-        transform: "translateY(-2px)",
+        transform: "translateY(-2px)"
       }}
     >
       {formatInterval(props.time || 0)}
@@ -337,7 +337,7 @@ function BlockNameAndPlacedID({ block }: { block: Block }) {
     <div
       className="block-name break-word flex flex-row gap-2 items-start"
       style={{
-        transform: block.isPlaced ? "translateY(-2px)" : "",
+        transform: block.isPlaced ? "translateY(-2px)" : ""
       }}
     >
       <BreakLongUnderscoreNames name={block.name} />
@@ -352,7 +352,7 @@ function BlockToolbar({
   block,
   blockState,
   blockHooks,
-  isPaused,
+  isPaused
 }: {
   block: Block;
   blockState: BlockViewState;
@@ -383,7 +383,7 @@ function BlockToolbar({
               onClick={(resetFlow) => {
                 blockHooks?.executeFlow({
                   placedID: block.placedID,
-                  resetFlow,
+                  resetFlow
                 });
               }}
             />
@@ -412,8 +412,8 @@ function BlockToolbar({
                   component: PANEL_REGISTRY.blockEditor.component,
                   panelID: `${PANEL_REGISTRY.blockEditor.id}.${block.id}`,
                   params: {
-                    block: block.rawBlock,
-                  },
+                    block: block.rawBlock
+                  }
                 });
               }}
             >
@@ -445,13 +445,13 @@ function BlockToolbar({
                   component: PANEL_REGISTRY.extensions.component,
                   title: block.name,
                   panelID: unrelatedExtensionToBlockIDGenerator({
-                    id: extensionID,
+                    id: extensionID
                   }),
                   params: {
                     // Here the URL is the ID
                     id: pageURL,
-                    name: block.name,
-                  } as PluginPage,
+                    name: block.name
+                  } as PluginPage
                 });
               } else {
                 // Open the external block URL if any
@@ -475,7 +475,7 @@ function BlockTopBar({ children }: { children: React.ReactNode }) {
 
 function BlockLogs({
   block,
-  blockState,
+  blockState
 }: {
   block: Block;
   blockState: BlockViewState;
@@ -494,7 +494,7 @@ function BlockLogs({
           ) : (
             <LogFileIcon
               style={{
-                transform: "translateY(-1px)",
+                transform: "translateY(-1px)"
               }}
               className="w-5 h-5 cursor-pointer"
               onClick={blockState.blockViewHooks.toggleBlockLogsModal}
@@ -511,7 +511,7 @@ function BlockLogs({
 function BlockDescription({
   description,
   show,
-  animate,
+  animate
 }: {
   description: string;
   show: boolean;
@@ -539,7 +539,7 @@ function BlockDescription({
       style={{
         overflow: "hidden", // Hide overflowing content
         height: height,
-        transition: "height 0.3s ease", // Animate the height change
+        transition: "height 0.3s ease" // Animate the height change
       }}
     >
       <pre
@@ -547,7 +547,7 @@ function BlockDescription({
         style={{
           whiteSpace: "pre-wrap",
           wordWrap: "break-word",
-          wordBreak: "break-word",
+          wordBreak: "break-word"
         }}
       >
         {description}
@@ -560,7 +560,7 @@ function BlockBody({
   block,
   blockState,
   isFlowActive,
-  blockHooks,
+  blockHooks
 }: {
   block: Block;
   blockState: BlockViewState;
@@ -580,7 +580,7 @@ function BlockBody({
             variable={{
               ...block.variables[0]!,
               placedID: block.placedID,
-              block: block,
+              block: block
             }}
             onChange={blockState.blockViewHooks.handleVariableChange}
             hideName={true}
@@ -606,7 +606,7 @@ function BlockBody({
                         blockHooks?.executeFlow({
                           placedID: block.placedID,
                           resetFlow: false,
-                          continueSlurm: true,
+                          continueSlurm: true
                         });
                       }}
                     >
@@ -670,7 +670,7 @@ function BlockVariablesButton({ onClick }: { onClick: () => void }) {
           style={{
             position: "relative",
             top: "-1px",
-            right: "-1px",
+            right: "-1px"
           }}
         >
           <SettingsIcon className="w-5 h-5 cursor-pointer" />
@@ -693,14 +693,14 @@ function DeleteBlockButton({ block, onClick }: DeleteBlockButtonProps) {
           onClick={deleteBlock}
           style={{
             position: "relative",
-            top: "-2px",
+            top: "-2px"
           }}
         >
           <TrashIcon
             color="var(--red-error)"
             style={{
               height: "1.35rem",
-              width: "1.35rem",
+              width: "1.35rem"
             }}
           />
         </button>
@@ -714,7 +714,7 @@ function DeleteBlockButton({ block, onClick }: DeleteBlockButtonProps) {
 function PlayBlockButton({
   isRunning,
   isPaused,
-  onClick,
+  onClick
 }: PlayBlockButtonProps) {
   const [executeDescription, setExecuteDescription] = useState("Execute block");
   const isModifierPressed = useRef(false);
@@ -756,7 +756,7 @@ function PlayBlockButton({
         className="w-5 h-5 text-orange-500"
         style={{
           position: "relative",
-          top: "-1px",
+          top: "-1px"
         }}
       />
     );
@@ -768,7 +768,7 @@ function PlayBlockButton({
         size={"1.5rem"}
         style={{
           position: "relative",
-          top: "-4px",
+          top: "-4px"
         }}
       />
     );
@@ -781,7 +781,7 @@ function PlayBlockButton({
           onClick={handleClick}
           style={{
             position: "relative",
-            right: "-2px",
+            right: "-2px"
           }}
         >
           <PlayIcon />

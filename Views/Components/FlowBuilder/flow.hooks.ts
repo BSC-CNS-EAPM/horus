@@ -5,7 +5,7 @@ import {
   useEffect,
   useMemo,
   useCallback,
-  useContext,
+  useContext
 } from "react";
 import type { DragEvent, PointerEvent } from "react";
 import { DockviewApi } from "dockview";
@@ -20,7 +20,7 @@ import {
   MeasuringConfiguration,
   PointerSensor,
   SensorDescriptor,
-  SensorOptions,
+  SensorOptions
 } from "@dnd-kit/core";
 
 // Horus web-server
@@ -29,7 +29,7 @@ import {
   fetchWithProgress,
   horusGet,
   horusPost,
-  POSTUploadWithProgress,
+  POSTUploadWithProgress
 } from "../../Utils/utils";
 import { socket } from "../../Utils/socket";
 
@@ -42,7 +42,7 @@ import {
   Flow,
   FlowStatus,
   FlowStatusUtil,
-  VariableConnection,
+  VariableConnection
 } from "./flow.types";
 import { FileExplorerProps } from "../FileExplorer/file_explorer";
 import { usePrompt } from "../HorusPrompt/horus_prompt";
@@ -50,7 +50,7 @@ import { useAlert } from "../HorusPrompt/horus_alert";
 import { useConfirm } from "../HorusPrompt/horus_confirm";
 import {
   HorusSmilesManagerState,
-  SmilesEvents,
+  SmilesEvents
 } from "../Smiles/SmilesWrapper/horusSmiles";
 import { useLocation } from "react-router";
 import {
@@ -58,19 +58,19 @@ import {
   addPanel,
   closeAllPanels,
   FlowBuilderContext,
-  PANEL_REGISTRY,
+  PANEL_REGISTRY
 } from "../MainApp/PanelView";
 import { navigateTo } from "@/Utils/navigationService";
 import {
   isMolstarLoaded,
-  MolstarEvents,
+  MolstarEvents
 } from "../Molstar/HorusWrapper/horusmolstar";
 import { LogsData } from "./Logs/logs_connections";
 import { blockLogsPanelID } from "./Blocks/block.hooks";
 import { GLOBAL_IDS } from "@/Utils/globals";
 
 export enum FlowEvents {
-  FLOW_CHANGED = "flowChanged",
+  FLOW_CHANGED = "flowChanged"
 }
 
 /**
@@ -91,8 +91,8 @@ class SmartPointerSensor extends PointerSensor {
         }
 
         return true;
-      },
-    },
+      }
+    }
   ];
 }
 
@@ -112,7 +112,7 @@ function isInteractiveElement(element: Element | null) {
     "rect",
     "pre",
     "a",
-    "img",
+    "img"
   ];
 
   // Disable drag on certain IDs
@@ -165,8 +165,8 @@ function moveBlock(
     ...block,
     position: {
       x: block.position.x + delta.x * (1 / scale),
-      y: block.position.y + delta.y * (1 / scale),
-    },
+      y: block.position.y + delta.y * (1 / scale)
+    }
   };
 
   return newBlock;
@@ -184,16 +184,16 @@ export function useDNDTweaks(): {
   // DND tweaks
   const mouseSensor = useSensor(SmartPointerSensor, {
     activationConstraint: {
-      distance: 5,
-    },
+      distance: 5
+    }
   });
 
   const sensors = useSensors(mouseSensor);
 
   const measuring: MeasuringConfiguration = {
     droppable: {
-      measure: getClientRect,
-    },
+      measure: getClientRect
+    }
   };
 
   return { sensors, measuring };
@@ -217,7 +217,7 @@ function newFlowObject(): Flow {
     pendingSmilesActions: [],
     pendingExtensions: [],
     flowError: "",
-    elapsed: 0,
+    elapsed: 0
   };
 }
 
@@ -234,8 +234,10 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
   const dndTweaks = useDNDTweaks();
 
   //
-  const [developmentIframes, setDevelopmentIframes] = useState<DevelopmentIframeVariableGetter[]>([]);
-  
+  const [developmentIframes, setDevelopmentIframes] = useState<
+    DevelopmentIframeVariableGetter[]
+  >([]);
+
   // Store the state of the flow
   const [flow, setFlow] = useState<Flow>(newFlowObject());
 
@@ -377,7 +379,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
             ...currentFlow,
             pendingActions: [],
             pendingSmilesActions: [],
-            pendingExtensions: [],
+            pendingExtensions: []
           };
         });
       } catch (e) {
@@ -409,9 +411,9 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Accept: "application/json",
+            Accept: "application/json"
           },
-          body: JSON.stringify({ flowPath: flowToOpen, savedID }),
+          body: JSON.stringify({ flowPath: flowToOpen, savedID })
         },
         (percentage) => {
           if (percentage === 100) {
@@ -485,7 +487,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         pendingActions: [],
         pendingExtensions: [],
         pendingSmilesActions: [],
-        flowError: "",
+        flowError: ""
       });
 
       if (appliedActions) {
@@ -529,7 +531,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         flowPanel = addPanel({
           dockApi: dockApi,
           component: PANEL_REGISTRY.flow.component,
-          panelID: PANEL_REGISTRY.flow.id,
+          panelID: PANEL_REGISTRY.flow.id
         });
       }
 
@@ -555,7 +557,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
           flow: null,
           msg: "Early error opening flow",
           molstarState: null,
-          smilesState: null,
+          smilesState: null
         };
 
         // If a default flow is being opened, some variables need to be set
@@ -566,7 +568,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         if (openRecent !== null) {
           const header = {
             "Content-Type": "application/json",
-            Accept: "application/json",
+            Accept: "application/json"
           };
 
           if (!openRecent.path || openRecent.template) {
@@ -576,7 +578,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
           const body = JSON.stringify({
             savedID: openRecent.savedID,
             path: openRecent.path,
-            template: openRecent.template,
+            template: openRecent.template
           });
 
           // Using fetchWithProgress to fetch with download progress
@@ -585,7 +587,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
             {
               method: "POST",
               headers: header,
-              body: body,
+              body: body
             },
             (percentage) => {
               setFlowText(`Reading data... (${percentage.toFixed(0)}%)`);
@@ -600,7 +602,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
             "/api/flowfile",
             {
               method: "POST",
-              body: body,
+              body: body
             },
             (percentage) => {
               setFlowText(
@@ -613,7 +615,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
           response = await fetchWithProgress(
             "/api/openflow",
             {
-              method: "GET",
+              method: "GET"
             },
             (percentage) => {
               setFlowText(`Reading data... (${percentage.toFixed(0)}%)`);
@@ -631,7 +633,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
               ok: false,
               msg: `Failed to open flow. ${
                 error instanceof Error ? error.message : error
-              }.`,
+              }.`
             };
           });
 
@@ -662,7 +664,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
               PANEL_REGISTRY.codeEditor.component,
               PANEL_REGISTRY.horusPlugins.component,
               PANEL_REGISTRY.horusRemotes.component,
-              PANEL_REGISTRY.horusSettings.component,
+              PANEL_REGISTRY.horusSettings.component
             ];
             dockApi.panels.map((panel) => {
               if (removeComponents.includes(panel.api.component)) {
@@ -741,9 +743,9 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         // Load the flow
         loadFlow({
           savedID: null,
-          path: path,
+          path: path
         });
-      },
+      }
     };
   }, [loadFlow]);
 
@@ -767,7 +769,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
   const serializeFlow = useCallback((): Flow => {
     return {
-      ...flow,
+      ...flow
     };
   }, [flow]);
 
@@ -795,7 +797,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       const saveContents: Flow = {
         ...(flowToSave ? flowToSave : serializeFlow()),
         status: FlowStatus.IDLE,
-        panels: dockApi?.toJSON(),
+        panels: dockApi?.toJSON()
       };
 
       try {
@@ -805,7 +807,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         // Save the flowData as a file, instead of form data
         // This is required for the server to be able to read it
         const flowFile = new File([JSON.stringify(saveContents)], "flow.json", {
-          type: "application/json",
+          type: "application/json"
         });
 
         body.append("flowData", flowFile);
@@ -863,7 +865,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
             ...saveContents,
             name: existingName,
             path: path,
-            overwrite: true,
+            overwrite: true
           };
 
           // Create a new form data object
@@ -873,7 +875,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
             [JSON.stringify(overwriteContents)],
             "flow.json",
             {
-              type: "application/json",
+              type: "application/json"
             }
           );
 
@@ -902,7 +904,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
           ...saveContents,
           savedID: savedFlow.savedID,
           path: savedFlow.path,
-          status: FlowStatus.IDLE,
+          status: FlowStatus.IDLE
         });
 
         latestPath.current = savedFlow.path;
@@ -919,7 +921,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         setFlowText("Getting structures state...");
         await updateMolstarState({
           savedPath: savedFlow.path,
-          savedID: savedFlow.savedID,
+          savedID: savedFlow.savedID
         });
 
         return savedFlow as Flow;
@@ -955,7 +957,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
           // Save the flow
           await handleSave(flowToSave);
-        },
+        }
       };
     },
     [flow, handleSave]
@@ -981,7 +983,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
               ...matchingNewBlock,
               finishedExecution: resetExecution
                 ? false
-                : block.finishedExecution,
+                : block.finishedExecution
             } as Block;
           }
 
@@ -990,7 +992,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
     const newFlow: Flow = {
       ...flow,
-      blocks: updatedBlocks,
+      blocks: updatedBlocks
     };
 
     handleFlowChange(newFlow, updateHistory);
@@ -1093,7 +1095,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     // The block position should be the mouse position plus 1/2 the width and height of the block
     const position = {
       x: mousePos.current.x / scale - convertRemToPixels(10),
-      y: mousePos.current.y / scale - convertRemToPixels(3),
+      y: mousePos.current.y / scale - convertRemToPixels(3)
     };
 
     const newBlock: Block = {
@@ -1104,9 +1106,9 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       variables: block.variables.map((variable) => {
         return {
           ...variable,
-          placedID: placedIDCounter.current,
+          placedID: placedIDCounter.current
         };
-      }),
+      })
     };
 
     handleBlockChanges([newBlock], true, true);
@@ -1291,7 +1293,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     handleFlowChange(
       {
         ...flow,
-        blocks: updatedBlocks,
+        blocks: updatedBlocks
       },
       true
     );
@@ -1319,7 +1321,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     const newConnection = {
       ...connection,
       cycles: cycles,
-      currentCycle: 0,
+      currentCycle: 0
     };
 
     const updatedBlocks = flow.blocks.map((b: Block) => {
@@ -1334,7 +1336,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
               return newConnection;
             }
             return vc;
-          }),
+          })
         } as Block;
       }
       return b;
@@ -1349,7 +1351,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
     const [originBlock, destinationBlock] = findBlocks([
       connection.origin.placedID,
-      connection.destination.placedID,
+      connection.destination.placedID
     ]) as [Block, Block];
 
     // If the blocks are not found, exit early
@@ -1375,7 +1377,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         const sameVar = b.origin.variableID === connection.origin.variableID;
 
         return !(sameBlock && sameVar);
-      }),
+      })
     };
 
     // Remove the connection reference from the "origin" block
@@ -1392,7 +1394,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
             b.destination.variableID === connection.destination.variableID;
 
           return !(sameBlock && sameVar);
-        }),
+        })
     };
 
     // Update the state
@@ -1515,9 +1517,9 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
           destination: destination,
           isCyclic: cyclic,
           cycles: 1,
-          currentCycle: 0,
-        },
-      ],
+          currentCycle: 0
+        }
+      ]
     };
 
     // Add a reference to the connection on the dragged block
@@ -1530,9 +1532,9 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
           destination: destination,
           isCyclic: cyclic,
           cycles: 1,
-          currentCycle: 0,
-        },
-      ],
+          currentCycle: 0
+        }
+      ]
     };
 
     // Update the state
@@ -1578,7 +1580,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
               ...block,
               position: currentFlow.blocks.find(
                 (b) => b.placedID === block.placedID
-              )?.position ?? { x: 0, y: 0 },
+              )?.position ?? { x: 0, y: 0 }
             };
 
             // Update the params if the blocklogs panel is opened
@@ -1586,7 +1588,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
             panel?.api.updateParameters({ block: newBlock });
 
             return newBlock;
-          }),
+          })
         };
 
         (async () => {
@@ -1617,7 +1619,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
           pendingActions: [],
           pendingExtensions: [],
           pendingSmilesActions: [],
-          flowError: "",
+          flowError: ""
         };
       });
     },
@@ -1662,7 +1664,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       addPanel({
         dockApi,
         component: PANEL_REGISTRY.flow.component,
-        panelID: PANEL_REGISTRY.flow.id,
+        panelID: PANEL_REGISTRY.flow.id
       });
 
       addBlockRegistryGroup(dockApi);
@@ -1737,7 +1739,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
           loadFlow({
             savedID: savedID ?? null,
             path,
-            template: template,
+            template: template
           });
         }
       } else {
@@ -1808,7 +1810,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     const newUnsavedFlow: Flow = {
       ...flow,
       savedID: null,
-      path: null,
+      path: null
     };
 
     // If we are on WebApp, ask the user for a new name
@@ -1830,7 +1832,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       ...flow,
       savedID: null,
       path: null,
-      template: true,
+      template: true
     };
 
     await preHandleSave(false, newUnsavedFlow);
@@ -1847,7 +1849,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       };
       initialPanPosition.current = {
         x: e.clientX,
-        y: e.clientY,
+        y: e.clientY
       };
     }
   }
@@ -1861,7 +1863,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
       initialPanPosition.current = {
         x: evt.clientX,
-        y: evt.clientY,
+        y: evt.clientY
       };
 
       moveBlocksPan(deltaX, deltaY);
@@ -1875,14 +1877,14 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
           ...block,
           position: {
             x: block.position.x + deltaX,
-            y: block.position.y + deltaY,
-          },
+            y: block.position.y + deltaY
+          }
         };
       });
 
       setFlow({
         ...flow,
-        blocks: newBlocks,
+        blocks: newBlocks
       });
     },
     [flow, setFlow]
@@ -1910,12 +1912,12 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
     const canvasCenter = {
       x: canvasWidth - convertRemToPixels(10),
-      y: canvasHeight - convertRemToPixels(3),
+      y: canvasHeight - convertRemToPixels(3)
     };
 
     const delta = {
       x: -firstBlockPos.x + canvasCenter.x,
-      y: -firstBlockPos.y + canvasCenter.y,
+      y: -firstBlockPos.y + canvasCenter.y
     };
 
     moveBlocksPan(delta.x, delta.y);
@@ -1935,7 +1937,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         return {
           ...block,
           selectedInputGroup: inputGroup,
-          finishedExecution: false,
+          finishedExecution: false
         };
       }
       return block;
@@ -1960,7 +1962,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     const {
       placedID = undefined,
       resetFlow = false,
-      continueSlurm = false,
+      continueSlurm = false
     } = { ...options };
 
     if (isExecutingInProcess.current) {
@@ -1986,7 +1988,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       setFlow((currentFlow) => {
         return {
           ...currentFlow,
-          status: FlowStatus.QUEUED,
+          status: FlowStatus.QUEUED
         } as Flow;
       });
 
@@ -1997,7 +1999,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
           flowPath: updatedFlowPath,
           placedID,
           resetFlow,
-          continueSlurm,
+          continueSlurm
         })
       );
 
@@ -2007,7 +2009,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         await horusAlert(result.msg);
         setFlow({
           ...flow,
-          status: FlowStatus.ERROR,
+          status: FlowStatus.ERROR
         });
       }
 
@@ -2023,14 +2025,14 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
     const stoppedFlow = {
       ...flow,
-      status: pause ? FlowStatus.PAUSED : FlowStatus.CANCELLING,
+      status: pause ? FlowStatus.PAUSED : FlowStatus.CANCELLING
     };
 
     setFlow(stoppedFlow);
 
     const body = JSON.stringify({
       flowPath: flow.path,
-      pause: pause,
+      pause: pause
     });
 
     const response = await horusPost("/api/plugins/stopflow", null, body);
@@ -2085,7 +2087,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
     const newBlock: Block = {
       ...blockToUpdate[0]!,
-      selectedRemote: selectedRemote,
+      selectedRemote: selectedRemote
     };
 
     handleBlockChanges([newBlock], false, true, false);
@@ -2118,7 +2120,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     if (!savedFlow) return;
     try {
       const body = JSON.stringify({
-        flowPath: flow.path,
+        flowPath: flow.path
       });
 
       const response = await horusPost("/api/resetflow", null, body);
@@ -2156,7 +2158,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       handleOpenFlow({
         savedID: urlProps.get("flowID") ?? undefined,
         path: urlProps.get("path") ?? undefined,
-        template: !!urlProps.get("template"),
+        template: !!urlProps.get("template")
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2176,7 +2178,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
         return {
           ...currentFlow,
-          status: FlowStatus.UNSAVED,
+          status: FlowStatus.UNSAVED
         };
       });
     };
@@ -2204,7 +2206,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       // Update the mouse position+
       mousePos.current = {
         x: relativeX,
-        y: relativeY,
+        y: relativeY
       };
     };
 
@@ -2246,8 +2248,8 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
           ...currentFlow,
           extraData: {
             ...currentFlow.extraData,
-            [key]: value,
-          },
+            [key]: value
+          }
         };
       });
     };
@@ -2259,7 +2261,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
     // Emit an event "onFlowChange" when the flow changes
     const newEvent = new CustomEvent(FlowEvents.FLOW_CHANGED, {
-      detail: flow,
+      detail: flow
     });
     window.dispatchEvent(newEvent);
 
@@ -2283,7 +2285,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
               panel?.api.updateParameters({ block: b });
             }
             return b;
-          }),
+          })
         };
       });
     },
@@ -2334,7 +2336,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       handleFlowChange,
       stopFlow,
       centerView,
-      handleScaleChange,
+      handleScaleChange
     },
     shortcuts: {
       stopFlow,
@@ -2348,7 +2350,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       centerView,
       pauseFlow,
       resetFlow,
-      toggleFileExplorer,
+      toggleFileExplorer
     },
     block: {
       connectingVariable,
@@ -2359,13 +2361,13 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       updateCyclesCount,
       setBlockInputGroup,
       handleBlockChanges,
-      setBlockRemote,
+      setBlockRemote
     },
     dnd: {
       dndTweaks,
       draggingBlock,
       handleDragEnd,
-      handleDragStart,
+      handleDragStart
     },
     handleMouse: {
       handleMouseDown,
@@ -2375,7 +2377,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       handleDrop,
       handleDragDropEnd,
       isDraggingFlowFile,
-      isPanning,
+      isPanning
     },
     misc: {
       fileProps,
@@ -2386,10 +2388,10 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       showFileExplorer,
       setShowFileExplorer,
 
-      // Selected development custom variable 
+      // Selected development custom variable
       developmentIframes,
-      setDevelopmentIframes,
-    },
+      setDevelopmentIframes
+    }
   };
 }
 

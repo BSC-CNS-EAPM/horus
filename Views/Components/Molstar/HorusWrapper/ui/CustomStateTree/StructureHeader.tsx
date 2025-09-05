@@ -10,7 +10,7 @@ interface StructureHeaderProps {
 export function StructureHeader({
   structure,
   isVisible,
-  onToggleVisibility,
+  onToggleVisibility
 }: StructureHeaderProps) {
   return (
     <div className="flex items-center justify-between">
@@ -21,7 +21,10 @@ export function StructureHeader({
           onChange={onToggleVisibility}
           className="h-4 w-4 rounded border-gray-300"
         />
-        <h3 className="text-sm font-medium text-gray-800">
+        <h3
+          className="text-sm font-medium text-gray-800 max-w-[150px] truncate"
+          title={structure.label || "Structure"}
+        >
           {structure.label || "Structure"}
         </h3>
       </div>

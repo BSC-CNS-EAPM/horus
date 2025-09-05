@@ -18,7 +18,7 @@ export function SearchComponent(props: SearchProps) {
     showIcon = true,
     className,
     onEnter,
-    value,
+    value
   } = props;
 
   const handleKeyDown = (event: KeyboardEvent) => {

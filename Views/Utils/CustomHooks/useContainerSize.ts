@@ -16,6 +16,6 @@ export function useContainerSize(containerRef: HTMLDivElement | null) {
 
   return {
     width,
-    height,
+    height
   };
 }

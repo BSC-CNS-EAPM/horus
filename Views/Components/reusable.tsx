@@ -47,7 +47,7 @@ const HorusPopover = (props: HorusPopoverProps) => {
             : {
                 margin: "0",
                 padding: "0",
-                height: "1.25rem",
+                height: "1.25rem"
               }
         }
       >
@@ -100,7 +100,7 @@ export function BlurredModal(props: BlurredModalProps) {
   const modalView = (
     <div
       style={{
-        zIndex: props.zIndex ?? 1000,
+        zIndex: props.zIndex ?? 1000
       }}
       className={`blurred-modal-container flex justify-center ${
         !props.noCentered && "items-center"
@@ -115,7 +115,7 @@ export function BlurredModal(props: BlurredModalProps) {
           overflow: "auto",
           // overflow: props.noMargin ? "hidden" : undefined,
           height: props.maxContentSize?.height,
-          width: props.maxContentSize?.width,
+          width: props.maxContentSize?.width
         }}
         className={`z-30 absolute blurred-modal-content zoom-in-animation ${
           !props.maxContentSize?.width && "max-w-[60%]"
@@ -176,7 +176,7 @@ export class ErrorBoundary extends Component {
 
 export function MovingChevron({
   down,
-  className,
+  className
 }: {
   down: boolean;
   className?: string;
@@ -201,7 +201,7 @@ export function updateFile(file: File, path: string) {
   formData.append("file", file, file.name);
   formData.append("path", path);
   const headers = {
-    Accept: "application/json",
+    Accept: "application/json"
   };
 
   horusPost("/api/updatefile", headers, formData)
@@ -227,7 +227,7 @@ export function saveFile(file: File) {
 
     form.append("file", file, file.name);
     const headers = {
-      Accept: "application/json",
+      Accept: "application/json"
     };
 
     horusPost("/api/savecontents", headers, form)
@@ -262,8 +262,8 @@ export function saveFile(file: File) {
       new MouseEvent("click", {
         bubbles: true,
         cancelable: true,
-        view: window,
-      }),
+        view: window
+      })
     );
 
     // Remove link from body
@@ -275,7 +275,7 @@ export function saveFile(file: File) {
 // and return the Blob
 export function getFile(path: string) {
   const url = new URL(
-    window.location.origin + window.__HORUS_ROOT__ + "/api/filepicker/download",
+    window.location.origin + window.__HORUS_ROOT__ + "/api/filepicker/download"
   );
 
   url.searchParams.append("path", path);

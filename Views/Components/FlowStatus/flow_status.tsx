@@ -50,7 +50,7 @@ function FlowStatusBase(props: FlowStatusBaseProps) {
     blue: "text-blue-500",
     green: "text-green-500",
     purple: "text-purple-500",
-    black: "",
+    black: ""
   };
 
   const classColorName = colorStyle[props.color];
@@ -61,7 +61,7 @@ function FlowStatusBase(props: FlowStatusBaseProps) {
     <div
       className={className}
       style={{
-        color: props.color === "black" ? "var(--digital-grey-IV)" : "",
+        color: props.color === "black" ? "var(--digital-grey-IV)" : ""
       }}
     >
       {props.children}

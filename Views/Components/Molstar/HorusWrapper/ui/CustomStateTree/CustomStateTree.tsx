@@ -9,7 +9,7 @@ import { StructureSelectionQueries } from "molstar/lib/mol-plugin-state/helpers/
 function StructureContainer({
   children,
   onMouseEnter,
-  onMouseLeave,
+  onMouseLeave
 }: {
   children: React.ReactNode;
   onMouseEnter?: () => void;
@@ -48,13 +48,13 @@ export function SingleStructureView({ structure }: StructureViewerProps) {
           representationParams: {
             representation: params.representation,
             representationParams: {
-              ...params.representationParams,
+              ...params.representationParams
             },
             color: params.color,
             colorParams: params.colorParams,
             size: params.size,
-            sizeParams: params.sizeParams,
-          },
+            sizeParams: params.sizeParams
+          }
         });
       } else if (params.script) {
         // Use script-based selection
@@ -62,18 +62,18 @@ export function SingleStructureView({ structure }: StructureViewerProps) {
           newSelectionLabel: params.label,
           selectionOptions: {
             script: params.script,
-            language: params.language!,
+            language: params.language!
           },
           representationParams: {
             representation: params.representation,
             representationParams: {
-              ...params.representationParams,
+              ...params.representationParams
             },
             color: params.color,
             colorParams: params.colorParams,
             size: params.size,
-            sizeParams: params.sizeParams,
-          },
+            sizeParams: params.sizeParams
+          }
         });
       }
 
@@ -83,9 +83,9 @@ export function SingleStructureView({ structure }: StructureViewerProps) {
             selection: StructureSelectionQueries.all, // Apply to entire component
             action: {
               name: "transparency",
-              params: { value: params.opacity }, // 0.0 = fully opaque, 1.0 = fully transparent
+              params: { value: params.opacity } // 0.0 = fully opaque, 1.0 = fully transparent
             },
-            representations: [params.representation], // Target specific representation type
+            representations: [params.representation] // Target specific representation type
           },
           [structure.structureRef]
         );

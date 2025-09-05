@@ -3,7 +3,7 @@ import { io } from "socket.io-client";
 // Create the socket
 export const socket = io({
   path: `${window.__HORUS_ROOT__}/socket.io`,
-  autoConnect: true,
+  autoConnect: true
 });
 
 // When connected, store the sid into the window

@@ -14,7 +14,7 @@ async function horusGet(
   url: string,
   headers?: any,
   shemsu?: any,
-  timeout?: number,
+  timeout?: number
 ) {
   const controller = new AbortController();
   const signal = controller.signal;
@@ -32,9 +32,9 @@ async function horusGet(
     headers: {
       socketiosid: window.socketiosid || parent.socketiosid || null,
       shemsu: shemsu || getShemsuToken(),
-      ...headers,
+      ...headers
     },
-    signal,
+    signal
   });
 
   try {
@@ -52,7 +52,7 @@ async function horusPost(
   headers: any,
   body: any,
   shemsu?: string,
-  timeout?: number | null,
+  timeout?: number | null
 ) {
   /* Send a post request to the server to open a window
    * @param {string} url - The url to send the request to
@@ -64,7 +64,7 @@ async function horusPost(
   if (headers === null) {
     headers = {
       "Content-Type": "application/json",
-      Accept: "application/json",
+      Accept: "application/json"
     };
   }
 
@@ -84,10 +84,10 @@ async function horusPost(
     headers: {
       shemsu: shemsu || getShemsuToken(),
       socketiosid: window.socketiosid || parent.socketiosid || null,
-      ...headers,
+      ...headers
     },
     body: body,
-    signal,
+    signal
   });
 
   try {
@@ -111,11 +111,11 @@ async function horusDelete({
   url,
   headers = {
     "Content-Type": "application/json",
-    Accept: "application/json",
+    Accept: "application/json"
   },
   body = null,
   shemsu,
-  timeout = null,
+  timeout = null
 }: HorusDeleteParams): Promise<Response> {
   /* Send a delete request to the server
    * @param {object} params - An object containing the parameters
@@ -143,10 +143,10 @@ async function horusDelete({
       shemsu: shemsu || getShemsuToken(),
       socketiosid:
         (window as any).socketiosid || (parent as any).socketiosid || null,
-      ...headers,
+      ...headers
     },
     body: body ? JSON.stringify(body) : null,
-    signal,
+    signal
   });
 
   try {
@@ -177,7 +177,7 @@ async function getVersion() {
 
 async function openWindow(name: string, url: string) {
   const header = {
-    "Content-Type": "application/json",
+    "Content-Type": "application/json"
   };
 
   const window = JSON.stringify({ name: name, url: url });
@@ -202,17 +202,17 @@ const fetchInternals = async () => {
     const response = await horusGet("/api/internal");
     window.horusInternal = {
       ...window.horusInternal,
-      ...(await response.json()),
+      ...(await response.json())
     };
   } catch (err) {
     alert(
-      `Could not detect running mode. Expect errors while running the app. ${err}`,
+      `Could not detect running mode. Expect errors while running the app. ${err}`
     );
     window.horusInternal = {
       ...window.horusInternal,
       isDesktop: false,
       mode: "server",
-      debug: false,
+      debug: false
     };
   }
 };
@@ -236,7 +236,7 @@ export {
   horusDelete,
   getVersion,
   openWindow,
-  fetchInternals as fetchDesktop,
+  fetchInternals as fetchDesktop
 };
 
 export function getRandomFromRange(max: number, min: number) {
@@ -247,7 +247,7 @@ export function getRandomFromRange(max: number, min: number) {
 export async function fetchWithProgress(
   url: string,
   options: RequestInit,
-  onProgress: (percentage: number) => void,
+  onProgress: (percentage: number) => void
 ): Promise<Response> {
   const response = await fetch(getBaseURL(url), options);
 
@@ -289,12 +289,12 @@ export async function fetchWithProgress(
       }
 
       read();
-    },
+    }
   });
 
   // Create a new response with the modified stream
   return new Response(stream, {
-    headers: response.headers,
+    headers: response.headers
   });
 }
 
@@ -302,7 +302,7 @@ export async function fetchWithProgress(
 export function POSTUploadWithProgress(
   url: string,
   formData: FormData,
-  onProgress: (percentage: number) => void,
+  onProgress: (percentage: number) => void
 ) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
