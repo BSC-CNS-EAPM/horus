@@ -53,7 +53,7 @@ export function HorusViewTabs({ tabs, disabled, onTabChange }: TabsProps) {
           currentTab === tabKeys[0] ? "" : "rounded-tl-lg"
         }`}
         style={{
-          height: "calc(100% - 2.5rem)",
+          height: "calc(100% - 2.5rem)"
         }}
       >
         {getCurrentTab().view}
@@ -71,7 +71,7 @@ export function TabSelector({
   tabs,
   currentTab,
   setCurrentTab,
-  disabled,
+  disabled
 }: TabSelectorProps) {
   const tabKeys = Object.keys(tabs);
 

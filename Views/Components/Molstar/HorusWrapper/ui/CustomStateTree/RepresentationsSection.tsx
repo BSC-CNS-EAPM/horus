@@ -7,7 +7,7 @@ import { RepresentationItem } from "./RepresentationItem";
 import {
   RepresentationInfo,
   AddComponentParams,
-  OnChangeRepresentationParams,
+  OnChangeRepresentationParams
 } from "./types";
 import { setStructureTransparency } from "molstar/lib/mol-plugin-state/helpers/structure-transparency";
 import { StructureElement } from "molstar/lib/mol-model/structure";
@@ -19,7 +19,7 @@ interface RepresentationsSectionProps {
 
 export function RepresentationsSection({
   structure,
-  onAddComponent,
+  onAddComponent
 }: RepresentationsSectionProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -36,7 +36,7 @@ export function RepresentationsSection({
           ref: rep,
           type: rep.cell.transform.params?.type?.name || "unknown",
           label: componentLabel, // Use the component label, not the representation label
-          componentLabel: componentLabel,
+          componentLabel: componentLabel
         });
       });
     });
@@ -49,7 +49,7 @@ export function RepresentationsSection({
     repId: representationId,
     colorTheme,
     sizeTheme,
-    opacity,
+    opacity
   }: OnChangeRepresentationParams) => {
     try {
       const plugin = (window.molstar as HorusMolstar).plugin!;
@@ -60,10 +60,10 @@ export function RepresentationsSection({
         {
           type: {
             name: representationId,
-            params: { value: representationId },
+            params: { value: representationId }
           },
           colorTheme: colorTheme,
-          sizeTheme: sizeTheme,
+          sizeTheme: sizeTheme
         }
       );
       if (opacity !== undefined) {

@@ -3,7 +3,7 @@ import { useCallback, useContext, useEffect, useState } from "react";
 // Horus components
 import {
   unrelatedExtensionToBlockIDGenerator,
-  usePluginPages,
+  usePluginPages
 } from "./extensions_list";
 import { ToolBarItemProps, ToolbarMenu, ToolBarMenuProps } from "./ToolbarItem";
 import { HorusSearch } from "./ToolbarSearch";
@@ -15,7 +15,7 @@ import {
   DockContext,
   FlowBuilderContext,
   PANEL_REGISTRY,
-  togglePanel,
+  togglePanel
 } from "../MainApp/PanelView";
 import { useFlowShortcuts } from "../FlowBuilder/flow.hooks";
 
@@ -92,7 +92,7 @@ export default function HorusToolbar() {
     togglePanel({
       dockApi: dockApi,
       component: PANEL_REGISTRY.terminal.component,
-      panelID: PANEL_REGISTRY.terminal.id,
+      panelID: PANEL_REGISTRY.terminal.id
     });
   }, [dockApi]);
 
@@ -100,7 +100,7 @@ export default function HorusToolbar() {
     addPanel({
       dockApi: dockApi,
       component: PANEL_REGISTRY.smiles.component,
-      panelID: PANEL_REGISTRY.smiles.id,
+      panelID: PANEL_REGISTRY.smiles.id
     });
   }, [dockApi]);
 
@@ -108,7 +108,7 @@ export default function HorusToolbar() {
     addPanel({
       dockApi: dockApi,
       component: PANEL_REGISTRY.molstar.component,
-      panelID: PANEL_REGISTRY.molstar.id,
+      panelID: PANEL_REGISTRY.molstar.id
     });
   }, [dockApi]);
 
@@ -193,7 +193,7 @@ export default function HorusToolbar() {
         }
 
         navigateTo("/");
-      },
+      }
     },
     {
       name: "File",
@@ -204,7 +204,7 @@ export default function HorusToolbar() {
           svgPath: <NewFlowIcon />,
           onClick: () => {
             shortcuts.handleNewFlow();
-          },
+          }
         },
         {
           name: "Open flow",
@@ -216,7 +216,7 @@ export default function HorusToolbar() {
             // This event will be captured by the flowReciever component
             // and will open the flow
             shortcuts.handleOpenFlow();
-          },
+          }
         },
         {
           name: "Save flow",
@@ -224,7 +224,7 @@ export default function HorusToolbar() {
           svgPath: <SaveIcon />,
           onClick: () => {
             shortcuts.preHandleSave();
-          },
+          }
         },
         {
           name: "Save flow as...",
@@ -232,14 +232,14 @@ export default function HorusToolbar() {
           svgPath: <SaveAsIcon />,
           onClick: () => {
             shortcuts.handleSaveAs();
-          },
+          }
         },
         {
           name: "Save template",
           svgPath: <TemplateIcon />,
           onClick: () => {
             shortcuts.handleSaveTemplate();
-          },
+          }
         },
         {
           name: "File explorer",
@@ -249,7 +249,7 @@ export default function HorusToolbar() {
           svgPath: <CreateFolderIcon />,
           onClick: () => {
             shortcuts.toggleFileExplorer();
-          },
+          }
         },
         {
           name: "Open a file",
@@ -257,10 +257,10 @@ export default function HorusToolbar() {
             addPanel({
               dockApi: dockApi,
               component: PANEL_REGISTRY.fileEditor.component,
-              panelID: `${PANEL_REGISTRY.fileEditor.id + Math.random()}`,
+              panelID: `${PANEL_REGISTRY.fileEditor.id + Math.random()}`
             });
           },
-          svgPath: <LogFile />,
+          svgPath: <LogFile />
         },
         {
           name: "Clean recents",
@@ -287,9 +287,9 @@ export default function HorusToolbar() {
               .catch((e) => {
                 horusAlert("Error cleaning recents: " + e);
               });
-          },
-        },
-      ],
+          }
+        }
+      ]
     },
     {
       name: "Edit",
@@ -303,7 +303,7 @@ export default function HorusToolbar() {
             shortcuts.handleUndo();
           },
           keyShortcut: `${modifierKeyLogo}Z`,
-          svgPath: <BackArrow />,
+          svgPath: <BackArrow />
         },
         {
           name: "Redo",
@@ -311,9 +311,9 @@ export default function HorusToolbar() {
             shortcuts.handleRedo();
           },
           keyShortcut: `${modifierKeyLogo}${shiftKeyLogo}Z`,
-          svgPath: <ForwardArrow />,
-        },
-      ],
+          svgPath: <ForwardArrow />
+        }
+      ]
     },
     {
       name: "View",
@@ -323,7 +323,7 @@ export default function HorusToolbar() {
           svgPath: <CrossIcon />,
           onClick: () => {
             closeAllPanels({ dockApi });
-          },
+          }
         },
         {
           name: "Open block registry",
@@ -331,10 +331,10 @@ export default function HorusToolbar() {
             addPanel({
               dockApi: dockApi,
               component: PANEL_REGISTRY.blockRegistry.component,
-              panelID: PANEL_REGISTRY.blockRegistry.id,
+              panelID: PANEL_REGISTRY.blockRegistry.id
             });
           },
-          svgPath: <NewFlowIcon />,
+          svgPath: <NewFlowIcon />
         },
         {
           name: "Open flow panel",
@@ -342,11 +342,11 @@ export default function HorusToolbar() {
             addPanel({
               dockApi: dockApi,
               component: PANEL_REGISTRY.flow.component,
-              panelID: PANEL_REGISTRY.flow.id,
+              panelID: PANEL_REGISTRY.flow.id
             });
           },
           // Set a keyShortcut to enable keyboard navigation.
-          keyShortcut: `${modifierKeyLogo}${shiftKeyLogo}M`,
+          keyShortcut: `${modifierKeyLogo}${shiftKeyLogo}M`
         },
         {
           name: "Open Mol*",
@@ -354,12 +354,12 @@ export default function HorusToolbar() {
             addPanel({
               dockApi: dockApi,
               component: PANEL_REGISTRY.molstar.component,
-              panelID: PANEL_REGISTRY.molstar.id,
+              panelID: PANEL_REGISTRY.molstar.id
             });
           },
           svgPath: <MolStarIcon />,
           // Set a keyShortcut to enable keyboard navigation.
-          keyShortcut: `${modifierKeyLogo}${shiftKeyLogo}M`,
+          keyShortcut: `${modifierKeyLogo}${shiftKeyLogo}M`
         },
         {
           name: "Open SMILES",
@@ -368,11 +368,11 @@ export default function HorusToolbar() {
             addPanel({
               dockApi: dockApi,
               component: PANEL_REGISTRY.smiles.component,
-              panelID: PANEL_REGISTRY.smiles.id,
+              panelID: PANEL_REGISTRY.smiles.id
             });
           },
           // Set a keyShortcut to enable keyboard navigation.
-          keyShortcut: `${modifierKeyLogo}${shiftKeyLogo}L`,
+          keyShortcut: `${modifierKeyLogo}${shiftKeyLogo}L`
         },
         {
           name: "Toggle console",
@@ -381,9 +381,9 @@ export default function HorusToolbar() {
           },
           svgPath: <ConsoleIcon />,
           // Set a keyShortcut to enable keyboard navigation.
-          keyShortcut: `${modifierKeyLogo}K`,
-        },
-      ],
+          keyShortcut: `${modifierKeyLogo}K`
+        }
+      ]
     },
     {
       name: "Flow",
@@ -393,27 +393,27 @@ export default function HorusToolbar() {
           onClick: () => {
             shortcuts.centerView();
           },
-          svgPath: <CenterView />,
+          svgPath: <CenterView />
         },
         {
           name: "Reset flow",
           onClick: () => {
             shortcuts.resetFlow();
-          },
+          }
         },
         {
           name: "Pause flow",
           svgPath: <PausedIcon />,
           onClick: () => {
             shortcuts.pauseFlow();
-          },
+          }
         },
         {
           name: "Stop flow",
           svgPath: <StopIcon />,
           onClick: () => {
             shortcuts.stopFlow();
-          },
+          }
         },
         {
           name: "Debug flow",
@@ -422,12 +422,12 @@ export default function HorusToolbar() {
             togglePanel({
               dockApi: dockApi,
               panelID: "debug",
-              component: "debugFlow",
+              component: "debugFlow"
             });
           },
-          svgPath: <LogFile />,
-        },
-      ],
+          svgPath: <LogFile />
+        }
+      ]
     },
     {
       name: "Extensions",
@@ -447,7 +447,7 @@ export default function HorusToolbar() {
               <Chevron
                 direction="right"
                 style={{
-                  transform: "translateX(-2px)",
+                  transform: "translateX(-2px)"
                 }}
               />
             ),
@@ -456,12 +456,12 @@ export default function HorusToolbar() {
                 dockApi: dockApi,
                 component: PANEL_REGISTRY.extensions.component,
                 panelID: unrelatedExtensionToBlockIDGenerator({ id: page.id }),
-                params: page,
+                params: page
               });
-            },
+            }
           } as ToolBarItemProps;
-        }),
-      ],
+        })
+      ]
     },
     {
       name: "Horus",
@@ -474,9 +474,9 @@ export default function HorusToolbar() {
             addPanel({
               dockApi: dockApi,
               panelID: PANEL_REGISTRY.horusPlugins.id,
-              component: PANEL_REGISTRY.horusPlugins.component,
+              component: PANEL_REGISTRY.horusPlugins.component
             });
-          },
+          }
         },
         {
           name: "Remotes",
@@ -486,9 +486,9 @@ export default function HorusToolbar() {
             addPanel({
               dockApi: dockApi,
               panelID: PANEL_REGISTRY.horusRemotes.id,
-              component: PANEL_REGISTRY.horusRemotes.component,
+              component: PANEL_REGISTRY.horusRemotes.component
             });
-          },
+          }
         },
         {
           name: "Settings",
@@ -497,12 +497,12 @@ export default function HorusToolbar() {
             addPanel({
               dockApi: dockApi,
               panelID: PANEL_REGISTRY.horusSettings.id,
-              component: PANEL_REGISTRY.horusSettings.component,
+              component: PANEL_REGISTRY.horusSettings.component
             });
-          },
-        },
-      ],
-    },
+          }
+        }
+      ]
+    }
   ];
 
   const [reloadingPlugins, setReloadingPlugins] = useState(false);
@@ -526,7 +526,7 @@ export default function HorusToolbar() {
                 .then(() => {
                   // Refetch the block list after reloading plugins
                   return queryClient.invalidateQueries({
-                    queryKey: ["blocklist"],
+                    queryKey: ["blocklist"]
                   });
                 })
                 .then(() =>

@@ -33,8 +33,8 @@ function useTemplates() {
   const filterTemplates = useCallback(() => {
     setFilteredTemplates(
       templates.filter((t) =>
-        t.name.toLowerCase().includes(filterTerm.toLowerCase()),
-      ),
+        t.name.toLowerCase().includes(filterTerm.toLowerCase())
+      )
     );
   }, [filterTerm, templates]);
 
@@ -66,7 +66,7 @@ function useTemplates() {
     templates: filteredTemplates,
     getTemplates,
     fetchingTemplates,
-    setFilteredTerm,
+    setFilteredTerm
   };
 }
 
@@ -112,7 +112,7 @@ export function TemplatesView() {
         <div
           className="w-full h-full flex flex-col items-center justify-center"
           style={{
-            color: "var(--digital-grey-IV)",
+            color: "var(--digital-grey-IV)"
           }}
         >
           {templates?.length === 0 ? (
@@ -150,7 +150,7 @@ function NoTemplates() {
 
 export function Template({
   flow,
-  getTemplates,
+  getTemplates
 }: {
   flow: Flow;
   getTemplates: () => Promise<void>;
@@ -168,7 +168,7 @@ export function Template({
         }}
         className="w-6 h-6 cursor-pointer"
         style={{
-          color: "red",
+          color: "red"
         }}
       />
     </>
@@ -177,7 +177,7 @@ export function Template({
 
 function DeleteTemplateModal({
   flow,
-  getTemplates,
+  getTemplates
 }: {
   flow: Flow;
   getTemplates: () => Promise<void>;
@@ -189,13 +189,13 @@ function DeleteTemplateModal({
   // Render the modal
   render(
     <_DeleteTemplateModal flow={flow} getTemplates={getTemplates} />,
-    modal,
+    modal
   );
 }
 
 function _DeleteTemplateModal({
   flow,
-  getTemplates,
+  getTemplates
 }: {
   flow: Flow;
   getTemplates: () => Promise<void>;
@@ -214,8 +214,8 @@ function _DeleteTemplateModal({
       const response = await horusDelete({
         url: "/api/templates",
         body: {
-          templateID: flow.savedID,
-        },
+          templateID: flow.savedID
+        }
       });
 
       const data = await response.json();
@@ -242,7 +242,7 @@ function _DeleteTemplateModal({
         <div
           className="text-xl font-semibold flow-title"
           style={{
-            height: "unset",
+            height: "unset"
           }}
         >
           Delete template
@@ -250,7 +250,7 @@ function _DeleteTemplateModal({
         <hr
           style={{
             width: "100%",
-            margin: "0 0",
+            margin: "0 0"
           }}
         ></hr>
         <p className="text-center">
@@ -267,7 +267,7 @@ function _DeleteTemplateModal({
               <button
                 className="app-button btn-danger"
                 style={{
-                  color: "var(--danger-red)",
+                  color: "var(--danger-red)"
                 }}
                 onClick={() => {
                   removeFlow();

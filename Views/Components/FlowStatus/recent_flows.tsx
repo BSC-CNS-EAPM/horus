@@ -125,7 +125,7 @@ export function useGetRecentFlows(webAppFlows: boolean = false): {
   const {
     data: recentFlowsData,
     isLoading: fetchingRecents,
-    refetch,
+    refetch
   } = useQuery({
     queryKey: ["recentFlows", webAppFlows],
     queryFn: async () => {
@@ -135,15 +135,15 @@ export function useGetRecentFlows(webAppFlows: boolean = false): {
       if (!data.ok) throw new Error(data.msg || "Failed to fetch recent flows");
       const flows = data.flows.sort(
         (a: Flow, b: Flow) =>
-          new Date(b.date).getTime() - new Date(a.date).getTime(),
+          new Date(b.date).getTime() - new Date(a.date).getTime()
       );
       return {
         flows,
         otherDirectories: data.otherDirectories || [],
-        corruptedFlows: data.corruptedFlows || [],
+        corruptedFlows: data.corruptedFlows || []
       };
     },
-    refetchInterval: 10000,
+    refetchInterval: 10000
   });
 
   // Fetch predefined flows
@@ -157,7 +157,7 @@ export function useGetRecentFlows(webAppFlows: boolean = false): {
         throw new Error(data.msg || "Failed to fetch predefined flows");
       }
       return data.flows;
-    },
+    }
   });
 
   // Fetch templates
@@ -168,7 +168,7 @@ export function useGetRecentFlows(webAppFlows: boolean = false): {
       const data = await response.json();
       if (!data.ok) throw new Error(data.msg || "Failed to fetch templates");
       return data.templates || [];
-    },
+    }
   });
 
   return {
@@ -178,6 +178,6 @@ export function useGetRecentFlows(webAppFlows: boolean = false): {
     templates: templatesData ?? null,
     otherDirectories: recentFlowsData?.otherDirectories ?? null,
     corruptedFlows: recentFlowsData?.corruptedFlows ?? null,
-    refetch,
+    refetch
   };
 }

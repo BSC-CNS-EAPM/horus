@@ -12,7 +12,7 @@ export const useAlert = () => {
   const [showAlert, setShowAlert] = useState(false);
   const [message, setMessage] = useState("");
   const [resolveCallback, setResolveCallback] = useState<null | (() => void)>(
-    null,
+    null
   );
 
   const horusAlert = (msg: string) => {
@@ -45,7 +45,7 @@ export const useAlert = () => {
     if (showAlert) {
       render(
         <AlertComponent message={message} onSubmit={handleSubmit} />,
-        document.getElementById("alert-root"),
+        document.getElementById("alert-root")
       );
     } else {
       unmountComponentAtNode(document.getElementById("alert-root")!);
@@ -57,7 +57,7 @@ export const useAlert = () => {
 
 const AlertComponent = ({
   message,
-  onSubmit,
+  onSubmit
 }: {
   message: string;
   onSubmit: () => void;
@@ -75,7 +75,7 @@ const AlertComponent = ({
         onSubmit();
       }
     },
-    [onSubmit],
+    [onSubmit]
   );
 
   useEffect(() => {
@@ -108,7 +108,7 @@ const AlertComponent = ({
               height: 0,
               opacity: "0",
               position: "absolute",
-              zIndex: -1,
+              zIndex: -1
             }}
           />
         </form>

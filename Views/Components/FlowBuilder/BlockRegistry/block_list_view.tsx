@@ -5,7 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useState,
+  useState
 } from "react";
 
 // Types for TypeScript
@@ -36,7 +36,7 @@ import { IconChevronsUp, IconPlus, IconSelector } from "@tabler/icons-react";
 import {
   DockContext,
   PANEL_REGISTRY,
-  addPanel,
+  addPanel
 } from "@/Components/MainApp/PanelView";
 import { useUser } from "@/Login/profile";
 
@@ -46,7 +46,7 @@ function PluginLogo({
 }: ImgHTMLAttributes<HTMLImageElement> & { pluginID: string }) {
   const { data } = useQuery({
     queryKey: [`pluginLogo-${pluginID}`],
-    queryFn: () => getPluginLogo({ pluginID }),
+    queryFn: () => getPluginLogo({ pluginID })
   });
   return data ? (
     <img {...rest} src={data}></img>
@@ -84,7 +84,7 @@ export function BlockRegistry() {
         isPlaced: false,
         position: { x: 0, y: 0 },
         variableConnections: [],
-        variableConnectionsReference: [],
+        variableConnectionsReference: []
       };
       blockList.push(newBlock);
     });
@@ -94,7 +94,7 @@ export function BlockRegistry() {
 
   const { data: blocks, isLoading: loadingBlocks } = useQuery({
     queryKey: ["blocklist"],
-    queryFn: fetchBlocks,
+    queryFn: fetchBlocks
   });
 
   const { userData } = useUser();
@@ -170,7 +170,7 @@ export function BlockRegistry() {
           <div
             className="sticky top-0 bg-white p-2 pb-0"
             style={{
-              zIndex: 1,
+              zIndex: 1
             }}
           >
             <div className="flex flex-row items-center justify-between w-full">
@@ -202,7 +202,7 @@ export function BlockRegistry() {
                       addPanel({
                         dockApi,
                         component: PANEL_REGISTRY.blockEditor.component,
-                        panelID: PANEL_REGISTRY.blockEditor.id,
+                        panelID: PANEL_REGISTRY.blockEditor.id
                       });
                     }}
                   >
@@ -230,7 +230,7 @@ export function BlockRegistry() {
             <hr
               style={{
                 marginTop: "10px",
-                marginBottom: "5px",
+                marginBottom: "5px"
               }}
             ></hr>
           </div>
@@ -249,7 +249,7 @@ export function BlockRegistry() {
 function PluginBlocksGroupList({
   blocks,
   showAllSignal,
-  collapseAllSignal,
+  collapseAllSignal
 }: {
   blocks: Block[];
   collapseAllSignal: number;
@@ -320,7 +320,7 @@ function PluginBlocksGroupList({
 
 function useCollapsible({
   collapseAllSignal,
-  showAllSignal,
+  showAllSignal
 }: {
   collapseAllSignal: number;
   showAllSignal: number;
@@ -352,7 +352,7 @@ function PluginBlocksGroup({
   groupedBlocks,
   pluginID,
   collapseAllSignal,
-  showAllSignal,
+  showAllSignal
 }: {
   groupedBlocks: Block[];
   pluginID: string;
@@ -437,7 +437,7 @@ function _CategoryView({
   category,
   blocks,
   collapseAllSignal,
-  showAllSignal,
+  showAllSignal
 }: {
   category: string;
   blocks: Block[];

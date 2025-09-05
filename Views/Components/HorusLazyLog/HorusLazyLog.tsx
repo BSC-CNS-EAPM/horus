@@ -41,7 +41,7 @@ export function HorusLazyLog(props: HorusLazyLogProps) {
         fullScreen
           ? {
               position: "absolute",
-              width: "100%",
+              width: "100%"
             }
           : undefined
       }
@@ -53,7 +53,7 @@ export function HorusLazyLog(props: HorusLazyLogProps) {
           marginTop: "0.5rem",
           marginLeft: "0.5rem",
           right: "1.5rem",
-          zIndex: 1001,
+          zIndex: 1001
         }}
       >
         <HorusPopover
@@ -64,8 +64,8 @@ export function HorusLazyLog(props: HorusLazyLogProps) {
                   [parsedLogText],
                   `${filename ?? "logs.log"}`,
                   {
-                    type: "text/plain",
-                  },
+                    type: "text/plain"
+                  }
                 );
                 window.horus.saveFile(file);
               }}
@@ -78,7 +78,7 @@ export function HorusLazyLog(props: HorusLazyLogProps) {
             className="hover-description"
             style={{
               position: "absolute",
-              transform: "translateX(-30px) translateY(10px)",
+              transform: "translateX(-30px) translateY(10px)"
             }}
           >
             Save logs
@@ -92,7 +92,7 @@ export function HorusLazyLog(props: HorusLazyLogProps) {
         options={{
           readOnly: true,
           minimap: { enabled: false },
-          scrollBeyondLastLine: false,
+          scrollBeyondLastLine: false
         }}
         onMount={(editor) => {
           codeRef.current = editor;
@@ -114,12 +114,12 @@ export function HorusLazyLog(props: HorusLazyLogProps) {
         show
         maxContentSize={{
           width: "95%",
-          height: "95%",
+          height: "95%"
         }}
       >
         {LoggingView}
       </BlurredModal>,
-      document.documentElement,
+      document.documentElement
     );
   }
 

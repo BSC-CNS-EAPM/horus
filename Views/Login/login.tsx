@@ -13,7 +13,7 @@ import Logo from "../Components/logo";
 import {
   loadCaptchaEnginge,
   LoadCanvasTemplateNoReload,
-  validateCaptcha,
+  validateCaptcha
   // @ts-ignore
 } from "react-simple-captcha";
 import { useAlert } from "../Components/HorusPrompt/horus_alert";
@@ -39,7 +39,7 @@ export default function LoginRegister() {
     msg: string;
   }>({
     ok: false,
-    msg: "",
+    msg: ""
   });
 
   const setView = useCallback(
@@ -49,7 +49,7 @@ export default function LoginRegister() {
         setMessages({ ok: false, msg: "" });
       }
     },
-    [],
+    []
   );
 
   const isFirstRender = useRef(true);
@@ -132,7 +132,7 @@ export default function LoginRegister() {
       <div
         style={{
           opacity: fadeIn ? 0 : 1,
-          transition: "opacity 0.5s",
+          transition: "opacity 0.5s"
         }}
       >
         {getCurrentView()}
@@ -144,7 +144,7 @@ export default function LoginRegister() {
 
 function Login({
   setView,
-  setMessages,
+  setMessages
 }: {
   setView: (newView: "login" | "register" | "reset") => void;
   setMessages: React.Dispatch<
@@ -208,7 +208,7 @@ function Login({
 
       const body = JSON.stringify({
         email: email,
-        password: password,
+        password: password
       });
 
       let response;
@@ -225,7 +225,7 @@ function Login({
 
       setMessages({
         ok: response.ok,
-        msg: response.msg,
+        msg: response.msg
       });
 
       // Redirect to / if the login was successful
@@ -312,7 +312,7 @@ type StrippedField = {
 
 function Register({
   setMessages,
-  setView,
+  setView
 }: {
   setView: (newView: "login" | "register", resetMessage?: boolean) => void;
   setMessages: React.Dispatch<
@@ -327,7 +327,7 @@ function Register({
     password: string;
   }>({
     email: "",
-    password: "",
+    password: ""
   });
   const [extraFieldsList, setExtraFieldsList] = useState<ExtraField[]>([]);
   const [extraFieldsValues, setExtraFieldsValues] = useState<StrippedField>({});
@@ -355,7 +355,7 @@ function Register({
         setMessages(
           parsedFields["email"]
             ? { ok: false, msg: "Password is required" }
-            : { ok: false, msg: "Email is required" },
+            : { ok: false, msg: "Email is required" }
         );
         return;
       }
@@ -373,7 +373,7 @@ function Register({
       }
 
       const body = JSON.stringify({
-        fields: parsedFields,
+        fields: parsedFields
       });
 
       const response = await await horusPost("/users/register", null, body);
@@ -382,7 +382,7 @@ function Register({
 
       setMessages({
         ok: data.ok,
-        msg: data.msg,
+        msg: data.msg
       });
 
       if (data.ok) {
@@ -433,7 +433,7 @@ function Register({
             onChange={(event) => {
               setRequiredFields({
                 ...requiredFields,
-                email: event.target.value,
+                email: event.target.value
               });
             }}
           />
@@ -451,7 +451,7 @@ function Register({
             onChange={(event) => {
               setRequiredFields({
                 ...requiredFields,
-                password: event.target.value,
+                password: event.target.value
               });
             }}
           />
@@ -473,7 +473,7 @@ function Register({
                     setExtraFieldsValues((currentValues) => {
                       return {
                         ...currentValues,
-                        [field.id]: newValue,
+                        [field.id]: newValue
                       };
                     });
                   }}
@@ -488,7 +488,7 @@ function Register({
             className="w-full flex flex-row gap-4 justify-between items-center form-control"
             style={{
               width: "unset",
-              display: "flex",
+              display: "flex"
             }}
           >
             <div>
@@ -518,13 +518,13 @@ function Register({
           <div
             className="form-floating"
             style={{
-              padding: "0",
+              padding: "0"
             }}
           >
             <div
               className="form-control flex items-center justify-center h-full"
               style={{
-                paddingTop: "1rem",
+                paddingTop: "1rem"
               }}
             >
               <LoadCanvasTemplateNoReload />
@@ -554,7 +554,7 @@ function Register({
 
 function Reset({
   setMessages,
-  setView,
+  setView
 }: {
   setView: (newView: "login" | "register", resetMessage?: boolean) => void;
   setMessages: React.Dispatch<
@@ -569,7 +569,7 @@ function Reset({
 
   const resetPassword = async () => {
     const body = JSON.stringify({
-      email,
+      email
     });
 
     const response = await horusPost("/users/reset", null, body);
@@ -585,14 +585,14 @@ function Reset({
       setMessages({
         msg:
           data.msg ?? "An email has ben sent in order to reset the password.",
-        ok: true,
+        ok: true
       });
       await new Promise((resolve) => setTimeout(resolve, 2000));
       window.location.href = "/users/login";
     } else {
       setMessages({
         msg: data.msg ?? "An error occurred. Try again later.",
-        ok: false,
+        ok: false
       });
     }
   };

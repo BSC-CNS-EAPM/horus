@@ -8,7 +8,7 @@ import "./horus_molstar.scss";
 // Horus Molstar wrapper
 import HorusMolstar, {
   MolstarEvents,
-  isMolstarLoaded,
+  isMolstarLoaded
 } from "./HorusWrapper/horusmolstar";
 
 // Error boundary (currently does not do anything)
@@ -18,7 +18,7 @@ import {
   DockContext,
   PANEL_REGISTRY,
   addPanel,
-  hooksInitializer,
+  hooksInitializer
 } from "../MainApp/PanelView";
 
 export default function Molstar() {
@@ -51,7 +51,7 @@ export default function Molstar() {
               addPanel({
                 dockApi,
                 panelID: PANEL_REGISTRY.horusSettings.id,
-                component: PANEL_REGISTRY.horusSettings.component,
+                component: PANEL_REGISTRY.horusSettings.component
               });
             }}
           >
@@ -71,7 +71,7 @@ export default function Molstar() {
         position: "relative",
         width: "100%",
         height: "100%",
-        border: "none",
+        border: "none"
       }}
     />
   );
@@ -91,7 +91,7 @@ function pluginDisposal() {
 
     // Launch a STATE event
     const event = new CustomEvent(MolstarEvents.STATE, {
-      detail: {},
+      detail: {}
     });
     window.dispatchEvent(event);
     return true;

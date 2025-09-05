@@ -20,7 +20,7 @@ export function StructureActions({ structure }: StructureActionsProps) {
     if (!s || !u) return;
 
     const loci = StructureElement.Loci(s, [
-      { unit: u, indices: u.elements as unknown as OrderedSet<UnitIndex> },
+      { unit: u, indices: u.elements as unknown as OrderedSet<UnitIndex> }
     ]);
 
     plugin.managers.camera.focusLoci(loci);
@@ -37,7 +37,7 @@ export function StructureActions({ structure }: StructureActionsProps) {
     PluginCommands.State.RemoveObject(plugin, {
       state: structure.structureRef.cell.parent!,
       ref: structure.rootRef,
-      removeParentGhosts: true,
+      removeParentGhosts: true
     });
   };
 

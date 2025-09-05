@@ -4,7 +4,7 @@ import {
   COLOR_TYPES,
   OnChangeRepresentationParams,
   RepresentationInfo,
-  SIZE_THEME_OPTIONS,
+  SIZE_THEME_OPTIONS
 } from "./types";
 import HorusMolstar from "../../horusmolstar";
 import EyeIcon from "@/Components/Toolbar/Icons/Eye";
@@ -26,7 +26,7 @@ interface RepresentationItemProps {
 export function RepresentationItem({
   representation,
   onChangeRepresentation,
-  onRemove,
+  onRemove
 }: RepresentationItemProps) {
   const plugin = (window.molstar as HorusMolstar).plugin!;
 
@@ -66,7 +66,7 @@ export function RepresentationItem({
       plugin!.managers.camera.focusLoci(lociList, {
         extraRadius: 4,
         minRadius: 8,
-        durationMs: 250,
+        durationMs: 250
       });
     }
   };
@@ -74,7 +74,7 @@ export function RepresentationItem({
   const highlighRepresentation = () => {
     lociList?.forEach((l) => {
       plugin!.managers.interactivity.lociHighlights.highlight({
-        loci: l,
+        loci: l
       });
     });
   };
@@ -95,15 +95,15 @@ export function RepresentationItem({
           value:
             typeof customColor === "string"
               ? Color.fromHexStyle(customColor)
-              : undefined,
-        },
+              : undefined
+        }
       },
       sizeTheme: {
         name: selectedSizeTheme,
         params: {
-          value: uniformSize,
-        },
-      },
+          value: uniformSize
+        }
+      }
     });
   }, [
     domain,
@@ -112,7 +112,7 @@ export function RepresentationItem({
     selectedColorTheme,
     customColor,
     selectedSizeTheme,
-    uniformSize,
+    uniformSize
   ]);
 
   return (

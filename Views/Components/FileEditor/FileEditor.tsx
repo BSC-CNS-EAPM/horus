@@ -19,14 +19,14 @@ const getFileLanguage = (path: string): string => {
     c: "c",
     java: "java",
     sh: "shell",
-    txt: "plaintext",
+    txt: "plaintext"
   };
   return ext ? languageMap[ext] || "plaintext" : "plaintext";
 };
 
 export function HorusFileEditor({
   dockApi,
-  params,
+  params
 }: {
   dockApi: DockviewPanelApi;
   params: any;
@@ -44,7 +44,7 @@ export function HorusFileEditor({
       window.horus?.openExtensionFilePicker?.({
         onFileConfirm: (file) => {
           setPath(file);
-        },
+        }
       });
       hasOpenedPicker.current = true;
     }
@@ -72,7 +72,7 @@ export function HorusFileEditor({
         <AppButton
           action={() =>
             window.horus?.openExtensionFilePicker?.({
-              onFileConfirm: (file) => setPath(file),
+              onFileConfirm: (file) => setPath(file)
             })
           }
         >
@@ -118,7 +118,7 @@ export function HorusFileEditor({
                     [value],
                     `${path.split("/").pop() ?? "file"}`,
                     {
-                      type: "text/plain",
+                      type: "text/plain"
                     }
                   );
                   window.horus.saveFile(file);
@@ -132,7 +132,7 @@ export function HorusFileEditor({
               className="hover-description"
               style={{
                 position: "absolute",
-                transform: "translateX(-30px) translateY(10px)",
+                transform: "translateX(-30px) translateY(10px)"
               }}
             >
               Save file

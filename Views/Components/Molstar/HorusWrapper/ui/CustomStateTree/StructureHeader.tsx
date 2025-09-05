@@ -10,7 +10,7 @@ interface StructureHeaderProps {
 export function StructureHeader({
   structure,
   isVisible,
-  onToggleVisibility,
+  onToggleVisibility
 }: StructureHeaderProps) {
   return (
     <div className="flex items-center justify-between">

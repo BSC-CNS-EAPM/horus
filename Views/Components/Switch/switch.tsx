@@ -35,7 +35,7 @@ export default function HorusSwitch(props: HorusSwitchProps) {
       onChange={handleChange}
       className="horus-switch"
       style={{
-        background: enabled ? "var(--vintage-code)" : "var(--grey-bsc)",
+        background: enabled ? "var(--vintage-code)" : "var(--grey-bsc)"
       }}
     >
       {/* {children && <span className="sr-only">{children}</span>} */}

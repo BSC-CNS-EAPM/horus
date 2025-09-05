@@ -24,13 +24,13 @@ export const HorusTable = forwardRef((props: HorusTableProps, ref: any) => {
     const gridRef = ref.current.api as GridApi;
     const csv =
       gridRef?.getDataAsCsv({
-        suppressQuotes: true,
+        suppressQuotes: true
       }) ?? "";
 
     window.horus.saveFile(
       new File([csv], props.allowDownload?.filename ?? "data.csv", {
-        type: "text/csv",
-      }),
+        type: "text/csv"
+      })
     );
   };
 

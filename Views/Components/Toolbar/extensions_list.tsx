@@ -46,9 +46,9 @@ export default function PluginPagesView(props: PluginPageViewProps) {
                     dockApi: dockApi,
                     component: PANEL_REGISTRY.extensions.component,
                     panelID: unrelatedExtensionToBlockIDGenerator({
-                      id: page.id,
+                      id: page.id
                     }),
-                    params: page,
+                    params: page
                   });
                 }
               }
@@ -63,7 +63,7 @@ export default function PluginPagesView(props: PluginPageViewProps) {
                 className="w-8 h-8"
                 color="black"
                 style={{
-                  transform: "translateX(-2px)",
+                  transform: "translateX(-2px)"
                 }}
               />
             )}

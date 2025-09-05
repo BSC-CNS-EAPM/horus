@@ -5,7 +5,7 @@ import {
   useRef,
   CSSProperties,
   useContext,
-  useCallback,
+  useCallback
 } from "react";
 
 // TS types
@@ -16,7 +16,7 @@ import { useXarrow } from "react-xarrows";
 import {
   addPanel,
   DockContext,
-  PANEL_REGISTRY,
+  PANEL_REGISTRY
 } from "@/Components/MainApp/PanelView";
 
 export function blockLogsPanelID(block: Block) {
@@ -61,7 +61,7 @@ export function useBlockView({
   blockHooks,
   onAir,
   scale,
-  isFlowActive,
+  isFlowActive
 }: BlockViewProps): BlockViewState {
   // Trigger xarrow update when block is moved
   useXarrow();
@@ -76,15 +76,15 @@ export function useBlockView({
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: block.placedID ? `${block.placedID}-${block.id}` : block.id,
     data: {
-      block: block,
-    },
+      block: block
+    }
   });
 
   const { setNodeRef: setDropRef } = useDroppable({
     id: block.placedID ? `${block.placedID}-${block.id}` : block.id,
     data: {
-      block: block,
-    },
+      block: block
+    }
   });
 
   const panelID = `${PANEL_REGISTRY.blockVariables.id}-${block.id}-${block.placedID}`;
@@ -98,8 +98,8 @@ export function useBlockView({
       params: {
         placedID: block.placedID,
         block: block,
-        handleVariableChange,
-      },
+        handleVariableChange
+      }
     });
   };
 
@@ -111,8 +111,8 @@ export function useBlockView({
       panelID: blockLogsPanelID(block),
       params: {
         placedID: block.placedID,
-        block: block,
-      },
+        block: block
+      }
     });
   };
 
@@ -121,7 +121,7 @@ export function useBlockView({
     const logsPanelID = blockLogsPanelID(block);
     const exists = dockApi?.getPanel(logsPanelID);
     exists?.api.updateParameters({
-      block: block,
+      block: block
     });
   }, [block, dockApi]);
 
@@ -211,14 +211,14 @@ export function useBlockView({
     const exists = dockApi?.getPanel(panelID);
     exists?.api.updateParameters({
       handleVariableChange,
-      block: block,
+      block: block
     });
   }, [block, dockApi, handleVariableChange, panelID]);
 
   const style: CSSProperties = {
     top: 0,
     left: 0,
-    cursor: "grab",
+    cursor: "grab"
   };
 
   if (block.isPlaced) {
@@ -247,7 +247,7 @@ export function useBlockView({
       ref: ref,
       attributes: attributes,
       listeners: listeners,
-      style: style,
+      style: style
     },
     blockViewHooks: {
       isInfoHovering: isInfoHovering,
@@ -255,10 +255,10 @@ export function useBlockView({
       toggleVariablesModal: toggleVariablesModal,
       toggleBlockLogsModal: toggleBlockLogsModal,
       handleVariableChange: handleVariableChange,
-      handleSelectedInputGroupChange: handleSelectedInputGroupChange,
+      handleSelectedInputGroupChange: handleSelectedInputGroupChange
     },
     settings: {
-      showPlacedID: showPlacedID,
-    },
+      showPlacedID: showPlacedID
+    }
   };
 }

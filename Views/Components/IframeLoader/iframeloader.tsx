@@ -75,7 +75,7 @@ function updateDevelopmentIframes(
           if (variable) {
             variable.value = value;
           }
-        },
+        }
       };
     }
 
@@ -85,15 +85,15 @@ function updateDevelopmentIframes(
         iframe_id: iframeID,
         variable_id: customVar.id,
         variable_placedID: customVar.placedID,
-        panel_id: panelApi.id,
-      },
+        panel_id: panelApi.id
+      }
     ];
   });
 
   // Set placedID in panel params for downstream logic
   if (customVar.placedID) {
     panelApi.updateParameters({
-      placedID: customVar.placedID,
+      placedID: customVar.placedID
     });
   }
 }
@@ -103,7 +103,7 @@ function IFrameLoader({
   data,
   panelApi,
   onFocus,
-  onLoad,
+  onLoad
 }: {
   page: PluginPage;
   data: any;
@@ -251,7 +251,7 @@ function IFrameLoader({
           if (customVars.length && !selectedVarID.id) {
             setSelectedVarID({
               id: customVars[0]!.id,
-              placedID: customVars[0]!.placedID,
+              placedID: customVars[0]!.placedID
             });
           }
 
@@ -259,7 +259,7 @@ function IFrameLoader({
             <div
               className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center"
               style={{
-                zIndex: 10000,
+                zIndex: 10000
               }}
             >
               <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
@@ -288,7 +288,7 @@ function IFrameLoader({
                         key={key}
                         value={JSON.stringify({
                           id: v.id,
-                          placedID: v.placedID,
+                          placedID: v.placedID
                         })}
                       >
                         {key}

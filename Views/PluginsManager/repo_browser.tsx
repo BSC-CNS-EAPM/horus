@@ -34,20 +34,20 @@ function RepoBrowser(props: RepoBrowserProps) {
   const {
     data: installedPlugins,
     isLoading: installedPluginsLoading,
-    error: installedPluginsError,
+    error: installedPluginsError
   } = useQuery({
     queryKey: [
       "installed_plugins",
       props.repoURL,
       props.repoName,
-      props.repoToken,
+      props.repoToken
     ],
     queryFn: () => {
       return horusGet("/api/plugins/list")
         .then((res) => res.json())
         .then((data) => data.plugins.plugins);
     },
-    refetchInterval: false,
+    refetchInterval: false
   });
 
   if (installedPluginsLoading) {
@@ -77,8 +77,8 @@ function _RepoBrowser(
 
       return fetch(url.toString(), {
         headers: {
-          Authorization: `Bearer ${props.repoToken}`,
-        },
+          Authorization: `Bearer ${props.repoToken}`
+        }
       })
         .then((res) => res.json())
         .then((data) => {
@@ -87,7 +87,7 @@ function _RepoBrowser(
           }
           return data as { plugins: DatabasePlugin[]; total: number };
         });
-    },
+    }
   });
 
   if (isLoading) {
@@ -143,7 +143,7 @@ function PluginInRepo({
   isInstalled,
   repo,
   repoName,
-  onInstall,
+  onInstall
 }: {
   plugin: DatabasePlugin;
   isInstalled?: HorusPlugin;
@@ -207,7 +207,7 @@ function RightSidePluginDownload({
   plugin,
   repoURL,
   repoName,
-  onInstall,
+  onInstall
 }: {
   isInstalled?: HorusPlugin;
   plugin: DatabasePlugin;
@@ -226,9 +226,7 @@ function RightSidePluginDownload({
           style={{
             width: width,
             color:
-              isInstalled.version !== plugin.latest_version
-                ? "orange"
-                : "green",
+              isInstalled.version !== plugin.latest_version ? "orange" : "green"
           }}
           action={() => {
             const pluginURL = `repoID://${repoURL}repoName://${repoName}pluginID://${plugin.id}`;

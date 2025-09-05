@@ -13,7 +13,7 @@ export function ComponentItem({
   item,
   onAddRepresentation,
   label,
-  compact,
+  compact
 }: ComponentItemProps) {
   const molstar = window.molstar as HorusMolstar;
 
@@ -21,7 +21,7 @@ export function ComponentItem({
     molstar.plugin!.managers.camera.focusLoci(item.loci, {
       minRadius: 8,
       extraRadius: 4,
-      durationMs: 250,
+      durationMs: 250
     });
     molstar.plugin!.managers.structure.focus.setFromLoci(item.loci);
   };
@@ -32,7 +32,7 @@ export function ComponentItem({
 
   const highlight = () => {
     molstar.plugin!.managers.interactivity.lociHighlights.highlight({
-      loci: item.loci,
+      loci: item.loci
     });
   };
 

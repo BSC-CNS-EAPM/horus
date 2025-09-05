@@ -3,7 +3,7 @@ import {
   AnimationViewportControls,
   LociLabels,
   SelectionViewportControls,
-  TrajectoryViewportControls,
+  TrajectoryViewportControls
 } from "molstar/lib/mol-plugin-ui/controls";
 import { BackgroundTaskProgress } from "molstar/lib/mol-plugin-ui/task";
 import { Toasts } from "molstar/lib/mol-plugin-ui/toast";
@@ -46,7 +46,7 @@ function EmptyMolstarHelp() {
       setIsEmpty(
         (isMolstarLoaded(window.molstar)
           ? window.molstar?.structures?.().length
-          : 0) === 0,
+          : 0) === 0
       );
     };
 
@@ -63,7 +63,7 @@ function EmptyMolstarHelp() {
     <div
       className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-gray-400 text-center"
       style={{
-        fontFamily: "Poppins",
+        fontFamily: "Poppins"
       }}
     >
       Drag and drop molecular structure files here (PDB, SDF, CIF...)

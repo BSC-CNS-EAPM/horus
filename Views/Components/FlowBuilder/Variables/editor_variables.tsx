@@ -11,7 +11,7 @@ import {
   DockContext,
   FlowBuilderContext,
   PANEL_REGISTRY,
-  togglePanel,
+  togglePanel
 } from "@/Components/MainApp/PanelView";
 import { PluginVariable } from "../flow.types";
 
@@ -107,7 +107,7 @@ export function HorusSmallVariableCodeEditor(
       const exists = dockApi.getPanel(panelID);
       exists?.api.updateParameters({
         onChange: props.onChange,
-        options: { readOnly: isFlowActive },
+        options: { readOnly: isFlowActive }
       });
     }
   }, [dockApi, isFlowActive, panelID, props.onChange]);
@@ -156,7 +156,7 @@ export function HorusSmallVariableCodeEditor(
           position: "absolute",
           top: "0.5rem",
           right: "0.5rem",
-          zIndex: 10,
+          zIndex: 10
         }}
       >
         <HorusPopover
@@ -175,8 +175,8 @@ export function HorusSmallVariableCodeEditor(
                       defaultLanguage: props.defaultLanguage,
                       value: props.value,
                       defaultValue: props.defaultValue,
-                      onChange: props.onChange,
-                    },
+                      onChange: props.onChange
+                    }
                   });
                 }
               }}
@@ -189,7 +189,7 @@ export function HorusSmallVariableCodeEditor(
             className="hover-description"
             style={{
               position: "absolute",
-              transform: "translateX(-40px) translateY(10px)",
+              transform: "translateX(-40px) translateY(10px)"
             }}
           >
             Detach
@@ -200,7 +200,7 @@ export function HorusSmallVariableCodeEditor(
         {...props}
         onChange={props.onChange}
         options={{
-          readOnly: isFlowActive || props.variable.disabled,
+          readOnly: isFlowActive || props.variable.disabled
         }}
       />
     </div>

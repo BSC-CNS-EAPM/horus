@@ -7,7 +7,7 @@ import {
   useEffect,
   useImperativeHandle,
   useRef,
-  useState,
+  useState
 } from "react";
 // @ts-ignore
 import Plotly from "plotly.js-dist";
@@ -25,7 +25,7 @@ const defaultColors: string[] = [
   "#B6E880",
   "#FF97FF",
   "#FECB52",
-  "#909091",
+  "#909091"
 ];
 
 export const getDataColor = (index: number) => {
@@ -112,7 +112,7 @@ function usePlotlyPlot({
   yAxisTitle,
   legendTitle,
   onDataClick,
-  api,
+  api
 }: HorusPlotProps & {
   ref: RefObject<HTMLDivElement>;
   api: ForwardedRef<HorusPlotlyAPI>;
@@ -149,22 +149,22 @@ function usePlotlyPlot({
       width: width,
       margin: {
         t: 30,
-        b: 30,
+        b: 30
       },
       hovermode: "closest",
       showlegend: true,
       legend: {
         title: {
-          text: legendTitle ?? "Legend",
-        },
-      },
+          text: legendTitle ?? "Legend"
+        }
+      }
     };
 
     const config = {
       responsive: true,
       displaylogo: false,
       displayModeBar: false,
-      showLegend: true,
+      showLegend: true
     };
 
     Plotly.react(plot.id, data, layout, config).then(() => setIsLoading(false));
@@ -180,15 +180,15 @@ function usePlotlyPlot({
     width,
     height,
     legendTitle,
-    onDataClick,
+    onDataClick
   ]);
 
   useImperativeHandle(
     api,
     () => ({
-      toImage: (options) => Plotly.toImage(ref.current?.id, options),
+      toImage: (options) => Plotly.toImage(ref.current?.id, options)
     }),
-    [ref],
+    [ref]
   );
 
   useEffect(() => {
@@ -232,7 +232,7 @@ export type HorusPlotlyAPI = {
 };
 
 export const HorusPlotly = forwardRef<HorusPlotlyAPI, HorusPlotProps>(
-  _HorusPlot,
+  _HorusPlot
 );
 
 function _HorusPlot(props: HorusPlotProps, api: ForwardedRef<HorusPlotlyAPI>) {
@@ -242,7 +242,7 @@ function _HorusPlot(props: HorusPlotProps, api: ForwardedRef<HorusPlotlyAPI>) {
   const { isLoading } = usePlotlyPlot({
     ref: localRef as RefObject<HTMLDivElement>,
     api,
-    ...props,
+    ...props
   });
 
   return (

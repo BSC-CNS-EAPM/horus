@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
     root.render(
       <React.StrictMode>
         <ConfigRemotes />
-      </React.StrictMode>,
+      </React.StrictMode>
     );
   }
 });
