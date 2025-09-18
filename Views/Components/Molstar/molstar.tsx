@@ -12,7 +12,7 @@ import HorusMolstar, {
 } from "./HorusWrapper/horusmolstar";
 
 // Error boundary (currently does not do anything)
-import { useSettings } from "@/Main/app";
+import { useSettingsContext } from "@/Main/app";
 import AppButton from "../appbutton";
 import {
   DockContext,
@@ -23,7 +23,7 @@ import {
 
 export default function Molstar() {
   const parent = createRef<HTMLDivElement>();
-  const settings = useSettings();
+  const settings = useSettingsContext();
   const { dockApi } = useContext(DockContext)!;
 
   useEffect(() => {

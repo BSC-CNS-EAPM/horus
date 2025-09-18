@@ -55,7 +55,7 @@ import SmilesIcon from "./Icons/Smiles";
 import StopIcon from "./Icons/Stop";
 import { queryClient } from "@/Main";
 import AppButton from "../appbutton";
-import { useSettings } from "@/Main/app";
+import { useSettingsContext } from "@/Main/app";
 import { IconReload } from "@tabler/icons-react";
 import RotatingLines from "../RotatingLines/rotatinglines";
 
@@ -506,7 +506,7 @@ export default function HorusToolbar() {
   ];
 
   const [reloadingPlugins, setReloadingPlugins] = useState(false);
-  const horusSettings = useSettings();
+  const horusSettings = useSettingsContext();
 
   return (
     <div className="flex flex-row justify-between items-center toolbar">

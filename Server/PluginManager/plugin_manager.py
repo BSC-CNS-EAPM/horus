@@ -314,7 +314,7 @@ class PluginManager(metaclass=HorusSingleton):
                 if os.path.exists(downloadDir):
                     shutil.rmtree(downloadDir, ignore_errors=True)
 
-    def _getRepos(self) -> typing.List[PluginRepos]:
+    def getRepos(self) -> typing.List[PluginRepos]:
         parsed_repos = []
         for r in self.horusSettings.getSetting("repos").value or []:
             try:
@@ -349,7 +349,7 @@ class PluginManager(metaclass=HorusSingleton):
 
         print(f"Downloading plugin {pluginID}...")
 
-        repos = self._getRepos()
+        repos = self.getRepos()
         headers = {}
 
         pluginRepo = None

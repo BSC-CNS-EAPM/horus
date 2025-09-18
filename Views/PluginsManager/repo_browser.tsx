@@ -9,10 +9,12 @@ import CheckMark from "../Components/Toolbar/Icons/CheckMark";
 
 import PluginsIcon from "../Components/Toolbar/Icons/Plugins";
 import AppButton from "../Components/appbutton";
-import CloudDownload from "../Components/Toolbar/Icons/CloudDownload";
-import SettingsIcon from "../Components/Toolbar/Icons/Settings";
-import LogFile from "../Components/Toolbar/Icons/LogFile";
 import { SearchComponent } from "@/Components/Search/Search";
+import {
+  IconArrowBarToDown,
+  IconArrowBarUp,
+  IconUser
+} from "@tabler/icons-react";
 
 type DatabasePlugin = HorusPlugin & {
   downloads: number;
@@ -109,18 +111,6 @@ function _RepoBrowser(
           }}
           onEnter={() => refetch()}
         />
-        <AppButton
-          className="min-w-[200px]"
-          action={() => {
-            const button = document.createElement("a");
-            button.target = "_blank";
-            button.href = props.repoURL;
-            button.click();
-            button.remove();
-          }}
-        >
-          Open repository
-        </AppButton>
       </div>
       <div className="grid grid-cols-1 gap-2">
         {data?.plugins.map((plugin) => (
@@ -216,13 +206,14 @@ function RightSidePluginDownload({
   onInstall: (file: string) => void;
 }) {
   const width = "120px";
-  const spanClassName = "font-semibold w-[90px]";
+  // const width = "auto";
+  const spanClassName = "font-semibold";
   return (
     <div className="flex flex-col gap-2 h-full">
       {isInstalled ? (
         <AppButton
           disabled={plugin.latest_version === isInstalled.version}
-          className="gap-2 flex flex-row flex-nowrap justify-between"
+          className="gap-2 flex flex-row flex-nowrap justify-center"
           style={{
             width: width,
             color:
@@ -239,14 +230,15 @@ function RightSidePluginDownload({
               : "Installed"}
           </span>
           {plugin.latest_version !== isInstalled.version ? (
-            <ErrorIcon className="w-6 h-6" />
+            <IconArrowBarUp />
           ) : (
             <CheckMark className="w-6 h-6" />
           )}
         </AppButton>
       ) : (
         <AppButton
-          className="gap-2 flex flex-row flex-nowrap justify-between"
+          title="Click to install plugin"
+          className="gap-2 flex flex-row flex-nowrap justify-center"
           style={{ color: "black", width: width }}
           action={() => {
             const pluginURL = `repoID://${repoURL}repoName://${repoName}pluginID://${plugin.id}`;
@@ -254,22 +246,31 @@ function RightSidePluginDownload({
           }}
         >
           <span className={spanClassName}>Install</span>
-          <SettingsIcon className="w-6 h-6" />
+          <IconArrowBarToDown />
         </AppButton>
       )}
       <AppButton
         style={{ color: "black", width: width, font: "semibold" }}
-        className="gap-2 flex flex-row flex-nowrap justify-between"
+        className="gap-2 flex flex-row flex-nowrap justify-center"
+        title={`Installed version: ${isInstalled?.version || "Not installed"}. Latest version: ${plugin.latest_version}`}
       >
-        <span className={spanClassName}>{plugin.latest_version}</span>
-        <LogFile className="w-6 h-6" />
+        {plugin.latest_version !== isInstalled?.version && isInstalled ? (
+          <>
+            <span className={spanClassName}>
+              {isInstalled.version} &rarr; {plugin.latest_version}
+            </span>
+          </>
+        ) : (
+          <span className={spanClassName}>{plugin.latest_version}</span>
+        )}
       </AppButton>
       <AppButton
+        title="Number of downloads"
         style={{ color: "black", width: width }}
-        className="gap-2 flex flex-row flex-nowrap justify-between"
+        className="gap-2 flex flex-row flex-nowrap justify-center"
       >
         <span className={spanClassName}>{plugin.downloads}</span>
-        <CloudDownload className="w-6 h-6" />
+        <IconUser />
       </AppButton>
     </div>
   );

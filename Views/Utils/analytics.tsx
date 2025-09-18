@@ -1,14 +1,9 @@
 import { useEffect, useState } from "react";
-import {
-  IconCookie,
-  IconX,
-  IconShield,
-  IconChartBar
-} from "@tabler/icons-react";
+import { IconX, IconShield, IconChartBar } from "@tabler/icons-react";
 import ReactGA from "react-ga4";
 
 import { getAppInfo } from "@/About/about";
-import { useSettings } from "@/Main/app";
+import { useSettingsContext } from "@/Main/app";
 import { saveSettings } from "@/Settings/settings";
 import { PluginVariable } from "@/Components/FlowBuilder/flow.types";
 import { HorusLink } from "@/Components/reusable";
@@ -17,7 +12,7 @@ function HorusGoogleAnalytics() {
   const [consent, setConsent] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  const settings = useSettings();
+  const settings = useSettingsContext();
 
   useEffect(() => {
     // Get initial consent from localStorage
@@ -73,7 +68,7 @@ export function ConsentBanner() {
   const [isVisible, setIsVisible] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
 
-  const settings = useSettings();
+  const settings = useSettingsContext();
 
   const analyticsSetting = settings?.["analytics"];
 

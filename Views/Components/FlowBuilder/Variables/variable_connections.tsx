@@ -31,7 +31,7 @@ import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { BlockHooks } from "../flow.hooks";
 import { SearchComponent } from "@/Components/Search/Search";
 import { FlowBuilderContext } from "@/Components/MainApp/PanelView";
-import { useSettings } from "@/Main/app";
+import { useSettingsContext } from "@/Main/app";
 
 export function getBlockVarPair(
   block: Block,
@@ -193,7 +193,7 @@ function OutputVariableBallConnector({
     }
   }, [ref]);
 
-  const settings = useSettings();
+  const settings = useSettingsContext();
 
   const arrowAppareance = settings?.["arrowLook"]?.value ?? "Curved";
   const path =
