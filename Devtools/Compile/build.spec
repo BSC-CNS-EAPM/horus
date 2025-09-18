@@ -6,6 +6,8 @@ import os
 import shutil
 import sys
 
+from PyInstaller.utils.hooks import collect_submodules
+
 
 # Before compiling horus, we need to bundle pip to be used by Horus
 # in the plugin manager to install plugin dependencies
@@ -152,6 +154,9 @@ imports = [
     "ssl",
     "pydantic",
 ]
+
+# For the email functionality of certain plugins
+imports += collect_submodules("email")
 
 imports += ["engineio", "engineio.async_drivers.threading"]
 

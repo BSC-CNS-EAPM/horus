@@ -114,12 +114,12 @@ export function ToolbarMenu(props: ToolBarMenuProps) {
               }}
             >
               {/* // Here the items will be rendered */}
-              {props.items?.map((item) =>
+              {props.items?.map((item, idx) =>
                 item.hidden ? null : (
-                  <Menu.Item key={item.name}>
+                  <Menu.Item key={`${item.name}-${idx}`}>
                     {({ close }) => (
                       <ToolBarItem
-                        key={item.name}
+                        key={`${item.name}-${idx}`}
                         {...item}
                         onClick={() => {
                           item.onClick?.();
