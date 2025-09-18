@@ -113,7 +113,7 @@ export async function saveSettings({
   return data;
 }
 
-function useSettings(forAdmin?: boolean) {
+export function useSettings(forAdmin?: boolean) {
   const [settings, setSettings] = useState<PluginVariable[] | null>(null);
   const [groupedSettings, setGroupedSettings] = useState<
     Record<string, PluginVariable[]>

@@ -34,7 +34,7 @@ import { HorusViewTabs, Tab } from "../Components/Tabs";
 import RemoteIcon from "../Components/Toolbar/Icons/Remote";
 import { HorusLazyLog } from "../Components/HorusLazyLog/HorusLazyLog";
 import { SearchComponent } from "@/Components/Search/Search";
-import { useSettings } from "@/Main/app";
+import { IconReload } from "@tabler/icons-react";
 
 type ConfigBlockType = Array<{
   remote: string;
@@ -678,7 +678,21 @@ export function PluginManager() {
           </div>
           <div className="flex flex-row flex-wrap justify-center gap-2 mr-2">
             {developmentMode && (
-              <AppButton text="Reload plugins" action={reloadPlugins} />
+              <AppButton action={reloadPlugins}>
+                <div className="flex flex-row items-center gap-2">
+                  {loading ? (
+                    <>
+                      <RotatingLines size="16px" />
+                      Reloading plugins...
+                    </>
+                  ) : (
+                    <>
+                      <IconReload size="18px" />
+                      Reload plugins
+                    </>
+                  )}
+                </div>
+              </AppButton>
             )}
             <AppButton
               text="Install plugin"
@@ -903,38 +917,57 @@ export type PluginInstallProps = {
 
 type InstallationViewsType = "manual" | string;
 
+type RepoType = {
+  title: string;
+  repository_url: string;
+  repository_name: string;
+  repository_token?: string;
+};
+
 function ManualOrStoreInstall({
   selectedFile,
   setSelectedFile,
   isInstalling,
   onPluginInstall
 }: PluginInstallProps) {
-  const settings = useSettings();
+  const [repos, setRepos] = useState<RepoType[]>([]);
+
+  useEffect(() => {
+    const fetchRepos = async () => {
+      const response = await horusGet("/api/plugins/repos");
+      const data = await response.json();
+
+      if (data.ok) {
+        setRepos(data.repos);
+      }
+    };
+
+    fetchRepos();
+  }, []);
 
   const getRepos = useMemo(() => {
-    if (!settings) {
-      return {};
-    }
-
-    const repos = settings["repos"]?.value.map((r: any) => ({
-      title: r.repository_name,
-      icon: <RemoteIcon />,
-      view: (
-        <PluginBrowserRoot
-          key={`${r.repository_name}-${r.repository_url}-${r.repository_token}`}
-          isInstalling={isInstalling}
-          selectedFile={selectedFile}
-          setSelectedFile={setSelectedFile}
-          onPluginInstall={onPluginInstall}
-          repoURL={r.repository_url}
-          repoToken={r.repository_token}
-          repoName={r.repository_name}
-        />
-      )
-    }));
-
-    return repos;
-  }, [settings, isInstalling, selectedFile, setSelectedFile, onPluginInstall]);
+    const parsedRepos: Record<string, Tab> = {};
+    repos.forEach(
+      (r) =>
+        (parsedRepos[r.repository_name] = {
+          title: r.repository_name,
+          icon: <RemoteIcon />,
+          view: (
+            <PluginBrowserRoot
+              key={`${r.repository_name}-${r.repository_url}-${r.repository_token}`}
+              isInstalling={isInstalling}
+              selectedFile={selectedFile}
+              setSelectedFile={setSelectedFile}
+              onPluginInstall={onPluginInstall}
+              repoURL={r.repository_url}
+              repoToken={r.repository_token}
+              repoName={r.repository_name}
+            />
+          )
+        })
+    );
+    return parsedRepos;
+  }, [repos, isInstalling, selectedFile, setSelectedFile, onPluginInstall]);
 
   const tabs: {
     [key in InstallationViewsType]: {

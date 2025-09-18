@@ -2297,6 +2297,23 @@ class HorusServer:
 
             return flask.jsonify({"ok": False, "msg": "Not allowed"})
 
+        @self.server.route("/api/plugins/repos", methods=["GET"])
+        @self.verifyLogin
+        @self.verifyAdmin
+        def listPluginRepos():
+            try:
+                repos = self.pluginManager.getRepos()
+                success = {
+                    "ok": True,
+                    "repos": [r.model_dump() for r in repos],
+                }
+            except Exception as exc:  # pylint: disable=broad-exception-caught
+                success = {
+                    "ok": False,
+                    "msg": str(exc),
+                }
+            return flask.jsonify(success)
+
         # View routes
         @self.server.route("/")
         @self.verifyLogin
