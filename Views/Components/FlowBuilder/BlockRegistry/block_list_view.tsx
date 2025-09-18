@@ -421,6 +421,7 @@ function PluginBlocksGroup({
         {Object.keys(categories).map((k) => {
           return (
             <_CategoryView
+              key={k}
               category={k}
               blocks={categories[k]!}
               collapseAllSignal={collapseAllSignal}
