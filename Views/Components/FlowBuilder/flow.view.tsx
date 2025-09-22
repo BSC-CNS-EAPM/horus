@@ -225,7 +225,7 @@ export function DebugFlow() {
       value={JSON.stringify(flow, null, 2)}
       onChange={(value) => {
         if (value) {
-          handleFlowChange(JSON.parse(value));
+          handleFlowChange(() => JSON.parse(value));
         }
       }}
     />

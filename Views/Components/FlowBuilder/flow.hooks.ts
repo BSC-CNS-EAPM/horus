@@ -311,17 +311,20 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
   // Helper function that should be called every time the flow changes
   // It updates the flow state and the saved state
   const handleFlowChange = useCallback(
-    (newFlow: Flow, updateHistory: boolean = false) => {
+    (callBack: (lastValue: Flow) => Flow, updateHistory: boolean = false) => {
       // Do not modify the flow if it is active
       if (isFlowActive) {
         return;
       }
 
-      const handledFlow: Flow = { ...newFlow, status: FlowStatus.UNSAVED };
-      setFlow((currentFlow) => {
+      setFlow((prev) => {
+        const newFlow = callBack(prev);
+        const handledFlow: Flow = { ...newFlow, status: FlowStatus.UNSAVED };
+
         if (updateHistory) {
-          handleHistoryChange(currentFlow);
+          handleHistoryChange(prev);
         }
+
         return handledFlow;
       });
     },
@@ -965,54 +968,58 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
   // Helper function that should be called every time any block changes
   // It updates the flow state and the saved state efficiently
-  const handleBlockChanges = (
-    newBlocks: Block[],
-    isNew: boolean = false,
-    updateHistory: boolean = false,
-    resetExecution: boolean = true
-  ) => {
-    const updatedBlocks = isNew
-      ? [...flow.blocks, ...newBlocks]
-      : flow.blocks.map((block: Block) => {
-          const matchingNewBlock = newBlocks.find(
-            (newBlock: Block) => newBlock.placedID === block.placedID
-          );
+  const handleBlockChanges = useCallback(
+    (
+      newBlocks: Block[],
+      isNew: boolean = false,
+      updateHistory: boolean = false,
+      resetExecution: boolean = true
+    ) => {
+      handleFlowChange((prev) => {
+        const updatedBlocks = isNew
+          ? [...prev.blocks, ...newBlocks]
+          : prev.blocks.map((block: Block) => {
+              const matchingNewBlock = newBlocks.find(
+                (newBlock: Block) => newBlock.placedID === block.placedID
+              );
 
-          if (matchingNewBlock) {
-            return {
-              ...matchingNewBlock,
-              finishedExecution: resetExecution
-                ? false
-                : block.finishedExecution
-            } as Block;
-          }
+              if (matchingNewBlock) {
+                return {
+                  ...matchingNewBlock,
+                  finishedExecution: resetExecution
+                    ? false
+                    : block.finishedExecution
+                } as Block;
+              }
 
-          return block;
-        });
+              return block;
+            });
 
-    const newFlow: Flow = {
-      ...flow,
-      blocks: updatedBlocks
-    };
-
-    handleFlowChange(newFlow, updateHistory);
-  };
+        return {
+          ...prev,
+          blocks: updatedBlocks
+        } satisfies Flow;
+      }, updateHistory);
+    },
+    [handleFlowChange]
+  );
 
   // Helper function that efficiently returns the blocks with the given placedID
   const findBlocks = (blockIDs: Array<number>): Array<Block> | null => {
-    // Find and sort the blocks found blocks by the same order the blockIDs were given
-    // So that the returning array is in the same order as the blockIDs
-    // We need to prevent looping over the flow.blocks array multiple times
-    // because it is an expensive operation
-    const blockMap = new Map();
+    let currentBlocks: Block[] = [];
+    setFlow((current) => {
+      currentBlocks = current.blocks;
+      return current;
+    });
 
     // Map the blocks by their placedID
-    flow.blocks.forEach((block) => blockMap.set(block.placedID, block));
+    const blockMap = new Map<number, Block>();
+    currentBlocks.forEach((block) => blockMap.set(block.placedID, block));
 
     // Generate a new list based on the map
     const found = blockIDs
       .map((blockID) => blockMap.get(blockID))
-      .filter(Boolean);
+      .filter(Boolean) as Block[];
 
     return found.length > 0 ? found : null;
   };
@@ -1088,6 +1095,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     }
   ) => {
     // Update the state
+
     handleBlockChanges([moveBlock(block, delta, scale)], false, true, false);
   };
 
@@ -1110,7 +1118,6 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         };
       })
     };
-
     handleBlockChanges([newBlock], true, true);
 
     // Update the placedIDCounter
@@ -1195,108 +1202,106 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       }
     }
 
-    for (const variableReference of block.variableConnectionsReference) {
-      const connectedBlock = flow.blocks.find(
-        (b) => b.placedID === variableReference.destination.placedID
-      );
-
-      // If the connected block is not found, continue
-      if (!connectedBlock) {
-        continue;
-      }
-
-      const cyclic = checkCyclicFlow(block, connectedBlock);
-
-      if (cyclic) {
-        await horusAlert("Remove the cyclic connection first");
-        return;
-      }
-    }
-
-    let updatedBlocks = flow.blocks;
-    // Delete the variable connections
-    // going out from this block to
-    // the connected blocks. For example,
-    // this is an input block connected to an action
-    // block. The action block is who stores the connection,
-    // Therefore if we delete the input block, the connection
-    // needs to be removed from the action block. Luckily,
-    // when connecting variables, a reference to the connection
-    // is istored in the input block. Therefore, we can use that
-    // reference to find the real block and remove the connections
-    // that depend on this block
-    if (
-      block.variableConnectionsReference &&
-      block.variableConnectionsReference.length > 0
-    ) {
-      for (const varConnected of block.variableConnectionsReference) {
-        // Find the real block from where the variable goes to
-        const realBlock = updatedBlocks.find(
-          (b) => b.placedID === varConnected.destination.placedID
+    // Update the flow
+    handleFlowChange((prev) => {
+      for (const variableReference of block.variableConnectionsReference) {
+        const connectedBlock = prev.blocks.find(
+          (b) => b.placedID === variableReference.destination.placedID
         );
 
-        if (!realBlock) {
+        // If the connected block is not found, continue
+        if (!connectedBlock) {
           continue;
         }
 
-        // Remove from the real block the variable connection
-        realBlock.variableConnections = realBlock.variableConnections.filter(
-          (v) => v.origin.placedID !== block.placedID
-        );
+        const cyclic = checkCyclicFlow(block, connectedBlock);
 
-        // Update the placedBlocks array
-        updatedBlocks = updatedBlocks.map((b) => {
-          if (b.placedID === realBlock.placedID) {
-            b.variableConnections = realBlock.variableConnections;
-          }
-          return b;
-        });
-      }
-    }
-
-    // If the block to be deleted is the action block for example,
-    // the reference of the connection stored in the input block
-    // needs to be removed. Therefore we need to read the block connections
-    // and remove the reference to this connection in the input block
-    if (block.variableConnections && block.variableConnections.length > 0) {
-      for (const varConnected of block.variableConnections) {
-        // Find the real block from where the variable comes from
-        const realBlock = updatedBlocks.find(
-          (b) => b.placedID === varConnected.origin.placedID
-        );
-
-        if (!realBlock) {
-          continue;
+        if (cyclic) {
+          alert("Remove the cyclic connection first");
+          return prev;
         }
+      }
 
-        // Remove from the real block the variable connection reference
-        realBlock.variableConnectionsReference =
-          realBlock.variableConnectionsReference.filter(
-            (v) => v.destination.placedID !== block.placedID
+      let updatedBlocks = prev.blocks;
+      // Delete the variable connections
+      // going out from this block to
+      // the connected blocks. For example,
+      // this is an input block connected to an action
+      // block. The action block is who stores the connection,
+      // Therefore if we delete the input block, the connection
+      // needs to be removed from the action block. Luckily,
+      // when connecting variables, a reference to the connection
+      // is istored in the input block. Therefore, we can use that
+      // reference to find the real block and remove the connections
+      // that depend on this block
+      if (
+        block.variableConnectionsReference &&
+        block.variableConnectionsReference.length > 0
+      ) {
+        for (const varConnected of block.variableConnectionsReference) {
+          // Find the real block from where the variable goes to
+          const realBlock = updatedBlocks.find(
+            (b) => b.placedID === varConnected.destination.placedID
           );
 
-        // Update the placedBlocks array
-        updatedBlocks = updatedBlocks.map((b) => {
-          if (b.placedID === realBlock.placedID) {
-            b.variableConnectionsReference =
-              realBlock.variableConnectionsReference;
+          if (!realBlock) {
+            continue;
           }
-          return b;
-        });
+
+          // Remove from the real block the variable connection
+          realBlock.variableConnections = realBlock.variableConnections.filter(
+            (v) => v.origin.placedID !== block.placedID
+          );
+
+          // Update the placedBlocks array
+          updatedBlocks = updatedBlocks.map((b) => {
+            if (b.placedID === realBlock.placedID) {
+              b.variableConnections = realBlock.variableConnections;
+            }
+            return b;
+          });
+        }
       }
-    }
 
-    // Delete the block
-    updatedBlocks = updatedBlocks.filter((b) => b.placedID !== block.placedID);
+      // If the block to be deleted is the action block for example,
+      // the reference of the connection stored in the input block
+      // needs to be removed. Therefore we need to read the block connections
+      // and remove the reference to this connection in the input block
+      if (block.variableConnections && block.variableConnections.length > 0) {
+        for (const varConnected of block.variableConnections) {
+          // Find the real block from where the variable comes from
+          const realBlock = updatedBlocks.find(
+            (b) => b.placedID === varConnected.origin.placedID
+          );
 
-    // Update the flow
-    handleFlowChange(
-      {
-        ...flow,
-        blocks: updatedBlocks
-      },
-      true
-    );
+          if (!realBlock) {
+            continue;
+          }
+
+          // Remove from the real block the variable connection reference
+          realBlock.variableConnectionsReference =
+            realBlock.variableConnectionsReference.filter(
+              (v) => v.destination.placedID !== block.placedID
+            );
+
+          // Update the placedBlocks array
+          updatedBlocks = updatedBlocks.map((b) => {
+            if (b.placedID === realBlock.placedID) {
+              b.variableConnectionsReference =
+                realBlock.variableConnectionsReference;
+            }
+            return b;
+          });
+        }
+      }
+
+      // Delete the block
+      updatedBlocks = updatedBlocks.filter(
+        (b) => b.placedID !== block.placedID
+      );
+
+      return { ...prev, blocks: updatedBlocks } satisfies Flow;
+    }, true);
   };
 
   const updateCyclesCount = (destination: BlockVarPair, cycles: number) => {
@@ -1696,7 +1701,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     setFuture([flow, ...future]); // Add the current state to the future array
     setPast(newPast); // Update the past array
 
-    handleFlowChange(undoTo); // Handle the flow change to the previous state
+    handleFlowChange(() => undoTo); // Handle the flow change to the previous state
   }, [flow, past, future, handleFlowChange]);
 
   /**
@@ -1723,7 +1728,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     setPast([...past, flow]); // Add the current state to the past array
     setFuture(newFuture); // Update the future array
 
-    handleFlowChange(redoTo); // Handle the flow change to the next state
+    handleFlowChange(() => redoTo); // Handle the flow change to the next state
   }, [flow, past, future, handleFlowChange]);
 
   const handleOpenFlow = useCallback(
@@ -2361,7 +2366,8 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       updateCyclesCount,
       setBlockInputGroup,
       handleBlockChanges,
-      setBlockRemote
+      setBlockRemote,
+      findBlocks
     },
     dnd: {
       dndTweaks,
