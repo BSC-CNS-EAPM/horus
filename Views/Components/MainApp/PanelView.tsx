@@ -537,7 +537,10 @@ async function defaultConfig({
 
   const molHidden = window?.horusSettings?.["molstarHidden"]?.value;
   if (urlProps.has("molstar") || !molHidden) {
-    api.addPanel({ ...MOLSTAR_PANEL, inactive: !urlProps.has("molstar") });
+    api.addPanel({
+      ...MOLSTAR_PANEL
+      // inactive: !urlProps.has("molstar") || !molHidden
+    });
   }
   if (urlProps.has("ext")) {
     const page: PluginPage = {
