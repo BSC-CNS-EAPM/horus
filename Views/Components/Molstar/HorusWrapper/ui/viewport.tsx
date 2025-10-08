@@ -2,7 +2,6 @@ import { PluginUIComponent } from "molstar/lib/mol-plugin-ui/base";
 import {
   AnimationViewportControls,
   LociLabels,
-  SelectionViewportControls,
   TrajectoryViewportControls
 } from "molstar/lib/mol-plugin-ui/controls";
 import { BackgroundTaskProgress } from "molstar/lib/mol-plugin-ui/task";
@@ -12,6 +11,7 @@ import { ViewportCanvas } from "molstar/lib/mol-plugin-ui/viewport/canvas";
 import { useEffect, useState } from "react";
 import { Smiles2DMolstarViewportComponent } from "../../../Smiles/SmilesViewport";
 import { isMolstarLoaded, MolstarEvents } from "../horusmolstar";
+import { HorusSelectionControls } from "./CustomSelectionControls/MolstarSelectionControls";
 
 export class HorusMolstarViewportComponent extends PluginUIComponent {
   override render() {
@@ -26,7 +26,7 @@ export class HorusMolstarViewportComponent extends PluginUIComponent {
           </div>
         </div>
         <EmptyMolstarHelp />
-        <SelectionViewportControls />
+        <HorusSelectionControls />
         <ViewportControls />
         <BackgroundTaskProgress />
         <div className="msp-highlight-toast-wrapper">

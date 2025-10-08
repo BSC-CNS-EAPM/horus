@@ -42,6 +42,7 @@ import AppButton from "@/Components/appbutton";
 import HorusSwitch from "@/Components/Switch/switch";
 import HorusMolstar, { MolInfoWithRef, MolstarEvents } from "../horusmolstar";
 import { SingleStructureView } from "./CustomStateTree/CustomStateTree";
+import { MeasurementsCard } from "./CustomStateTree/MeasurementsSection";
 import RotatingLines from "@/Components/RotatingLines/rotatinglines";
 
 export class CustomImportControls extends PluginUIComponent<{
@@ -450,6 +451,7 @@ function SimpleStateTree() {
 
   return (
     <>
+      <MeasurementsCard />
       <div className="flex flex-col gap-1 p-2">
         <div className="flex flex-row items-center space-x-2">
           <input
@@ -516,6 +518,11 @@ function OpenFileStructure() {
       {/* Fetch from PDB */}
       <div className="flex space-x-2 w-full">
         <input
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              fetchPDB();
+            }
+          }}
           type="text"
           placeholder="PDB ID"
           value={pdbID}

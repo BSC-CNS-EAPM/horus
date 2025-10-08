@@ -17,9 +17,11 @@ import { PluginConfig } from "molstar/lib/mol-plugin/config";
 import { Script } from "molstar/lib/mol-script/script";
 import { StructureSelection } from "molstar/lib/mol-model/structure/query";
 import {
+  Frame,
   Structure,
   StructureElement,
   StructureProperties,
+  Time,
   Unit
 } from "molstar/lib/mol-model/structure";
 import { Loci as LociType } from "molstar/lib/mol-model/structure/structure/element/loci";
@@ -34,11 +36,12 @@ import {
   StructureComponentRef,
   StructureRef
 } from "molstar/lib/mol-plugin-state/manager/structure/hierarchy-state";
-import { Vec3 } from "molstar/lib/mol-math/linear-algebra";
+import { Mat4, Vec3 } from "molstar/lib/mol-math/linear-algebra";
 import { Expression } from "molstar/lib/mol-script/language/expression";
 
 import { Mp4Export } from "molstar/lib/extensions/mp4-export";
 import {
+  StateObjectCell,
   StateObjectRef,
   StateObjectSelector,
   StateSelection
@@ -46,6 +49,41 @@ import {
 import { BuiltInTrajectoryFormats } from "molstar/lib/mol-plugin-state/formats/trajectory";
 import { HorusMolstarViewportComponent } from "./ui/viewport";
 import { HorusLeftPanelControls } from "./ui/HorusLeftPanelControls";
+
+// Optimization types
+export interface OptimizationProgress {
+  step: number;
+  totalSteps: number;
+  message: string;
+  intermediatePdb?: string;
+  newCoords?: { frame: number; coords: number[][] };
+  completed?: boolean;
+}
+
+export interface OptimizationResult {
+  optimizedStructure: string;
+  trajectory: number[][][];
+}
+
+type OptimizationConstraints = {
+  mode: "freeze" | "flexible";
+  atoms: {
+    chain: string;
+    residue?: number;
+    atom?: number;
+  }[];
+};
+export interface OptimizationOptions {
+  constraints?: OptimizationConstraints;
+  steps?: number;
+  chunk?: number;
+  forceField?: "uff" | "mmff94" | "ghemical";
+  steepestDescent?: boolean;
+  conjugateGradients?: boolean;
+  steepestDescentThreshold?: number;
+  conjugateGradientsThreshold?: number;
+  onProgress?: (progress: OptimizationProgress) => void;
+}
 import {
   ModelFromTrajectory,
   TrajectoryFromModelAndCoordinates
@@ -69,6 +107,9 @@ import { ColorName, HexColor } from "molstar/lib/extensions/mvs/helpers/utils";
 import { OrderedSet, Segmentation } from "molstar/lib/mol-data/int";
 import { UnitIndex } from "molstar/lib/mol-model/structure/structure/element/util";
 import { InteractivityManager } from "molstar/lib/mol-plugin-state/manager/interactivity";
+import { superpose } from "molstar/lib/mol-model/structure/structure/util/superposition";
+import { StructureSelectionHistoryEntry } from "molstar/lib/mol-plugin-state/manager/structure/selection";
+import { SymmetryOperator } from "molstar/lib/mol-math/geometry";
 
 // Definition of useful types
 export type AtomInfo = {
@@ -263,6 +304,21 @@ export type MolecularSelection = {
   within_distance?: WithinDistance;
 };
 
+export type AlignmentOptions = {
+  chain: string;
+  residue?: number;
+};
+
+interface LociEntry {
+  loci: StructureElement.Loci;
+  label: string;
+  cell: StateObjectCell<PluginStateObject.Molecule.Structure>;
+}
+
+interface AtomsLociEntry extends LociEntry {
+  atoms: StructureSelectionHistoryEntry[];
+}
+
 export function isMolstarLoaded(
   molstar: typeof window.molstar
 ): molstar is HorusMolstar {
@@ -272,10 +328,24 @@ export function isMolstarLoaded(
 export default class HorusMolstar {
   plugin: PluginUIContext | null = null;
   target: HTMLDivElement;
+  private openBabelWorker: Worker;
+  private optimizationPromises: Map<
+    string,
+    {
+      resolve: (value: OptimizationResult) => void;
+      reject: (reason: any) => void;
+      onProgress?: (progress: OptimizationProgress) => void;
+    }
+  > = new Map();
 
   constructor(target: HTMLDivElement, options?: MolstarInitOptions) {
     this.target = target;
     this.initPlugin(options);
+
+    this.openBabelWorker = new Worker(
+      // @ts-ignore
+      new URL("../../OpenBabel/openBabel.worker.js", import.meta.url)
+    );
   }
 
   private async initPlugin(options?: MolstarInitOptions) {
@@ -366,6 +436,12 @@ export default class HorusMolstar {
         tags
       );
     };
+
+    // await this.loadMoleculeFile(
+    //   await window.horus
+    //     .getFile("/Users/cdominguez/Downloads/test_allpdb_3_copy.pdb")
+    //     .then((blob) => new File([blob], "test_allpdb_3_copy.pdb"))
+    // );
   }
 
   private molstarEvents() {
@@ -1806,8 +1882,27 @@ export default class HorusMolstar {
     );
   }
 
-  private getStructureFromLoci(loci: StructureElement.Location<Unit>): MolInfo {
-    const lociID = loci.structure.model.id;
+  public getStructureFromLoci<T extends boolean = false>(
+    loci: StructureElement.Location<Unit> | StructureElement.Loci,
+    options: {
+      includeRef: T;
+    } = { includeRef: false } as { includeRef: T }
+  ): T extends true ? MolInfoWithRef : MolInfo {
+    // Handle both Location and Loci types
+    let location: StructureElement.Location<Unit>;
+    if ("kind" in loci && loci.kind === "element-loci") {
+      // It's a StructureElement.Loci, get the first location
+      const firstLocation = StructureElement.Loci.getFirstLocation(loci);
+      if (!firstLocation) {
+        throw new Error("Could not get first location from loci");
+      }
+      location = firstLocation;
+    } else {
+      // It's already a StructureElement.Location<Unit>
+      location = loci as StructureElement.Location<Unit>;
+    }
+
+    const lociID = location.structure.model.id;
 
     const structure = this.listStructures({ includeRef: true }).find((s) =>
       s.structureRef.cell.obj?.data.units
@@ -1818,13 +1913,17 @@ export default class HorusMolstar {
     if (!structure)
       throw new Error("Could not find structure for the given loci");
 
+    if (options?.includeRef) {
+      return structure;
+    }
+
     // Remove the structureRef, the structure already contains the ID, and the structureRef
     // is a big object which we prefer to not include. In case a developer needs it,
     // it can be accessed from the listStructures({includeRef: true}) method.
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { structureRef, ...structureWithoutRef } = structure;
 
-    return structureWithoutRef satisfies MolInfo;
+    return structureWithoutRef as T extends true ? MolInfoWithRef : MolInfo;
   }
 
   private extractAtomInfo(
@@ -2929,6 +3028,520 @@ export default class HorusMolstar {
     );
 
     return components.length;
+  }
+
+  private atomEntries() {
+    const plugin = this.plugin;
+
+    if (!plugin) return [];
+
+    const structureEntries = new Map<
+      Structure,
+      StructureSelectionHistoryEntry[]
+    >();
+    const history = plugin.managers.structure.selection.additionsHistory;
+
+    for (let i = 0, il = history.length; i < il; ++i) {
+      const e = history[i]!;
+
+      // if (StructureElement.Loci.size(e.loci) !== 1) continue;
+
+      const k = e.loci.structure;
+      if (structureEntries.has(k)) structureEntries.get(k)!.push(e);
+      else structureEntries.set(k, [e]);
+    }
+
+    const entries: AtomsLociEntry[] = [];
+    structureEntries.forEach((atoms, structure) => {
+      const cell = plugin.helpers.substructureParent.get(structure)!;
+
+      const elements: StructureElement.Loci["elements"][0][] = [];
+      for (let i = 0, il = atoms.length; i < il; ++i) {
+        // note, we don't do loci union here to keep order of selected atoms
+        // for atom pairing during superposition
+        elements.push(atoms[i]!.loci.elements[0]!);
+      }
+
+      const loci = StructureElement.Loci(atoms[0]!.loci.structure, elements);
+      const label = loci.structure.label.split(" | ")[0]!;
+      entries.push({ loci, label, cell, atoms });
+    });
+    return entries;
+  }
+
+  public getRootStructure(s: Structure) {
+    const parent = this.plugin!.helpers.substructureParent.get(s)!;
+    const rootData = this.plugin!.state.data.selectQ((q) =>
+      q.byValue(parent).rootOfType(PluginStateObject.Molecule.Structure)
+    )[0]?.obj?.data;
+
+    return rootData;
+  }
+
+  async transform(
+    s: StateObjectRef<PluginStateObject.Molecule.Structure>,
+    matrix: Mat4,
+    coordinateSystem?: SymmetryOperator
+  ) {
+    const plugin = this.plugin;
+    if (!plugin) return;
+
+    const r = StateObjectRef.resolveAndCheck(plugin.state.data, s);
+    if (!r) return;
+    const o = plugin.state.data.selectQ((q) =>
+      q
+        .byRef(r.transform.ref)
+        .subtree()
+        .withTransformer(StateTransforms.Model.TransformStructureConformation)
+    )[0];
+
+    const transform =
+      coordinateSystem && !Mat4.isIdentity(coordinateSystem.matrix)
+        ? Mat4.mul(Mat4(), coordinateSystem.matrix, matrix)
+        : matrix;
+
+    const params = {
+      transform: {
+        name: "matrix" as const,
+        params: { data: transform, transpose: false }
+      }
+    };
+    const b = o
+      ? plugin.state.data.build().to(o).update(params)
+      : plugin.state.data
+          .build()
+          .to(s)
+          .insert(
+            StateTransforms.Model.TransformStructureConformation,
+            params,
+            { tags: "SuperpositionTransform" }
+          );
+    await plugin.runTask(plugin.state.data.updateTree(b));
+  }
+
+  public async alignAtoms() {
+    const plugin = this.plugin;
+    if (!plugin) return;
+
+    const entries = this.atomEntries();
+
+    let atomLocis: StructureElement.Loci[];
+    try {
+      atomLocis = entries.map((e) => {
+        const rootS = this.getRootStructure(e.loci.structure);
+
+        if (!rootS) {
+          return e.loci;
+        }
+
+        return StructureElement.Loci.remap(e.loci, rootS);
+      });
+    } catch (e) {
+      console.error("Error during loci remapping:", e);
+      return;
+    }
+
+    if (atomLocis.length < 2) {
+      alert(
+        "At least two different structures must be selected for alignment."
+      );
+      return;
+    }
+
+    const transforms = superpose(atomLocis);
+
+    const pivot = plugin.managers.structure.hierarchy.findStructure(
+      atomLocis[0]?.structure
+    );
+    const coordinateSystem = pivot?.transform?.cell.obj?.data.coordinateSystem;
+
+    for (let i = 1, il = atomLocis.length; i < il; ++i) {
+      const eB = entries[i]!;
+      const { bTransform } = transforms[i - 1]!;
+      await this.transform(eB.cell, bTransform, coordinateSystem);
+    }
+  }
+
+  /**
+   * Aligns multiple structures based on a root structure and target structures.
+   *
+   * This method is intended to align a set of target structures to a specified root structure.
+   * The alignment process typically involves superimposing the target structures onto the root
+   * structure based on their atomic coordinates. The method currently serves as a placeholder
+   * for future implementation.
+   * * @param {object} params The parameters for the alignment.
+   * @param {string} params.root The label of the root structure to align to.
+   * @param {string[]} params.targets An array of labels for the target structures to be aligned.
+   *
+   * @returns {void}
+   *
+   * @throws {Error} If there is an issue with the alignment process or if the specified structures are invalid.
+   */
+  // public async align({ root, targets }: { root: string; targets: string[] }) {
+  public async alignStructures({
+    root,
+    targets
+  }: {
+    root: Structure;
+    targets: Structure[];
+    options?: AlignmentOptions;
+  }) {
+    if (!root) {
+      console.error(`Root structure data not found for alignment`);
+      return;
+    }
+
+    const plugin = this.plugin;
+    if (!plugin) return;
+
+    // Get the loci representation of the structures
+    const datasLoci = [root, ...targets].map((s) =>
+      Structure.toStructureElementLoci(s)
+    );
+
+    // Get the matris transform to superpose the structures
+    const transforms = superpose(datasLoci);
+
+    // Apply transformations
+    // TODO: Animate the transition between states
+    for (let i = 0; i < targets.length; i++) {
+      const t = targets[i];
+
+      const bTransform = transforms[i]?.bTransform;
+
+      if (!bTransform || !t) continue;
+
+      // Apply the transform
+      const params = {
+        transform: {
+          name: "matrix" as const,
+          params: { data: bTransform, transpose: false }
+        }
+      };
+
+      const cell = plugin.managers.structure.hierarchy.findStructure(t);
+
+      if (!cell) continue;
+
+      const task = plugin.state.data
+        .build()
+        .to(cell.cell)
+        .insert(StateTransforms.Model.TransformStructureConformation, params, {
+          tags: "Superposition"
+        });
+
+      await plugin.runTask(plugin.state.data.updateTree(task));
+    }
+  }
+
+  public async optimizeMolecule({
+    structure,
+    loadResult = true,
+    options
+  }: {
+    structure: MolInfoWithRef;
+    loadResult?: boolean;
+    options?: OptimizationOptions;
+  }) {
+    if (!structure) {
+      console.error(`Structure data not found for optimization`);
+      return null;
+    }
+
+    const plugin = this.plugin;
+    if (!plugin) {
+      console.error("Plugin not initialized");
+      return null;
+    }
+
+    if (!structure.fileContents) {
+      console.error("Structure file contents not available");
+      return null;
+    }
+
+    const optimizationId = this.generateOptimizationId();
+
+    const promise = new Promise<OptimizationResult>((resolve, reject) => {
+      this.optimizationPromises.set(optimizationId, {
+        resolve,
+        reject,
+        onProgress: options?.onProgress
+      });
+    });
+
+    // Set up message handler if not already done
+    if (!this.openBabelWorker.onmessage) {
+      this.openBabelWorker.onmessage = (event) => {
+        const { result, error, conversionId, progress, trajectory } =
+          event.data;
+        const promiseHandlers = this.optimizationPromises.get(conversionId);
+
+        if (promiseHandlers) {
+          if (error) {
+            promiseHandlers.reject(new Error(error));
+            this.optimizationPromises.delete(conversionId);
+          } else if (progress) {
+            // Handle progress updates
+            if (promiseHandlers.onProgress) {
+              promiseHandlers.onProgress(progress);
+            }
+
+            // If optimization is completed
+            if (progress.completed && result) {
+              promiseHandlers.resolve({
+                optimizedStructure: result,
+                trajectory: trajectory || []
+              });
+              this.optimizationPromises.delete(conversionId);
+
+              // Optionally load the optimized structure & restore the original modificated structure
+              if (loadResult) {
+                const optimizedLabel = `${structure.label}_optimized.${
+                  structure.format
+                }`;
+                this.loadOptimizedStructure(result, optimizedLabel);
+
+                console.log("Loaded optimized structure:", optimizedLabel);
+
+                // Restore original structure
+                const existingTransform = this.plugin!.state.data.selectQ((q) =>
+                  q
+                    .byRef(structure.structureRef.model!.cell.transform.ref)
+                    .subtree()
+                    .withTransformer(StateTransforms.Model.ModelWithCoordinates)
+                )[0];
+
+                if (existingTransform) {
+                  // If ModelWithCoordinates transform exists, remove it to revert to original
+                  this.plugin!.state.data.build()
+                    .to(existingTransform)
+                    .update({
+                      atomicCoordinateFrame: undefined
+                    })
+                    .commit();
+                }
+              }
+            }
+          } else if (result) {
+            // Handle final result without progress
+            promiseHandlers.resolve({
+              optimizedStructure: result,
+              trajectory: trajectory || []
+            });
+            this.optimizationPromises.delete(conversionId);
+
+            // Optionally load the optimized structure & restore the original modificated structure
+            if (loadResult) {
+              const optimizedLabel = `${structure.label}_optimized.${
+                structure.format
+              }`;
+              this.loadOptimizedStructure(result, optimizedLabel);
+
+              console.log("Loaded optimized structure:", optimizedLabel);
+
+              // Restore original structure
+              const existingTransform = this.plugin!.state.data.selectQ((q) =>
+                q
+                  .byRef(structure.structureRef.model!.cell.transform.ref)
+                  .subtree()
+                  .withTransformer(StateTransforms.Model.ModelWithCoordinates)
+              )[0];
+
+              if (existingTransform) {
+                // If ModelWithCoordinates transform exists, remove it to revert to original
+                this.plugin!.state.data.build()
+                  .delete(existingTransform)
+                  .commit();
+              }
+            }
+          }
+        }
+      };
+
+      this.openBabelWorker.onerror = (error) => {
+        console.error("Optimization worker error:", error);
+        // Reject all pending promises
+        this.optimizationPromises.forEach(({ reject }) => {
+          reject(new Error("Worker error occurred"));
+        });
+        this.optimizationPromises.clear();
+      };
+    }
+
+    // Send optimization task to worker
+    this.openBabelWorker.postMessage({
+      task: "optimize",
+      molecule: structure.fileContents,
+      options: {
+        inputFormat: structure.format || "pdb",
+        outputFormat: "pdb",
+        constraints: options?.constraints || [],
+        steps: options?.steps || 200,
+        chunk: options?.chunk || 10,
+        forceField: options?.forceField || "uff"
+      },
+      conversionId: optimizationId,
+      baseURL: location.origin + (window as any).__HORUS_ROOT__
+    });
+
+    return promise;
+  }
+
+  private generateOptimizationId(): string {
+    return Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+  }
+
+  /**
+   * Loads an optimized structure back into Molstar
+   *
+   * @param optimizedPdb - The optimized PDB structure content
+   * @param label - Label for the new structure
+   * @param replaceOriginal - Whether to replace the original structure or add as new
+   */
+  public async loadOptimizedStructure(
+    optimizedPdb: string,
+    label: string = "Optimized Structure"
+  ) {
+    if (!this.plugin) {
+      console.error("Plugin not initialized");
+      return null;
+    }
+
+    try {
+      // Create a blob from the PDB content
+      const blob = new Blob([optimizedPdb], { type: "text/plain" });
+      const file = new File([blob], `${label}.pdb`, { type: "text/plain" });
+
+      // Load the optimized structure
+      const result = await this.loadMoleculeFile(file, {
+        label: label
+      });
+
+      return result;
+    } catch (error) {
+      console.error("Error loading optimized structure:", error);
+      return null;
+    }
+  }
+
+  // /**
+  //  * Optimizes a specific residue in a structure and optionally loads the result
+  //  *
+  //  * @param structureLabel - Label of the structure to optimize
+  //  * @param chainId - Chain ID containing the residue to optimize
+  //  * @param residueNumber - Residue number to optimize
+  //  * @param optimizationOptions - Additional optimization parameters
+  //  */
+  // public async optimizeResidue({
+  //   targetStructure,
+  //   loadResult = true,
+  //   ...optimizationOptions
+  // }: {
+  //   targetStructure: MolInfo;
+  //   loadResult?: boolean;
+  // } & OptimizationOptions) {
+  //   if (!targetStructure) {
+  //     console.error(`Structure missing or not found`);
+  //     return null;
+  //   }
+
+  //   try {
+  //     // Perform optimization
+  //     const result = await this.optimizeMolecule({
+  //       structure: targetStructure,
+  //       options: {
+  //         chainId,
+  //         residueNumber,
+  //         ...optimizationOptions
+  //       }
+  //     });
+
+  //     if (!result) {
+  //       console.error("Optimization failed");
+  //       return null;
+  //     }
+
+  //     // Optionally load the optimized structure
+  //     if (loadResult) {
+  //       const optimizedLabel = `${targetStructure.label}_optimized_${chainId}_${residueNumber}.${targetStructure.format}`;
+  //       await this.loadOptimizedStructure(
+  //         result.optimizedStructure,
+  //         optimizedLabel
+  //       );
+  //     }
+
+  //     return result;
+  //   } catch (error) {
+  //     console.error("Error during residue optimization:", error);
+  //     return null;
+  //   }
+  // }
+
+  public async updateCoordinates(
+    structure: MolInfoWithRef,
+    newCoordinates: { frame: number; coords: number[][] }
+  ) {
+    const model = structure.structureRef.model?.cell.obj?.data;
+
+    if (!model) {
+      console.error("Model not found for the given structure reference");
+      return;
+    }
+
+    const atomCount = model.atomicHierarchy.atoms._rowCount;
+    const { coords } = newCoordinates;
+
+    // Create NEW coordinate arrays from the new coordinates
+    const x = new Float32Array(atomCount);
+    const y = new Float32Array(atomCount);
+    const z = new Float32Array(atomCount);
+
+    // Apply the new coordinates
+    for (let i = 0; i < Math.min(atomCount, coords.length); i++) {
+      x[i] = coords[i]![0]!;
+      y[i] = coords[i]![1]!;
+      z[i] = coords[i]![2]!;
+    }
+
+    // Create a NEW Frame object each time - this is crucial!
+    // The ModelWithCoordinates transform uses reference equality check
+    const frame: Frame = {
+      elementCount: atomCount,
+      time: Time(newCoordinates.frame, "step"),
+      x,
+      y,
+      z,
+      xyzOrdering: { isIdentity: true }
+    };
+
+    // Check if ModelWithCoordinates transform already exists
+    const existingTransform = this.plugin!.state.data.selectQ((q) =>
+      q
+        .byRef(structure.structureRef.model!.cell.transform.ref)
+        .subtree()
+        .withTransformer(StateTransforms.Model.ModelWithCoordinates)
+    )[0];
+
+    if (existingTransform) {
+      // Update existing ModelWithCoordinates transform
+      await this.plugin!.state.data.build()
+        .to(existingTransform)
+        .update({
+          frameIndex: newCoordinates.frame,
+          atomicCoordinateFrame: frame
+        })
+        .commit();
+    } else {
+      // Apply new ModelWithCoordinates transform
+      await this.plugin!.state.data.build()
+        .to(structure.structureRef.model!.cell)
+        .apply(StateTransforms.Model.ModelWithCoordinates, {
+          frameIndex: newCoordinates.frame,
+          frameCount: 1,
+          atomicCoordinateFrame: frame
+        })
+        .commit();
+    }
   }
 
   /**
