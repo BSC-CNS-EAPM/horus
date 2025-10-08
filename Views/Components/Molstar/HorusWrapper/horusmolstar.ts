@@ -2203,7 +2203,7 @@ export default class HorusMolstar {
       : this.structures();
 
     if (label && structuresToList.length === 0) {
-      throw new Error(`No structure with label '${label}'`);
+      return {};
     }
 
     const atoms: { [id: string]: AtomInfo[] } = {};
@@ -2347,7 +2347,7 @@ export default class HorusMolstar {
       : this.structures();
 
     if (label && structuresToList.length === 0) {
-      throw new Error(`No structure with label '${label}'`);
+      return [];
     }
 
     // Map each structure to its list of hetero residues
@@ -2378,7 +2378,7 @@ export default class HorusMolstar {
       : this.structures();
 
     if (label && structuresToList.length === 0) {
-      throw new Error(`No structure with label '${label}'`);
+      return [];
     }
 
     // Map each structure to its list of hetero residues
@@ -2409,7 +2409,7 @@ export default class HorusMolstar {
       : this.structures();
 
     if (label && structuresToList.length === 0) {
-      throw new Error(`No structure with label '${label}'`);
+      return [];
     }
 
     // Map each structure to its list of hetero residues

@@ -431,7 +431,7 @@ export default class HorusSmilesManager {
       this.parseMolstarSDFFileAsSmiles(structure);
     } else {
       const heteroAtomsList = isMolstarLoaded(window.molstar)
-        ? window?.molstar?.listHeteroAtoms(structureLabel)[structure.id]
+        ? window?.molstar?.listHeteroAtoms()[structure.id]
         : [];
       if (!heteroAtomsList) {
         return;

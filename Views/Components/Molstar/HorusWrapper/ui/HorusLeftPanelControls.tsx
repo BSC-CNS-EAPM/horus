@@ -465,7 +465,7 @@ function SimpleStateTree() {
           <span>Show / hide all</span>
         </div>
         {loadedStructures.map((s) => (
-          <SingleStructureView structure={s} />
+          <SingleStructureView key={s.id} structure={s} />
         ))}
       </div>
       <div className="flex flex-col justify-center items-center gap-2">
@@ -514,7 +514,7 @@ function OpenFileStructure() {
   }
 
   return (
-    <div className="space-y-2 w-[250px] mb-2">
+    <div className="space-y-2 w-[250px]">
       {/* Fetch from PDB */}
       <div className="flex space-x-2 w-full">
         <input
@@ -538,15 +538,22 @@ function OpenFileStructure() {
       <AppButton
         className="w-full"
         action={() => {
-          window.horus.openExtensionFilePicker?.({
-            onFileConfirm(file) {
-              window.horus.getFile(file).then((b) => {
-                const filename = file.split("/").pop() || "molecule";
-                const f = new File([b], filename);
-                window.molstar?.loadMoleculeFile(f, { label: filename });
+          window.horus
+            .openExtensionFilePicker?.({
+              label: "Select structure file"
+            })
+            .then((filePath) => {
+              if (!filePath) return;
+
+              return window.horus.getFile(filePath).then((buffer) => {
+                const filename = filePath.split("/").pop() || "molecule";
+                const file = new File([buffer], filename);
+                window.molstar?.loadMoleculeFile(file, { label: filename });
               });
-            }
-          });
+            })
+            .catch(() => {
+              alert("Failed to load the selected file.");
+            });
         }}
       >
         Open file
@@ -595,11 +602,15 @@ function OpenTrajectoryStructure() {
           });
 
           if (top && trajectory) {
-            molstar.loadTrajectory({
-              topology: top,
-              trajectory: trajectory,
-              label: top.name
-            });
+            molstar
+              .loadTrajectory({
+                topology: top,
+                trajectory: trajectory,
+                label: top.name
+              })
+              .catch((e) => {
+                alert(`Failed to load trajectory: ${e.message || e}`);
+              });
           }
         }}
       >

@@ -26,6 +26,9 @@ import { useAlert } from "../HorusPrompt/horus_alert";
 import { usePrompt } from "../HorusPrompt/horus_prompt";
 import { FlowBuilderContext } from "../MainApp/PanelView";
 
+// Global variable to store the last visited path
+let lastVisitedPath: string | null = null;
+
 function getDirOfPath(path?: string | null) {
   if (!path) return null;
 
@@ -105,6 +108,7 @@ function useServerExplorer(
         path:
           openPath ??
           currentPath.current ??
+          lastVisitedPath ??
           getDirOfPath(flowBuilderContext?.flow?.flow?.path),
         extensions: extensions,
         openFolder: openFolder,
@@ -126,6 +130,15 @@ function useServerExplorer(
 
       setFiles(data.contents);
       setFolderChain(data.folderChain);
+
+      // Update the last visited path
+      if (data.folderChain && data.folderChain.length > 0) {
+        const currentFolderPath =
+          data.folderChain[data.folderChain.length - 1]?.path;
+        if (currentFolderPath) {
+          lastVisitedPath = currentFolderPath;
+        }
+      }
 
       // If the selected path is null, set it to the current path if we are on folder mode
       if (!selectedFile && openFolder) {
@@ -169,6 +182,7 @@ function useServerExplorer(
     if (action["id"] === "open_files") {
       if (targetFile && targetFile.isDir) {
         currentPath.current = targetFile["path"];
+        lastVisitedPath = targetFile["path"];
         fetchFolders();
       }
     }
@@ -591,6 +605,9 @@ function ServerFileExplorerModal(props: ServerFileExplorerModalProps) {
         if (!fileProps?.openFolder) {
           openAtPath = getDirOfPath(openAtPath) ?? undefined;
         }
+      } else {
+        // If no openAtPath is provided, use the last visited path
+        openAtPath = lastVisitedPath ?? undefined;
       }
 
       setGoToPath(openAtPath ?? "");
@@ -927,14 +944,21 @@ function openExtensionFilePicker(
     globalFilePicker.id = GLOBAL_IDS.EXTENSIONS_FILEPICKER;
     document.body.appendChild(globalFilePicker);
 
+    const handleFileConfirm = (selectedPath: string | null) => {
+      resolve(selectedPath);
+      selectedPath && options?.onFileConfirm?.(selectedPath);
+      options?.onClose?.(selectedPath);
+      if (globalFilePicker) {
+        globalFilePicker.remove();
+      }
+    };
+
     render(
       <HorusFileExplorer
         {...options}
         openDirectly
-        onClose={(selectedPath) => {
-          resolve(selectedPath);
-          options?.onClose?.(selectedPath);
-        }}
+        onFileConfirm={handleFileConfirm}
+        onClose={handleFileConfirm}
       />,
       globalFilePicker
     );
