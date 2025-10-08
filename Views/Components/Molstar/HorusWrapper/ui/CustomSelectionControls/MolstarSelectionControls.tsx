@@ -72,10 +72,9 @@ import {
   ViewportHelpContent
 } from "molstar/lib/mol-plugin-ui/viewport/help";
 import { AddComponentControls } from "molstar/lib/mol-plugin-ui/structure/components";
-// Horus-specific imports
 import {
-  IconArrowsMinimize,
-  IconGradienter,
+  IconLayersSelectedBottom,
+  IconMathMin,
   IconRulerMeasure
 } from "@tabler/icons-react";
 import HorusMolstar, { isMolstarLoaded } from "../../horusmolstar";
@@ -894,9 +893,7 @@ class StructureSelectionActionsControls extends PluginUIComponent<
                       : "Selected residues will be frozen while others move freely."
                   }`}
                   onClick={this.optimize}
-                  icon={
-                    this.state.isOptimizing ? undefined : IconArrowsMinimize
-                  }
+                  icon={this.state.isOptimizing ? undefined : IconMinimize}
                   disabled={this.isOptimizeDisabled}
                 >
                   {this.state.isOptimizing ? (
@@ -986,7 +983,7 @@ class StructureSelectionActionsControls extends PluginUIComponent<
                         } selections from your selection history`
                   }
                   onClick={this.addMeasurement}
-                  icon={IconRulerMeasure}
+                  icon={IconMeasure}
                   disabled={this.isDisabled}
                 >
                   {this.state.measurementMode === "auto"
@@ -1046,7 +1043,7 @@ class StructureSelectionActionsControls extends PluginUIComponent<
             />
           )}
           <ToggleButton
-            icon={IconArrowsMinimize}
+            icon={IconMinimize}
             title="ForceField Optimization"
             toggle={this.toggleOptimize}
             isSelected={this.state.action === "optimize"}
@@ -1056,11 +1053,11 @@ class StructureSelectionActionsControls extends PluginUIComponent<
           <Button
             title="Align selected structures"
             onClick={this.align}
-            icon={IconGradienter}
+            icon={IconAlign}
             disabled={this.nothingSelected || this.state.isOptimizing}
           />
           <ToggleButton
-            icon={IconRulerMeasure}
+            icon={IconMeasure}
             title="Structural Measurements"
             toggle={this.toggleMeasure}
             isSelected={this.state.action === "measure"}
@@ -1262,4 +1259,34 @@ export class HorusSelectionControls extends PluginUIComponent {
       </div>
     );
   }
+}
+
+function IconMinimize() {
+  return (
+    <IconMathMin
+      style={{
+        fill: "none"
+      }}
+    />
+  );
+}
+
+function IconMeasure() {
+  return (
+    <IconRulerMeasure
+      style={{
+        fill: "none"
+      }}
+    />
+  );
+}
+
+function IconAlign() {
+  return (
+    <IconLayersSelectedBottom
+      style={{
+        fill: "none"
+      }}
+    />
+  );
 }
