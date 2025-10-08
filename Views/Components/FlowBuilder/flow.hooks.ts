@@ -1005,24 +1005,21 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
   );
 
   // Helper function that efficiently returns the blocks with the given placedID
-  const findBlocks = (blockIDs: Array<number>): Array<Block> | null => {
-    let currentBlocks: Block[] = [];
-    setFlow((current) => {
-      currentBlocks = current.blocks;
-      return current;
-    });
+  const findBlocks = useCallback(
+    (blockIDs: Array<number>): Array<Block> | null => {
+      // Map the blocks by their placedID
+      const blockMap = new Map<number, Block>();
+      flow.blocks.forEach((block) => blockMap.set(block.placedID, block));
 
-    // Map the blocks by their placedID
-    const blockMap = new Map<number, Block>();
-    currentBlocks.forEach((block) => blockMap.set(block.placedID, block));
+      // Generate a new list based on the map
+      const found = blockIDs
+        .map((blockID) => blockMap.get(blockID))
+        .filter(Boolean) as Block[];
 
-    // Generate a new list based on the map
-    const found = blockIDs
-      .map((blockID) => blockMap.get(blockID))
-      .filter(Boolean) as Block[];
-
-    return found.length > 0 ? found : null;
-  };
+      return found.length > 0 ? found : null;
+    },
+    [flow]
+  );
 
   // Called every time a block is placed or moved
   const handleDragEnd = (event: DragEndEvent) => {
