@@ -94,7 +94,7 @@ export default class HorusSmilesManager {
 
     this.openBabelWorker = new Worker(
       // @ts-ignore
-      new URL("./moleculeConverter.worker.js", import.meta.url)
+      new URL("../../OpenBabel/openBabel.worker.js", import.meta.url)
     );
 
     const constructedSmilesEventUpdater =
@@ -1078,6 +1078,7 @@ export default class HorusSmilesManager {
     }
 
     this.openBabelWorker.postMessage({
+      task: "convert",
       molecule,
       options,
       conversionId,
