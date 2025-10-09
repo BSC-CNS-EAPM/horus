@@ -260,7 +260,9 @@ export function MeasurementsCard() {
 
   const clearAllMeasurements = async () => {
     if (
-      confirm(`Are you sure you want to delete all ${totalCount} measurements?`)
+      await confirm(
+        `Are you sure you want to delete all ${totalCount} measurements?`
+      )
     ) {
       try {
         const promises = allMeasurements.map(({ cell }) =>
