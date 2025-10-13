@@ -13,7 +13,6 @@ import typing
 import traceback
 import datetime
 import io
-import mimetypes
 
 # Decorators
 from functools import wraps
@@ -233,6 +232,8 @@ class HorusServer:
                 sock.bind((localIp or self.host, self.port))
             except OSError as ose:
                 raise Exception(f"Adress {self.baseURL} is already in use") from ose
+            finally:
+                sock.close()
 
         logging.getLogger("Horus").info("Host: %s", self.host)
         logging.getLogger("Horus").info("Port: %s", self.port)
@@ -340,12 +341,15 @@ class HorusServer:
 
         # Check that the port is not in use
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        while True:
-            try:
-                sock.bind((self.host, port))
-                break
-            except OSError:
-                port = random.randint(3000, 9000)
+        try:
+            while True:
+                try:
+                    sock.bind((self.host, port))
+                    break
+                except OSError:
+                    port = random.randint(3000, 9000)
+        finally:
+            sock.close()
 
         return port
 

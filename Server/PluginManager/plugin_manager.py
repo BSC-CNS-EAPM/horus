@@ -7,7 +7,6 @@ importantly, it manages the execution of the individual blocks of the plugins.
 
 # Standard imports
 from collections import defaultdict, deque
-from ctypes import Union
 from multiprocessing import Process
 import os
 import signal
@@ -37,15 +36,11 @@ import importlib.util
 # For the PrintCapturer class
 from contextlib import contextmanager, redirect_stdout, redirect_stderr
 
-# For the PluginDeps class
 import pkg_resources
 
 # For the SocketIO type completion
 from flask_socketio import SocketIO
 import flask_login
-
-from HorusAPI import CustomBlockParser
-from Server.Utils import PrintTruncator
 
 # Plugin deps context manager, forking the process prevents
 # importend modules from being imported twice
@@ -56,6 +51,7 @@ else:
 
 # More types from the HorusAPI
 from HorusAPI import (
+    CustomBlockParser,
     Plugin,
     PluginBlock,
     PluginPage,
@@ -67,6 +63,8 @@ from HorusAPI import (
     __version__ as HorusAPIVersion,
     Status,
 )
+
+from Server.Utils import PrintTruncator
 
 # Import the RemoteManager for the block's remote
 from Server.RemotesManager import RemotesManager, CommandFailed
@@ -1414,7 +1412,8 @@ class PluginManager(metaclass=HorusSingleton):
                 # Some python packages need to be built from source,
                 # and the bundled pip cannot handle this.
                 # For such cases, Horus will use the python interpreter set in the settings.
-                interpreter = [self._getExternalInterpreter(), "-m", "pip"]
+                external_python = ExternalPython(self.horusSettings)
+                interpreter = external_python.get_pip_command()
                 interpreterCMD = " ".join(interpreter)
                 logging.getLogger("Horus").error(
                     "Trying with external python interpreter '%s'.", interpreterCMD
@@ -1425,82 +1424,6 @@ class PluginManager(metaclass=HorusSingleton):
                     f"Failed to install dependency {dep}. External interpreter error: {str(exc2)}"
                 )
                 raise Exception(msg) from exc2
-
-    def _getExternalInterpreter(self) -> str:
-        """
-        This method checks and verifies the defined interpreter set in the settings.
-        """
-
-        from App import AppDelegate
-
-        interpreter: str = "python"
-        try:
-            interpreter = str(
-                self.horusSettings.getSetting("dependenciesInterpreter").value
-            ).strip()
-        except Exception as e:
-            msg = f"Could not get the python interpreter from the user settings: {e}. "
-            msg += "Defaulting to path 'python' interpreter."
-            print(msg)
-
-        # Check if the python interpreter is valid
-        try:
-            p = subprocess.Popen(
-                [interpreter, "--version"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                stdin=subprocess.PIPE,
-            )
-        except Exception as e:
-            raise Exception(
-                f"Could not execute '{interpreter}' command. {e}."
-                + " Make sure you have selected a valid interpreter in the settings."
-            ) from e
-
-        # Wait for the process to finish
-        p.wait()
-
-        # Get the result
-        if p.stdout is None:
-            raise Exception("Could not get the intalled python interpreter version.")
-
-        version = p.stdout.read().decode("utf-8").strip().split(" ")[-1]
-
-        try:
-            appPythonVersion = AppDelegate().APP_INFO["PYTHON_VERSION"]
-        except Exception as exc:
-            raise Exception(f"Could not get the python version from the app info: {exc}") from exc
-
-        exceptionMsg = (
-            "In order to install additional dependencies, "
-            "you need to have a valid python interpreter "
-            f"installed on your system with python v{appPythonVersion}. "
-            "You can select a specific interpreter in the settings."
-        )
-
-        # Check the return code
-        if p.returncode != 0 and p.returncode is not None:
-            raise Exception(exceptionMsg)
-
-        # Check that the major and minor version of python matches
-        major = version.split(".")[0]
-        minor = version.split(".")[1]
-
-        appVersionMajor = appPythonVersion.split(".")[0]
-        appVersionMinor = appPythonVersion.split(".")[1]
-
-        majorMatches = major == appVersionMajor
-        minorMatches = minor == appVersionMinor
-
-        # Both major and minor versions must match (eg. 3.9.12 == 3.9.15)
-        # Patch versions are ignored
-        bothMatch = majorMatches and minorMatches
-
-        if not bothMatch:
-            exceptionMsg += f" (Currently detected python v{version})"
-            raise Exception(exceptionMsg)
-
-        return interpreter
 
     def getPlugins(self) -> dict:
         """
@@ -2602,3 +2525,327 @@ class SubprocessManager:
             """
 
             self.wait(timeout=timeout)
+
+
+class ExternalPython:
+    """
+    Manages an external Python installation for plugin dependency management.
+
+    This class provides validation, version checking, and execution capabilities
+    for external Python interpreters used by Horus plugins.
+    """
+
+    def __init__(self, settingsManager: typing.Optional["SettingsManager"] = None):
+        """
+        Initialize the ExternalPython manager.
+
+        Args:
+            settingsManager: Optional SettingsManager instance. If None, will create one.
+        """
+        self._interpreter_path: typing.Optional[str] = None
+        self._validated: bool = False
+        self._version: typing.Optional[str] = None
+        self._settingsManager = settingsManager
+
+        # Cache for validated interpreters to avoid repeated validation
+        self._validation_cache: typing.Dict[str, typing.Tuple[bool, str]] = {}
+
+    @property
+    def settingsManager(self) -> "SettingsManager":
+        """Get or create the settings manager."""
+        if self._settingsManager is None:
+            from Server.SettingsManager import SettingsManager
+            from App import AppDelegate
+
+            self._settingsManager = SettingsManager(AppDelegate().appSupportDir)
+        return self._settingsManager
+
+    @property
+    def interpreter_path(self) -> str:
+        """
+        Get the validated Python interpreter path.
+
+        Returns:
+            The path to the validated Python interpreter.
+
+        Raises:
+            Exception: If the interpreter cannot be validated.
+        """
+        if not self._validated or self._interpreter_path is None:
+            self._validate_interpreter()
+
+        # After validation, _interpreter_path should never be None
+        assert (
+            self._interpreter_path is not None
+        ), "Interpreter path should be set after validation"
+        return self._interpreter_path
+
+    @property
+    def version(self) -> str:
+        """
+        Get the Python version of the interpreter.
+
+        Returns:
+            The version string of the Python interpreter.
+
+        Raises:
+            Exception: If the interpreter has not been validated.
+        """
+        if not self._validated or self._version is None:
+            self._validate_interpreter()
+
+        # After validation, _version should never be None
+        assert self._version is not None, "Version should be set after validation"
+        return self._version
+
+    def _get_interpreter_from_settings(self) -> str:
+        """
+        Get the interpreter path from settings.
+
+        Returns:
+            The interpreter path from settings, defaults to 'python' if not found.
+        """
+        try:
+            interpreter = str(
+                self.settingsManager.getSetting("dependenciesInterpreter").value
+            ).strip()
+            return interpreter if interpreter else "python"
+        except Exception as e:
+            logging.getLogger("Horus").warning(
+                "Could not get the python interpreter from settings: %s. "
+                "Defaulting to 'python'.",
+                str(e),
+            )
+            return "python"
+
+    def _get_required_version(self) -> str:
+        """
+        Get the required Python version from app info.
+
+        Returns:
+            The required Python version string.
+
+        Raises:
+            Exception: If the app version cannot be determined.
+        """
+        try:
+            from App import AppDelegate
+
+            return AppDelegate().APP_INFO["PYTHON_VERSION"]
+        except Exception as exc:
+            raise Exception(f"Could not get the python version from the app info: {exc}") from exc
+
+    def _check_interpreter_executable(
+        self, interpreter_path: str
+    ) -> typing.Tuple[bool, str, str]:
+        """
+        Check if the interpreter is executable and get its version.
+
+        Args:
+            interpreter_path: Path to the Python interpreter.
+
+        Returns:
+            Tuple of (is_valid, version_string, error_message)
+        """
+        try:
+            # Try to execute the interpreter with --version
+            process = subprocess.Popen(
+                [interpreter_path, "--version"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                stdin=subprocess.PIPE,
+                text=True,
+            )
+
+            stdout, _ = process.communicate()
+
+            if process.returncode != 0:
+                return False, "", f"Interpreter returned exit code {process.returncode}"
+
+            if not stdout:
+                return False, "", "Could not get version output from interpreter"
+
+            # Extract version from output (e.g., "Python 3.9.15" -> "3.9.15")
+            version_parts = stdout.strip().split()
+            if len(version_parts) < 2:
+                return False, "", f"Unexpected version output format: {stdout.strip()}"
+
+            version = version_parts[-1]
+            return True, version, ""
+
+        except FileNotFoundError:
+            return False, "", f"Interpreter '{interpreter_path}' not found"
+        except Exception as e:
+            return False, "", f"Error executing interpreter: {str(e)}"
+
+    def _validate_version_compatibility(
+        self, interpreter_version: str, required_version: str
+    ) -> typing.Tuple[bool, str]:
+        """
+        Validate that the interpreter version is compatible with the required version.
+
+        Args:
+            interpreter_version: Version of the interpreter.
+            required_version: Required version from app info.
+
+        Returns:
+            Tuple of (is_compatible, error_message)
+        """
+        try:
+            # Parse versions
+            interpreter_parts = interpreter_version.split(".")
+            required_parts = required_version.split(".")
+
+            if len(interpreter_parts) < 2 or len(required_parts) < 2:
+                return (
+                    False,
+                    f"Invalid version format: interpreter={interpreter_version}, required={required_version}",
+                )
+
+            # Check major and minor versions (ignore patch version)
+            interpreter_major = interpreter_parts[0]
+            interpreter_minor = interpreter_parts[1]
+            required_major = required_parts[0]
+            required_minor = required_parts[1]
+
+            if interpreter_major != required_major or interpreter_minor != required_minor:
+                return False, (
+                    f"Python version mismatch: interpreter v{interpreter_version} "
+                    f"does not match required v{required_version}. "
+                    f"Major and minor versions must match (e.g., 3.9.x == 3.9.y)"
+                )
+
+            return True, ""
+
+        except Exception as e:
+            return False, f"Error comparing versions: {str(e)}"
+
+    def _validate_interpreter(self, force: bool = False) -> None:
+        """
+        Validate the Python interpreter from settings.
+
+        Args:
+            force: If True, force re-validation even if already validated.
+
+        Raises:
+            Exception: If the interpreter cannot be validated.
+        """
+        if self._validated and not force:
+            return
+
+        interpreter_path = self._get_interpreter_from_settings()
+
+        # Check cache first
+        if interpreter_path in self._validation_cache and not force:
+            is_valid, cached_version = self._validation_cache[interpreter_path]
+            if is_valid:
+                self._interpreter_path = interpreter_path
+                self._version = cached_version
+                self._validated = True
+                return
+
+        # Validate the interpreter
+        is_executable, version, exec_error = self._check_interpreter_executable(interpreter_path)
+
+        if not is_executable:
+            error_msg = (
+                f"Could not execute '{interpreter_path}' command. {exec_error}. "
+                "Make sure you have selected a valid interpreter in the settings."
+            )
+            raise Exception(error_msg)
+
+        # Get required version and validate compatibility
+        required_version = self._get_required_version()
+        is_compatible, version_error = self._validate_version_compatibility(
+            version, required_version
+        )
+
+        if not is_compatible:
+            error_msg = (
+                "In order to install additional dependencies, "
+                "you need to have a valid python interpreter "
+                f"installed on your system with python v{required_version}. "
+                "You can select a specific interpreter in the settings. "
+                f"{version_error}"
+            )
+            raise Exception(error_msg)
+
+        # Cache the result
+        self._validation_cache[interpreter_path] = (True, version)
+
+        # Set instance variables
+        self._interpreter_path = interpreter_path
+        self._version = version
+        self._validated = True
+
+        logging.getLogger("Horus").info(
+            "Validated External Python interpreter: %s (version %s)", interpreter_path, version
+        )
+
+    def get_pip_command(self) -> typing.List[str]:
+        """
+        Get the pip command for this interpreter.
+
+        Returns:
+            List of command parts for executing pip with this interpreter.
+
+        Raises:
+            Exception: If the interpreter is not validated.
+        """
+        return [self.interpreter_path, "-m", "pip"]
+
+    def execute_command(self, command: typing.List[str], **kwargs) -> subprocess.Popen:
+        """
+        Execute a command with this Python interpreter.
+
+        Args:
+            command: Command to execute (without the interpreter part).
+            **kwargs: Additional arguments for subprocess.Popen.
+
+        Returns:
+            subprocess.Popen instance.
+
+        Raises:
+            Exception: If the interpreter is not validated.
+        """
+        full_command = [self.interpreter_path] + command
+        return subprocess.Popen(full_command, **kwargs)
+
+    def validate(self, force: bool = False) -> bool:
+        """
+        Validate the interpreter and return whether it's valid.
+
+        Args:
+            force: If True, force re-validation even if already validated.
+
+        Returns:
+            True if valid, False otherwise.
+        """
+        try:
+            self._validate_interpreter(force=force)
+            return True
+        except Exception:
+            return False
+
+    def get_info(self) -> typing.Dict[str, typing.Any]:
+        """
+        Get information about the interpreter.
+
+        Returns:
+            Dictionary with interpreter information.
+        """
+        try:
+            self._validate_interpreter()
+            return {
+                "path": self._interpreter_path,
+                "version": self._version,
+                "validated": self._validated,
+                "pip_command": self.get_pip_command(),
+            }
+        except Exception as e:
+            return {
+                "path": self._get_interpreter_from_settings(),
+                "version": None,
+                "validated": False,
+                "error": str(e),
+            }

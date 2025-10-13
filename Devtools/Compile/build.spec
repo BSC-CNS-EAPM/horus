@@ -6,7 +6,7 @@ import os
 import shutil
 import sys
 
-from PyInstaller.utils.hooks import collect_submodules
+from PyInstaller.utils.hooks import collect_submodules, collect_all
 
 
 # Before compiling horus, we need to bundle pip to be used by Horus
@@ -225,6 +225,13 @@ if ".el8." in os.popen("uname -a").read():
     ]
 
 binaries = []
+# Include all of debugpy and its vendored components
+debugpy_datas, debugpy_binaries, debugpy_hiddenimports = collect_all("debugpy")
+datas += debugpy_datas
+binaries += debugpy_binaries
+imports += debugpy_hiddenimports
+imports += collect_submodules("xmlrpc")
+
 
 debug = False
 
