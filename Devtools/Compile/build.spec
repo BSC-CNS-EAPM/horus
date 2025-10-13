@@ -204,6 +204,10 @@ imports += [
 # Include filecmp for ESMFold plugin
 imports += ["filecmp"]
 
+# HTML parser for the WebScraper plugin
+imports_parser = collect_submodules("html")
+imports += imports_parser
+
 # Check that all the modules are installed in the environment
 for module in imports:
     try:
@@ -225,6 +229,7 @@ if ".el8." in os.popen("uname -a").read():
     ]
 
 binaries = []
+
 # Include all of debugpy and its vendored components
 debugpy_datas, debugpy_binaries, debugpy_hiddenimports = collect_all("debugpy")
 datas += debugpy_datas
