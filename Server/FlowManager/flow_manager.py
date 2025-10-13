@@ -2284,6 +2284,9 @@ class FlowManager:
         if AppDelegate().verbose:
             optionalOptions += ["-V"]
 
+        if AppDelegate().debugPlugins:
+            optionalOptions += ["--debug-plugins"]
+
         command = command + requiredOptions + optionalOptions
 
         generalSettings = AppDelegate().server._settingsManager
