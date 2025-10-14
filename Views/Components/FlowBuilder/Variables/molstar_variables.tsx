@@ -910,16 +910,74 @@ export function AtomView(props: VariableViewProps) {
     </div>
   );
 }
+
+type BoxVariableData = {
+  metrics: {
+    x0: number | string;
+    y0: number | string;
+    z0: number | string;
+    x1: number | string;
+    y1: number | string;
+    z1: number | string;
+    x2: number | string;
+    y2: number | string;
+    z2: number | string;
+    x3: number | string;
+    y3: number | string;
+    z3: number | string;
+  };
+  radiusScale: number | string;
+  radialSegments: number | string;
+  ref: BoxRef | null;
+};
 export function BoxVariableView(props: VariableViewProps) {
   const { currentValue, variable, onChange } = props;
 
-  const boxRef = useRef<BoxRef | null>(currentValue?.ref ?? null);
+  const typedCurrentValue = currentValue as BoxVariableData | null;
+  const boxRef = useRef<BoxRef | null>(typedCurrentValue?.ref ?? null);
 
   const [active, setActive] = useState(false);
   const [activeColor, setActiveColor] = useState(
     boxRef.current ? Color.toHexStyle(boxRef.current.color) : "#a5d6a7"
   );
   const mounted = useRef(false);
+
+  // Helper function to create complete metrics with defaults
+  const createUpdatedMetrics = useCallback(
+    (updates: Partial<BoxVariableData["metrics"]>) => {
+      const defaults = {
+        x0: 0,
+        y0: 0,
+        z0: 0,
+        x1: 5,
+        y1: 0,
+        z1: 0,
+        x2: 0,
+        y2: 5,
+        z2: 0,
+        x3: 0,
+        y3: 0,
+        z3: 5
+      };
+
+      return {
+        x0: typedCurrentValue?.metrics?.x0 ?? defaults.x0,
+        y0: typedCurrentValue?.metrics?.y0 ?? defaults.y0,
+        z0: typedCurrentValue?.metrics?.z0 ?? defaults.z0,
+        x1: typedCurrentValue?.metrics?.x1 ?? defaults.x1,
+        y1: typedCurrentValue?.metrics?.y1 ?? defaults.y1,
+        z1: typedCurrentValue?.metrics?.z1 ?? defaults.z1,
+        x2: typedCurrentValue?.metrics?.x2 ?? defaults.x2,
+        y2: typedCurrentValue?.metrics?.y2 ?? defaults.y2,
+        z2: typedCurrentValue?.metrics?.z2 ?? defaults.z2,
+        x3: typedCurrentValue?.metrics?.x3 ?? defaults.x3,
+        y3: typedCurrentValue?.metrics?.y3 ?? defaults.y3,
+        z3: typedCurrentValue?.metrics?.z3 ?? defaults.z3,
+        ...updates
+      };
+    },
+    [typedCurrentValue]
+  );
 
   const handleChange = useCallback(
     async (
@@ -1009,12 +1067,12 @@ export function BoxVariableView(props: VariableViewProps) {
         },
         radiusScale: radiusScale,
         radialSegments: radialSegments,
-        ref: ref
+        ref: ref || boxRef.current
       };
 
       onChange(boxData);
     },
-    [onChange]
+    [onChange, active, mounted]
   );
 
   // When unmounting, remove the box
@@ -1031,26 +1089,17 @@ export function BoxVariableView(props: VariableViewProps) {
       if (active) {
         const data = (e as CustomEvent).detail;
         handleChange(
-          {
+          createUpdatedMetrics({
             x0: data.x,
             y0: data.y,
-            z0: data.z,
-            x1: currentValue.metrics.x1,
-            y1: currentValue.metrics.y1,
-            z1: currentValue.metrics.z1,
-            x2: currentValue.metrics.x2,
-            y2: currentValue.metrics.y2,
-            z2: currentValue.metrics.z2,
-            x3: currentValue.metrics.x3,
-            y3: currentValue.metrics.y3,
-            z3: currentValue.metrics.z3
-          },
-          currentValue?.radiusScale ?? 10,
-          currentValue?.radialSegments ?? 2
+            z0: data.z
+          }),
+          typedCurrentValue?.radiusScale ?? 10,
+          typedCurrentValue?.radialSegments ?? 2
         );
       }
     },
-    [active, currentValue, handleChange]
+    [active, typedCurrentValue, handleChange, createUpdatedMetrics]
   );
 
   // Place the box in the center of the screen
@@ -1136,29 +1185,14 @@ export function BoxVariableView(props: VariableViewProps) {
           <input
             id={`${variable.id}-x`}
             className="plugin-variable-value text-black"
-            value={currentValue?.metrics?.x0 ?? ""}
+            value={typedCurrentValue?.metrics?.x0 ?? 0}
             onChange={(e) => {
               handleChange(
-                {
-                  // CHANGE
-                  x0: parseNumberOrNegative(e.target.value),
-
-                  //UNCHANGED
-
-                  y0: currentValue?.metrics?.y0,
-                  z0: currentValue?.metrics?.z0,
-                  y1: currentValue?.metrics?.y1,
-                  x1: currentValue?.metrics?.x1,
-                  z1: currentValue?.metrics?.z1,
-                  x2: currentValue?.metrics?.x2,
-                  y2: currentValue?.metrics?.y2,
-                  z2: currentValue?.metrics?.z2,
-                  x3: currentValue?.metrics?.x3,
-                  y3: currentValue?.metrics?.y3,
-                  z3: currentValue?.metrics?.z3
-                },
-                currentValue?.radiusScale,
-                currentValue?.radialSegments
+                createUpdatedMetrics({
+                  x0: parseNumberOrNegative(e.target.value)
+                }),
+                typedCurrentValue?.radiusScale ?? 10,
+                typedCurrentValue?.radialSegments ?? 1
               );
             }}
           />
@@ -1175,29 +1209,14 @@ export function BoxVariableView(props: VariableViewProps) {
           <input
             id={`${variable.id}-y`}
             className="plugin-variable-value text-black"
-            value={currentValue?.metrics?.y0 ?? 0}
+            value={typedCurrentValue?.metrics?.y0 ?? 0}
             onChange={(e) => {
               handleChange(
-                {
-                  // CHANGE
-                  y0: parseNumberOrNegative(e.target.value),
-
-                  //UNCHANGED
-
-                  x0: currentValue?.metrics?.x0,
-                  z0: currentValue?.metrics?.z0,
-                  x1: currentValue?.metrics?.x1,
-                  y1: currentValue?.metrics?.y1,
-                  z1: currentValue?.metrics?.z1,
-                  x2: currentValue?.metrics?.x2,
-                  y2: currentValue?.metrics?.y2,
-                  z2: currentValue?.metrics?.z2,
-                  x3: currentValue?.metrics?.x3,
-                  y3: currentValue?.metrics?.y3,
-                  z3: currentValue?.metrics?.z3
-                },
-                currentValue?.radiusScale,
-                currentValue?.radialSegments
+                createUpdatedMetrics({
+                  y0: parseNumberOrNegative(e.target.value)
+                }),
+                typedCurrentValue?.radiusScale ?? 10,
+                typedCurrentValue?.radialSegments ?? 1
               );
             }}
           />
@@ -1214,29 +1233,14 @@ export function BoxVariableView(props: VariableViewProps) {
           <input
             id={`${variable.id}-z`}
             className="plugin-variable-value text-black"
-            value={currentValue?.metrics?.z0 ?? 0}
+            value={typedCurrentValue?.metrics?.z0 ?? 0}
             onChange={(e) => {
               handleChange(
-                {
-                  // CHANGE
-                  z0: parseNumberOrNegative(e.target.value),
-
-                  //UNCHANGED
-
-                  x0: currentValue?.metrics?.x0,
-                  y0: currentValue?.metrics?.y0,
-                  x1: currentValue?.metrics?.x1,
-                  y1: currentValue?.metrics?.y1,
-                  z1: currentValue?.metrics?.z1,
-                  x2: currentValue?.metrics?.x2,
-                  y2: currentValue?.metrics?.y2,
-                  z2: currentValue?.metrics?.z2,
-                  x3: currentValue?.metrics?.x3,
-                  y3: currentValue?.metrics?.y3,
-                  z3: currentValue?.metrics?.z3
-                },
-                currentValue?.radiusScale,
-                currentValue?.radialSegments
+                createUpdatedMetrics({
+                  z0: parseNumberOrNegative(e.target.value)
+                }),
+                typedCurrentValue?.radiusScale ?? 10,
+                typedCurrentValue?.radialSegments ?? 1
               );
             }}
           />
@@ -1255,29 +1259,14 @@ export function BoxVariableView(props: VariableViewProps) {
           <input
             id={`${variable.id}-x`}
             className="plugin-variable-value text-black"
-            value={currentValue?.metrics?.x1 ?? ""}
+            value={typedCurrentValue?.metrics?.x1 ?? 5}
             onChange={(e) => {
               handleChange(
-                {
-                  // CHANGE
-                  x1: parseNumberOrNegative(e.target.value),
-
-                  //UNCHANGED
-
-                  x0: currentValue?.metrics?.x0,
-                  y0: currentValue?.metrics?.y0,
-                  z0: currentValue?.metrics?.z0,
-                  y1: currentValue?.metrics?.y1,
-                  z1: currentValue?.metrics?.z1,
-                  x2: currentValue?.metrics?.x2,
-                  y2: currentValue?.metrics?.y2,
-                  z2: currentValue?.metrics?.z2,
-                  x3: currentValue?.metrics?.x3,
-                  y3: currentValue?.metrics?.y3,
-                  z3: currentValue?.metrics?.z3
-                },
-                currentValue?.radiusScale,
-                currentValue?.radialSegments
+                createUpdatedMetrics({
+                  x1: parseNumberOrNegative(e.target.value)
+                }),
+                typedCurrentValue?.radiusScale ?? 10,
+                typedCurrentValue?.radialSegments ?? 1
               );
             }}
           />
@@ -1294,29 +1283,14 @@ export function BoxVariableView(props: VariableViewProps) {
           <input
             id={`${variable.id}-y`}
             className="plugin-variable-value text-black"
-            value={currentValue?.metrics?.y2 ?? 0}
+            value={typedCurrentValue?.metrics?.y2 ?? 5}
             onChange={(e) => {
               handleChange(
-                {
-                  // CHANGE
-                  y2: parseNumberOrNegative(e.target.value),
-
-                  //UNCHANGED
-
-                  x0: currentValue?.metrics?.x0,
-                  y0: currentValue?.metrics?.y0,
-                  z0: currentValue?.metrics?.z0,
-                  x1: currentValue?.metrics?.x1,
-                  y1: currentValue?.metrics?.y1,
-                  z1: currentValue?.metrics?.z1,
-                  x2: currentValue?.metrics?.x2,
-                  z2: currentValue?.metrics?.z2,
-                  x3: currentValue?.metrics?.x3,
-                  y3: currentValue?.metrics?.y3,
-                  z3: currentValue?.metrics?.z3
-                },
-                currentValue?.radiusScale,
-                currentValue?.radialSegments
+                createUpdatedMetrics({
+                  y2: parseNumberOrNegative(e.target.value)
+                }),
+                typedCurrentValue?.radiusScale ?? 10,
+                typedCurrentValue?.radialSegments ?? 1
               );
             }}
           />
@@ -1333,29 +1307,14 @@ export function BoxVariableView(props: VariableViewProps) {
           <input
             id={`${variable.id}-z`}
             className="plugin-variable-value text-black"
-            value={currentValue?.metrics?.z3 ?? 0}
+            value={typedCurrentValue?.metrics?.z3 ?? 5}
             onChange={(e) => {
               handleChange(
-                {
-                  // CHANGE
-                  z3: parseNumberOrNegative(e.target.value),
-
-                  //UNCHANGED
-
-                  x0: currentValue?.metrics?.x0,
-                  y0: currentValue?.metrics?.y0,
-                  z0: currentValue?.metrics?.z0,
-                  x1: currentValue?.metrics?.x1,
-                  y1: currentValue?.metrics?.y1,
-                  z1: currentValue?.metrics?.z1,
-                  x2: currentValue?.metrics?.x2,
-                  y2: currentValue?.metrics?.y2,
-                  z2: currentValue?.metrics?.z2,
-                  x3: currentValue?.metrics?.x3,
-                  y3: currentValue?.metrics?.y3
-                },
-                currentValue?.radiusScale,
-                currentValue?.radialSegments
+                createUpdatedMetrics({
+                  z3: parseNumberOrNegative(e.target.value)
+                }),
+                typedCurrentValue?.radiusScale ?? 10,
+                typedCurrentValue?.radialSegments ?? 1
               );
             }}
           />
@@ -1398,10 +1357,21 @@ export function BoxVariableView(props: VariableViewProps) {
   );
 }
 
+type SphereVariableData = {
+  center: {
+    x: number | string;
+    y: number | string;
+    z: number | string;
+  };
+  radius: number | string;
+  ref: SphereRef | null;
+};
+
 export function SphereVariableView(props: VariableViewProps) {
   const { currentValue, variable, onChange } = props;
 
-  const sphereRef = useRef<SphereRef | null>(currentValue?.ref ?? null);
+  const typedCurrentValue = currentValue as SphereVariableData | null;
+  const sphereRef = useRef<SphereRef | null>(typedCurrentValue?.ref ?? null);
 
   const [active, setActive] = useState(false);
   const [activeColor, setActiveColor] = useState(
@@ -1417,7 +1387,7 @@ export function SphereVariableView(props: VariableViewProps) {
         z: number | string;
       },
       radius: number | string
-    ) => {
+    ): Promise<void> => {
       const parsedSphereNumbers = {
         x: Number(position.x),
         y: Number(position.y),
@@ -1457,19 +1427,19 @@ export function SphereVariableView(props: VariableViewProps) {
         }
       }
 
-      const sphereData = {
+      const sphereData: SphereVariableData = {
         center: {
           x: position.x,
           y: position.y,
           z: position.z
         },
         radius: radius,
-        ref: ref
+        ref: ref || sphereRef.current
       };
 
       onChange(sphereData);
     },
-    [onChange]
+    [onChange, active, mounted]
   );
 
   // When unmounting, remove the sphere
@@ -1492,11 +1462,11 @@ export function SphereVariableView(props: VariableViewProps) {
             y: data.y,
             z: data.z
           },
-          currentValue?.radius ?? 10
+          typedCurrentValue?.radius ?? 10
         );
       }
     },
-    [active, currentValue, handleChange]
+    [active, typedCurrentValue, handleChange]
   );
 
   // Place the sphere in the center of the screen
@@ -1515,8 +1485,8 @@ export function SphereVariableView(props: VariableViewProps) {
     };
   }, [active, handleCoordinates]);
 
-  const handleNewlyPlaced = useCallback(async () => {
-    const sphereData: any = {
+  const handleNewlyPlaced = useCallback(async (): Promise<void> => {
+    const sphereData: SphereVariableData = {
       center: {
         x: 0,
         y: 0,
@@ -1528,8 +1498,12 @@ export function SphereVariableView(props: VariableViewProps) {
 
     if (isMolstarLoaded(window.molstar)) {
       const ref = await window.molstar.addSphere({
-        position: sphereData.center,
-        radius: sphereData.radius,
+        position: {
+          x: Number(sphereData.center.x),
+          y: Number(sphereData.center.y),
+          z: Number(sphereData.center.z)
+        },
+        radius: Number(sphereData.radius),
         opacity: 0.3
       });
 
@@ -1570,15 +1544,15 @@ export function SphereVariableView(props: VariableViewProps) {
           <input
             id={`${variable.id}-x`}
             className="plugin-variable-value text-black"
-            value={currentValue?.center?.x ?? ""}
+            value={typedCurrentValue?.center?.x ?? 0}
             onChange={(e) => {
               handleChange(
                 {
                   x: parseNumberOrNegative(e.target.value),
-                  y: currentValue?.center?.y,
-                  z: currentValue?.center?.z
+                  y: typedCurrentValue?.center?.y ?? 0,
+                  z: typedCurrentValue?.center?.z ?? 0
                 },
-                currentValue?.radius
+                typedCurrentValue?.radius ?? 10
               );
             }}
           />
@@ -1595,15 +1569,15 @@ export function SphereVariableView(props: VariableViewProps) {
           <input
             id={`${variable.id}-y`}
             className="plugin-variable-value text-black"
-            value={currentValue?.center?.y ?? 0}
+            value={typedCurrentValue?.center?.y ?? 0}
             onChange={(e) => {
               handleChange(
                 {
-                  x: currentValue?.center.x,
+                  x: typedCurrentValue?.center?.x ?? 0,
                   y: parseNumberOrNegative(e.target.value),
-                  z: currentValue?.center.z
+                  z: typedCurrentValue?.center?.z ?? 0
                 },
-                currentValue?.radius
+                typedCurrentValue?.radius ?? 10
               );
             }}
           />
@@ -1620,15 +1594,15 @@ export function SphereVariableView(props: VariableViewProps) {
           <input
             id={`${variable.id}-z`}
             className="plugin-variable-value text-black"
-            value={currentValue?.center?.z ?? 0}
+            value={typedCurrentValue?.center?.z ?? 0}
             onChange={(e) => {
               handleChange(
                 {
-                  x: currentValue?.center.x,
-                  y: currentValue?.center.y,
+                  x: typedCurrentValue?.center?.x ?? 0,
+                  y: typedCurrentValue?.center?.y ?? 0,
                   z: parseNumberOrNegative(e.target.value)
                 },
-                currentValue?.radius
+                typedCurrentValue?.radius ?? 10
               );
             }}
           />
@@ -1645,14 +1619,14 @@ export function SphereVariableView(props: VariableViewProps) {
           <input
             id={`${variable.id}-radius`}
             className="plugin-variable-value text-black"
-            value={currentValue?.radius ?? ""}
+            value={typedCurrentValue?.radius ?? 10}
             onChange={(e) => {
               const newRadius = parseNumberOrNegative(e.target.value);
               handleChange(
                 {
-                  x: currentValue.center.x,
-                  y: currentValue.center.y,
-                  z: currentValue.center.z
+                  x: typedCurrentValue?.center?.x ?? 0,
+                  y: typedCurrentValue?.center?.y ?? 0,
+                  z: typedCurrentValue?.center?.z ?? 0
                 },
                 newRadius
               );

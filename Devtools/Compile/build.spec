@@ -6,6 +6,8 @@ import os
 import shutil
 import sys
 
+from PyInstaller.utils.hooks import collect_submodules, collect_all
+
 
 # Before compiling horus, we need to bundle pip to be used by Horus
 # in the plugin manager to install plugin dependencies
@@ -153,6 +155,9 @@ imports = [
     "pydantic",
 ]
 
+# For the email functionality of certain plugins
+imports += collect_submodules("email")
+
 imports += ["engineio", "engineio.async_drivers.threading"]
 
 # Add all the submodules required by flask_socketio
@@ -199,6 +204,10 @@ imports += [
 # Include filecmp for ESMFold plugin
 imports += ["filecmp"]
 
+# HTML parser for the WebScraper plugin
+imports_parser = collect_submodules("html")
+imports += imports_parser
+
 # Check that all the modules are installed in the environment
 for module in imports:
     try:
@@ -220,6 +229,14 @@ if ".el8." in os.popen("uname -a").read():
     ]
 
 binaries = []
+
+# Include all of debugpy and its vendored components
+debugpy_datas, debugpy_binaries, debugpy_hiddenimports = collect_all("debugpy")
+datas += debugpy_datas
+binaries += debugpy_binaries
+imports += debugpy_hiddenimports
+imports += collect_submodules("xmlrpc")
+
 
 debug = False
 

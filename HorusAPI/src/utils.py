@@ -327,7 +327,7 @@ def initPlugin():
     # Inside the plugin folder, create the meta file
     with open(os.path.join(pluginFolder, "plugin.meta"), "w", encoding="utf-8") as f:
         # Dump the JSON meta file
-        f.write(metaModel.json(indent=4))
+        f.write(metaModel.model_dump_json(indent=4))
 
     # Inside the plugin folder, create the plugin file
     with open(os.path.join(pluginFolder, "plugin.py"), "w", encoding="utf-8") as f:

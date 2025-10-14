@@ -144,6 +144,11 @@ function IFrameLoader({
       url = url + "/";
     }
 
+    // If the URL ends with two slashes, remove one (because otherwise, the page won't load)
+    if (url.endsWith("//")) {
+      url = url.slice(0, -1);
+    }
+
     return domain + url;
   };
 

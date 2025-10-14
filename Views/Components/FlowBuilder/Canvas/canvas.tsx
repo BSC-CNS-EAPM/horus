@@ -197,7 +197,10 @@ function FlowNameInput({
 }: {
   flow: Flow;
   saved: boolean;
-  handleFlowChange: (newFlow: Flow) => void;
+  handleFlowChange: (
+    callBack: (lastValue: Flow) => Flow,
+    updateHistory?: boolean
+  ) => void;
 }) {
   return (
     <input
@@ -209,7 +212,9 @@ function FlowNameInput({
       type="text"
       id="flow-name"
       placeholder={"Flow Name"}
-      onChange={(e) => handleFlowChange({ ...flow, name: e.target.value })}
+      onChange={(e) =>
+        handleFlowChange((prev) => ({ ...prev, name: e.target.value }))
+      }
       value={flow.name}
     />
   );

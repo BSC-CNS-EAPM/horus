@@ -25,7 +25,7 @@ import { HorusAnalyticsProvider } from "@/Utils/analytics";
 
 export const SettingsContext = createContext<HorusSettingsObject | null>(null);
 
-export function useSettings() {
+export function useSettingsContext() {
   return useContext(SettingsContext);
 }
 

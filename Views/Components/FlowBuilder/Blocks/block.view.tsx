@@ -22,7 +22,7 @@ import {
 
 // Utilities
 import { modifierKey } from "../../Toolbar/toolbar";
-import { useSettings } from "@/Main/app";
+import { useSettingsContext } from "@/Main/app";
 
 // Variables
 import { PluginVariableView } from "../Variables/variables";
@@ -331,7 +331,7 @@ function BlockTime(props: { time?: number }) {
 }
 
 function BlockNameAndPlacedID({ block }: { block: Block }) {
-  const horusSettings = useSettings();
+  const horusSettings = useSettingsContext();
 
   return (
     <div

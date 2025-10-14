@@ -160,6 +160,8 @@ When developing a plugin, you may want to test it without having to install it i
 When this setting is enabled, a new button in the Bloks sidebar will appear. This button will allow you to reload the plugin without having to restart
 Horus.
 
+For advanced debugging capabilities, including breakpoints and step-by-step execution, see the :ref:`debugpy` section which explains how to use Python's debugpy adapter for plugin debugging.
+
 Furthermore, it is recommended to make a symlink of your plugin development folder in the :bdg-secondary-line:`Plugins` folder of Horus. This way, you can
 develop your plugin in a separate folder and reload it in Horus without having to copy the plugin folder every time a change is made. To do this, you can
 run the following command in your terminal:

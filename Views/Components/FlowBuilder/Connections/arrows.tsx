@@ -10,7 +10,7 @@ import { DroppableEntity, VariableConnection } from "../flow.types";
 import { BlockVarPair } from "../flow.types";
 import { BlockHooks } from "../flow.hooks";
 import { compareAllowedValues } from "../Variables/variable_connections";
-import { useSettings } from "@/Main/app";
+import { useSettingsContext } from "@/Main/app";
 
 type ConnectedArrows = {
   blockHooks: BlockHooks;
@@ -22,7 +22,7 @@ export function ConnectedArrows(props: ConnectedArrows) {
   const start = `output-drag-${props.connection.origin.variableID}-${props.connection.origin.placedID}-connector`;
   const end = `connect-${props.connection.destination.variableID}-${props.connection.destination.placedID}`;
 
-  const settings = useSettings();
+  const settings = useSettingsContext();
 
   const [isHovering, setIsHovering] = useState<boolean>(false);
 
