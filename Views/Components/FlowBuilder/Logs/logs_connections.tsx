@@ -15,7 +15,7 @@ import { Block, FlowStatus, Status, SlurmJob, JobStatus } from "../flow.types";
 import { HorusLazyLog } from "../../HorusLazyLog/HorusLazyLog";
 import { HorusViewTabs, Tab } from "@/Components/Tabs";
 import { FlowBuilderContext } from "@/Components/MainApp/PanelView";
-import { useSettings } from "@/Main/app";
+import { useSettingsContext } from "@/Main/app";
 import { Editor } from "@monaco-editor/react";
 import { IconCode } from "@tabler/icons-react";
 
@@ -44,7 +44,7 @@ function RegularBlockLogs({ block }: { block: Block }) {
 }
 
 function BlockLogsViewWithTabs({ block }: { block: Block }) {
-  const settings = useSettings();
+  const settings = useSettingsContext();
 
   const tabs = () => {
     const t: { [key: string]: Tab } = {};
@@ -52,7 +52,7 @@ function BlockLogsViewWithTabs({ block }: { block: Block }) {
     t["logs"] = {
       title: "Block",
       icon: <LogFile />,
-      view: <RegularBlockLogs block={block} />,
+      view: <RegularBlockLogs block={block} />
     };
 
     // If development mode is enabled, add tabs for viewing the block state
@@ -66,10 +66,10 @@ function BlockLogsViewWithTabs({ block }: { block: Block }) {
             value={JSON.stringify({ ...block, blockLogs: undefined }, null, 2)}
             options={{
               readOnly: true,
-              automaticLayout: true,
+              automaticLayout: true
             }}
           />
-        ),
+        )
       };
     }
 
@@ -96,7 +96,7 @@ function BlockLogsViewWithTabs({ block }: { block: Block }) {
       t[job.JobId] = {
         title: `${job.JobId}`,
         icon: statusNode,
-        view: <SingleSlurmJobView block={block} job={job} />,
+        view: <SingleSlurmJobView block={block} job={job} />
       };
     });
     return t;
@@ -147,12 +147,12 @@ function SingleSlurmJobView({ block, job }: { block: Block; job: SlurmJob }) {
             borderColor: "lightgray",
             fontFamily: "Poppins",
             height: "100%",
-            overflowY: "auto",
+            overflowY: "auto"
           }}
         >
           {detailedStatus}
         </div>
-      ),
+      )
     };
 
     groupedViews["Slurm script"] = {
@@ -166,7 +166,7 @@ function SingleSlurmJobView({ block, job }: { block: Block; job: SlurmJob }) {
             borderColor: "lightgray",
             fontFamily: "Poppins",
             overflow: "hidden",
-            height: "100%",
+            height: "100%"
           }}
         >
           <HorusLazyLog
@@ -175,7 +175,7 @@ function SingleSlurmJobView({ block, job }: { block: Block; job: SlurmJob }) {
             format="shell"
           />
         </div>
-      ),
+      )
     };
 
     groupedViews["Slurm output"] = {
@@ -189,7 +189,7 @@ function SingleSlurmJobView({ block, job }: { block: Block; job: SlurmJob }) {
             borderColor: "lightgray",
             fontFamily: "Poppins",
             overflow: "hidden",
-            height: "100%",
+            height: "100%"
           }}
         >
           <HorusLazyLog
@@ -197,7 +197,7 @@ function SingleSlurmJobView({ block, job }: { block: Block; job: SlurmJob }) {
             filename={`${block.id}-${block.placedID}-${job.JobId}-slurm.out`}
           />
         </div>
-      ),
+      )
     };
 
     groupedViews["Slurm error"] = {
@@ -211,7 +211,7 @@ function SingleSlurmJobView({ block, job }: { block: Block; job: SlurmJob }) {
             borderColor: "lightgray",
             fontFamily: "Poppins",
             overflow: "hidden",
-            height: "100%",
+            height: "100%"
           }}
         >
           <HorusLazyLog
@@ -219,7 +219,7 @@ function SingleSlurmJobView({ block, job }: { block: Block; job: SlurmJob }) {
             filename={`${block.id}-${block.placedID}-${job.JobId}-slurm.err`}
           />
         </div>
-      ),
+      )
     };
 
     return groupedViews;
@@ -239,7 +239,7 @@ function SingleSlurmJobView({ block, job }: { block: Block; job: SlurmJob }) {
           <div
             className="font-semibold text-3xl break-all"
             style={{
-              color: "var(--digital-grey-IV)",
+              color: "var(--digital-grey-IV)"
             }}
           >
             {block.name} - {job.JobId}
@@ -257,7 +257,7 @@ function SingleSlurmJobView({ block, job }: { block: Block; job: SlurmJob }) {
                 const path = "/api/plugins/fetch-job";
                 const data = JSON.stringify({
                   flowPath: flowBuilderContext?.flow.flow.path,
-                  placedID: block.placedID,
+                  placedID: block.placedID
                 });
 
                 flowBuilderContext.flow.hideFlowError.current = true;

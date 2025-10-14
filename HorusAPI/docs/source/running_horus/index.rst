@@ -44,8 +44,10 @@ In addition to command-line options, Horus allows configuration through the foll
 - **HORUS_MODE**: Specifies the application mode. Valid values are ``app``, ``browser``, ``server``, or ``webapp``.
 - **HORUS_PORT**: Defines the port for the Horus server.
 - **HORUS_HOST**: Specifies the host for the Horus server.
-- **HORUS_HOST**: Specifies the host for the Horus server.
 - **HORUS_LOG_LENGTH**: Specifies the maximum length of a log line. This can be useful to prevent memory overflows when printing large chunks of data (Defaults to 500).
+- **HORUS_DEBUG_PLUGINS**: Enables debugpy for plugin debugging. Valid values are ``1``, ``true``, or ``yes``.
+- **HORUS_DEBUGPY_PORT**: Sets the debugpy port for regular application debugging (defaults to 5678).
+- **HORUS_DEBUGPY_FLOW_PORT**: Sets the debugpy port for flow debugging (defaults to 5679).
 
 **App Mode (Default Mode)**
 ---------------------------

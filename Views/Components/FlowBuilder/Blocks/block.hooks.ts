@@ -173,6 +173,15 @@ export function useBlockView({
       if (isFlowActive) {
         return;
       }
+
+      // Get the latest block state from blockHooks to avoid stale closure
+      const latestBlocks = blockHooks?.findBlocks([block.placedID]);
+      const latestBlock = latestBlocks?.[0];
+
+      if (!latestBlock) {
+        return;
+      }
+
       let hasChanged = false;
       const updateValue = (variable: PluginVariable) => {
         if (
@@ -189,21 +198,21 @@ export function useBlockView({
 
       // Update the variable value by searching the PluginVariable by id
       if (groupID) {
-        block.variables.map((variable) => {
+        latestBlock.variables.map((variable: PluginVariable) => {
           if (variable.id === groupID) {
             variable.variables?.map(updateValue);
           }
         });
       } else {
-        block.variables.map(updateValue);
+        latestBlock.variables.map(updateValue);
       }
 
-      // Call the onChange function
+      // Call the onChange function with the latest block state
       if (hasChanged) {
-        blockHooks?.handleBlockChanges([block]);
+        blockHooks?.handleBlockChanges([latestBlock]);
       }
     },
-    [block, blockHooks, isFlowActive]
+    [block.placedID, blockHooks, isFlowActive]
   );
 
   // Update the params of the block variables panel when opened

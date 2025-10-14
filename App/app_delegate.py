@@ -10,9 +10,9 @@ import subprocess
 import webbrowser
 import logging
 import datetime
-import io
 import argparse
 import platform
+import debugpy
 from contextlib import contextmanager
 
 # Import type annotations
@@ -25,7 +25,15 @@ import requests
 import webview
 import webview.menu as wm
 
-from Server.Utils import PrintTruncator
+# Supress several warnings
+import warnings
+
+# For the PluginDeps class
+# Suppress pkg_resources deprecation warnings
+warnings.filterwarnings("ignore", message=".*pkg_resources.*")
+
+# For multiprocessing (leaked semaphore message when closing Horus)
+warnings.filterwarnings("ignore", message=".*resource_tracker.*")
 
 # Multiprocessing
 if typing.TYPE_CHECKING:
@@ -35,12 +43,13 @@ else:
 
 # Server
 from Server import HorusServer
+from Server.Utils import PrintTruncator
 from HorusAPI import HorusSingleton, __version__
 
 # Add to the pythonpath the path of the project
 sys.path.append("../")
 
-FLOWNAME: typing.Optional[str] = None
+FLOWPATH: typing.Optional[str] = None
 """
 Variable only used to log the Flows, not the application itself
 
@@ -152,8 +161,10 @@ class HorusLogger:
             logname += "debug"
 
         # If we are running a flow instead of running Horus, add "flow-{flowname}" to the logname
-        if FLOWNAME:
-            logname += f"-FLOWRUN-{FLOWNAME}"
+        if FLOWPATH:
+            logname += f"-FLOWRUN-{os.path.basename(FLOWPATH).replace('.flow', '')}"
+            self.logDir = os.path.dirname(FLOWPATH)
+            print(f"Logging FLOWRUN to {self.logDir}")
 
         logFile = os.path.join(self.logDir, f"{logname}.log")
 
@@ -164,7 +175,7 @@ class HorusLogger:
         self.latestLogFile = os.path.join(self.logDir, "latest.log")
 
         # Do not create symlink for FLOWRUN logs
-        if not FLOWNAME:
+        if not FLOWPATH:
             # Generate a symlink to the latest log as "latest.log"
             if os.path.exists(self.latestLogFile):
                 os.remove(self.latestLogFile)
@@ -534,6 +545,7 @@ class AppDelegate(metaclass=HorusSingleton):
         port: typing.Optional[int] = None,
         root: typing.Optional[str] = None,
         verbose: bool = False,
+        debugPlugins: bool = False,
     ):
         """
         Initialize the AppDelegate.
@@ -547,6 +559,7 @@ class AppDelegate(metaclass=HorusSingleton):
         self.port = port
         self.root = root
         self.verbose = verbose
+        self.debugPlugins = debugPlugins
 
         self.desktop = self.mode == "app" or self.mode == "browser"
         """
@@ -573,6 +586,48 @@ class AppDelegate(metaclass=HorusSingleton):
         # Start the logger if needed
         self._loadLogger()
 
+    def _loadDebugpy(self):
+        """
+        Prepare debugpy if needed
+        """
+        if self.debugPlugins:
+            self.logger.horus.info("Starting debugpy...")
+
+            # Get debugpy port from environment variables or use defaults
+            if FLOWPATH:
+                # For flows, use HORUS_DEBUGPY_FLOW_PORT or default to 5679
+                default_port = 5679
+                env_var = "HORUS_DEBUGPY_FLOW_PORT"
+            else:
+                # For regular app, use HORUS_DEBUGPY_PORT or default to 5678
+                default_port = 5678
+                env_var = "HORUS_DEBUGPY_PORT"
+
+            debugpy_port = int(os.getenv(env_var) or default_port)
+
+            if not debugpy.is_client_connected():
+
+                # Load the external python manager to get the validated python path
+                from Server.SettingsManager import SettingsManager
+                from Server.PluginManager import ExternalPython
+
+                external_python = ExternalPython(SettingsManager(self.appSupportDir))
+
+                try:
+                    python = external_python.interpreter_path
+                    print(
+                        f"Debugpy started with helper interpreter: {python}. "
+                        f"Waiting for debugger to attach to port {debugpy_port}..."
+                    )
+                    debugpy.configure(python=python)
+                    debugpy.listen(debugpy_port)
+                    debugpy.wait_for_client()
+                    print("Debugger attached.")
+                except KeyboardInterrupt:
+                    print("Debugpy setup interrupted by user.")
+                except Exception as e:
+                    print(f"Warning: Could not configure debugpy with external interpreter: {e}")
+
     def _internalPlatformSetup(self):
         """
         Setup special platform requirements
@@ -587,6 +642,12 @@ class AppDelegate(metaclass=HorusSingleton):
         # Initialize only if not previously initialized
         if hasattr(self, "_server"):
             return
+
+        # Start debugpy if needed
+        # This is done here to ensure the AppDelegate is fully initialized
+        # And has to be made before the init of the server in order
+        # to debug plugin initialization (which happens during server init)
+        self._loadDebugpy()
 
         # Prepare the server
         self._server = HorusServer(
@@ -1130,6 +1191,9 @@ def parseArgs() -> tuple[dict, dict, dict]:
         "--debug", "-d", action="store_true", help="Force the server to run in debug mode."
     )
     parser.add_argument(
+        "--debug-plugins", "-dp", action="store_true", help="Attach a debugger to Horus."
+    )
+    parser.add_argument(
         "--password", help="Password for entering debug mode in the compiled app."
     )
     parser.add_argument(
@@ -1321,8 +1385,8 @@ def parseArgs() -> tuple[dict, dict, dict]:
             print(f"Flow '{flowPath}' does not exist")
             sys.exit(1)
 
-        global FLOWNAME  # pylint: disable=global-statement
-        FLOWNAME = os.path.basename(flowPath).replace(".flow", "")
+        global FLOWPATH  # pylint: disable=global-statement
+        FLOWPATH = flowPath
 
     flowAppSupport = (
         args.flow_appsupport.strip() if args.flow_appsupport else args.flow_appsupport
@@ -1331,6 +1395,13 @@ def parseArgs() -> tuple[dict, dict, dict]:
     continueSlurm = args.continue_slurm
     resetFlow = args.reset_flow
     resetRemoteBlock = args.reset_remote
+
+    # Parse debugpy
+    debugPlugins = args.debug_plugins or os.getenv("HORUS_DEBUG_PLUGINS", "").lower() in (
+        "1",
+        "true",
+        "yes",
+    )
 
     # Parse the arguments
     argsDict = {
@@ -1341,6 +1412,7 @@ def parseArgs() -> tuple[dict, dict, dict]:
         "port": port,
         "root": root,
         "verbose": True if args.verbose else False,
+        "debugPlugins": debugPlugins,
     }
 
     pluginArgs = {"installPlugin": args.install_plugin, "asDefault": args.as_default}

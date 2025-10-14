@@ -38,3 +38,4 @@ dependencies:
       - twine==6.1.0
       - PyYAML==6.0.2
       - pip-licenses==5.0.0
+      - debugpy==1.8.17

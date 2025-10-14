@@ -1015,7 +1015,7 @@ class VariableList(PluginVariable):
             name=name,
             description=description,
             type=VariableTypes._LIST,
-            defaultValue=defaultValue or None,
+            defaultValue=defaultValue,
             allowedValues=allowedValues,
             category=category,
             disabled=disabled,

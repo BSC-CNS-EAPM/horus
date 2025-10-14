@@ -6,4 +6,5 @@ from Server.PluginManager.plugin_manager import (
     PluginDepsBase,
     PrintSocketCapturer,
     SubprocessManager,
+    ExternalPython,
 )  # noqa

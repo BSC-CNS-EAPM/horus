@@ -46,6 +46,12 @@ Usage
     horusapi/flows.rst
 
 .. toctree::
+    :caption: Debugging and Development
+    :maxdepth: 1
+
+    debugging.rst
+
+.. toctree::
     :caption: RemotesAPI
     :maxdepth: 2
 

@@ -94,7 +94,7 @@ export default class HorusSmilesManager {
 
     this.openBabelWorker = new Worker(
       // @ts-ignore
-      new URL("./moleculeConverter.worker.js", import.meta.url)
+      new URL("../../OpenBabel/openBabel.worker.js", import.meta.url)
     );
 
     const constructedSmilesEventUpdater =
@@ -431,7 +431,7 @@ export default class HorusSmilesManager {
       this.parseMolstarSDFFileAsSmiles(structure);
     } else {
       const heteroAtomsList = isMolstarLoaded(window.molstar)
-        ? window?.molstar?.listHeteroAtoms(structureLabel)[structure.id]
+        ? window?.molstar?.listHeteroAtoms()[structure.id]
         : [];
       if (!heteroAtomsList) {
         return;
@@ -1078,6 +1078,7 @@ export default class HorusSmilesManager {
     }
 
     this.openBabelWorker.postMessage({
+      task: "convert",
       molecule,
       options,
       conversionId,

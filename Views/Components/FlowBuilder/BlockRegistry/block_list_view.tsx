@@ -29,7 +29,7 @@ import { SearchComponent } from "@/Components/Search/Search";
 import PluginsIcon from "@/Components/Toolbar/Icons/Plugins";
 import { useQuery } from "@tanstack/react-query";
 import { getPluginLogo } from "@/Components/logo";
-import { useSettings } from "@/Main/app";
+import { useSettingsContext } from "@/Main/app";
 
 // Icons
 import { IconChevronsUp, IconPlus, IconSelector } from "@tabler/icons-react";
@@ -325,7 +325,7 @@ function useCollapsible({
   collapseAllSignal: number;
   showAllSignal: number;
 }) {
-  const setings = useSettings();
+  const setings = useSettingsContext();
 
   const [show, setShow] = useState<boolean>(
     setings?.["collapseBlocks"]?.value ? false : true
@@ -421,6 +421,7 @@ function PluginBlocksGroup({
         {Object.keys(categories).map((k) => {
           return (
             <_CategoryView
+              key={k}
               category={k}
               blocks={categories[k]!}
               collapseAllSignal={collapseAllSignal}
