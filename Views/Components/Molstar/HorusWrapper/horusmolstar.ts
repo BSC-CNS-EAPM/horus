@@ -225,7 +225,7 @@ type _RepresentationThemeOptions<
   S extends SizeTheme.BuiltIn
 > = {
   representation: StructureRepresentationRegistry.BuiltIn;
-  representationParams: ParamDefinition.NamedParams;
+  representationParams: Record<string, any>;
   color?: C;
   size?: S;
   colorParams?: ColorTheme.BuiltInParams<C> & { value: string };
