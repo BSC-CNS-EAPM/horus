@@ -118,7 +118,6 @@ class Extensions(metaclass=SingletonMeta):
         :param title: The title of the 'Result'. \
         This will be displayed on top of the block that produced the HTML.
         :param store: Whether to store the HTML as results or to open it inmediately.
-        :param asString: Whether the passed HTML is a string or an html file.
         """
 
         if html.endswith(".html") and not os.path.exists(html):

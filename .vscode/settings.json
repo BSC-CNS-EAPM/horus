@@ -19,5 +19,6 @@
     "AppSupport/Plugins/**": true,
     "**/.*": true
   },
+  "flake8.args": ["--max-line-length=98"],
   "cSpell.files": ["*.rst"]
 }
