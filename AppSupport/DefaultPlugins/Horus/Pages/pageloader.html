@@ -21,9 +21,9 @@
             `;
       }
       function loadHTML(htmlToLoad) {
-        document.querySelector("html").innerHTML = htmlToLoad;
-        document.documentElement.innerHTML = htmlToLoad;
-        document.getElementsByTagName("html")[0].innerHTML = htmlToLoad;
+        const blob = new Blob([htmlToLoad], { type: "text/html" });
+        const url = URL.createObjectURL(blob);
+        window.location.href = url; // full reload
       }
 
       // Check if the extensionData object is available
