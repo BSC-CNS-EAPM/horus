@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Flow, PluginPage } from "../FlowBuilder/flow.types";
+import { MinimalFlow, PluginPage } from "../FlowBuilder/flow.types";
 import RecentUserFlows, {
   PredefinedFlows,
   useGetRecentFlows
@@ -11,11 +11,13 @@ import { HorusLink } from "../reusable";
 
 export function HorusSearch({ pages }: { pages: PluginPage[] }) {
   const [predefinedFilteredFlows, setPredefinedFilteredFlows] = useState<
-    Flow[]
+    MinimalFlow[]
   >([]);
-  const [recentFilteredFlows, setRecentFilteredFlows] = useState<Flow[]>([]);
+  const [recentFilteredFlows, setRecentFilteredFlows] = useState<MinimalFlow[]>(
+    []
+  );
 
-  const [filteredTemplates, setFilteredTemplates] = useState<Flow[]>([]);
+  const [filteredTemplates, setFilteredTemplates] = useState<MinimalFlow[]>([]);
 
   const [filteredPages, setFilteredPages] = useState<PluginPage[]>(pages);
 
@@ -105,7 +107,7 @@ export function HorusSearch({ pages }: { pages: PluginPage[] }) {
   }
 
   function TemplatesView() {
-    const getURL = (flow: Flow) => {
+    const getURL = (flow: MinimalFlow) => {
       const open = window.location.search.includes("open=true")
         ? "yes"
         : "true";

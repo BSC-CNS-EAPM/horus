@@ -12,7 +12,7 @@ import OpenFlowIcon from "../Toolbar/Icons/Open";
 import CopyIcon from "../Toolbar/Icons/Copy";
 
 // Types
-import { Flow, FlowStatus } from "../FlowBuilder/flow.types";
+import { FlowStatus, MinimalFlow } from "../FlowBuilder/flow.types";
 
 // Styling
 import "./webappflows.css";
@@ -381,7 +381,13 @@ function OtherFileView(props: { directory: FileData; getFlows: () => void }) {
   );
 }
 
-function FlowRowView({ flow, getFlows }: { flow: Flow; getFlows: () => void }) {
+function FlowRowView({
+  flow,
+  getFlows
+}: {
+  flow: MinimalFlow;
+  getFlows: () => void;
+}) {
   return (
     <>
       <div className="text-center overflow-x-auto">{flow.name}</div>
@@ -407,7 +413,13 @@ function FlowRowView({ flow, getFlows }: { flow: Flow; getFlows: () => void }) {
   );
 }
 
-function DeleteFlow({ flow, getFlows }: { flow: Flow; getFlows: () => void }) {
+function DeleteFlow({
+  flow,
+  getFlows
+}: {
+  flow: MinimalFlow;
+  getFlows: () => void;
+}) {
   if (flow.status === FlowStatus.RUNNING || flow.status === FlowStatus.QUEUED) {
     return <div>-</div>;
   }
@@ -425,7 +437,7 @@ function DeleteFlow({ flow, getFlows }: { flow: Flow; getFlows: () => void }) {
   );
 }
 
-function FlowDownload({ flow }: { flow: Flow }) {
+function FlowDownload({ flow }: { flow: MinimalFlow }) {
   const [isDownloading, setIsDownloading] = useState(false);
 
   const horusAlert = useAlert();
@@ -491,7 +503,13 @@ function FlowDownload({ flow }: { flow: Flow }) {
   );
 }
 
-function FlowClone({ flow, getFlows }: { flow: Flow; getFlows: () => void }) {
+function FlowClone({
+  flow,
+  getFlows
+}: {
+  flow: MinimalFlow;
+  getFlows: () => void;
+}) {
   const [isCloning, setIsCloning] = useState(false);
 
   const horusAlert = useAlert();
@@ -562,7 +580,7 @@ function DeleteFlowModal({
   flow,
   getFlows
 }: {
-  flow: Flow;
+  flow: MinimalFlow;
   getFlows: () => void;
 }) {
   // Attach the modal to the body of the document
@@ -577,7 +595,7 @@ function _DeleteFlowModal({
   flow,
   getFlows
 }: {
-  flow: Flow;
+  flow: MinimalFlow;
   getFlows: () => void;
 }) {
   const [isDeleting, setIsDeleting] = useState(false);
