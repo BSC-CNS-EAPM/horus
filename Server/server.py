@@ -970,8 +970,7 @@ class HorusServer:
                             )
 
                     # Convert the flows to JSON
-
-                    flows = [flow.encode() for flow in flows]
+                    flows = [flow.encode(minimal=True) for flow in flows]
 
                     success = {"ok": True, "flows": flows}
             except Exception as exc:
@@ -1093,7 +1092,7 @@ class HorusServer:
                     flow.path = str(UserFileExplorer(path, currentUser).getRelativePath())
 
                 # Get the flow JSON
-                flowJson = {**flow.encode(minimal=False), "preset": flow.isPreset}
+                flowJson = flow.encode(minimal=False)
 
                 success = {"ok": True, "flow": flowJson}
 

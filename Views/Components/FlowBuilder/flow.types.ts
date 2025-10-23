@@ -343,10 +343,7 @@ export class FlowStatusUtil {
   }
 }
 
-/**
- * Represents a flow in the application.
- */
-export type Flow = {
+export type MinimalFlow = {
   /**
    * The ID of the saved flow.
    */
@@ -365,39 +362,14 @@ export type Flow = {
   status: FlowStatus;
   /**
    * The date of the flow.
+   * Represents the ISO string date when the flow was created or last modified.
    */
-  date: string;
-  /**
-   * The blocks in the flow.
-   */
-  blocks: Array<Block>;
-  /**
-   * The name of the plugin associated with the flow, in case its a preset
-   */
-  pluginName?: string;
-  pluginID?: string;
-  /**
-   * The stored terminal output
-   */
-  terminalOutput: string[];
-  /**
-   * The Mol* pending tasks
-   */
-  pendingActions: Array<any>;
-  /**
-   * The Smiles pending tasks
-   */
-  pendingSmilesActions: Array<any>;
-
-  /**
-   * The Extensions pending tasks
-   */
-  pendingExtensions: Array<any>;
-
   /**
    * The flow size
    */
   size?: number;
+
+  date: string;
 
   /**
    * Timestamp when the flow started executing
@@ -419,6 +391,41 @@ export type Flow = {
    */
   template?: boolean;
 
+  isPreset?: boolean;
+  /**
+   * The name of the plugin associated with the flow, in case its a preset
+   */
+  pluginName?: string;
+  pluginID?: string;
+};
+
+/**
+ * Represents a flow in the application.
+ */
+export type Flow = MinimalFlow & {
+  /**
+   * The blocks in the flow.
+   */
+  blocks: Array<Block>;
+
+  /**
+   * The stored terminal output
+   */
+  terminalOutput: string[];
+  /**
+   * The Mol* pending tasks
+   */
+  pendingActions: Array<any>;
+  /**
+   * The Smiles pending tasks
+   */
+  pendingSmilesActions: Array<any>;
+
+  /**
+   * The Extensions pending tasks
+   */
+  pendingExtensions: Array<any>;
+
   /**
    * The serialized dock panels
    */
@@ -428,8 +435,6 @@ export type Flow = {
   extraData?: {
     [key: string]: any;
   };
-
-  isPreset?: boolean;
 
   flowError: string;
 };

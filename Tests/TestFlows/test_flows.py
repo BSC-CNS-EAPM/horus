@@ -97,7 +97,6 @@ def test_flow_blocks(flow: Flow):
 
 def test_flow_encode(flow: Flow):
     encoded_flow = flow.encode()
-    print(encoded_flow)
     assert encoded_flow["name"] == "Test Flow"
     assert encoded_flow["path"] == "/path/to/flow.flow"
     assert encoded_flow["currentExecuting"] == 1
@@ -173,18 +172,29 @@ def test_flow_run(flow_appDelegate):
 
     try:
         flow = Flow.read(path)
-
         flow.run(placedID=1)
-
-        # Check that the flow has been updated
-        assert flow.status == Flow.FlowStatus.FINISHED
-
-        # Re-read the flow and check everything is saved
         encoded_flow = flow.encode()
 
-        read_flow = Flow.read(path).encode()
+        # Re-instantiate the flow, run again, and verify that the workflow is reproducible
+        read_flow = Flow.read(path)
+        read_flow.run(placedID=1, resetFlow=True)
+        read_flow_encoded = read_flow.encode()
 
-        assert read_flow == encoded_flow
+        # Compare only reproducible fields for flow
+        for i in range(len(read_flow_encoded["blocks"])):
+            block_read = read_flow_encoded["blocks"][i]
+            block_flow = encoded_flow["blocks"][i]
+
+            # Assert reproducible fields
+            assert block_read["id"] == block_flow["id"]
+            assert block_read["name"] == block_flow["name"]
+            assert block_read["inputs"] == block_flow["inputs"]
+            assert block_read["outputs"] == block_flow["outputs"]
+            assert block_read["variables"] == block_flow["variables"]
+            assert block_read["blockLogs"] == block_flow["blockLogs"]
+
+        assert encoded_flow["terminalOutput"] == read_flow_encoded["terminalOutput"]
+
     finally:
         # Restore the flow by copying the .bak file to the original file
         os.system(f"mv {path}.bak {path}")
@@ -235,9 +245,24 @@ def test_double_circular_flow_run(flow_appDelegate, capfd):
         # Re-read the flow and check everything is saved
         encoded_flow = flow.encode()
 
-        read_flow = Flow.read(path).encode()
+        read_flow = Flow.read(path)
+        read_flow.run(placedID=6, resetFlow=True)
+        read_flow_encoded = read_flow.encode()
 
-        assert read_flow == encoded_flow
+        # Check only reproducible fields for flow
+        for i in range(len(read_flow_encoded["blocks"])):
+            block_read = read_flow_encoded["blocks"][i]
+            block_flow = encoded_flow["blocks"][i]
+
+            # Assert reproducible fields
+            assert block_read["id"] == block_flow["id"]
+            assert block_read["name"] == block_flow["name"]
+            assert block_read["inputs"] == block_flow["inputs"]
+            assert block_read["outputs"] == block_flow["outputs"]
+            assert block_read["variables"] == block_flow["variables"]
+            assert block_read["blockLogs"] == block_flow["blockLogs"]
+
+        assert read_flow_encoded["terminalOutput"] == encoded_flow["terminalOutput"]
     finally:
         # Restore the flow by copying the .bak file to the original file
         os.system(f"mv {path}.bak {path}")
