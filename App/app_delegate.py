@@ -13,6 +13,7 @@ import datetime
 import argparse
 import platform
 import debugpy
+import time
 from contextlib import contextmanager
 
 # Import type annotations
@@ -41,10 +42,11 @@ if typing.TYPE_CHECKING:
 else:
     import multiprocess as mp
 
-# Server
-from Server import HorusServer
-from Server.Utils import PrintTruncator
-from HorusAPI import HorusSingleton, __version__
+# Server (ignore import order because we need first to filter warnings)
+from Server import HorusServer  # noqa: E402
+from Server.Utils import PrintTruncator  # noqa: E402
+from HorusAPI import HorusSingleton, __version__  # noqa: E402
+
 
 # Add to the pythonpath the path of the project
 sys.path.append("../")
@@ -594,6 +596,7 @@ class AppDelegate(metaclass=HorusSingleton):
             self.logger.horus.info("Starting debugpy...")
 
             # Get debugpy port from environment variables or use defaults
+            timeout = int(os.getenv("HORUS_DEBUGPY_TIMEOUT") or 10)
             if FLOWPATH:
                 # For flows, use HORUS_DEBUGPY_FLOW_PORT or default to 5679
                 default_port = 5679
@@ -621,8 +624,18 @@ class AppDelegate(metaclass=HorusSingleton):
                     )
                     debugpy.configure(python=python)
                     debugpy.listen(debugpy_port)
-                    debugpy.wait_for_client()
-                    print("Debugger attached.")
+                    start_time = time.time()
+                    while not debugpy.is_client_connected():
+                        if time.time() - start_time > timeout:
+                            print(
+                                "Timeout waiting for debugger to attach after"
+                                f" {timeout} seconds."
+                            )
+                            break
+                        time.sleep(1)
+                    if debugpy.is_client_connected():
+                        print("Debugger attached.")
+
                 except KeyboardInterrupt:
                     print("Debugpy setup interrupted by user.")
                 except Exception as e:
@@ -681,7 +694,7 @@ class AppDelegate(metaclass=HorusSingleton):
 
         # Get the path to the APP_INFO file
         if hasattr(sys, "_MEIPASS"):
-            envPath = os.path.join(sys._MEIPASS, "APP_INFO")  # type: ignore pylint: disable=protected-access
+            envPath = os.path.join(sys._MEIPASS, "APP_INFO")  # type: ignore
         else:
             envPath = os.path.join("App", "APP_INFO")
 
@@ -976,9 +989,10 @@ class AppDelegate(metaclass=HorusSingleton):
         # Start the webview
         try:
             webview.start(debug=self.debug, menu=self._menus(), gui=guiBacked())  # type: ignore
-        except webview.WebViewException as e:
+        except webview.WebViewException:
             logging.getLogger("Horus").critical(
-                "Failed to start the window management system. Try launching Horus in server mode (--server)"
+                "Failed to start the window management system. "
+                "Try launching Horus in server mode (--server)"
             )
 
     def _startServerMode(self):
@@ -1240,7 +1254,9 @@ def parseArgs() -> tuple[dict, dict, dict]:
     parser.add_argument(
         "--flow-base-url",
         metavar="URL",
-        help="Base URL for sending events in a subprocess flow. Events will sent to the Horus server available on that instance. Only intended for internal use.",
+        help="Base URL for sending events in a subprocess flow. "
+        "Events will sent to the Horus server available on that instance."
+        " Only intended for internal use.",
     )
 
     parser.add_argument(
@@ -1264,7 +1280,9 @@ def parseArgs() -> tuple[dict, dict, dict]:
     parser.add_argument(
         "--flow-appsupport",
         metavar="/path/to/app/support/directory",
-        help="Specify the path to the app support directory for the flow. Only intended for internal use. Do not specify this option unless you know what you are doing.",
+        help="Specify the path to the app support directory for the flow. "
+        "Only intended for internal use. Do not specify this option unless"
+        " you know what you are doing.",
     )
 
     # For installing a plugin from the command line
@@ -1483,7 +1501,8 @@ def runFlowInsteadOfLaunch(app: AppDelegate, args: dict):
 
 def installPluginInsteadOfLaunch(app: AppDelegate, pluginArgs: dict):
     """
-    If a plugin was provided as an argument, it will install the plugin instead of launching the app.
+    If a plugin was provided as an argument,
+    it will install the plugin instead of launching the app.
     """
 
     pluginPath = pluginArgs.get("installPlugin")
@@ -1518,7 +1537,8 @@ def launchApp():
         )
         sys.exit(1)
 
-    # If a plugin was provided as an argument, it will install the plugin instead of launching the app.
+    # If a plugin was provided as an argument, it will install
+    # the plugin instead of launching the app.
     installPluginInsteadOfLaunch(app, pluginArgs)
 
     # If a flow was provided as an argument, it will run the flow instead of launching the app.
