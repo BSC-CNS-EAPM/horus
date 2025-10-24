@@ -44,6 +44,7 @@ else:
 
 # Server (ignore import order because we need first to filter warnings)
 from Server import HorusServer  # noqa: E402
+from Server.FlowManager import Flow  # noqa: E402
 from Server.Utils import PrintTruncator  # noqa: E402
 from HorusAPI import HorusSingleton, __version__  # noqa: E402
 
@@ -87,7 +88,10 @@ class HorusLogger:
     def __init__(self, appSupportDir: str, debug: bool = False, verbose: bool = False) -> None:
 
         # Define the logs folder
-        self.logDir = os.path.join(appSupportDir, "logs")
+        if FLOWPATH:
+            self.logDir = os.path.join(Flow.flowWorkDir(FLOWPATH), ".logs")
+        else:
+            self.logDir = os.path.join(appSupportDir, "logs")
 
         # Define debug & verbose
         self.debug = debug
@@ -95,7 +99,7 @@ class HorusLogger:
 
         # Create the logs folder if it doesn't exist
         if not os.path.exists(self.logDir):
-            os.mkdir(self.logDir)
+            os.makedirs(self.logDir, exist_ok=True)
 
         # Clean the logs folder
         # DISABLED AS NO NEED TO REMOVE OLD LOGS
@@ -160,13 +164,11 @@ class HorusLogger:
         logname = f"{datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}-Horus-"
 
         if self.debug:
-            logname += "debug"
+            logname += "debug-"
 
         # If we are running a flow instead of running Horus, add "flow-{flowname}" to the logname
         if FLOWPATH:
-            logname += f"-FLOWRUN-{os.path.basename(FLOWPATH).replace('.flow', '')}"
-            self.logDir = os.path.dirname(FLOWPATH)
-            print(f"Logging FLOWRUN to {self.logDir}")
+            logname += f"{os.path.basename(FLOWPATH).replace('.flow', '')}"
 
         logFile = os.path.join(self.logDir, f"{logname}.log")
 
