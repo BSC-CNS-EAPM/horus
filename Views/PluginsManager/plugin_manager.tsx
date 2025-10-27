@@ -425,15 +425,18 @@ function PluginCard(props: PluginCardProps) {
     );
   }
 
+  const configNotAccessible = isDeleting || error || plugin.config.length === 0;
+
   return (
     <div
       className={`card ${
         error ? "plugin-card-error" : "plugin-card"
       } animated-gradient ${isDeleting ? "slide-left-exit-animation" : null}`}
       onClick={() => {
-        if (isDeleting) return;
-        !error && plugin.config.length > 0;
+        if (configNotAccessible) return;
+        props.setSubview(<PluginConfigView configBlocks={plugin.config} />);
       }}
+      style={{ cursor: configNotAccessible ? "default" : "pointer" }}
     >
       <div className="grid grid-cols-[100px_auto]">
         <div className="my-2 ml-2 grid place-items-center overflow-hidden rounded">
@@ -479,7 +482,8 @@ function PluginCard(props: PluginCardProps) {
             <div className="flex justify-content-between gap-2">
               {!error && plugin.config.length > 0 && (
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     props.setSubview(
                       <PluginConfigView configBlocks={plugin.config} />
                     );
@@ -504,7 +508,12 @@ function PluginCard(props: PluginCardProps) {
               ) : plugin.dev ? (
                 <div>Development plugin</div>
               ) : (
-                <button onClick={deletePlugin}>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deletePlugin();
+                  }}
+                >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
