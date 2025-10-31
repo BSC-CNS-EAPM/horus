@@ -780,13 +780,16 @@ function TextAreaVariableView(props: VariableViewProps) {
 function IntegerFloatVariableView(props: VariableViewProps) {
   const { currentValue, variable, onChange } = props;
 
+  const [internalValue, setInternalValue] = useState<string | number | null>(
+    currentValue
+  );
   const [numberMessage, setNumberMessage] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseNum(e.target.value);
     parseInsideAllowedValues(value);
-
     onChange(value);
+    setInternalValue(value);
   };
 
   const parseNum = (value: string) => {
@@ -843,8 +846,9 @@ function IntegerFloatVariableView(props: VariableViewProps) {
       <input
         placeholder={props.variable.placeholder}
         className="plugin-variable-value"
-        value={currentValue}
-        onChange={handleChange}
+        value={internalValue ?? ""}
+        onBlur={handleChange}
+        onChange={(e) => setInternalValue(e.target.value)}
       />
     </div>
   );
@@ -986,27 +990,32 @@ function FilePickerView(props: FilePickerViewProps) {
   const { currentValue, variable, onChange } = props;
 
   return (
-    <div className="flex flex-row gap-2 w-full h-10 p-1 justify-center items-center">
-      <input
-        id={variable.id}
-        placeholder={props.variable.placeholder ?? "Write a path or browse..."}
-        className="overflow-x-auto break-keep-all h-6 plugin-variable-value"
-        value={currentValue ?? ""}
-        onChange={(e) => onChange(e.target.value)}
-      />
-      <HorusFileExplorer
-        openOutsideFlowContext={
-          (variable as PluginVariable & { openOutsideFlowContext?: boolean })
-            ?.openOutsideFlowContext
-        }
-        openAtPath={currentValue}
-        onFileConfirm={onChange}
-        onFileSelect={onChange}
-        openFolder={props.openFolder ?? false}
-        allowedExtensions={variable?.allowedValues}
-      >
-        Browse...
-      </HorusFileExplorer>
+    <div className="flex flex-col w-full gap-2">
+      <div className="flex flex-row gap-2 w-full h-10 p-1 justify-center items-center">
+        <input
+          id={variable.id}
+          placeholder={
+            props.variable.placeholder ?? "Write a path or browse..."
+          }
+          className="overflow-x-auto break-keep-all h-6 plugin-variable-value"
+          value={currentValue ?? ""}
+          onChange={(e) => onChange(e.target.value)}
+        />
+        <HorusFileExplorer
+          openOutsideFlowContext={
+            (variable as PluginVariable & { openOutsideFlowContext?: boolean })
+              ?.openOutsideFlowContext
+          }
+          openAtPath={currentValue}
+          onFileConfirm={onChange}
+          onFileSelect={onChange}
+          openFolder={props.openFolder ?? false}
+          allowedExtensions={variable?.allowedValues}
+        >
+          Browse...
+        </HorusFileExplorer>
+      </div>
+      <AppButton>Edit file</AppButton>
     </div>
   );
 }
