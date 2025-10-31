@@ -79,7 +79,10 @@ declare global {
       ) => Promise<string | null>;
       saveFile: (file: File) => void;
       updateFile: (file: File, path: string) => void;
-      getFile: (path: string) => Promise<Blob>;
+      getFile: (
+        path: string,
+        options?: { onlyFiles?: boolean; onlyText?: boolean }
+      ) => Promise<Blob>;
       openFile: (path: string) => Promise<void>;
       setTabTitle?: (tabTitle: string) => void;
       closeTab?: () => void;
@@ -90,12 +93,14 @@ declare global {
         name,
         path,
         readOnly,
-        format
+        format,
+        panelID
       }: {
         path: string;
         name?: string;
         readOnly?: boolean;
         format?: string;
+        panelID?: string;
       }) => void;
     };
     // JSME viewer
