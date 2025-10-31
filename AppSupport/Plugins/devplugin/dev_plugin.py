@@ -910,6 +910,24 @@ input_block_number = InputBlock(
 
 plugin.addBlock(input_block_number)
 
+float_input = PluginVariable(
+    id="float_input",
+    name="Float input",
+    description="Float input",
+    type=VariableTypes.FLOAT,
+)
+
+
+input_block_float = InputBlock(
+    id="input_block_float",
+    name="Input block float",
+    description="Input block float",
+    variable=float_input,
+    action=None,
+)
+
+plugin.addBlock(input_block_float)
+
 
 radio_input = PluginVariable(
     id="radio_input",
