@@ -78,6 +78,7 @@ import { MoleculePlotter } from "../MoleculePlotter/MoleculePlotter";
 import { HorusFileEditor } from "../FileEditor/FileEditor";
 import { BlockEditor } from "../FlowBuilder/BlockRegistry/BlockEditor";
 import { IconFile } from "@tabler/icons-react";
+import { IDockviewPanel } from "dockview-react";
 
 const MOLSTAR_PANEL: AddPanelOptions = {
   id: "molstar",
@@ -919,17 +920,19 @@ export function HorusPanelView() {
       name,
       path,
       readOnly,
-      format
+      format,
+      panelID
     }: {
       path: string;
       name?: string;
       readOnly?: boolean;
       format?: string;
-    }) => {
-      addPanel({
+      panelID?: string;
+    }): IDockviewPanel | undefined => {
+      return addPanel({
         dockApi: dockApi,
         component: PANEL_REGISTRY.fileEditor.component,
-        panelID: `fileEditor-${path}`,
+        panelID: panelID ?? `fileEditor-${path}`,
         title: name ?? path.split("/").pop() ?? "File",
         params: {
           title: name,

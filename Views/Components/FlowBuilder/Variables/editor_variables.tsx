@@ -81,7 +81,12 @@ export function CodeVariableView(props: VariableViewProps) {
 }
 
 export function HorusSmallVariableCodeEditor(
-  props: EditorProps & { variable: PluginVariable }
+  props: EditorProps & {
+    variable: PluginVariable;
+    overrideFullScreenToggle?: (panelID: string) => void;
+    onClose?: () => void;
+    label?: string;
+  }
 ) {
   const { dockApi } = useContext(DockContext);
 
@@ -98,19 +103,22 @@ export function HorusSmallVariableCodeEditor(
       dockApi.onDidRemovePanel(() => {
         const exists = dockApi.getPanel(panelID);
         setIsFullscreen(!!exists);
+        if (!exists) {
+          props.onClose?.();
+        }
       });
     }
-  }, [dockApi, panelID]);
+  }, [dockApi, panelID, props]);
 
   useEffect(() => {
     if (dockApi) {
       const exists = dockApi.getPanel(panelID);
       exists?.api.updateParameters({
         onChange: props.onChange,
-        options: { readOnly: isFlowActive }
+        options: { readOnly: isFlowActive, ...props.options }
       });
     }
-  }, [dockApi, isFlowActive, panelID, props.onChange]);
+  }, [dockApi, isFlowActive, panelID, props.onChange, props.options]);
 
   useEffect(() => {
     if (dockApi) {
@@ -124,9 +132,10 @@ export function HorusSmallVariableCodeEditor(
       const panel = dockApi?.getPanel(panelID);
       if (panel) {
         dockApi?.removePanel(panel);
+        props.onClose?.();
       }
     };
-  }, [dockApi, panelID]);
+  }, [dockApi, panelID, props]);
 
   if (isFullscreen) {
     return (
@@ -135,6 +144,7 @@ export function HorusSmallVariableCodeEditor(
         <AppButton
           action={() => {
             setIsFullscreen(false);
+            props.onClose?.();
             if (dockApi) {
               const panel = dockApi.getPanel(panelID);
               if (panel) {
@@ -165,19 +175,24 @@ export function HorusSmallVariableCodeEditor(
               action={() => {
                 if (dockApi) {
                   setIsFullscreen(true);
-                  togglePanel({
-                    dockApi,
-                    component: PANEL_REGISTRY.codeEditor.component,
-                    title: `${props.variable.name} - Block ${props.variable.placedID} - Code Editor`,
-                    panelID,
-                    params: {
-                      placedID: props.variable.placedID,
-                      defaultLanguage: props.defaultLanguage,
-                      value: props.value,
-                      defaultValue: props.defaultValue,
-                      onChange: props.onChange
-                    }
-                  });
+                  if (props.overrideFullScreenToggle) {
+                    props.overrideFullScreenToggle(panelID);
+                  } else {
+                    togglePanel({
+                      dockApi,
+                      component: PANEL_REGISTRY.codeEditor.component,
+                      title: `${props.variable.name} - Block ${props.variable.placedID} - Code Editor`,
+                      panelID,
+                      params: {
+                        placedID: props.variable.placedID,
+                        defaultLanguage: props.defaultLanguage,
+                        value: props.value,
+                        defaultValue: props.defaultValue,
+                        onChange: props.onChange,
+                        options: props.options
+                      }
+                    });
+                  }
                 }
               }}
             >
@@ -192,7 +207,7 @@ export function HorusSmallVariableCodeEditor(
               transform: "translateX(-40px) translateY(10px)"
             }}
           >
-            Detach
+            {props.label ?? "Detach"}
           </div>
         </HorusPopover>
       </div>
@@ -200,7 +215,8 @@ export function HorusSmallVariableCodeEditor(
         {...props}
         onChange={props.onChange}
         options={{
-          readOnly: isFlowActive || props.variable.disabled
+          readOnly: isFlowActive || props.variable.disabled,
+          ...props.options
         }}
       />
     </div>
