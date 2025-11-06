@@ -7,6 +7,7 @@ import {
 } from "./extensions_list";
 import { ToolBarItemProps, ToolbarMenu, ToolBarMenuProps } from "./ToolbarItem";
 import { HorusSearch } from "./ToolbarSearch";
+import { SaveIndicator } from "./SaveIndicator";
 
 // Context
 import {
@@ -516,6 +517,7 @@ export default function HorusToolbar() {
         ))}
       </div>
       <div className="flex flex-row items-center gap-2">
+        <SaveIndicator status={flowContext?.flow?.saveStatus || "idle"} />
         {horusSettings?.["developmentMode"]?.value && (
           <AppButton
             disabled={reloadingPlugins}

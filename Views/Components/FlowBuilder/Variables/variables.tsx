@@ -783,13 +783,19 @@ function TextAreaVariableView(props: VariableViewProps) {
   );
 }
 
-function IntegerFloatVariableView(props: VariableViewProps) {
+function IntegerFloatVariableView(
+  props: VariableViewProps & { skipCheck?: boolean }
+) {
   const { currentValue, variable, onChange } = props;
 
   const [internalValue, setInternalValue] = useState<string | number | null>(
     currentValue
   );
   const [numberMessage, setNumberMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    setInternalValue(currentValue);
+  }, [currentValue]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseNum(e.target.value);
@@ -828,7 +834,11 @@ function IntegerFloatVariableView(props: VariableViewProps) {
 
   const parseInsideAllowedValues = (value: any) => {
     // If no allowedValues are set, return the value
-    if (!variable.allowedValues || variable.allowedValues.length === 0) {
+    if (
+      !variable.allowedValues ||
+      variable.allowedValues.length === 0 ||
+      props.skipCheck
+    ) {
       return;
     }
     // If the allowedValues contains the value, return it
@@ -880,6 +890,8 @@ function SliderVariableView(props: VariableViewProps) {
     value = max;
   }
 
+  console.log("slider value:", currentValue);
+
   return (
     <div
       className="flex flex-row p-2 w-full items-end gap-4"
@@ -906,6 +918,7 @@ function SliderVariableView(props: VariableViewProps) {
         }}
       />
       <IntegerFloatVariableView
+        skipCheck={true}
         currentValue={currentValue}
         variable={variable}
         onChange={onChange}
