@@ -863,6 +863,33 @@ export function HorusPanelView() {
 
   const flowBuilderState = useFlowBuilder({ dockApi });
 
+  useEffect(() => {
+    const keydownHandler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "w") {
+        // Ignore key auto-repeat and debounce within 150ms
+        if (e.repeat) {
+          // Ignore key auto-repeat
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const activePanel = dockApi?.activePanel;
+        if (activePanel) {
+          activePanel.api.close();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", keydownHandler, { capture: true });
+
+    return () => {
+      window.removeEventListener("keydown", keydownHandler, {
+        capture: true
+      });
+    };
+  }, [dockApi]);
+
   const onReady = (event: DockviewReadyEvent) => {
     const dockApi = event.api;
 
