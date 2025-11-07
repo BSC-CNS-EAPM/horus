@@ -1739,7 +1739,7 @@ class Flow:
             with open(Flow.socketPath(flowPath), "r", encoding="utf-8") as f:
                 return [line.split("URL=")[-1].strip() for line in f if line.startswith("URL=")]
         except Exception as e:
-            logging.getLogger("Horus").error(
+            logging.getLogger("Horus").debug(
                 "Failed to load socket URLs for flow: %s. %s", flowPath, str(e)
             )
             return None
