@@ -207,7 +207,7 @@ class HorusLogger:
             # White for the capturer
             CAPTURER_COLOR = "\033[1;37m"
 
-            def format(self, record):
+            def format(self, record: logging.LogRecord) -> str:
 
                 # Define the colors for the log levels
                 logLevelColor = self.COLOR_CODES.get(record.levelname, "")
@@ -224,7 +224,21 @@ class HorusLogger:
 
                 # Apply the colors
                 formatted = super().format(record)
-                colored = f"{logLevelColor}{formatted}{self.RESET_CODE}"
+
+                # Only apply colors if safe to do so
+                # This prevents deadlock issues with custom logging setup
+                try:
+                    # Do not use colors for flow runs,
+                    # as stdout/stderr may be redirected (+ subprocesses deadlock)
+                    safe_for_color = FLOWPATH is None
+
+                    if safe_for_color:
+                        colored = f"{logLevelColor}{formatted}{self.RESET_CODE}"
+                    else:
+                        colored = formatted
+                except Exception:
+                    # Fallback: no colors to avoid deadlock
+                    colored = formatted
 
                 # Restore the old format
                 self._style._fmt = oldFormat

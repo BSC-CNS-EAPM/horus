@@ -3,6 +3,7 @@ import { useEffect, useState, useMemo, useContext, useCallback } from "react";
 
 // Horus TS types
 import {
+  BlockTypes,
   CustomVariable,
   PluginPage,
   PluginVariable,
@@ -1011,8 +1012,29 @@ function FilePickerView(props: FilePickerViewProps) {
   const [fileError, setFileError] = useState<string | null>(null);
   const [fileLoading, setFileLoading] = useState<boolean>(false);
 
+  // Get flow context to check if we're in the flow canvas
+  const flowContext = useContext(FlowBuilderContext);
+
+  // Determine if we should show file contents based on block context
+  const shouldShowFileContents = useMemo(() => {
+    // Only show file contents if:
+    // 1. We have a block context
+    // 2. We are in the flow canvas (flowContext exists)
+    // 3. The block is an INPUT block
+    // 4. The selected remote is "Local"
+
+    if (!variable.block || !flowContext) {
+      return false;
+    }
+
+    const isInputBlock = variable.block.type === BlockTypes.INPUT;
+    const isLocalRemote = variable.block.selectedRemote === "Local";
+
+    return isInputBlock && isLocalRemote;
+  }, [variable.block, flowContext]);
+
   const loadFileContents = useDebouncedCallback(async () => {
-    if (!currentValue) {
+    if (!currentValue || !shouldShowFileContents) {
       setFileContents(null);
       setFileError(null);
       setFileLoading(false);
@@ -1038,7 +1060,7 @@ function FilePickerView(props: FilePickerViewProps) {
   useEffect(() => {
     loadFileContents();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentValue]); // Load whenever currentValue changes
+  }, [currentValue, shouldShowFileContents]); // Load whenever currentValue or conditions change
 
   return (
     <div className="flex flex-col w-full gap-2">
@@ -1066,45 +1088,51 @@ function FilePickerView(props: FilePickerViewProps) {
           Browse...
         </HorusFileExplorer>
       </div>
-      {fileLoading ? (
-        <div className="flex flex-col justify-center items-center p-4 w-full">
-          <RotatingLines size="2rem" />
-        </div>
-      ) : (
-        currentValue &&
-        (() => {
-          const parts = currentValue.split("/");
-          const fileName = parts.pop();
-          const extension = fileName?.split(".").pop();
+      {shouldShowFileContents && (
+        <>
+          {fileLoading ? (
+            <div className="flex flex-col justify-center items-center p-4 w-full">
+              <RotatingLines size="2rem" />
+            </div>
+          ) : (
+            currentValue &&
+            (() => {
+              const parts = currentValue.split("/");
+              const fileName = parts.pop();
+              const extension = fileName?.split(".").pop();
 
-          if (fileError) {
-            return (
-              <div className="text-red-500 text-center p-2">{fileError}</div>
-            );
-          }
+              if (fileError) {
+                return (
+                  <div className="text-red-500 text-center p-2">
+                    {fileError}
+                  </div>
+                );
+              }
 
-          return (
-            <HorusSmallVariableCodeEditor
-              variable={props.variable}
-              value={fileContents ?? ""}
-              onChange={() => {}}
-              language={extension ?? "txt"}
-              height="300px"
-              options={{ minimap: { enabled: false }, readOnly: true }}
-              overrideFullScreenToggle={(panelID) => {
-                window.horus.openFileInEditor?.({
-                  path: currentValue,
-                  panelID
-                });
-              }}
-              label="Edit file"
-              onClose={() => {
-                // Update the contents when the editor is closed
-                loadFileContents();
-              }}
-            />
-          );
-        })()
+              return (
+                <HorusSmallVariableCodeEditor
+                  variable={props.variable}
+                  value={fileContents ?? ""}
+                  onChange={() => {}}
+                  language={extension ?? "txt"}
+                  height="300px"
+                  options={{ minimap: { enabled: false }, readOnly: true }}
+                  overrideFullScreenToggle={(panelID) => {
+                    window.horus.openFileInEditor?.({
+                      path: currentValue,
+                      panelID
+                    });
+                  }}
+                  label="Edit file"
+                  onClose={() => {
+                    // Update the contents when the editor is closed
+                    loadFileContents();
+                  }}
+                />
+              );
+            })()
+          )}
+        </>
       )}
     </div>
   );
