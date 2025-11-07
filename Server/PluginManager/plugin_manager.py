@@ -158,7 +158,8 @@ class PluginManager(metaclass=HorusSingleton):
         except Exception as e:
             logging.getLogger("Horus").critical(
                 "Error initializing plugins: %s. "
-                "Please check the plugins in the Plugins directory. Booting Horus without plugins.",
+                "Please check the plugins in the Plugins directory. "
+                "Booting Horus without plugins.",
                 str(e),
             )
 
@@ -275,7 +276,8 @@ class PluginManager(metaclass=HorusSingleton):
                     print("Downloading plugin from URL...")
                     f = self._downloadPluginFromURL(f, downloadDir)
 
-                # If the file is a plugin from the plugin repo (starts with pluginID:// or repoID://)
+                # If the file is a plugin from the plugin repo
+                # (starts with pluginID:// or repoID://)
                 # then download the specific version
                 # for this system
                 if f.startswith(REPOIDURL_PREFIX) or f.startswith(PLUGINIDURL_PREFIX):
@@ -608,9 +610,12 @@ class PluginManager(metaclass=HorusSingleton):
 
             # If a plugin with the same name already exists, check if it is the same plugin
             # in order to upgrade it
-            if not loadedPlugin in self.loadedPlugins:
+            if loadedPlugin not in self.loadedPlugins:
                 print("Saving new plugin to its folder...")
-                os.rename(tmpInstallDir, pluginFinalPath)
+                try:
+                    os.rename(tmpInstallDir, pluginFinalPath)
+                except OSError:
+                    shutil.move(tmpInstallDir, pluginFinalPath)
                 print(
                     "Plugin installed."
                     + " You can start working with the blocks in the flow manager."

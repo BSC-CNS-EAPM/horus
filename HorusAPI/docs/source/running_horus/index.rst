@@ -48,6 +48,7 @@ In addition to command-line options, Horus allows configuration through the foll
 - **HORUS_DEBUG_PLUGINS**: Enables debugpy for plugin debugging. Valid values are ``1``, ``true``, or ``yes``.
 - **HORUS_DEBUGPY_PORT**: Sets the debugpy port for regular application debugging (defaults to 5678).
 - **HORUS_DEBUGPY_FLOW_PORT**: Sets the debugpy port for flow debugging (defaults to 5679).
+- **HORUS_DEBUGPY_TIMEOUT**: Sets the timeout in seconds for waiting for a debugger to attach (defaults to 10).
 
 **App Mode (Default Mode)**
 ---------------------------

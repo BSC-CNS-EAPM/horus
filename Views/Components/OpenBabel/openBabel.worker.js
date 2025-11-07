@@ -89,7 +89,11 @@ async function optimizeMolecule(obabel, molecule, options, conversionId) {
   const matchingAtoms = new Set();
 
   for (const constraint of atoms) {
-    const { chain: targetChain, residue: targetResidue, atom: targetAtom } = constraint;
+    const {
+      chain: targetChain,
+      residue: targetResidue,
+      atom: targetAtom
+    } = constraint;
 
     for (let i = 1; i <= mol.NumAtoms(); i++) {
       const atom = mol.GetAtom(i);
@@ -105,13 +109,20 @@ async function optimizeMolecule(obabel, molecule, options, conversionId) {
         if (targetChain && targetResidue && targetAtom !== undefined) {
           // Most specific: chain + residue + atom
           const atomIdx = atom.GetIdx();
-          matches = (targetChain === chain && resNum === targetResidue && atomIdx === targetAtom);
+          matches =
+            targetChain === chain &&
+            resNum === targetResidue &&
+            atomIdx === targetAtom;
         } else if (targetChain && targetResidue && targetAtom === undefined) {
           // Medium specific: chain + residue (all atoms in this residue)
-          matches = (targetChain === chain && resNum === targetResidue);
-        } else if (targetChain && targetResidue === undefined && targetAtom === undefined) {
+          matches = targetChain === chain && resNum === targetResidue;
+        } else if (
+          targetChain &&
+          targetResidue === undefined &&
+          targetAtom === undefined
+        ) {
           // Least specific: chain only (all atoms in this chain)
-          matches = (targetChain === chain);
+          matches = targetChain === chain;
         }
 
         if (matches) {
@@ -141,15 +152,21 @@ async function optimizeMolecule(obabel, molecule, options, conversionId) {
     }
     processedAtoms = matchingAtoms.size;
   } else {
-    throw new Error(`Unknown constraint mode: ${mode}. Use 'flexible' or 'freeze'.`);
+    throw new Error(
+      `Unknown constraint mode: ${mode}. Use 'flexible' or 'freeze'.`
+    );
   }
 
   if (processedAtoms === 0) {
-    throw new Error("No atoms found matching the specified constraints. Check chain ID and residue number.");
+    throw new Error(
+      "No atoms found matching the specified constraints. Check chain ID and residue number."
+    );
   }
 
   if (addedConstraints === 0) {
-    throw new Error("No constraints were added. Check constraint mode and parameters.");
+    throw new Error(
+      "No constraints were added. Check constraint mode and parameters."
+    );
   }
 
   // Set up force field

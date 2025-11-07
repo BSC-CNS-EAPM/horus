@@ -36,6 +36,7 @@ export function HorusFileEditor({
   const [loadingFile, setLoadingFile] = useState(false);
   const [fileType, setFileType] = useState<string>("plaintext");
   const [hasChanges, setHasChanges] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const hasOpenedPicker = useRef(path ? true : false); // Prevent double execution
 
@@ -59,25 +60,38 @@ export function HorusFileEditor({
     setLoadingFile(true);
 
     window.horus
-      ?.getFile(path)
+      ?.getFile(path, { onlyText: true, onlyFiles: true })
       .then((file) => file.text())
-      .then((text) => setValue(text))
-      .catch((err) => setValue("Error loading file: " + err))
+      .then((text) => {
+        setValue(text);
+        setError(null);
+        setHasChanges(false);
+      })
+      .catch((err) => setError("Error loading file: " + err))
       .finally(() => setLoadingFile(false));
-  }, [path, dockApi]);
+  }, [path, dockApi, params]);
 
-  if (!path) {
+  if (!path || error) {
     return (
       <div className="inline-box grid items-center justify-center h-full">
-        <AppButton
-          action={() =>
-            window.horus?.openExtensionFilePicker?.({
-              onFileConfirm: (file) => setPath(file)
-            })
-          }
-        >
-          Select a file
-        </AppButton>
+        <div className="flex flex-col items-center gap-4">
+          {error && (
+            <div className="inline-box grid items-center justify-center">
+              <div className="flex flex-col items-center gap-4">
+                <div className="text-red-500 text-center">{error}</div>
+              </div>
+            </div>
+          )}
+          <AppButton
+            action={() =>
+              window.horus?.openExtensionFilePicker?.({
+                onFileConfirm: (file) => setPath(file)
+              })
+            }
+          >
+            Select a file
+          </AppButton>
+        </div>
       </div>
     );
   }

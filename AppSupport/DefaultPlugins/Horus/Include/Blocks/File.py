@@ -34,6 +34,5 @@ fileBlock = InputBlock(
     action=checkPathIsFile,
     variable=fileVariable,
     id="file",
-        category="Files"
-
+    category="Files",
 )

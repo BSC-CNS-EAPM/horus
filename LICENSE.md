@@ -2,10 +2,11 @@
 
 Copyright 2024 - Barcelona Supercomputing Center
 
-If you use this software to obtain results that are published in scientific articles, presentations, or other academic works, you are required to acknowledge the use of the software by citing the following:
+If you use Horus to obtain results that are published in scientific articles, presentations, or other academic works, you are required to acknowledge the use of the software by citing the following publication:
 
-**Domínguez-Dalmases, C., Cañellas-Solé, A., Guallar, V. (Barcelona Supercomputing Center), Municoy, M. (Nostrum Biodiscovery).**  
-**https://horus.bsc.es**
+**Domínguez-Dalmases, C., Cañellas-Solé, A., Lambea-Jané, R., Municoy, M., Guallar, V.**  
+Horus: Reproducible Workflow Manager for Biomolecular Modelling
+DOI: https://doi.org/10.1101/2025.09.26.678751
 
 Proper citation ensures continued support, maintenance, and recognition of the work.
 

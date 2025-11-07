@@ -621,49 +621,52 @@ class Flow:
     Only used in webapp mode
     """
 
-    def encode(self, minimal: bool = True) -> typing.Dict[str, typing.Any]:
+    def encode(self, minimal: bool = False) -> typing.Dict[str, typing.Any]:
         """
         Encodes the flow to a JSON object
         """
 
         logging.getLogger("Horus").debug("Encoding flow '%s'", self.name)
 
-        # Encode the blocks
-        blocksJSON = []
-        for block in self.blocks:
-            # Encode the block to a JSON object
-            encodedBlock = (
-                block._minimalEncode()  # pylint: disable=protected-access
-                if minimal
-                else block._toDict()  # pylint: disable=protected-access
-            )
-
-            blocksJSON.append(encodedBlock)
-
-        # Create a JSON object
-        flow = {
+        encoded_flow = {
             "name": self.name,
             "savedID": self.savedID,
             "path": self.path if self._skipPath is None else self._skipPath,
-            "currentExecuting": self.currentExecuting,
             "status": self.status.value,
             "date": self.date,
             "size": self.size,
             "startedTime": self.startedTime.timestamp() if self.startedTime else None,
             "finishedTime": self.finishedTime.timestamp() if self.finishedTime else None,
             "elapsed": self.elapsed,
-            "blocks": blocksJSON,
-            "terminalOutput": self.terminalOutput,
-            "pendingActions": self.pendingActions,
-            "pendingSmilesActions": self.pendingSmilesActions,
-            "pendingExtensions": self.pendingExtensions,
-            "panels": self.panels,
-            "extraData": self.extraData,
-            "flowRunInfo": self.flowRunInfo.model_dump() if self.flowRunInfo else None,
-            "flowError": self.flowError,
+            "isPreset": self.isPreset,
+            "currentExecuting": self.currentExecuting,
         }
 
-        return flow
+        if minimal:
+            return encoded_flow
+
+        # Encode the blocks
+        blocksJSON = []
+        for block in self.blocks:
+            # Encode the block to a JSON object
+            blocksJSON.append(block._toDict())
+
+        # Create a JSON object
+        encoded_flow.update(
+            {
+                "blocks": blocksJSON,
+                "terminalOutput": self.terminalOutput,
+                "pendingActions": self.pendingActions,
+                "pendingSmilesActions": self.pendingSmilesActions,
+                "pendingExtensions": self.pendingExtensions,
+                "panels": self.panels,
+                "extraData": self.extraData,
+                "flowRunInfo": self.flowRunInfo.model_dump() if self.flowRunInfo else None,
+                "flowError": self.flowError,
+            }
+        )
+
+        return encoded_flow
 
     def write(
         self, molState: typing.Optional[bytes] = None, smilesState: typing.Optional[dict] = None
