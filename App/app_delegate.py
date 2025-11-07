@@ -35,6 +35,15 @@ warnings.filterwarnings("ignore", message=".*pkg_resources.*")
 
 # For multiprocessing (leaked semaphore message when closing Horus)
 warnings.filterwarnings("ignore", message=".*resource_tracker.*")
+# Supress several warnings
+import warnings
+
+# For the PluginDeps class
+# Suppress pkg_resources deprecation warnings
+warnings.filterwarnings("ignore", message=".*pkg_resources.*")
+
+# For multiprocessing (leaked semaphore message when closing Horus)
+warnings.filterwarnings("ignore", message=".*resource_tracker.*")
 
 # Multiprocessing
 if typing.TYPE_CHECKING:
