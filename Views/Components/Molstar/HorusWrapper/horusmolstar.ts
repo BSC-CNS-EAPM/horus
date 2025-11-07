@@ -225,7 +225,7 @@ type _RepresentationThemeOptions<
   S extends SizeTheme.BuiltIn
 > = {
   representation: StructureRepresentationRegistry.BuiltIn;
-  representationParams: ParamDefinition.NamedParams;
+  representationParams: Record<string, any>;
   color?: C;
   size?: S;
   colorParams?: ColorTheme.BuiltInParams<C> & { value: string };
@@ -1201,12 +1201,15 @@ export default class HorusMolstar {
    * @param {object} [options] Additional configuration options.
    * @param {string} [options.label] The label to assign to the loaded molecule.
    *
-   * @returns {Promise<void>} A promise that resolves once the molecule file is loaded and presets are applied.
+   * @returns {Promise<StructureRef | null>} A promise that resolves once the molecule file is loaded and presets are applied.
    *
    * @throws {Error} If an error occurs during file parsing or preset application, or if the plugin is not initialized.
    */
 
-  public loadMoleculeFile: LoadMoleculeFileType = async (file, options) => {
+  public loadMoleculeFile: LoadMoleculeFileType = async (
+    file,
+    options
+  ): Promise<StructureRef | null> => {
     if (!this.plugin) {
       throw new Error("Plugin is not initialized. Cannot load molecule file.");
     }
@@ -3300,8 +3303,6 @@ export default class HorusMolstar {
                   structure.format
                 }`;
                 this.loadOptimizedStructure(result, optimizedLabel);
-
-                console.log("Loaded optimized structure:", optimizedLabel);
 
                 // Restore original structure
                 const existingTransform = this.plugin!.state.data.selectQ((q) =>

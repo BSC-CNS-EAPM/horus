@@ -273,12 +273,22 @@ export function saveFile(file: File) {
 
 // Will download the file (if its available for the user)
 // and return the Blob
-export function getFile(path: string) {
+export function getFile(
+  path: string,
+  { onlyFiles, onlyText }: { onlyFiles?: boolean; onlyText?: boolean } = {}
+): Promise<Blob> {
   const url = new URL(
     window.location.origin + window.__HORUS_ROOT__ + "/api/filepicker/download"
   );
 
+  // Setup URL params
   url.searchParams.append("path", path);
+  if (onlyFiles) {
+    url.searchParams.append("onlyFiles", "true");
+  }
+  if (onlyText) {
+    url.searchParams.append("onlyText", "true");
+  }
 
   return new Promise<Blob>((resolve, reject) => {
     fetch(url.toString())

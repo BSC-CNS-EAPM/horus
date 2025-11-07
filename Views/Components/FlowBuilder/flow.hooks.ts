@@ -69,6 +69,8 @@ import { LogsData } from "./Logs/logs_connections";
 import { blockLogsPanelID } from "./Blocks/block.hooks";
 import { GLOBAL_IDS } from "@/Utils/globals";
 
+export type SaveStatus = "saved" | "saving" | "error" | "idle";
+
 export enum FlowEvents {
   FLOW_CHANGED = "flowChanged"
 }
@@ -229,6 +231,10 @@ type DevelopmentIframeVariableGetter = {
 };
 
 // Create a new flow builder hook
+const SAVE_SUCCESS_DISPLAY_DURATION_MS = 2000;
+// Duration for displaying save error status (ms)
+const SAVE_ERROR_DISPLAY_DURATION_MS = 5000;
+
 export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
   // Initialize the drag and drop tweaks
   const dndTweaks = useDNDTweaks();
@@ -332,12 +338,17 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
   );
 
   const updateMolstarState = useCallback(
-    async (options?: { savedPath?: string; savedID?: string }) => {
+    async (options?: {
+      savedPath?: string;
+      savedID?: string;
+      showProgress?: boolean;
+    }) => {
       // Check that the flow has a valid path and
       // that Mol* is mounted
 
       const pathToUse = options?.savedPath ?? flow.path;
       const savedID = options?.savedID;
+      const showProgress = options?.showProgress ?? true;
 
       if (!pathToUse || !savedID) {
         return;
@@ -364,13 +375,20 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         }
 
         // Use the helper function to upload with progress tracking
-        const data: any = await POSTUploadWithProgress(
-          "/api/updatemolstate",
-          formData,
-          (percentage) => {
-            setFlowText(`Saving structures: ${percentage.toFixed(0)}%`);
-          }
-        );
+        // No-op callback for auto-save when progress tracking is not needed
+        const data: any = showProgress
+          ? await POSTUploadWithProgress(
+              "/api/updatemolstate",
+              formData,
+              (percentage) => {
+                setFlowText(`Saving structures: ${percentage.toFixed(0)}%`);
+              }
+            )
+          : await POSTUploadWithProgress(
+              "/api/updatemolstate",
+              formData,
+              () => {} // No progress tracking for auto-save
+            );
 
         if (!data.ok) {
           throw new Error(data.msg);
@@ -386,7 +404,11 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
           };
         });
       } catch (e) {
-        await horusAlert("Error updating Mol* state: " + e);
+        if (showProgress) {
+          await horusAlert("Error updating Mol* state: " + e);
+        } else {
+          console.error("Error updating Mol* state during auto-save:", e);
+        }
       }
       // Disable horusAlert and horusConfirm hook warning
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -777,28 +799,29 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
   }, [flow]);
 
   const isSaving = useRef<boolean>(false);
+  const isAutoSaving = useRef<boolean>(false);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
+  const autoSaveTimeoutRef = useRef<number | null>(null);
+  const saveStatusTimeoutRef = useRef<number | null>(null);
+  useEffect(() => {
+    return () => {
+      if (saveStatusTimeoutRef.current) {
+        clearTimeout(saveStatusTimeoutRef.current);
+        saveStatusTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   /**
-   * Saves the flow data to the server.
-   *
-   * @param flowToSave - Optional flow object to save. If not provided, the current flow will be serialized and saved.
-   * @returns A Promise that resolves to the saved Flow object if successful, or null otherwise.
+   * Core save functionality that can be used by both manual and auto saves
    */
-  const handleSave = useCallback(
-    async (flowToSave?: Flow): Promise<Flow | null> => {
-      // If the flow is already saving, exit early
-      if (isSaving.current) {
-        return null;
-      }
-
-      // Set the state
-      isSaving.current = true;
-      setFlowText("Saving flow...");
-      setFlowLoading(true);
-
-      // The serialization of the flow to save
+  const saveFlowCore = useCallback(
+    async (
+      flowToSave: Flow,
+      showModal: boolean = true
+    ): Promise<Flow | null> => {
       const saveContents: Flow = {
-        ...(flowToSave ? flowToSave : serializeFlow()),
+        ...flowToSave,
         status: FlowStatus.IDLE,
         panels: dockApi?.toJSON()
       };
@@ -806,19 +829,10 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       try {
         // Prepare the body for the save request
         const body = new FormData();
-
-        // Save the flowData as a file, instead of form data
-        // This is required for the server to be able to read it
         const flowFile = new File([JSON.stringify(saveContents)], "flow.json", {
           type: "application/json"
         });
-
         body.append("flowData", flowFile);
-
-        // // Set the headers so that flask correctly accepts the form data
-        // const headers = {
-        //   Accept: "application/json",
-        // };
 
         // Post the flow to the server
         const response = await horusPost(
@@ -832,26 +846,24 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         let savedFlow = await response.json();
 
         if (!savedFlow) {
-          await horusAlert("No response from the server");
+          if (showModal) await horusAlert("No response from the server");
           return null;
         }
 
         if (!savedFlow.ok) {
-          savedFlow?.msg && (await horusAlert(savedFlow.msg));
+          if (showModal && savedFlow?.msg) await horusAlert(savedFlow.msg);
           return null;
         }
 
-        // Get relevant flow data
-        // If we are on App mode, the overwrite process gets handled by the system file explroer,
-        // on server mode though, we need to handle the overwrite process here, this is why we
-        //  to parse the overwrite and existingName flags
+        // Handle overwrite for manual saves only
         const overwrite = savedFlow.overwrite;
         const existingName = savedFlow.existingName;
         const path = overwrite ? savedFlow.path : saveContents.path;
         const desktop = savedFlow.desktop;
 
-        // Check if the flow with the same name already exists
+        // Check if the flow with the same name already exists (only for manual saves)
         if (
+          showModal &&
           overwrite &&
           !desktop &&
           !(await horusConfirm(
@@ -863,7 +875,6 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
         // If the user decided to overwrite the flow, re-send the request with the overwrite flag
         if (overwrite) {
-          // Re send the request with the overwrite flag
           const overwriteContents = {
             ...saveContents,
             name: existingName,
@@ -871,20 +882,15 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
             overwrite: true
           };
 
-          // Create a new form data object
           const overwriteBody = new FormData();
-
           const overwriteFile = new File(
             [JSON.stringify(overwriteContents)],
             "flow.json",
-            {
-              type: "application/json"
-            }
+            { type: "application/json" }
           );
 
           overwriteBody.append("flowData", overwriteFile);
 
-          // Send the request again
           const overwriteResponse = await horusPost(
             "/api/saveflow",
             undefined,
@@ -895,12 +901,12 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
           savedFlow = await overwriteResponse.json();
 
           if (!savedFlow.ok) {
-            await horusAlert(savedFlow.msg);
+            if (showModal) await horusAlert(savedFlow.msg);
             return null;
           }
         }
 
-        // If everything went well, update the flow state
+        // Update flow state
         socket.emit("leaveFlow", saveContents.savedID);
 
         setFlow({
@@ -917,29 +923,122 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
         // Update the URL with the flowID
         const newURL = `${window.__HORUS_ROOT__}/flow?open=true&flowID=${savedFlow.savedID}&path=${savedFlow.path}`;
-
         window.history.replaceState({}, document.title, newURL);
 
-        // Update the molstar state
-        setFlowText("Getting structures state...");
+        // Update the molstar state for all saves
+        if (showModal) {
+          setFlowText("Getting structures state...");
+        }
         await updateMolstarState({
           savedPath: savedFlow.path,
-          savedID: savedFlow.savedID
+          savedID: savedFlow.savedID,
+          showProgress: showModal
         });
 
         return savedFlow as Flow;
       } catch (error) {
-        alert(`Error saving the flow: ${error}`);
+        if (showModal) {
+          alert(`Error saving the flow: ${error}`);
+        }
         return null;
+      }
+    },
+    // Disable horusAlert and horusConfirm hook warning
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [serializeFlow, handleFlowChange, saved, dockApi, updateMolstarState]
+  );
+
+  // Duration for displaying save error status (ms)
+  const handleAutoSave = useCallback(async (): Promise<boolean> => {
+    if (
+      isFlowActive ||
+      !flow.path ||
+      isSaving.current ||
+      isAutoSaving.current
+    ) {
+      return false;
+    }
+
+    // Don't auto-save if flow is already saved
+    if (saved) {
+      return true;
+    }
+
+    isAutoSaving.current = true;
+    setSaveStatus("saving");
+
+    try {
+      const result = await saveFlowCore(serializeFlow(), false);
+
+      if (result) {
+        setSaveStatus("saved");
+        // Auto-hide saved status after SAVE_SUCCESS_DISPLAY_DURATION_MS
+        if (saveStatusTimeoutRef.current) {
+          window.clearTimeout(saveStatusTimeoutRef.current);
+          window.clearTimeout(saveStatusTimeoutRef.current);
+        }
+        saveStatusTimeoutRef.current = window.setTimeout(() => {
+          setSaveStatus("idle");
+        }, SAVE_SUCCESS_DISPLAY_DURATION_MS);
+        return true;
+      } else {
+        setSaveStatus("error");
+        // Auto-hide error status after SAVE_ERROR_DISPLAY_DURATION_MS
+        if (saveStatusTimeoutRef.current) {
+          window.clearTimeout(saveStatusTimeoutRef.current);
+        }
+        saveStatusTimeoutRef.current = window.setTimeout(() => {
+          setSaveStatus("idle");
+        }, SAVE_ERROR_DISPLAY_DURATION_MS);
+        return false;
+      }
+    } catch (error) {
+      console.error("Auto-save failed:", error);
+      setSaveStatus("error");
+      // Auto-hide error status after SAVE_ERROR_DISPLAY_DURATION_MS
+      if (saveStatusTimeoutRef.current) {
+        window.clearTimeout(saveStatusTimeoutRef.current);
+      }
+      saveStatusTimeoutRef.current = window.setTimeout(() => {
+        setSaveStatus("idle");
+      }, SAVE_ERROR_DISPLAY_DURATION_MS);
+      return false;
+    } finally {
+      isAutoSaving.current = false;
+      // Remove saveFlowCore from dependency array to prevent unnecessary recreations
+    }
+  }, [isFlowActive, flow.path, saved, serializeFlow, saveFlowCore]);
+  /**
+   * Saves the flow data to the server (for manual saves).
+   *
+   * @param flowToSave - Optional flow object to save. If not provided, the current flow will be serialized and saved.
+   * @returns A Promise that resolves to the saved Flow object if successful, or null otherwise.
+   */
+  const handleSave = useCallback(
+    async (flowToSave?: Flow): Promise<Flow | null> => {
+      // If the flow is already saving, exit early
+      if (isSaving.current) {
+        return null;
+      }
+
+      // Set the state
+      isSaving.current = true;
+      setFlowText("Saving flow...");
+      setFlowLoading(true);
+
+      try {
+        const result = await saveFlowCore(
+          flowToSave ? flowToSave : serializeFlow(),
+          true
+        );
+        return result;
       } finally {
         // Reset the state of the loading flow when everything is done
         isSaving.current = false;
         setFlowLoading(false);
       }
     },
-    // Disable horusAlert hook warning
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [serializeFlow, handleFlowChange, saved, dockApi]
+    [serializeFlow, saveFlowCore]
   );
 
   const serverPickerFolder = useCallback(
@@ -1956,100 +2055,108 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
   const latestPath = useRef<string | null>(null);
 
-  async function executeFlow(options?: {
-    placedID?: number;
-    resetFlow?: boolean;
-    continueSlurm?: boolean;
-  }) {
-    const {
-      placedID = undefined,
-      resetFlow = false,
-      continueSlurm = false
-    } = { ...options };
+  const executeFlow = useCallback(
+    async (options?: {
+      placedID?: number;
+      resetFlow?: boolean;
+      continueSlurm?: boolean;
+    }) => {
+      const {
+        placedID = undefined,
+        resetFlow = false,
+        continueSlurm = false
+      } = { ...options };
 
-    if (isExecutingInProcess.current) {
-      return;
-    }
-
-    try {
-      isExecutingInProcess.current = true;
-
-      // Check that the flow is saved
-      if (!(await preHandleSave(true))) {
+      if (isExecutingInProcess.current) {
         return;
       }
 
+      try {
+        isExecutingInProcess.current = true;
+
+        // Check that the flow is saved
+        if (!(await preHandleSave(true))) {
+          return;
+        }
+
+        // Make sure we have joined the flow room
+        socket.emit("joinFlow", flow.savedID);
+
+        setFlowText("Submitting flow");
+        setFlowLoading(true);
+
+        const updatedFlowPath = flow.path ?? latestPath.current;
+
+        setFlow((currentFlow) => {
+          return {
+            ...currentFlow,
+            status: FlowStatus.QUEUED
+          } as Flow;
+        });
+
+        const response = await horusPost(
+          "/api/plugins/executeflow",
+          null,
+          JSON.stringify({
+            flowPath: updatedFlowPath,
+            placedID,
+            resetFlow,
+            continueSlurm
+          })
+        );
+
+        const result = await response.json();
+
+        if (!result.ok) {
+          await horusAlert(result.msg);
+          setFlow({
+            ...flow,
+            status: FlowStatus.ERROR
+          });
+        }
+
+        setFlowLoading(false);
+      } finally {
+        isExecutingInProcess.current = false;
+      }
+    },
+    // Disable horusAlert hook warning
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [flow, preHandleSave]
+  );
+
+  const pauseOrStopFlow = useCallback(
+    async (pause: boolean = false) => {
       // Make sure we have joined the flow room
       socket.emit("joinFlow", flow.savedID);
 
-      setFlowText("Submitting flow");
-      setFlowLoading(true);
+      const stoppedFlow = {
+        ...flow,
+        status: pause ? FlowStatus.PAUSED : FlowStatus.CANCELLING
+      };
 
-      const updatedFlowPath = flow.path ?? latestPath.current;
+      setFlow(stoppedFlow);
 
-      setFlow((currentFlow) => {
-        return {
-          ...currentFlow,
-          status: FlowStatus.QUEUED
-        } as Flow;
+      const body = JSON.stringify({
+        flowPath: flow.path,
+        pause: pause
       });
 
-      const response = await horusPost(
-        "/api/plugins/executeflow",
-        null,
-        JSON.stringify({
-          flowPath: updatedFlowPath,
-          placedID,
-          resetFlow,
-          continueSlurm
-        })
-      );
+      const response = await horusPost("/api/plugins/stopflow", null, body);
 
-      const result = await response.json();
+      const data = await response.json();
 
-      if (!result.ok) {
-        await horusAlert(result.msg);
-        setFlow({
-          ...flow,
-          status: FlowStatus.ERROR
-        });
+      if (!data.ok) {
+        await horusAlert(data.msg);
+
+        // Restore the previous state of the flow
+        setFlow(flow);
       }
+    },
+    [flow, horusAlert, setFlow]
+  );
 
-      setFlowLoading(false);
-    } finally {
-      isExecutingInProcess.current = false;
-    }
-  }
-
-  async function pauseOrStopFlow(pause: boolean = false) {
-    // Make sure we have joined the flow room
-    socket.emit("joinFlow", flow.savedID);
-
-    const stoppedFlow = {
-      ...flow,
-      status: pause ? FlowStatus.PAUSED : FlowStatus.CANCELLING
-    };
-
-    setFlow(stoppedFlow);
-
-    const body = JSON.stringify({
-      flowPath: flow.path,
-      pause: pause
-    });
-
-    const response = await horusPost("/api/plugins/stopflow", null, body);
-
-    const data = await response.json();
-
-    if (!data.ok) {
-      await horusAlert(data.msg);
-
-      // Restore the previous state of the flow
-      setFlow(flow);
-    }
-  }
-
-  async function stopFlow() {
+  const stopFlow = useCallback(async () => {
     if (
       !(await horusConfirm("Are you sure you want to stop executing the flow?"))
     ) {
@@ -2057,7 +2164,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     }
 
     await pauseOrStopFlow();
-  }
+  }, [horusConfirm, pauseOrStopFlow]);
 
   const pauseFlow = useCallback(async () => {
     // If the flow is not running, display an alert
@@ -2229,6 +2336,33 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     };
   }, []);
 
+  // Auto-save delay constant
+  const AUTO_SAVE_DELAY_MS = 10000;
+
+  // Auto-save effect
+  useEffect(() => {
+    // Clear any existing timeout
+    if (autoSaveTimeoutRef.current) {
+      window.clearTimeout(autoSaveTimeoutRef.current);
+    }
+
+    // Don't set auto-save for new flows or flows without a path
+    if (!flow.path || saved) {
+      return;
+    }
+
+    // Set up auto-save after AUTO_SAVE_DELAY_MS of inactivity
+    autoSaveTimeoutRef.current = window.setTimeout(() => {
+      handleAutoSave();
+    }, AUTO_SAVE_DELAY_MS);
+
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        window.clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [flow, saved, handleAutoSave]);
+
   useEffect(() => {
     // Update the window.horus.getFlow function
     window.horus.getFlow = () => {
@@ -2268,7 +2402,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     window.dispatchEvent(newEvent);
 
     // Add a onFlowChange function
-  }, [flow, setFlow]);
+  }, [flow, setFlow, executeFlow]);
 
   const updateBlockLogs = useCallback(
     (logs: LogsData) => {
@@ -2338,7 +2472,8 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       handleFlowChange,
       stopFlow,
       centerView,
-      handleScaleChange
+      handleScaleChange,
+      saveStatus
     },
     shortcuts: {
       stopFlow,

@@ -6,19 +6,19 @@ import { horusGet } from "../../Utils/utils";
 
 // Horus components
 import { FlowStatusView } from "./flow_status";
-import { Flow } from "../FlowBuilder/flow.types";
+import { MinimalFlow } from "../FlowBuilder/flow.types";
 import { FileData } from "chonky";
 import { BreakLongUnderscoreNames } from "../FlowBuilder/Blocks/block.view";
 import { HorusLink } from "../reusable";
 
 type RecentUserFlowProps = {
-  flows: Flow[];
+  flows: MinimalFlow[];
 };
 
 export default function RecentUserFlows(props: RecentUserFlowProps) {
   const { flows } = props;
 
-  const ParsedFlowPath = ({ flow }: { flow: Flow }) => {
+  const ParsedFlowPath = ({ flow }: { flow: MinimalFlow }) => {
     if (flow.path) {
       const path = flow.path.split("/");
       // Remove from the path the first and last elements
@@ -47,7 +47,7 @@ export default function RecentUserFlows(props: RecentUserFlowProps) {
     return <div>Unknown path</div>;
   };
 
-  const getURL = (flow: Flow) => {
+  const getURL = (flow: MinimalFlow) => {
     const open = window.location.search.includes("open=true") ? "yes" : "true";
     return `/flow?open=${open}&flowID=${flow.savedID}&path=${flow.path}`;
   };
@@ -85,7 +85,7 @@ export default function RecentUserFlows(props: RecentUserFlowProps) {
 }
 
 export function PredefinedFlows(props: RecentUserFlowProps) {
-  const getURL = (flow: Flow) => {
+  const getURL = (flow: MinimalFlow) => {
     const open = window.location.search.includes("open=true") ? "yes" : "true";
     return `/flow?open=${open}&flowID=${flow.savedID}`;
   };
@@ -114,9 +114,9 @@ export type CorruptedFlow = FileData & {
 
 export function useGetRecentFlows(webAppFlows: boolean = false): {
   isLoading: boolean;
-  recentFlows: Flow[] | null;
-  presetFlows: Flow[] | null;
-  templates: Flow[] | null;
+  recentFlows: MinimalFlow[] | null;
+  presetFlows: MinimalFlow[] | null;
+  templates: MinimalFlow[] | null;
   otherDirectories: FileData[] | null;
   corruptedFlows: CorruptedFlow[] | null;
   refetch: () => void;
@@ -134,7 +134,7 @@ export function useGetRecentFlows(webAppFlows: boolean = false): {
       const data = await response.json();
       if (!data.ok) throw new Error(data.msg || "Failed to fetch recent flows");
       const flows = data.flows.sort(
-        (a: Flow, b: Flow) =>
+        (a: MinimalFlow, b: MinimalFlow) =>
           new Date(b.date).getTime() - new Date(a.date).getTime()
       );
       return {

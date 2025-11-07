@@ -13,6 +13,7 @@ import datetime
 import argparse
 import platform
 import debugpy
+import time
 from contextlib import contextmanager
 
 # Import type annotations
@@ -34,6 +35,15 @@ warnings.filterwarnings("ignore", message=".*pkg_resources.*")
 
 # For multiprocessing (leaked semaphore message when closing Horus)
 warnings.filterwarnings("ignore", message=".*resource_tracker.*")
+# Supress several warnings
+import warnings
+
+# For the PluginDeps class
+# Suppress pkg_resources deprecation warnings
+warnings.filterwarnings("ignore", message=".*pkg_resources.*")
+
+# For multiprocessing (leaked semaphore message when closing Horus)
+warnings.filterwarnings("ignore", message=".*resource_tracker.*")
 
 # Multiprocessing
 if typing.TYPE_CHECKING:
@@ -41,10 +51,12 @@ if typing.TYPE_CHECKING:
 else:
     import multiprocess as mp
 
-# Server
-from Server import HorusServer
-from Server.Utils import PrintTruncator
-from HorusAPI import HorusSingleton, __version__
+# Server (ignore import order because we need first to filter warnings)
+from Server import HorusServer  # noqa: E402
+from Server.FlowManager import Flow  # noqa: E402
+from Server.Utils import PrintTruncator  # noqa: E402
+from HorusAPI import HorusSingleton, __version__  # noqa: E402
+
 
 # Add to the pythonpath the path of the project
 sys.path.append("../")
@@ -85,7 +97,10 @@ class HorusLogger:
     def __init__(self, appSupportDir: str, debug: bool = False, verbose: bool = False) -> None:
 
         # Define the logs folder
-        self.logDir = os.path.join(appSupportDir, "logs")
+        if FLOWPATH:
+            self.logDir = os.path.join(Flow.flowWorkDir(FLOWPATH), ".logs")
+        else:
+            self.logDir = os.path.join(appSupportDir, "logs")
 
         # Define debug & verbose
         self.debug = debug
@@ -93,7 +108,7 @@ class HorusLogger:
 
         # Create the logs folder if it doesn't exist
         if not os.path.exists(self.logDir):
-            os.mkdir(self.logDir)
+            os.makedirs(self.logDir, exist_ok=True)
 
         # Clean the logs folder
         # DISABLED AS NO NEED TO REMOVE OLD LOGS
@@ -158,13 +173,11 @@ class HorusLogger:
         logname = f"{datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}-Horus-"
 
         if self.debug:
-            logname += "debug"
+            logname += "debug-"
 
         # If we are running a flow instead of running Horus, add "flow-{flowname}" to the logname
         if FLOWPATH:
-            logname += f"-FLOWRUN-{os.path.basename(FLOWPATH).replace('.flow', '')}"
-            self.logDir = os.path.dirname(FLOWPATH)
-            print(f"Logging FLOWRUN to {self.logDir}")
+            logname += f"{os.path.basename(FLOWPATH).replace('.flow', '')}"
 
         logFile = os.path.join(self.logDir, f"{logname}.log")
 
@@ -203,7 +216,7 @@ class HorusLogger:
             # White for the capturer
             CAPTURER_COLOR = "\033[1;37m"
 
-            def format(self, record):
+            def format(self, record: logging.LogRecord) -> str:
 
                 # Define the colors for the log levels
                 logLevelColor = self.COLOR_CODES.get(record.levelname, "")
@@ -220,7 +233,21 @@ class HorusLogger:
 
                 # Apply the colors
                 formatted = super().format(record)
-                colored = f"{logLevelColor}{formatted}{self.RESET_CODE}"
+
+                # Only apply colors if safe to do so
+                # This prevents deadlock issues with custom logging setup
+                try:
+                    # Do not use colors for flow runs,
+                    # as stdout/stderr may be redirected (+ subprocesses deadlock)
+                    safe_for_color = FLOWPATH is None
+
+                    if safe_for_color:
+                        colored = f"{logLevelColor}{formatted}{self.RESET_CODE}"
+                    else:
+                        colored = formatted
+                except Exception:
+                    # Fallback: no colors to avoid deadlock
+                    colored = formatted
 
                 # Restore the old format
                 self._style._fmt = oldFormat
@@ -594,6 +621,7 @@ class AppDelegate(metaclass=HorusSingleton):
             self.logger.horus.info("Starting debugpy...")
 
             # Get debugpy port from environment variables or use defaults
+            timeout = int(os.getenv("HORUS_DEBUGPY_TIMEOUT") or 10)
             if FLOWPATH:
                 # For flows, use HORUS_DEBUGPY_FLOW_PORT or default to 5679
                 default_port = 5679
@@ -621,8 +649,18 @@ class AppDelegate(metaclass=HorusSingleton):
                     )
                     debugpy.configure(python=python)
                     debugpy.listen(debugpy_port)
-                    debugpy.wait_for_client()
-                    print("Debugger attached.")
+                    start_time = time.time()
+                    while not debugpy.is_client_connected():
+                        if time.time() - start_time > timeout:
+                            print(
+                                "Timeout waiting for debugger to attach after"
+                                f" {timeout} seconds."
+                            )
+                            break
+                        time.sleep(1)
+                    if debugpy.is_client_connected():
+                        print("Debugger attached.")
+
                 except KeyboardInterrupt:
                     print("Debugpy setup interrupted by user.")
                 except Exception as e:
@@ -681,7 +719,7 @@ class AppDelegate(metaclass=HorusSingleton):
 
         # Get the path to the APP_INFO file
         if hasattr(sys, "_MEIPASS"):
-            envPath = os.path.join(sys._MEIPASS, "APP_INFO")  # type: ignore pylint: disable=protected-access
+            envPath = os.path.join(sys._MEIPASS, "APP_INFO")  # type: ignore
         else:
             envPath = os.path.join("App", "APP_INFO")
 
@@ -976,9 +1014,10 @@ class AppDelegate(metaclass=HorusSingleton):
         # Start the webview
         try:
             webview.start(debug=self.debug, menu=self._menus(), gui=guiBacked())  # type: ignore
-        except webview.WebViewException as e:
+        except webview.WebViewException:
             logging.getLogger("Horus").critical(
-                "Failed to start the window management system. Try launching Horus in server mode (--server)"
+                "Failed to start the window management system. "
+                "Try launching Horus in server mode (--server)"
             )
 
     def _startServerMode(self):
@@ -1240,7 +1279,9 @@ def parseArgs() -> tuple[dict, dict, dict]:
     parser.add_argument(
         "--flow-base-url",
         metavar="URL",
-        help="Base URL for sending events in a subprocess flow. Events will sent to the Horus server available on that instance. Only intended for internal use.",
+        help="Base URL for sending events in a subprocess flow. "
+        "Events will sent to the Horus server available on that instance."
+        " Only intended for internal use.",
     )
 
     parser.add_argument(
@@ -1264,7 +1305,9 @@ def parseArgs() -> tuple[dict, dict, dict]:
     parser.add_argument(
         "--flow-appsupport",
         metavar="/path/to/app/support/directory",
-        help="Specify the path to the app support directory for the flow. Only intended for internal use. Do not specify this option unless you know what you are doing.",
+        help="Specify the path to the app support directory for the flow. "
+        "Only intended for internal use. Do not specify this option unless"
+        " you know what you are doing.",
     )
 
     # For installing a plugin from the command line
@@ -1483,7 +1526,8 @@ def runFlowInsteadOfLaunch(app: AppDelegate, args: dict):
 
 def installPluginInsteadOfLaunch(app: AppDelegate, pluginArgs: dict):
     """
-    If a plugin was provided as an argument, it will install the plugin instead of launching the app.
+    If a plugin was provided as an argument,
+    it will install the plugin instead of launching the app.
     """
 
     pluginPath = pluginArgs.get("installPlugin")
@@ -1518,7 +1562,8 @@ def launchApp():
         )
         sys.exit(1)
 
-    # If a plugin was provided as an argument, it will install the plugin instead of launching the app.
+    # If a plugin was provided as an argument, it will install
+    # the plugin instead of launching the app.
     installPluginInsteadOfLaunch(app, pluginArgs)
 
     # If a flow was provided as an argument, it will run the flow instead of launching the app.

@@ -970,8 +970,7 @@ class HorusServer:
                             )
 
                     # Convert the flows to JSON
-
-                    flows = [flow.encode() for flow in flows]
+                    flows = [flow.encode(minimal=True) for flow in flows]
 
                     success = {"ok": True, "flows": flows}
             except Exception as exc:
@@ -1093,7 +1092,7 @@ class HorusServer:
                     flow.path = str(UserFileExplorer(path, currentUser).getRelativePath())
 
                 # Get the flow JSON
-                flowJson = {**flow.encode(minimal=False), "preset": flow.isPreset}
+                flowJson = flow.encode(minimal=False)
 
                 success = {"ok": True, "flow": flowJson}
 
@@ -1998,6 +1997,8 @@ class HorusServer:
         @self.preventOnWebApp(specialBypass="allowDownload")
         def downloadFiles():
 
+            onlyFiles = request.args.get("onlyFiles", "false").lower() == "true"
+            onlyText = request.args.get("onlyText", "false").lower() == "true"
             if request.method == "GET":
                 path = request.args.get("path", None)
                 flowContextPath = None
@@ -2024,7 +2025,7 @@ class HorusServer:
                         path, currentUser, relativeTo=relativeTo
                     ).getAbsolutePath()
 
-                if os.path.isdir(path):
+                if not onlyFiles and os.path.isdir(path):
 
                     # Zip the folder
                     shutil.make_archive(str(path), "zip", path)
@@ -2034,6 +2035,22 @@ class HorusServer:
                     def remove_file(response):
                         os.remove(path)
                         return response
+
+                if onlyFiles and os.path.isdir(path):
+                    raise Exception("Path is a directory")
+
+                # Check that the file exists / is a file
+                if not os.path.exists(path) or not os.path.isfile(path):
+                    raise Exception("File does not exist")
+
+                if onlyText:
+                    try:
+                        # Read only the first 1KB to check if it's text
+                        with open(path, "rb") as binaryFile:
+                            sample = binaryFile.read(1024)
+                            sample.decode("utf-8")
+                    except UnicodeDecodeError:
+                        raise Exception("File is not a text file")
 
                 # Always send as a binary blob, never as application/json
                 # Sending a .json file was causing issues for the fronten, thinking it was an error

@@ -78,6 +78,7 @@ import { MoleculePlotter } from "../MoleculePlotter/MoleculePlotter";
 import { HorusFileEditor } from "../FileEditor/FileEditor";
 import { BlockEditor } from "../FlowBuilder/BlockRegistry/BlockEditor";
 import { IconFile } from "@tabler/icons-react";
+import { IDockviewPanel } from "dockview-react";
 
 const MOLSTAR_PANEL: AddPanelOptions = {
   id: "molstar",
@@ -862,6 +863,33 @@ export function HorusPanelView() {
 
   const flowBuilderState = useFlowBuilder({ dockApi });
 
+  useEffect(() => {
+    const keydownHandler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "w") {
+        // Ignore key auto-repeat and debounce within 150ms
+        if (e.repeat) {
+          // Ignore key auto-repeat
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const activePanel = dockApi?.activePanel;
+        if (activePanel) {
+          activePanel.api.close();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", keydownHandler, { capture: true });
+
+    return () => {
+      window.removeEventListener("keydown", keydownHandler, {
+        capture: true
+      });
+    };
+  }, [dockApi]);
+
   const onReady = (event: DockviewReadyEvent) => {
     const dockApi = event.api;
 
@@ -919,17 +947,19 @@ export function HorusPanelView() {
       name,
       path,
       readOnly,
-      format
+      format,
+      panelID
     }: {
       path: string;
       name?: string;
       readOnly?: boolean;
       format?: string;
-    }) => {
-      addPanel({
+      panelID?: string;
+    }): IDockviewPanel | undefined => {
+      return addPanel({
         dockApi: dockApi,
         component: PANEL_REGISTRY.fileEditor.component,
-        panelID: `fileEditor-${path}`,
+        panelID: panelID ?? `fileEditor-${path}`,
         title: name ?? path.split("/").pop() ?? "File",
         params: {
           title: name,

@@ -3,6 +3,7 @@ import { useEffect, useState, useMemo, useContext, useCallback } from "react";
 
 // Horus TS types
 import {
+  BlockTypes,
   CustomVariable,
   PluginPage,
   PluginVariable,
@@ -36,7 +37,11 @@ import {
 } from "./molstar_variables";
 
 // Code editor variables
-import { CodeVariableView, ObjectVariableView } from "./editor_variables";
+import {
+  CodeVariableView,
+  HorusSmallVariableCodeEditor,
+  ObjectVariableView
+} from "./editor_variables";
 
 // Smiles
 import { SmilesVariableView } from "./smiles_variables";
@@ -50,6 +55,8 @@ import {
   PANEL_REGISTRY
 } from "@/Components/MainApp/PanelView";
 import { getIframeExtensionID } from "@/Components/IframeLoader/iframeloader";
+import RotatingLines from "@/Components/RotatingLines/rotatinglines";
+import { useDebouncedCallback } from "@mantine/hooks";
 
 type PluginVariableViewProps = {
   variable: PluginVariable;
@@ -777,16 +784,25 @@ function TextAreaVariableView(props: VariableViewProps) {
   );
 }
 
-function IntegerFloatVariableView(props: VariableViewProps) {
+function IntegerFloatVariableView(
+  props: VariableViewProps & { skipCheck?: boolean }
+) {
   const { currentValue, variable, onChange } = props;
 
+  const [internalValue, setInternalValue] = useState<string | number | null>(
+    currentValue
+  );
   const [numberMessage, setNumberMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    setInternalValue(currentValue);
+  }, [currentValue]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseNum(e.target.value);
     parseInsideAllowedValues(value);
-
     onChange(value);
+    setInternalValue(value);
   };
 
   const parseNum = (value: string) => {
@@ -819,7 +835,11 @@ function IntegerFloatVariableView(props: VariableViewProps) {
 
   const parseInsideAllowedValues = (value: any) => {
     // If no allowedValues are set, return the value
-    if (!variable.allowedValues || variable.allowedValues.length === 0) {
+    if (
+      !variable.allowedValues ||
+      variable.allowedValues.length === 0 ||
+      props.skipCheck
+    ) {
       return;
     }
     // If the allowedValues contains the value, return it
@@ -843,8 +863,9 @@ function IntegerFloatVariableView(props: VariableViewProps) {
       <input
         placeholder={props.variable.placeholder}
         className="plugin-variable-value"
-        value={currentValue}
-        onChange={handleChange}
+        value={internalValue ?? ""}
+        onBlur={handleChange}
+        onChange={(e) => setInternalValue(e.target.value)}
       />
     </div>
   );
@@ -869,6 +890,8 @@ function SliderVariableView(props: VariableViewProps) {
   } else if (value > max) {
     value = max;
   }
+
+  console.log("slider value:", currentValue);
 
   return (
     <div
@@ -896,6 +919,7 @@ function SliderVariableView(props: VariableViewProps) {
         }}
       />
       <IntegerFloatVariableView
+        skipCheck={true}
         currentValue={currentValue}
         variable={variable}
         onChange={onChange}
@@ -984,29 +1008,132 @@ type FilePickerViewProps = VariableViewProps & {
 
 function FilePickerView(props: FilePickerViewProps) {
   const { currentValue, variable, onChange } = props;
+  const [fileContents, setFileContents] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [fileLoading, setFileLoading] = useState<boolean>(false);
+
+  // Get flow context to check if we're in the flow canvas
+  const flowContext = useContext(FlowBuilderContext);
+
+  // Determine if we should show file contents based on block context
+  const shouldShowFileContents = useMemo(() => {
+    // Only show file contents if:
+    // 1. We have a block context
+    // 2. We are in the flow canvas (flowContext exists)
+    // 3. The block is an INPUT block
+    // 4. The selected remote is "Local"
+
+    if (!variable.block || !flowContext) {
+      return false;
+    }
+
+    const isInputBlock = variable.block.type === BlockTypes.INPUT;
+    const isLocalRemote = variable.block.selectedRemote === "Local";
+
+    return isInputBlock && isLocalRemote;
+  }, [variable.block, flowContext]);
+
+  const loadFileContents = useDebouncedCallback(async () => {
+    if (!currentValue || !shouldShowFileContents) {
+      setFileContents(null);
+      setFileError(null);
+      setFileLoading(false);
+      return;
+    }
+    setFileLoading(true);
+    try {
+      const contents = await window.horus.getFile(currentValue, {
+        onlyFiles: true,
+        onlyText: true
+      });
+      const text = await contents.text();
+      setFileContents(text);
+      setFileError(null);
+    } catch (err) {
+      setFileContents(null);
+      setFileError(typeof err === "string" ? err : "Error loading file");
+    } finally {
+      setFileLoading(false);
+    }
+  }, 500);
+
+  useEffect(() => {
+    loadFileContents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentValue, shouldShowFileContents]); // Load whenever currentValue or conditions change
 
   return (
-    <div className="flex flex-row gap-2 w-full h-10 p-1 justify-center items-center">
-      <input
-        id={variable.id}
-        placeholder={props.variable.placeholder ?? "Write a path or browse..."}
-        className="overflow-x-auto break-keep-all h-6 plugin-variable-value"
-        value={currentValue ?? ""}
-        onChange={(e) => onChange(e.target.value)}
-      />
-      <HorusFileExplorer
-        openOutsideFlowContext={
-          (variable as PluginVariable & { openOutsideFlowContext?: boolean })
-            ?.openOutsideFlowContext
-        }
-        openAtPath={currentValue}
-        onFileConfirm={onChange}
-        onFileSelect={onChange}
-        openFolder={props.openFolder ?? false}
-        allowedExtensions={variable?.allowedValues}
-      >
-        Browse...
-      </HorusFileExplorer>
+    <div className="flex flex-col w-full gap-2">
+      <div className="flex flex-row gap-2 w-full h-10 p-1 justify-center items-center">
+        <input
+          id={variable.id}
+          placeholder={
+            props.variable.placeholder ?? "Write a path or browse..."
+          }
+          className="overflow-x-auto break-keep-all h-6 plugin-variable-value"
+          value={currentValue ?? ""}
+          onChange={(e) => onChange(e.target.value)}
+        />
+        <HorusFileExplorer
+          openOutsideFlowContext={
+            (variable as PluginVariable & { openOutsideFlowContext?: boolean })
+              ?.openOutsideFlowContext
+          }
+          openAtPath={currentValue}
+          onFileConfirm={onChange}
+          onFileSelect={onChange}
+          openFolder={props.openFolder ?? false}
+          allowedExtensions={variable?.allowedValues}
+        >
+          Browse...
+        </HorusFileExplorer>
+      </div>
+      {shouldShowFileContents && (
+        <>
+          {fileLoading ? (
+            <div className="flex flex-col justify-center items-center p-4 w-full">
+              <RotatingLines size="2rem" />
+            </div>
+          ) : (
+            currentValue &&
+            (() => {
+              const parts = currentValue.split("/");
+              const fileName = parts.pop();
+              const extension = fileName?.split(".").pop();
+
+              if (fileError) {
+                return (
+                  <div className="text-red-500 text-center p-2">
+                    {fileError}
+                  </div>
+                );
+              }
+
+              return (
+                <HorusSmallVariableCodeEditor
+                  variable={props.variable}
+                  value={fileContents ?? ""}
+                  onChange={() => {}}
+                  language={extension ?? "txt"}
+                  height="300px"
+                  options={{ minimap: { enabled: false }, readOnly: true }}
+                  overrideFullScreenToggle={(panelID) => {
+                    window.horus.openFileInEditor?.({
+                      path: currentValue,
+                      panelID
+                    });
+                  }}
+                  label="Edit file"
+                  onClose={() => {
+                    // Update the contents when the editor is closed
+                    loadFileContents();
+                  }}
+                />
+              );
+            })()
+          )}
+        </>
+      )}
     </div>
   );
 }
