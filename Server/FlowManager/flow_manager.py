@@ -2294,6 +2294,10 @@ class FlowManager:
 
         generalSettings = AppDelegate().server._settingsManager
 
+        # Unset HORUS_PORT to prevent clashes
+        env = {**os.environ}
+        env.pop("HORUS_PORT", None)
+
         if generalSettings.getSetting("runFlowsInSlurm").value:
 
             if not AppDelegate().isCompiled:
@@ -2308,11 +2312,11 @@ class FlowManager:
 
             # Setup a local remote to use the submitJob functionality
             remote = RemotesAPI()
-            slurmJob = SlurmJob._submitJob(remote, [scriptPath])[0]
+            slurmJob = SlurmJob._submitJob(remote, [scriptPath], env=env)[0]
             externalFlow = ExternalSlurmFlow(slurmJob, remote)
 
         else:
-            process = SubprocessManager.callPopen(command, wait=False, env={**os.environ})
+            process = SubprocessManager.callPopen(command, wait=False, env=env)
             externalFlow = ExternalProcessFlow(process.pid)
 
         # Save the process
