@@ -468,7 +468,7 @@ class FileManagement:
 
     allowUpload: bool = False
     """
-    If users should be allowed to uplaod files to the flow
+    If users should be allowed to upload files to the flow
     """
 
     maxUploadSize: int = 2

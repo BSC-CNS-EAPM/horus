@@ -18,7 +18,6 @@ from HorusAPI import (
     VariableGroup,
 )
 
-
 plugin = Plugin()
 
 
@@ -633,7 +632,7 @@ customVariableTest = CustomVariable(
     id="custom_variable_test",
     name="Custom variable test",
     description="Custom variable test",
-    customPage=devPage,
+    customPage="devplugin.dev_page",
     type=VariableTypes.NUMBER,
     category="Custom variables",
 )
