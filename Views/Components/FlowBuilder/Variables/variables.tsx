@@ -1236,6 +1236,16 @@ function CustomVariableRenderer(props: {
   const panelID = `variable-${props.variable.id}-${props.variable.placedID}`;
 
   const updatedPluginPage: PluginPage = useMemo(() => {
+    if (typeof props.variable.customPage === "string") {
+      const pluginID = props.variable.customPage.split(".")[0];
+      return {
+        name: props.variable.name,
+        plugin: pluginID,
+        id: props.variable.customPage,
+        variable_id: props.variable.id,
+        placedID: props.variable.placedID
+      };
+    }
     return {
       ...props.variable.customPage,
       variable_id: props.variable.id,

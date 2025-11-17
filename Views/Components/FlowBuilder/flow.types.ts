@@ -27,7 +27,7 @@ export type HorusPlugin = {
 
 export type PluginPage = {
   name: string;
-  url: string;
+  url?: string;
   description?: string;
   hidden?: boolean;
   id?: string;
@@ -108,7 +108,7 @@ export type PluginVariable = {
 };
 
 export type CustomVariable = PluginVariable & {
-  customPage: PluginPage;
+  customPage: PluginPage | string;
 };
 
 export enum BlockTypes {

@@ -115,6 +115,16 @@ class PluginRepos(BaseModel):
     repository_name: typing.Optional[str] = None
 
 
+class MissingDependencies(typing.TypedDict):
+    pluginPath: str
+    missingDependencies: list[str]
+
+
+class PluginsResult(typing.NamedTuple):
+    plugins: typing.List[str]
+    errors: typing.List[MissingDependencies]
+
+
 class PluginManager(metaclass=HorusSingleton):
     """
     This class manages the installation, loading and uninstallation of plugins.
@@ -157,7 +167,7 @@ class PluginManager(metaclass=HorusSingleton):
             self._initializePlugins()
         except Exception as e:
             logging.getLogger("Horus").critical(
-                "Error initializing plugins: %s. "
+                "Error initializing plugins: %s "
                 "Please check the plugins in the Plugins directory. "
                 "Booting Horus without plugins.",
                 str(e),
@@ -750,30 +760,41 @@ class PluginManager(metaclass=HorusSingleton):
         self.customBlocks: dict[str, Plugin] = {}
         pluginPaths = self._listPluginsPaths()
 
-        for pth in self._getPluginsImportOrder(pluginPaths):
+        def addErrorPlugin(pth: str, e: Exception):
+            meta = {
+                "id": os.path.basename(pth).lower(),
+                "name": os.path.basename(pth),
+                "description": str(e),
+                "author": "unknown",
+                "version": "unknown",
+                "pluginFile": os.path.basename(pth),
+                "platforms": None,
+            }
+
+            # Define an error dummy plugin
+            errorPlugin = Plugin(noMetaLoad=True)
+            errorPlugin.pluginMeta = PluginMetaModel(**meta)
+            errorPlugin.id = meta["id"]
+            errorPlugin._path = pth
+            self.errorPlugins.append(errorPlugin)
+
+        importOrder = self._getPluginsImportOrder(pluginPaths)
+
+        for pth in importOrder.plugins:
             try:
                 self._loadPlugin(pth)
             except Exception as e:
-
-                dummyMeta = {
-                    "id": os.path.basename(pth).lower(),
-                    "name": os.path.basename(pth),
-                    "description": str(e),
-                    "author": "unknown",
-                    "version": "unknown",
-                    "pluginFile": os.path.basename(pth),
-                    "platforms": None,
-                }
-
-                # Define an error dummy plugin
-                errorPlugin = Plugin(noMetaLoad=True)
-                errorPlugin.pluginMeta = PluginMetaModel(**dummyMeta)
-                errorPlugin.id = dummyMeta["id"]
-                errorPlugin._path = pth
-                self.errorPlugins.append(errorPlugin)
-
+                addErrorPlugin(pth, e)
                 # No need to log here as it is already logged in _loadPlugin
                 # logging.getLogger("Horus").error("Error loading plugin '%s': %s", pth, str(e))
+
+        for e in importOrder.errors:
+            addErrorPlugin(
+                e["pluginPath"],
+                Exception(
+                    f"Could not load plugin due to missing dependencies: {', '.join(e['missingDependencies'])}."
+                ),
+            )
 
         logging.getLogger("Horus").info(
             "%i plugins initialized: %s.",
@@ -799,7 +820,7 @@ class PluginManager(metaclass=HorusSingleton):
             ", ".join([block.id for block in self.customBlocks.values()]),
         )
 
-    def _getPluginsImportOrder(self, pluginPaths: list[str]) -> list[str]:
+    def _getPluginsImportOrder(self, pluginPaths: list[str]) -> PluginsResult:
         """
         Based on each plugin's pluginRequires metadata,
         set the correct order for import order
@@ -832,6 +853,53 @@ class PluginManager(metaclass=HorusSingleton):
             for dep in meta.meta.pluginRequires or []:
                 graph[dep].append(meta.meta.id)
                 in_degree[meta.meta.id] += 1
+
+        # Verify that all dependencies are present
+        metas_to_remove: set[str] = set()
+        dependencies_error_list: list[MissingDependencies] = []
+
+        for meta in metas:
+            for dep in meta.meta.pluginRequires or []:
+                if dep not in in_degree:
+                    # Mark plugin for removal due to missing dependency
+                    logging.getLogger("Horus").error(
+                        "Plugin '%s' requires missing plugin with ID '%s'. "
+                        "Horus won't load this plugin.",
+                        meta.meta.name,
+                        dep,
+                    )
+                    dependencies_error_list.append(
+                        {"pluginPath": meta.p, "missingDependencies": [dep]}
+                    )
+                    metas_to_remove.add(meta.meta.id)
+
+                    # Find all plugins that transitively depend on this one
+                    to_process = deque([meta.meta.id])
+                    while to_process:
+                        current = to_process.popleft()
+                        for dependent_id in graph.get(current, []):
+                            if dependent_id not in metas_to_remove:
+                                dependent_meta = next(
+                                    (m for m in metas if m.meta.id == dependent_id), None
+                                )
+                                if dependent_meta:
+                                    logging.getLogger("Horus").error(
+                                        "Also removing plugin '%s' that depends on missing plugin '%s'.",
+                                        dependent_meta.meta.name,
+                                        current,
+                                    )
+                                    dependencies_error_list.append(
+                                        {
+                                            "pluginPath": dependent_meta.p,
+                                            "missingDependencies": [current],
+                                        }
+                                    )
+                                    metas_to_remove.add(dependent_id)
+                                    to_process.append(dependent_id)
+                    break  # No need to check other dependencies of this plugin
+
+        # Remove all marked plugins in one pass
+        metas[:] = [m for m in metas if m.meta.id not in metas_to_remove]
 
         # Collect plugins with no dependencies
         queue = deque([meta for meta in metas if in_degree[meta.meta.id] == 0])
@@ -873,7 +941,7 @@ class PluginManager(metaclass=HorusSingleton):
         # Add the error plugins
         sorted_plugins = errors + sorted_plugins
 
-        return sorted_plugins
+        return PluginsResult(plugins=sorted_plugins, errors=dependencies_error_list)
 
     def _loadPlugin(
         self, pluginPath: str, appendToLoaded: bool = True
