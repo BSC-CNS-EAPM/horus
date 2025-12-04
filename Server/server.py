@@ -1864,7 +1864,7 @@ class HorusServer:
         def filePicker():
             try:
                 jsonData = request.get_json()
-                path = jsonData.get("path")
+                path: typing.Union[str, None] = jsonData.get("path")
                 flowContextPath = jsonData.get("flowContextPath")
                 extensions = jsonData.get("extensions")
                 openFolder = jsonData.get("openFolder", False)
@@ -1892,7 +1892,7 @@ class HorusServer:
 
                         if overrideUserExplorer():
                             fileExplorer = FileExplorer(
-                                (path if os.path.exists(path) else relativeTo),
+                                (path if path and os.path.exists(path) else relativeTo),
                             )
                         else:
                             fileExplorer = UserFileExplorer(
