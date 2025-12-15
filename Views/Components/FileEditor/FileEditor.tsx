@@ -51,9 +51,12 @@ export function HorusFileEditor({
     }
   }, []);
 
-  useEffect(() => {
-    if (!path) return;
+  const fetching = useRef(false);
 
+  useEffect(() => {
+    if (!path || fetching.current) return;
+
+    fetching.current = true;
     dockApi.setTitle(params.title ?? path.split("/").pop() ?? "Untitled");
     dockApi.updateParameters({ path });
     setFileType(params?.format ?? getFileLanguage(path));
@@ -68,7 +71,10 @@ export function HorusFileEditor({
         setHasChanges(false);
       })
       .catch((err) => setError("Error loading file: " + err))
-      .finally(() => setLoadingFile(false));
+      .finally(() => {
+        setLoadingFile(false);
+        fetching.current = false;
+      });
   }, [path, dockApi, params]);
 
   if (!path || error) {
