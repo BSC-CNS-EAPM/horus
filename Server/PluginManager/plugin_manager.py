@@ -1664,9 +1664,9 @@ class PluginManager(metaclass=HorusSingleton):
         # Set the block config to execute the block
         block.config = plugin.config
 
-        appSupportDir = self.appSupportDir
-        if hasattr(currentUser, "appSupportDir"):
-            appSupportDir = currentUser.appSupportDir
+        from App import AppDelegate
+
+        appSupportDir = AppDelegate().flowAppSupportDir or self.appSupportDir
 
         # Set the block plugin path
         block.pluginDir = plugin._path
