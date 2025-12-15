@@ -35,15 +35,6 @@ warnings.filterwarnings("ignore", message=".*pkg_resources.*")
 
 # For multiprocessing (leaked semaphore message when closing Horus)
 warnings.filterwarnings("ignore", message=".*resource_tracker.*")
-# Supress several warnings
-import warnings
-
-# For the PluginDeps class
-# Suppress pkg_resources deprecation warnings
-warnings.filterwarnings("ignore", message=".*pkg_resources.*")
-
-# For multiprocessing (leaked semaphore message when closing Horus)
-warnings.filterwarnings("ignore", message=".*resource_tracker.*")
 
 # Multiprocessing
 if typing.TYPE_CHECKING:
@@ -533,6 +524,11 @@ class AppDelegate(metaclass=HorusSingleton):
     """
     Whether the app is in verbose mode. This will print all logs
     into the console apart from the logfile.
+    """
+
+    flowAppSupportDir: typing.Optional[str] = None
+    """
+    Flow app support dir used when running flows. Used on _minimalEncode of PluginBlock
     """
 
     @property
@@ -1493,6 +1489,7 @@ def runFlowInsteadOfLaunch(app: AppDelegate, args: dict):
         from Server.SettingsManager import SettingsManager
 
         settings = SettingsManager(flowAppSupport)
+        app.flowAppSupportDir = flowAppSupport
     else:
         settings = app.server.settingsManager
 
