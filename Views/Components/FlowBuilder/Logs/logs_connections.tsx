@@ -121,7 +121,9 @@ function SingleSlurmJobView({ block, job }: { block: Block; job: SlurmJob }) {
         {words?.map((key) => {
           return (
             <tr key={key} className="select-text">
-              <td style={{ paddingLeft: "15px" }}>{key}</td>
+              <td className="font-semibold" style={{ paddingLeft: "15px" }}>
+                {key}
+              </td>
               <td style={{ paddingLeft: "25px" }}>{`${job[key]}`}</td>
             </tr>
           );
