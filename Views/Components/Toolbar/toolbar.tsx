@@ -57,7 +57,7 @@ import StopIcon from "./Icons/Stop";
 import { queryClient } from "@/Main";
 import AppButton from "../appbutton";
 import { useSettingsContext } from "@/Main/app";
-import { IconReload } from "@tabler/icons-react";
+import { IconCopy, IconReload } from "@tabler/icons-react";
 import RotatingLines from "../RotatingLines/rotatinglines";
 
 // Define the logos for the shortcuts
@@ -415,6 +415,13 @@ export default function HorusToolbar() {
           onClick: () => {
             shortcuts.stopFlow();
           }
+        },
+        {
+          name: "Copy flow path",
+          onClick: () => {
+            shortcuts.copyFlowPath();
+          },
+          svgPath: <IconCopy size="18px" />
         },
         {
           name: "Debug flow",
