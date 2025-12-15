@@ -2461,8 +2461,13 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       return;
     }
 
-    navigator.clipboard.writeText(flow.path);
-    horusAlert(`Flow path '${flow.path}' copied to clipboard`);
+    try {
+      navigator.clipboard.writeText(flow.path);
+      horusAlert(`Flow path '${flow.path}' copied to clipboard`);
+    } catch {
+      horusAlert(`Could not copy to clipboard. Flow path: '${flow.path}');
+    }
+      
   }, [flow.path, horusAlert]);
 
   return {
