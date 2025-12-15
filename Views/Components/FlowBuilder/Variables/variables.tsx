@@ -1022,8 +1022,15 @@ function FilePickerView(props: FilePickerViewProps) {
     // 2. We are in the flow canvas (flowContext exists)
     // 3. The block is an INPUT block
     // 4. The selected remote is "Local"
+    // 5. The variable is of type FILE (not FOLDER)
 
-    if (!variable.block || !flowContext) {
+    const flowPath = flowContext?.flow.flow.path;
+
+    if (
+      !variable.block ||
+      !flowPath ||
+      variable.type !== PluginVariableTypes.FILE
+    ) {
       return false;
     }
 
@@ -1031,7 +1038,7 @@ function FilePickerView(props: FilePickerViewProps) {
     const isLocalRemote = variable.block.selectedRemote === "Local";
 
     return isInputBlock && isLocalRemote;
-  }, [variable.block, flowContext]);
+  }, [variable.block, flowContext?.flow.flow.path, variable.type]);
 
   const loadFileContents = useDebouncedCallback(async () => {
     if (!currentValue || !shouldShowFileContents) {
