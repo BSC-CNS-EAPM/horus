@@ -2455,6 +2455,16 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     // eslint-disable-next-line
   }, []);
 
+  const copyFlowPath = useCallback(() => {
+    if (!flow.path) {
+      horusAlert("Flow has not been saved yet");
+      return;
+    }
+
+    navigator.clipboard.writeText(flow.path);
+    horusAlert(`Flow path '${flow.path}' copied to clipboard`);
+  }, [flow.path, horusAlert]);
+
   return {
     flow: {
       hideFlowError,
@@ -2476,6 +2486,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       saveStatus
     },
     shortcuts: {
+      copyFlowPath,
       stopFlow,
       handleUndo,
       handleRedo,
