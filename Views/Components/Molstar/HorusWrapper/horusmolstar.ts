@@ -2603,9 +2603,9 @@ export default class HorusMolstar {
     color?: Color;
     deletePrevious?: SphereRef;
   }): Promise<SphereRef> {
-    deletePrevious && this.removeShape(deletePrevious.ref);
+    deletePrevious &&
+      this.removeShape(deletePrevious.ref, { removeNode: true });
 
-    // Determine the structure to use based on the existence of structureFirst
     const structure = await this.createEmptyNode("Sphere");
 
     if (!structure) {
@@ -2753,7 +2753,8 @@ export default class HorusMolstar {
     color?: Color;
     deletePrevious?: BoxRef;
   }): Promise<BoxRef> {
-    deletePrevious && this.removeShape(deletePrevious.ref);
+    deletePrevious &&
+      this.removeShape(deletePrevious.ref, { removeNode: true });
 
     // Generate a box node
     const structure = await this.createEmptyNode("Box");
@@ -2928,10 +2929,40 @@ export default class HorusMolstar {
    *
    * @throws {Error} If there's an issue removing the shape or committing the change.
    */
-  public async removeShape(ref: string) {
+  public async removeShape(
+    ref: string,
+    { removeNode }: { removeNode?: boolean } = {}
+  ) {
     const builder = this.plugin?.state.data.build();
     builder?.delete(ref);
     builder?.commit();
+
+    // Remove the node, not only the representation
+    // used for removing spheres and boxes when needed
+    if (removeNode) {
+      // Get the shape object to find its parent structure
+      const shapeObj = this.plugin?.state.data.select(ref);
+      if (!shapeObj || !shapeObj[0]) return;
+
+      // find the structure that contains this shape
+      const strucNode = this.listStructures({ includeRef: true }).find(
+        (s) => shapeObj[0]?.sourceRef === s.structureRef.cell.transform.ref
+      );
+
+      if (strucNode) {
+        this.removeStructure(strucNode);
+      }
+    }
+  }
+
+  public removeStructure(structure: MolInfoWithRef) {
+    if (!this.plugin) return;
+
+    PluginCommands.State.RemoveObject(this.plugin, {
+      state: structure.structureRef.cell.parent!,
+      ref: structure.rootRef,
+      removeParentGhosts: true
+    });
   }
 
   /**
@@ -3725,6 +3756,7 @@ export type BoxRef = {
   radialSegments: number;
   color: Color;
   alpha: number;
+  // This ref corresponds to the representation
   ref: string;
 };
 
@@ -3735,6 +3767,7 @@ export type SphereRef = {
   radius: number;
   color: Color;
   alpha: number;
+  // This ref corresponds to the representation
   ref: string;
 };
 
