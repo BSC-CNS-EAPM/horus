@@ -2937,7 +2937,7 @@ export default class HorusMolstar {
     builder?.delete(ref);
     builder?.commit();
 
-    // Remvoe the node, not only the representation
+    // Remove the node, not only the representation
     // used for removing spheres and boxes when needed
     if (removeNode) {
       // Get the shape object to find its parent structure
