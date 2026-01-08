@@ -1079,7 +1079,7 @@ export function BoxVariableView(props: VariableViewProps) {
   useEffect(() => {
     return () => {
       if (isMolstarLoaded(window.molstar) && boxRef?.current?.ref) {
-        window.molstar.removeShape(boxRef.current.ref);
+        window.molstar.removeShape(boxRef.current.ref, { removeNode: true });
       }
     };
   }, []);
@@ -1446,7 +1446,7 @@ export function SphereVariableView(props: VariableViewProps) {
   useEffect(() => {
     return () => {
       if (isMolstarLoaded(window.molstar) && sphereRef?.current?.ref) {
-        window.molstar.removeShape(sphereRef.current.ref);
+        window.molstar.removeShape(sphereRef.current.ref, { removeNode: true });
       }
     };
   }, []);

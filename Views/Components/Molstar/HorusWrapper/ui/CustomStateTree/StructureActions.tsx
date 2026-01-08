@@ -1,8 +1,10 @@
 import { StructureElement } from "molstar/lib/mol-model/structure";
 import { OrderedSet } from "molstar/lib/mol-data/int";
 import { UnitIndex } from "molstar/lib/mol-model/structure/structure/element/util";
-import { PluginCommands } from "molstar/lib/mol-plugin/commands";
-import HorusMolstar, { MolInfoWithRef } from "../../horusmolstar";
+import HorusMolstar, {
+  MolInfoWithRef,
+  isMolstarLoaded
+} from "../../horusmolstar";
 import CloudDownload from "@/Components/Toolbar/Icons/CloudDownload";
 import TrashIcon from "@/Components/Toolbar/Icons/Trash";
 import EyeIcon from "@/Components/Toolbar/Icons/Eye";
@@ -34,11 +36,8 @@ export function StructureActions({ structure }: StructureActionsProps) {
 
   const removeStructure = (e: React.MouseEvent) => {
     e.preventDefault();
-    PluginCommands.State.RemoveObject(plugin, {
-      state: structure.structureRef.cell.parent!,
-      ref: structure.rootRef,
-      removeParentGhosts: true
-    });
+    isMolstarLoaded(window.molstar) &&
+      window.molstar.removeStructure(structure);
   };
 
   return (
