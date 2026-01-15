@@ -1,5 +1,12 @@
 // React
-import { useEffect, useState, useMemo, useContext, useCallback } from "react";
+import {
+  useEffect,
+  useState,
+  useMemo,
+  useContext,
+  useCallback,
+  Fragment
+} from "react";
 
 // Horus TS types
 import {
@@ -185,6 +192,30 @@ export function PluginVariableView(props: PluginVariableViewProps) {
 
 function VariableListView(props: VariableViewProps) {
   const { variable, currentValue, onChange } = props;
+  const [itemIds, setItemIds] = useState<string[]>([]);
+
+  // Generate unique IDs for items when the array length changes
+  useEffect(() => {
+    // To prevent infinite loops, only proceed if currentValue is an array
+    // Usually, it starts with null or undefined
+    if (!Array.isArray(currentValue)) {
+      return;
+    }
+
+    // When its an array but empty, reset itemIds
+    if (!currentValue || currentValue.length === 0) {
+      setItemIds([]);
+      return;
+    }
+
+    // If the length of itemIds is different from currentValue, regenerate itemIds
+    setItemIds((prev) =>
+      prev.length === currentValue.length
+        ? prev
+        : currentValue.map((_, i) => prev[i] ?? `item-${Date.now()}`)
+    );
+  }, [currentValue]);
+
   const addRow = () => {
     const newValues = currentValue ? [...currentValue] : [];
 
@@ -202,14 +233,20 @@ function VariableListView(props: VariableViewProps) {
         return acc;
       }, {})
     );
+    const newIds = [...itemIds, `item-${Date.now()}`];
     onChange(newValues);
+    setItemIds(newIds);
   };
 
   const removeRow = (index: number) => {
     if (!currentValue) return;
     const newValues = [...currentValue];
+    const newIds = [...itemIds];
     newValues.splice(index, 1);
+    newIds.splice(index, 1);
+
     onChange(newValues);
+    setItemIds(newIds);
   };
 
   const internalOnChange = (
@@ -278,6 +315,7 @@ function VariableListView(props: VariableViewProps) {
         <AppButton
           action={() => {
             onChange([]);
+            setItemIds([]);
           }}
         >
           Clear
@@ -290,7 +328,7 @@ function VariableListView(props: VariableViewProps) {
         >
           {cols}
           {currentValue?.map((value: any, index: number) => (
-            <>
+            <Fragment key={itemIds[index] ?? `fallback-${index}`}>
               {variable.variables!.map((variable, i) => {
                 return (
                   <PluginVariableView
@@ -319,13 +357,13 @@ function VariableListView(props: VariableViewProps) {
                 );
               })}
               <button
-                key={index}
+                key={"delete-button"}
                 className="flex justify-center items-center w-6"
                 onClick={() => removeRow(index)}
               >
                 <TrashIcon stroke="none" color="red" />
               </button>
-            </>
+            </Fragment>
           ))}
         </div>
       )}
@@ -383,11 +421,9 @@ function VariableRenderer(props: {
   };
 
   useEffect(() => {
-    // Assign the variable value that comes from the object to the
-    // initial currentValue
+    // Update currentValue when the variable value changes
     setCurrentValue(variableToRender.value);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Notice the empty dependency array so that the value is not updated with the variable
+  }, [variableToRender.value]);
 
   if (variableToRender?.isCustom) {
     return (
@@ -891,8 +927,6 @@ function SliderVariableView(props: VariableViewProps) {
     value = max;
   }
 
-  console.log("slider value:", currentValue);
-
   return (
     <div
       className="flex flex-row p-2 w-full items-end gap-4"
@@ -1147,18 +1181,46 @@ function FilePickerView(props: FilePickerViewProps) {
 
 function ListView(props: VariableViewProps) {
   const { currentValue, variable, onChange } = props;
+  const [itemIds, setItemIds] = useState<string[]>([]);
+
+  // Generate unique IDs for items when the array length changes
+  useEffect(() => {
+    // To prevent infinite loops, only proceed if currentValue is an array
+    // Usually, it starts with null or undefined
+    if (!Array.isArray(currentValue)) {
+      return;
+    }
+
+    // When its an array but empty, reset itemIds
+    if (!currentValue || currentValue.length === 0) {
+      setItemIds([]);
+      return;
+    }
+
+    // If the length of itemIds is different from currentValue, regenerate itemIds
+    setItemIds((prev) =>
+      prev.length === currentValue.length
+        ? prev
+        : currentValue.map((_, i) => prev[i] ?? `item-${Date.now()}`)
+    );
+  }, [currentValue]);
 
   const addRow = () => {
     const newValues = currentValue ? [...currentValue] : [];
     newValues.push(null);
+    const newIds = [...itemIds, `item-${Date.now()}`];
     onChange(newValues);
+    setItemIds(newIds);
   };
 
   const removeRow = (index: number) => {
     if (!currentValue) return;
     const newValues = [...currentValue];
+    const newIds = [...itemIds];
     newValues.splice(index, 1);
+    newIds.splice(index, 1);
     onChange(newValues);
+    setItemIds(newIds);
   };
 
   const handleRowValueChange = (index: number, value: string) => {
@@ -1183,6 +1245,7 @@ function ListView(props: VariableViewProps) {
         <AppButton
           action={() => {
             onChange([]);
+            setItemIds([]);
           }}
         >
           Clear
@@ -1192,6 +1255,7 @@ function ListView(props: VariableViewProps) {
         <div className="flex flex-col gap-2 pb-2">
           {currentValue?.map((value: any, index: number) => (
             <div
+              key={itemIds[index] ?? `fallback-${index}`}
               className="flex flex-row gap-2 items-center justify-between px-2 zoom-out-animation "
               style={{
                 pointerEvents: props.isFlowActive ? "none" : "auto",
