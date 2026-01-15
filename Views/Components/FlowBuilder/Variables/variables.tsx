@@ -203,18 +203,18 @@ function VariableListView(props: VariableViewProps) {
     }
 
     // When its an array but empty, reset itemIds
-    if (!currentValue) {
+    if (!currentValue || currentValue.length === 0) {
       setItemIds([]);
+      return;
     }
 
     // If the length of itemIds is different from currentValue, regenerate itemIds
-    if (itemIds.length !== currentValue.length) {
-      const newIds = (currentValue as any[]).map(
-        (_, index) => itemIds[index] ?? `item-${Date.now()}-${Math.random()}`
-      );
-      setItemIds(newIds);
-    }
-  }, [currentValue, itemIds]);
+    setItemIds((prev) =>
+      prev.length === currentValue.length
+        ? prev
+        : currentValue.map((_, i) => prev[i] ?? `item-${Date.now()}`)
+    );
+  }, [currentValue]);
 
   const addRow = () => {
     const newValues = currentValue ? [...currentValue] : [];
@@ -233,7 +233,7 @@ function VariableListView(props: VariableViewProps) {
         return acc;
       }, {})
     );
-    const newIds = [...itemIds, `item-${Date.now()}-${Math.random()}`];
+    const newIds = [...itemIds, `item-${Date.now()}`];
     onChange(newValues);
     setItemIds(newIds);
   };
@@ -1192,24 +1192,23 @@ function ListView(props: VariableViewProps) {
     }
 
     // When its an array but empty, reset itemIds
-    if (!currentValue) {
+    if (!currentValue || currentValue.length === 0) {
       setItemIds([]);
       return;
     }
 
     // If the length of itemIds is different from currentValue, regenerate itemIds
-    if (itemIds.length !== currentValue.length) {
-      const newIds = (currentValue as any[]).map(
-        (_, index) => itemIds[index] ?? `item-${Date.now()}-${Math.random()}`
-      );
-      setItemIds(newIds);
-    }
-  }, [currentValue, itemIds]);
+    setItemIds((prev) =>
+      prev.length === currentValue.length
+        ? prev
+        : currentValue.map((_, i) => prev[i] ?? `item-${Date.now()}`)
+    );
+  }, [currentValue]);
 
   const addRow = () => {
     const newValues = currentValue ? [...currentValue] : [];
     newValues.push(null);
-    const newIds = [...itemIds, `item-${Date.now()}-${Math.random()}`];
+    const newIds = [...itemIds, `item-${Date.now()}`];
     onChange(newValues);
     setItemIds(newIds);
   };
