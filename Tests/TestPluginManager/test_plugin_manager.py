@@ -838,7 +838,11 @@ def test_successful_sort(PluginManagerSorter: PluginManager):
     sorted_plugins = PluginManagerSorter._getPluginsImportOrder(paths)
 
     # The correct order should be 1 -> 2 -> 3
-    assert [os.path.basename(p) for p in sorted_plugins] == ["Plugin1", "Plugin2", "Plugin3"]
+    assert [os.path.basename(p) for p in sorted_plugins.plugins] == [
+        "Plugin1",
+        "Plugin2",
+        "Plugin3",
+    ]
 
 
 def test_circular_dependency(PluginManagerSorter: PluginManager):

@@ -14,7 +14,7 @@ import shutil
 import typing
 from copy import deepcopy
 from enum import Enum
-from typing import Any, Callable, ClassVar, Dict, List, TypeVar, cast, Optional
+from typing import Any, Callable, ClassVar, Dict, List, TypeVar, Union, cast, Optional
 from pydantic import (  # pylint: disable=no-name-in-module. # Somehow pylint does not recognize BaseModel
     BaseModel,
     Field,
@@ -836,7 +836,7 @@ class CustomVariable(PluginVariable):
     Custom varialbe which supports custom view
     """
 
-    customPage: PluginPage
+    customPage: Union[PluginPage, str]
     """
     The ID of the page where the variable will be rendered.
     """
@@ -852,7 +852,7 @@ class CustomVariable(PluginVariable):
         name: str,
         description: str,
         type: typing.Union[VariableTypes, str],
-        customPage: PluginPage,
+        customPage: Union[PluginPage, str],
         defaultValue: Any | None = None,
         allowedValues: List[Any] | None = None,
         category: str | None = None,
@@ -872,7 +872,7 @@ class CustomVariable(PluginVariable):
         The values must be JSON serializable.
         
 
-        :param customPage: The page instance where the variable will be rendered.
+        :param customPage: The page instance where the variable will be rendered or the ID of the page.
         """
         super().__init__(
             id, name, description, type, defaultValue, allowedValues, category, disabled, required
@@ -890,7 +890,11 @@ class CustomVariable(PluginVariable):
 
         # Add the pageID
         encodedVar["isCustom"] = self._isCustom
-        encodedVar["customPage"] = self.customPage._toDict()
+        encodedVar["customPage"] = (
+            self.customPage._toDict()
+            if isinstance(self.customPage, PluginPage)
+            else self.customPage
+        )
 
         return encodedVar
 
@@ -1973,8 +1977,17 @@ class PluginBlock:
         # Ensure the selected remote exists in the current isntance of Horus
         # If the selected remote does not exist in the current remotes, set it as the local IP
         from App import AppDelegate
+        from Server.RemotesManager import RemotesManager
 
-        if not AppDelegate().server.remoteManager.remoteExists(self.selectedRemote):
+        flowAppSupportDir = AppDelegate().flowAppSupportDir
+        rm = (
+            RemotesManager(flowAppSupportDir)
+            if flowAppSupportDir
+            else AppDelegate().server.remoteManager
+        )
+
+        # Ensure the selected remote exists
+        if not rm.remoteExists(self.selectedRemote):
             self.selectedRemote = "Local"
 
         return {
