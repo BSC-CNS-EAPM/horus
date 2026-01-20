@@ -23,8 +23,6 @@ from pydantic import (  # pylint: disable=no-name-in-module. # Somehow pylint do
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, Future
 
-from Server.RemotesManager import RemotesManager
-
 # Horus imports
 from .utils import ResetRemoteException, get_unique_dir_name
 
@@ -1979,6 +1977,7 @@ class PluginBlock:
         # Ensure the selected remote exists in the current isntance of Horus
         # If the selected remote does not exist in the current remotes, set it as the local IP
         from App import AppDelegate
+        from Server.RemotesManager import RemotesManager
 
         flowAppSupportDir = AppDelegate().flowAppSupportDir
         rm = (
