@@ -1114,31 +1114,120 @@ class HorusServer:
         @self.verifyLogin
         def readFlowFile():
             try:
+
+                # If uploading flows is disabled, prevent access to this route
+                if (
+                    self.webAppManager is not None
+                    and self.webAppManager.userManagement is not None
+                ):
+                    if not self.webAppManager.userManagement.fileManagement.allowFlowUpload:
+                        raise Exception("Uploading flows is disabled.")
+
                 file = request.files.get("file")
                 if file is None:
                     raise ValueError("No file provided")
 
-                # Store the file into a temporary path
-                temPath = self.flowManager.droppedFlowsDir
-                os.makedirs(temPath, exist_ok=True)
-                tempFile = os.path.join(temPath, file.filename or "dropped.flow")
-                file.save(tempFile)
+                filename = file.filename or "dropped_file"
 
-                flow = self.flowManager.openFlowFromPath(tempFile)
+                # Handle .zip files differently
+                if filename.endswith(".zip"):
 
-                # Remove the path from the flow, as if it was a template
-                # This is a workaround as we do not have the actual path of the flow when we drop
-                # it due to javascript security. The suer will need to "save" again the flow in a new path
-                # (or the same path) in order to work with the flow. This will be the intended behaviour on
-                # server mode, as you are efectively uploading the file to the server, but for app mode
-                # is an annoying drawback.
-                flow.savedID = None
+                    import zipfile
+                    import tempfile
+                    import shutil
 
-                encodedFlow = flow.encode(minimal=False)
+                    # Create a temporary directory for extraction
+                    with tempfile.TemporaryDirectory() as temp_dir:
+                        # Save the zip file temporarily
+                        temp_zip_path = os.path.join(temp_dir, filename)
+                        file.save(temp_zip_path)
 
-                # Return the file as a tempalte/preset flow, so that the user needs to select a
-                # path to save it next time
-                success = {"ok": True, "flow": encodedFlow}
+                        # Extract the zip file
+                        with zipfile.ZipFile(temp_zip_path, "r") as zip_ref:
+                            zip_ref.extractall(temp_dir)
+
+                        # Find the .flow file in the extracted content
+                        flow_file_path = None
+                        flow_name = "dropped_flow"
+
+                        for root, dirs, files in os.walk(temp_dir):
+                            for file_name in files:
+                                if file_name.endswith(".flow"):
+                                    flow_file_path = os.path.join(root, file_name)
+                                    flow_name = os.path.splitext(file_name)[0]
+                                    break
+                            if flow_file_path:
+                                break
+
+                        if not flow_file_path:
+                            raise ValueError("No .flow file found in the uploaded .zip file")
+
+                        # If running in webapp mode, extract to user's flows directory
+                        if self._isForUser:
+                            # Create the target folder in user's flows directory
+                            target_folder = os.path.join(currentUser.flowsDir, flow_name)
+                            os.makedirs(target_folder, exist_ok=True)
+
+                            # Copy all files and folders from the zip (excluding the zip file itself)
+                            # This preserves both the .flow file and any working directories
+                            for item in os.listdir(temp_dir):
+                                if item != filename:  # Skip the original zip file
+                                    src_path = os.path.join(temp_dir, item)
+                                    dst_path = os.path.join(target_folder, item)
+
+                                    if os.path.isdir(src_path):
+                                        # Copy directory and its contents
+                                        if os.path.exists(dst_path):
+                                            shutil.rmtree(dst_path)
+                                        shutil.copytree(src_path, dst_path)
+                                    else:
+                                        # Copy file
+                                        shutil.copy2(src_path, dst_path)
+
+                            # Update flow_file_path to point to the new location
+                            flow_file_path = os.path.join(target_folder, flow_name + ".flow")
+
+                        # Open the flow from the extracted location
+                        flow = self.flowManager.openFlowFromPath(flow_file_path)
+
+                        # For zip files in webapp mode, preserve the flow as a real flow
+                        # since it's now properly extracted to the user's directory
+                        if self._isForUser:
+                            # Keep the savedID and path for proper flow handling
+                            success = {
+                                "ok": True,
+                                "flow": flow.encode(minimal=False),
+                                "isRealFlow": True,
+                                "savedID": flow.savedID,
+                                "path": flow.path,
+                            }
+                        else:
+                            # For non-webapp mode, treat as template
+                            flow.savedID = None
+                            success = {"ok": True, "flow": flow.encode(minimal=False)}
+                else:
+                    # Handle .flow files as before
+                    # Store the file into a temporary path
+                    temPath = self.flowManager.droppedFlowsDir
+                    os.makedirs(temPath, exist_ok=True)
+                    tempFile = os.path.join(temPath, filename)
+                    file.save(tempFile)
+
+                    flow = self.flowManager.openFlowFromPath(tempFile)
+
+                    # Remove the path from the flow, as if it was a template
+                    # This is a workaround as we do not have the actual path of the flow when we drop
+                    # it due to javascript security. The user will need to "save" again the flow in a new path
+                    # (or the same path) in order to work with the flow. This will be the intended behaviour on
+                    # server mode, as you are effectively uploading the file to the server, but for app mode
+                    # is an annoying drawback.
+                    flow.savedID = None
+
+                    encodedFlow = flow.encode(minimal=False)
+
+                    # Return the file as a template/preset flow, so that the user needs to select a
+                    # path to save it next time
+                    success = {"ok": True, "flow": encodedFlow}
             except Exception as exc:
                 success = {
                     "ok": False,
@@ -1312,6 +1401,7 @@ class HorusServer:
                     "uploadSize": self.webAppManager.userManagement.fileManagement.maxUploadSize,
                     "allowFullFileSystemAccess": self.webAppManager.userManagement.fileManagement.allowFullFileSystemAccess,
                     "allowCustomBlocks": self.webAppManager.allowCustomBlocks,
+                    "allowFlowUpload": self.webAppManager.userManagement.fileManagement.allowFlowUpload,
                 }
 
             return flask.jsonify(internalSettings)

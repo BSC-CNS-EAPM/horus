@@ -577,6 +577,9 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
           msg: string;
           molstarState: Blob | null;
           smilesState: string | null;
+          isRealFlow?: boolean;
+          savedID?: string | null;
+          path?: string | null;
         } = {
           ok: false,
           flow: null,
@@ -732,8 +735,9 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
         // If we are dropping a file, do not set the path
         // Except for App mode, in that case leave the path
+        // Also check if this is a real flow from zip upload
         if (
-          (openFile && !window.horusInternal.isDesktop) ||
+          (openFile && !window.horusInternal.isDesktop && !data.isRealFlow) ||
           openedFlow.isPreset
         ) {
           openedFlow.path = null;
@@ -744,6 +748,12 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
         // Reset the history
         resetHistory();
+
+        // If this is a real flow from zip upload, redirect to proper URL
+        if (openFile && data.isRealFlow && data.savedID && data.path) {
+          const newURL = `${window.__HORUS_ROOT__}/flow?open=true&flowID=${data.savedID}&path=${encodeURIComponent(data.path)}`;
+          window.history.replaceState({}, document.title, newURL);
+        }
       } finally {
         setFlowLoading(false);
         isLoadingFlow.current = false;
@@ -1260,7 +1270,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     event.preventDefault();
 
     if (event.dataTransfer.types[0] === "Files") {
-      // If its dragging a .flow file,
+      // If its dragging a .flow/.zip file,
       // set the overlay to active
       setIsDraggingFlowFile(true);
     }
@@ -1277,7 +1287,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     // Send the file to the backend and open an "unsaved" flow
     const file = event.dataTransfer.files[0];
 
-    if (file && file.name.endsWith(".flow")) {
+    if (file && (file.name.endsWith(".flow") || file.name.endsWith(".zip"))) {
       loadFlow(null, file);
     }
   };
