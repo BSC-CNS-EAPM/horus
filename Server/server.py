@@ -1142,10 +1142,32 @@ class HorusServer:
                         temp_zip_path = os.path.join(temp_dir, filename)
                         file.save(temp_zip_path)
 
-                        # Extract the zip file
+                        # Extract the zip file safely to avoid path traversal
                         with zipfile.ZipFile(temp_zip_path, "r") as zip_ref:
-                            zip_ref.extractall(temp_dir)
 
+                            def _safe_extract(zip_file: "zipfile.ZipFile", dest_dir: str) -> None:
+                                """Safely extract zip_file into dest_dir, preventing path traversal."""
+                                dest_dir_abs = os.path.abspath(dest_dir)
+                                for member in zip_file.infolist():
+                                    member_name = member.filename
+                                    # Reject absolute paths
+                                    if os.path.isabs(member_name):
+                                        raise ValueError("Invalid path in zip file: absolute paths are not allowed")
+                                    target_path = os.path.join(dest_dir_abs, member_name)
+                                    normalized_path = os.path.normpath(target_path)
+                                    # Ensure the normalized path is within dest_dir_abs
+                                    if not (normalized_path == dest_dir_abs or normalized_path.startswith(dest_dir_abs + os.sep)):
+                                        raise ValueError("Invalid path in zip file: path traversal detected")
+
+                                    if member.is_dir():
+                                        os.makedirs(normalized_path, exist_ok=True)
+                                        continue
+
+                                    os.makedirs(os.path.dirname(normalized_path), exist_ok=True)
+                                    with zip_file.open(member, "r") as source, open(normalized_path, "wb") as target:
+                                        shutil.copyfileobj(source, target)
+
+                            _safe_extract(zip_ref, temp_dir)
                         # Find the .flow file in the extracted content
                         flow_file_path = None
                         flow_name = "dropped_flow"
