@@ -1206,8 +1206,10 @@ class HorusServer:
                                         # Copy file
                                         shutil.copy2(src_path, dst_path)
 
-                            # Update flow_file_path to point to the new location
-                            flow_file_path = os.path.join(target_folder, flow_name + ".flow")
+                            # Update flow_file_path to point to the new location,
+                            # preserving its relative path within the extracted ZIP
+                            relative_flow_path = os.path.relpath(flow_file_path, temp_dir)
+                            flow_file_path = os.path.join(target_folder, relative_flow_path)
 
                         # Open the flow from the extracted location
                         flow = self.flowManager.openFlowFromPath(flow_file_path)
