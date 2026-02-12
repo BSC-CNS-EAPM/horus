@@ -491,6 +491,11 @@ class FileManagement:
     If users are allowed to create new folders using the FilePicker
     """
 
+    allowFlowUpload: bool = False
+    """
+    If users are allowed to upload flows to the webapp compressed as zip files
+    """
+
     def __init__(self, rawFileManager: dict[str, Any]) -> None:
         self.allowFullFileSystemAccess = rawFileManager.get("allowFullFileSystemAccess", False)
         self.allowUpload = rawFileManager.get("allowUpload", False)
@@ -498,6 +503,7 @@ class FileManagement:
         self.allowDownload = rawFileManager.get("allowDownload", False)
         self.allowDelete = rawFileManager.get("allowDelete", False)
         self.allowNewFolder = rawFileManager.get("allowNewFolder", False)
+        self.allowFlowUpload = rawFileManager.get("allowFlowUpload", False)
 
 
 class AnonymousQuotas:

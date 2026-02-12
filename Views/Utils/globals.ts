@@ -40,6 +40,7 @@ declare global {
         uploadSize: number;
         allowFullFileSystemAccess: boolean;
         allowCustomBlocks: boolean;
+        allowFlowUpload: boolean;
       };
       updateSettings: (settings: HorusSettingsObject) => void;
     };
