@@ -2499,8 +2499,11 @@ class SlurmJob(HorusPydanticModel):
         for slurmJob in slurmJobs:
             if slurmJob.array_task_id:
                 arrayJobsCommands = []
-                start, end = map(int, slurmJob.array_task_id.split("-"))
-                for i in range(start, end):
+                # Take into account batching, which can be in the format "1-10%2", 
+                # so we need to split by "%" and take the first part
+                task_id = slurmJob.array_task_id.split("%")[0]
+                start, end = map(int, task_id.split("-"))
+                for i in range(start, end + 1):
                     arrayJobsCommands.append(SlurmJob.SCONTROL_COMMAND(f"{slurmJob.job_id}_{i}"))
 
                 arrayCommand = f"; echo {SlurmJob.SEPARATOR};".join(arrayJobsCommands)
