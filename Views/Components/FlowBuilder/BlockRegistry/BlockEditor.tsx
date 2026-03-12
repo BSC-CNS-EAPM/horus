@@ -405,7 +405,8 @@ function VariableListEditor({
       category: "",
       disabled: false,
       required: false,
-      placeholder: ""
+      placeholder: "",
+      showInCanvas: false
     } as PluginVariable;
   };
 
@@ -587,6 +588,17 @@ function VariableListEditor({
                     className="mr-1"
                   />
                   Disabled
+                </label>
+                <label className="flex items-center text-sm">
+                  <input
+                    type="checkbox"
+                    checked={item.showInCanvas || false}
+                    onChange={(e) =>
+                      updateItem(index, { showInCanvas: e.target.checked })
+                    }
+                    className="mr-1"
+                  />
+                  Show in Canvas
                 </label>
               </div>
 

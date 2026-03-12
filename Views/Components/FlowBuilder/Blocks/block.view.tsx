@@ -567,10 +567,10 @@ function BlockBodyVariables({
   if (!block.isPlaced) {
     return null;
   }
-  // Get alsoInCanvas variables from the block
+  // Get showInCanvas variables from the block
 
   const bodyVariables = block.variables.filter(
-    (variable) => variable.alsoInCanvas
+    (variable) => variable.showInCanvas
   );
 
   if (bodyVariables.length === 0) {
