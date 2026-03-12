@@ -61,13 +61,18 @@ import {
   FlowBuilderContext,
   PANEL_REGISTRY
 } from "@/Components/MainApp/PanelView";
-import { getIframeExtensionID } from "@/Components/IframeLoader/iframeloader";
 import RotatingLines from "@/Components/RotatingLines/rotatinglines";
 import { useDebouncedCallback } from "@mantine/hooks";
+import { getIframeExtensionID } from "@/Components/IframeLoader/iframeloader";
 
 type PluginVariableViewProps = {
   variable: PluginVariable;
-  onChange: (value: any, variable: PluginVariable, groupID?: string) => void;
+  onChange: (
+    value: any,
+    variable: PluginVariable,
+    groupID?: string,
+    options?: { buttonTitle?: string }
+  ) => void;
   hideName?: boolean;
   hideDescription?: boolean;
   applyStyle?: boolean;
@@ -82,12 +87,17 @@ export function PluginVariableView(props: PluginVariableViewProps) {
   const isFlowActive = !!flowContext?.flow.isFlowActive;
 
   const handleChange = useCallback(
-    (value: any, varToChange?: PluginVariable, groupID?: string) => {
+    (
+      value: any,
+      varToChange?: PluginVariable,
+      groupID?: string,
+      options?: { buttonTitle?: string }
+    ) => {
       if (!variable.disabled && !isFlowActive) {
         if (variable.type === PluginVariableTypes.GROUP) {
-          varToChange && onChange(value, varToChange, groupID);
+          varToChange && onChange(value, varToChange, groupID, options);
         } else {
-          onChange(value, variable);
+          onChange(value, variable, undefined, options);
         }
       }
     },
@@ -402,7 +412,12 @@ function GroupVariableView(props: PluginVariableViewProps) {
 
 function VariableRenderer(props: {
   variable: PluginVariable;
-  onChange: (value: any) => void;
+  onChange: (
+    value: any,
+    variable?: PluginVariable,
+    groupID?: string,
+    options?: { buttonTitle?: string }
+  ) => void;
   isFlowActive?: boolean;
 }) {
   // Extract the variable from the props
@@ -412,11 +427,11 @@ function VariableRenderer(props: {
   // changes
   const [currentValue, setCurrentValue] = useState(variableToRender.value);
 
-  const handleVariableChangeInternal = (value: any) => {
+  const handleVariableChangeInternal = (value: any, buttonTitle?: string) => {
     if (props.isFlowActive || props.variable.disabled) {
       return;
     }
-    onChange(value);
+    onChange(value, variableToRender, undefined, { buttonTitle });
     setCurrentValue(value);
   };
 
@@ -1299,7 +1314,12 @@ function ListView(props: VariableViewProps) {
 
 function CustomVariableRenderer(props: {
   variable: CustomVariable;
-  onChange: (value: any) => void;
+  onChange: (
+    value: any,
+    variable?: PluginVariable,
+    groupID?: string,
+    options?: { buttonTitle?: string }
+  ) => void;
 }) {
   const { dockApi } = useContext(DockContext);
   const flowBuilderContext = useContext(FlowBuilderContext);
@@ -1345,6 +1365,11 @@ function CustomVariableRenderer(props: {
           getVariable: () => props.variable,
           setVariable: (value: any) => {
             props.onChange(value);
+          },
+          setButtonTitle: (title: string) => {
+            props.onChange(props.variable.value, undefined, undefined, {
+              buttonTitle: title
+            });
           }
         };
       }
@@ -1378,7 +1403,12 @@ function CustomVariableRenderer(props: {
 
         devIframe.contentWindow.horusVariable = {
           getVariable: () => props.variable,
-          setVariable: (value: any) => props.onChange(value)
+          setVariable: (value: any) => props.onChange(value),
+          setButtonTitle: (title: string) => {
+            props.onChange(props.variable.value, undefined, undefined, {
+              buttonTitle: title
+            });
+          }
         };
       }
     };
@@ -1417,7 +1447,7 @@ function CustomVariableRenderer(props: {
           });
         }}
       >
-        {props.variable.name}
+        {props.variable.buttonTitle || props.variable.name}
       </AppButton>
     </div>
   );

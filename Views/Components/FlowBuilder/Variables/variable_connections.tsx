@@ -63,14 +63,16 @@ export function VariableSetupView(props: VariableModalViewProps) {
 
   const isFlowActive = flowBuilderState?.flow.isFlowActive;
 
-  const variables: PluginVariable[] = block.variables.map((variable) => {
-    return {
-      ...variable,
-      placedID: block.placedID,
-      disabled: !!isFlowActive || variable.disabled,
-      block: block
-    } as PluginVariable;
-  });
+  const variables: PluginVariable[] = block.variables
+    .filter((v) => !v.showInCanvas)
+    .map((variable) => {
+      return {
+        ...variable,
+        placedID: block.placedID,
+        disabled: !!isFlowActive || variable.disabled,
+        block: block
+      } as PluginVariable;
+    });
 
   const [filter, setFilter] = useState("");
 

@@ -97,6 +97,7 @@ export type PluginVariable = {
   disabled: boolean;
   required: boolean;
   placeholder?: string;
+  showInCanvas?: boolean;
 
   // For GroupVariable
   variables?: Array<PluginVariable>;
@@ -109,6 +110,7 @@ export type PluginVariable = {
 
 export type CustomVariable = PluginVariable & {
   customPage: PluginPage | string;
+  buttonTitle: string;
 };
 
 export enum BlockTypes {

@@ -63,6 +63,7 @@ declare global {
     horusVariable: {
       getVariable?: () => any;
       setVariable?: (value: any) => void;
+      setButtonTitle?: (title: string) => void;
     };
     // Horus flow builder
     horus: {

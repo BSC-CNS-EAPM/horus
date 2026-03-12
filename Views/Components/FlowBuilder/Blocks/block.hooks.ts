@@ -9,7 +9,7 @@ import {
 } from "react";
 
 // TS types
-import { Block, PluginVariable } from "../flow.types";
+import { Block, CustomVariable, PluginVariable } from "../flow.types";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { BlockHooks } from "../flow.hooks";
 import { useXarrow } from "react-xarrows";
@@ -47,7 +47,8 @@ export type BlockViewState = {
     handleVariableChange: (
       value: any,
       variable: PluginVariable,
-      groupID?: string
+      groupID?: string,
+      options?: { buttonTitle?: string }
     ) => void;
     handleSelectedInputGroupChange: (direction: "up" | "down") => void;
   };
@@ -169,7 +170,7 @@ export function useBlockView({
   };
 
   const handleVariableChange = useCallback(
-    (value: any, variableToChange: PluginVariable, groupID?: string) => {
+    (value: any, variableToChange: PluginVariable, groupID?: string, { buttonTitle }: { buttonTitle?: string } = {}) => {
       if (isFlowActive) {
         return;
       }
@@ -205,6 +206,20 @@ export function useBlockView({
         });
       } else {
         latestBlock.variables.map(updateValue);
+      }
+
+      // Update the button title if it's a custom variable, and was provided
+      if (buttonTitle) {
+        latestBlock.variables.map((variable: PluginVariable) => {
+          if (
+            variable.id === variableToChange.id &&
+            variable.placedID === variableToChange.placedID &&
+            variable.isCustom
+          ) {
+            hasChanged = true;
+            (variable as CustomVariable).buttonTitle = buttonTitle;
+          }
+        });
       }
 
       // Call the onChange function with the latest block state

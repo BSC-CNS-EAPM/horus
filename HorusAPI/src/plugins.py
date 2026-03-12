@@ -695,6 +695,12 @@ class PluginVariable:
     Check if the variable is a copy or the original used to model the block
     """
 
+    showInCanvas: bool = False
+    """
+    Indicates whether the variable is part of the body of the block.
+    """
+    
+
     def __init__(
         self,
         id: str,
@@ -707,6 +713,7 @@ class PluginVariable:
         disabled: bool = False,
         required: bool = False,
         placeholder: typing.Optional[str] = None,
+        showInCanvas: bool = False,
     ):
         """
         :param name: The name of the variable.
@@ -719,6 +726,7 @@ class PluginVariable:
         :param required: Whether the variable is required or not.
         This will show the variable in orange when not connected.
         :param placeholder: The placeholder of the input field.
+        :param showInCanvas: Indicates whether the variable is part of the body of the block.
         """
         self.name = name
         self.description = description
@@ -726,6 +734,7 @@ class PluginVariable:
         self.disabled = disabled
         self.required = required
         self.placeholder = placeholder
+        self.showInCanvas = showInCanvas
 
         if type not in VariableTypes.getTypes():
             raise Exception(f"Invalid type {type}.")
@@ -814,6 +823,7 @@ class PluginVariable:
             varDict["required"] = self.required
             varDict["placeholder"] = self.placeholder
             varDict["placedID"] = self.placedID
+            varDict["showInCanvas"] = self.showInCanvas
 
         return varDict
 
@@ -833,7 +843,7 @@ class PluginVariable:
 
 class CustomVariable(PluginVariable):
     """
-    Custom varialbe which supports custom view
+    Custom variable which supports custom view
     """
 
     customPage: Union[PluginPage, str]
@@ -844,6 +854,11 @@ class CustomVariable(PluginVariable):
     _isCustom: bool = True
     """
     Flag for the frontend to know that this is a custom variable.
+    """
+
+    buttonTitle: Optional[str] = None
+    """
+    The extension can modify the button in the UI with a different title instead of the variable name.
     """
 
     def __init__(
@@ -858,6 +873,7 @@ class CustomVariable(PluginVariable):
         category: str | None = None,
         disabled: bool = False,
         required: bool = False,
+        showInCanvas: bool = False,
     ):
         """
         The custom variable works like a regular variable, but it can use an extension \
@@ -875,7 +891,7 @@ class CustomVariable(PluginVariable):
         :param customPage: The page instance where the variable will be rendered or the ID of the page.
         """
         super().__init__(
-            id, name, description, type, defaultValue, allowedValues, category, disabled, required
+            id, name, description, type, defaultValue, allowedValues, category, disabled, required, showInCanvas=showInCanvas
         )
 
         self.customPage = customPage
@@ -895,13 +911,14 @@ class CustomVariable(PluginVariable):
             if isinstance(self.customPage, PluginPage)
             else self.customPage
         )
+        encodedVar["buttonTitle"] = self.buttonTitle if self.buttonTitle else self.name
 
         return encodedVar
 
 
 class VariableGroup(PluginVariable):
     """
-    A group of varaibles to be used together as input.
+    A group of variables to be used together as input.
     """
 
     variables: typing.List[PluginVariable] = []
@@ -919,6 +936,7 @@ class VariableGroup(PluginVariable):
         category: typing.Optional[str] = None,
         disabled: bool = False,
         required: bool = False,
+        showInCanvas: bool = False,
     ) -> None:
         """
         Initialize a VariableGroup
@@ -962,6 +980,7 @@ class VariableGroup(PluginVariable):
             category=category,
             disabled=disabled,
             required=required,
+            showInCanvas=showInCanvas,
         )
 
     def toDict(self, minimal: bool = False):
@@ -1002,6 +1021,7 @@ class VariableList(PluginVariable):
         category: typing.Optional[str] = None,
         disabled: bool = False,
         required: bool = False,
+        showInCanvas: bool = False,
     ):
         """
         :param id: The ID of the variable.
@@ -1024,6 +1044,7 @@ class VariableList(PluginVariable):
             category=category,
             disabled=disabled,
             required=required,
+            showInCanvas=showInCanvas,
         )
 
         # prototypes cannot be VariableGroups
@@ -1940,6 +1961,14 @@ class PluginBlock:
         self.selectedRemote = selectedRemote
         self._updateVariables(variablesJSONParsed)
 
+        # Update custom variables that have updated the button title
+        for rawVariable in blockJSON.get("variables", []):
+            buttonTitle = rawVariable.get("buttonTitle", None)
+            if buttonTitle is not None:
+                for variable in self._variables:
+                    if variable.id == rawVariable.get("id"):
+                        variable.buttonTitle = buttonTitle
+
         # Update the outputs
         for ov in typing.cast(list[dict[str, typing.Any]], blockJSON.get("outputs", [])):
             try:
@@ -2499,8 +2528,11 @@ class SlurmJob(HorusPydanticModel):
         for slurmJob in slurmJobs:
             if slurmJob.array_task_id:
                 arrayJobsCommands = []
-                start, end = map(int, slurmJob.array_task_id.split("-"))
-                for i in range(start, end):
+                # Take into account batching, which can be in the format "1-10%2", 
+                # so we need to split by "%" and take the first part
+                task_id = slurmJob.array_task_id.split("%")[0]
+                start, end = map(int, task_id.split("-"))
+                for i in range(start, end + 1):
                     arrayJobsCommands.append(SlurmJob.SCONTROL_COMMAND(f"{slurmJob.job_id}_{i}"))
 
                 arrayCommand = f"; echo {SlurmJob.SEPARATOR};".join(arrayJobsCommands)
@@ -3296,6 +3328,7 @@ class CustomVariableParser:
         "disabled",
         "required",
         "placeholder",
+        "showInCanvas"
     ]
 
     @classmethod

@@ -16,7 +16,6 @@
     "**/*.code-search": true,
     "**/dist": true,
     "**/*.map": true,
-    "AppSupport/Plugins/**": true,
     "**/.*": true
   },
   "flake8.args": ["--max-line-length=98"],
