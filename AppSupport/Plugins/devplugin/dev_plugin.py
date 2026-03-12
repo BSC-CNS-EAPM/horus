@@ -297,6 +297,7 @@ script_variable = PluginVariable(
 echo "Hello world"
 
 """,
+alsoInCanvas=True,
 )
 
 
@@ -592,6 +593,7 @@ some_toggle_variable = PluginVariable(
     name="Toggle",
     description="Toggle",
     type=VariableTypes.BOOLEAN,
+    alsoInCanvas=True,
 )
 
 testExtensionsShortcutsBlock = SlurmBlock(
@@ -635,6 +637,7 @@ customVariableTest = CustomVariable(
     customPage="devplugin.dev_page",
     type=VariableTypes.NUMBER,
     category="Custom variables",
+    alsoInCanvas=True,
 )
 
 customVariableTest21 = CustomVariable(
@@ -1197,3 +1200,55 @@ docs_block = PluginBlock(
 )
 
 plugin.addBlock(docs_block)
+
+
+test_body_varaibles = PluginBlock(
+    id="test_body_variables",
+    name="Test body variables",
+    description="Test body variables",
+    action=lambda block: None,
+    variables=[
+        PluginVariable(
+            id="body_variable_1",
+            name="Body variable 1",
+            description="This is a body variable",
+            type=VariableTypes.BOOLEAN,
+            alsoInCanvas=True,
+        ),
+        PluginVariable(
+            id="body_variable_2",
+            name="Body variable 2",
+            description="This is another body variable",
+            type=VariableTypes.NUMBER,
+            alsoInCanvas=True,
+        ),
+        PluginVariable(
+            id="body_variable_3",
+            name="Body variable 3",
+            description="This is a sphere body variable",
+            type=VariableTypes.SPHERE,
+            alsoInCanvas=True,
+        ),
+        PluginVariable(
+            id="body_variable_4",
+            name="Body variable 4",
+            description="This is a constrained number range body variable",
+            type=VariableTypes.CONSTRAINED_NUMBER_RANGE,
+            allowedValues=[0, 100, 1],
+            alsoInCanvas=True,
+            category="A category variables",
+        ),
+        PluginVariable(
+            id="non_body_variable",
+            name="Non body variable",
+            description="This variable is not a body variable",
+            type=VariableTypes.STRING,
+            alsoInCanvas=False,
+        ),
+        customVariableTest,
+
+    ],
+
+)
+
+plugin.addBlock(test_body_varaibles)
