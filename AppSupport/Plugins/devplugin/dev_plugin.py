@@ -1202,11 +1202,20 @@ docs_block = PluginBlock(
 plugin.addBlock(docs_block)
 
 
-test_body_varaibles = PluginBlock(
+test_body_varaibles = SlurmBlock(
     id="test_body_variables",
     name="Test body variables",
     description="Test body variables",
-    action=lambda block: None,
+    initialAction=lambda block: print("Initial body variables: ", block.variables),
+    finalAction=lambda block: print("Body variables: ", block.variables),
+    inputs=[
+        PluginVariable(
+            id="input_variable_1",
+            name="Input variable 1",
+            description="This is an input variable",
+            type=VariableTypes.STRING,
+        )
+    ],
     variables=[
         PluginVariable(
             id="body_variable_1",
@@ -1246,9 +1255,15 @@ test_body_varaibles = PluginBlock(
             alsoInCanvas=False,
         ),
         customVariableTest,
-
     ],
-
+    outputs=[
+        PluginVariable(
+            id="output_variable_1",
+            name="Output variable 1",
+            description="This is an output variable",
+            type=VariableTypes.STRING,
+        )
+    ],
 )
 
 plugin.addBlock(test_body_varaibles)
