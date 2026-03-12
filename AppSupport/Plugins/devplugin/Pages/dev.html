@@ -12,10 +12,17 @@
     <button onclick="modifyVariable()">Modify variable</button>
 
     <script>
+      var changes = 0;
       function modifyVariable() {
-        variable = parent.horus.getVariable();
+
+        
+        
+        variable = horusVariable.getVariable();
 
         console.log("variable", variable);
+
+        horusVariable.setButtonTitle("New button title " + changes);
+        changes += 1;
       }
       function modifyFlow() {
         flow = parent.horus.getFlow();

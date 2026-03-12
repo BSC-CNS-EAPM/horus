@@ -110,6 +110,7 @@ export type PluginVariable = {
 
 export type CustomVariable = PluginVariable & {
   customPage: PluginPage | string;
+  buttonTitle: string;
 };
 
 export enum BlockTypes {
