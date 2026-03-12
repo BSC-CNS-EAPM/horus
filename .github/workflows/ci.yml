@@ -131,7 +131,7 @@ jobs:
 
       - name: Fix workspace permissions
         if: always()
-        run: sudo chown -R $(id -u):$(id -g) .
+        run: docker run --rm -v $(pwd):/workspace alpine chown -R $(id -u):$(id -g) /workspace
 
   build_docs:
     runs-on: perry
