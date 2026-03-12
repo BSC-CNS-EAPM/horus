@@ -858,7 +858,7 @@ class CustomVariable(PluginVariable):
 
     buttonTitle: Optional[str] = None
     """
-    The extension can modify the button in the UI with a different itle isntead of the variable name.
+    The extension can modify the button in the UI with a different title instead of the variable name.
     """
 
     def __init__(
@@ -918,7 +918,7 @@ class CustomVariable(PluginVariable):
 
 class VariableGroup(PluginVariable):
     """
-    A group of varaibles to be used together as input.
+    A group of variables to be used together as input.
     """
 
     variables: typing.List[PluginVariable] = []

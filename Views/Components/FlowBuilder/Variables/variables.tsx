@@ -1367,9 +1367,7 @@ function CustomVariableRenderer(props: {
             props.onChange(value);
           },
           setButtonTitle: (title: string) => {
-            console.log("Setting button title to", title);
-
-            props.onChange(undefined, undefined, undefined, {
+            props.onChange(props.variable.value, undefined, undefined, {
               buttonTitle: title
             });
           }
@@ -1407,7 +1405,7 @@ function CustomVariableRenderer(props: {
           getVariable: () => props.variable,
           setVariable: (value: any) => props.onChange(value),
           setButtonTitle: (title: string) => {
-            props.onChange(undefined, undefined, undefined, {
+            props.onChange(props.variable.value, undefined, undefined, {
               buttonTitle: title
             });
           }

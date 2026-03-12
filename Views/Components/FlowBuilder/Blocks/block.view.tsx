@@ -573,6 +573,10 @@ function BlockBodyVariables({
     (variable) => variable.alsoInCanvas
   );
 
+  if (bodyVariables.length === 0) {
+    return null;
+  }
+
   return (
     <>
       <hr className="border-t border-gray-300 mt-2" />
