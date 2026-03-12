@@ -48,7 +48,7 @@ jobs:
         run: |
           echo "GIT_TAG=$(basename $GITHUB_REF)" >> $GITHUB_ENV
           echo "GIT_COMMIT=${GITHUB_SHA:0:8}" >> $GITHUB_ENV
-          echo "GIT_BRANCH=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
+          echo "GIT_BRANCH=$(basename $GITHUB_REF)" >> $GITHUB_ENV
           echo "VERSION=$(basename $GITHUB_REF)" >> $GITHUB_ENV
 
       - name: Display environment variables
@@ -91,7 +91,7 @@ jobs:
         run: |
           echo "GIT_TAG=$(basename $GITHUB_REF)" >> $GITHUB_ENV
           echo "GIT_COMMIT=${GITHUB_SHA:0:8}" >> $GITHUB_ENV
-          echo "GIT_BRANCH=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
+          echo "GIT_BRANCH=$(basename $GITHUB_REF)" >> $GITHUB_ENV
           echo "VERSION=$(basename $GITHUB_REF)" >> $GITHUB_ENV
 
       - name: Display environment variables
@@ -128,6 +128,10 @@ jobs:
               auditwheel repair dist/*.whl &&
               twine upload wheelhouse/*.whl
             "
+
+      - name: Fix workspace permissions
+        if: always()
+        run: sudo chown -R $(id -u):$(id -g) .
 
   build_docs:
     runs-on: perry
