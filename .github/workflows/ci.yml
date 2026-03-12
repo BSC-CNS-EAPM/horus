@@ -48,7 +48,7 @@ jobs:
         run: |
           echo "GIT_TAG=$(basename $GITHUB_REF)" >> $GITHUB_ENV
           echo "GIT_COMMIT=${GITHUB_SHA:0:8}" >> $GITHUB_ENV
-          echo "GIT_BRANCH=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
+          echo "GIT_BRANCH=$(basename $GITHUB_REF)" >> $GITHUB_ENV
           echo "VERSION=$(basename $GITHUB_REF)" >> $GITHUB_ENV
 
       - name: Display environment variables
@@ -92,7 +92,7 @@ jobs:
           echo "GIT_TAG=$(basename $GITHUB_REF)" >> $GITHUB_ENV
           echo "GIT_TAG=$(basename $GITHUB_REF)" >> $GITHUB_ENV
           echo "GIT_COMMIT=${GITHUB_SHA:0:8}" >> $GITHUB_ENV
-          echo "GIT_BRANCH=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
+          echo "GIT_BRANCH=$(basename $GITHUB_REF)" >> $GITHUB_ENV
           echo "VERSION=$(basename $GITHUB_REF)" >> $GITHUB_ENV
 
       - name: Display environment variables
