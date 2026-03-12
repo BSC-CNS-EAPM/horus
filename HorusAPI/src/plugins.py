@@ -856,6 +856,11 @@ class CustomVariable(PluginVariable):
     Flag for the frontend to know that this is a custom variable.
     """
 
+    buttonTitle: Optional[str] = None
+    """
+    The extension can modify the button in the UI with a different itle isntead of the variable name.
+    """
+
     def __init__(
         self,
         id: str,
@@ -906,6 +911,7 @@ class CustomVariable(PluginVariable):
             if isinstance(self.customPage, PluginPage)
             else self.customPage
         )
+        encodedVar["buttonTitle"] = self.buttonTitle if self.buttonTitle else self.name
 
         return encodedVar
 
@@ -1954,6 +1960,14 @@ class PluginBlock:
 
         self.selectedRemote = selectedRemote
         self._updateVariables(variablesJSONParsed)
+
+        # Update custom variables that have updated the button title
+        for rawVariable in blockJSON.get("variables", []):
+            buttonTitle = rawVariable.get("buttonTitle", None)
+            if buttonTitle is not None:
+                for variable in self._variables:
+                    if variable.id == rawVariable.get("id"):
+                        variable.buttonTitle = buttonTitle
 
         # Update the outputs
         for ov in typing.cast(list[dict[str, typing.Any]], blockJSON.get("outputs", [])):
