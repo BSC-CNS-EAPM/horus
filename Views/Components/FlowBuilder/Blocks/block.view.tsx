@@ -94,6 +94,7 @@ export function BlockView(
           blockState={blockState}
           isFlowActive={isFlowActive}
         />
+        <BlockBodyVariables block={block} blockState={blockState} />
       </BlockBox>
       <BlockVariablesAndConnections
         block={block}
@@ -553,6 +554,43 @@ function BlockDescription({
         {description}
       </pre>
     </div>
+  );
+}
+
+function BlockBodyVariables({
+  block,
+  blockState
+}: {
+  block: Block;
+  blockState: BlockViewState;
+}) {
+  if (!block.isPlaced) {
+    return null;
+  }
+  // Get alsoInCanvas variables from the block
+
+  const bodyVariables = block.variables.filter(
+    (variable) => variable.alsoInCanvas
+  );
+
+  return (
+    <>
+      <hr className="border-t border-gray-300 mt-2" />
+      <div className="mt-2 flex flex-col gap-2">
+        {bodyVariables.map((variable) => (
+          <PluginVariableView
+            key={`${variable.id}-0-${block.id}-${block.placedID}`}
+            variable={{
+              ...variable,
+              placedID: block.placedID,
+              block: block
+            }}
+            onChange={blockState.blockViewHooks.handleVariableChange}
+            applyStyle={false}
+          />
+        ))}
+      </div>
+    </>
   );
 }
 
