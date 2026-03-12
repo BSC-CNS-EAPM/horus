@@ -64,7 +64,7 @@ export function VariableSetupView(props: VariableModalViewProps) {
   const isFlowActive = flowBuilderState?.flow.isFlowActive;
 
   const variables: PluginVariable[] = block.variables
-    .filter((v) => !v.alsoInCanvas)
+    .filter((v) => !v.showInCanvas)
     .map((variable) => {
       return {
         ...variable,

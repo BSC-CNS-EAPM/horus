@@ -297,7 +297,7 @@ script_variable = PluginVariable(
 echo "Hello world"
 
 """,
-alsoInCanvas=True,
+showInCanvas=True,
 )
 
 
@@ -593,7 +593,7 @@ some_toggle_variable = PluginVariable(
     name="Toggle",
     description="Toggle",
     type=VariableTypes.BOOLEAN,
-    alsoInCanvas=True,
+    showInCanvas=True,
 )
 
 testExtensionsShortcutsBlock = SlurmBlock(
@@ -637,7 +637,7 @@ customVariableTest = CustomVariable(
     customPage="devplugin.dev_page",
     type=VariableTypes.NUMBER,
     category="Custom variables",
-    alsoInCanvas=True,
+    showInCanvas=True,
 )
 
 customVariableTest21 = CustomVariable(
@@ -1222,21 +1222,21 @@ test_body_varaibles = SlurmBlock(
             name="Body variable 1",
             description="This is a body variable",
             type=VariableTypes.BOOLEAN,
-            alsoInCanvas=True,
+            showInCanvas=True,
         ),
         PluginVariable(
             id="body_variable_2",
             name="Body variable 2",
             description="This is another body variable",
             type=VariableTypes.NUMBER,
-            alsoInCanvas=True,
+            showInCanvas=True,
         ),
         PluginVariable(
             id="body_variable_3",
             name="Body variable 3",
             description="This is a sphere body variable",
             type=VariableTypes.SPHERE,
-            alsoInCanvas=True,
+            showInCanvas=True,
         ),
         PluginVariable(
             id="body_variable_4",
@@ -1244,7 +1244,7 @@ test_body_varaibles = SlurmBlock(
             description="This is a constrained number range body variable",
             type=VariableTypes.CONSTRAINED_NUMBER_RANGE,
             allowedValues=[0, 100, 1],
-            alsoInCanvas=True,
+            showInCanvas=True,
             category="A category variables",
         ),
         PluginVariable(
@@ -1252,7 +1252,7 @@ test_body_varaibles = SlurmBlock(
             name="Non body variable",
             description="This variable is not a body variable",
             type=VariableTypes.STRING,
-            alsoInCanvas=False,
+            showInCanvas=False,
         ),
         customVariableTest,
     ],

@@ -695,7 +695,7 @@ class PluginVariable:
     Check if the variable is a copy or the original used to model the block
     """
 
-    alsoInCanvas: bool = False
+    showInCanvas: bool = False
     """
     Indicates whether the variable is part of the body of the block.
     """
@@ -713,7 +713,7 @@ class PluginVariable:
         disabled: bool = False,
         required: bool = False,
         placeholder: typing.Optional[str] = None,
-        alsoInCanvas: bool = False,
+        showInCanvas: bool = False,
     ):
         """
         :param name: The name of the variable.
@@ -726,7 +726,7 @@ class PluginVariable:
         :param required: Whether the variable is required or not.
         This will show the variable in orange when not connected.
         :param placeholder: The placeholder of the input field.
-        :param alsoInCanvas: Indicates whether the variable is part of the body of the block.
+        :param showInCanvas: Indicates whether the variable is part of the body of the block.
         """
         self.name = name
         self.description = description
@@ -734,7 +734,7 @@ class PluginVariable:
         self.disabled = disabled
         self.required = required
         self.placeholder = placeholder
-        self.alsoInCanvas = alsoInCanvas
+        self.showInCanvas = showInCanvas
 
         if type not in VariableTypes.getTypes():
             raise Exception(f"Invalid type {type}.")
@@ -823,7 +823,7 @@ class PluginVariable:
             varDict["required"] = self.required
             varDict["placeholder"] = self.placeholder
             varDict["placedID"] = self.placedID
-            varDict["alsoInCanvas"] = self.alsoInCanvas
+            varDict["showInCanvas"] = self.showInCanvas
 
         return varDict
 
@@ -873,7 +873,7 @@ class CustomVariable(PluginVariable):
         category: str | None = None,
         disabled: bool = False,
         required: bool = False,
-        alsoInCanvas: bool = False,
+        showInCanvas: bool = False,
     ):
         """
         The custom variable works like a regular variable, but it can use an extension \
@@ -891,7 +891,7 @@ class CustomVariable(PluginVariable):
         :param customPage: The page instance where the variable will be rendered or the ID of the page.
         """
         super().__init__(
-            id, name, description, type, defaultValue, allowedValues, category, disabled, required, alsoInCanvas=alsoInCanvas
+            id, name, description, type, defaultValue, allowedValues, category, disabled, required, showInCanvas=showInCanvas
         )
 
         self.customPage = customPage
@@ -936,7 +936,7 @@ class VariableGroup(PluginVariable):
         category: typing.Optional[str] = None,
         disabled: bool = False,
         required: bool = False,
-        alsoInCanvas: bool = False,
+        showInCanvas: bool = False,
     ) -> None:
         """
         Initialize a VariableGroup
@@ -980,7 +980,7 @@ class VariableGroup(PluginVariable):
             category=category,
             disabled=disabled,
             required=required,
-            alsoInCanvas=alsoInCanvas,
+            showInCanvas=showInCanvas,
         )
 
     def toDict(self, minimal: bool = False):
@@ -1021,7 +1021,7 @@ class VariableList(PluginVariable):
         category: typing.Optional[str] = None,
         disabled: bool = False,
         required: bool = False,
-        alsoInCanvas: bool = False,
+        showInCanvas: bool = False,
     ):
         """
         :param id: The ID of the variable.
@@ -1044,7 +1044,7 @@ class VariableList(PluginVariable):
             category=category,
             disabled=disabled,
             required=required,
-            alsoInCanvas=alsoInCanvas,
+            showInCanvas=showInCanvas,
         )
 
         # prototypes cannot be VariableGroups
@@ -3328,6 +3328,7 @@ class CustomVariableParser:
         "disabled",
         "required",
         "placeholder",
+        "showInCanvas"
     ]
 
     @classmethod
