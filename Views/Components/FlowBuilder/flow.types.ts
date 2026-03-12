@@ -97,7 +97,7 @@ export type PluginVariable = {
   disabled: boolean;
   required: boolean;
   placeholder?: string;
-  alsoInCanvas: boolean;
+  alsoInCanvas?: boolean;
 
   // For GroupVariable
   variables?: Array<PluginVariable>;
