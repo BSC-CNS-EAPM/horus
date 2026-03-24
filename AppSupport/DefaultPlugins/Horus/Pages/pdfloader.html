@@ -28,7 +28,8 @@
         const blob = parent.horus
           .getFile(pdf)
           .then((blob) => {
-            pdfToLoad = URL.createObjectURL(blob);
+            const pdfBlob = new Blob([blob], { type: "application/pdf" });
+            const pdfToLoad = URL.createObjectURL(pdfBlob);
 
             // Replace from the iframe-loader the <iframe> and add the PDF viewer
             const iframeDiv = parent.document.getElementById("iframe-loader");
