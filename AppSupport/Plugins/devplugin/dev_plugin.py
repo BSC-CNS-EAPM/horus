@@ -1,4 +1,3 @@
-from re import I
 import time
 
 from HorusAPI import (

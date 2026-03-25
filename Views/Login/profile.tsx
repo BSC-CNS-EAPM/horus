@@ -119,7 +119,7 @@ export default function Profile() {
 
     if (data.ok) {
       await horusAlert("Your account has been deleted");
-      window.location.href = "/users/login";
+      window.location.href = `${window.__HORUS_ROOT__}/users/login`;
     } else {
       await horusAlert(data.msg || "An error occurred. Try again later.");
     }
@@ -179,7 +179,7 @@ export default function Profile() {
                 style={{
                   color: "var(--waring-orange)"
                 }}
-                href="/users/admintools"
+                href={`${window.__HORUS_ROOT__}/users/admintools`}
                 target="_blank"
               >
                 Enter AdminTools <LockIcon />
@@ -188,7 +188,7 @@ export default function Profile() {
           </div>
           <div className="flex flex-col gap-2 mb-4">
             <a
-              href="/users/logout"
+              href={`${window.__HORUS_ROOT__}/users/logout`}
               className="bsc-btn animated-gradient w-100 cursor-pointer text-white"
             >
               Logout

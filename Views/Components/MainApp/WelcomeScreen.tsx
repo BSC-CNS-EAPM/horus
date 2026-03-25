@@ -153,7 +153,7 @@ function WelcomeToHorus(props: {
             style={{
               color: "var(--digital-grey-IV)"
             }}
-            href="/users/logout"
+            href={`${window.__HORUS_ROOT__}/users/logout`}
           >
             <Login />
           </a>

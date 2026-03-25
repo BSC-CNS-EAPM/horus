@@ -215,7 +215,7 @@ function Login({
       try {
         response = await (await horusPost("/users/login", null, body)).json();
       } catch (error) {
-        window.location.href = "/"; // or the redirect URL
+        window.location.href = `${window.__HORUS_ROOT__}/`; // or the redirect URL
         return;
       }
 
@@ -230,7 +230,7 @@ function Login({
 
       // Redirect to / if the login was successful
       if (response.ok) {
-        window.location.href = "/";
+        window.location.href = `${window.__HORUS_ROOT__}/`; // or the redirect URL
       }
     } finally {
       setDisableLogin(false);
@@ -294,7 +294,7 @@ function Login({
         </button>
         {window.horusInternal?.webApp?.allowDemoUser && (
           <a
-            href="/users/demo"
+            href={`${window.__HORUS_ROOT__}/users/demo`}
             className="bsc-btn animated-gradient w-100 cursor-pointer text-white"
           >
             Try a demo
@@ -493,7 +493,11 @@ function Register({
           >
             <div>
               I accept the{" "}
-              <a href="/tos" target="_blank" className="text-blue-500">
+              <a
+                href={`${window.__HORUS_ROOT__}/tos`}
+                target="_blank"
+                className="text-blue-500"
+              >
                 Terms of Service
               </a>
             </div>
@@ -588,7 +592,7 @@ function Reset({
         ok: true
       });
       await new Promise((resolve) => setTimeout(resolve, 2000));
-      window.location.href = "/users/login";
+      window.location.href = `${window.__HORUS_ROOT__}/users/login`;
     } else {
       setMessages({
         msg: data.msg ?? "An error occurred. Try again later.",

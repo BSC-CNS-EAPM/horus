@@ -7,6 +7,7 @@ import { useSettingsContext } from "@/Main/app";
 import { saveSettings } from "@/Settings/settings";
 import { PluginVariable } from "@/Components/FlowBuilder/flow.types";
 import { HorusLink } from "@/Components/reusable";
+import { getBaseURL } from "./utils";
 
 function HorusGoogleAnalytics() {
   const [consent, setConsent] = useState<string | null>(null);
@@ -210,7 +211,7 @@ export function ConsentBanner() {
             <p className="text-xs text-gray-500 text-center">
               Learn more about our{" "}
               <HorusLink
-                to="/privacy"
+                to={getBaseURL("/privacy")}
                 target="_blank"
                 className="text-blue-600 hover:underline"
               >

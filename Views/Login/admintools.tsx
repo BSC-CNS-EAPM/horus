@@ -244,7 +244,7 @@ function _UserTable({
 
                 if (confirmDelete) {
                   horusDelete({
-                    url: "/users/admintools/deleteuser",
+                    url: `${window.__HORUS_ROOT__}/users/admintools/deleteuser`,
                     body: { email }
                   }).then(async (res) => {
                     // Check if the response is ok
@@ -285,7 +285,7 @@ function _UserTable({
 
                 if (confirmChangePassword) {
                   horusPost(
-                    "/users/admintools/changepassword",
+                    `${window.__HORUS_ROOT__}/users/admintools/changepassword`,
                     header,
                     body
                   ).then(async (res) => {
