@@ -49,7 +49,7 @@ export default function Reset() {
         type: "success"
       });
       await new Promise((resolve) => setTimeout(resolve, 2000));
-      window.location.href = "/users/login";
+      window.location.href = `${window.__HORUS_ROOT__}/users/login`;
     } else {
       setMessage({
         text: data.msg ?? "An error occurred. Try again later.",
@@ -62,7 +62,7 @@ export default function Reset() {
     fetchDesktop();
 
     if (!window.mail) {
-      window.location.href = "/users/login";
+      window.location.href = `${window.__HORUS_ROOT__}/users/login`;
     }
   }, []);
 
