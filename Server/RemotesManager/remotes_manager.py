@@ -145,7 +145,7 @@ class RemotesAPI:
             self.isLocal = True
 
             # For local, set the workDir as the current directory
-            self.workDir = os.getcwd()
+            workDir = os.getcwd()
 
             return
 
@@ -890,6 +890,9 @@ class RemotesManager:
         # Fix the name of the remote to not have special characters
         newConfig["name"] = newConfig["name"].replace(" ", "_")
 
+        if not newConfig["name"].lower() == "local":
+
+
         if not newConfig["name"].lower() == self.LOCAL_REMOTE_NAME.lower():
             if newConfig.get("username") is None:
                 raise Exception("The user of the remote is required")
@@ -1029,7 +1032,7 @@ class RemotesManager:
         # Connect to the remote
         self.remote.connect()
         if not self.remote.isConnected:
-            raise Exception("Could not connect to the remote")
+            raise Exception("Could not connect to the remote")            
 
     def _remoteConfig(self) -> t.Dict[str, t.Any]:
         """
