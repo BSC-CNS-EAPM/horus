@@ -120,7 +120,7 @@ def test_AppDelegate_startup(appDelegate_default: AppDelegate):
     assert appDelegate_default.APP_INFO != {}
     assert appDelegate_default.APP_INFO["NAME"] == "Horus"
     assert appDelegate_default.APP_INFO["BUNDLE_IDENTIFIER"] == "com.bsc.horus"
-    assert appDelegate_default.APP_INFO["PYTHON_VERSION"] == "3.9.16"
+    assert appDelegate_default.APP_INFO["PYTHON_VERSION"] == "3.12.13"
 
 
 @pytest.fixture
@@ -253,7 +253,7 @@ def test_horus_settings_get_setting(horus_settings):
     assert setting.value == "python"
     assert (
         setting.description
-        == "Python interpreter path to use for dependencies installation. Only required for special packages that need to be compiled from source. Must be python 3.9."
+        == "Python interpreter path to use for dependencies installation. Only required for special packages that need to be compiled from source. Must be python 3.12."
     )
     assert setting.category == "Python"
 

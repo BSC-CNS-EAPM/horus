@@ -10,7 +10,7 @@ from enum import Enum
 import typing
 from typing import Optional, Any, Dict, Union, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 # Utilities
 from .utils import SingletonMeta
@@ -107,8 +107,9 @@ class MolstarThemeOptions(BaseModel):
     size: Optional[Union[SizeTheme, str]] = None
     sizeParams: Optional[Dict[str, Any]] = None
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(
+        use_enum_values=True
+    )
 
 
 class SelectionLanguage(str, Enum):

@@ -36,7 +36,8 @@ import importlib.util
 # For the PrintCapturer class
 from contextlib import contextmanager, redirect_stdout, redirect_stderr
 
-import pkg_resources
+import importlib.metadata
+from packaging.requirements import Requirement as PkgRequirement, InvalidRequirement
 
 # For the SocketIO type completion
 from flask_socketio import SocketIO
@@ -1244,11 +1245,12 @@ class PluginManager(metaclass=HorusSingleton):
         if not os.path.exists(fullDepsDir):
             os.makedirs(fullDepsDir, exist_ok=True)
 
-        # Create a new working set that includes the custom directory
-        pluginWorkingSet = pkg_resources.WorkingSet(entries=[fullDepsDir])
-
-        # Get the installed dependencies
-        installedDeps = {pkg.key: pkg.version for pkg in pluginWorkingSet}
+        # Scan installed distributions in the plugin deps directory
+        installedDeps = {
+            dist.metadata["Name"].lower(): dist.metadata["Version"]
+            for dist in importlib.metadata.distributions(path=[fullDepsDir])
+            if dist.metadata["Name"] is not None
+        }
 
         # Check for dependencies installed from git repositories
         listedDeps = os.listdir(fullDepsDir)
@@ -1319,10 +1321,10 @@ class PluginManager(metaclass=HorusSingleton):
             versionSpecs: typing.Optional[list[typing.Tuple[str, str]]] = None
             if not parsedDep.startswith("git+"):
                 try:
-                    requirement = pkg_resources.Requirement.parse(parsedDep)
-                    name = requirement.project_name.lower()
-                    versionSpecs = requirement.specs
-                except pkg_resources.RequirementParseError:
+                    requirement = PkgRequirement(parsedDep)
+                    name = requirement.name.lower()
+                    versionSpecs = [(str(s.operator), str(s.version)) for s in requirement.specifier]
+                except InvalidRequirement:
                     logging.getLogger("Horus").error(
                         "Invalid requirement specification: %s", parsedDep
                     )
@@ -2208,16 +2210,8 @@ class PluginDepsBase:
             sys.path.insert(0, depsDir)
             sys.path.insert(0, includeDir)
 
-            # Once pyinstaller is compiled, distributions inside the deps
-            # directory are not correctly detected by pkg_resources.
-            # To fix this, we need to add the deps directory to the
-            # pkg_resources working set
-
-            # Add the deps directory to the working set
-            pkg_resources.working_set.add_entry(depsDir)
-
-            # Add the include directory to the working set
-            pkg_resources.working_set.add_entry(includeDir)
+            # sys.path insertion above is sufficient for importlib to
+            # discover packages in these directories at runtime.
 
         for p in self.paths:
             addPath(p)
@@ -2261,12 +2255,6 @@ class PluginDepsBase:
             # Restore the initial python path
             sys.path = self.initialPath
 
-            # Remove the deps directory from the working set
-            pkg_resources.working_set.entries.remove(depsDir)
-
-            # Remove the include directory from the working set
-            pkg_resources.working_set.entries.remove(includeDir)
-
         for p in self.paths:
             removePath(p)
 
@@ -2289,7 +2277,7 @@ class PluginDepsBase:
 
         Example:
             >>> getPluginDepsDir("/path/to/plugin")
-            "/path/to/plugin/deps/lib/python3.9/site-packages"
+            "/path/to/plugin/deps/lib/python3.12/site-packages"
         """
         # We need to return a path of the form {pluginPath}/lib/python{pythonVersion}/site-packages
         depsDir = os.path.join(pluginPath, "deps")
@@ -2298,7 +2286,7 @@ class PluginDepsBase:
             return depsDir
 
         # Get the python version
-        pythonVersion = sys.version[:3]
+        pythonVersion = f"{sys.version_info.major}.{sys.version_info.minor}"
 
         # Return the path
         return os.path.join(depsDir, "lib", "python" + str(pythonVersion), "site-packages")
@@ -2738,7 +2726,7 @@ class ExternalPython:
             if not stdout:
                 return False, "", "Could not get version output from interpreter"
 
-            # Extract version from output (e.g., "Python 3.9.15" -> "3.9.15")
+            # Extract version from output (e.g., "Python 3.12.13" -> "3.12.13")
             version_parts = stdout.strip().split()
             if len(version_parts) < 2:
                 return False, "", f"Unexpected version output format: {stdout.strip()}"
@@ -2785,7 +2773,7 @@ class ExternalPython:
                 return False, (
                     f"Python version mismatch: interpreter v{interpreter_version} "
                     f"does not match required v{required_version}. "
-                    f"Major and minor versions must match (e.g., 3.9.x == 3.9.y)"
+                    f"Major and minor versions must match (e.g., 3.12.x == 3.12.y)"
                 )
 
             return True, ""
