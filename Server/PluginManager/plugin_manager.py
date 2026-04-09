@@ -1512,7 +1512,7 @@ class PluginManager(metaclass=HorusSingleton):
         # Get the remote list for listing the configurations
         # THIS INDICATES THAT PER-REMOTE-CONFIGURATION OF PLUGINS
         # IS NOT AVAILABLE ON WEBAPP MODE
-        remoteList = RemotesManager(self.appSupportDir).listRemotes(includeLocal=True)
+        remoteList = RemotesManager(self.appSupportDir).listRemotes()
 
         for p in self.loadedPlugins:
             try:

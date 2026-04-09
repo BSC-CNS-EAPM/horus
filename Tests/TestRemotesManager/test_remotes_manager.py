@@ -1,8 +1,7 @@
-from math import e
-from sys import stderr
+import json
 import pytest
 from unittest.mock import patch, MagicMock
-from Server.RemotesManager import RemotesAPI
+from Server.RemotesManager import RemotesAPI, RemotesManager
 from App import AppDelegate
 import os
 
@@ -196,3 +195,61 @@ def test_transfer_from_remote(mock_remotes_api_remote):
     # Assertions
     assert os.path.dirname(os.path.dirname(result)) == expected_destination
     mock_remotes_api_remote._internalTransferFrom.assert_called_once()
+
+
+def test_local_command_uses_su_when_credentials_are_configured():
+    local_config = {
+        "name": "Local",
+        "type": "local",
+        "username": "targetuser",
+        "password": "targetpass",
+    }
+    instance = RemotesAPI(local_config)
+
+    with patch(
+        "subprocess.run", return_value=MagicMock(returncode=0, stdout="ok", stderr="")
+    ) as mock_run:
+        out = instance.command("whoami", env={"TEST_VAR": "1"})
+
+    assert out == "ok\n"
+    called_command = mock_run.call_args[0][0]
+    assert "su targetuser -c" in called_command
+    assert "whoami" in called_command
+    assert "export TEST_VAR=1;" in called_command
+    assert mock_run.call_args.kwargs["stdin"] == -1
+    assert mock_run.call_args.kwargs["input"] == "targetpass\n"
+    assert mock_run.call_args.kwargs["env"] is None
+
+
+def test_connect_remote_local_reads_local_config(tmp_path):
+    remotes_config = {
+        "Local": {
+            "name": "Local",
+            "type": "local",
+            "username": "configured_user",
+            "password": "configured_password",
+        }
+    }
+    with open(tmp_path / "remotes.json", "w", encoding="utf-8") as handle:
+        json.dump(remotes_config, handle)
+
+    manager = RemotesManager(str(tmp_path))
+
+    with patch("Server.RemotesManager.remotes_manager.RemotesAPI") as mock_api:
+        remote_instance = MagicMock()
+        remote_instance.isConnected = True
+        remote_instance.name = "Local"
+        mock_api.return_value = remote_instance
+
+        manager.connectRemote("Local")
+
+    mock_api.assert_called_once_with(
+        remotes_config["Local"], local=False, requireLocalCredentials=False
+    )
+
+
+def test_get_remote_api_local_requires_config_in_webapp_mode(tmp_path):
+    manager = RemotesManager(str(tmp_path), requireLocalConfig=True)
+
+    with pytest.raises(Exception, match="requires a configured 'Local' remote"):
+        manager.getRemoteAPI("Local")

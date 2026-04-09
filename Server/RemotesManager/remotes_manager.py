@@ -10,6 +10,7 @@ import json
 import logging
 import os
 import secrets
+import shlex
 import subprocess
 import tarfile
 
@@ -104,22 +105,24 @@ class RemotesAPI:
     """
 
     def __init__(
-        self, selectedRemote: t.Optional[t.Dict[str, t.Any]] = None, local: bool = False
+        self,
+        selectedRemote: t.Dict[str, t.Any],
     ):
         """
         Create a new ClusterAPI object.
 
         :param selectedRemote: The remote to connect to.
         """
+        name = selectedRemote.get("name")
 
-        # Check if the remote is local
-        if local or selectedRemote is None:
+        assert name is not None, "Remote configuration must include a 'name' field."
+
+        workDir = selectedRemote.get("workDir") or self.workDir
+        if name.lower() == "local":
             self.isLocal = True
-            self.name = "Local"
-            self.remoteName = "Local"
 
             # For local, set the workDir as the current directory
-            self.workDir = os.getcwd()
+            workDir = os.getcwd()
 
             return
 
@@ -137,7 +140,7 @@ class RemotesAPI:
         self.key = selectedRemote.get("keyPath") or None
         self.proxyCommand = selectedRemote.get("proxyCommand") or None
         self.remoteName = selectedRemote.get("name") or "Unnamed Remote"
-        self.workDir = selectedRemote.get("workDir") or self.workDir
+        self.workDir = workDir
         self.loadProfile = selectedRemote.get("loadProfile") or self.loadProfile
 
     def connect(self):
@@ -145,49 +148,51 @@ class RemotesAPI:
         Connect to the remote.
         """
 
+        if self.isLocal:
+            return
+        
         # Check if connection details are provided
-        if not self.isLocal:
-            if self.host is None:
-                raise ConnectionFailed("No hostname provided.")
-            if self.port is None:
-                raise ConnectionFailed("No port provided.")
-            if self.username is None:
-                raise ConnectionFailed("No username provided.")
-            if self.password is None and self.key is None:
-                raise ConnectionFailed("No password or key provided.")
+        if self.host is None:
+            raise ConnectionFailed("No hostname provided.")
+        if self.port is None:
+            raise ConnectionFailed("No port provided.")
+        if self.username is None:
+            raise ConnectionFailed("No username provided.")
+        if self.password is None and self.key is None:
+            raise ConnectionFailed("No password or key provided.")
 
-            # Set kwargs for connection
-            connect_kwargs = {}  # pylint: disable=invalid-name
+        # Set kwargs for connection
+        connect_kwargs = {}  # pylint: disable=invalid-name
 
-            if self.password is not None:
-                connect_kwargs["password"] = self.password
+        if self.password is not None:
+            connect_kwargs["password"] = self.password
 
-            if self.key is not None:
-                connect_kwargs["key_filename"] = self.key
+        if self.key is not None:
+            connect_kwargs["key_filename"] = self.key
 
-            # Connect
-            if self.password is not None or self.key is not None:
-                try:
-                    self.conn = fabric.Connection(
-                        host=self.host,
-                        port=self.port,
-                        user=self.username,
-                        connect_kwargs={
-                            **connect_kwargs,
-                        },
-                        gateway=self.proxyCommand or None,
-                        connect_timeout=8,
-                    )
-                    self.conn.open()
-                except Exception as exc:
-                    logging.getLogger("Horus").error(
-                        "Could not connect to the remote %s: %s", self.host, str(exc)
-                    )
-                    raise ConnectionFailed(
-                        f"Could not connect to the remote {self.host}: {exc}"
-                    ) from exc
-            else:
-                raise ConnectionFailed("No connection method provided.")
+        # Connect
+        if self.password is not None or self.key is not None:
+            try:
+                self.conn = fabric.Connection(
+                    host=self.host,
+                    port=self.port,
+                    user=self.username,
+                    connect_kwargs={
+                        **connect_kwargs,
+                    },
+                    gateway=self.proxyCommand or None,
+                    connect_timeout=8,
+                )
+                self.conn.open()
+            except Exception as exc:
+                logging.getLogger("Horus").error(
+                    "Could not connect to the remote %s: %s", self.host, str(exc)
+                )
+                raise ConnectionFailed(
+                    f"Could not connect to the remote {self.host}: {exc}"
+                ) from exc
+        else:
+            raise ConnectionFailed("No connection method provided.")
 
         if "~" in self.workDir:
             # Replace the ~ with the user home directory for compatibility
@@ -236,16 +241,53 @@ class RemotesAPI:
             out = ""
             err = ""
             try:
-                process = subprocess.run(
-                    command,
+                from App import AppDelegate
+
+                if AppDelegate().mode == "webapp":
+                    if not self.username or not self.password:
+                        raise CommandFailed(
+                            "WebApp mode requires local remote credentials.",
+                            cmd=command,
+                            stdout="",
+                        stderr="",
+                    )
+
+                effectiveCommand = command
+                stdIn = subprocess.DEVNULL
+                runEnv = env
+                runInput = None
+
+                # If local credentials are configured, impersonate with su.
+                if self.isLocal and self.username and self.password:
+                    if env:
+                        env_vars = " ".join(
+                            f"export {key}={shlex.quote(value)};" for key, value in env.items()
+                        )
+                        effectiveCommand = f"{env_vars} {command}".strip()
+
+                    effectiveCommand = (
+                        f"su {shlex.quote(self.username)} -c {shlex.quote(effectiveCommand)}"
+                    )
+                    stdIn = subprocess.PIPE
+                    runEnv = None
+                    runInput = f"{self.password}\n"
+
+                processKwargs: dict[str, t.Any] = dict(
                     shell=True,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
-                    stdin=subprocess.DEVNULL,
+                    stdin=stdIn,
                     timeout=timeout,
                     text=True,
                     check=False,
-                    env=env,
+                    env=runEnv,
+                )
+                if runInput is not None:
+                    processKwargs["input"] = runInput
+
+                process = subprocess.run(
+                    effectiveCommand,
+                    **processKwargs,
                 )
 
                 def logCommandOutput(o: str):
@@ -682,7 +724,7 @@ class RemotesManager:
     """
 
     # The default local name
-    LOCAL_IP = "Local"
+    LOCAL_IP = "local"
 
     remote: t.Optional[RemotesAPI] = None
     """
@@ -696,6 +738,22 @@ class RemotesManager:
         :param appSupportDir: The path to the app support directory
         """
         self.appSupportDir = appSupportDir
+
+        # Configure the local remote if it does not exist
+        if not self.remoteExists(self.LOCAL_IP):
+            self.configureRemote(
+                {
+                    "name": self.LOCAL_IP,
+                    "host": self.LOCAL_IP,
+                    "port": None,
+                    "username": None,
+                    "password": None,
+                    "keyPath": None,
+                    "proxyCommand": None,
+                    "workDir": None,
+                }
+            )
+
 
     def configureRemote(self, newConfig: t.Dict[str, t.Any]):
         """
@@ -720,38 +778,37 @@ class RemotesManager:
         # Fix the name of the remote to not have special characters
         newConfig["name"] = newConfig["name"].replace(" ", "_")
 
-        if newConfig.get("username") is None:
-            raise Exception("The user of the remote is required")
+        if not newConfig["name"].lower() == "local":
 
-        if newConfig.get("host") is None:
-            raise Exception("The host of the remote is required")
 
-        if newConfig.get("port") is None:
-            raise Exception("The port of the remote is required")
+            if newConfig.get("username") is None:
+                raise Exception("The user of the remote is required")
 
-        if newConfig.get("keyPath") is None and newConfig.get("password") is None:
-            raise Exception(
-                "Either the keys or the password of the remote is required. None provided."
-            )
+            if newConfig.get("host") is None:
+                raise Exception("The host of the remote is required")
 
-        if newConfig.get("keyPath") is not None and newConfig.get("password") is not None:
-            raise Exception(
-                "While configuring a remote either the keys or "
-                "the password is required, not both."
-            )
+            if newConfig.get("port") is None:
+                raise Exception("The port of the remote is required")
 
-        newKeyPath = newConfig.get("keyPath", None)
-        if newKeyPath is not None:
-            if isinstance(newKeyPath, list):
-                newKeyPath = newKeyPath[0]
-                newConfig["keyPath"] = newKeyPath
+            if newConfig.get("keyPath") is None and newConfig.get("password") is None:
+                raise Exception(
+                    "Either the keys or the password of the remote is required. None provided."
+                )
 
-            if not os.path.exists(newKeyPath):
-                raise Exception("The keys file does not exist")
+            if newConfig.get("keyPath") is not None and newConfig.get("password") is not None:
+                raise Exception(
+                    "While configuring a remote either the keys or "
+                    "the password is required, not both."
+                )
 
-        if newConfig["name"].lower() == "local":
-            # The local remote does not need to be configured
-            raise Exception("The local machine does not need to be configured")
+            newKeyPath = newConfig.get("keyPath", None)
+            if newKeyPath is not None:
+                if isinstance(newKeyPath, list):
+                    newKeyPath = newKeyPath[0]
+                    newConfig["keyPath"] = newKeyPath
+
+                if not os.path.exists(newKeyPath):
+                    raise Exception("The keys file does not exist")
 
         remotesPath = os.path.join(self.appSupportDir, "remotes.json")
 
@@ -775,7 +832,7 @@ class RemotesManager:
         with open(remotesPath, "w", encoding="utf-8") as file:
             json.dump(remotesConfig, file)
 
-    def listRemotes(self, includeLocal: bool = False) -> list[dict[str, t.Any]]:
+    def listRemotes(self) -> list[dict[str, t.Any]]:
         """
         Loads the ssh configuration file and returns the list of remotes
         """
@@ -792,10 +849,6 @@ class RemotesManager:
         remotes = []
         for name, config in remotesConfig.items():  # pylint: disable=unused-variable
             remotes.append(config)
-
-        # Add the local machine
-        if includeLocal:
-            remotes.append({"name": "Local"})
 
         return remotes
 
@@ -837,20 +890,15 @@ class RemotesManager:
 
         remotesConfig = self._remoteConfig()
 
-        if name.lower() == "local":
-            self.remote = RemotesAPI(None, local=True)
-        else:
-            # Get the remote configuration if its not the local machine
-            selectedRemote = remotesConfig[name]
+        # Get the remote configuration (including local)
+        selectedRemote = remotesConfig[name]
+        # Init the Remote
+        self.remote = RemotesAPI(selectedRemote)
 
-            # Init the Remote
-            self.remote = RemotesAPI(selectedRemote)
-
-            # Connect to the remote
-            self.remote.connect()
-
+        # Connect to the remote
+        self.remote.connect()
         if not self.remote.isConnected:
-            raise Exception("Could not connect to the remote")
+            raise Exception("Could not connect to the remote")            
 
     def _remoteConfig(self) -> t.Dict[str, t.Any]:
         """
@@ -871,26 +919,20 @@ class RemotesManager:
         Returns whether a remote exists by the remote's name
         """
 
-        if remoteName.lower() != "local":
-            return remoteName in self._remoteConfig().keys()
-
-        return True
+        return remoteName in self._remoteConfig().keys()
 
     def getRemoteAPI(self, remoteName: str) -> RemotesAPI:
         """
-        Returns the conencted instanced of the remote
+        Returns the connected instance of the remote
         """
 
-        if remoteName == "Local":
-            rapi = RemotesAPI(local=True)
-        else:
-            # Check if the remote exists
-            if not self.remoteExists(remoteName):
-                raise Exception(f"The remote {remoteName} does not exist")
+        # Check if the remote exists
+        if not self.remoteExists(remoteName):
+            raise Exception(f"The remote {remoteName} does not exist")
 
-            remotesConfig = self._remoteConfig()
+        remotesConfig = self._remoteConfig()
 
-            rapi = RemotesAPI(remotesConfig[remoteName])
+        rapi = RemotesAPI(remotesConfig[remoteName])
 
         # Connect the remote
         rapi.connect()
