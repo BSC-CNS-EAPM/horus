@@ -49,7 +49,7 @@ import PausedIcon from "../../Toolbar/Icons/Paused";
 import ErrorLogFile from "../../Toolbar/Icons/ErrorLogFile";
 import ExternalIcon from "../../Toolbar/Icons/External";
 import Chevron from "@/Components/Toolbar/Icons/Chevron";
-import { IconPencilCog } from "@tabler/icons-react";
+import { IconPencilCog, IconPalette } from "@tabler/icons-react";
 import { unrelatedExtensionToBlockIDGenerator } from "@/Components/Toolbar/extensions_list";
 
 export function BlockView(
@@ -136,6 +136,9 @@ function BlockBox({
       className={`plugin-block ${block.isPlaced && "plugin-block-placed "} ${
         block.error && "plugin-block-failed"
       }`}
+      style={{
+        backgroundColor: block.color
+      }}
     >
       {children}
     </div>
@@ -154,7 +157,10 @@ function BlockWrapper({
 }) {
   return (
     <div
-      style={{ ...blockState.div.style, ...extraStyle }}
+      style={{
+        ...blockState.div.style,
+        ...extraStyle
+      }}
       className={`flex flex-col gap-1 ${
         block.isPlaced ? "absolute z-1" : "relative"
       }`}
@@ -394,6 +400,13 @@ function BlockToolbar({
               onClick={blockState.blockViewHooks.toggleVariablesModal}
             />
           )}
+
+          <BlockColorPicker
+            color={block.color}
+            onChange={(color) =>
+              blockHooks?.setBlockColor(block.placedID, color)
+            }
+          />
 
           <DeleteBlockButton
             block={block}
@@ -720,6 +733,43 @@ function BlockVariablesButton({ onClick }: { onClick: () => void }) {
       }
     >
       <div className="hover-description">Setup variables</div>
+    </HorusPopover>
+  );
+}
+
+function BlockColorPicker({
+  color,
+  onChange
+}: {
+  color?: string;
+  onChange: (color: string) => void;
+}) {
+  const colorInputRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <HorusPopover
+      triggerClassName="pointer-events-auto"
+      trigger={
+        <button
+          onClick={() => colorInputRef.current?.click()}
+          style={{
+            position: "relative",
+            top: "-1px"
+          }}
+        >
+          <IconPalette className="w-5 h-5 cursor-pointer" />
+          <input
+            ref={colorInputRef}
+            type="color"
+            value={color ?? "#ffffff"}
+            onChange={(e) => onChange(e.target.value)}
+            className="absolute opacity-0 w-0 h-0 pointer-events-none"
+            tabIndex={-1}
+          />
+        </button>
+      }
+    >
+      <div className="hover-description">Block color</div>
     </HorusPopover>
   );
 }

@@ -2212,6 +2212,21 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     handleBlockChanges([newBlock], false, true, false);
   }
 
+  function setBlockColor(placedID: number, color: string) {
+    const blockToUpdate = findBlocks([placedID]);
+
+    if (!blockToUpdate) {
+      return;
+    }
+
+    const newBlock: Block = {
+      ...blockToUpdate[0]!,
+      color: color
+    };
+
+    handleBlockChanges([newBlock], false, true, false);
+  }
+
   useEffect(() => {
     socket.on("flow", loadSocketFlow);
 
@@ -2524,6 +2539,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       setBlockInputGroup,
       handleBlockChanges,
       setBlockRemote,
+      setBlockColor,
       findBlocks
     },
     dnd: {

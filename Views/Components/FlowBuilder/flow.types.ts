@@ -178,6 +178,7 @@ export type Block = BaseBlock & {
   extensionsToOpen: Array<PluginPage>;
   time: number;
   externalURL?: string;
+  color?: string;
 
   // Variable connections
   variableConnections: Array<VariableConnection>;
