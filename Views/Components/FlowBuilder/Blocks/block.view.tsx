@@ -381,6 +381,13 @@ function BlockToolbar({
             </>
           )}
 
+          <BlockColorPicker
+            color={block.color}
+            onChange={(color) =>
+              blockHooks?.setBlockColor(block.placedID, color)
+            }
+          />
+
           <BlockLogs block={block} blockState={blockState} />
 
           {block.type !== BlockTypes.GHOST && (
@@ -400,13 +407,6 @@ function BlockToolbar({
               onClick={blockState.blockViewHooks.toggleVariablesModal}
             />
           )}
-
-          <BlockColorPicker
-            color={block.color}
-            onChange={(color) =>
-              blockHooks?.setBlockColor(block.placedID, color)
-            }
-          />
 
           <DeleteBlockButton
             block={block}
