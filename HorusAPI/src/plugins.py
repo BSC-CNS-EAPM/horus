@@ -1159,6 +1159,11 @@ class PluginBlockTypes(str, Enum):
     exists due to a removed or modified plugin.
     """
 
+    NOTE = "note"
+    """
+    A block that can be used to write notes and comments in the flow.
+    """
+
     def __str__(self):
         return self.value
 
@@ -2103,6 +2108,40 @@ class PluginBlock:
     The configuration of the plugin that hosts this block.
     """
 
+class NoteBlock(PluginBlock):
+    """
+    A block used to write notes in the flow.
+    """
+
+    contents: str = ""
+    """
+    The contents of the note.
+    """
+
+    def __init__(self, name: str, description: str, id: typing.Optional[str] = None):
+        super().__init__(
+                name=name,
+                description=description,
+                blockType=PluginBlockTypes.NOTE,
+                id=id,
+            )
+        
+    def __call__(self, *args, **kwargs):
+        # Note blocks do not perform any action when called
+        raise Exception("Cannot execute a note block.")
+    
+    def _toDict(self):
+        serialized = super()._toDict()
+        serialized.update({
+            "contents": self.contents
+        })
+        return serialized
+    
+    def _parseInternalVariables(self, blockJSON: Dict[str, Any]):
+
+        self.contents = blockJSON.get("contents", "")
+
+        return super()._parseInternalVariables(blockJSON)
 
 class GhostBlock(PluginBlock):
     """

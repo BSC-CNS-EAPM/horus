@@ -42,6 +42,7 @@ import {
   Flow,
   FlowStatus,
   FlowStatusUtil,
+  NoteBlock,
   VariableConnection
 } from "./flow.types";
 import { FileExplorerProps } from "../FileExplorer/file_explorer";
@@ -2227,6 +2228,21 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     handleBlockChanges([newBlock], false, true, false);
   }
 
+  function setNoteContents(placedID: number, contents: string) {
+    const blockToUpdate = findBlocks([placedID]);
+
+    if (!blockToUpdate) {
+      return;
+    }
+
+    const newBlock: NoteBlock = {
+      ...(blockToUpdate[0]! as NoteBlock),
+      contents
+    };
+
+    handleBlockChanges([newBlock], false, true, false);
+  }
+
   useEffect(() => {
     socket.on("flow", loadSocketFlow);
 
@@ -2540,6 +2556,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       handleBlockChanges,
       setBlockRemote,
       setBlockColor,
+      setNoteContents,
       findBlocks
     },
     dnd: {
