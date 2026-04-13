@@ -119,6 +119,8 @@ class RemotesAPI:
 
         workDir = selectedRemote.get("workDir") or self.workDir
         if name.lower() == "local":
+            self.username = selectedRemote.get("username") or None
+            self.password = selectedRemote.get("password") or None
             self.isLocal = True
 
             # For local, set the workDir as the current directory
@@ -268,7 +270,6 @@ class RemotesAPI:
                     effectiveCommand = (
                         f"su {shlex.quote(self.username)} -c {shlex.quote(effectiveCommand)}"
                     )
-                    stdIn = subprocess.PIPE
                     runEnv = None
                     runInput = f"{self.password}\n"
 
@@ -282,7 +283,9 @@ class RemotesAPI:
                     check=False,
                     env=runEnv,
                 )
-                if runInput is not None:
+
+                if runInput:
+                    processKwargs["stdin"] = None
                     processKwargs["input"] = runInput
 
                 process = subprocess.run(
