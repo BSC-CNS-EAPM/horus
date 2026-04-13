@@ -211,7 +211,7 @@ def test_install_dep_internal_success(mocker):
     mock_popen.__enter__ = mocker.Mock(return_value=mock_popen)
     mock_popen.__exit__ = mocker.Mock(return_value=None)
 
-    mock_popen.stdout.read.return_value = b"Python 3.9.16"
+    mock_popen.stdout.read.return_value = b"Python 3.12.13"
 
     # Call the _installDepInternal method
     dep_to_install = "dep"

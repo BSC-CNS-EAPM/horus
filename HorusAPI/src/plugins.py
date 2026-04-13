@@ -17,6 +17,7 @@ from enum import Enum
 from typing import Any, Callable, ClassVar, Dict, List, TypeVar, Union, cast, Optional
 from pydantic import (  # pylint: disable=no-name-in-module. # Somehow pylint does not recognize BaseModel
     BaseModel,
+    ConfigDict,
     Field,
     field_validator,
 )
@@ -131,7 +132,9 @@ class PluginRemote:
         """
 
         if not isinstance(self.block, SlurmBlock):
-            raise ValueError("In order to submit jobs a SlurmBlock instance must be used.")
+            raise ValueError(
+                "In order to submit jobs a SlurmBlock instance must be used."
+            )
 
         scriptsToSubmit: list[str] = []
         isSingleJob = False
@@ -699,7 +702,6 @@ class PluginVariable:
     """
     Indicates whether the variable is part of the body of the block.
     """
-    
 
     def __init__(
         self,
@@ -767,7 +769,6 @@ class PluginVariable:
 
         # For .LIST variables, do not allow allowedvalues other than the allowed values
         if self.type == VariableTypes.LIST and allowedValues is not None:
-
             if len(allowedValues) > 1:
                 logging.getLogger("Horus").warning(
                     f"Only the first allowed value '{allowedValues[0]}' will be used "
@@ -891,7 +892,16 @@ class CustomVariable(PluginVariable):
         :param customPage: The page instance where the variable will be rendered or the ID of the page.
         """
         super().__init__(
-            id, name, description, type, defaultValue, allowedValues, category, disabled, required, showInCanvas=showInCanvas
+            id,
+            name,
+            description,
+            type,
+            defaultValue,
+            allowedValues,
+            category,
+            disabled,
+            required,
+            showInCanvas=showInCanvas,
         )
 
         self.customPage = customPage
@@ -1095,7 +1105,9 @@ class VariableList(PluginVariable):
             return
 
         # Create a set of disabled prototype IDs for faster lookup
-        disabledPrototypes = {p.id: p.defaultValue for p in self.prototypes if p.disabled}
+        disabledPrototypes = {
+            p.id: p.defaultValue for p in self.prototypes if p.disabled
+        }
 
         # Replace from each value in the list, the value corresponding to the disabled variables
         parsedList = []
@@ -1564,7 +1576,9 @@ class PluginBlock:
             raise Exception("A block can only have inputs or input groups, not both.")
 
         if len(inputs) > 0 and len(inputGroups) == 0:
-            inputGroups = [VariableGroup("default", "Default", "The default input group", inputs)]
+            inputGroups = [
+                VariableGroup("default", "Default", "The default input group", inputs)
+            ]
 
         for group in inputGroups:
             checkNestedVariables(group.variables)
@@ -1600,7 +1614,9 @@ class PluginBlock:
             self._inputGroups[ig.id] = ig
 
         if blockType not in (PluginBlockTypes):
-            raise Exception(f"Invalid block type {blockType}. Allowed types: {PluginBlockTypes}")
+            raise Exception(
+                f"Invalid block type {blockType}. Allowed types: {PluginBlockTypes}"
+            )
 
         self.TYPE: PluginBlockTypes = blockType  # pylint: disable=invalid-name
         """
@@ -1778,7 +1794,9 @@ class PluginBlock:
     def __str__(self):
         return json.dumps(self._toDict(), indent=4)
 
-    def _variablesToDict(self, vars: typing.List[PluginVariable], minimal: bool = False):
+    def _variablesToDict(
+        self, vars: typing.List[PluginVariable], minimal: bool = False
+    ):
         varList: list[dict[str, typing.Any]] = []
         for v in vars:
             varList.append(v.toDict(minimal=minimal))
@@ -1878,8 +1896,8 @@ class PluginBlock:
         variableConnections: typing.List[typing.Dict[str, typing.Any]] = blockJSON.get(
             "variableConnections", []
         )
-        variableConnectionsReference: typing.List[typing.Dict[str, typing.Any]] = blockJSON.get(
-            "variableConnectionsReference", []
+        variableConnectionsReference: typing.List[typing.Dict[str, typing.Any]] = (
+            blockJSON.get("variableConnectionsReference", [])
         )
 
         def parseVariableConnection(connection: typing.Dict[str, typing.Any]):
@@ -1912,7 +1930,9 @@ class PluginBlock:
             destinationBlockID = destination.get("blockID", None)
             destinationVariableID = destination.get("variableID", None)
             destinationVariableType = destination.get("variableType", None)
-            destinationVariableAllowedValues = destination.get("variableAllowedValues", None)
+            destinationVariableAllowedValues = destination.get(
+                "variableAllowedValues", None
+            )
 
             destinationPair = BlockVarPair(
                 destinationPlacedID,
@@ -1922,7 +1942,9 @@ class PluginBlock:
                 destinationVariableAllowedValues,
             )
 
-            return BlockConnection(originPair, destinationPair, isCyclic, cycles, currentCycle)
+            return BlockConnection(
+                originPair, destinationPair, isCyclic, cycles, currentCycle
+            )
 
         # Parse the variableConnections
         parsedVariableConnections: typing.List[BlockConnection] = []
@@ -1932,7 +1954,9 @@ class PluginBlock:
         # Parse the variableConnectionsReference
         parsedVariableConnectionsReference: typing.List[BlockConnection] = []
         for connection in variableConnectionsReference:
-            parsedVariableConnectionsReference.append(parseVariableConnection(connection))
+            parsedVariableConnectionsReference.append(
+                parseVariableConnection(connection)
+            )
 
         # Parse the variable values
         variablesJSON: list[dict] = blockJSON.get("variables", [])
@@ -1970,7 +1994,9 @@ class PluginBlock:
                         variable.buttonTitle = buttonTitle
 
         # Update the outputs
-        for ov in typing.cast(list[dict[str, typing.Any]], blockJSON.get("outputs", [])):
+        for ov in typing.cast(
+            list[dict[str, typing.Any]], blockJSON.get("outputs", [])
+        ):
             try:
                 k = ov["id"]
                 v = ov["value"]
@@ -2131,7 +2157,12 @@ class PluginConfig(PluginBlock):
             raise Exception("A PluginConfig must have at least one variable.")
 
         super().__init__(
-            name, description, action, variables, blockType=PluginBlockTypes.CONFIG, id=id
+            name,
+            description,
+            action,
+            variables,
+            blockType=PluginBlockTypes.CONFIG,
+            id=id,
         )
 
 
@@ -2215,7 +2246,6 @@ class InputBlock(PluginBlock):
 
 
 class HorusPydanticModel(BaseModel):
-
     def update(self, newValues: "HorusPydanticModel"):
         # Map the dictionary keys to field names using aliases
         alias_map = {
@@ -2224,7 +2254,9 @@ class HorusPydanticModel(BaseModel):
         }
 
         # Look here how we used the .model_dump() method and not the custom toDict()
-        updated_dict: dict = {alias_map.get(k, k): v for k, v in newValues.model_dump().items()}
+        updated_dict: dict = {
+            alias_map.get(k, k): v for k, v in newValues.model_dump().items()
+        }
         self.__dict__.update(updated_dict)
 
     def toDict(self) -> dict:
@@ -2238,7 +2270,10 @@ class HorusPydanticModel(BaseModel):
         return json.loads(self.model_dump_json(by_alias=True))  # pylint: disable=no-member
 
     model_config = {
-        "ignored_types": (type(update), type(toDict)),  # Will be cython_function_or_method
+        "ignored_types": (
+            type(update),
+            type(toDict),
+        ),  # Will be cython_function_or_method
     }
 
 
@@ -2330,7 +2365,6 @@ RemoteUnion = typing.Union["RemotesAPI", "PluginRemote"]
 
 
 class SlurmJob(HorusPydanticModel):
-
     SEPARATOR: ClassVar[str] = f"====HORUS===={os.urandom(16).hex()}====HORUS===="
 
     job_id: str = Field(..., alias="JobId")
@@ -2382,14 +2416,14 @@ class SlurmJob(HorusPydanticModel):
         """
         return Status(value)
 
-    class Config:
-        populate_by_name = True  # Allows using alias names for JSON serialization
-        arbitrary_types_allowed = True
-
-        json_encoders = {
+    model_config = ConfigDict(
+        populate_by_name=True,  # Allows using alias names for JSON serialization
+        arbitrary_types_allowed=True,
+        json_encoders={
             datetime: lambda x: x.timestamp(),
             Status: lambda x: x.value,
-        }
+        },
+    )
 
     @property
     def completed(self):
@@ -2518,7 +2552,9 @@ class SlurmJob(HorusPydanticModel):
         try:
             out = remote.command(fullCommand, env=env)
             jobOutputs = out.split(SlurmJob.SEPARATOR)
-            slurmJobs = [SlurmJob.parseScontrolToSlurmJob(jobOutput) for jobOutput in jobOutputs]
+            slurmJobs = [
+                SlurmJob.parseScontrolToSlurmJob(jobOutput) for jobOutput in jobOutputs
+            ]
         except Exception as exc:
             raise Exception(
                 f"Error submitting job. Does the machine '{remote.name}' have SLURM installed? {exc}"
@@ -2528,12 +2564,14 @@ class SlurmJob(HorusPydanticModel):
         for slurmJob in slurmJobs:
             if slurmJob.array_task_id:
                 arrayJobsCommands = []
-                # Take into account batching, which can be in the format "1-10%2", 
+                # Take into account batching, which can be in the format "1-10%2",
                 # so we need to split by "%" and take the first part
                 task_id = slurmJob.array_task_id.split("%")[0]
                 start, end = map(int, task_id.split("-"))
                 for i in range(start, end + 1):
-                    arrayJobsCommands.append(SlurmJob.SCONTROL_COMMAND(f"{slurmJob.job_id}_{i}"))
+                    arrayJobsCommands.append(
+                        SlurmJob.SCONTROL_COMMAND(f"{slurmJob.job_id}_{i}")
+                    )
 
                 arrayCommand = f"; echo {SlurmJob.SEPARATOR};".join(arrayJobsCommands)
                 out = remote.command(arrayCommand)
@@ -2551,7 +2589,6 @@ class SlurmJob(HorusPydanticModel):
         # The output is the scontrol information
         jobDict = {}
         for o in scontrol.strip().split(" "):
-
             if "=" not in o:
                 continue
 
@@ -2570,9 +2607,10 @@ class SlurmJob(HorusPydanticModel):
         # Assume completed when the status cannot be retrieved
         status = Status.COMPLETED
         try:
-            status = Status(remote.command(f"sacct -j {jobID} -o 'State' --noheader -X").strip())
+            status = Status(
+                remote.command(f"sacct -j {jobID} -o 'State' --noheader -X").strip()
+            )
         except CommandFailed as cf1:
-
             logging.getLogger("Horus").error(
                 "Failed to check sactt state for job %s. %s."
                 " Trying with less reliable squeue.",
@@ -2583,7 +2621,9 @@ class SlurmJob(HorusPydanticModel):
             # Try with squeue
             try:
                 status = Status(
-                    remote.command(f"squeue -j {jobID} --format='%T' --noheader").strip()
+                    remote.command(
+                        f"squeue -j {jobID} --format='%T' --noheader"
+                    ).strip()
                 )
             except CommandFailed as cf2:
                 # Assume The job has ended
@@ -2716,7 +2756,6 @@ class SlurmBlock(PluginBlock):
         tasks: dict[str, Future[None]] = {}
         with ThreadPoolExecutor(max_workers=8) as executor:
             for j in self.jobs:
-
                 # Skip finished jobs
                 if skipCompleted and j.completed:
                     continue
@@ -2728,7 +2767,9 @@ class SlurmBlock(PluginBlock):
                 task.result()
             except Exception as tException:
                 logging.getLogger("Horus").error(
-                    "Could not parse job status status for JobID %s: %s", jobid, str(tException)
+                    "Could not parse job status status for JobID %s: %s",
+                    jobid,
+                    str(tException),
                 )
 
         # Based on all jobs, parse the global result
@@ -2787,7 +2828,9 @@ class SlurmBlock(PluginBlock):
                 self.name,
                 e,
             )
-            raise Exception("An error occurred while checking if the job is finished.") from e
+            raise Exception(
+                "An error occurred while checking if the job is finished."
+            ) from e
 
     def cancelAllJobs(self):
         """
@@ -2832,7 +2875,9 @@ class SlurmBlock(PluginBlock):
 
 
 # Platform typing
-PlatformType = typing.List[typing.Literal["universal", "linux", "macos_intel", "macos_arm"]]
+PlatformType = typing.List[
+    typing.Literal["universal", "linux", "macos_intel", "macos_arm"]
+]
 
 
 class PluginMetaModel(BaseModel):
@@ -2936,7 +2981,6 @@ class Plugin:
         import inspect
 
         if __name__ != "__main__":
-
             # If we are on compiled Horus, the path of the plugin is the same
             # is the first element of the stack trace
 
@@ -3008,9 +3052,13 @@ class Plugin:
                 # Update the id on the meta too
                 self.pluginMeta.id = self.id
 
-                logging.debug("Assigned ID '%s' to plugin '%s'", self.id, self.pluginMeta.name)
+                logging.debug(
+                    "Assigned ID '%s' to plugin '%s'", self.id, self.pluginMeta.name
+                )
             except Exception as exc:
-                raise Exception(f"Error loading plugin.meta file ({metaPath}): {exc}") from exc
+                raise Exception(
+                    f"Error loading plugin.meta file ({metaPath}): {exc}"
+                ) from exc
         else:
             raise Exception(f"plugin.meta file not found at '{metaPath}'.")
 
@@ -3018,9 +3066,7 @@ class Plugin:
         logoPath = os.path.join(self._path, "logo.png")
         if os.path.exists(logoPath):
             with open(logoPath, "rb") as logoFile:
-                self.logo = (
-                    f"data:image/png;base64,{base64.b64encode(logoFile.read()).decode('utf-8')}"
-                )
+                self.logo = f"data:image/png;base64,{base64.b64encode(logoFile.read()).decode('utf-8')}"
 
     # Function to get a block by its ID
     def getBlock(self, id):
@@ -3053,8 +3099,12 @@ class Plugin:
         Adds a PluginBlock to the plugin.
         """
 
-        if isinstance(block, GhostBlock):  # If trying to add a Ghost block, log an error
-            logging.getLogger("Horus").error("Cannot add a GhostBlock to the plugin as a block.")
+        if isinstance(
+            block, GhostBlock
+        ):  # If trying to add a Ghost block, log an error
+            logging.getLogger("Horus").error(
+                "Cannot add a GhostBlock to the plugin as a block."
+            )
         # If trying to add a Config, log an error
         elif isinstance(block, PluginConfig):
             logging.getLogger("Horus").error(
@@ -3080,7 +3130,6 @@ class Plugin:
         # Check if the property is a PluginBlock
         # If it is, add it to the list of blocks
         for attr in dir(self):
-
             logging.getLogger("Horus").debug("Checking attribute %s", attr)
 
             # Get the attribute
@@ -3287,7 +3336,6 @@ class Plugin:
         """
         # Save the config file only if the block has configs
         if len(self._configs) > 0:
-
             # Read the existing config file
             if not os.path.exists(configPath):
                 self._createConfig(configPath)
@@ -3328,7 +3376,7 @@ class CustomVariableParser:
         "disabled",
         "required",
         "placeholder",
-        "showInCanvas"
+        "showInCanvas",
     ]
 
     @classmethod
@@ -3357,7 +3405,6 @@ class CustomVariableParser:
 
 
 class CustomInputsParser(CustomVariableParser):
-
     @classmethod
     def parse(cls, variable: dict) -> PluginVariable:
         """
@@ -3383,14 +3430,24 @@ class CustomBlockParser:
             raise ValueError("Block must be a dictionary.")
 
         # Check if the block has the required fields
-        requiredFields = ["id", "name", "description", "action", "variables", "inputs", "outputs"]
+        requiredFields = [
+            "id",
+            "name",
+            "description",
+            "action",
+            "variables",
+            "inputs",
+            "outputs",
+        ]
         for field in requiredFields:
             if field not in block:
                 raise ValueError(f"Block is missing required field: {field}")
 
         # Verify the ID is alphanumeric, and contains no spaces, only underscores
         if not re.match(r"^[a-zA-Z0-9_]+$", block["id"]):
-            raise ValueError("Block ID must be alphanumeric and can only contain underscores.")
+            raise ValueError(
+                "Block ID must be alphanumeric and can only contain underscores."
+            )
 
         # Parse inputs
         inputs = []
