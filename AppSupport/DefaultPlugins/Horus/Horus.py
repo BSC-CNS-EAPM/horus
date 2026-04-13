@@ -3,6 +3,11 @@ from HorusAPI import Plugin
 
 plugin = Plugin()
 
+from Blocks.note import noteBlock
+
+# Add the note block to the plugin
+plugin.addBlock(noteBlock)
+
 from Blocks.Smiles import smilesBlock
 
 # Add the smiles block to the plugin

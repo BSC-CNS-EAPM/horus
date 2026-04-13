@@ -1159,6 +1159,11 @@ class PluginBlockTypes(str, Enum):
     exists due to a removed or modified plugin.
     """
 
+    NOTE = "note"
+    """
+    A block that can be used to write notes and comments in the flow.
+    """
+
     def __str__(self):
         return self.value
 
@@ -1403,6 +1408,13 @@ class PluginBlock:
     Used only for custom blocks to store the raw block data.
     """
 
+    color: typing.Union[None, str] = None
+    """
+    A custom color for the block.
+
+    Can be assigned a hex color code as a string, for example: "#FF0000" for red.
+    """
+
     @property
     def unique_block_dir_local(self):
         """
@@ -1479,6 +1491,7 @@ class PluginBlock:
         id: typing.Optional[str] = None,
         externalURL: typing.Optional[str] = None,
         category: typing.Optional[str] = None,
+        color: typing.Optional[str] = None,
     ):
         """
         Initialize a PluginBlock.
@@ -1622,6 +1635,8 @@ class PluginBlock:
         """
         The type of the block. Internal use only.
         """
+
+        self.color = color
 
     # Define the call method to run the block
     def __call__(self, *args, **kwargs):
@@ -1882,6 +1897,7 @@ class PluginBlock:
         selectedInputGroup: str = blockJSON.get("selectedInputGroup", "default")
         selectedRemote: str = blockJSON.get("selectedRemote", "Local")
         self.category = blockJSON.get("category", None)
+        self.color = blockJSON.get("color", self.color)
         extensionsToOpen: typing.List[typing.Dict[str, typing.Any]] = blockJSON.get(
             "extensionsToOpen", []
         )
@@ -2029,7 +2045,7 @@ class PluginBlock:
         Encode only the blockID and the internal variables.
         """
 
-        # Ensure the selected remote exists in the current isntance of Horus
+        # Ensure the selected remote exists in the current instance of Horus
         # If the selected remote does not exist in the current remotes, set it as the local IP
         from App import AppDelegate
         from Server.RemotesManager import RemotesManager
@@ -2065,6 +2081,7 @@ class PluginBlock:
             "extraData": self.extraData,
             "dirty": self.dirty,
             "category": self.category,
+            "color": self.color,
         }
 
     def _toDict(self):
@@ -2091,6 +2108,40 @@ class PluginBlock:
     The configuration of the plugin that hosts this block.
     """
 
+class NoteBlock(PluginBlock):
+    """
+    A block used to write notes in the flow.
+    """
+
+    contents: str = ""
+    """
+    The contents of the note.
+    """
+
+    def __init__(self, name: str, description: str, id: typing.Optional[str] = None):
+        super().__init__(
+                name=name,
+                description=description,
+                blockType=PluginBlockTypes.NOTE,
+                id=id,
+            )
+        
+    def __call__(self, *args, **kwargs):
+        # Note blocks do not perform any action when called
+        raise Exception("Cannot execute a note block.")
+    
+    def _toDict(self):
+        serialized = super()._toDict()
+        serialized.update({
+            "contents": self.contents
+        })
+        return serialized
+    
+    def _parseInternalVariables(self, blockJSON: Dict[str, Any]):
+
+        self.contents = blockJSON.get("contents", "")
+
+        return super()._parseInternalVariables(blockJSON)
 
 class GhostBlock(PluginBlock):
     """
@@ -2191,6 +2242,7 @@ class InputBlock(PluginBlock):
         id: typing.Optional[str] = None,
         externalURL: typing.Optional[str] = None,
         category: typing.Optional[str] = None,
+        color: typing.Optional[str] = None,
     ):
         """
         :param name: The name of the block.
@@ -2221,6 +2273,7 @@ class InputBlock(PluginBlock):
             id=id,
             externalURL=externalURL,
             category=category,
+            color=color,
         )
 
     # Override the __call__ method to return
@@ -2697,6 +2750,7 @@ class SlurmBlock(PluginBlock):
         failOnSlurmError: bool = True,
         externalURL: typing.Optional[str] = None,
         category: typing.Optional[str] = None,
+        color: typing.Optional[str] = None,
     ):
         """
         :param name: The name of the block.
@@ -2723,6 +2777,7 @@ class SlurmBlock(PluginBlock):
             id=id,
             externalURL=externalURL,
             category=category,
+            color=color,
         )
         self.initalAction = initialAction
         self.finalAction = finalAction

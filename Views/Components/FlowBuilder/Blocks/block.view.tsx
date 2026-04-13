@@ -8,6 +8,9 @@ import {
   CSSProperties
 } from "react";
 
+// Mantine
+import { Textarea } from "@mantine/core";
+
 // Horus components
 import RotatingLines from "../../RotatingLines/rotatinglines";
 import ServerIcon from "../../Toolbar/Icons/Server";
@@ -29,7 +32,13 @@ import { PluginVariableView } from "../Variables/variables";
 import { PlacedBlockVariables } from "../Variables/variable_connections";
 
 // Typescript types
-import { Block, BlockTypes, PluginPage, Status } from "../flow.types";
+import {
+  Block,
+  BlockTypes,
+  NoteBlock,
+  PluginPage,
+  Status
+} from "../flow.types";
 
 // Block style
 import "./block.css";
@@ -49,7 +58,7 @@ import PausedIcon from "../../Toolbar/Icons/Paused";
 import ErrorLogFile from "../../Toolbar/Icons/ErrorLogFile";
 import ExternalIcon from "../../Toolbar/Icons/External";
 import Chevron from "@/Components/Toolbar/Icons/Chevron";
-import { IconPencilCog } from "@tabler/icons-react";
+import { IconPencilCog, IconPalette } from "@tabler/icons-react";
 import { unrelatedExtensionToBlockIDGenerator } from "@/Components/Toolbar/extensions_list";
 
 export function BlockView(
@@ -136,6 +145,9 @@ function BlockBox({
       className={`plugin-block ${block.isPlaced && "plugin-block-placed "} ${
         block.error && "plugin-block-failed"
       }`}
+      style={{
+        backgroundColor: block.color
+      }}
     >
       {children}
     </div>
@@ -154,7 +166,10 @@ function BlockWrapper({
 }) {
   return (
     <div
-      style={{ ...blockState.div.style, ...extraStyle }}
+      style={{
+        ...blockState.div.style,
+        ...extraStyle
+      }}
       className={`flex flex-col gap-1 ${
         block.isPlaced ? "absolute z-1" : "relative"
       }`}
@@ -374,6 +389,13 @@ function BlockToolbar({
               <FinishedCheck error={block.error} blockLogs={block.blockLogs} />
             </>
           )}
+
+          <BlockColorPicker
+            color={block.color}
+            onChange={(color) =>
+              blockHooks?.setBlockColor(block.placedID, color)
+            }
+          />
 
           <BlockLogs block={block} blockState={blockState} />
 
@@ -673,7 +695,7 @@ function BlockBody({
           </div>
         );
       default:
-        return null;
+        return undefined;
     }
   };
 
@@ -720,6 +742,43 @@ function BlockVariablesButton({ onClick }: { onClick: () => void }) {
       }
     >
       <div className="hover-description">Setup variables</div>
+    </HorusPopover>
+  );
+}
+
+function BlockColorPicker({
+  color,
+  onChange
+}: {
+  color?: string;
+  onChange: (color: string) => void;
+}) {
+  const colorInputRef = useRef<HTMLInputElement>(null);
+
+  return (
+    <HorusPopover
+      triggerClassName="pointer-events-auto"
+      trigger={
+        <button
+          onClick={() => colorInputRef.current?.click()}
+          style={{
+            position: "relative",
+            top: "-1px"
+          }}
+        >
+          <IconPalette className="w-5 h-5 cursor-pointer" />
+          <input
+            ref={colorInputRef}
+            type="color"
+            value={color ?? "#ffffff"}
+            onChange={(e) => onChange(e.target.value)}
+            className="absolute opacity-0 w-0 h-0 pointer-events-none"
+            tabIndex={-1}
+          />
+        </button>
+      }
+    >
+      <div className="hover-description">Block color</div>
     </HorusPopover>
   );
 }
@@ -846,4 +905,107 @@ export function BreakLongUnderscoreNames(props: { name: string }) {
   }, [props.name]);
 
   return <span ref={containerRef}>{props.name}</span>;
+}
+
+const NOTE_DEFAULT_COLOR = "#fef9c3";
+
+export function NoteBlockView(
+  props: BlockViewProps & { extraStyle?: CSSProperties }
+) {
+  const { block, blockHooks } = props;
+  const blockState = useBlockView(props);
+  const noteBlock = block as NoteBlock;
+
+  if (!block.isPlaced) {
+    return null;
+  }
+
+  const bgColor = block.color ?? NOTE_DEFAULT_COLOR;
+
+  return (
+    <div
+      style={{
+        ...blockState.div.style,
+        ...props.extraStyle
+      }}
+      className="absolute z-1 flex flex-col gap-1"
+    >
+      <div
+        ref={blockState.div.ref}
+        {...blockState.div.listeners}
+        {...blockState.div.attributes}
+        role={`block-${blockState.div.style.cursor}`}
+        id={`placed-${block.placedID}`}
+        style={{
+          backgroundColor: bgColor,
+          width: "220px",
+          borderRadius: "4px 4px 0 0",
+          boxShadow: "2px 4px 12px -4px rgba(0,0,0,0.25)",
+          padding: "8px 10px 10px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "6px",
+          position: "relative"
+        }}
+      >
+        <div
+          style={{
+            backgroundColor: `color-mix(in srgb, ${bgColor} 60%, #a0802040)`,
+            borderBottom: "1px solid rgba(0,0,0,0.08)",
+            margin: "-8px -10px 4px",
+            padding: "4px 8px",
+            borderRadius: "4px 4px 0 0",
+            display: "flex",
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center"
+          }}
+        >
+          <span
+            style={{
+              fontSize: "0.7rem",
+              fontWeight: 600,
+              color: "rgba(0,0,0,0.45)",
+              userSelect: "none"
+            }}
+          >
+            Note
+          </span>
+          <div className="flex flex-row gap-1 items-center cursor-auto">
+            <BlockColorPicker
+              color={bgColor}
+              onChange={(color) =>
+                blockHooks?.setBlockColor(block.placedID, color)
+              }
+            />
+            <DeleteBlockButton
+              block={block}
+              onClick={() => blockHooks?.handleDelete(block)}
+            />
+          </div>
+        </div>
+
+        <Textarea
+          value={noteBlock.contents ?? ""}
+          onChange={(e) =>
+            blockHooks?.setNoteContents(block.placedID, e.target.value)
+          }
+          placeholder="Write a note..."
+          autosize
+          minRows={4}
+          variant="unstyled"
+          styles={{
+            input: {
+              backgroundColor: "transparent",
+              fontSize: "0.875rem",
+              color: "rgba(0,0,0,0.75)",
+              resize: "none",
+              padding: 0,
+              width: "100%"
+            }
+          }}
+        />
+      </div>
+    </div>
+  );
 }

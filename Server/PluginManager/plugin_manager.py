@@ -38,6 +38,7 @@ from contextlib import contextmanager, redirect_stdout, redirect_stderr
 
 import importlib.metadata
 from packaging.requirements import Requirement as PkgRequirement, InvalidRequirement
+from packaging.utils import canonicalize_name
 
 # For the SocketIO type completion
 from flask_socketio import SocketIO
@@ -1247,7 +1248,7 @@ class PluginManager(metaclass=HorusSingleton):
 
         # Scan installed distributions in the plugin deps directory
         installedDeps = {
-            dist.metadata["Name"].lower(): dist.metadata["Version"]
+            canonicalize_name(dist.metadata["Name"]): dist.version
             for dist in importlib.metadata.distributions(path=[fullDepsDir])
             if dist.metadata["Name"] is not None
         }

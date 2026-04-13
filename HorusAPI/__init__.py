@@ -2,6 +2,7 @@
 from .src import (
     Plugin,
     PluginBlock,
+    NoteBlock,
     InputBlock,
     SlurmBlock,
     GhostBlock,

@@ -1,14 +1,14 @@
 // Components
 import { GLOBAL_IDS } from "../../Utils/globals";
 import { FlowCanvas } from "./Canvas/canvas";
-import { BlockView } from "./Blocks/block.view";
+import { BlockView, NoteBlockView } from "./Blocks/block.view";
 import { CSSProperties, useContext, useEffect, useRef } from "react";
 import { BlurredModal } from "../reusable";
 import RotatingLines from "../RotatingLines/rotatinglines";
 import { ServerFileExplorerModal } from "../FileExplorer/file_explorer";
 import { ConnectedArrows } from "./Connections/arrows";
 import Xarrow, { Xwrapper, useXarrow } from "react-xarrows";
-import { DroppableEntity, FlowStatus } from "./flow.types";
+import { BlockTypes, DroppableEntity, FlowStatus } from "./flow.types";
 import { GreenOverlay } from "../GreenOverlay/GreenOverlay";
 import SaveIcon from "../Toolbar/Icons/Save";
 import { FlowBuilderContext } from "../MainApp/PanelView";
@@ -153,16 +153,25 @@ function ScaledCanvas({
       className="scaled-flow-canvas"
       id={DroppableEntity.SCALED_CANVAS}
     >
-      {flowBuilderState.flow.flow.blocks.map((block) => (
-        <BlockView
-          key={block.placedID}
-          block={block}
-          blockHooks={flowBuilderState.block}
-          scale={flowBuilderState.flow.scale}
-          isPaused={flowBuilderState.flow.flow.status === FlowStatus.PAUSED}
-          isFlowActive={flowBuilderState.flow.isFlowActive}
-        />
-      ))}
+      {flowBuilderState.flow.flow.blocks.map((block) =>
+        block.type === BlockTypes.NOTE ? (
+          <NoteBlockView
+            key={block.placedID}
+            block={block}
+            blockHooks={flowBuilderState.block}
+            scale={flowBuilderState.flow.scale}
+          />
+        ) : (
+          <BlockView
+            key={block.placedID}
+            block={block}
+            blockHooks={flowBuilderState.block}
+            scale={flowBuilderState.flow.scale}
+            isPaused={flowBuilderState.flow.flow.status === FlowStatus.PAUSED}
+            isFlowActive={flowBuilderState.flow.isFlowActive}
+          />
+        )
+      )}
     </div>
   );
 }
