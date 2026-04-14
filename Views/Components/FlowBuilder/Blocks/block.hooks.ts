@@ -30,6 +30,8 @@ export type BlockViewProps = {
   scale?: number;
   isPaused?: boolean;
   isFlowActive?: boolean;
+  selectedPlacedIDs?: Set<number>;
+  onToggleSelect?: (placedID: number) => void;
 };
 
 export type BlockViewState = {

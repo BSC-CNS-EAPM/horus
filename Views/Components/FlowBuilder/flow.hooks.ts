@@ -301,6 +301,11 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
   const [isPanning, setIsPanning] = useState(false);
   const initialPanPosition = useRef({ x: 0, y: 0 });
 
+  // Multi-block selection
+  const [selectedPlacedIDs, setSelectedPlacedIDs] = useState<Set<number>>(
+    new Set()
+  );
+
   // Undo and redo history
   const [past, setPast] = useState<Flow[]>([]);
   const [future, setFuture] = useState<Flow[]>([]);
@@ -1201,9 +1206,15 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       y: number;
     }
   ) => {
-    // Update the state
-
-    handleBlockChanges([moveBlock(block, delta, scale)], false, true, false);
+    if (selectedPlacedIDs.has(block.placedID) && selectedPlacedIDs.size > 1) {
+      // Move all selected blocks together
+      const movedBlocks = flow.blocks
+        .filter((b) => selectedPlacedIDs.has(b.placedID))
+        .map((b) => moveBlock(b, delta, scale));
+      handleBlockChanges(movedBlocks, false, true, false);
+    } else {
+      handleBlockChanges([moveBlock(block, delta, scale)], false, true, false);
+    }
   };
 
   const addBlockToFlow = (block: Block) => {
@@ -1955,6 +1966,8 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
 
     // Check that the user is clicking over the canvas and not anything else
     if (target.id === DroppableEntity.CANVAS) {
+      // Clear block selection when clicking the canvas background
+      setSelectedPlacedIDs(new Set());
       setIsPanning(true);
       document.onselectstart = function () {
         return false;
@@ -2286,6 +2299,202 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     duplicateBlock(block);
   }, [duplicateBlock]);
 
+  const toggleBlockSelection = useCallback((placedID: number) => {
+    setSelectedPlacedIDs((prev) => {
+      const next = new Set(prev);
+      if (next.has(placedID)) {
+        next.delete(placedID);
+      } else {
+        next.add(placedID);
+      }
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedPlacedIDs(new Set());
+  }, []);
+
+  const deleteSelectedBlocks = useCallback(() => {
+    if (selectedPlacedIDs.size === 0) return;
+
+    dockApi?.panels.forEach((panel) => {
+      if (
+        panel?.params?.["placedID"] !== undefined &&
+        selectedPlacedIDs.has(panel.params["placedID"] as number)
+      ) {
+        dockApi?.removePanel(panel);
+      }
+    });
+
+    handleFlowChange((prev) => ({
+      ...prev,
+      blocks: prev.blocks
+        .filter((b) => !selectedPlacedIDs.has(b.placedID))
+        .map((b) => ({
+          ...b,
+          variableConnections: b.variableConnections.filter(
+            (vc) =>
+              !selectedPlacedIDs.has(vc.origin.placedID) &&
+              !selectedPlacedIDs.has(vc.destination.placedID)
+          ),
+          variableConnectionsReference: b.variableConnectionsReference.filter(
+            (vc) =>
+              !selectedPlacedIDs.has(vc.origin.placedID) &&
+              !selectedPlacedIDs.has(vc.destination.placedID)
+          )
+        }))
+    }), true);
+
+    setSelectedPlacedIDs(new Set());
+  }, [selectedPlacedIDs, dockApi, handleFlowChange]);
+
+  const duplicateSelectedBlocks = useCallback(() => {
+    if (selectedPlacedIDs.size === 0) return;
+
+    const blocksToDuplicate = flow.blocks.filter((b) =>
+      selectedPlacedIDs.has(b.placedID)
+    );
+    const offset = 30;
+    const newBlocks: Block[] = [];
+
+    for (const block of blocksToDuplicate) {
+      const newPlacedID = placedIDCounter.current;
+      placedIDCounter.current += 1;
+      newBlocks.push({
+        ...block,
+        isPlaced: true,
+        placedID: newPlacedID,
+        position: {
+          x: block.position.x + offset,
+          y: block.position.y + offset
+        },
+        isRunning: false,
+        error: false,
+        blockLogs: "",
+        finishedExecution: false,
+        time: 0,
+        extensionsToOpen: [],
+        variableConnections: [],
+        variableConnectionsReference: [],
+        variables: block.variables.map((v) => ({ ...v, placedID: newPlacedID }))
+      });
+    }
+
+    handleBlockChanges(newBlocks, true, true);
+    setSelectedPlacedIDs(new Set());
+  }, [selectedPlacedIDs, flow.blocks, handleBlockChanges]);
+
+  const copySelectedBlocksToClipboard = useCallback(async () => {
+    const blocksToCopy =
+      selectedPlacedIDs.size > 0
+        ? flow.blocks.filter((b) => selectedPlacedIDs.has(b.placedID))
+        : copiedBlock.current
+          ? [copiedBlock.current]
+          : [];
+
+    if (blocksToCopy.length === 0) return;
+
+    // Only retain connections where both endpoints are within the exported set
+    const exportedIDs = new Set(blocksToCopy.map((b) => b.placedID));
+    const blocksWithConnections = blocksToCopy.map((block) => ({
+      ...block,
+      variableConnections: block.variableConnections.filter(
+        (vc) =>
+          exportedIDs.has(vc.origin.placedID) &&
+          exportedIDs.has(vc.destination.placedID)
+      ),
+      variableConnectionsReference: block.variableConnectionsReference.filter(
+        (vc) =>
+          exportedIDs.has(vc.origin.placedID) &&
+          exportedIDs.has(vc.destination.placedID)
+      )
+    }));
+
+    const payload = JSON.stringify({ __horusBlocks: true, blocks: blocksWithConnections });
+    try {
+      await navigator.clipboard.writeText(payload);
+    } catch {
+      // Fallback: store in a module-level variable if clipboard API is unavailable
+      (window as Window & { __horusClipboard?: string }).__horusClipboard = payload;
+    }
+  }, [selectedPlacedIDs, flow.blocks]);
+
+  const pasteBlocksFromClipboard = useCallback(async () => {
+    let text: string | null = null;
+    try {
+      text = await navigator.clipboard.readText();
+    } catch {
+      text = (window as Window & { __horusClipboard?: string }).__horusClipboard ?? null;
+    }
+    if (!text) return;
+
+    let parsed: { __horusBlocks?: boolean; blocks?: Block[] };
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      return;
+    }
+    if (!parsed.__horusBlocks || !Array.isArray(parsed.blocks)) return;
+
+    const offset = 30;
+    const newBlocks: Block[] = [];
+    // Build old placedID → new placedID mapping so connections can be remapped
+    const placedIDMap = new Map<number, number>();
+
+    for (const block of parsed.blocks) {
+      const newPlacedID = placedIDCounter.current;
+      placedIDMap.set(block.placedID, newPlacedID);
+      placedIDCounter.current += 1;
+      newBlocks.push({
+        ...block,
+        isPlaced: true,
+        placedID: newPlacedID,
+        position: {
+          x: (block.position?.x ?? 0) + offset,
+          y: (block.position?.y ?? 0) + offset
+        },
+        isRunning: false,
+        error: false,
+        blockLogs: "",
+        finishedExecution: false,
+        time: 0,
+        extensionsToOpen: [],
+        variableConnections: [],
+        variableConnectionsReference: [],
+        variables: (block.variables ?? []).map((v) => ({ ...v, placedID: newPlacedID }))
+      });
+    }
+
+    // Remap connections using the old→new placedID map
+    const remapConnection = (vc: VariableConnection): VariableConnection => ({
+      ...vc,
+      origin: {
+        ...vc.origin,
+        placedID: placedIDMap.get(vc.origin.placedID) ?? vc.origin.placedID
+      },
+      destination: {
+        ...vc.destination,
+        placedID: placedIDMap.get(vc.destination.placedID) ?? vc.destination.placedID
+      }
+    });
+
+    for (let i = 0; i < newBlocks.length; i++) {
+      const srcBlock = parsed.blocks[i];
+      if (srcBlock) {
+        newBlocks[i] = {
+          ...newBlocks[i],
+          variableConnections: (srcBlock.variableConnections ?? []).map(remapConnection),
+          variableConnectionsReference: (srcBlock.variableConnectionsReference ?? []).map(remapConnection)
+        } as Block;
+      }
+    }
+
+    if (newBlocks.length > 0) {
+      handleBlockChanges(newBlocks, true, true);
+    }
+  }, [handleBlockChanges]);
+
   useEffect(() => {
     socket.on("flow", loadSocketFlow);
 
@@ -2587,7 +2796,9 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       pauseFlow,
       resetFlow,
       toggleFileExplorer,
-      pasteBlock
+      pasteBlock,
+      copySelectedBlocksToClipboard,
+      pasteBlocksFromClipboard
     },
     block: {
       connectingVariable,
@@ -2604,7 +2815,14 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       findBlocks,
       copyBlock,
       pasteBlock,
-      duplicateBlock
+      duplicateBlock,
+      selectedPlacedIDs,
+      toggleBlockSelection,
+      clearSelection,
+      deleteSelectedBlocks,
+      duplicateSelectedBlocks,
+      copySelectedBlocksToClipboard,
+      pasteBlocksFromClipboard
     },
     dnd: {
       dndTweaks,

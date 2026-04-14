@@ -58,7 +58,13 @@ import PausedIcon from "../../Toolbar/Icons/Paused";
 import ErrorLogFile from "../../Toolbar/Icons/ErrorLogFile";
 import ExternalIcon from "../../Toolbar/Icons/External";
 import Chevron from "@/Components/Toolbar/Icons/Chevron";
-import { IconPencilCog, IconPalette, IconCopyPlus } from "@tabler/icons-react";
+import {
+  IconPencilCog,
+  IconPalette,
+  IconCopyPlus,
+  IconSquare,
+  IconSquareCheckFilled
+} from "@tabler/icons-react";
 import { unrelatedExtensionToBlockIDGenerator } from "@/Components/Toolbar/extensions_list";
 
 export function BlockView(
@@ -73,6 +79,8 @@ export function BlockView(
       blockState={blockState}
       block={block}
       extraStyle={props.extraStyle}
+      selectedPlacedIDs={props.selectedPlacedIDs}
+      onToggleSelect={props.onToggleSelect}
     >
       <BlockExtensionsView block={block} />
       <BlockBox block={block} blockState={blockState}>
@@ -83,6 +91,8 @@ export function BlockView(
             blockState={blockState}
             blockHooks={blockHooks}
             isPaused={props.isPaused}
+            selectedPlacedIDs={props.selectedPlacedIDs}
+            onToggleSelect={props.onToggleSelect}
           />
         </BlockTopBar>
         {block.type !== BlockTypes.GHOST && (
@@ -158,12 +168,16 @@ function BlockWrapper({
   blockState,
   block,
   children,
-  extraStyle
+  extraStyle,
+  selectedPlacedIDs
 }: BlockViewProps & {
   children: ReactNode;
   blockState: BlockViewState;
   extraStyle?: CSSProperties;
 }) {
+  const isSelected =
+    block.isPlaced && (selectedPlacedIDs?.has(block.placedID) ?? false);
+
   return (
     <div
       style={{
@@ -171,8 +185,8 @@ function BlockWrapper({
         ...extraStyle
       }}
       className={`flex flex-col gap-1 ${
-        block.isPlaced ? "absolute z-1" : "relative"
-      }`}
+        block.isPlaced ? "absolute z-1 group" : "relative"
+      }${isSelected ? " outline outline-2 outline-blue-500 rounded-xl" : ""}`}
     >
       {children}
     </div>
@@ -368,12 +382,16 @@ function BlockToolbar({
   block,
   blockState,
   blockHooks,
-  isPaused
+  isPaused,
+  selectedPlacedIDs,
+  onToggleSelect
 }: {
   block: Block;
   blockState: BlockViewState;
   blockHooks?: BlockHooks;
   isPaused?: boolean;
+  selectedPlacedIDs?: Set<number>;
+  onToggleSelect?: (placedID: number) => void;
 }) {
   const { dockApi } = useContext(DockContext);
 
@@ -383,6 +401,30 @@ function BlockToolbar({
       {/* Delete button to remove the block from the canvas */}
       {block.isPlaced && (
         <>
+          {onToggleSelect && (
+            <button
+              style={{
+                position: "relative",
+                top: "-1px"
+              }}
+              className={`transition-opacity pointer-events-auto ${
+                selectedPlacedIDs?.has(block.placedID)
+                  ? "opacity-100"
+                  : "opacity-0 group-hover:opacity-100"
+              }`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleSelect(block.placedID);
+              }}
+            >
+              {selectedPlacedIDs?.has(block.placedID) ? (
+                <IconSquareCheckFilled className="w-5 h-5 text-blue-500" />
+              ) : (
+                <IconSquare className="w-5 h-5 text-gray-400" />
+              )}
+            </button>
+          )}
+
           {block.finishedExecution && (
             <>
               <BlockTime time={block.time} />
@@ -944,6 +986,7 @@ export function NoteBlockView(
   }
 
   const bgColor = block.color ?? NOTE_DEFAULT_COLOR;
+  const isSelected = props.selectedPlacedIDs?.has(block.placedID) ?? false;
 
   return (
     <div
@@ -951,7 +994,9 @@ export function NoteBlockView(
         ...blockState.div.style,
         ...props.extraStyle
       }}
-      className="absolute z-1 flex flex-col gap-1"
+      className={`absolute z-1 flex flex-col gap-1 group${
+        isSelected ? " outline outline-2 outline-blue-500 rounded" : ""
+      }`}
     >
       <div
         ref={blockState.div.ref}
@@ -995,6 +1040,29 @@ export function NoteBlockView(
             Note
           </span>
           <div className="flex flex-row gap-1 items-center cursor-auto">
+            {props.onToggleSelect && (
+              <button
+                style={{
+                  position: "relative",
+                  top: "-1px"
+                }}
+                className={`pointer-events-auto transition-opacity ${
+                  isSelected
+                    ? "opacity-100"
+                    : "opacity-0 group-hover:opacity-100"
+                }`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  props.onToggleSelect!(block.placedID);
+                }}
+              >
+                {isSelected ? (
+                  <IconSquareCheckFilled className="w-5 h-5 text-blue-500" />
+                ) : (
+                  <IconSquare className="w-5 h-5 text-gray-400" />
+                )}
+              </button>
+            )}
             <BlockColorPicker
               color={bgColor}
               onChange={(color) =>
