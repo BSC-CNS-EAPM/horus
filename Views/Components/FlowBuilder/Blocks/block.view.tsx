@@ -58,7 +58,7 @@ import PausedIcon from "../../Toolbar/Icons/Paused";
 import ErrorLogFile from "../../Toolbar/Icons/ErrorLogFile";
 import ExternalIcon from "../../Toolbar/Icons/External";
 import Chevron from "@/Components/Toolbar/Icons/Chevron";
-import { IconPencilCog, IconPalette } from "@tabler/icons-react";
+import { IconPencilCog, IconPalette, IconCopyPlus } from "@tabler/icons-react";
 import { unrelatedExtensionToBlockIDGenerator } from "@/Components/Toolbar/extensions_list";
 
 export function BlockView(
@@ -396,6 +396,8 @@ function BlockToolbar({
               blockHooks?.setBlockColor(block.placedID, color)
             }
           />
+
+          <CopyBlockButton onClick={() => blockHooks?.duplicateBlock(block)} />
 
           <BlockLogs block={block} blockState={blockState} />
 
@@ -742,6 +744,27 @@ function BlockVariablesButton({ onClick }: { onClick: () => void }) {
       }
     >
       <div className="hover-description">Setup variables</div>
+    </HorusPopover>
+  );
+}
+
+function CopyBlockButton({ onClick }: { onClick: () => void }) {
+  return (
+    <HorusPopover
+      triggerClassName="pointer-events-auto"
+      trigger={
+        <button
+          onClick={onClick}
+          style={{
+            position: "relative",
+            top: "-1px"
+          }}
+        >
+          <IconCopyPlus className="w-5 h-5 cursor-pointer" />
+        </button>
+      }
+    >
+      <div className="hover-description">Duplicate block</div>
     </HorusPopover>
   );
 }

@@ -2243,6 +2243,49 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     handleBlockChanges([newBlock], false, true, false);
   }
 
+  const copiedBlock = useRef<Block | null>(null);
+
+  function copyBlock(block: Block) {
+    copiedBlock.current = block;
+  }
+
+  const duplicateBlock = useCallback(
+    (block: Block) => {
+      const offset = 30;
+      const newBlock: Block = {
+        ...block,
+        isPlaced: true,
+        placedID: placedIDCounter.current,
+        position: {
+          x: block.position.x + offset,
+          y: block.position.y + offset
+        },
+        isRunning: false,
+        error: false,
+        blockLogs: "",
+        finishedExecution: false,
+        time: 0,
+        extensionsToOpen: [],
+        variableConnections: [],
+        variableConnectionsReference: [],
+        variables: block.variables.map((variable) => ({
+          ...variable,
+          placedID: placedIDCounter.current
+        }))
+      };
+
+      handleBlockChanges([newBlock], true, true);
+      placedIDCounter.current += 1;
+    },
+    [handleBlockChanges]
+  );
+
+  const pasteBlock = useCallback(() => {
+    const block = copiedBlock.current;
+    if (!block) return;
+    duplicateBlock(block);
+  }, [duplicateBlock]);
+
   useEffect(() => {
     socket.on("flow", loadSocketFlow);
 
@@ -2543,7 +2586,8 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       centerView,
       pauseFlow,
       resetFlow,
-      toggleFileExplorer
+      toggleFileExplorer,
+      pasteBlock
     },
     block: {
       connectingVariable,
@@ -2557,7 +2601,10 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       setBlockRemote,
       setBlockColor,
       setNoteContents,
-      findBlocks
+      findBlocks,
+      copyBlock,
+      pasteBlock,
+      duplicateBlock
     },
     dnd: {
       dndTweaks,
