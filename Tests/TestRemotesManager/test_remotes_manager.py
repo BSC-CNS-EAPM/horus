@@ -197,7 +197,7 @@ def test_transfer_from_remote(mock_remotes_api_remote):
     mock_remotes_api_remote._internalTransferFrom.assert_called_once()
 
 
-def test_local_command_uses_su_when_credentials_are_configured():
+def test_local_command_uses_sshpass_when_credentials_are_configured():
     local_config = {
         "name": RemotesManager.LOCAL_REMOTE_NAME,
         "type": "local",

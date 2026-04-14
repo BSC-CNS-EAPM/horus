@@ -38,12 +38,12 @@ export const config = {
     // When not using requireRegistration, you may want to remove automatically
     // the anonymus user data after a certain time. Specify the time in days
     deleteInterval: 1,
+    // Enforces that workflows that execute commands require local credentials in webapp mode.
+    requireLocalCredentials: true,
     // If requireRegistration is false, then you may want to limit the number of flows that an anonymous user can send
     // This is different from the "database" configuration in the sense that anonymous users cannot be tracked. This
     // configuration will only apply to non-registered users, as registered ones have the "quotas". This won't apply
     // in any case to webapps that have the requireRegistration set to true, as demo users cannot send calculations.
-    requireLocalCredentials: true,
-    // Enforces that workflows that execute commands require local credentials in webapp mode.
     anonymousQuotas: {
       maxFlows: 10,
       maxTemplates: 10,
