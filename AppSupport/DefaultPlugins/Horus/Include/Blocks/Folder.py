@@ -1,5 +1,6 @@
 import os
 from HorusAPI import PluginVariable, InputBlock, VariableTypes
+from Server.RemotesManager import RemotesManager
 
 folderVariable = PluginVariable(
     name="Folder",
@@ -15,7 +16,7 @@ def checkPathIsFolder(block: InputBlock):
     if folderVariableValue is None:
         raise Exception("No folder provided.")
 
-    if block.remote.name != "Local":
+    if block.remote.name != RemotesManager.LOCAL_REMOTE_NAME:
         try:
             block.remote.command("test -d " + folderVariableValue)
         except Exception:

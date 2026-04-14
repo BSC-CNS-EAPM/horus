@@ -1,5 +1,6 @@
 import os
 from HorusAPI import PluginVariable, InputBlock, VariableTypes
+from Server.RemotesManager import RemotesManager
 
 fileVariable = PluginVariable(
     name="File",
@@ -16,7 +17,7 @@ def checkPathIsFile(block: InputBlock):
     if fileVariableValue is None:
         raise Exception("No file provided.")
 
-    if block.remote.name != "Local":
+    if block.remote.name != RemotesManager.LOCAL_REMOTE_NAME:
         try:
             block.remote.command("test -f " + fileVariableValue)
         except Exception:

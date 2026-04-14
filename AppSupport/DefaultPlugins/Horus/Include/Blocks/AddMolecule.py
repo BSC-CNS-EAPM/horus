@@ -13,6 +13,7 @@ from HorusAPI import (
     MolstarAPI,
     VariableGroup,
 )
+from Server.RemotesManager import RemotesManager
 
 
 class NoMoleculeFileException(Exception):
@@ -43,7 +44,7 @@ def addMolecule(block: PluginBlock):
         path = block.inputs.get("file", None)
 
         if path is not None:
-            if block.remote.name != "Local":
+            if block.remote.name != RemotesManager.LOCAL_REMOTE_NAME:
                 # Download the file
                 print("Downloading file from remote...")
 
@@ -66,7 +67,7 @@ def addMolecule(block: PluginBlock):
             path = block.inputs.get("folder", None)
 
             if path is not None:
-                if block.remote.name != "Local":
+                if block.remote.name != RemotesManager.LOCAL_REMOTE_NAME:
                     # Download the folder
                     print("Downloading folder from remote...")
                     remoteTmpMolecule = ".temp_remote_Molecule_folder"

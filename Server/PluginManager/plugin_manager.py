@@ -1512,7 +1512,7 @@ class PluginManager(metaclass=HorusSingleton):
         # Get the remote list for listing the configurations
         # THIS INDICATES THAT PER-REMOTE-CONFIGURATION OF PLUGINS
         # IS NOT AVAILABLE ON WEBAPP MODE
-        remoteList = RemotesManager(self.appSupportDir).listRemotes(includeLocal=True)
+        remoteList = RemotesManager(self.appSupportDir).listRemotes()
 
         for p in self.loadedPlugins:
             try:
@@ -1616,7 +1616,7 @@ class PluginManager(metaclass=HorusSingleton):
         except Exception as exc:
             raise BlockNotFoundError(fromBlockID) from exc
 
-    def getPluginConfig(self, pluginID: str, remote: str = "Local") -> dict[str, typing.Any]:
+    def getPluginConfig(self, pluginID: str, remote: str = RemotesManager.LOCAL_REMOTE_NAME) -> dict[str, typing.Any]:
         """
         Returns the config of a Plugin
         """
@@ -2403,16 +2403,16 @@ class SubprocessManager:
                         forkedBlock.selectedRemote,
                         forkedBlock.name,
                     )
-                    forkedBlock.selectedRemote = "Local"
+                    forkedBlock.selectedRemote = RemotesManager.LOCAL_REMOTE_NAME
 
-                if forkedBlock.selectedRemote != "Local":
+                if forkedBlock.selectedRemote != RemotesManager.LOCAL_REMOTE_NAME:
                     msg = f"Connecting to remote '{forkedBlock.selectedRemote}'..."
                     print(msg)
                     logging.getLogger("Horus").info(msg)
 
                 rAPI = remoteManager.getRemoteAPI(forkedBlock.selectedRemote)
 
-                if forkedBlock.selectedRemote != "Local":
+                if forkedBlock.selectedRemote != RemotesManager.LOCAL_REMOTE_NAME:
                     msg = f"Successfully connected to remote '{forkedBlock.selectedRemote}'"
                     print(msg)
                     logging.getLogger("Horus").info(msg)
