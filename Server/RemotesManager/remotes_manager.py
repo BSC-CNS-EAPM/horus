@@ -9,6 +9,7 @@ import contextlib
 import json
 import logging
 import os
+import re
 import secrets
 import shlex
 import subprocess
@@ -21,6 +22,19 @@ import typing as t
 import fabric
 
 LOCAL_REMOTE_NAME = "Local"
+
+_VALID_ENV_KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _validate_env(env: dict) -> None:
+    """Raise ValueError if any env key is not a safe shell identifier."""
+    for key in env:
+        if not _VALID_ENV_KEY_RE.match(key):
+            raise ValueError(
+                f"Invalid environment variable name: {key!r}. "
+                "Only letters, digits, and underscores are allowed."
+            )
+
 
 class CommandFailed(Exception):
     cmd: str
@@ -104,6 +118,12 @@ class RemotesAPI:
     This can slow down command executions.
     """
 
+    _local_ssh_verified: bool = False
+    """
+    Whether the local SSH connectivity check has already succeeded.
+    Set once on the first successful check; avoids a round-trip per command.
+    """
+
     def __init__(
         self,
         selectedRemote: t.Dict[str, t.Any],
@@ -115,7 +135,8 @@ class RemotesAPI:
         """
         name = selectedRemote.get("name")
 
-        assert name is not None, "Remote configuration must include a 'name' field."
+        if name is None:
+            raise ValueError("Remote configuration must include a 'name' field.")
 
         workDir = selectedRemote.get("workDir") or self.workDir
         if name == RemotesManager.LOCAL_REMOTE_NAME:
@@ -289,30 +310,34 @@ class RemotesAPI:
                         stdout="",
                         stderr="",
                     )
-                    try:
-                        ssh_check = subprocess.run(
-                            [
-                                *ssh_prefix,
-                                "ssh",
-                                *ssh_opts,
-                                f"{self.username}@localhost",
-                                "exit",
-                            ],
-                            stdout=subprocess.DEVNULL,
-                            stderr=subprocess.DEVNULL,
-                            check=False,
-                        )
-                    except FileNotFoundError as exc:
-                        logging.getLogger("Horus").error(
-                            "sshpass is required for local remote with password, but it is not installed: %s",
-                            str(exc),
-                        )
-                        raise cmd_check_error
+                    if not self._local_ssh_verified:
+                        try:
+                            ssh_check = subprocess.run(
+                                [
+                                    *ssh_prefix,
+                                    "ssh",
+                                    *ssh_opts,
+                                    f"{self.username}@localhost",
+                                    "exit",
+                                ],
+                                stdout=subprocess.DEVNULL,
+                                stderr=subprocess.DEVNULL,
+                                check=False,
+                            )
+                        except FileNotFoundError as exc:
+                            logging.getLogger("Horus").error(
+                                "sshpass is required for local remote with password, but it is not installed: %s",
+                                str(exc),
+                            )
+                            raise cmd_check_error
 
-                    if ssh_check.returncode != 0:
-                        raise cmd_check_error
+                        if ssh_check.returncode != 0:
+                            raise cmd_check_error
+
+                        self._local_ssh_verified = True
 
                     if env:
+                        _validate_env(env)
                         env_vars = " ".join(
                             f"export {key}={shlex.quote(value)};"
                             for key, value in env.items()
@@ -412,9 +437,10 @@ class RemotesAPI:
             bash_command = f'bash -l -c "source ~/.bashrc 2>/dev/null || source /etc/bash.bashrc 2>/dev/null; {command}"'
 
             if env:
+                _validate_env(env)
                 # Add environment variables to the command
                 env_vars = " ".join(
-                    f'export {key}="{value}"' for key, value in env.items()
+                    f"export {key}={shlex.quote(value)}" for key, value in env.items()
                 )
                 bash_command = f'bash -l -c "{env_vars}; {bash_command}"'
 
