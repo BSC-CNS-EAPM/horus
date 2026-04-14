@@ -890,6 +890,9 @@ class RemotesManager:
         # Fix the name of the remote to not have special characters
         newConfig["name"] = newConfig["name"].replace(" ", "_")
 
+        if not newConfig["name"].lower() == "local":
+
+
         if not newConfig["name"].lower() == self.LOCAL_REMOTE_NAME.lower():
             if newConfig.get("username") is None:
                 raise Exception("The user of the remote is required")

@@ -11,9 +11,15 @@ import Xarrow, { Xwrapper, useXarrow } from "react-xarrows";
 import { BlockTypes, DroppableEntity, FlowStatus } from "./flow.types";
 import { GreenOverlay } from "../GreenOverlay/GreenOverlay";
 import SaveIcon from "../Toolbar/Icons/Save";
+import TrashIcon from "../Toolbar/Icons/Trash";
 import { FlowBuilderContext } from "../MainApp/PanelView";
 import { Editor } from "@monaco-editor/react";
 import { FlowBuilderHooks } from "./flow.hooks";
+import {
+  IconCopyPlus,
+  IconClipboardCopy,
+  IconClipboardText
+} from "@tabler/icons-react";
 
 // Main Component
 function FlowBuilderView() {
@@ -70,7 +76,7 @@ function FlowCanvasContainer({
     <Xwrapper>
       <div
         id={GLOBAL_IDS.FLOW_BUILDER_DIV}
-        className="h-full w-full overflow-hidden"
+        className="h-full w-full overflow-hidden relative"
         style={style}
         onDragOver={flowBuilderState.handleMouse.handleDragOver}
         onDrop={flowBuilderState.handleMouse.handleDrop}
@@ -99,8 +105,79 @@ function FlowCanvasContainer({
             </>
           )}
         </FlowCanvas>
+        {flowBuilderState.block.selectedPlacedIDs.size > 0 && (
+          <SelectionActionBar
+            count={flowBuilderState.block.selectedPlacedIDs.size}
+            onDuplicate={flowBuilderState.block.duplicateSelectedBlocks}
+            onDelete={flowBuilderState.block.deleteSelectedBlocks}
+            onClear={flowBuilderState.block.clearSelection}
+            onExport={flowBuilderState.block.copySelectedBlocksToClipboard}
+          />
+        )}
       </div>
     </Xwrapper>
+  );
+}
+
+function SelectionActionBar({
+  count,
+  onDuplicate,
+  onDelete,
+  onClear,
+  onExport
+}: {
+  count: number;
+  onDuplicate: () => void;
+  onDelete: () => void;
+  onClear: () => void;
+  onExport: () => void;
+}) {
+  return (
+    <div
+      className="flex flex-row items-center gap-3 bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2 pointer-events-auto"
+      style={{
+        position: "absolute",
+        bottom: "4rem",
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 50
+      }}
+    >
+      <span className="text-sm text-gray-500 font-medium whitespace-nowrap">
+        {count} block{count !== 1 ? "s" : ""} selected
+      </span>
+      <div className="w-px h-5 bg-gray-200" />
+      <button
+        title="Export selected blocks to clipboard"
+        onClick={onExport}
+        className="hover:text-blue-500 transition-colors"
+      >
+        <IconClipboardCopy className="w-5 h-5" />
+      </button>
+      <button
+        title="Duplicate selected"
+        onClick={onDuplicate}
+        className="hover:text-blue-500 transition-colors"
+      >
+        <IconCopyPlus className="w-5 h-5" />
+      </button>
+      <button
+        title="Delete selected"
+        onClick={onDelete}
+        className="transition-colors"
+        style={{ color: "var(--red-error)" }}
+      >
+        <TrashIcon style={{ height: "1.25rem", width: "1.25rem" }} />
+      </button>
+      <div className="w-px h-5 bg-gray-200" />
+      <button
+        title="Clear selection"
+        onClick={onClear}
+        className="text-gray-400 hover:text-gray-600 text-sm font-medium leading-none"
+      >
+        ✕
+      </button>
+    </div>
   );
 }
 
@@ -160,6 +237,8 @@ function ScaledCanvas({
             block={block}
             blockHooks={flowBuilderState.block}
             scale={flowBuilderState.flow.scale}
+            selectedPlacedIDs={flowBuilderState.block.selectedPlacedIDs}
+            onToggleSelect={flowBuilderState.block.toggleBlockSelection}
           />
         ) : (
           <BlockView
@@ -169,6 +248,8 @@ function ScaledCanvas({
             scale={flowBuilderState.flow.scale}
             isPaused={flowBuilderState.flow.flow.status === FlowStatus.PAUSED}
             isFlowActive={flowBuilderState.flow.isFlowActive}
+            selectedPlacedIDs={flowBuilderState.block.selectedPlacedIDs}
+            onToggleSelect={flowBuilderState.block.toggleBlockSelection}
           />
         )
       )}

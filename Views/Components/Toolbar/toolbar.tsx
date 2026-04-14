@@ -155,6 +155,23 @@ export default function HorusToolbar() {
         shortcuts.handleNewFlow();
       }
       // * Panel related key shortcuts * //
+      // Only intercept copy/paste when focus is not inside a text input
+      const activeTag = (document.activeElement?.tagName ?? "").toLowerCase();
+      const isTextInput =
+        activeTag === "input" ||
+        activeTag === "textarea" ||
+        (document.activeElement as HTMLElement)?.isContentEditable;
+
+      // Copy selected blocks to clipboard
+      if (event.code === "KeyC" && isModifierKeyPressed && !isTextInput) {
+        event.preventDefault();
+        shortcuts.copySelectedBlocksToClipboard?.();
+      }
+      // Paste blocks from clipboard
+      if (event.code === "KeyV" && isModifierKeyPressed && !isTextInput) {
+        event.preventDefault();
+        shortcuts.pasteBlocksFromClipboard?.();
+      }
       // Toggle console
       if (event.code === "KeyK" && isModifierKeyPressed) {
         event.preventDefault();
