@@ -42,6 +42,8 @@ export const config = {
     // This is different from the "database" configuration in the sense that anonymous users cannot be tracked. This
     // configuration will only apply to non-registered users, as registered ones have the "quotas". This won't apply
     // in any case to webapps that have the requireRegistration set to true, as demo users cannot send calculations.
+    requireLocalCredentials: true,
+    // Enforces that workflows that execute commands require local credentials in webapp mode.
     anonymousQuotas: {
       maxFlows: 10,
       maxTemplates: 10,

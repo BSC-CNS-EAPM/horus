@@ -215,7 +215,9 @@ class PluginRemote:
         Returns whether the remote is local or not
         """
 
-        return self._remote.name == "Local"
+        from Server.RemotesManager import RemotesManager
+
+        return self._remote.name == RemotesManager.LOCAL_REMOTE_NAME
 
 
 class PluginEndpoint:
@@ -1335,7 +1337,7 @@ class PluginBlock:
     selects a different input group in the frontend.
     """
 
-    selectedRemote: str = "Local"
+    selectedRemote: str = ""
     """
     The name of the selected remote.
     """
@@ -1543,6 +1545,10 @@ class PluginBlock:
         """
         The category of the block inside the plugin. None by default.
         """
+
+        from Server.RemotesManager import RemotesManager
+
+        self.selectedRemote = self.selectedRemote or RemotesManager.LOCAL_REMOTE_NAME
 
         # Verify all Variable IDs are unique
         def verifyUniqueIDs(variables: typing.List[PluginVariable]):
@@ -1888,6 +1894,8 @@ class PluginBlock:
         Updates the block with the internal variables.
         """
 
+        from Server.RemotesManager import RemotesManager
+
         isPlaced: bool = blockJSON.get("isPlaced", False)
         isRunning: bool = blockJSON.get("isRunning", False)
         error: bool = blockJSON.get("error", False)
@@ -1895,7 +1903,7 @@ class PluginBlock:
         placedID: int = blockJSON.get("placedID", 0)
         finishedExecution: bool = blockJSON.get("finishedExecution", True)
         selectedInputGroup: str = blockJSON.get("selectedInputGroup", "default")
-        selectedRemote: str = blockJSON.get("selectedRemote", "Local")
+        selectedRemote: str = blockJSON.get("selectedRemote", RemotesManager.LOCAL_REMOTE_NAME)
         self.category = blockJSON.get("category", None)
         self.color = blockJSON.get("color", self.color)
         extensionsToOpen: typing.List[typing.Dict[str, typing.Any]] = blockJSON.get(
@@ -2059,7 +2067,7 @@ class PluginBlock:
 
         # Ensure the selected remote exists
         if not rm.remoteExists(self.selectedRemote):
-            self.selectedRemote = "Local"
+            self.selectedRemote = RemotesManager.LOCAL_REMOTE_NAME
 
         return {
             "id": self.id,

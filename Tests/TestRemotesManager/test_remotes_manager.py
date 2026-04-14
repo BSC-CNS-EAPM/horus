@@ -23,7 +23,7 @@ import os
             "Test",
             "~/.horus/",
         ),
-        (None, True, True, "Local", "/tmp/current/directory/"),
+        ({"name": RemotesManager.LOCAL_REMOTE_NAME}, True, True, RemotesManager.LOCAL_REMOTE_NAME, "/tmp/current/directory/"),
     ],
 )
 def test_init(selected_remote, local, expected_is_local, expected_name, expected_workdir):
@@ -33,7 +33,7 @@ def test_init(selected_remote, local, expected_is_local, expected_name, expected
                 mock_connection_instance = MagicMock(spec=["open", "is_connected", "close"])
                 mock_conn.return_value = mock_connection_instance
                 mock_command.return_value = "~"
-                instance = RemotesAPI(selected_remote, local)
+                instance = RemotesAPI(selected_remote)
                 instance.connect()
                 assert instance.isLocal == expected_is_local
                 assert instance.name == expected_name
@@ -54,7 +54,7 @@ def mock_remotes_api_local():
         with patch("fabric.Connection") as mock_conn:
             mock_connection_instance = MagicMock(spec=["open", "is_connected", "close"])
             mock_conn.return_value = mock_connection_instance
-            instance = RemotesAPI(None, True)
+            instance = RemotesAPI({"name": RemotesManager.LOCAL_REMOTE_NAME})
             instance.workDir = "."
             instance.connect()
             yield instance
@@ -199,7 +199,7 @@ def test_transfer_from_remote(mock_remotes_api_remote):
 
 def test_local_command_uses_su_when_credentials_are_configured():
     local_config = {
-        "name": "Local",
+        "name": RemotesManager.LOCAL_REMOTE_NAME,
         "type": "local",
         "username": "targetuser",
         "password": "targetpass",
@@ -213,18 +213,17 @@ def test_local_command_uses_su_when_credentials_are_configured():
 
     assert out == "ok\n"
     called_command = mock_run.call_args[0][0]
-    assert "su targetuser -c" in called_command
+    assert "sshpass" in called_command
     assert "whoami" in called_command
     assert "export TEST_VAR=1;" in called_command
-    assert mock_run.call_args.kwargs["stdin"] == -1
-    assert mock_run.call_args.kwargs["input"] == "targetpass\n"
+    assert mock_run.call_args.kwargs["stdin"] == -3
     assert mock_run.call_args.kwargs["env"] is None
 
 
 def test_connect_remote_local_reads_local_config(tmp_path):
     remotes_config = {
-        "Local": {
-            "name": "Local",
+        RemotesManager.LOCAL_REMOTE_NAME: {
+            "name": RemotesManager.LOCAL_REMOTE_NAME,
             "type": "local",
             "username": "configured_user",
             "password": "configured_password",
@@ -238,18 +237,11 @@ def test_connect_remote_local_reads_local_config(tmp_path):
     with patch("Server.RemotesManager.remotes_manager.RemotesAPI") as mock_api:
         remote_instance = MagicMock()
         remote_instance.isConnected = True
-        remote_instance.name = "Local"
+        remote_instance.name = RemotesManager.LOCAL_REMOTE_NAME
         mock_api.return_value = remote_instance
 
-        manager.connectRemote("Local")
+        manager.connectRemote(RemotesManager.LOCAL_REMOTE_NAME)
 
     mock_api.assert_called_once_with(
-        remotes_config["Local"], local=False, requireLocalCredentials=False
+        remotes_config[RemotesManager.LOCAL_REMOTE_NAME]
     )
-
-
-def test_get_remote_api_local_requires_config_in_webapp_mode(tmp_path):
-    manager = RemotesManager(str(tmp_path), requireLocalConfig=True)
-
-    with pytest.raises(Exception, match="requires a configured 'Local' remote"):
-        manager.getRemoteAPI("Local")

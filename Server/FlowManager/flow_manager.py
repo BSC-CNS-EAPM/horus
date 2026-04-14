@@ -2294,6 +2294,12 @@ class FlowManager:
         env = {**os.environ}
         env.pop("HORUS_PORT", None)
 
+        # Add the if commands require credentials in webapp mode
+        if AppDelegate().mode == "webapp":
+            wappManager = AppDelegate().server.webAppManager
+            if wappManager and wappManager.userManagement and wappManager.userManagement.requireLocalCredentials:
+                env["HORUS_REQUIRES_COMMAND_CREDENTIALS"] = "yes"
+
         externalFlow: ExternalFlowRunnerManager
         if generalSettings.getSetting("runFlowsInSlurm").value:
 
@@ -2308,7 +2314,7 @@ class FlowManager:
                 f.write(slurmScript + "\n" + " ".join(command))
 
             # Setup a local remote to use the submitJob functionality
-            local_remote = RemotesManager(self.appSupportDir).getRemoteAPI("local")
+            local_remote = RemotesManager(self.appSupportDir).getRemoteAPI(RemotesManager.LOCAL_REMOTE_NAME)
             slurmJob = SlurmJob._submitJob(local_remote, [scriptPath], env=env)[0]
             externalFlow = ExternalSlurmFlow(slurmJob, local_remote)
 
@@ -2424,7 +2430,7 @@ class FlowManager:
                 except psutil.NoSuchProcess:
                     pass
             elif flow.flowRunInfo.type == FlowRunTypes.SLURM:
-                local_remote = RemotesManager(self.appSupportDir).getRemoteAPI("local")
+                local_remote = RemotesManager(self.appSupportDir).getRemoteAPI(RemotesManager.LOCAL_REMOTE_NAME)
                 slurmJob = SlurmJob.fromJobID(local_remote, str(flow.flowRunInfo.PID))
                 process = ExternalSlurmFlow(slurmJob, local_remote)
 
