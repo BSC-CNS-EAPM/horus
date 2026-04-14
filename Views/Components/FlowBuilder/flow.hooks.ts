@@ -1995,6 +1995,13 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     }
   }
 
+  function handleWheel(evt: WheelEvent) {
+    evt.preventDefault();
+
+    // Pan the canvas — negate deltas so content follows the scroll direction
+    moveBlocksPan(-evt.deltaX * (1 / scale), -evt.deltaY * (1 / scale));
+  }
+
   const moveBlocksPan = useCallback(
     (deltaX: number, deltaY: number) => {
       const newBlocks: Block[] = flow.blocks.map((block: Block) => {
@@ -2046,6 +2053,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     };
 
     moveBlocksPan(delta.x, delta.y);
+    scaleRef.current = 1;
     setScale(1);
   }, [flow.blocks, moveBlocksPan, setScale]);
 
@@ -2834,6 +2842,7 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
       handleMouseDown,
       handleMousePan,
       handleMouseUp,
+      handleWheel,
       handleDragOver,
       handleDrop,
       handleDragDropEnd,

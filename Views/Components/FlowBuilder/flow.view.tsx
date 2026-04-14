@@ -114,9 +114,6 @@ function FlowCanvasContainer({
             onExport={flowBuilderState.block.copySelectedBlocksToClipboard}
           />
         )}
-        <PasteButton
-          onPaste={flowBuilderState.block.pasteBlocksFromClipboard}
-        />
       </div>
     </Xwrapper>
   );
@@ -151,7 +148,7 @@ function SelectionActionBar({
       </span>
       <div className="w-px h-5 bg-gray-200" />
       <button
-        title="Export selected blocks (⌘C)"
+        title="Export selected blocks to clipboard"
         onClick={onExport}
         className="hover:text-blue-500 transition-colors"
       >
@@ -181,24 +178,6 @@ function SelectionActionBar({
         ✕
       </button>
     </div>
-  );
-}
-
-function PasteButton({ onPaste }: { onPaste: () => void }) {
-  return (
-    <button
-      title="Paste blocks (⌘V)"
-      onClick={onPaste}
-      className="flex items-center justify-center bg-white border border-gray-200 rounded-lg shadow-lg p-2 pointer-events-auto hover:text-blue-500 transition-colors"
-      style={{
-        position: "absolute",
-        bottom: "4rem",
-        right: "1rem",
-        zIndex: 50
-      }}
-    >
-      <IconClipboardText className="w-5 h-5" />
-    </button>
   );
 }
 
