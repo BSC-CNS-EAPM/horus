@@ -145,7 +145,7 @@ class RemotesAPI:
             self.isLocal = True
 
             # For local, set the workDir as the current directory
-            workDir = os.getcwd()
+            self.workDir = os.getcwd()
 
             return
 
@@ -1032,7 +1032,7 @@ class RemotesManager:
         # Connect to the remote
         self.remote.connect()
         if not self.remote.isConnected:
-            raise Exception("Could not connect to the remote")            
+            raise Exception("Could not connect to the remote")
 
     def _remoteConfig(self) -> t.Dict[str, t.Any]:
         """
