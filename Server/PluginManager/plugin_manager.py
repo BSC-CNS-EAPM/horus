@@ -1323,7 +1323,7 @@ class PluginManager(metaclass=HorusSingleton):
             if not parsedDep.startswith("git+"):
                 try:
                     requirement = PkgRequirement(parsedDep)
-                    name = requirement.name.lower()
+                    name = canonicalize_name(requirement.name)
                     versionSpecs = [(str(s.operator), str(s.version)) for s in requirement.specifier]
                 except InvalidRequirement:
                     logging.getLogger("Horus").error(
