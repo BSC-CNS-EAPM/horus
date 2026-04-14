@@ -1318,7 +1318,7 @@ class PluginManager(metaclass=HorusSingleton):
         currentString = None
         for dep in dependencies:
             name = None
-            parsedDep = dep.replace(" --no-deps", "").replace(" --isolated", "")
+            parsedDep = dep.replace(" --no-deps", "").replace(" --isolated", "").replace(" --no-build-isolation", "")
             versionSpecs: typing.Optional[list[typing.Tuple[str, str]]] = None
             if not parsedDep.startswith("git+"):
                 try:
@@ -1347,7 +1347,7 @@ class PluginManager(metaclass=HorusSingleton):
                 else:
                     continue
 
-            if "--no-deps" in dep or "--isolated" in dep:
+            if "--no-deps" in dep or "--isolated" in dep or "--no-build-isolation" in dep:
                 if currentString:
                     depsToInstallStringList.append(currentString)
                     currentString = None
@@ -1457,6 +1457,12 @@ class PluginManager(metaclass=HorusSingleton):
         else:
             noDependencies = False
 
+        if "--no-build-isolation" in dep:
+            dep = dep.replace(" --no-build-isolation", "")
+            noBuildIsolation = True
+        else:
+            noBuildIsolation = False
+
         interpreter = (
             [os.path.join(AppDelegate().bundleDir, "pip", "pip")]
             if AppDelegate().isCompiled
@@ -1473,6 +1479,7 @@ class PluginManager(metaclass=HorusSingleton):
             "--no-input",
             "--ignore-installed",
             *(["--no-deps"] if noDependencies else []),
+            *(["--no-build-isolation"] if noBuildIsolation else []),
         ]
 
         try:
