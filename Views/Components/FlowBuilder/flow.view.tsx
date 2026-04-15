@@ -72,6 +72,18 @@ function FlowCanvasContainer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flowBuilderState.flow.scale]);
 
+  useEffect(() => {
+    const el = document.getElementById(GLOBAL_IDS.FLOW_BUILDER_DIV);
+    if (!el) return;
+
+    const observer = new ResizeObserver(() => {
+      updateArrow();
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <Xwrapper>
       <div
