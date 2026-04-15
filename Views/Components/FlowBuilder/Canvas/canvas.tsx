@@ -69,11 +69,13 @@ export function FlowCanvas(props: FlowCanvasProps) {
         onMouseUp={mouseHooks.handleMouseUp as any}
         onMouseLeave={mouseHooks.handleMouseUp as any}
         onMouseMove={mouseHooks.handleMousePan as any}
+        style={{
+          opacity: isFlowActive ? 0.8 : 1
+        }}
       >
         <div
           style={{
-            pointerEvents: isFlowActive ? "none" : "auto",
-            filter: isFlowActive ? "opacity(0.8)" : "none"
+            pointerEvents: isFlowActive ? "none" : "auto"
           }}
         >
           {children}

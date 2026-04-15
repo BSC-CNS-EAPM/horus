@@ -2053,7 +2053,6 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
     };
 
     moveBlocksPan(delta.x, delta.y);
-    scaleRef.current = 1;
     setScale(1);
   }, [flow.blocks, moveBlocksPan, setScale]);
 
