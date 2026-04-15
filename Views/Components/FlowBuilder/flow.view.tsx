@@ -74,13 +74,29 @@ function FlowCanvasContainer({
 
   useEffect(() => {
     const el = document.getElementById(GLOBAL_IDS.FLOW_BUILDER_DIV);
-    if (!el) return;
+    if (!el || typeof ResizeObserver === "undefined") return;
+
+    let animationFrameId: number | null = null;
+    const scheduleArrowUpdate = () => {
+      if (animationFrameId !== null) return;
+
+      animationFrameId = window.requestAnimationFrame(() => {
+        animationFrameId = null;
+        updateArrow();
+      });
+    };
 
     const observer = new ResizeObserver(() => {
-      updateArrow();
+      scheduleArrowUpdate();
     });
     observer.observe(el);
-    return () => observer.disconnect();
+
+    return () => {
+      observer.disconnect();
+      if (animationFrameId !== null) {
+        window.cancelAnimationFrame(animationFrameId);
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
