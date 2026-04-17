@@ -20,10 +20,49 @@ import typing as t
 
 # Third party imports
 import fabric
+from cryptography.fernet import Fernet
 
 LOCAL_REMOTE_NAME = "Local"
 
 _VALID_ENV_KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+_ENC_PREFIX = "enc$"
+
+
+class _PasswordCrypto:
+    """
+    Fernet-based password encryption tied to a per-installation key file.
+    """
+
+    def __init__(self, key_path: str) -> None:
+        self._key_path = key_path
+        self._fernet = Fernet(self._load_or_create_key())
+
+    def _load_or_create_key(self) -> bytes:
+        if os.path.exists(self._key_path):
+            with open(self._key_path, "rb") as f:
+                return f.read().strip()
+        key = Fernet.generate_key()
+        with open(self._key_path, "wb") as f:
+            f.write(key)
+        os.chmod(self._key_path, 0o600)
+        return key
+
+    def encrypt(self, plaintext: str) -> str:
+        """
+        Return a prefixed ciphertext string safe to store in JSON.
+        """
+        token = self._fernet.encrypt(plaintext.encode()).decode()
+        return f"{_ENC_PREFIX}{token}"
+
+    def decrypt(self, value: str) -> str:
+        """
+        Decrypt a value produced by encrypt(). Plain-text values are returned as-is.
+        """
+        if not value.startswith(_ENC_PREFIX):
+            return value
+        token = value[len(_ENC_PREFIX):]
+        return self._fernet.decrypt(token.encode()).decode()
 
 
 def _validate_env(env: dict) -> None:
@@ -336,15 +375,22 @@ class RemotesAPI:
 
                         self._local_ssh_verified = True
 
+                    # Preserve the caller's working directory inside the SSH session.
+                    # If the cd() context manager is active, `command` already starts
+                    # with "cd /specific/path && …", so the prepended cd is harmlessly
+                    # overridden by that second cd, no interference.
+                    cwd = shlex.quote(os.getcwd())
+                    cwd_prefix = f"cd {cwd} && "
+
                     if env:
                         _validate_env(env)
                         env_vars = " ".join(
                             f"export {key}={shlex.quote(value)};"
                             for key, value in env.items()
                         )
-                        inner_command = f"{env_vars} {command}".strip()
+                        inner_command = f"{env_vars} {cwd_prefix}{command}".strip()
                     else:
-                        inner_command = command
+                        inner_command = f"{cwd_prefix}{command}"
 
                     ssh_opts_str = " ".join(ssh_opts)
                     if self.password:
@@ -851,6 +897,9 @@ class RemotesManager:
         :param appSupportDir: The path to the app support directory
         """
         self.appSupportDir = appSupportDir
+        self._crypto = _PasswordCrypto(
+            os.path.join(appSupportDir, ".horus_keyfile")
+        )
 
         # Configure the local remote if it does not exist
         if not self.remoteExists(self.LOCAL_REMOTE_NAME):
@@ -925,22 +974,27 @@ class RemotesManager:
 
         remotesPath = os.path.join(self.appSupportDir, "remotes.json")
 
+        # Encrypt the password before persisting
+        configToStore = dict(newConfig)
+        if configToStore.get("password") and not str(configToStore["password"]).startswith(_ENC_PREFIX):
+            configToStore["password"] = self._crypto.encrypt(configToStore["password"])
+
         if os.path.exists(remotesPath):
             # Load and update the existing ssh configuration
             with open(remotesPath, "r", encoding="utf-8") as file:
                 remotesConfig: t.Dict[str, t.Any] = json.load(file)
 
             # Check if the remote already exists
-            if newConfig["name"] in remotesConfig.keys():
+            if configToStore["name"] in remotesConfig.keys():
                 # Update the remote
-                remotesConfig[newConfig["name"]] = newConfig
+                remotesConfig[configToStore["name"]] = configToStore
             else:
                 # Create a new remote
-                remotesConfig.update({newConfig["name"]: newConfig})
+                remotesConfig.update({configToStore["name"]: configToStore})
 
         else:
             # Create a new ssh configuration
-            remotesConfig = {newConfig["name"]: newConfig}
+            remotesConfig = {configToStore["name"]: configToStore}
 
         with open(remotesPath, "w", encoding="utf-8") as file:
             json.dump(remotesConfig, file)
@@ -959,10 +1013,12 @@ class RemotesManager:
             with open(remotesFile, "r", encoding="utf-8") as file:
                 remotesConfig = json.load(file)
 
-        # Convert the remotes configuration to a list
+        # Convert the remotes configuration to a list, stripping passwords
         remotes = []
-        for name, config in remotesConfig.items():  # pylint: disable=unused-variable
-            remotes.append(config)
+        for _, config in remotesConfig.items():
+            sanitized = dict(config)
+            sanitized["password"] = None
+            remotes.append(sanitized)
 
         # Always, if the local remote is not in the list, add it
         if self.LOCAL_REMOTE_NAME not in remotesConfig.keys():
@@ -1033,7 +1089,7 @@ class RemotesManager:
 
     def _remoteConfig(self) -> t.Dict[str, t.Any]:
         """
-        Returns the remote configuration read from the file
+        Returns the remote configuration read from the file, with passwords decrypted.
         """
 
         remotesFile = os.path.join(self.appSupportDir, "remotes.json")
@@ -1042,6 +1098,11 @@ class RemotesManager:
         if os.path.exists(remotesFile):
             with open(remotesFile, "r", encoding="utf-8") as f:
                 remotesConfig = json.load(f)
+
+        # Decrypt passwords transparently (plain-text legacy values pass through)
+        for config in remotesConfig.values():
+            if config.get("password"):
+                config["password"] = self._crypto.decrypt(config["password"])
 
         return remotesConfig
 

@@ -237,6 +237,8 @@ binaries += debugpy_binaries
 imports += debugpy_hiddenimports
 imports += collect_submodules("xmlrpc")
 
+# Include cryptography libraries
+imports += collect_submodules("cryptography")
 
 debug = False
 
