@@ -211,7 +211,7 @@ def test_install_dep_internal_success(mocker):
     mock_popen.__enter__ = mocker.Mock(return_value=mock_popen)
     mock_popen.__exit__ = mocker.Mock(return_value=None)
 
-    mock_popen.stdout.read.return_value = b"Python 3.9.16"
+    mock_popen.stdout.read.return_value = b"Python 3.12.13"
 
     # Call the _installDepInternal method
     dep_to_install = "dep"
@@ -605,7 +605,7 @@ def test_test_plugin_config_update():
 
     plugin = pluginManager._checkPlugin(pluginDir)
 
-    remotes = RemotesManager("AppSupport").listRemotes(includeLocal=True)
+    remotes = RemotesManager("AppSupport").listRemotes()
 
     for remote in remotes:
         configPath = pluginManager._pluginConfigPath(plugin, remote["name"])
@@ -627,7 +627,7 @@ def test_test_plugin_saveconfig():
 
     newConfig = [configBlock._toDict()]
 
-    remotes = RemotesManager("AppSupport").listRemotes(includeLocal=True)
+    remotes = RemotesManager("AppSupport").listRemotes()
 
     for remote in remotes:
         pluginManager.saveConfig(newConfig, remote["name"])

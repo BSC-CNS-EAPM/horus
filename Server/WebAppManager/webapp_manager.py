@@ -595,6 +595,11 @@ class UserManagement:
     Wether admin tools should be present or not.
     """
 
+    requireLocalCredentials: bool
+    """
+    Whether to require local credentials for executing commands in flows. 
+    """
+
     forbiddenBlocks: list[str]
     """
     List of forbidden blocks IDs.
@@ -618,6 +623,7 @@ class UserManagement:
         self.requireRegistration = rawUserManagement.get("requireRegistration", False)
         self.requireActivation = rawUserManagement.get("requireActivation", False)
         self.allowDemoUser = rawUserManagement.get("allowDemoUser", False)
+        self.requireLocalCredentials = rawUserManagement.get("requireLocalCredentials", False)
         self.deleteInterval = rawUserManagement.get("deleteInterval", 0)
         self.disableAdminTools = rawUserManagement.get("disableAdminTools", False)
 

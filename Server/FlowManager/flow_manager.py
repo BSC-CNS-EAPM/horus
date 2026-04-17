@@ -565,7 +565,7 @@ class Flow:
                     ):
                         found = True
                         break
-                except:
+                except Exception:
                     # Maybe the variable group disappeared entirely, thus, we remove the connection too
                     break
 
@@ -573,44 +573,44 @@ class Flow:
                 raise VariableConnectionNotFound(var)
 
         # Verify that variables are connected to existing variables
-        for block in blocks:
-            for var in block._variableConnections.copy():  # pylint: disable=protected-access
+        for block_cls in blocks:
+            for var in block_cls._variableConnections.copy():  # pylint: disable=protected-access
                 try:
                     checkVarConnection(var)
                 except VariableConnectionNotFound as exc:
                     logging.getLogger("Horus").warning(exc)
 
                     # Remove the connection
-                    block._variableConnections.remove(var)
+                    block_cls._variableConnections.remove(var)
 
                     self.canExecute = False
 
             # Do the same for the references
             for (
                 refVar
-            ) in block._variableConnectionsReferences.copy():  # pylint: disable=protected-access
+            ) in block_cls._variableConnectionsReferences.copy():  # pylint: disable=protected-access
                 try:
                     checkVarConnection(refVar)
                 except VariableConnectionNotFound as exc:
                     logging.getLogger("Horus").warning(exc)
 
                     # Remove the reference
-                    block._variableConnectionsReferences.remove(refVar)
+                    block_cls._variableConnectionsReferences.remove(refVar)
 
                     self.canExecute = False
 
-        for block in blocks:
+        for block_cls in blocks:
             # If the flow is not running but any block is running, set the block as not running
-            if block._isRunning and not self.isActive:
+            if block_cls._isRunning and not self.isActive:
                 logging.getLogger("Horus").warning(
                     "The block '%s' with placedID %s was running but the flow is not. "
                     + "Setting the block as not running.",
-                    block.name,
-                    block._placedID,
+                    block_cls.name,
+                    block_cls._placedID,
                 )
 
-                block._isRunning = False
-                block._finishedExecution = True
+                block_cls._isRunning = False
+                block_cls._finishedExecution = True
 
         return blocks
 
@@ -2246,10 +2246,6 @@ class FlowManager:
         if not flow.path:
             raise Exception(f"Something went wrong. The flow path is None for flow '{flow.name}'")
 
-        # Create a process to run the flow
-        from Server.PluginManager import (
-            SubprocessManager,
-        )
         from App import AppDelegate
 
         # From uncompiled, get only the first argv, which is the script
@@ -2298,6 +2294,13 @@ class FlowManager:
         env = {**os.environ}
         env.pop("HORUS_PORT", None)
 
+        # Add the if commands require credentials in webapp mode
+        if AppDelegate().mode == "webapp":
+            wappManager = AppDelegate().server.webAppManager
+            if wappManager and wappManager.userManagement and wappManager.userManagement.requireLocalCredentials:
+                env["HORUS_REQUIRES_COMMAND_CREDENTIALS"] = "yes"
+
+        externalFlow: ExternalFlowRunnerManager
         if generalSettings.getSetting("runFlowsInSlurm").value:
 
             if not AppDelegate().isCompiled:
@@ -2311,13 +2314,13 @@ class FlowManager:
                 f.write(slurmScript + "\n" + " ".join(command))
 
             # Setup a local remote to use the submitJob functionality
-            remote = RemotesAPI()
-            slurmJob = SlurmJob._submitJob(remote, [scriptPath], env=env)[0]
-            externalFlow = ExternalSlurmFlow(slurmJob, remote)
+            local_remote = RemotesManager(self.appSupportDir).getRemoteAPI(RemotesManager.LOCAL_REMOTE_NAME)
+            slurmJob = SlurmJob._submitJob(local_remote, [scriptPath], env=env)[0]
+            externalFlow = ExternalSlurmFlow(slurmJob, local_remote)
 
         else:
-            process = SubprocessManager.callPopen(command, wait=False, env=env)
-            externalFlow = ExternalProcessFlow(process.pid)
+            external_process = SubprocessManager.callPopen(command, wait=False, env=env)
+            externalFlow = ExternalProcessFlow(external_process.pid)
 
         # Save the process
         self._flowProcesses[flow.path] = externalFlow
@@ -2417,8 +2420,8 @@ class FlowManager:
 
     def _getProcessFromOpenedFlow(
         self, flow: Flow
-    ) -> typing.Union[None, "ExternalFlowRunnerManager"]:
-        process = None
+    ) -> typing.Optional["ExternalFlowRunnerManager"]:
+        process: typing.Optional["ExternalFlowRunnerManager"] = None
 
         if flow.flowRunInfo:
             if flow.flowRunInfo.type == FlowRunTypes.PROCESS:
@@ -2427,9 +2430,9 @@ class FlowManager:
                 except psutil.NoSuchProcess:
                     pass
             elif flow.flowRunInfo.type == FlowRunTypes.SLURM:
-                remote = RemotesAPI()
-                slurmJob = SlurmJob.fromJobID(remote, str(flow.flowRunInfo.PID))
-                process = ExternalSlurmFlow(slurmJob, remote)
+                local_remote = RemotesManager(self.appSupportDir).getRemoteAPI(RemotesManager.LOCAL_REMOTE_NAME)
+                slurmJob = SlurmJob.fromJobID(local_remote, str(flow.flowRunInfo.PID))
+                process = ExternalSlurmFlow(slurmJob, local_remote)
 
         return process
 
@@ -2717,7 +2720,7 @@ class ExternalProcessFlow(ExternalFlowRunnerManager):
 
         try:
             os.killpg(self.pgid, signal.SIGKILL)
-        except:
+        except BaseException:
             pass
 
     def terminate(self):
@@ -2726,7 +2729,7 @@ class ExternalProcessFlow(ExternalFlowRunnerManager):
         # Send a termination signal to ensure process is killed
         try:
             os.killpg(self.pgid, signal.SIGTERM)
-        except:
+        except BaseException:
             pass
 
     def join(self, *args, **kwargs) -> typing.Optional[int]:
@@ -2735,9 +2738,9 @@ class ExternalProcessFlow(ExternalFlowRunnerManager):
         we will use process.wait
         """
         try:
-            self.process.wait(*args, **kwargs)
+            return self.process.wait(*args, **kwargs)
         except psutil.TimeoutExpired:
-            pass
+            return None
 
     def is_alive(self):
 

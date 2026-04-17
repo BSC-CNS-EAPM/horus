@@ -2,6 +2,7 @@
 from .plugins import (
     Plugin,
     PluginBlock,
+    NoteBlock,
     InputBlock,
     SlurmBlock,
     GhostBlock,
@@ -51,6 +52,7 @@ from .utils import (
 __all__ = [
     "Plugin",
     "PluginBlock",
+    "NoteBlock",
     "InputBlock",
     "SlurmBlock",
     "GhostBlock",

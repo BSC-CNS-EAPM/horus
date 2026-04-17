@@ -86,8 +86,8 @@ export default function ConfigRemotes() {
   }, []);
 
   return (
-    <div className="overflow-hidden">
-      <div className="flex flex-col gap-1 items-center">
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex flex-col gap-1 items-center h-full">
         <div className="plugin-manager-title flex w-full">
           <div
             className="
@@ -134,24 +134,26 @@ export default function ConfigRemotes() {
             </a>
           </div>
         </div>
-        {subView ? (
-          <>
-            <div className="p-2 flex flex-row fade-in-animation w-full">
-              <button onClick={returnToMainView}>
-                <BackArrowIcon className="w-10 h-10" />
-              </button>
-              <div className="flex-grow p-2">{subView}</div>
-            </div>
-          </>
-        ) : (
-          <RemoteListView
-            remotes={remotes ?? []}
-            isLoading={fetchingRemotes}
-            handleSubView={handleSubView}
-            returnToMainView={returnToMainView}
-            setEditingRemote={setEditingRemote}
-          />
-        )}
+        <div className="flex-1 overflow-y-auto w-full">
+          {subView ? (
+            <>
+              <div className="p-2 flex flex-row fade-in-animation w-full">
+                <button onClick={returnToMainView}>
+                  <BackArrowIcon className="w-10 h-10" />
+                </button>
+                <div className="flex-grow p-2">{subView}</div>
+              </div>
+            </>
+          ) : (
+            <RemoteListView
+              remotes={remotes ?? []}
+              isLoading={fetchingRemotes}
+              handleSubView={handleSubView}
+              returnToMainView={returnToMainView}
+              setEditingRemote={setEditingRemote}
+            />
+          )}
+        </div>
       </div>
     </div>
   );
@@ -416,13 +418,13 @@ function RemoteVariablesView(props: RemoteVariablesViewProps) {
             id: "remote-port",
             description: "The port of the remote",
             type: PluginVariableTypes.STRING,
-            value: remoteData?.port,
+            value: remoteData?.port ?? "22",
             placedID: 3,
             allowedValues: [],
             defaultValue: "",
             category: "Remote",
             disabled: false,
-            required: true
+            required: false
           }}
           onChange={(value) =>
             setRemoteData({ ...remoteData, port: value } as Remote)

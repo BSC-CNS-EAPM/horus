@@ -1,19 +1,25 @@
 // Components
 import { GLOBAL_IDS } from "../../Utils/globals";
 import { FlowCanvas } from "./Canvas/canvas";
-import { BlockView } from "./Blocks/block.view";
+import { BlockView, NoteBlockView } from "./Blocks/block.view";
 import { CSSProperties, useContext, useEffect, useRef } from "react";
 import { BlurredModal } from "../reusable";
 import RotatingLines from "../RotatingLines/rotatinglines";
 import { ServerFileExplorerModal } from "../FileExplorer/file_explorer";
 import { ConnectedArrows } from "./Connections/arrows";
 import Xarrow, { Xwrapper, useXarrow } from "react-xarrows";
-import { DroppableEntity, FlowStatus } from "./flow.types";
+import { BlockTypes, DroppableEntity, FlowStatus } from "./flow.types";
 import { GreenOverlay } from "../GreenOverlay/GreenOverlay";
 import SaveIcon from "../Toolbar/Icons/Save";
+import TrashIcon from "../Toolbar/Icons/Trash";
 import { FlowBuilderContext } from "../MainApp/PanelView";
 import { Editor } from "@monaco-editor/react";
 import { FlowBuilderHooks } from "./flow.hooks";
+import {
+  IconCopyPlus,
+  IconClipboardCopy,
+  IconClipboardText
+} from "@tabler/icons-react";
 
 // Main Component
 function FlowBuilderView() {
@@ -66,11 +72,39 @@ function FlowCanvasContainer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flowBuilderState.flow.scale]);
 
+  useEffect(() => {
+    const el = document.getElementById(GLOBAL_IDS.FLOW_BUILDER_DIV);
+    if (!el || typeof ResizeObserver === "undefined") return;
+
+    let animationFrameId: number | null = null;
+    const scheduleArrowUpdate = () => {
+      if (animationFrameId !== null) return;
+
+      animationFrameId = window.requestAnimationFrame(() => {
+        animationFrameId = null;
+        updateArrow();
+      });
+    };
+
+    const observer = new ResizeObserver(() => {
+      scheduleArrowUpdate();
+    });
+    observer.observe(el);
+
+    return () => {
+      observer.disconnect();
+      if (animationFrameId !== null) {
+        window.cancelAnimationFrame(animationFrameId);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <Xwrapper>
       <div
         id={GLOBAL_IDS.FLOW_BUILDER_DIV}
-        className="h-full w-full overflow-hidden"
+        className="h-full w-full overflow-hidden relative"
         style={style}
         onDragOver={flowBuilderState.handleMouse.handleDragOver}
         onDrop={flowBuilderState.handleMouse.handleDrop}
@@ -99,8 +133,79 @@ function FlowCanvasContainer({
             </>
           )}
         </FlowCanvas>
+        {flowBuilderState.block.selectedPlacedIDs.size > 0 && (
+          <SelectionActionBar
+            count={flowBuilderState.block.selectedPlacedIDs.size}
+            onDuplicate={flowBuilderState.block.duplicateSelectedBlocks}
+            onDelete={flowBuilderState.block.deleteSelectedBlocks}
+            onClear={flowBuilderState.block.clearSelection}
+            onExport={flowBuilderState.block.copySelectedBlocksToClipboard}
+          />
+        )}
       </div>
     </Xwrapper>
+  );
+}
+
+function SelectionActionBar({
+  count,
+  onDuplicate,
+  onDelete,
+  onClear,
+  onExport
+}: {
+  count: number;
+  onDuplicate: () => void;
+  onDelete: () => void;
+  onClear: () => void;
+  onExport: () => void;
+}) {
+  return (
+    <div
+      className="flex flex-row items-center gap-3 bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2 pointer-events-auto"
+      style={{
+        position: "absolute",
+        bottom: "4rem",
+        left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 50
+      }}
+    >
+      <span className="text-sm text-gray-500 font-medium whitespace-nowrap">
+        {count} block{count !== 1 ? "s" : ""} selected
+      </span>
+      <div className="w-px h-5 bg-gray-200" />
+      <button
+        title="Export selected blocks to clipboard"
+        onClick={onExport}
+        className="hover:text-blue-500 transition-colors"
+      >
+        <IconClipboardCopy className="w-5 h-5" />
+      </button>
+      <button
+        title="Duplicate selected"
+        onClick={onDuplicate}
+        className="hover:text-blue-500 transition-colors"
+      >
+        <IconCopyPlus className="w-5 h-5" />
+      </button>
+      <button
+        title="Delete selected"
+        onClick={onDelete}
+        className="transition-colors"
+        style={{ color: "var(--red-error)" }}
+      >
+        <TrashIcon style={{ height: "1.25rem", width: "1.25rem" }} />
+      </button>
+      <div className="w-px h-5 bg-gray-200" />
+      <button
+        title="Clear selection"
+        onClick={onClear}
+        className="text-gray-400 hover:text-gray-600 text-sm font-medium leading-none"
+      >
+        ✕
+      </button>
+    </div>
   );
 }
 
@@ -153,16 +258,29 @@ function ScaledCanvas({
       className="scaled-flow-canvas"
       id={DroppableEntity.SCALED_CANVAS}
     >
-      {flowBuilderState.flow.flow.blocks.map((block) => (
-        <BlockView
-          key={block.placedID}
-          block={block}
-          blockHooks={flowBuilderState.block}
-          scale={flowBuilderState.flow.scale}
-          isPaused={flowBuilderState.flow.flow.status === FlowStatus.PAUSED}
-          isFlowActive={flowBuilderState.flow.isFlowActive}
-        />
-      ))}
+      {flowBuilderState.flow.flow.blocks.map((block) =>
+        block.type === BlockTypes.NOTE ? (
+          <NoteBlockView
+            key={block.placedID}
+            block={block}
+            blockHooks={flowBuilderState.block}
+            scale={flowBuilderState.flow.scale}
+            selectedPlacedIDs={flowBuilderState.block.selectedPlacedIDs}
+            onToggleSelect={flowBuilderState.block.toggleBlockSelection}
+          />
+        ) : (
+          <BlockView
+            key={block.placedID}
+            block={block}
+            blockHooks={flowBuilderState.block}
+            scale={flowBuilderState.flow.scale}
+            isPaused={flowBuilderState.flow.flow.status === FlowStatus.PAUSED}
+            isFlowActive={flowBuilderState.flow.isFlowActive}
+            selectedPlacedIDs={flowBuilderState.block.selectedPlacedIDs}
+            onToggleSelect={flowBuilderState.block.toggleBlockSelection}
+          />
+        )
+      )}
     </div>
   );
 }

@@ -36,7 +36,9 @@ import importlib.util
 # For the PrintCapturer class
 from contextlib import contextmanager, redirect_stdout, redirect_stderr
 
-import pkg_resources
+import importlib.metadata
+from packaging.requirements import Requirement as PkgRequirement, InvalidRequirement
+from packaging.utils import canonicalize_name
 
 # For the SocketIO type completion
 from flask_socketio import SocketIO
@@ -1244,11 +1246,12 @@ class PluginManager(metaclass=HorusSingleton):
         if not os.path.exists(fullDepsDir):
             os.makedirs(fullDepsDir, exist_ok=True)
 
-        # Create a new working set that includes the custom directory
-        pluginWorkingSet = pkg_resources.WorkingSet(entries=[fullDepsDir])
-
-        # Get the installed dependencies
-        installedDeps = {pkg.key: pkg.version for pkg in pluginWorkingSet}
+        # Scan installed distributions in the plugin deps directory
+        installedDeps = {
+            canonicalize_name(dist.metadata["Name"]): dist.version
+            for dist in importlib.metadata.distributions(path=[fullDepsDir])
+            if dist.metadata["Name"] is not None
+        }
 
         # Check for dependencies installed from git repositories
         listedDeps = os.listdir(fullDepsDir)
@@ -1315,14 +1318,14 @@ class PluginManager(metaclass=HorusSingleton):
         currentString = None
         for dep in dependencies:
             name = None
-            parsedDep = dep.replace(" --no-deps", "").replace(" --isolated", "")
+            parsedDep = dep.replace(" --no-deps", "").replace(" --isolated", "").replace(" --no-build-isolation", "")
             versionSpecs: typing.Optional[list[typing.Tuple[str, str]]] = None
             if not parsedDep.startswith("git+"):
                 try:
-                    requirement = pkg_resources.Requirement.parse(parsedDep)
-                    name = requirement.project_name.lower()
-                    versionSpecs = requirement.specs
-                except pkg_resources.RequirementParseError:
+                    requirement = PkgRequirement(parsedDep)
+                    name = canonicalize_name(requirement.name)
+                    versionSpecs = [(str(s.operator), str(s.version)) for s in requirement.specifier]
+                except InvalidRequirement:
                     logging.getLogger("Horus").error(
                         "Invalid requirement specification: %s", parsedDep
                     )
@@ -1344,7 +1347,7 @@ class PluginManager(metaclass=HorusSingleton):
                 else:
                     continue
 
-            if "--no-deps" in dep or "--isolated" in dep:
+            if "--no-deps" in dep or "--isolated" in dep or "--no-build-isolation" in dep:
                 if currentString:
                     depsToInstallStringList.append(currentString)
                     currentString = None
@@ -1454,6 +1457,12 @@ class PluginManager(metaclass=HorusSingleton):
         else:
             noDependencies = False
 
+        if "--no-build-isolation" in dep:
+            dep = dep.replace(" --no-build-isolation", "")
+            noBuildIsolation = True
+        else:
+            noBuildIsolation = False
+
         interpreter = (
             [os.path.join(AppDelegate().bundleDir, "pip", "pip")]
             if AppDelegate().isCompiled
@@ -1470,6 +1479,7 @@ class PluginManager(metaclass=HorusSingleton):
             "--no-input",
             "--ignore-installed",
             *(["--no-deps"] if noDependencies else []),
+            *(["--no-build-isolation"] if noBuildIsolation else []),
         ]
 
         try:
@@ -1509,7 +1519,7 @@ class PluginManager(metaclass=HorusSingleton):
         # Get the remote list for listing the configurations
         # THIS INDICATES THAT PER-REMOTE-CONFIGURATION OF PLUGINS
         # IS NOT AVAILABLE ON WEBAPP MODE
-        remoteList = RemotesManager(self.appSupportDir).listRemotes(includeLocal=True)
+        remoteList = RemotesManager(self.appSupportDir).listRemotes()
 
         for p in self.loadedPlugins:
             try:
@@ -1613,7 +1623,7 @@ class PluginManager(metaclass=HorusSingleton):
         except Exception as exc:
             raise BlockNotFoundError(fromBlockID) from exc
 
-    def getPluginConfig(self, pluginID: str, remote: str = "Local") -> dict[str, typing.Any]:
+    def getPluginConfig(self, pluginID: str, remote: str = RemotesManager.LOCAL_REMOTE_NAME) -> dict[str, typing.Any]:
         """
         Returns the config of a Plugin
         """
@@ -2208,16 +2218,8 @@ class PluginDepsBase:
             sys.path.insert(0, depsDir)
             sys.path.insert(0, includeDir)
 
-            # Once pyinstaller is compiled, distributions inside the deps
-            # directory are not correctly detected by pkg_resources.
-            # To fix this, we need to add the deps directory to the
-            # pkg_resources working set
-
-            # Add the deps directory to the working set
-            pkg_resources.working_set.add_entry(depsDir)
-
-            # Add the include directory to the working set
-            pkg_resources.working_set.add_entry(includeDir)
+            # sys.path insertion above is sufficient for importlib to
+            # discover packages in these directories at runtime.
 
         for p in self.paths:
             addPath(p)
@@ -2261,12 +2263,6 @@ class PluginDepsBase:
             # Restore the initial python path
             sys.path = self.initialPath
 
-            # Remove the deps directory from the working set
-            pkg_resources.working_set.entries.remove(depsDir)
-
-            # Remove the include directory from the working set
-            pkg_resources.working_set.entries.remove(includeDir)
-
         for p in self.paths:
             removePath(p)
 
@@ -2289,7 +2285,7 @@ class PluginDepsBase:
 
         Example:
             >>> getPluginDepsDir("/path/to/plugin")
-            "/path/to/plugin/deps/lib/python3.9/site-packages"
+            "/path/to/plugin/deps/lib/python3.12/site-packages"
         """
         # We need to return a path of the form {pluginPath}/lib/python{pythonVersion}/site-packages
         depsDir = os.path.join(pluginPath, "deps")
@@ -2298,7 +2294,7 @@ class PluginDepsBase:
             return depsDir
 
         # Get the python version
-        pythonVersion = sys.version[:3]
+        pythonVersion = f"{sys.version_info.major}.{sys.version_info.minor}"
 
         # Return the path
         return os.path.join(depsDir, "lib", "python" + str(pythonVersion), "site-packages")
@@ -2414,16 +2410,16 @@ class SubprocessManager:
                         forkedBlock.selectedRemote,
                         forkedBlock.name,
                     )
-                    forkedBlock.selectedRemote = "Local"
+                    forkedBlock.selectedRemote = RemotesManager.LOCAL_REMOTE_NAME
 
-                if forkedBlock.selectedRemote != "Local":
+                if forkedBlock.selectedRemote != RemotesManager.LOCAL_REMOTE_NAME:
                     msg = f"Connecting to remote '{forkedBlock.selectedRemote}'..."
                     print(msg)
                     logging.getLogger("Horus").info(msg)
 
                 rAPI = remoteManager.getRemoteAPI(forkedBlock.selectedRemote)
 
-                if forkedBlock.selectedRemote != "Local":
+                if forkedBlock.selectedRemote != RemotesManager.LOCAL_REMOTE_NAME:
                     msg = f"Successfully connected to remote '{forkedBlock.selectedRemote}'"
                     print(msg)
                     logging.getLogger("Horus").info(msg)
@@ -2738,7 +2734,7 @@ class ExternalPython:
             if not stdout:
                 return False, "", "Could not get version output from interpreter"
 
-            # Extract version from output (e.g., "Python 3.9.15" -> "3.9.15")
+            # Extract version from output (e.g., "Python 3.12.13" -> "3.12.13")
             version_parts = stdout.strip().split()
             if len(version_parts) < 2:
                 return False, "", f"Unexpected version output format: {stdout.strip()}"
@@ -2785,7 +2781,7 @@ class ExternalPython:
                 return False, (
                     f"Python version mismatch: interpreter v{interpreter_version} "
                     f"does not match required v{required_version}. "
-                    f"Major and minor versions must match (e.g., 3.9.x == 3.9.y)"
+                    f"Major and minor versions must match (e.g., 3.12.x == 3.12.y)"
                 )
 
             return True, ""

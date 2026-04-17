@@ -23,7 +23,7 @@ import {
   PANEL_REGISTRY,
   togglePanel
 } from "@/Components/MainApp/PanelView";
-import { useContext } from "react";
+import { useContext, useEffect, useRef } from "react";
 import { HorusPopover } from "@/Components/reusable";
 
 type FlowCanvasProps = {
@@ -42,6 +42,22 @@ export function FlowCanvas(props: FlowCanvasProps) {
     disabled: isFlowActive
   });
 
+  // Keep a ref to the latest handleWheel so the passive listener always calls
+  // the most up-to-date version without being re-attached on every render.
+  const handleWheelRef = useRef(mouseHooks.handleWheel);
+  useEffect(() => {
+    handleWheelRef.current = mouseHooks.handleWheel;
+  });
+
+  useEffect(() => {
+    const canvas = document.getElementById(DroppableEntity.CANVAS.valueOf());
+    if (!canvas) return;
+
+    const onWheel = (e: WheelEvent) => handleWheelRef.current(e);
+    canvas.addEventListener("wheel", onWheel, { passive: false });
+    return () => canvas.removeEventListener("wheel", onWheel);
+  }, []);
+
   return (
     <>
       <FlowTopBar flowHooks={props.flowHooks} />
@@ -53,11 +69,13 @@ export function FlowCanvas(props: FlowCanvasProps) {
         onMouseUp={mouseHooks.handleMouseUp as any}
         onMouseLeave={mouseHooks.handleMouseUp as any}
         onMouseMove={mouseHooks.handleMousePan as any}
+        style={{
+          opacity: isFlowActive ? 0.8 : 1
+        }}
       >
         <div
           style={{
-            pointerEvents: isFlowActive ? "none" : "auto",
-            filter: isFlowActive ? "opacity(0.8)" : "none"
+            pointerEvents: isFlowActive ? "none" : "auto"
           }}
         >
           {children}

@@ -119,7 +119,8 @@ export enum BlockTypes {
   ACTION = "action",
   SLURM = "slurm",
   CONFIG = "config",
-  GHOST = "ghost"
+  GHOST = "ghost",
+  NOTE = "note"
 }
 
 export type VariableGroup = {
@@ -178,6 +179,7 @@ export type Block = BaseBlock & {
   extensionsToOpen: Array<PluginPage>;
   time: number;
   externalURL?: string;
+  color?: string;
 
   // Variable connections
   variableConnections: Array<VariableConnection>;
@@ -195,6 +197,10 @@ export type Block = BaseBlock & {
   selectedRemote: string;
 
   selectedInputGroup: string;
+};
+
+export type NoteBlock = Block & {
+  contents: string;
 };
 
 export type SlurmJob = {

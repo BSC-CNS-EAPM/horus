@@ -9,7 +9,9 @@ import contextlib
 import json
 import logging
 import os
+import re
 import secrets
+import shlex
 import subprocess
 import tarfile
 
@@ -18,10 +20,62 @@ import typing as t
 
 # Third party imports
 import fabric
+from cryptography.fernet import Fernet
+
+LOCAL_REMOTE_NAME = "Local"
+
+_VALID_ENV_KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+_ENC_PREFIX = "enc$"
+
+
+class _PasswordCrypto:
+    """
+    Fernet-based password encryption tied to a per-installation key file.
+    """
+
+    def __init__(self, key_path: str) -> None:
+        self._key_path = key_path
+        self._fernet = Fernet(self._load_or_create_key())
+
+    def _load_or_create_key(self) -> bytes:
+        if os.path.exists(self._key_path):
+            with open(self._key_path, "rb") as f:
+                return f.read().strip()
+        key = Fernet.generate_key()
+        with open(self._key_path, "wb") as f:
+            f.write(key)
+        os.chmod(self._key_path, 0o600)
+        return key
+
+    def encrypt(self, plaintext: str) -> str:
+        """
+        Return a prefixed ciphertext string safe to store in JSON.
+        """
+        token = self._fernet.encrypt(plaintext.encode()).decode()
+        return f"{_ENC_PREFIX}{token}"
+
+    def decrypt(self, value: str) -> str:
+        """
+        Decrypt a value produced by encrypt(). Plain-text values are returned as-is.
+        """
+        if not value.startswith(_ENC_PREFIX):
+            return value
+        token = value[len(_ENC_PREFIX):]
+        return self._fernet.decrypt(token.encode()).decode()
+
+
+def _validate_env(env: dict) -> None:
+    """Raise ValueError if any env key is not a safe shell identifier."""
+    for key in env:
+        if not _VALID_ENV_KEY_RE.match(key):
+            raise ValueError(
+                f"Invalid environment variable name: {key!r}. "
+                "Only letters, digits, and underscores are allowed."
+            )
 
 
 class CommandFailed(Exception):
-
     cmd: str
     stdout: str
     stderr: str
@@ -92,7 +146,7 @@ class RemotesAPI:
     Whether the remote is local or not.
     """
 
-    name: str = "Unnamed Remote"
+    name: str = LOCAL_REMOTE_NAME
     """
     The selected remote name.
     """
@@ -103,20 +157,31 @@ class RemotesAPI:
     This can slow down command executions.
     """
 
+    _local_ssh_verified: bool = False
+    """
+    Whether the local SSH connectivity check has already succeeded.
+    Set once on the first successful check; avoids a round-trip per command.
+    """
+
     def __init__(
-        self, selectedRemote: t.Optional[t.Dict[str, t.Any]] = None, local: bool = False
+        self,
+        selectedRemote: t.Dict[str, t.Any],
     ):
         """
         Create a new ClusterAPI object.
 
         :param selectedRemote: The remote to connect to.
         """
+        name = selectedRemote.get("name")
 
-        # Check if the remote is local
-        if local or selectedRemote is None:
+        if name is None:
+            raise ValueError("Remote configuration must include a 'name' field.")
+
+        workDir = selectedRemote.get("workDir") or self.workDir
+        if name == RemotesManager.LOCAL_REMOTE_NAME:
+            self.username = selectedRemote.get("username") or None
+            self.password = selectedRemote.get("password") or None
             self.isLocal = True
-            self.name = "Local"
-            self.remoteName = "Local"
 
             # For local, set the workDir as the current directory
             self.workDir = os.getcwd()
@@ -137,7 +202,7 @@ class RemotesAPI:
         self.key = selectedRemote.get("keyPath") or None
         self.proxyCommand = selectedRemote.get("proxyCommand") or None
         self.remoteName = selectedRemote.get("name") or "Unnamed Remote"
-        self.workDir = selectedRemote.get("workDir") or self.workDir
+        self.workDir = workDir
         self.loadProfile = selectedRemote.get("loadProfile") or self.loadProfile
 
     def connect(self):
@@ -145,49 +210,51 @@ class RemotesAPI:
         Connect to the remote.
         """
 
+        if self.isLocal:
+            return
+
         # Check if connection details are provided
-        if not self.isLocal:
-            if self.host is None:
-                raise ConnectionFailed("No hostname provided.")
-            if self.port is None:
-                raise ConnectionFailed("No port provided.")
-            if self.username is None:
-                raise ConnectionFailed("No username provided.")
-            if self.password is None and self.key is None:
-                raise ConnectionFailed("No password or key provided.")
+        if self.host is None:
+            raise ConnectionFailed("No hostname provided.")
+        if self.port is None:
+            raise ConnectionFailed("No port provided.")
+        if self.username is None:
+            raise ConnectionFailed("No username provided.")
+        if self.password is None and self.key is None:
+            raise ConnectionFailed("No password or key provided.")
 
-            # Set kwargs for connection
-            connect_kwargs = {}  # pylint: disable=invalid-name
+        # Set kwargs for connection
+        connect_kwargs = {}  # pylint: disable=invalid-name
 
-            if self.password is not None:
-                connect_kwargs["password"] = self.password
+        if self.password is not None:
+            connect_kwargs["password"] = self.password
 
-            if self.key is not None:
-                connect_kwargs["key_filename"] = self.key
+        if self.key is not None:
+            connect_kwargs["key_filename"] = self.key
 
-            # Connect
-            if self.password is not None or self.key is not None:
-                try:
-                    self.conn = fabric.Connection(
-                        host=self.host,
-                        port=self.port,
-                        user=self.username,
-                        connect_kwargs={
-                            **connect_kwargs,
-                        },
-                        gateway=self.proxyCommand or None,
-                        connect_timeout=8,
-                    )
-                    self.conn.open()
-                except Exception as exc:
-                    logging.getLogger("Horus").error(
-                        "Could not connect to the remote %s: %s", self.host, str(exc)
-                    )
-                    raise ConnectionFailed(
-                        f"Could not connect to the remote {self.host}: {exc}"
-                    ) from exc
-            else:
-                raise ConnectionFailed("No connection method provided.")
+        # Connect
+        if self.password is not None or self.key is not None:
+            try:
+                self.conn = fabric.Connection(
+                    host=self.host,
+                    port=self.port,
+                    user=self.username,
+                    connect_kwargs={
+                        **connect_kwargs,
+                    },
+                    gateway=self.proxyCommand or None,
+                    connect_timeout=8,
+                )
+                self.conn.open()
+            except Exception as exc:
+                logging.getLogger("Horus").error(
+                    "Could not connect to the remote %s: %s", self.host, str(exc)
+                )
+                raise ConnectionFailed(
+                    f"Could not connect to the remote {self.host}: {exc}"
+                ) from exc
+        else:
+            raise ConnectionFailed("No connection method provided.")
 
         if "~" in self.workDir:
             # Replace the ~ with the user home directory for compatibility
@@ -231,21 +298,128 @@ class RemotesAPI:
 
         if self.isLocal or forceLocal:
             # Run command locally
-            logging.getLogger("Horus").info("Running command: '%s' on local machine,", command)
+            logging.getLogger("Horus").info(
+                "Running command: '%s' on local machine,", command
+            )
             failed = False
             out = ""
             err = ""
             try:
-                process = subprocess.run(
-                    command,
+                if os.environ.get("HORUS_REQUIRES_COMMAND_CREDENTIALS") == "yes":
+                    if not self.username or not self.password:
+                        raise CommandFailed(
+                            "You need to configure local remote credentials in the Remotes panel.",
+                            cmd=command,
+                            stdout="",
+                            stderr="",
+                        )
+
+                effectiveCommand = command
+                stdIn = subprocess.DEVNULL
+                runEnv = env
+
+                # If local credentials are configured, impersonate via ssh to localhost.
+                if self.isLocal and self.username:
+                    # Build the sshpass prefix when a password is provided.
+                    if self.password:
+                        ssh_prefix = ["sshpass", "-p", self.password]
+                        ssh_opts = [
+                            "-o",
+                            "StrictHostKeyChecking=no",
+                            "-o",
+                            "ConnectTimeout=3",
+                        ]
+                    else:
+                        ssh_prefix = []
+                        ssh_opts = [
+                            "-o",
+                            "BatchMode=yes",
+                            "-o",
+                            "StrictHostKeyChecking=no",
+                            "-o",
+                            "ConnectTimeout=3",
+                        ]
+
+                    cmd_check_error = CommandFailed(
+                        "You have configured local credentials, but this only works if the "
+                        "local machine has an active SSH server on localhost and the user "
+                        f"'{self.username}' can authenticate either with a key or with sshpass. If this was a mistake, "
+                        "please remove the local credentials configuration in the Remotes panel.",
+                        cmd=command,
+                        stdout="",
+                        stderr="",
+                    )
+                    if not self._local_ssh_verified:
+                        try:
+                            ssh_check = subprocess.run(
+                                [
+                                    *ssh_prefix,
+                                    "ssh",
+                                    *ssh_opts,
+                                    f"{self.username}@localhost",
+                                    "exit",
+                                ],
+                                stdout=subprocess.DEVNULL,
+                                stderr=subprocess.DEVNULL,
+                                check=False,
+                            )
+                        except FileNotFoundError as exc:
+                            logging.getLogger("Horus").error(
+                                "sshpass is required for local remote with password, but it is not installed: %s",
+                                str(exc),
+                            )
+                            raise cmd_check_error
+
+                        if ssh_check.returncode != 0:
+                            raise cmd_check_error
+
+                        self._local_ssh_verified = True
+
+                    # Preserve the caller's working directory inside the SSH session.
+                    # If the cd() context manager is active, `command` already starts
+                    # with "cd /specific/path && …", so the prepended cd is harmlessly
+                    # overridden by that second cd, no interference.
+                    cwd = shlex.quote(os.getcwd())
+                    cwd_prefix = f"cd {cwd} && "
+
+                    if env:
+                        _validate_env(env)
+                        env_vars = " ".join(
+                            f"export {key}={shlex.quote(value)};"
+                            for key, value in env.items()
+                        )
+                        inner_command = f"{env_vars} {cwd_prefix}{command}".strip()
+                    else:
+                        inner_command = f"{cwd_prefix}{command}"
+
+                    ssh_opts_str = " ".join(ssh_opts)
+                    if self.password:
+                        effectiveCommand = (
+                            f"sshpass -p {shlex.quote(self.password)} "
+                            f"ssh {ssh_opts_str} "
+                            f"{shlex.quote(self.username)}@localhost {shlex.quote(inner_command)}"
+                        )
+                    else:
+                        effectiveCommand = (
+                            f"ssh {ssh_opts_str} "
+                            f"{shlex.quote(self.username)}@localhost {shlex.quote(inner_command)}"
+                        )
+                    runEnv = None
+
+                processKwargs: dict[str, t.Any] = dict(
                     shell=True,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
-                    stdin=subprocess.DEVNULL,
+                    stdin=stdIn,
                     timeout=timeout,
                     text=True,
                     check=False,
-                    env=env,
+                    env=runEnv,
+                )
+
+                process = subprocess.run(
+                    effectiveCommand,
+                    **processKwargs,
                 )
 
                 def logCommandOutput(o: str):
@@ -274,7 +448,9 @@ class RemotesAPI:
 
             if failed:
                 logging.getLogger("Horus").error("Command timed out: %s", command)
-                raise CommandFailed("Command timed out.", cmd=command, stdout=out, stderr=err)
+                raise CommandFailed(
+                    "Command timed out.", cmd=command, stdout=out, stderr=err
+                )
 
             # Return the stdout and stderr as a string
             return out + "\n" + err if mergeStdErr else out
@@ -289,7 +465,6 @@ class RemotesAPI:
         )
         channel = None
         try:
-
             if not hasattr(self.conn, "transport") or not self.loadProfile:
                 # Execute the command the old way
                 return self._oldCommand(command, timeout, env)
@@ -308,8 +483,11 @@ class RemotesAPI:
             bash_command = f'bash -l -c "source ~/.bashrc 2>/dev/null || source /etc/bash.bashrc 2>/dev/null; {command}"'
 
             if env:
+                _validate_env(env)
                 # Add environment variables to the command
-                env_vars = " ".join(f'export {key}="{value}"' for key, value in env.items())
+                env_vars = " ".join(
+                    f"export {key}={shlex.quote(value)}" for key, value in env.items()
+                )
                 bash_command = f'bash -l -c "{env_vars}; {bash_command}"'
 
             # Add timeout if specified for the command itself
@@ -370,7 +548,10 @@ class RemotesAPI:
                     pass
 
     def _oldCommand(
-        self, command: str, timeout: t.Optional[int] = None, env: t.Optional[dict] = None
+        self,
+        command: str,
+        timeout: t.Optional[int] = None,
+        env: t.Optional[dict] = None,
     ) -> str:
         # Run command on remote
         # Hide is needed to avoid the output to be printed on the console
@@ -380,7 +561,9 @@ class RemotesAPI:
         try:
             # Update the command with the timeout
             if timeout:
-                command = "timeout {timeout} {command}".format(timeout=timeout, command=command)
+                command = "timeout {timeout} {command}".format(
+                    timeout=timeout, command=command
+                )
 
             out_cmd = self.conn.run(
                 command,
@@ -401,7 +584,10 @@ class RemotesAPI:
             return out
         except Exception as exc:
             logging.getLogger("Horus").debug(
-                "Error running command %s on remote %s: %s", command, self.name, str(exc)
+                "Error running command %s on remote %s: %s",
+                command,
+                self.name,
+                str(exc),
             )
             raise exc
 
@@ -441,7 +627,9 @@ class RemotesAPI:
             logging.getLogger("Horus").error(
                 "Error getting data from %s to %s: %s", source, destination, str(exc)
             )
-            raise Exception(f"Error transferring data from {self.remoteName}: {exc}") from exc
+            raise Exception(
+                f"Error transferring data from {self.remoteName}: {exc}"
+            ) from exc
 
     def _internalTransferTo(self, source: str, destination: str):
         try:
@@ -453,7 +641,9 @@ class RemotesAPI:
                 destination,
                 str(exc),
             )
-            raise Exception(f"Error transferring data to {self.remoteName}: {exc}") from exc
+            raise Exception(
+                f"Error transferring data to {self.remoteName}: {exc}"
+            ) from exc
 
     def transferTo(self, source: str, destination: str) -> str:
         """
@@ -468,7 +658,9 @@ class RemotesAPI:
         :return: The final path to the file/folder.
         """
 
-        logging.getLogger("Horus").info("Transferring data from %s to %s", source, destination)
+        logging.getLogger("Horus").info(
+            "Transferring data from %s to %s", source, destination
+        )
 
         if destination is None or destination == "":
             destination = self.workDir
@@ -478,7 +670,9 @@ class RemotesAPI:
             raise Exception(f"The source path cannot contain spaces: {source}")
 
         if " " in destination:
-            raise Exception(f"The destination path cannot contain spaces: {destination}")
+            raise Exception(
+                f"The destination path cannot contain spaces: {destination}"
+            )
 
         # Create the destination container folder
         if os.path.isdir(source):
@@ -495,7 +689,6 @@ class RemotesAPI:
         # Check if the source is a folder
         source = os.path.abspath(source)
         if os.path.isdir(source):
-
             # Then zip the folder
             logging.getLogger("Horus").info("Zipping local folder %s", source)
 
@@ -558,7 +751,9 @@ class RemotesAPI:
             raise Exception(f"The source path cannot contain spaces: {source}")
 
         if " " in destination:
-            raise Exception(f"The destination path cannot contain spaces: {destination}")
+            raise Exception(
+                f"The destination path cannot contain spaces: {destination}"
+            )
 
         if self.isLocal:
             if os.path.isdir(source):
@@ -572,7 +767,9 @@ class RemotesAPI:
             self.command(f"cp -r {source} {destination}")
             return destination
 
-        logging.getLogger("Horus").info("Transferring data from %s to %s", source, destination)
+        logging.getLogger("Horus").info(
+            "Transferring data from %s to %s", source, destination
+        )
 
         # Check if the source is a folder
         destination = os.path.abspath(destination)
@@ -589,7 +786,9 @@ class RemotesAPI:
             zipPath = f"{folderName}-{unique_id}.tar.gz"
             container = os.path.dirname(source)
 
-            logging.getLogger("Horus").info("Zipping remote folder %s into %s", source, zipPath)
+            logging.getLogger("Horus").info(
+                "Zipping remote folder %s into %s", source, zipPath
+            )
 
             self.command(f"cd {container} && tar -czvf {zipPath} {sourceZip}")
 
@@ -609,7 +808,9 @@ class RemotesAPI:
 
             # Remove the zip file
 
-            logging.getLogger("Horus").info("Removing the generated zip file %s", source)
+            logging.getLogger("Horus").info(
+                "Removing the generated zip file %s", source
+            )
 
             self.command(f"rm {source}")
 
@@ -682,7 +883,7 @@ class RemotesManager:
     """
 
     # The default local name
-    LOCAL_IP = "Local"
+    LOCAL_REMOTE_NAME = LOCAL_REMOTE_NAME
 
     remote: t.Optional[RemotesAPI] = None
     """
@@ -696,6 +897,24 @@ class RemotesManager:
         :param appSupportDir: The path to the app support directory
         """
         self.appSupportDir = appSupportDir
+        self._crypto = _PasswordCrypto(
+            os.path.join(appSupportDir, ".horus_keyfile")
+        )
+
+        # Configure the local remote if it does not exist
+        if not self.remoteExists(self.LOCAL_REMOTE_NAME):
+            self.configureRemote(
+                {
+                    "name": self.LOCAL_REMOTE_NAME,
+                    "host": self.LOCAL_REMOTE_NAME,
+                    "port": None,
+                    "username": None,
+                    "password": None,
+                    "keyPath": None,
+                    "proxyCommand": None,
+                    "workDir": None,
+                }
+            )
 
     def configureRemote(self, newConfig: t.Dict[str, t.Any]):
         """
@@ -720,40 +939,45 @@ class RemotesManager:
         # Fix the name of the remote to not have special characters
         newConfig["name"] = newConfig["name"].replace(" ", "_")
 
-        if newConfig.get("username") is None:
-            raise Exception("The user of the remote is required")
+        if not newConfig["name"].lower() == self.LOCAL_REMOTE_NAME.lower():
+            if newConfig.get("username") is None:
+                raise Exception("The user of the remote is required")
 
-        if newConfig.get("host") is None:
-            raise Exception("The host of the remote is required")
+            if newConfig.get("host") is None:
+                raise Exception("The host of the remote is required")
 
-        if newConfig.get("port") is None:
-            raise Exception("The port of the remote is required")
+            if newConfig.get("port") is None:
+                raise Exception("The port of the remote is required")
 
-        if newConfig.get("keyPath") is None and newConfig.get("password") is None:
-            raise Exception(
-                "Either the keys or the password of the remote is required. None provided."
-            )
+            if newConfig.get("keyPath") is None and newConfig.get("password") is None:
+                raise Exception(
+                    "Either the keys or the password of the remote is required. None provided."
+                )
 
-        if newConfig.get("keyPath") is not None and newConfig.get("password") is not None:
-            raise Exception(
-                "While configuring a remote either the keys or "
-                "the password is required, not both."
-            )
+            if (
+                newConfig.get("keyPath") is not None
+                and newConfig.get("password") is not None
+            ):
+                raise Exception(
+                    "While configuring a remote either the keys or "
+                    "the password is required, not both."
+                )
 
-        newKeyPath = newConfig.get("keyPath", None)
-        if newKeyPath is not None:
-            if isinstance(newKeyPath, list):
-                newKeyPath = newKeyPath[0]
-                newConfig["keyPath"] = newKeyPath
+            newKeyPath = newConfig.get("keyPath", None)
+            if newKeyPath is not None:
+                if isinstance(newKeyPath, list):
+                    newKeyPath = newKeyPath[0]
+                    newConfig["keyPath"] = newKeyPath
 
-            if not os.path.exists(newKeyPath):
-                raise Exception("The keys file does not exist")
-
-        if newConfig["name"].lower() == "local":
-            # The local remote does not need to be configured
-            raise Exception("The local machine does not need to be configured")
+                if not os.path.exists(newKeyPath):
+                    raise Exception("The keys file does not exist")
 
         remotesPath = os.path.join(self.appSupportDir, "remotes.json")
+
+        # Encrypt the password before persisting
+        configToStore = dict(newConfig)
+        if configToStore.get("password") and not str(configToStore["password"]).startswith(_ENC_PREFIX):
+            configToStore["password"] = self._crypto.encrypt(configToStore["password"])
 
         if os.path.exists(remotesPath):
             # Load and update the existing ssh configuration
@@ -761,41 +985,57 @@ class RemotesManager:
                 remotesConfig: t.Dict[str, t.Any] = json.load(file)
 
             # Check if the remote already exists
-            if newConfig["name"] in remotesConfig.keys():
+            if configToStore["name"] in remotesConfig.keys():
                 # Update the remote
-                remotesConfig[newConfig["name"]] = newConfig
+                remotesConfig[configToStore["name"]] = configToStore
             else:
                 # Create a new remote
-                remotesConfig.update({newConfig["name"]: newConfig})
+                remotesConfig.update({configToStore["name"]: configToStore})
 
         else:
             # Create a new ssh configuration
-            remotesConfig = {newConfig["name"]: newConfig}
+            remotesConfig = {configToStore["name"]: configToStore}
 
         with open(remotesPath, "w", encoding="utf-8") as file:
             json.dump(remotesConfig, file)
 
-    def listRemotes(self, includeLocal: bool = False) -> list[dict[str, t.Any]]:
+    def listRemotes(self) -> list[dict[str, t.Any]]:
         """
         Loads the ssh configuration file and returns the list of remotes
         """
 
         remotesFile = os.path.join(self.appSupportDir, "remotes.json")
 
+        remotesConfig: t.Dict[str, t.Any] = {}
         if not os.path.exists(remotesFile):
             remotesConfig = {}
         else:
             with open(remotesFile, "r", encoding="utf-8") as file:
-                remotesConfig: t.Dict[str, str] = json.load(file)
+                remotesConfig = json.load(file)
 
-        # Convert the remotes configuration to a list
+        # Convert the remotes configuration to a list, stripping passwords
         remotes = []
-        for name, config in remotesConfig.items():  # pylint: disable=unused-variable
-            remotes.append(config)
+        for _, config in remotesConfig.items():
+            sanitized = dict(config)
+            sanitized["password"] = None
+            remotes.append(sanitized)
 
-        # Add the local machine
-        if includeLocal:
-            remotes.append({"name": "Local"})
+        # Always, if the local remote is not in the list, add it
+        if self.LOCAL_REMOTE_NAME not in remotesConfig.keys():
+            local_remote_config = {
+                "name": self.LOCAL_REMOTE_NAME,
+                "host": self.LOCAL_REMOTE_NAME,
+                "port": None,
+                "username": None,
+                "password": None,
+                "keyPath": None,
+                "proxyCommand": None,
+                "workDir": None,
+            }
+            remotes.append(local_remote_config)
+
+            # Save the local remote configuration to the file
+            self.configureRemote(local_remote_config)
 
         return remotes
 
@@ -837,24 +1077,19 @@ class RemotesManager:
 
         remotesConfig = self._remoteConfig()
 
-        if name.lower() == "local":
-            self.remote = RemotesAPI(None, local=True)
-        else:
-            # Get the remote configuration if its not the local machine
-            selectedRemote = remotesConfig[name]
+        # Get the remote configuration (including local)
+        selectedRemote = remotesConfig[name]
+        # Init the Remote
+        self.remote = RemotesAPI(selectedRemote)
 
-            # Init the Remote
-            self.remote = RemotesAPI(selectedRemote)
-
-            # Connect to the remote
-            self.remote.connect()
-
+        # Connect to the remote
+        self.remote.connect()
         if not self.remote.isConnected:
             raise Exception("Could not connect to the remote")
 
     def _remoteConfig(self) -> t.Dict[str, t.Any]:
         """
-        Returns the remote configuration read from the file
+        Returns the remote configuration read from the file, with passwords decrypted.
         """
 
         remotesFile = os.path.join(self.appSupportDir, "remotes.json")
@@ -864,6 +1099,11 @@ class RemotesManager:
             with open(remotesFile, "r", encoding="utf-8") as f:
                 remotesConfig = json.load(f)
 
+        # Decrypt passwords transparently (plain-text legacy values pass through)
+        for config in remotesConfig.values():
+            if config.get("password"):
+                config["password"] = self._crypto.decrypt(config["password"])
+
         return remotesConfig
 
     def remoteExists(self, remoteName: str) -> bool:
@@ -871,26 +1111,20 @@ class RemotesManager:
         Returns whether a remote exists by the remote's name
         """
 
-        if remoteName.lower() != "local":
-            return remoteName in self._remoteConfig().keys()
-
-        return True
+        return remoteName in self._remoteConfig().keys()
 
     def getRemoteAPI(self, remoteName: str) -> RemotesAPI:
         """
-        Returns the conencted instanced of the remote
+        Returns the connected instance of the remote
         """
 
-        if remoteName == "Local":
-            rapi = RemotesAPI(local=True)
-        else:
-            # Check if the remote exists
-            if not self.remoteExists(remoteName):
-                raise Exception(f"The remote {remoteName} does not exist")
+        # Check if the remote exists
+        if not self.remoteExists(remoteName):
+            raise Exception(f"The remote {remoteName} does not exist")
 
-            remotesConfig = self._remoteConfig()
+        remotesConfig = self._remoteConfig()
 
-            rapi = RemotesAPI(remotesConfig[remoteName])
+        rapi = RemotesAPI(remotesConfig[remoteName])
 
         # Connect the remote
         rapi.connect()

@@ -1266,3 +1266,26 @@ test_body_varaibles = SlurmBlock(
 )
 
 plugin.addBlock(test_body_varaibles)
+
+
+color_input_var = PluginVariable(
+    id="color_input_var",
+    name="Color input variable",
+    description="This variable changes the block color",
+    type=VariableTypes.STRING,
+)
+
+def change_color_action(block: PluginBlock):
+    new_color = block.inputs.get("color_input_var", "#FF0000")
+    block.color = new_color
+
+color_block = InputBlock(
+    id="color_block",
+    name="Color block",
+    description="Block that changes colors",
+    action=change_color_action,
+    color="#FF0000",
+    variable=color_input_var,
+)
+
+plugin.addBlock(color_block)

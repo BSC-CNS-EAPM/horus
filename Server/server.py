@@ -126,7 +126,9 @@ class HorusServer:
         """
 
         return (
-            RemotesManager(currentUser.appSupportDir) if self._isForUser else self._remoteManager
+            RemotesManager(currentUser.appSupportDir)
+            if self._isForUser
+            else self._remoteManager
         )
 
     @property
@@ -2321,7 +2323,7 @@ class HorusServer:
         @self.verifyLogin
         def listRemoteNames():
             try:
-                remotes = self.remoteManager.listRemotes(includeLocal=True)
+                remotes = self.remoteManager.listRemotes()
 
                 remotes = [r["name"] for r in remotes]
 
