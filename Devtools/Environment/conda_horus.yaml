@@ -39,3 +39,4 @@ dependencies:
       - PyYAML==6.0.3
       - pip-licenses==5.5.5
       - debugpy==1.8.20
+      - cryptography==46.0.7
