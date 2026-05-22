@@ -1,7 +1,7 @@
 import json
 import pytest
 from unittest.mock import patch, MagicMock
-from Server.RemotesManager import RemotesAPI, RemotesManager
+from Server.RemotesManager import CommandFailed, RemotesAPI, RemotesManager
 from App import AppDelegate
 import os
 
@@ -218,6 +218,53 @@ def test_local_command_uses_sshpass_when_credentials_are_configured():
     assert "export TEST_VAR=1;" in called_command
     assert mock_run.call_args.kwargs["stdin"] == -3
     assert mock_run.call_args.kwargs["env"] is None
+
+
+def test_local_command_reports_ssh_probe_failure_details():
+    local_config = {
+        "name": RemotesManager.LOCAL_REMOTE_NAME,
+        "type": "local",
+        "username": "targetuser",
+        "password": "targetpass",
+    }
+    instance = RemotesAPI(local_config)
+
+    with patch(
+        "subprocess.run",
+        return_value=MagicMock(
+            returncode=255,
+            stdout="",
+            stderr="Permission denied, please try again.",
+        ),
+    ):
+        with pytest.raises(CommandFailed) as exc_info:
+            instance.command("whoami")
+
+    assert "SSH localhost probe failed" in str(exc_info.value)
+    assert "Authentication failed" in str(exc_info.value)
+    assert "Permission denied" in exc_info.value.stderr
+
+
+def test_local_command_reports_permission_denied_with_exit_code():
+    local_config = {
+        "name": RemotesManager.LOCAL_REMOTE_NAME,
+        "type": "local",
+    }
+    instance = RemotesAPI(local_config)
+
+    with patch(
+        "subprocess.run",
+        return_value=MagicMock(
+            returncode=1,
+            stdout="",
+            stderr="mkdir: cannot create directory '/shared/work': Permission denied",
+        ),
+    ):
+        with pytest.raises(CommandFailed) as exc_info:
+            instance.command("mkdir -p /shared/work", forceLocal=True)
+
+    assert "exit code 1" in str(exc_info.value)
+    assert "Permission denied" in str(exc_info.value)
 
 
 def test_connect_remote_local_reads_local_config(tmp_path):

@@ -88,6 +88,23 @@ class CommandFailed(Exception):
         self.stderr = stderr
 
 
+def _truncate_for_log(value: str, limit: int = 400) -> str:
+    """Return a single-line, length-limited representation for logs."""
+    if not value:
+        return ""
+    compact = value.replace("\n", "\\n")
+    if len(compact) <= limit:
+        return compact
+    return f"{compact[:limit]}...(truncated)"
+
+
+def _sanitize_command_for_log(command: str, password: t.Optional[str]) -> str:
+    """Mask sensitive data before writing command strings to logs."""
+    if not password:
+        return command
+    return command.replace(password, "***")
+
+
 class ConnectionFailed(Exception):
     """
     Exception raised when a remote cannot be connected
@@ -359,19 +376,43 @@ class RemotesAPI:
                                     f"{self.username}@localhost",
                                     "exit",
                                 ],
-                                stdout=subprocess.DEVNULL,
-                                stderr=subprocess.DEVNULL,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE,
+                                text=True,
                                 check=False,
                             )
                         except FileNotFoundError as exc:
                             logging.getLogger("Horus").error(
-                                "sshpass is required for local remote with password, but it is not installed: %s",
+                                "Missing binary while checking localhost SSH for user '%s': %s",
+                                self.username,
                                 str(exc),
                             )
-                            raise cmd_check_error
+                            raise CommandFailed(
+                                f"{cmd_check_error}. Missing binary: {exc}",
+                                cmd=command,
+                                stdout="",
+                                stderr=str(exc),
+                            ) from exc
 
                         if ssh_check.returncode != 0:
-                            raise cmd_check_error
+                            ssh_stdout = (ssh_check.stdout or "").strip()
+                            ssh_stderr = (ssh_check.stderr or "").strip()
+                            auth_hint = ""
+                            if "Permission denied" in ssh_stderr:
+                                auth_hint = (
+                                    " Authentication failed for localhost. Verify username/password "
+                                    "or remove local credentials to execute directly on host."
+                                )
+
+                            raise CommandFailed(
+                                (
+                                    f"{cmd_check_error}. SSH localhost probe failed "
+                                    f"(rc={ssh_check.returncode}).{auth_hint}"
+                                ).strip(),
+                                cmd=command,
+                                stdout=ssh_stdout,
+                                stderr=ssh_stderr,
+                            )
 
                         self._local_ssh_verified = True
 
@@ -441,7 +482,23 @@ class RemotesAPI:
 
                 # If the command failed, raise an exception
                 if process.returncode != 0:
-                    raise CommandFailed(err, cmd=command, stdout=out, stderr=err)
+                    reason = (
+                        f"Local command failed with exit code {process.returncode}."
+                    )
+                    if "Permission denied" in err:
+                        reason += " Permission denied. Verify path permissions and execution user."
+                    raise CommandFailed(reason, cmd=command, stdout=out, stderr=err)
+
+            except CommandFailed as exc:
+                logging.getLogger("Horus").error(
+                    "Local command failed | cmd='%s' | effective='%s' | reason='%s' | stdout='%s' | stderr='%s'",
+                    command,
+                    _sanitize_command_for_log(effectiveCommand, self.password),
+                    str(exc),
+                    _truncate_for_log(exc.stdout),
+                    _truncate_for_log(exc.stderr),
+                )
+                raise
 
             except subprocess.TimeoutExpired:
                 failed = True
