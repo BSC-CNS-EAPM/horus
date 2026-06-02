@@ -2822,7 +2822,12 @@ class SlurmBlock(PluginBlock):
                 # Skip finished jobs
                 if skipCompleted and j.completed:
                     continue
-
+                
+                logging.getLogger("Horus").info(
+                    "Updating logs for job %s with status %s",
+                    j.job_id,
+                    j.state,
+                )
                 tasks[j.job_id] = executor.submit(j.updateLogs, self.remote)
 
         for jobid, task in tasks.items():
@@ -2837,6 +2842,12 @@ class SlurmBlock(PluginBlock):
 
         # Based on all jobs, parse the global result
         allStatus = [j.state for j in self.jobs]
+
+        logging.getLogger("Horus").debug(
+            "Parsed statuses for block %s: %s",
+            self.name,
+            ", ".join([f"{j.job_id}: {j.state}" for j in self.jobs]),
+        )
 
         # If all are queued, set queued
         if all(s == Status.PENDING for s in allStatus):
