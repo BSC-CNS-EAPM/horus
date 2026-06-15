@@ -105,6 +105,26 @@
     "type": "boolean",
     "desktopOnly": true
   },
+  "runFlowsAsLocalRemoteUser": {
+    "name": "Launch workflows as Local user",
+    "description": "If true, non-SLURM workflows are launched using the Local remote username through sudo/su.",
+    "category": "Advanced",
+    "value": false,
+    "type": "boolean",
+    "desktopOnly": true
+  },
+  "localFlowLaunchMethod": {
+    "name": "Workflow launch impersonation method",
+    "description": "Method used when launching workflows as Local user.",
+    "category": "Advanced",
+    "value": "sudo",
+    "type": "string[]",
+    "allowedValues": [
+      "sudo",
+      "su"
+    ],
+    "desktopOnly": true
+  },
   "slurmScript": {
     "name": "Submission script",
     "description": "The script that Horus will use to submit locally the flows. The command to run the flow will be automatically appended at the end.",

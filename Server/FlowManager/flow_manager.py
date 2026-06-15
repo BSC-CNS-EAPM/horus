@@ -13,6 +13,7 @@ import datetime
 import logging
 import hashlib
 import re
+import shlex
 import psutil
 import signal
 
@@ -2203,6 +2204,45 @@ class FlowManager:
     The active running flows. The key is the flow path and the value is the process.
     """
 
+    def _buildImpersonatedFlowLaunchCommand(
+        self,
+        command: list[str],
+        settingsManager: SettingsManager,
+    ) -> list[str]:
+        """
+        Wrap flow launcher command to run as the Local remote user.
+
+        Uses non-interactive sudo/su. The target identity is taken from the Local
+        remote credentials configured in remotes.json.
+        """
+
+        if not settingsManager.getSetting("runFlowsAsLocalRemoteUser").value:
+            return command
+
+        remotesManager = RemotesManager(self.appSupportDir)
+        localConfig = remotesManager._remoteConfig().get(RemotesManager.LOCAL_REMOTE_NAME, {})
+        localUser = localConfig.get("username")
+
+        if not localUser:
+            raise Exception(
+                "Flow launcher impersonation is enabled, but Local remote username is missing. "
+                "Configure it in the Remotes panel."
+            )
+
+        launchMethod = settingsManager.getSetting("localFlowLaunchMethod").value
+        launchMethod = str(launchMethod).lower()
+
+        if launchMethod == "sudo":
+            return ["sudo", "-n", "-u", str(localUser), "--", *command]
+
+        if launchMethod == "su":
+            quotedCommand = " ".join(shlex.quote(part) for part in command)
+            return ["su", "-", str(localUser), "-c", quotedCommand]
+
+        raise Exception(
+            "Invalid 'localFlowLaunchMethod' setting. Allowed values: 'sudo' or 'su'."
+        )
+
     def runFlow(
         self,
         flow: Flow,
@@ -2319,6 +2359,7 @@ class FlowManager:
             externalFlow = ExternalSlurmFlow(slurmJob, local_remote)
 
         else:
+            command = self._buildImpersonatedFlowLaunchCommand(command, generalSettings)
             external_process = SubprocessManager.callPopen(command, wait=False, env=env)
             externalFlow = ExternalProcessFlow(external_process.pid)
 
