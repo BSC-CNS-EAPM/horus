@@ -69,15 +69,15 @@ export default function SplashScreen() {
             <ManageSettings setModalContent={updateModalContent} />
           </div>
           <div className="flex flex-row flex-wrap gap-2 justify-center">
-            {window.horusInternal.mode === "webapp" ? (
-              <PredefinedFlowsSplash />
-            ) : (
-              <RecentFlowsSplash />
-            )}
+            <PredefinedFlowsSplash />
             <ExploreExtensions />
           </div>
         </div>
-        {window.horusInternal.mode === "webapp" && <WebAppUserFlows />}
+        {window.horusInternal.mode === "webapp" ? (
+          <WebAppUserFlows />
+        ) : (
+          <LocalUserFlows />
+        )}
       </div>
       {modalContent && (
         <ModalView
@@ -335,56 +335,29 @@ function PredefinedFlowsSplash() {
   );
 }
 
-function RecentFlowsSplash() {
-  // Get the recent flows with the custom hook
-  const {
-    isLoading: fetchingRecents,
-    recentFlows,
-    presetFlows: predefinedFlows
-  } = useGetRecentFlows();
+function LocalUserFlows() {
+  const { isLoading, recentFlows } = useGetRecentFlows();
+
+  if (isLoading) {
+    return (
+      <div className="mt-16 grid place-items-center">
+        <RotatingLines />
+      </div>
+    );
+  }
+
+  if (!recentFlows || recentFlows.length === 0) return null;
 
   return (
-    <ScrollableViewWelcome.Root>
-      <ScrollableViewWelcome.Header>
-        <div className="text-xl font-semibold">
-          {recentFlows && recentFlows.length === 0
-            ? predefinedFlows && predefinedFlows.length === 0
-              ? "Recent flows"
-              : "Preset flows"
-            : "Recent flows"}
-        </div>
-      </ScrollableViewWelcome.Header>
-      <ScrollableViewWelcome.Body>
-        {fetchingRecents ? (
-          <div className="w-full h-full flex justify-center items-center">
-            <RotatingLines />
-          </div>
-        ) : (
-          <div className="w-full h-full">
-            {recentFlows && recentFlows.length === 0 ? (
-              predefinedFlows && predefinedFlows.length > 0 ? (
-                <PredefinedFlows flows={predefinedFlows} />
-              ) : (
-                <div className="h-full flex justify-center items-center">
-                  No recent flows
-                </div>
-              )
-            ) : (
-              <RecentUserFlows flows={recentFlows ?? []} />
-            )}
-          </div>
-        )}
-      </ScrollableViewWelcome.Body>
-      <ScrollableViewWelcome.Footer>
-        <a
-          className="app-button text-black text-decoration-none"
-          href="https://horus.bsc.es/docs/running_flows/index.html"
-          target="_blank"
-        >
-          Learn more about flows
-        </a>
-      </ScrollableViewWelcome.Footer>
-    </ScrollableViewWelcome.Root>
+    <HorusContainer
+      className="w-full flex flex-col justify-center items-center gap-2"
+      style={{ maxWidth: "1075px", minWidth: "650px" }}
+    >
+      <h1 className="text-xl font-semibold">Your Flows</h1>
+      <div className="w-full">
+        <RecentUserFlows flows={recentFlows} />
+      </div>
+    </HorusContainer>
   );
 }
 

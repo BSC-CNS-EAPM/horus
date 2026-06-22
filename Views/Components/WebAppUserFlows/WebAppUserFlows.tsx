@@ -18,8 +18,14 @@ import { FlowStatus, MinimalFlow } from "../FlowBuilder/flow.types";
 import "./webappflows.css";
 import CloudDownload from "../Toolbar/Icons/CloudDownload";
 
+// AgGrid
+import { AgGridReact } from "ag-grid-react";
+import { ColDef, ICellRendererParams } from "ag-grid-community";
+import "ag-grid-community/styles/ag-grid.css";
+import "ag-grid-community/styles/ag-theme-quartz.css";
+
 // React
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 // Ignore those errors until frontend-rewrite
 // @ts-ignore
@@ -49,6 +55,150 @@ export default function WebAppUserFlows() {
     }
   }, [recentFlows]);
 
+  const gridContext = useMemo(() => ({ getFlows }), [getFlows]);
+
+  const flowColumnDefs = useMemo<ColDef<MinimalFlow>[]>(
+    () => [
+      {
+        headerName: "Name",
+        field: "name",
+        flex: 2,
+        cellRenderer: (p: ICellRendererParams<MinimalFlow>) => {
+          if (!p.data) return p.value;
+          return (
+            <HorusLink
+              to={`/flow?open=true&flowID=${p.data.savedID}&path=${p.data.path}`}
+              className="text-decoration-none"
+              style={{ color: "var(--pop-code)" }}
+            >
+              {p.data.name}
+            </HorusLink>
+          );
+        }
+      },
+      {
+        headerName: "Date",
+        field: "date",
+        width: 130,
+        valueFormatter: (p) =>
+          p.value
+            ? new Date(p.value).toLocaleDateString(undefined, {
+                month: "short",
+                day: "numeric",
+                year: "numeric"
+              })
+            : ""
+      },
+      {
+        headerName: "Size",
+        field: "size",
+        width: 90,
+        valueFormatter: (p) => formatSize(p.value)
+      },
+      {
+        headerName: "Duration",
+        field: "elapsed",
+        width: 120,
+        sortable: false,
+        filter: false,
+        cellRenderer: (p: ICellRendererParams<MinimalFlow>) => (
+          <FlowElapsed
+            startedTime={p.data?.startedTime}
+            finishedTime={p.data?.finishedTime}
+            elapsed={p.data?.elapsed ?? 0}
+          />
+        )
+      },
+      {
+        headerName: "Status",
+        field: "status",
+        width: 120,
+        cellRenderer: (p: ICellRendererParams<MinimalFlow>) => (
+          <FlowStatusView status={p.data!.status} />
+        ),
+        filterValueGetter: (p) => p.data?.status ?? ""
+      },
+      {
+        headerName: "Actions",
+        field: "savedID",
+        width: 150,
+        sortable: false,
+        filter: false,
+        cellRenderer: FlowActionsCell
+      }
+    ],
+    []
+  );
+
+  const corruptedColumnDefs = useMemo<ColDef<CorruptedFlow>[]>(
+    () => [
+      { headerName: "Name", field: "name", flex: 2 },
+      {
+        headerName: "Date",
+        field: "modDate",
+        width: 130,
+        valueFormatter: (p) =>
+          p.value != null ? (String(p.value).split(".")[0] ?? "-") : "-"
+      },
+      {
+        headerName: "Size",
+        field: "size",
+        width: 90,
+        valueFormatter: (p) => formatSize(p.value)
+      },
+      { headerName: "Reason", field: "reason", flex: 1 },
+      {
+        headerName: "Actions",
+        field: "id",
+        width: 90,
+        sortable: false,
+        filter: false,
+        cellRenderer: CorruptedActionsCell
+      }
+    ],
+    []
+  );
+
+  const otherFilesColumnDefs = useMemo<ColDef<FileData>[]>(
+    () => [
+      { headerName: "Name", field: "name", flex: 2 },
+      {
+        headerName: "Date",
+        field: "modDate",
+        width: 130,
+        valueFormatter: (p) =>
+          p.value != null ? (String(p.value).split(".")[0] ?? "-") : "-"
+      },
+      {
+        headerName: "Size",
+        field: "size",
+        width: 90,
+        valueFormatter: (p) => formatSize(p.value)
+      },
+      {
+        headerName: "Type",
+        field: "isDir",
+        width: 90,
+        valueFormatter: (p) =>
+          p.data?.isDir ? "Folder" : (p.data?.ext ?? "Unknown")
+      },
+      {
+        headerName: "Actions",
+        field: "id",
+        width: 90,
+        sortable: false,
+        filter: false,
+        cellRenderer: OtherFileActionsCell
+      }
+    ],
+    []
+  );
+
+  const defaultColDef = useMemo<ColDef>(
+    () => ({ sortable: true, resizable: true, filter: true }),
+    []
+  );
+
   if (fetchingRecents && !hasFetchedInitally) {
     return (
       <div className="mt-16 grid place-items-center">
@@ -76,88 +226,63 @@ export default function WebAppUserFlows() {
           }}
         >
           <h1 className="text-xl font-semibold">Your Flows</h1>
-          <div className="flow-table w-full p-2 svg-container">
-            <div className="header-row">Name</div>
-            <div className="header-row">Date</div>
-            <div className="header-row">Size</div>
-            <div className="header-row">Duration</div>
-            <div className="header-row">Status</div>
-            <div className="header-row">Open</div>
-            <div className="header-row">Clone</div>
-            <div className="header-row">Download</div>
-            <div className="header-row">Delete</div>
-            <hr className="p-0 m-0 w-full"></hr>
-            <hr className="p-0 m-0 w-full"></hr>
-            <hr className="p-0 m-0 w-full"></hr>
-            <hr className="p-0 m-0 w-full"></hr>
-            <hr className="p-0 m-0 w-full"></hr>
-            <hr className="p-0 m-0 w-full"></hr>
-            <hr className="p-0 m-0 w-full"></hr>
-            <hr className="p-0 m-0 w-full"></hr>
-            <hr className="p-0 m-0 w-full"></hr>
-            {recentFlows.map((flow) => (
-              <FlowRowView key={flow.savedID} flow={flow} getFlows={getFlows} />
-            ))}
+          <div className="ag-theme-quartz w-full">
+            <AgGridReact
+              rowData={recentFlows}
+              columnDefs={flowColumnDefs}
+              defaultColDef={defaultColDef}
+              context={gridContext}
+              domLayout="autoHeight"
+              suppressCellFocus
+              pagination
+              paginationPageSize={10}
+              paginationPageSizeSelector={[10, 25, 50, 100]}
+              getRowId={(p) => p.data.savedID ?? p.data.name}
+            />
           </div>
         </HorusContainer>
       )}
       {corruptedFlows && corruptedFlows.length > 0 && (
         <HorusContainer
           className="w-full flex flex-col justify-center items-center gap-2"
-          style={{
-            maxWidth: "1075px",
-            minWidth: "650px"
-          }}
+          style={{ maxWidth: "1075px", minWidth: "650px" }}
         >
           <h1 className="text-xl font-semibold">Corrupted flows</h1>
-          <div className="download-file-table w-full p-2 svg-container">
-            <div className="header-row">Name</div>
-            <div className="header-row">Date</div>
-            <div className="header-row">Size</div>
-            <div className="header-row">Reason</div>
-            <div className="header-row">Download</div>
-            <div className="header-row">Delete</div>
-            <hr className="p-0 m-0 w-full"></hr>
-            <hr className="p-0 m-0 w-full"></hr>
-            <hr className="p-0 m-0 w-full"></hr>
-            <hr className="p-0 m-0 w-full"></hr>
-            <hr className="p-0 m-0 w-full"></hr>
-            <hr className="p-0 m-0 w-full"></hr>
-            {corruptedFlows.map((corr) => (
-              <CorruptedFlowView
-                key={corr.id}
-                corruptedFlow={corr}
-                getFlows={getFlows}
-              />
-            ))}
+          <div className="ag-theme-quartz w-full">
+            <AgGridReact
+              rowData={corruptedFlows}
+              columnDefs={corruptedColumnDefs}
+              defaultColDef={defaultColDef}
+              context={gridContext}
+              domLayout="autoHeight"
+              suppressCellFocus
+              pagination
+              paginationPageSize={10}
+              paginationPageSizeSelector={[10, 25, 50, 100]}
+              getRowId={(p) => String(p.data.id ?? p.data.name)}
+            />
           </div>
         </HorusContainer>
       )}
       {otherDirectories && otherDirectories.length > 0 && (
         <HorusContainer
           className="w-full flex flex-col justify-center items-center gap-2"
-          style={{
-            maxWidth: "1075px",
-            minWidth: "650px"
-          }}
+          style={{ maxWidth: "1075px", minWidth: "650px" }}
         >
           <h1 className="text-xl font-semibold">Other files</h1>
-          <div className="download-file-table w-full p-2 svg-container">
-            <div className="header-row">Name</div>
-            <div className="header-row">Date</div>
-            <div className="header-row">Size</div>
-            <div className="header-row">Type</div>
-            <div className="header-row">Download</div>
-            <div className="header-row">Delete</div>
-            <hr className="p-0 m-0 w-full"></hr>
-            <hr className="p-0 m-0 w-full"></hr>
-            <hr className="p-0 m-0 w-full"></hr>
-            <hr className="p-0 m-0 w-full"></hr>
-            <hr className="p-0 m-0 w-full"></hr>
-            <hr className="p-0 m-0 w-full"></hr>
-            {otherDirectories.map((dir) => (
-              <OtherFileView key={dir.id} directory={dir} getFlows={getFlows} />
-            ))}
+          <div className="ag-theme-quartz w-full">
+            <AgGridReact
+              rowData={otherDirectories}
+              columnDefs={otherFilesColumnDefs}
+              defaultColDef={defaultColDef}
+              context={gridContext}
+              domLayout="autoHeight"
+              suppressCellFocus
+              pagination
+              paginationPageSize={10}
+              paginationPageSizeSelector={[10, 25, 50, 100]}
+              getRowId={(p) => String(p.data.id ?? p.data.name)}
+            />
           </div>
         </HorusContainer>
       )}
@@ -165,62 +290,39 @@ export default function WebAppUserFlows() {
   );
 }
 
-function CorruptedFlowView(props: {
-  corruptedFlow: CorruptedFlow;
-  getFlows: () => void;
-}) {
+function CorruptedActionsCell(params: ICellRendererParams<CorruptedFlow>) {
+  const corruptedFlow = params.data!;
+  const { getFlows } = params.context as { getFlows: () => void };
   const [isDownloading, setIsDownloading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
+  const horusAlert = useAlert();
   const horusConfirm = useConfirm();
 
   const downloadFile = async () => {
     setIsDownloading(true);
-
     try {
-      // Create a link to download the file
       const link = document.createElement("a");
-      const safeURL = encodeURIComponent(props.corruptedFlow["path"]);
+      const safeURL = encodeURIComponent(corruptedFlow["path"]);
       link.href = `${window.__HORUS_ROOT__}/users/downloadfile?path=${safeURL}`;
-
-      // Add the link to the document
       document.body.appendChild(link);
-
-      // Click the link
       link.click();
-
-      // Remove the link from the document
       document.body.removeChild(link);
     } finally {
       setIsDownloading(false);
     }
   };
 
-  const horusAlert = useAlert();
-
   const deleteFile = async () => {
     setIsDeleting(true);
-
     try {
-      const body = JSON.stringify({
-        path: props.corruptedFlow["path"]
-      });
-
+      const body = JSON.stringify({ path: corruptedFlow["path"] });
       const response = await horusPost("/users/deletefile", null, body);
-
-      if (!response) {
-        setIsDeleting(false);
-        return;
-      }
-
+      if (!response) { setIsDeleting(false); return; }
       const data = await response.json();
-
       if (!data.ok) {
         await horusAlert("Error deleting file: " + data.msg);
       } else {
-        // Get the flows again
-        await props.getFlows();
-
+        await getFlows();
         setIsDeleting(false);
       }
     } finally {
@@ -230,33 +332,22 @@ function CorruptedFlowView(props: {
 
   if (isDownloading || isDeleting) {
     return (
-      <RotatingLines
-        size="25px"
-        style={{
-          // Center the loading icon
-          margin: "0 auto"
-        }}
-      />
+      <div className="flex items-center h-full">
+        <RotatingLines size="25px" />
+      </div>
     );
   }
 
   return (
-    <>
-      <div className="overflow-x-auto">{props.corruptedFlow.name}</div>
-      <div>{props.corruptedFlow.modDate?.toString().split(".")[0] ?? "-"}</div>
-      <div>
-        <FlowSize size={props.corruptedFlow.size} />
-      </div>
-      <div className="overflow-x-auto">{props.corruptedFlow.reason}</div>
+    <div className="flex flex-row gap-2 items-center h-full">
       <CloudDownload
-        className="cursor-pointer w-6 h-6"
-        style={{
-          color: "var(--pop-code)"
-        }}
+        className="cursor-pointer w-5 h-5"
+        style={{ color: "var(--pop-code)" }}
         onClick={downloadFile}
       />
       <TrashIcon
-        className="w-6 h-6 text-center cursor-pointer items-center justify-center"
+        className="cursor-pointer w-5 h-5"
+        style={{ color: "var(--danger-red)" }}
         onClick={async () => {
           if (
             await horusConfirm(
@@ -266,66 +357,44 @@ function CorruptedFlowView(props: {
             deleteFile();
           }
         }}
-        style={{
-          color: "var(--danger-red)"
-        }}
       />
-    </>
+    </div>
   );
 }
 
-function OtherFileView(props: { directory: FileData; getFlows: () => void }) {
+function OtherFileActionsCell(params: ICellRendererParams<FileData>) {
+  const directory = params.data!;
+  const { getFlows } = params.context as { getFlows: () => void };
   const [isDownloading, setIsDownloading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const horusAlert = useAlert();
+  const horusConfirm = useConfirm();
 
   const downloadFile = async () => {
     setIsDownloading(true);
-
     try {
-      // Create a link to download the file
       const link = document.createElement("a");
-      const safeURL = encodeURIComponent(props.directory["path"]);
+      const safeURL = encodeURIComponent(directory["path"]);
       link.href = `${window.__HORUS_ROOT__}/users/downloadfile?path=${safeURL}`;
-
-      // Add the link to the document
       document.body.appendChild(link);
-
-      // Click the link
       link.click();
-
-      // Remove the link from the document
       document.body.removeChild(link);
     } finally {
       setIsDownloading(false);
     }
   };
 
-  const horusAlert = useAlert();
-  const horusConfirm = useConfirm();
-
   const deleteFile = async () => {
     setIsDeleting(true);
-
     try {
-      const body = JSON.stringify({
-        path: props.directory["path"]
-      });
-
+      const body = JSON.stringify({ path: directory["path"] });
       const response = await horusPost("/users/deletefile", null, body);
-
-      if (!response) {
-        setIsDeleting(false);
-        return;
-      }
-
+      if (!response) { setIsDeleting(false); return; }
       const data = await response.json();
-
       if (!data.ok) {
         await horusAlert("Error deleting file: " + data.msg);
       } else {
-        // Get the flows again
-        await props.getFlows();
-
+        await getFlows();
         setIsDeleting(false);
       }
     } finally {
@@ -335,35 +404,22 @@ function OtherFileView(props: { directory: FileData; getFlows: () => void }) {
 
   if (isDownloading || isDeleting) {
     return (
-      <RotatingLines
-        size="25px"
-        style={{
-          // Center the loading icon
-          margin: "0 auto"
-        }}
-      />
+      <div className="flex items-center h-full">
+        <RotatingLines size="25px" />
+      </div>
     );
   }
 
   return (
-    <>
-      <div className="overflow-x-auto">{props.directory.name}</div>
-      <div>{props.directory.modDate?.toString().split(".")[0] ?? "-"}</div>
-      <div>
-        <FlowSize size={props.directory.size} />
-      </div>
-      <div>
-        {props.directory.isDir ? "Folder" : (props.directory.ext ?? "Unknown")}
-      </div>
+    <div className="flex flex-row gap-2 items-center h-full">
       <CloudDownload
-        className="cursor-pointer w-6 h-6"
-        style={{
-          color: "var(--pop-code)"
-        }}
+        className="cursor-pointer w-5 h-5"
+        style={{ color: "var(--pop-code)" }}
         onClick={downloadFile}
       />
       <TrashIcon
-        className="w-6 h-6 text-center cursor-pointer items-center justify-center"
+        className="cursor-pointer w-5 h-5"
+        style={{ color: "var(--danger-red)" }}
         onClick={async () => {
           if (
             await horusConfirm(
@@ -373,44 +429,42 @@ function OtherFileView(props: { directory: FileData; getFlows: () => void }) {
             deleteFile();
           }
         }}
-        style={{
-          color: "var(--danger-red)"
-        }}
       />
-    </>
+    </div>
   );
 }
 
-function FlowRowView({
-  flow,
-  getFlows
-}: {
-  flow: MinimalFlow;
-  getFlows: () => void;
-}) {
+function FlowActionsCell(params: ICellRendererParams<MinimalFlow>) {
+  const flow = params.data!;
+  const { getFlows } = params.context as { getFlows: () => void };
+  const isActive =
+    flow.status === FlowStatus.RUNNING || flow.status === FlowStatus.QUEUED;
+
   return (
-    <>
-      <div className="text-center overflow-x-auto">{flow.name}</div>
-      <div className="text-center">{flow.date}</div>
-      <FlowSize size={flow.size} />
-      <FlowElapsed
-        startedTime={flow.startedTime}
-        finishedTime={flow.finishedTime}
-        elapsed={flow.elapsed}
-      />
-      <div className="text-center flex justify-center items-baseline">
-        <FlowStatusView status={flow.status} />
-      </div>
-      <HorusLink
+    <div className="flex flex-row gap-2 items-center justify-center h-full">
+      {/* <HorusLink
         to={`/flow?open=true&flowID=${flow.savedID}&path=${flow.path}`}
       >
-        <OpenFlowIcon className="cursor-pointer w-6 h-6" />
-      </HorusLink>
-      <FlowClone flow={flow} getFlows={getFlows} />
-      <FlowDownload flow={flow} />
-      <DeleteFlow flow={flow} getFlows={getFlows} />
-    </>
+        <OpenFlowIcon className="cursor-pointer w-5 h-5" />
+      </HorusLink> */}
+      {!isActive && (
+        <>
+          <FlowClone flow={flow} getFlows={getFlows} />
+          <FlowDownload flow={flow} />
+          <DeleteFlow flow={flow} getFlows={getFlows} />
+        </>
+      )}
+    </div>
   );
+}
+
+function formatSize(size?: number): string {
+  if (size !== undefined && size !== null) {
+    if (size > 1000) return `${(size / 1000).toFixed(2)} GB`;
+    if (size < 1) return `${(size * 1000).toFixed(2)} KB`;
+    return `${size.toFixed(2)} MB`;
+  }
+  return "-";
 }
 
 function DeleteFlow({
@@ -560,22 +614,6 @@ function FlowClone({
 
   return <CopyIcon className="cursor-pointer w-6 h-6" onClick={cloneFlow} />;
 }
-
-function FlowSize({ size }: { size?: number }) {
-  if (size || size === 0) {
-    // The size are MB, but if higher than 1000, then it's GB
-    if (size > 1000) {
-      return <div>{(size / 1000).toFixed(2)} GB</div>;
-    } else if (size < 1) {
-      return <div>{(size * 1000).toFixed(2)} KB</div>;
-    } else {
-      return <div>{size.toFixed(2) ?? 0} MB</div>;
-    }
-  }
-
-  return <div>-</div>;
-}
-
 function DeleteFlowModal({
   flow,
   getFlows
