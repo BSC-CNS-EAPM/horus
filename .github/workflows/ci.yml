@@ -119,7 +119,7 @@ jobs:
               curl -fsSL https://rpm.nodesource.com/setup_20.x | bash - && dnf install -y nodejs
               curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xvj -C /usr/local/bin --strip-components=1 bin/micromamba
               micromamba env create -f Devtools/Environment/conda_horus.yaml -n horus_rocky8 -y
-              micromamba run -n horus_rocky8 pip install 'pywebview[qt]==5.4'
+              micromamba run -n horus_rocky8 pip install 'pywebview==5.4' 'PyQt5' 'PyQtWebEngine' 'QtPy'
               npm i --legacy-peer-deps
               micromamba run -n horus_rocky8 npm run build
               npm run distribute

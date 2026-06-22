@@ -82,14 +82,7 @@ cd dist
 # # Remove the rpmbuild folder
 # rm -rf ~/rpmbuild/
 
-echo "Removing libstdc++.so.6 from the bundle (issue #68)"
-
-# The library is in the _internal folder of the bundle
-# Removed to avoid conflicts between this library and the system one
-
-# TODO: Use internal PIP so that we don't need to do this, as the
-# dependencies will be compiled with the internal libstdc++.so.6
-rm -rf Horus/_internal/libstdc++.so.6
+echo "Keeping bundled libstdc++.so.6 so the app is not affected by the system libstdc++ version"
 
 # # Zip the Horus folder
 # zip -rq $filename.zip Horus
