@@ -9,12 +9,6 @@ echo "Version: $version"
 # Get the system architecture (we are in RHEL/CentOS, so it will always be x86_64)
 arch=$(uname -m)
 
-# Get the system name (el8, ubuntu, etc)
-system=$(lsb_release -is)
-
-# Set a filename variable
-filename=Horus-$version-$arch-$system-QT5
-
 # Go to the dist folder
 cd dist
 
