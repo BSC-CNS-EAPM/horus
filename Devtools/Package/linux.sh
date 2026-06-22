@@ -47,7 +47,7 @@ elif [ -f "/etc/redhat-release" ]
     if [ $osName = "rocky" ]
     then
       osName="Rocky"
-    else [ $osName = "centos" ]
+    elif [ $osName = "centos" ]
       osName="CentOS"
     fi
 

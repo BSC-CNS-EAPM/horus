@@ -58,6 +58,11 @@ jobs:
         with:
           node-version: "20"
 
+      - name: Set version from tag
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          sed -i "s/APP_VERSION = .*/APP_VERSION = $VERSION/" App/APP_INFO
+
       - name: Install GTK4 system libs
         run: sudo apt-get install -y libgirepository1.0-dev gcc libgtk-4-dev
 
@@ -97,16 +102,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set version from tag
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          sed -i "s/APP_VERSION = .*/APP_VERSION = $VERSION/" App/APP_INFO
+
       - name: Build in Rocky Linux 8 container
         run: |
           docker run --rm \
             -v $(pwd):/workspace \
             -w /workspace \
+            -e QT_QPA_PLATFORM=offscreen \
             rockylinux:8 bash -c "
-              dnf install -y curl git
+              set -e
+              dnf install -y curl git bzip2 libxcb libxkbcommon-x11
               curl -fsSL https://rpm.nodesource.com/setup_20.x | bash - && dnf install -y nodejs
-              curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xvj bin/micromamba
-              export PATH=/workspace/bin:\$PATH
+              curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xvj -C /usr/local/bin --strip-components=1 bin/micromamba
               micromamba env create -f Devtools/Environment/conda_horus.yaml -n horus_rocky8 -y
               micromamba run -n horus_rocky8 pip install 'pywebview[qt]==5.4'
               npm i --legacy-peer-deps
@@ -132,6 +143,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+
+      - name: Set version from tag
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          sed -i '' "s/APP_VERSION = .*/APP_VERSION = $VERSION/" App/APP_INFO
 
       - name: Setup Micromamba environment
         uses: mamba-org/setup-micromamba@v2
@@ -172,6 +188,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+
+      - name: Set version from tag
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          sed -i '' "s/APP_VERSION = .*/APP_VERSION = $VERSION/" App/APP_INFO
 
       - name: Setup Micromamba environment
         uses: mamba-org/setup-micromamba@v2
@@ -223,6 +244,7 @@ jobs:
             -e TWINE_PASSWORD=$TWINE_PASSWORD \
             quay.io/pypa/manylinux2014_x86_64 \
             bash -c "
+              yum install -y zip unzip &&
               export PATH=/opt/python/cp312-cp312/bin:\$PATH &&
               pip install cython==3.0.2 twine==6.1.0 mypy==1.8 pydantic==2.11.7 pathvalidate==3.2.0 setuptools==80.8.0 wheel==0.45.1 &&
               bash Devtools/Compile/build_horusapi.sh &&
@@ -251,6 +273,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          shopt -s globstar
           VERSION=${GITHUB_REF#refs/tags/}
           gh release create "$VERSION" \
             --title "Horus $VERSION" \
