@@ -121,10 +121,14 @@ jobs:
 
       - name: Build Horus and package in Rocky Linux 8 container
         run: |
+          VERSION=${GITHUB_REF#refs/tags/}
           docker run --rm \
             -v $(pwd):/workspace \
             -w /workspace \
             -e QT_QPA_PLATFORM=offscreen \
+            -e GIT_TAG=$VERSION \
+            -e GIT_BRANCH=$VERSION \
+            -e GIT_COMMIT=${GITHUB_SHA::8} \
             rockylinux:8 bash -c "
               set -e
               dnf install -y curl git bzip2 gcc gcc-c++ make libxcb libxkbcommon-x11
