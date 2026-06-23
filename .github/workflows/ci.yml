@@ -127,7 +127,7 @@ jobs:
             -e QT_QPA_PLATFORM=offscreen \
             rockylinux:8 bash -c "
               set -e
-              dnf install -y curl git bzip2 libxcb libxkbcommon-x11
+              dnf install -y curl git bzip2 gcc gcc-c++ make libxcb libxkbcommon-x11
               curl -fsSL https://rpm.nodesource.com/setup_20.x | bash - && dnf install -y nodejs
               curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xvj -C /usr/local/bin --strip-components=1 bin/micromamba
               micromamba env create -f Devtools/Environment/conda_horus.yaml -n horus_rocky8 -y
@@ -218,7 +218,7 @@ jobs:
               pip install cython==3.0.2 twine==6.1.0 mypy==1.8 pydantic==2.11.7 pathvalidate==3.2.0 setuptools==80.8.0 wheel==0.45.1 &&
               bash Devtools/Compile/build_horusapi.sh &&
               auditwheel repair dist/*.whl &&
-              twine upload wheelhouse/*.whl
+              twine upload --skip-existing wheelhouse/*.whl
             "
 
       - name: Fix workspace permissions
