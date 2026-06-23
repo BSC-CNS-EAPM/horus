@@ -246,12 +246,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          shopt -s globstar
           VERSION=${GITHUB_REF#refs/tags/}
           gh release create "$VERSION" \
             --title "Horus $VERSION" \
             --notes "Release $VERSION" \
-            dist-artifacts/**/*
+            $(find dist-artifacts -type f)
 
   build_docs:
     runs-on: perry
