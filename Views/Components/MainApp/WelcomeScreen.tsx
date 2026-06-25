@@ -53,7 +53,7 @@ export default function SplashScreen() {
   return (
     <>
       <WelcomeToHorus setModalContent={updateModalContent} />
-      <div className="splash-container h-full flex flex-col justify-center gap-4 items-center">
+      <div className="splash-container h-full flex flex-col justify-start gap-4 items-center">
         <div className="pt-8 flex flex-row flex-wrap justify-center items-center w-full gap-8 zoom-in-animation text-white">
           <div className="flex gap-2 p-2 flex-wrap justify-center flex-direction-splash-buttons">
             <CreateNewFlow />
@@ -102,7 +102,7 @@ function ModalView(props: {
       maxContentSize={{
         width: "80vw"
       }}
-      onHide={(props.modal.allowBlurClose ?? true) ? props.onHide : () => {}}
+      onHide={(props.modal.allowBlurClose ?? true) ? props.onHide : () => { }}
     >
       {props.modal.body}
     </BlurredModal>
