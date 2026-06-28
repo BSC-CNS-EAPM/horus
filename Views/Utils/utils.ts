@@ -256,11 +256,7 @@ export async function fetchWithProgress(
   }
 
   const contentLength = response.headers.get("Content-Length");
-  if (!contentLength) {
-    throw new Error("Content-Length header is missing.");
-  }
-
-  const totalBytes = parseInt(contentLength, 10);
+  const totalBytes = contentLength ? parseInt(contentLength, 10) : undefined;
   let loadedBytes = 0;
 
   const reader = response.body.getReader();
@@ -276,8 +272,10 @@ export async function fetchWithProgress(
             }
 
             loadedBytes += value.length;
-            const percentage = (loadedBytes / totalBytes) * 100;
-            onProgress(percentage);
+            if (totalBytes !== undefined) {
+              const percentage = (loadedBytes / totalBytes) * 100;
+              onProgress(percentage);
+            }
 
             controller.enqueue(value);
             read();
