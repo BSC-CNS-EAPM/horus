@@ -1,6 +1,22 @@
 import pytest
 from unittest.mock import patch, MagicMock
 from HorusAPI import PluginVariable, PluginBlock, VariableTypes, VariableList, VariableGroup
+from HorusAPI import SlurmJob
+
+
+@pytest.mark.parametrize(
+    "array_task_id, expected",
+    [
+        ("5", [5]),  # single task (e.g. from --array=5-5) used to crash
+        ("1-1", [1]),  # single-element range
+        ("1-3", [1, 2, 3]),  # regular range
+        ("1-10%2", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]),  # range with throttle
+        ("1,3,5", [1, 3, 5]),  # comma list
+        ("1-3,7", [1, 2, 3, 7]),  # mixed range and list
+    ],
+)
+def test_expand_array_task_ids(array_task_id, expected):
+    assert SlurmJob.expandArrayTaskIds(array_task_id) == expected
 
 
 def test_disabled_variables_output():
