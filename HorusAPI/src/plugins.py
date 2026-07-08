@@ -2648,14 +2648,15 @@ class SlurmJob(HorusPydanticModel):
         return jobs
 
     @staticmethod
-    def expandArrayTaskIds(array_task_id: str) -> typing.List[int]:
+    def expandArrayTaskIds(array_task_id: typing.Optional[str]) -> typing.List[int]:
         """
         Expand a SLURM ``ArrayTaskId`` spec into individual task indices.
 
         SLURM reports the array task id in several forms depending on the array:
         a single id (``"5"``), a range (``"1-10"``), a range with a throttle
         (``"1-10%2"``), a comma-separated list (``"1,3,5"``), or a mix of these
-        (``"1-3,7"``). This normalises all of them into a list of ints.
+        (``"1-3,7"``). This normalises all of them into a list of ints. ``None``
+        or an empty spec yields an empty list.
         """
         # Drop any "%N" throttle suffix (e.g. "1-10%2" -> "1-10")
         spec = (array_task_id or "").split("%")[0]

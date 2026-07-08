@@ -7,6 +7,8 @@ from HorusAPI import SlurmJob
 @pytest.mark.parametrize(
     "array_task_id, expected",
     [
+        (None, []),  # no array info
+        ("", []),  # empty spec
         ("5", [5]),  # single task (e.g. from --array=5-5) used to crash
         ("1-1", [1]),  # single-element range
         ("1-3", [1, 2, 3]),  # regular range
