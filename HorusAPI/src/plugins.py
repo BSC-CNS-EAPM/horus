@@ -2503,7 +2503,13 @@ class SlurmJob(HorusPydanticModel):
         Retruns a formatted string for running the scontrol command
         """
 
-        return "scontrol show jobid {} -d --oneline".format(jid)
+        # NOTE: do not add the -d/--details flag. On some clusters (e.g. BSC)
+        # -d makes scontrol additionally load the node allocation details, which
+        # unprivileged accounts are not allowed to read once the job is running
+        # ("slurm_load_nodes error: Access/permission denied"). On those systems
+        # -d also exits non-zero even when it prints the job info. The plain
+        # form still reports JobState and every field Horus parses.
+        return "scontrol show jobid {} --oneline".format(jid)
 
     def updateLogs(self, remote: RemoteUnion):
         """

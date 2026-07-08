@@ -197,6 +197,41 @@ def test_transfer_from_remote(mock_remotes_api_remote):
     mock_remotes_api_remote._internalTransferFrom.assert_called_once()
 
 
+def test_remote_command_raises_commandfailed_on_nonzero_exit(mock_remotes_api_remote):
+    """
+    A non-zero remote command must raise CommandFailed, not fabric's
+    UnexpectedExit.
+
+    Fabric's Connection.run raises UnexpectedExit on a non-zero exit unless
+    warn=True is passed. Callers such as SlurmJob.updateLogs catch CommandFailed
+    to handle *expected* failures (e.g. scontrol returning "Invalid job id
+    specified" for a job that has already finished). If UnexpectedExit escaped
+    instead, the job status would never update and the flow would hang.
+    """
+    from Server.RemotesManager import CommandFailed
+    from invoke.exceptions import UnexpectedExit
+
+    remote = mock_remotes_api_remote
+
+    failed_result = MagicMock()
+    failed_result.failed = True
+    failed_result.stdout = "out"
+    failed_result.stderr = "slurm_load_jobs error: Invalid job id specified"
+
+    def fake_run(_command, **kwargs):
+        # Emulate fabric: only warn=True suppresses UnexpectedExit
+        if not kwargs.get("warn", False):
+            raise UnexpectedExit(failed_result)
+        return failed_result
+
+    remote.conn.run.side_effect = fake_run
+
+    with pytest.raises(CommandFailed) as excinfo:
+        remote.command("scontrol show jobid 123 -d --oneline")
+
+    assert "Invalid job id specified" in excinfo.value.stderr
+
+
 def test_local_command_uses_sshpass_when_credentials_are_configured():
     local_config = {
         "name": RemotesManager.LOCAL_REMOTE_NAME,
