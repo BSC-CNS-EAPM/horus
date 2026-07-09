@@ -2447,7 +2447,16 @@ class FlowManager:
             externalFlow = ExternalSlurmFlow(slurmJob, local_remote)
 
         else:
-            external_process = SubprocessManager.callPopen(command, wait=False, env=env)
+            # comunicate=False so the detached process' stdout/stderr go to
+            # DEVNULL instead of a PIPE. With wait=False nobody ever drains the
+            # pipe, so once the child writes ~64KB (easily reached in --debug,
+            # paramiko is very verbose) the OS pipe buffer fills and the child
+            # blocks forever on write, freezing the whole flow (it appears stuck
+            # "running"). The flow already logs to its own .logs/*.log file, so
+            # the pipe is redundant.
+            external_process = SubprocessManager.callPopen(
+                command, wait=False, comunicate=False, env=env
+            )
             externalFlow = ExternalProcessFlow(external_process.pid)
 
         # Save the process
