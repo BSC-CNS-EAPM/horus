@@ -428,6 +428,72 @@ class Flow:
     The status of the flow
     """
 
+    VALID_NAME_RE: typing.ClassVar[re.Pattern] = re.compile(r"^[a-zA-Z0-9 _\-.]+$")
+    """
+    Allowed characters in a flow name: alphanumeric, space, underscore, hyphen, dot.
+    """
+
+    VALID_PATH_COMPONENT_RE: typing.ClassVar[re.Pattern] = re.compile(r"^[a-zA-Z0-9_\-.]+$")
+    """
+    Allowed characters in the filename component of a flow path (no spaces).
+    """
+
+    @staticmethod
+    def validateName(name: str) -> None:
+        """
+        Validates a flow name against :attr:`VALID_NAME_RE`.
+
+        :raises ValueError: If the name contains characters outside
+            alphanumeric, space, underscore, hyphen or dot.
+        """
+        stripped = name.strip()
+        if not stripped:
+            raise ValueError("Flow name must not be empty.")
+        if not Flow.VALID_NAME_RE.match(stripped):
+            raise ValueError(
+                f"Invalid flow name '{name}'. "
+                "Names may only contain alphanumeric characters, spaces, "
+                "underscores, hyphens and dots."
+            )
+
+    @staticmethod
+    def validatePathComponent(path: str) -> None:
+        """
+        Validates the filename component (without extension) of *path*
+        against :attr:`VALID_PATH_COMPONENT_RE`.
+
+        :raises ValueError: If the filename contains characters outside
+            alphanumeric, underscore, hyphen or dot.
+        """
+        filename = os.path.splitext(os.path.basename(path))[0]
+        if not filename:
+            raise ValueError(f"Flow path '{path}' has an empty filename component.")
+        if not Flow.VALID_PATH_COMPONENT_RE.match(filename):
+            raise ValueError(
+                f"Invalid flow filename '{filename}' in path '{path}'. "
+                "Filenames may only contain alphanumeric characters, "
+                "underscores, hyphens and dots (no spaces)."
+            )
+
+    @staticmethod
+    def sanitizeName(name: str) -> str:
+        """
+        Sanitizes a flow name by replacing invalid characters with underscores.
+
+        Characters not matching [a-zA-Z0-9 _\\.\\-] are replaced with underscores.
+        The result is stripped and falls back to "Unnamed_flow" if empty.
+
+        :param name: The name to sanitize
+        :returns: The sanitized name (guaranteed to pass :meth:`validateName`)
+        """
+        # Replace any character not in the allowed set with underscore
+        sanitized = re.sub(r"[^a-zA-Z0-9 _\-.]", "_", name)
+        # Strip leading/trailing whitespace
+        sanitized = sanitized.strip()
+        if not sanitized:
+            sanitized = "Unnamed_flow"
+        return sanitized
+
     @property
     def dateAsInt(self):
         """
@@ -1991,6 +2057,10 @@ class FlowManager:
         if flowPath is None:
             raise Exception(f"The flow '{flow.name}' does not have a path")
 
+        # Validate name and path component before doing anything else
+        Flow.validateName(flow.name)
+        Flow.validatePathComponent(flowPath)
+
         # Read the savedID from the file if it exists
         overwriteCaution = False
         if os.path.exists(flowPath) and not overwrite:
@@ -2064,7 +2134,8 @@ class FlowManager:
 
             if not AppDelegate().desktop:
                 overwrite = True
-                flowInstance.path = os.path.join("flows", flowInstance.name + ".flow")
+                _safeName = flowInstance.name.replace(" ", "_")
+                flowInstance.path = os.path.join("flows", _safeName + ".flow")
             else:  # On desktop mode, open the file picker
                 filename = flowInstance.name + ".flow"
                 flowPath = AppDelegate().saveFileSelectDialog(
@@ -2106,9 +2177,66 @@ class FlowManager:
         # Read the flow file
         flow = Flow.read(flowPath)
 
-        # Add the flow to the recent flows list
-        if addToRecents:
-            self._addToRecentFlows(flow)
+        # Check if the flow name needs migration (invalid characters)
+        try:
+            Flow.validateName(flow.name)
+        except ValueError:
+            old_name = flow.name
+            old_flow_path = flowPath
+            old_flow_work_dir = Flow.flowWorkDir(old_flow_path)
+            new_name = Flow.sanitizeName(old_name)
+
+            # For filename, replace spaces with underscores to create path-safe component
+            safe_filename = new_name.replace(" ", "_")
+
+            flow_dir = os.path.dirname(flowPath)
+            new_flow_path = os.path.join(flow_dir, safe_filename + ".flow")
+
+            # Find a unique path if either the flow file or its work dir already exists
+            counter = 2
+            while os.path.exists(new_flow_path) or os.path.exists(Flow.flowWorkDir(new_flow_path)):
+                new_flow_path = os.path.join(flow_dir, f"{safe_filename}_{counter}.flow")
+                counter += 1
+
+            new_flow_work_dir = Flow.flowWorkDir(new_flow_path)
+
+            # Migrate the flow work folder if needed.
+            # This preserves existing outputs and state under the new sanitized name.
+            if (
+                old_flow_work_dir != new_flow_work_dir
+                and os.path.exists(old_flow_work_dir)
+                and not os.path.exists(new_flow_work_dir)
+            ):
+                try:
+                    shutil.move(old_flow_work_dir, new_flow_work_dir)
+                except Exception as exc:  # pylint: disable=broad-exception-caught
+                    logging.getLogger("Horus").warning(
+                        "Could not migrate flow work dir from '%s' to '%s': %s",
+                        old_flow_work_dir,
+                        new_flow_work_dir,
+                        str(exc),
+                    )
+
+            flow.name = new_name
+            flow.path = new_flow_path
+            flow.savedID = None  # Reset to be regenerated from new path
+
+            # Save the migrated flow (without calling _addToRecentFlows twice)
+            self._saveFlowInternal(flow, overwrite=False, addToRecents=addToRecents)
+
+            logging.getLogger("Horus").info(
+                "Migrated flow with invalid name from '%s' to '%s' at '%s'",
+                old_name,
+                new_name,
+                new_flow_path,
+            )
+
+            # Update flowPath reference for subsequent operations
+            flowPath = new_flow_path
+        else:
+            # Add the flow to the recent flows list only if no migration occurred
+            if addToRecents:
+                self._addToRecentFlows(flow)
 
         # If the flow is marked as running but its not present
         # in the running flows list, set the status to FAILED
@@ -2147,11 +2275,11 @@ class FlowManager:
                 if flowPath in self._flowProcesses:
                     self._flowProcesses.pop(flowPath)
 
-        if resetFlowSockets:
+        if resetFlowSockets and os.path.exists(Flow.socketPath(flowPath)):
             os.remove(Flow.socketPath(flowPath))
 
         # Update the horusSocket
-        from App import AppDelegate
+        from App import AppDelegate  # pylint: disable=import-outside-toplevel
 
         Flow.saveSocketFile(flowPath, socketBaseURL or AppDelegate().server.baseURL)
 
