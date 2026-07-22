@@ -194,6 +194,11 @@ def test_install_dep_internal_success(mocker):
 
     settingsManager = SettingsManager("AppSupport")
 
+    mocker.patch(
+        "Server.PluginManager.plugin_manager.ExternalPython._get_interpreter_from_settings",
+        return_value="python",
+    )
+
     from App import AppDelegate
 
     # Set the app delegate to be on "Server mode"

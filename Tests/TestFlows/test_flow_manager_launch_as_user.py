@@ -1,3 +1,4 @@
+import shlex
 import types
 from unittest.mock import patch
 
@@ -78,7 +79,8 @@ def test_build_impersonated_command_su(tmp_path):
 
     assert wrapped[0:3] == ["su", "-", "alice"]
     assert wrapped[3] == "-c"
-    assert "my flow.flow" not in wrapped[4]
+    assert wrapped[4] == " ".join(shlex.quote(part) for part in command)
+    assert shlex.quote("my flow.flow") in wrapped[4]
 
 
 def test_build_impersonated_command_requires_local_username(tmp_path):

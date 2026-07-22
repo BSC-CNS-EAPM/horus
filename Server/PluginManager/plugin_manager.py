@@ -1186,7 +1186,7 @@ class PluginManager(metaclass=HorusSingleton):
         Verifies that the plugin is compatible with the current platform.
         """
         # Get the Horus version, and parse correctly development versions
-        parsedHorusVersion = re.match(r"(\d+(?:\.\d+){0,2})", HorusAPIVersion)
+        parsedHorusVersion = re.search(r"(\d+(?:\.\d+){0,2})", HorusAPIVersion)
         parsedHorusVersion = (
             parsedHorusVersion.group(1) if parsedHorusVersion else HorusAPIVersion
         )
