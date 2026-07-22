@@ -1,15 +1,23 @@
 // React imports
+import { useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+
+// AgGrid
+import { AgGridReact } from "ag-grid-react";
+import { ColDef, RowClickedEvent } from "ag-grid-community";
+import "ag-grid-community/styles/ag-grid.css";
+import "ag-grid-community/styles/ag-theme-quartz.css";
 
 // Horus web-server
 import { horusGet } from "../../Utils/utils";
 
 // Horus components
 import { FlowStatusView } from "./flow_status";
-import { MinimalFlow } from "../FlowBuilder/flow.types";
+import { MinimalFlow, FlowStatus } from "../FlowBuilder/flow.types";
 import { FileData } from "chonky";
 import { BreakLongUnderscoreNames } from "../FlowBuilder/Blocks/block.view";
 import { HorusLink } from "../reusable";
+import { navigateTo } from "@/Utils/navigationService";
 
 type RecentUserFlowProps = {
   flows: MinimalFlow[];
@@ -18,68 +26,94 @@ type RecentUserFlowProps = {
 export default function RecentUserFlows(props: RecentUserFlowProps) {
   const { flows } = props;
 
-  const ParsedFlowPath = ({ flow }: { flow: MinimalFlow }) => {
-    if (flow.path) {
-      const path = flow.path.split("/");
-      // Remove from the path the first and last elements
-      // As the flow is the full path /path/to/flow
-      // After the split we have ["", "path", "to", "flow", "file.flow"]
-      // For the first element we dont want to show it empty
-      // For the last element we dont want to show the file name
-      path.shift();
-      return (
-        <div className="flex flex-row gap-1 overflow-x-auto justify-start">
-          {path.map((p, index) => {
-            return (
-              <div
-                key={index}
-                className="flex flex-row gap-1 predefined-flow-plugin m-0"
-              >
-                {index > 0 && <div>▸</div>}
-                <span className="whitespace-nowrap">{p}</span>
-              </div>
-            );
-          })}
-        </div>
-      );
-    }
-
-    return <div>Unknown path</div>;
-  };
-
   const getURL = (flow: MinimalFlow) => {
     const open = window.location.search.includes("open=true") ? "yes" : "true";
     return `/flow?open=${open}&flowID=${flow.savedID}&path=${flow.path}`;
   };
 
+  const columnDefs = useMemo<ColDef<MinimalFlow>[]>(
+    () => [
+      {
+        headerName: "Name",
+        field: "name",
+        flex: 2,
+        cellRenderer: (params: { value: string }) => (
+          <BreakLongUnderscoreNames name={params.value} />
+        )
+      },
+      {
+        headerName: "Status",
+        field: "status",
+        width: 120,
+        cellRenderer: (params: { value: FlowStatus }) => (
+          <FlowStatusView status={params.value} />
+        ),
+        filterValueGetter: (params) => params.data?.status ?? ""
+      },
+      {
+        headerName: "Date",
+        field: "date",
+        width: 110,
+        valueFormatter: (params) =>
+          params.value
+            ? new Date(params.value).toLocaleDateString(undefined, {
+                month: "short",
+                day: "numeric",
+                year: "numeric"
+              })
+            : ""
+      },
+      {
+        headerName: "Path",
+        field: "path",
+        flex: 1,
+        valueFormatter: (params) => {
+          if (!params.value) return "Unknown path";
+          const parts = (params.value as string)
+            .split("/")
+            .filter((p: string) => p.length > 0);
+          return parts.join(" ▸ ");
+        }
+      }
+    ],
+    []
+  );
+
+  const defaultColDef = useMemo<ColDef>(
+    () => ({ sortable: true, filter: true, resizable: true }),
+    []
+  );
+
+  const onRowClicked = useCallback(
+    (e: RowClickedEvent<MinimalFlow>) => {
+      if (e.data) navigateTo(getURL(e.data));
+    },
+    []
+  );
+
+  if (!flows || flows.length === 0) {
+    return (
+      <div className="h-full flex justify-center items-center">
+        No recent flows
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col gap-1 h-full">
-      {flows?.length > 0 ? (
-        flows.map((flow) => (
-          <HorusLink
-            role="button"
-            to={getURL(flow)}
-            key={flow.savedID ?? "Unknown flow ID"}
-            className="predefined-flow w-full max-w-[380px]"
-          >
-            <div className="flex flex-row justify-between">
-              <div className="predefined-flow-name max-w-[260px] cut-text">
-                <BreakLongUnderscoreNames name={flow.name} />
-              </div>
-              <div className="text-base">
-                <FlowStatusView status={flow.status} />
-              </div>
-            </div>
-            <div className="predefined-flow-plugin break-keep	">
-              {<ParsedFlowPath flow={flow} />}
-            </div>
-          </HorusLink>
-        ))
-      ) : (
-        <div className="h-full flex justify-center items-center">
-          No recent flows
-        </div>
-      )}
+    <div className="ag-theme-quartz w-full">
+      <AgGridReact
+        rowData={flows}
+        columnDefs={columnDefs}
+        defaultColDef={defaultColDef}
+        domLayout="autoHeight"
+        rowStyle={{ cursor: "pointer" }}
+        suppressCellFocus
+        onRowClicked={onRowClicked}
+        getRowId={(params) => params.data.savedID ?? params.data.name}
+        pagination
+        paginationPageSize={10}
+        paginationPageSizeSelector={[10, 25, 50, 100]}
+      />
     </div>
   );
 }

@@ -26,7 +26,7 @@ mv dist/Horus.app dist/Packages
 find dist/Packages/Horus.app -name '*.DS_Store' -exec rm {} \;
 
 # Remove any previous signing
-codesign --remove-signature dist/Packages/Horus.app
+codesign --remove-signature dist/Packages/Horus.app || true
 
 # Get the Apple Development signing identity (Code number)
 identity=$(security find-identity -v -p codesigning | grep "Developer ID" | awk -F' "' '{print $1}' | awk -F') ' '{print $2}')
@@ -77,7 +77,7 @@ mkdir -p "dist/Horus-$version-macOS-$osName"
 
 # Move the dmg, the .hp files and the python wheel (.whl) to the new folder
 mv "dist/$name" "dist/Horus-$version-macOS-$osName"
-mv dist/*.hp "dist/Horus-$version-macOS-$osName"
+mv dist/*.hp "dist/Horus-$version-macOS-$osName" 2>/dev/null || true
 mv dist/*.whl "dist/Horus-$version-macOS-$osName"
 
 # Create a zip file of the folder

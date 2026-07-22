@@ -565,11 +565,18 @@ class RemotesAPI:
                     timeout=timeout, command=command
                 )
 
+            # warn=True so a non-zero exit returns a Result instead of raising
+            # fabric's UnexpectedExit. This lets us raise a consistent
+            # CommandFailed below (matching the other command paths), which
+            # callers such as SlurmJob.updateLogs rely on to detect and handle
+            # expected failures (e.g. scontrol "Invalid job id" for a finished
+            # job) instead of letting the exception escape.
             out_cmd = self.conn.run(
                 command,
                 hide=True,
                 in_stream=False,
                 env=env,
+                warn=True,
             )
             out = str(out_cmd.stdout.strip())
             err = str(out_cmd.stderr.strip())

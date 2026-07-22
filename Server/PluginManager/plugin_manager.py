@@ -87,6 +87,7 @@ URL_TOKEN = "://"
 REPOIDURL_PREFIX = f"repoID{URL_TOKEN}"
 PLUGINIDURL_PREFIX = f"pluginID{URL_TOKEN}"
 REPONAME_PREFIX = f"repoName{URL_TOKEN}"
+PLUGINVERSION_PREFIX = f"pluginVersion{URL_TOKEN}"
 
 
 class DefaultPluginConfigException(Exception):
@@ -297,26 +298,37 @@ class PluginManager(metaclass=HorusSingleton):
                         repoID = None
                         pluginID = None
                         repoName = None
-                        if f.startswith(REPOIDURL_PREFIX):
+                        pluginVersion = None
 
+                        if PLUGINVERSION_PREFIX in f:
+                            pluginVersion = f.split(PLUGINVERSION_PREFIX)[1]
+
+                        if f.startswith(REPOIDURL_PREFIX):
+                        
                             # The URL is formed like:
-                            # repoID://<repo_url>/repoName://<repo_name>/pluginID://<plugin_id>
+                            # repoID://<repo_url>/repoName://<repo_name>/pluginID://<plugin_id>/pluginVersion://<version>
                             # Therefore we need to split the URL
                             repoID = "".join(f.split(REPOIDURL_PREFIX)[1]).split(
                                 REPONAME_PREFIX, maxsplit=1
                             )[0]
 
-                            pluginID = f.split(PLUGINIDURL_PREFIX)[1]
+                            pluginID = (
+                                f.split(PLUGINIDURL_PREFIX)[1].split(PLUGINVERSION_PREFIX)[0]
+                            )
 
                             repoName = f.split(REPONAME_PREFIX)[1].split(PLUGINIDURL_PREFIX)[0]
 
                         if f.startswith(PLUGINIDURL_PREFIX):
-                            pluginID = f.split(PLUGINIDURL_PREFIX)[1]
+                            pluginID = (
+                                f.split(PLUGINIDURL_PREFIX)[1].split(PLUGINVERSION_PREFIX)[0]
+                            )
 
                         if not pluginID:
                             raise ValueError("Plugin ID not found in the URL.")
 
-                        f = self._downloadPluginFromRepo(pluginID, downloadDir, repoID, repoName)
+                        f = self._downloadPluginFromRepo(
+                            pluginID, downloadDir, repoID, repoName, pluginVersion
+                        )
                     except Exception as e:
                         raise Exception(f"Failed to download plugin from repository: {e}") from e
 
@@ -346,12 +358,15 @@ class PluginManager(metaclass=HorusSingleton):
         downloadDir: str,
         repo_url: typing.Optional[str] = None,
         repo_name: typing.Optional[str] = None,
-    ) -> str:
+        version: typing.Optional[str] = None
+        ) -> str:
         """
         Downloads a plugin from the repo.
 
         Args:
             pluginID (str): The ID of the plugin to download.
+            version (str, optional): A specific version to download. If not
+                provided, the latest platform-compatible version is used.
 
         Returns:
             str: The path to the downloaded plugin.
@@ -414,41 +429,75 @@ class PluginManager(metaclass=HorusSingleton):
 
         jsonResponse = pluginResponse.json()
 
-        # Get the latest compatible version
         compatibleVersion: typing.Optional[str] = None
         compatiblePlatform: typing.Optional[str] = None
 
         appPlatform = AppDelegate.getPlatform()
 
-        print(f"Finding compatible version for '{appPlatform}' and Horus {HorusAPIVersion}...")
+        if version:
+            print(
+                f"Locating requested version '{version}' for platform "
+                f"'{appPlatform}' and Horus {HorusAPIVersion}..."
+            )
 
-        found = False
-        for v in jsonResponse["versions"]:
+            versionData = jsonResponse["versions"].get(version)
+            if versionData is None:
+                raise Exception(
+                    f"Requested version '{version}' was not found for plugin '{pluginID}'."
+                )
 
-            if found:
-                break
-
-            version = jsonResponse["versions"][v]
-            platforms = version["platforms"]
-            for p in platforms:
+            for p in versionData["platforms"]:
                 pluginPlatforms = p["platforms"]
 
                 if "universal" not in pluginPlatforms and appPlatform not in pluginPlatforms:
                     continue
 
-                if appPlatform in p["platforms"]:
+                if appPlatform in pluginPlatforms:
                     compatiblePlatform = appPlatform
+                    compatibleVersion = version
+                    break
+
+                compatibleVersion = version
+                compatiblePlatform = "universal"
+                break
+
+            if compatibleVersion is None or compatiblePlatform is None:
+                raise Exception(
+                    f"Requested version '{version}' of plugin '{pluginID}' is not "
+                    f"compatible with the current platform ('{appPlatform}')."
+                )
+        else:
+            print(
+                f"Finding compatible version for '{appPlatform}' and Horus {HorusAPIVersion}..."
+            )
+
+            found = False
+            for v in jsonResponse["versions"]:
+
+                if found:
+                    break
+
+                versionData = jsonResponse["versions"][v]
+                platforms = versionData["platforms"]
+                for p in platforms:
+                    pluginPlatforms = p["platforms"]
+
+                    if "universal" not in pluginPlatforms and appPlatform not in pluginPlatforms:
+                        continue
+
+                    if appPlatform in p["platforms"]:
+                        compatiblePlatform = appPlatform
+                        compatibleVersion = v
+                        found = True
+                        break
+
                     compatibleVersion = v
+                    compatiblePlatform = "universal"
                     found = True
                     break
 
-                compatibleVersion = v
-                compatiblePlatform = "universal"
-                found = True
-                break
-
-        if compatibleVersion is None or compatiblePlatform is None:
-            raise Exception("Could not find compatible version.")
+            if compatibleVersion is None or compatiblePlatform is None:
+                raise Exception("Could not find compatible version.")
 
         print(f"Found compatible version: {compatibleVersion} ({compatiblePlatform})")
 

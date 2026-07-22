@@ -6,7 +6,9 @@ import { HorusPlugin } from "../Components/FlowBuilder/flow.types";
 import RotatingLines from "../Components/RotatingLines/rotatinglines";
 import ErrorIcon from "../Components/Toolbar/Icons/Error";
 import CheckMark from "../Components/Toolbar/Icons/CheckMark";
-
+import {
+  IconChevronDown,
+} from "@tabler/icons-react";
 import PluginsIcon from "../Components/Toolbar/Icons/Plugins";
 import AppButton from "../Components/appbutton";
 import { SearchComponent } from "@/Components/Search/Search";
@@ -16,10 +18,17 @@ import {
   IconUser
 } from "@tabler/icons-react";
 
+type PluginVersion = {
+  version: string,
+  platforms: string[]
+  updated: string,
+}
+
 type DatabasePlugin = HorusPlugin & {
   downloads: number;
   latest_version: string;
   repo_url: string;
+  versions: Record<string, PluginVersion>
 };
 
 type RepoBrowserProps = PluginInstallProps & {
@@ -197,7 +206,7 @@ function RightSidePluginDownload({
   plugin,
   repoURL,
   repoName,
-  onInstall
+  onInstall,
 }: {
   isInstalled?: HorusPlugin;
   plugin: DatabasePlugin;
@@ -206,63 +215,97 @@ function RightSidePluginDownload({
   onInstall: (file: string) => void;
 }) {
   const width = "120px";
-  // const width = "auto";
   const spanClassName = "font-semibold";
+
+  const [selectedVersion, setSelectedVersion] = useState(
+    plugin.latest_version
+  );
+
+  const isUpdateAvailable = isInstalled && plugin.latest_version !== isInstalled.version;
+
   return (
     <div className="flex flex-col gap-2 h-full">
       {isInstalled ? (
-        <AppButton
-          disabled={plugin.latest_version === isInstalled.version}
-          className="gap-2 flex flex-row flex-nowrap justify-center"
-          style={{
-            width: width,
-            color:
-              isInstalled.version !== plugin.latest_version ? "orange" : "green"
-          }}
-          action={() => {
-            const pluginURL = `repoID://${repoURL}repoName://${repoName}pluginID://${plugin.id}`;
-            onInstall(pluginURL);
-          }}
-        >
-          <span className={spanClassName}>
-            {plugin.latest_version !== isInstalled.version
-              ? "Update"
-              : "Installed"}
-          </span>
-          {plugin.latest_version !== isInstalled.version ? (
-            <IconArrowBarUp />
-          ) : (
-            <CheckMark className="w-6 h-6" />
+        <>
+          {isUpdateAvailable && (
+            <div className="relative" style={{ width }}>
+              <select
+                value={selectedVersion}
+                onChange={(e) => setSelectedVersion(e.target.value)}
+                style={{ backgroundColor: "white", color: "black", width: width }}
+                title="Select version to install"
+              >
+                {Object.values(plugin.versions).map((v) => (
+                  <option key={v.version} value={v.version}>
+                    {v.version}
+                    {v.version === plugin.latest_version ? " (latest)" : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
           )}
-        </AppButton>
+          <AppButton
+            disabled={!isUpdateAvailable}
+            className="gap-2 flex flex-row flex-nowrap justify-center"
+            style={{
+              width: width,
+              color: isUpdateAvailable ? "orange" : "green",
+            }}
+            action={() => {
+              const pluginURL = `repoID://${repoURL}repoName://${repoName}pluginID://${plugin.id}pluginVersion://${selectedVersion}`;
+              onInstall(pluginURL);
+            }}
+          >
+            <span className={spanClassName}>
+              {isUpdateAvailable ? "Update" : "Installed"}
+            </span>
+            {isUpdateAvailable ? (
+              <IconArrowBarUp />
+            ) : (
+              <CheckMark className="w-6 h-6" />
+            )}
+          </AppButton>
+        </>
       ) : (
-        <AppButton
-          title="Click to install plugin"
-          className="gap-2 flex flex-row flex-nowrap justify-center"
-          style={{ color: "black", width: width }}
-          action={() => {
-            const pluginURL = `repoID://${repoURL}repoName://${repoName}pluginID://${plugin.id}`;
-            onInstall(pluginURL);
-          }}
-        >
-          <span className={spanClassName}>Install</span>
-          <IconArrowBarToDown />
-        </AppButton>
+        <>
+          <div className="relative" style={{ width }}>
+            <select
+              value={selectedVersion}
+              onChange={(e) => setSelectedVersion(e.target.value)}
+              style={{ backgroundColor: "white", color: "black", width: width }}
+              title="Select version to install"
+            >
+              {Object.values(plugin.versions).map((v) => (
+                <option key={v.version} value={v.version}>
+                  {v.version}
+                  {v.version === plugin.latest_version ? " (latest)" : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <AppButton
+            title="Click to install plugin"
+            className="gap-2 flex flex-row flex-nowrap justify-center"
+            style={{ color: "black", width: width }}
+            action={() => {
+              const pluginURL = `repoID://${repoURL}repoName://${repoName}pluginID://${plugin.id}pluginVersion://${selectedVersion}`;
+              onInstall(pluginURL);
+            }}
+          >
+            <span className={spanClassName}>Install</span>
+            <IconArrowBarToDown />
+          </AppButton>
+        </>
       )}
       <AppButton
         style={{ color: "black", width: width, font: "semibold" }}
         className="gap-2 flex flex-row flex-nowrap justify-center"
-        title={`Installed version: ${isInstalled?.version || "Not installed"}. Latest version: ${plugin.latest_version}`}
+        title={isInstalled ? `Installed version: ${isInstalled.version}` : "Not installed"}
       >
-        {plugin.latest_version !== isInstalled?.version && isInstalled ? (
-          <>
-            <span className={spanClassName}>
-              {isInstalled.version} &rarr; {plugin.latest_version}
-            </span>
-          </>
-        ) : (
-          <span className={spanClassName}>{plugin.latest_version}</span>
-        )}
+        <span className={spanClassName}>
+          {isInstalled ? isInstalled.version : "Not installed"}
+        </span>
       </AppButton>
       <AppButton
         title="Number of downloads"

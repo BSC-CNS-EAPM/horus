@@ -490,6 +490,7 @@ function VariableRenderer(props: {
           <HorusSwitch
             setEnabled={handleVariableChangeInternal}
             enabled={currentValue as boolean}
+            disabled={props.isFlowActive || variableToRender.disabled}
           />
         </div>
       );

@@ -1169,12 +1169,21 @@ disabled_string_list_variable = PluginVariable(
     allowedValues=["Value 1", "Value 2", "Value 3"],
 )
 
+disabled_boolean_list_variable = PluginVariable(
+    id="disabled_boolean_list_variable",
+    name="Disabled boolean list variable",
+    description="This variable is disabled",
+    type=VariableTypes.BOOLEAN,
+    disabled=True,
+    showInCanvas=True,
+)
+
 explicative_block = PluginBlock(
     id="explicative_block",
     name="Explicative block",
     description="This block is an example of a code block",
     action=lambda block: None,
-    variables=[explicative_code_variable, disabled_string_list_variable],
+    variables=[explicative_code_variable, disabled_string_list_variable, disabled_boolean_list_variable],
 )
 
 plugin.addBlock(explicative_block)

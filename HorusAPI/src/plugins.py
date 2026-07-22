@@ -2503,7 +2503,13 @@ class SlurmJob(HorusPydanticModel):
         Retruns a formatted string for running the scontrol command
         """
 
-        return "scontrol show jobid {} -d --oneline".format(jid)
+        # NOTE: do not add the -d/--details flag. On some clusters (e.g. BSC)
+        # -d makes scontrol additionally load the node allocation details, which
+        # unprivileged accounts are not allowed to read once the job is running
+        # ("slurm_load_nodes error: Access/permission denied"). On those systems
+        # -d also exits non-zero even when it prints the job info. The plain
+        # form still reports JobState and every field Horus parses.
+        return "scontrol show jobid {} --oneline".format(jid)
 
     def updateLogs(self, remote: RemoteUnion):
         """
@@ -2625,11 +2631,7 @@ class SlurmJob(HorusPydanticModel):
         for slurmJob in slurmJobs:
             if slurmJob.array_task_id:
                 arrayJobsCommands = []
-                # Take into account batching, which can be in the format "1-10%2",
-                # so we need to split by "%" and take the first part
-                task_id = slurmJob.array_task_id.split("%")[0]
-                start, end = map(int, task_id.split("-"))
-                for i in range(start, end + 1):
+                for i in SlurmJob.expandArrayTaskIds(slurmJob.array_task_id):
                     arrayJobsCommands.append(
                         SlurmJob.SCONTROL_COMMAND(f"{slurmJob.job_id}_{i}")
                     )
@@ -2644,6 +2646,32 @@ class SlurmJob(HorusPydanticModel):
 
         jobs = slurmJobs + arrayJobs
         return jobs
+
+    @staticmethod
+    def expandArrayTaskIds(array_task_id: typing.Optional[str]) -> typing.List[int]:
+        """
+        Expand a SLURM ``ArrayTaskId`` spec into individual task indices.
+
+        SLURM reports the array task id in several forms depending on the array:
+        a single id (``"5"``), a range (``"1-10"``), a range with a throttle
+        (``"1-10%2"``), a comma-separated list (``"1,3,5"``), or a mix of these
+        (``"1-3,7"``). This normalises all of them into a list of ints. ``None``
+        or an empty spec yields an empty list.
+        """
+        # Drop any "%N" throttle suffix (e.g. "1-10%2" -> "1-10")
+        spec = (array_task_id or "").split("%")[0]
+
+        indices: typing.List[int] = []
+        for part in spec.split(","):
+            part = part.strip()
+            if not part:
+                continue
+            if "-" in part:
+                start, end = (int(bound) for bound in part.split("-")[:2])
+                indices.extend(range(start, end + 1))
+            else:
+                indices.append(int(part))
+        return indices
 
     @staticmethod
     def parseScontrolToSlurmJob(scontrol: str) -> "SlurmJob":
