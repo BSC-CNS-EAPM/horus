@@ -2,6 +2,7 @@
 Settings manager for the Horus app
 """
 
+import contextlib
 import os
 import typing
 import json
@@ -9,6 +10,17 @@ import sys
 import logging
 
 from HorusAPI import VariableTypes
+
+
+def _makeGroupWritable(path: str) -> None:
+    """
+    NamedTemporaryFile always creates files with mode 0600, and os.replace keeps it.
+    The app support dir is shared between the server user and the impersonated flow
+    user, so restore group access. Fails silently if we are not the owner (in that
+    case the mode is already correct).
+    """
+    with contextlib.suppress(OSError):
+        os.chmod(path, 0o660)
 
 
 class Setting:
@@ -217,6 +229,7 @@ class SettingsManager:
             tempname = tf.name
 
         os.replace(tempname, self.userSettingsPath)
+        _makeGroupWritable(self.userSettingsPath)
 
     def _loadSettings(self):
         """
@@ -424,6 +437,7 @@ class SettingsManager:
             tempname = tf.name
 
         os.replace(tempname, self.userSettingsPath)
+        _makeGroupWritable(self.userSettingsPath)
 
     def listSettings(self) -> typing.Dict[str, dict]:
         """

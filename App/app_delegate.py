@@ -1543,6 +1543,10 @@ def launchApp():
     Launches the app.
     """
 
+    # The app support dir can be shared between the server user and the users
+    # impersonated when running flows, so keep group write on what we create.
+    os.umask(0o002)
+
     appDelegateArgs, flowArgs, pluginArgs = parseArgs()
 
     # Prepare the app delegate

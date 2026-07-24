@@ -45,7 +45,10 @@ class _PasswordCrypto:
         key = Fernet.generate_key()
         with open(self._key_path, "wb") as f:
             f.write(key)
-        os.chmod(self._key_path, 0o600)
+        # Group-readable: the app support dir is shared between the server user and
+        # the impersonated flow user. Any member of the group can read the key.
+        with contextlib.suppress(OSError):
+            os.chmod(self._key_path, 0o640)
         return key
 
     def encrypt(self, plaintext: str) -> str:
