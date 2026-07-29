@@ -35,9 +35,9 @@ import { PlacedBlockVariables } from "../Variables/variable_connections";
 import {
   Block,
   BlockTypes,
+  JobStatus,
   NoteBlock,
-  PluginPage,
-  Status
+  PluginPage
 } from "../flow.types";
 
 // Block style
@@ -152,9 +152,8 @@ function BlockBox({
       {...blockState.div.attributes}
       role={`block-${blockState.div.style.cursor}`}
       id={`placed-${block.placedID}`}
-      className={`plugin-block ${block.isPlaced && "plugin-block-placed "} ${
-        block.error && "plugin-block-failed"
-      }`}
+      className={`plugin-block ${block.isPlaced && "plugin-block-placed "} ${block.error && "plugin-block-failed"
+        }`}
       style={{
         backgroundColor: block.color
       }}
@@ -184,9 +183,8 @@ function BlockWrapper({
         ...blockState.div.style,
         ...extraStyle
       }}
-      className={`flex flex-col gap-1 ${
-        block.isPlaced ? "absolute z-1 group" : "relative"
-      }${isSelected ? " outline outline-2 outline-blue-500 rounded-xl" : ""}`}
+      className={`flex flex-col gap-1 ${block.isPlaced ? "absolute z-1 group" : "relative"
+        }${isSelected ? " outline outline-2 outline-blue-500 rounded-xl" : ""}`}
     >
       {children}
     </div>
@@ -407,11 +405,10 @@ function BlockToolbar({
                 position: "relative",
                 top: "-1px"
               }}
-              className={`transition-opacity pointer-events-auto ${
-                selectedPlacedIDs?.has(block.placedID)
-                  ? "opacity-100"
-                  : "opacity-0 group-hover:opacity-100"
-              }`}
+              className={`transition-opacity pointer-events-auto ${selectedPlacedIDs?.has(block.placedID)
+                ? "opacity-100"
+                : "opacity-0 group-hover:opacity-100"
+                }`}
               onClick={(e) => {
                 e.stopPropagation();
                 onToggleSelect(block.placedID);
@@ -703,7 +700,7 @@ function BlockBody({
             <div className="remote-block-cloud ">
               <ServerIcon /> Slurm Block - {block.status}
             </div>
-            {block.status === Status.FAILED && !block.isRunning && (
+            {(JobStatus.FAILED_STATUSES().includes(block.status)) && !block.isRunning && (
               <span className="remote-block-cloud items-center gap-0">
                 <Chevron direction="right" />
                 <HorusPopover
@@ -994,9 +991,8 @@ export function NoteBlockView(
         ...blockState.div.style,
         ...props.extraStyle
       }}
-      className={`absolute z-1 flex flex-col gap-1 group${
-        isSelected ? " outline outline-2 outline-blue-500 rounded" : ""
-      }`}
+      className={`absolute z-1 flex flex-col gap-1 group${isSelected ? " outline outline-2 outline-blue-500 rounded" : ""
+        }`}
     >
       <div
         ref={blockState.div.ref}
@@ -1046,11 +1042,10 @@ export function NoteBlockView(
                   position: "relative",
                   top: "-1px"
                 }}
-                className={`pointer-events-auto transition-opacity ${
-                  isSelected
-                    ? "opacity-100"
-                    : "opacity-0 group-hover:opacity-100"
-                }`}
+                className={`pointer-events-auto transition-opacity ${isSelected
+                  ? "opacity-100"
+                  : "opacity-0 group-hover:opacity-100"
+                  }`}
                 onClick={(e) => {
                   e.stopPropagation();
                   props.onToggleSelect!(block.placedID);
