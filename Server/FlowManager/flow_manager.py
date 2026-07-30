@@ -2336,6 +2336,7 @@ class FlowManager:
         self,
         command: list[str],
         settingsManager: SettingsManager,
+        env: dict[str, typing.Any]
     ) -> list[str]:
         """
         Wrap flow launcher command to run as the Local remote user.
@@ -2359,6 +2360,11 @@ class FlowManager:
 
         launchMethod = settingsManager.getSetting("localFlowLaunchMethod").value
         launchMethod = str(launchMethod).lower()
+
+        # Drop the .env so it can be picked by the new 
+        with open(".env", "w") as f:
+            for key, value in env.items():
+                f.write(f"{key}={value}\n")
 
         if launchMethod == "sudo":
             return ["sudo", "-n", "-u", str(localUser), "--", *command]
