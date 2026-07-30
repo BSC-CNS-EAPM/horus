@@ -281,7 +281,8 @@ export class JobStatus {
       Status.PREEMPTED,
       Status.REVOKED,
       Status.STOPPED,
-      Status.SPECIAL_EXIT
+      Status.SPECIAL_EXIT,
+      Status.UNKNOWN
     ];
   }
 
