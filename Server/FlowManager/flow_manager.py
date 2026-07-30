@@ -2493,7 +2493,7 @@ class FlowManager:
             externalFlow = ExternalSlurmFlow(slurmJob, local_remote)
 
         else:
-            command = self._buildImpersonatedFlowLaunchCommand(command, generalSettings)
+            command = self._buildImpersonatedFlowLaunchCommand(command, generalSettings, env)
             # comunicate=False so the detached process' stdout/stderr go to
             # DEVNULL instead of a PIPE. With wait=False nobody ever drains the
             # pipe, so once the child writes ~64KB (easily reached in --debug,
