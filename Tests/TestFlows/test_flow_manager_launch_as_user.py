@@ -1,3 +1,4 @@
+import os
 import shlex
 import types
 from unittest.mock import patch
@@ -27,7 +28,7 @@ def test_build_impersonated_command_disabled(tmp_path):
         }
     )
 
-    wrapped = manager._buildImpersonatedFlowLaunchCommand(command, settings)
+    wrapped = manager._buildImpersonatedFlowLaunchCommand(command, settings, env={**os.environ})
 
     assert wrapped == command
 
@@ -51,7 +52,7 @@ def test_build_impersonated_command_sudo(tmp_path):
             }
         },
     ):
-        wrapped = manager._buildImpersonatedFlowLaunchCommand(command, settings)
+        wrapped = manager._buildImpersonatedFlowLaunchCommand(command, settings, env={**os.environ})
 
     assert wrapped == ["sudo", "-n", "-u", "alice", "--", *command]
 
@@ -75,7 +76,7 @@ def test_build_impersonated_command_su(tmp_path):
             }
         },
     ):
-        wrapped = manager._buildImpersonatedFlowLaunchCommand(command, settings)
+        wrapped = manager._buildImpersonatedFlowLaunchCommand(command, settings, env={**os.environ})
 
     assert wrapped[0:3] == ["su", "-", "alice"]
     assert wrapped[3] == "-c"
@@ -103,4 +104,4 @@ def test_build_impersonated_command_requires_local_username(tmp_path):
         },
     ):
         with pytest.raises(Exception, match="Local remote username is missing"):
-            manager._buildImpersonatedFlowLaunchCommand(command, settings)
+            manager._buildImpersonatedFlowLaunchCommand(command, settings, env={**os.environ})

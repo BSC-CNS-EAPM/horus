@@ -15,6 +15,9 @@ import platform
 import debugpy
 import time
 from contextlib import contextmanager
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Import type annotations
 import typing
