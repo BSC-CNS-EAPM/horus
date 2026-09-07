@@ -30,6 +30,8 @@ type AppInfo = {
   mode?: "app" | "server" | "webapp" | "browser" | "unknown";
   appSupportDir?: string;
   PYTHON_VERSION?: string;
+  installID?: string;
+  userID?: string | null;
 };
 
 export async function getAppInfo(): Promise<AppInfo> {

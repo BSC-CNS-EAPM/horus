@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { IconX, IconShield, IconChartBar } from "@tabler/icons-react";
 import ReactGA from "react-ga4";
 
@@ -9,44 +9,95 @@ import { PluginVariable } from "@/Components/FlowBuilder/flow.types";
 import { HorusLink } from "@/Components/reusable";
 import { getBaseURL } from "./utils";
 
+const MEASUREMENT_ID = "G-D9DT7B1QHG";
+
+// Whether the current session has consent and GA has been initialized.
+// Read by track() below, set only from HorusGoogleAnalytics.
+let analyticsEnabled = false;
+let commonParams: Record<string, unknown> = {};
+
+/**
+ * Sends a GA4 event. No-ops until the user has accepted analytics and GA has
+ * finished initializing (see HorusGoogleAnalytics). Every event is stamped
+ * with the common app/mode params so events are filterable by platform.
+ */
+export function track(name: string, params?: Record<string, unknown>) {
+  if (!analyticsEnabled) return;
+  ReactGA.event(name, { ...commonParams, ...params, source: "client" });
+}
+
 function HorusGoogleAnalytics() {
-  const [consent, setConsent] = useState<string | null>(null);
+  const [consent, setConsent] = useState<boolean | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const lastHeartbeat = useRef<number>(Date.now());
 
   const settings = useSettingsContext();
 
   useEffect(() => {
-    // Get initial consent from localStorage
+    // Get initial consent from settings (a boolean, or null if undecided)
     const storedConsent = settings?.["analytics"]?.value ?? null;
-    setConsent(storedConsent);
+    setConsent(storedConsent as boolean | null);
   }, [settings]);
 
   useEffect(() => {
-    // Only initialize GA if user has given consent
-    if (consent === "accepted") {
-      if (!isInitialized) {
-        ReactGA.initialize("G-D9DT7B1QHG", {
-          gtagOptions: {
-            anonymize_ip: true
-          }
-        });
-
-        // Custom set the platform data
-        getAppInfo().then((appInfo) => {
-          // Set custom dimensions for app info
-          ReactGA.event("app_info", {
-            app_version: appInfo.APP_VERSION,
-            platform: appInfo.platform || "unknown",
-            debug: appInfo.debug || false,
-            mode: appInfo.mode || "unknown"
-          });
-        });
-
-        setIsInitialized(true);
-      }
-      ReactGA.send({ hitType: "pageview", page: window.location.pathname });
+    if (consent !== true || isInitialized) {
+      analyticsEnabled = consent === true;
+      return;
     }
+
+    // Fetch app info first so we can give GA a stable identity before the
+    // very first event, instead of re-tagging events after the fact.
+    getAppInfo().then((appInfo) => {
+      commonParams = {
+        app_version: appInfo.APP_VERSION,
+        platform: appInfo.platform || "unknown",
+        mode: appInfo.mode || "unknown",
+        webapp: appInfo.mode === "webapp",
+        debug: appInfo.debug || false
+      };
+
+      ReactGA.initialize(MEASUREMENT_ID, {
+        gaOptions: {
+          clientId: appInfo.installID,
+          userId: appInfo.userID || undefined,
+          anonymizeIp: true
+        }
+      });
+
+      analyticsEnabled = true;
+      setIsInitialized(true);
+
+      track("app_launch");
+      ReactGA.send({ hitType: "pageview", page: window.location.pathname });
+    });
   }, [consent, isInitialized]);
+
+  // Heartbeat: GA4 derives "time in app" from engagement_time_msec, which
+  // otherwise only comes from the (unreliable, webview-killed-before-sent)
+  // automatic engagement beacon. Send it explicitly every minute the tab is
+  // visible, plus a final flush when the app is hidden/closed.
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    const sendHeartbeat = () => {
+      if (document.visibilityState !== "visible") return;
+      const now = Date.now();
+      const elapsed = now - lastHeartbeat.current;
+      lastHeartbeat.current = now;
+      track("app_heartbeat", { engagement_time_msec: elapsed });
+    };
+
+    const interval = setInterval(sendHeartbeat, 60_000);
+
+    document.addEventListener("visibilitychange", sendHeartbeat);
+    window.addEventListener("pagehide", sendHeartbeat);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", sendHeartbeat);
+      window.removeEventListener("pagehide", sendHeartbeat);
+    };
+  }, [isInitialized]);
 
   return null;
 }

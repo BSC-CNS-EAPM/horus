@@ -32,6 +32,7 @@ import {
   POSTUploadWithProgress
 } from "../../Utils/utils";
 import { socket } from "../../Utils/socket";
+import { track } from "../../Utils/analytics";
 
 // Types
 import {
@@ -1693,6 +1694,23 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         ) {
           return currentFlow;
         }
+
+        // Track the transition into a terminal status, once, not on every
+        // re-broadcast of the same status for this flow
+        const terminalStatuses = [
+          FlowStatus.FINISHED,
+          FlowStatus.ERROR,
+          FlowStatus.STOPPED
+        ];
+        if (
+          currentFlow.status !== recivedFlow.status &&
+          terminalStatuses.includes(recivedFlow.status)
+        ) {
+          track("workflow_finished", {
+            status: recivedFlow.status,
+            duration_s: recivedFlow.elapsed ?? 0
+          });
+        }
         // Do not update the position of the blocks
         // This is because the user might be panning the view
         // during the flow execution
@@ -2139,10 +2157,16 @@ export function useFlowBuilder({ dockApi }: { dockApi: DockviewApi | null }) {
         const result = await response.json();
 
         if (!result.ok) {
+          track("workflow_submit_failed");
           await horusAlert(result.msg);
           setFlow({
             ...flow,
             status: FlowStatus.ERROR
+          });
+        } else {
+          track("workflow_started", {
+            blocks: flow.blocks?.length ?? 0,
+            remote: continueSlurm
           });
         }
 
