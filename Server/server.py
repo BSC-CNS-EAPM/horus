@@ -8,6 +8,7 @@ import os
 import shutil
 import sys
 import hashlib
+import json
 import logging
 import typing
 import traceback
@@ -76,6 +77,7 @@ from Server.FileExplorer import FileExplorer, UserFileExplorer, File
 
 # User management for WebApp mode
 from Server.WebAppManager import WebAppManager, UserError, HorusUser, overrideUserExplorer
+from Server import analytics
 
 if typing.TYPE_CHECKING:
     from Server.WebAppManager import Database
@@ -263,6 +265,11 @@ class HorusServer:
         self._settingsManager = SettingsManager(self.appSupportDir)
         """
         Settings manager class. Handle the app settings.
+        """
+
+        self.installID = analytics.getInstallID(self.appSupportDir)
+        """
+        Stable per-install analytics id (GA4 client_id), persisted across launches.
         """
 
         # Initialize the Remotes Manager
@@ -538,6 +545,42 @@ class HorusServer:
 
         # Save the configuration in the class
         self.origins = origins
+
+    def _analyticsConsentGiven(self) -> bool:
+        """
+        Whether the user has opted in to analytics, using the same "analytics" setting
+        the frontend consent banner writes to.
+        """
+
+        try:
+            return self._settingsManager.getSetting("analytics").value is True
+        except Exception:  # pylint: disable=broad-except
+            return False
+
+    def _hashedUserID(self) -> typing.Optional[str]:
+        """
+        A non-reversible id for the current logged-in user, for GA4 user_id. Never sends
+        the raw email/username.
+        """
+
+        if currentUser is None or not currentUser.is_authenticated or currentUser.isDemo:
+            return None
+
+        return hashlib.sha256(currentUser.email.encode("utf-8")).hexdigest()[:16]
+
+    def trackEvent(self, name: str, params: typing.Optional[typing.Dict[str, typing.Any]] = None):
+        """
+        Fires a server-side GA4 event (see Server/analytics.py). No-ops if the user has not
+        given analytics consent.
+        """
+
+        analytics.track(
+            self.installID,
+            name,
+            params,
+            userID=self._hashedUserID(),
+            consentGiven=self._analyticsConsentGiven(),
+        )
 
     # Create a wrapper for login (only applies to webapp mode and requires registration)
     def verifyLogin(self, func):
@@ -1959,9 +2002,20 @@ class HorusServer:
 
                 appINFO = AppDelegate().APP_INFO
 
-                # On webapp mode, jsut return the version
+                # On webapp mode, only return the version plus what analytics needs
+                # (mode/platform/debug are needed to distinguish the webapp population)
                 if self.mode == "webapp" and not self.debug:
-                    appINFO = {"APP_VERSION": appINFO["APP_VERSION"]}
+                    appINFO = {
+                        "APP_VERSION": appINFO["APP_VERSION"],
+                        "mode": appINFO.get("mode"),
+                        "platform": appINFO.get("platform"),
+                        "debug": appINFO.get("debug"),
+                    }
+                else:
+                    appINFO = dict(appINFO)
+
+                appINFO["installID"] = self.installID
+                appINFO["userID"] = self._hashedUserID()
 
                 success = {
                     "ok": True,

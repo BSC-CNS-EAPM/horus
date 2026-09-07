@@ -1009,7 +1009,13 @@ class AppDelegate(metaclass=HorusSingleton):
 
         # Start the webview
         try:
-            webview.start(debug=self.debug, menu=self._menus(), gui=guiBacked())  # type: ignore
+            webview.start(
+                debug=self.debug,
+                menu=self._menus(),
+                gui=guiBacked(),
+                private_mode=False,
+                storage_path=os.path.join(self.appSupportDir, "webview"),
+            )  # type: ignore
         except webview.WebViewException:
             logging.getLogger("Horus").critical(
                 "Failed to start the window management system. "

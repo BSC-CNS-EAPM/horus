@@ -1338,6 +1338,33 @@ class Flow:
         # Restore the time
         self.elapsed = 0
 
+    def _trackServerEvent(self, name: str, params: typing.Optional[dict] = None):
+        """
+        Fires a server-side analytics event for this flow run (see Server/analytics.py).
+        Runs are executed in a standalone subprocess (see App.app_delegate.
+        runFlowInsteadOfLaunch), so this is the only place that reliably sees every run,
+        including headless/CLI and remote/Slurm ones. No-ops if the user has not given
+        analytics consent, or if self.horusSettings was not provided.
+        """
+
+        if self.horusSettings is None:
+            return
+
+        try:
+            consentGiven = self.horusSettings.getSetting("analytics").value is True
+        except Exception:  # pylint: disable=broad-except
+            consentGiven = False
+
+        if not consentGiven:
+            return
+
+        from Server import analytics  # pylint: disable=import-outside-toplevel
+
+        appSupportDir = os.path.dirname(self.horusSettings.userSettingsPath)
+        analytics.track(
+            analytics.getInstallID(appSupportDir), name, params, consentGiven=True
+        )
+
     def run(
         self,
         placedID: typing.Optional[int] = None,
@@ -1444,6 +1471,14 @@ class Flow:
                     "The settings manager instance is not available. "
                     + "The flow will run with the default settings."
                 )
+
+            self._trackServerEvent(
+                "flow_run_started",
+                {
+                    "blocks": len(self.blocks),
+                    "remote": any(isinstance(b, SlurmBlock) for b in self.blocks),
+                },
+            )
 
             # Generate a folder for the results of the flow, and change the working dir
             # to it
@@ -1566,6 +1601,11 @@ class Flow:
             # Send the flow to the frontend if a socket is provided
             # Send a request to the main server to remove the flow from the running flows list
             self._socket.removeFinishedFlowFromRunningFlows(self.path) if self._socket else None
+
+            self._trackServerEvent(
+                "flow_run_finished",
+                {"status": self.status.value, "elapsed_s": self.elapsed},
+            )
 
         logging.getLogger("Horus").info(
             "Flow '%s' finished with status '%s'.",
