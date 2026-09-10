@@ -563,6 +563,11 @@ class HorusServer:
         the raw email/username.
         """
 
+        # flask_login is only initialized in webapp mode (see _setupLoginManager), so
+        # touching current_user in desktop mode raises AttributeError: login_manager
+        if self.webAppManager is None:
+            return None
+
         if currentUser is None or not currentUser.is_authenticated or currentUser.isDemo:
             return None
 

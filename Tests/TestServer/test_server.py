@@ -250,3 +250,14 @@ def test_run_app_mode_production():
 
     # Wait for the process to finish
     process.kill()
+
+
+def test_hashed_user_id_desktop_mode(desktopServer):
+    """
+    flask_login is only initialized in webapp mode, so resolving current_user in
+    desktop mode raised "'HorusFlask' object has no attribute 'login_manager'",
+    which broke /api/version (the About window).
+    """
+
+    with desktopServer.server.test_request_context("/api/version"):
+        assert desktopServer._hashedUserID() is None
