@@ -53,7 +53,10 @@ function HorusGoogleAnalytics() {
         platform: appInfo.platform || "unknown",
         mode: appInfo.mode || "unknown",
         webapp: appInfo.mode === "webapp",
-        debug: appInfo.debug || false
+        debug: appInfo.debug || false,
+        // GA4 routes events carrying debug_mode to DebugView instead of reports,
+        // which is the only way to watch them arrive live
+        debug_mode: appInfo.debug || false
       };
 
       ReactGA.initialize(MEASUREMENT_ID, {

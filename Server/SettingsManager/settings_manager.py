@@ -300,6 +300,13 @@ class SettingsManager:
                         key,
                     )
 
+        # Analytics is opt-out: an install that never answered the consent banner
+        # (value null) takes the default. An explicit True/False is never touched.
+        analyticsSetting = fileSettings.get("analytics")
+        if analyticsSetting is not None and analyticsSetting.get("value") is None:
+            analyticsSetting["value"] = defaultSettings["analytics"]["value"]
+            newChanges = True
+
         if newChanges:
             with open(self.userSettingsPath, "w", encoding="utf-8") as f:
                 json.dump(fileSettings, f)

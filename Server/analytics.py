@@ -75,9 +75,16 @@ def track(
     if not apiSecret:
         return
 
+    eventParams: typing.Dict[str, typing.Any] = {**(params or {}), "source": "server"}
+
+    # GA4 routes events carrying debug_mode to DebugView instead of reports. Opt-in via
+    # HORUS_GA_DEBUG=1 so a release build never marks its own traffic as debug.
+    if os.getenv("HORUS_GA_DEBUG"):
+        eventParams["debug_mode"] = True
+
     payload: typing.Dict[str, typing.Any] = {
         "client_id": clientID,
-        "events": [{"name": name, "params": {**(params or {}), "source": "server"}}],
+        "events": [{"name": name, "params": eventParams}],
     }
 
     if userID:
