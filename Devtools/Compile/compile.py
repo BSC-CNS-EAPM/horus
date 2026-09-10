@@ -7,6 +7,7 @@ from typing import cast
 from setuptools import setup
 from Cython.Distutils import build_ext  # type: ignore
 import os
+from pathlib import Path
 
 
 # TODO: THIS CODE IS DUPLICATED IN HorusAPI/setup.py !!!
@@ -46,75 +47,17 @@ def my_get_config_vars(*args):
 # 2.step: replace
 dsc.get_config_vars = my_get_config_vars
 
+# Every module under App/ and Server/ gets cythonized. Globbed, not listed:
+# a module missing here produces no .so, and since build.spec excludes these
+# packages from PyInstaller, the frozen app crashes at import time.
 ext_modules = [
-    # Compile the AppDelegate
-    Extension("App.app_delegate", ["App/app_delegate.py"]),
-    Extension("App.__init__", ["App/__init__.py"], include_package_data=True),  # type: ignore
-    # Compile the Server
-    Extension("Server.server", ["Server/server.py"]),
     Extension(
-        "Server.__init__",
-        ["Server/__init__.py"],
+        source.with_suffix("").as_posix().replace("/", "."),
+        [source.as_posix()],
         include_package_data=True,  # type: ignore
-    ),
-    # Compile the utils extension
-    Extension("Server.Utils", ["Server/Utils.py"]),
-    # Compile the server extension
-    # Flow manager
-    Extension("Server.FlowManager.flow_manager", ["Server/FlowManager/flow_manager.py"]),
-    Extension(
-        "Server.FlowManager.__init__",
-        ["Server/FlowManager/__init__.py"],
-        include_package_data=True,  # type: ignore
-    ),
-    # Remotes manager
-    Extension(
-        "Server.RemotesManager.remotes_manager", ["Server/RemotesManager/remotes_manager.py"]
-    ),
-    Extension(
-        "Server.RemotesManager.__init__",
-        ["Server/RemotesManager/__init__.py"],
-        include_package_data=True,  # type: ignore
-    ),
-    # Settings manager
-    Extension(
-        "Server.SettingsManager.settings_manager", ["Server/SettingsManager/settings_manager.py"]
-    ),
-    Extension(
-        "Server.SettingsManager.__init__",
-        ["Server/SettingsManager/__init__.py"],
-        include_package_data=True,  # type: ignore
-    ),
-    # Plugin manager
-    Extension("Server.PluginManager.plugin_manager", ["Server/PluginManager/plugin_manager.py"]),
-    Extension(
-        "Server.PluginManager.__init__",
-        ["Server/PluginManager/__init__.py"],
-        include_package_data=True,  # type: ignore
-    ),
-    # FileExplorer
-    Extension("Server.FileExplorer.file_explorer", ["Server/FileExplorer/file_explorer.py"]),
-    Extension(
-        "Server.FileExplorer.__init__",
-        ["Server/FileExplorer/__init__.py"],
-        include_package_data=True,  # type: ignore
-    ),
-    # WebApp manager
-    Extension("Server.WebAppManager.webapp_manager", ["Server/WebAppManager/webapp_manager.py"]),
-    Extension("Server.WebAppManager.database", ["Server/WebAppManager/database.py"]),
-    Extension("Server.WebAppManager.user", ["Server/WebAppManager/user.py"]),
-    Extension(
-        "Server.WebAppManager.__init__",
-        ["Server/WebAppManager/__init__.py"],
-        include_package_data=True,  # type: ignore
-    ),
-    # Utils
-    # Extension("Utils.utils", ["Utils/utils.py"]),
-    # Extension(
-    #     "Utils.__init__",
-    #     ["Utils/__init__.py"],
-    #     include_package_data=True,  # type: ignore
-    # ),
+    )
+    for folder in ("App", "Server")
+    for source in sorted(Path(folder).rglob("*.py"))
 ]
 
 setup(

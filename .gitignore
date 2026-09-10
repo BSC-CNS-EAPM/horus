@@ -178,6 +178,9 @@ AppSupport/recent_flows.json
 # User settings
 AppSupport/settings.json
 
+# Analytics install id (generated at runtime)
+AppSupport/analytics_id.json
+
 # Add .hypothesis (pytest)
 .hypothesis/
 
