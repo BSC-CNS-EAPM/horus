@@ -917,6 +917,12 @@ function IntegerFloatVariableView(
         className="plugin-variable-value"
         value={internalValue ?? ""}
         onBlur={handleChange}
+        // The value is only committed on blur, so let Enter commit it too
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.currentTarget.blur();
+          }
+        }}
         onChange={(e) => setInternalValue(e.target.value)}
       />
     </div>
