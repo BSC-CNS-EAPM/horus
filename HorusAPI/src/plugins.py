@@ -2696,8 +2696,8 @@ class SlurmJob(HorusPydanticModel):
         # Assume completed when the status cannot be retrieved
         status = Status.COMPLETED
         try:
-            status = Status(
-                remote.command(f"sacct -j {jobID} -o 'State' --noheader -X").strip()
+            status = SlurmJob._combineSacctStates(
+                remote.command(f"sacct -j {jobID} -o 'State' --noheader -X")
             )
         except CommandFailed as cf1:
             logging.getLogger("Horus").error(
@@ -2724,6 +2724,36 @@ class SlurmJob(HorusPydanticModel):
                 )
 
         return status
+
+    @staticmethod
+    def _combineSacctStates(output: str) -> "Status":
+        """
+        Reduce sacct's State column to one status.
+
+        For a job array, sacct prints one line per task, and a state may carry
+        a suffix ("CANCELLED by 1234"). Passing that text straight to Status()
+        raised, and the job was reported UNKNOWN, i.e. failed, even when every
+        task had completed.
+        """
+        states = []
+        for line in output.splitlines():
+            if not line.strip():
+                continue
+            try:
+                states.append(Status(line.split()[0].rstrip("+")))
+            except ValueError:
+                states.append(Status.UNKNOWN)
+
+        if not states:
+            # Nothing in the accounting database; keep the previous assumption
+            return Status.COMPLETED
+        for group in (Status.RUNNING_STATUSES(), Status.FAILED_STATUSES()):
+            for state in states:
+                if state in group:
+                    return state
+        if all(state == Status.COMPLETED for state in states):
+            return Status.COMPLETED
+        return Status.UNKNOWN
 
     @classmethod
     def fromJobID(cls, remote: RemoteUnion, jobID: str) -> "SlurmJob":
