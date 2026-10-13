@@ -1,21 +1,50 @@
 self.baseURL = null;
 
+const LOAD_TIMEOUT_MS = 60000;
+let obabelPromise = null;
+
+// Load OpenBabel once per worker. Asset failures (e.g. a proxy redirecting
+// /Static to a login page) throw inside emscripten's XHR callbacks, so the
+// timeout is what turns them into an error instead of an endless wait.
+function loadOpenBabel(baseURL) {
+  if (obabelPromise) return obabelPromise;
+
+  obabelPromise = new Promise((resolve, reject) => {
+    self.baseURL = baseURL;
+    importScripts(baseURL + "/Static/obabel/openbabel.js");
+
+    // @ts-ignore
+    const obabel = OpenBabelModule({
+      onAbort: (what) => reject(new Error(`OpenBabel aborted: ${what}`))
+    });
+
+    const started = Date.now();
+    const poll = () => {
+      if (obabel.ObConversionWrapper) return resolve(obabel);
+      if (Date.now() - started > LOAD_TIMEOUT_MS) {
+        return reject(
+          new Error(
+            `OpenBabel failed to load from ${baseURL}/Static/obabel/ (check the network tab for blocked or redirected requests)`
+          )
+        );
+      }
+      setTimeout(poll, 100);
+    };
+    poll();
+  }).catch((error) => {
+    obabelPromise = null; // allow a retry on the next message
+    throw error;
+  });
+
+  return obabelPromise;
+}
+
 addEventListener("message", async (event) => {
   const { molecule, options, conversionId, baseURL, task } = event.data;
 
-  self.baseURL = baseURL;
-
-  importScripts(baseURL + "/Static/obabel/openbabel.js");
-
-  // @ts-ignore
-  const obabel = OpenBabelModule();
-
-  // Wait for the obabel module to be loaded
-  while (!obabel.ObConversionWrapper) {
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-
   try {
+    const obabel = await loadOpenBabel(baseURL);
+
     // Handle different tasks
     switch (task) {
       case "optimize":
