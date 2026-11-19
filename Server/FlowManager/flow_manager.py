@@ -227,6 +227,14 @@ class Flow:
     If the flow is running inside a slurm job or in a separated process. This is only available at runtime
     """
 
+    runStartedFrom: typing.Optional[int] = None
+    """
+    placedID of the block the user started the current run from, or None when
+    the run resumes an earlier one. Lets a block tell a run it was started from
+    apart from one that reached it through its connections. Only available at
+    runtime.
+    """
+
     flowError: str = ""
     """
     Error message displayed when the entire flow has an error
@@ -1419,7 +1427,9 @@ class Flow:
             # would be lost
             flowResumed = False
             blockSelectedToRun: typing.Optional["Block"] = None
+            self.runStartedFrom = None
             if placedID:
+                self.runStartedFrom = placedID
                 blockSelectedToRun = self.findBlockByPlacedID(placedID)
                 if not continueSlurm:
                     blockSelectedToRun._cleanRun(cleanCycles=False)

@@ -4,6 +4,7 @@ Test file for Flows
 
 import os
 import json
+import shutil
 from typing import cast
 import requests
 import random
@@ -198,6 +199,25 @@ def test_flow_run(flow_appDelegate):
     finally:
         # Restore the flow by copying the .bak file to the original file
         os.system(f"mv {path}.bak {path}")
+
+
+def test_flow_run_records_start_block(flow_appDelegate):
+    path = os.path.join(os.path.dirname(__file__), "test_flow.flow")
+
+    # Backup the flow
+    shutil.copy2(path, f"{path}.bak")
+
+    try:
+        flow = Flow.read(path)
+        assert flow.runStartedFrom is None
+
+        flow.run(placedID=1)
+        assert flow.runStartedFrom == 1
+
+        # Runtime only: never written to the flow file
+        assert "runStartedFrom" not in flow.encode()
+    finally:
+        os.replace(f"{path}.bak", path)
 
 
 def test_double_circular_flow_run(flow_appDelegate, capfd):
