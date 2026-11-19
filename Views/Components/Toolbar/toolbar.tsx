@@ -147,7 +147,10 @@ export default function HorusToolbar() {
       // Save
       if (event.code === "KeyS" && isModifierKeyPressed) {
         event.preventDefault();
-        shortcuts.preHandleSave();
+        // Variable inputs commit their value on blur, so drop the focus first
+        // to avoid saving the flow without the value being currently edited
+        (document.activeElement as HTMLElement | null)?.blur();
+        setTimeout(() => shortcuts.preHandleSave(), 0);
       }
       // New flow
       if (event.code === "KeyN" && isModifierKeyPressed) {

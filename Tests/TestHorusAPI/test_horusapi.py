@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import patch, MagicMock
 from HorusAPI import PluginVariable, PluginBlock, VariableTypes, VariableList, VariableGroup
-from HorusAPI import SlurmJob
+from HorusAPI import SlurmJob, Status
 
 
 @pytest.mark.parametrize(
@@ -19,6 +19,32 @@ from HorusAPI import SlurmJob
 )
 def test_expand_array_task_ids(array_task_id, expected):
     assert SlurmJob.expandArrayTaskIds(array_task_id) == expected
+
+
+@pytest.mark.parametrize(
+    "sacct_output, expected",
+    [
+        # sacct prints one line per array task; this used to be reported UNKNOWN
+        (" COMPLETED \n COMPLETED \n COMPLETED \n COMPLETED \n", Status.COMPLETED),
+        ("COMPLETED\n", Status.COMPLETED),  # single job, as before
+        ("COMPLETED\nRUNNING\n", Status.RUNNING),  # wait while any task runs
+        ("FAILED\nRUNNING\n", Status.RUNNING),
+        ("COMPLETED\nFAILED\n", Status.FAILED),
+        ("COMPLETED\nTIMEOUT\n", Status.TIMEOUT),
+        ("PENDING\n", Status.PENDING),
+        ("CANCELLED by 4526\n", Status.CANCELLED),  # state with a suffix
+        ("COMPLETED\nNOT_A_STATE\n", Status.UNKNOWN),
+        ("", Status.COMPLETED),  # nothing in the accounting database
+    ],
+)
+def test_combine_sacct_states(sacct_output, expected):
+    assert SlurmJob._combineSacctStates(sacct_output) == expected
+
+
+def test_sacct_status_of_finished_array_job():
+    remote = MagicMock()
+    remote.command.return_value = " COMPLETED \n COMPLETED \n"
+    assert SlurmJob.getSacctStatus(remote, "46093426") == Status.COMPLETED
 
 
 def test_disabled_variables_output():
